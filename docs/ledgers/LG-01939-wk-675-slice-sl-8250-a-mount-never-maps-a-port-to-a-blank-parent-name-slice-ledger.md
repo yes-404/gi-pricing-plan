@@ -2,12 +2,13 @@
 id: LG-1939
 family: ledger
 title: WK-675 slice SL-1938 — a mount never maps a port to a blank parent name (PL-1937; RL-1876) (slice ledger)
-status: active                 # active → closed (§1.2a)
+status: closed                 # active → closed (§1.2a)
 created: 2026-10-26               # drafted 2026-10-25 under working id 8251
 owner: executor
 tree: f4422297
 phase: P2
 work: WK-675
+slice: SL-1938
 plans: [PL-1937, PL-1546]
 corrected_by: []
 relates: [PL-1937, PL-1546, RL-1876, SL-1554]
@@ -68,3 +69,7 @@ Appended per task and per push, never rewritten; every stamp from `date`. Runs: 
 ## PRs
 
 Not yet opened.
+
+## Closed
+
+**Closed 2026-10-27** at slice close: PR #1397 merged as squash `8f5aead6a826f9dbb82589cee0e5b355ab9f49ed` (tree `5a8cff218d35e5bf189120b4d7d935769f4afb75`) on the maintainer's (by delegation) merge entry, `to-lead.md` entry "2026-10-26 05:49:38 GMT — Maintainer: MERGE 25 (#1397, PL 8205 slice — FD-1936 fixed, SL-1938) VERIFIED on origin = 8f5aead6a826; WK-675's last fix slice is on main; S1a's turn is open". The roadmap row `SL-1938` is `closed` in the same commit.

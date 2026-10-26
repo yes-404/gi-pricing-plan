@@ -1595,7 +1595,7 @@ relates: [PL-1286, PL-1371]
 id: SL-1552
 family: slice
 title: Slice 10: Rating version list (FD-1283 option A; a new `03` §3.4 FR, spec first)
-status: active                 # draft → active → closed | retired (§1.2a)
+status: closed                 # draft → active → closed | retired (§1.2a)
 created: 2026-10-10  # original date 2026-10-08, set at the draft; minted 2026-10-10
 owner: planner                   # cut in the map plan (draft); lead dispatches (active)
 tree: 60e9254c22972c03fb11f10fcce8dae4f1c00dd9
@@ -1607,13 +1607,15 @@ relates: [PL-1286, PL-1371]
 
 `PL-1286` S10, cut as a draft row for the WK-675 Work-plan delta PL-1546, whose row is this slice's scope. The `/rating` list: versions by status, live badges, effective dates, rows linking to `:slug/v/:version`; spec first, amending the existing `GET /api/v1/rating-versions` §5.1 row per `RL-1483`. **Activation needs:** S8 (order: reverse ladder order, ruled 2026-10-08 14:32:33 BST, item D); `SL-1256` (met); `03` §3.4 serialised with WK-674 S6 (`SL-1260`, `PL-1286:398`). Lane or team fixed at GO. **Cut-ladder rung 2**, with S11 (`handover/cut-ladder-2026-10-08.md`, ruled 2026-10-08 13:21:00 BST); not pre-cut. *(Cut 2026-10-08 by the planner under working id 9462, reserved by the lead; minted 2026-10-10 as SL-1552 in the D2 batch mint.)* *(Activated 2026-10-23, `draft` → `active`, on the maintainer's (by delegation) entry "2026-10-23 11:14:56 BST — Maintainer: SL-1552 (WK-675 S10) GO under L1; RL 8163 ADOPTED; DP-S10-4 and DP-S11-3 decided" in `to-lead.md`, item (D); ledger LG-1902. `router/index.ts` and `App.vue` stay held until SL-1551's squash is on `origin/main`.)*
 
+**Closed 2026-10-27** as a Slice: merged as #1388 (squash `85eac5b29bef93d90d3107abc72adf5126d013c8`, tree `8da3c76ee0740752b75e07e30b09016fa8f2e689`) on the maintainer's (by delegation) merge entry, `to-lead.md` entry "2026-10-25 22:27:45 GMT — Maintainer: #1388 (SL-1552, WK-675 S10) ACK VERIFIED LIVE; MERGE 15 VERIFIED on origin = 85eac5b2; removals owed" (CLAUDE.md §13: a Slice closes on a clean audit and the lead's merge). Ledger: `LG-1902`. Audit: `RS-1904` (CLEAN with B2 resolved before merge and the gate owed, as filed; the lead adopts at the PR's FINAL).
+
 #### SL-1553 — Slice 11: Regression suite view (FR-260, FR-261, FR-1221; FD-1283 option A)
 
 ```yaml
 id: SL-1553
 family: slice
 title: Slice 11: Regression suite view (FR-260, FR-261, FR-1221; FD-1283 option A)
-status: active                 # draft → active → closed | retired (§1.2a)
+status: closed                 # draft → active → closed | retired (§1.2a)
 created: 2026-10-10  # original date 2026-10-08, set at the draft; minted 2026-10-10
 owner: planner                   # cut in the map plan (draft); lead dispatches (active)
 tree: 60e9254c22972c03fb11f10fcce8dae4f1c00dd9
@@ -1625,13 +1627,15 @@ relates: [PL-1286, PL-1371]
 
 `PL-1286` S11, cut as a draft row for the WK-675 Work-plan delta PL-1546, whose row is this slice's scope. Golden quotes and property results over WK-672's routes; a run-list read route only if the version's evidence gives no run id (DP-4 (a), spec first). **Activation needs:** S10 (order). Lane or team fixed at GO. **Cut-ladder rung 2**, with S10 (`handover/cut-ladder-2026-10-08.md`, ruled 2026-10-08 13:21:00 BST); not pre-cut. *(Cut 2026-10-08 by the planner under working id 9461, reserved by the lead; minted 2026-10-10 as SL-1553 in the D2 batch mint.)* *(Activated 2026-10-25 on the maintainer's "2026-10-25 22:33:28 GMT — Maintainer: GO — SL-1553 (WK-675 S11, LG 8212, PL-1546 row 7) on `sl-1553-wk675-s11` @e64c4568", `to-lead "2026-10-25 22:33:28 GMT"`: WK-675 Slice 11; DP-S11-3 met at `85eac5b2` (SL-1552's squash is an ancestor of origin/main); the WK-675 follow-on `rating.py` row is none at 01a28e6d (to-lead "2026-10-25 15:38:26 GMT", S11 open point closed). Plan PL-1546 row 7; ruled by RL-1900 (DP-S11-1/2 (a)) and RL-1934 (points 1 to 3, adopted to-lead "2026-10-25 11:22:13 GMT"). Ledger LG-1933.)*
 
+**Closed 2026-10-27** as a Slice: merged as #1396 (squash `866cec47e446eec7f9ccba7cc9e318d6c831ef11`, tree `959dd405c573addf93b03ab6eec93f2a4e812267`) on the maintainer's (by delegation) merge entry, `to-lead.md` entry "2026-10-26 04:43:13 GMT — Maintainer: MERGE 24 (#1396, SL-1553 — WK-675 S11, FR-1932) VERIFIED on origin = 866cec47e446; lane C's last slice is on main; PL 8205's turn is open" (CLAUDE.md §13: a Slice closes on a clean audit and the lead's merge). Ledger: `LG-1933`. Audit: `RS-1935` (NOT-CLEAN on F1 only, then CLEAN for the delta `57bf2fbb..08ae3a72`, as filed; the lead adopts at the PR's FINAL).
+
 #### SL-1554 — Slice 9: Designer III — sub-graph mounting (FR-217, FR-218 authoring view)
 
 ```yaml
 id: SL-1554
 family: slice
 title: Slice 9: Designer III — sub-graph mounting (FR-217, FR-218 authoring view)
-status: active                  # draft → active → closed | retired (§1.2a)
+status: closed                  # draft → active → closed | retired (§1.2a)
 created: 2026-10-10  # original date 2026-10-08, set at the draft; minted 2026-10-10
 owner: planner                   # cut in the map plan (draft); lead dispatches (active)
 tree: 60e9254c22972c03fb11f10fcce8dae4f1c00dd9
@@ -1643,6 +1647,8 @@ relates: [PL-1286, PL-1371]
 
 `PL-1286` S9, cut as a draft row for the WK-675 Work-plan delta PL-1546, whose row is this slice's scope. Mounting a pinned sub-graph in the designer. **Activation needs:** S3 closed; `SL-1341` (WK-1250 S3) closed. Lane or team fixed at GO. **Cut-ladder rung 1** (`handover/cut-ladder-2026-10-08.md`, ruled 2026-10-08 13:21:00 BST); not pre-cut. *(Cut 2026-10-08 by the planner under working id 9463, reserved by the lead; minted 2026-10-10 as SL-1554 in the D2 batch mint.)*
 (Activated 2026-10-21 on the maintainer's (by delegation) GO, "2026-10-21 15:10:53 BST — Maintainer: GO D28 and SL-1554; build-order item D relaxed" item 2, with RL-1835 adopted by "2026-10-21 15:39:13 BST" (and its 15:39:19 correction: the later-merging of S8, S9, S10, S11 re-merges `origin/main` and re-runs its checks); slice ledger LG-1881.)
+
+**Closed 2026-10-27** as a Slice: merged as #1384 (squash `ef3ac6c8a7fde1559ee3f907e5340f6697d5a552`, tree `b9e058b6e89e44bdeb65ab6412b9a7d24ee5449c`) on the maintainer's (by delegation) merge entry, `to-lead.md` entry "2026-10-25 18:59:00 GMT — Maintainer: #1384 MERGED and VERIFIED (main ef3ac6c8, 11 merges); SL-1552 gate's one real failure RULED — pairing-exposed test-isolation defect; FD LOW; named exception on conditions; GRANT" (CLAUDE.md §13: a Slice closes on a clean audit and the lead's merge). Ledger: `LG-1881`. Audit: `RS-1882 to RS-1886` (RS-1886 CLEAN for the gate-head delta `beae0dff..11c3db18`, as filed; the lead adopts at the PR's FINAL).
 
 #### SL-1639 — WK-675 fix slice — FD-1611: DagDesigner.test.ts stubs the validate route, and the debounce's unmount cancel is proven
 
@@ -1668,7 +1674,7 @@ The fix slice of the maintainer's (by delegation) entry "2026-10-11 10:38:57 BST
 id: SL-1938
 family: slice
 title: WK-675 slice SL-1938 — a mount never maps a port to a blank parent name (PL-1937; RL-1876)
-status: active                    # draft → active → closed | retired (§1.2a)
+status: closed                    # draft → active → closed | retired (§1.2a)
 created: 2026-10-26
 owner: lead
 tree: 40ca2645cdaf4c97a57a9fcf52ce1ffde1027521
@@ -1681,6 +1687,8 @@ relates: [FD-1936, LG-1939, RS-1940, PL-1937]
 A mount never maps a port to a blank parent name: `graph_invariant_issues` refuses it on the mount and names the port (RL-1876; FR-217; OQ-1843 closed). The blank-mapped-port fix slice of PL-1937.
 
 (Minted 2026-10-26 from working id 8250, on the maintainer's (by delegation) entry "2026-10-26 02:29:45 GMT" (the PL-1937 real-mint conditions); finding FD-1936, ledger LG-1939, audit RS-1940; executed on branch `draft/pl-8205`.)
+
+**Closed 2026-10-27** as a Slice: merged as #1397 (squash `8f5aead6a826f9dbb82589cee0e5b355ab9f49ed`, tree `5a8cff218d35e5bf189120b4d7d935769f4afb75`) on the maintainer's (by delegation) merge entry, `to-lead.md` entry "2026-10-26 05:49:38 GMT — Maintainer: MERGE 25 (#1397, PL 8205 slice — FD-1936 fixed, SL-1938) VERIFIED on origin = 8f5aead6a826; WK-675's last fix slice is on main; S1a's turn is open" (CLAUDE.md §13: a Slice closes on a clean audit and the lead's merge). Ledger: `LG-1939`. Audit: `RS-1940` (CLEAN for the build at `dc4f061a`, as filed; the lead adopts at the PR's FINAL).
 
 ### WK-690 — **`expression` custom objectives** — SymPy derivation, the gradient/hessian compilation target, the authoring UI, and lifting `expression_objectives_enabled` **plus `custom_objective:author` and its check, which `06` FR-367 requires the `expression` kind to arrive with**
 
