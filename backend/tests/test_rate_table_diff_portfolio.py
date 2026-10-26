@@ -1182,8 +1182,11 @@ async def test_a_parquet_cells_request_runs_one_job_then_pages(
     assert finished.result is not None
     from sqlalchemy import delete
 
-    async with database.unit_of_work() as session:
+    # Test-side cleanup: the login role holds no DELETE on `blobs`, so the removal is the owner's.
+    async def remove(session) -> None:  # type: ignore[no-untyped-def]
         await session.execute(delete(BlobRow).where(BlobRow.sha256 == finished.result["ref"]))
+
+    await seed_as_owner(remove)
     again = api_client.get(_cells_url(parquet), params=params, headers=analyst)
     assert again.status_code == 202, again.text
 
