@@ -273,16 +273,18 @@ defect, reported to the lead.
 20. **Reds by cause, in S1c's `LG-`** (`head=` first, `rc=` last), each on S1c's base (`eaddb4d9` or
     later main) in a throwaway `postgres:16-alpine` with the role planted, before the fix: (a1)
     `ALTER ROLE gip_app CREATEROLE` and (a2) `ALTER ROLE gip_app_login CREATEROLE` — startup does not
-    refuse; (a3) `GRANT gipricing TO gip_app_login WITH ADMIN TRUE, INHERIT FALSE, SET FALSE` —
-    startup does not refuse; (b1) a pre-planted `gip_app` with `CREATEROLE` keeps it after the base
+    refuse; (b1) a pre-planted `gip_app` with `CREATEROLE` keeps it after the base
     `app-login-role.sql`; (b2) a pre-planted membership `WITH INHERIT FALSE, SET TRUE` keeps its
     options after the base SQL; and one red per medium DP-S1c-1 takes in. Each turns green at the
-    head: startup refuses (a1)–(a3) naming the route, and `app-login-role.sql` resets (b1) and (b2).
-21. **Control, not a red:** `GRANT gipricing TO gip_app_login WITH ADMIN OPTION` (PostgreSQL 16
-    defaults: INHERIT and SET true) is refused at the base already, through `pg_has_role(…,
-    'MEMBER')`; the `LG-` records it refused at base and head.
-22. `git grep -n "rolcreaterole\|admin_option" -- backend/src/app/db/immutability.py` prints a hit
-    for each, inside `P_OWN` or a constant defined beside it and imported by the tests;
+    head: startup refuses (a1) and (a2) naming the route, and `app-login-role.sql` resets (b1) and (b2).
+21. **Two controls, not reds:** `GRANT gipricing TO gip_app_login WITH ADMIN OPTION` and the
+    admin-only `GRANT gipricing TO gip_app_login WITH ADMIN TRUE, INHERIT FALSE, SET FALSE` are both
+    refused at the base already, through `pg_has_role(…, 'MEMBER')`: on PostgreSQL 16 any
+    `pg_auth_members` row counts as MEMBER, the admin-only form included (measured 2026-10-26 by
+    the lead's and the maintainer's probes, see the dated line under S1c-4). The `LG-` records
+    both refused at base and head.
+22. `git grep -n "rolcreaterole" -- backend/src/app/db/immutability.py` prints a hit,
+    inside `P_OWN` or a constant defined beside it and imported by the tests;
     `git grep -n "WITH INHERIT TRUE, SET FALSE\|NOCREATEROLE" -- deploy/postgres/app-login-role.sql`
     prints the membership line and an `ALTER ROLE gip_app` line.
 23. `FR-44` (`01-data-management.md:106`) carries a dated line naming SL 8266 (its minted id after
@@ -520,19 +522,16 @@ throwaway's superuser. The owner role is `gipricing`.
   (`01-data-management.md:106`, with its 2026-10-26 amendment) and FD-1951 whole. Record in the
   `LG-` the base's `pg_roles` / `pg_auth_members` read-back of the provisioned throwaway (FD-1951's
   two queries), which shows neither route.
-- [ ] **S1c-1. (a) `P_OWN` sees CREATEROLE and ADMIN OPTION.** Reds first, each planted after a clean
+- [ ] **S1c-1. (a) `P_OWN` sees CREATEROLE.** Reds first, each planted after a clean
   provision and `alembic upgrade head`, each a startup that **does not refuse** at the base:
-  (a1) `ALTER ROLE gip_app CREATEROLE`; (a2) `ALTER ROLE gip_app_login CREATEROLE`; (a3) the
-  PostgreSQL 16 admin-without-membership form `GRANT gipricing TO gip_app_login WITH ADMIN TRUE,
-  INHERIT FALSE, SET FALSE` (fails `pg_has_role(…, 'MEMBER')`, so passes `P_OWN`). The plain
-  `… WITH ADMIN OPTION` form is a **control**, not a red: INHERIT and SET default to true, so the
-  base already refuses it; record it refused at base and head. Then widen `P_OWN`: a reachable role
-  (`pg_has_role(current_user, r.oid, 'MEMBER')`) with `r.rolcreaterole`, **or** a
-  `pg_auth_members` row with `admin_option` whose `member` is the current user or a role it reaches
-  and whose `roleid` is, or reaches, a role `P_OWN` already refuses (an owner, a superuser, a
-  `BYPASSRLS` role). The refusal message names the route (`createrole`, `admin option on <role>`),
+  (a1) `ALTER ROLE gip_app CREATEROLE`; (a2) `ALTER ROLE gip_app_login CREATEROLE`. The two ADMIN
+  forms (the plain `… WITH ADMIN OPTION`, and `… WITH ADMIN TRUE, INHERIT FALSE, SET FALSE`) are
+  **controls**, not reds: on PostgreSQL 16 both count as `pg_has_role(…, 'MEMBER')`, so the base
+  already refuses them; record both refused at base and head (acceptance 21). Then widen `P_OWN`:
+  a reachable role (`pg_has_role(current_user, r.oid, 'MEMBER')`) with `r.rolcreaterole`. The
+  refusal message names the route (`createrole`),
   never a credential. Tests in `backend/tests/test_application_role.py`, `req` marker FR-44, each
-  reading the constant `P_OWN`, never a copy. Green: (a1)–(a3) refused, the provisioned state
+  reading the constant `P_OWN`, never a copy. Green: (a1) and (a2) refused, the provisioned state
   passes.
 - [ ] **S1c-2. (b) `app-login-role.sql` converges `gip_app` and the membership.** Reds first:
   (b1) pre-plant `CREATE ROLE gip_app NOLOGIN CREATEROLE` (and `CREATEDB`, `REPLICATION`) before
@@ -590,6 +589,16 @@ throwaway's superuser. The owner role is `gipricing`.
   Acceptance 21 is accepted: the plain `WITH ADMIN OPTION` grant is the control, refused at the base and at the
   head, and the red by cause is `WITH ADMIN TRUE, INHERIT FALSE, SET FALSE`. Added by the lead; the text above is
   unchanged.)*
+  *(Corrected 2026-10-26, on the maintainer's entry "2026-10-26 13:50:37 GMT" (Q2): the admin-only
+  form is NOT red. Measured on PostgreSQL 16.15, a throwaway `postgres:16-alpine` (the lead's probe,
+  reproduced by the maintainer): `GRANT owner_grp TO gip_app_login WITH ADMIN TRUE, INHERIT FALSE,
+  SET FALSE` gives `pg_auth_members` admin t / inherit f / set f and `pg_has_role('gip_app_login',
+  'owner_grp', 'MEMBER')` = t (USAGE f, SET f). The plain `WITH ADMIN OPTION` grant also gives
+  MEMBER = t. So the base `P_OWN` already refuses both. In this unmerged delta, acceptance 20 drops
+  (a3) as a red, acceptance 21 names both forms as controls, acceptance 22 drops `admin_option`, and
+  S1c-1 widens `P_OWN` by CREATEROLE only. FD-1951's HIGH-2 is refuted by the same probe (its
+  dated correction); its residual is CREATEROLE plus the five mediums. Edited in place by the lead,
+  disclosed here.)*
 - [ ] **S1c-5.** `PL-1769` Task 6 again (the compose run on a separate project and a fresh volume),
   because S1c edits `deploy/`, as S1b-3 did.
 - [ ] **S1c-6.** The full gate, both halves; after the last re-merge of main, the full backend
