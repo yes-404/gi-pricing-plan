@@ -2,7 +2,7 @@
 id: FD-1456
 family: finding
 title: A peril structure has no approval path and the compile resolver has no peril branch, so the day one is added an unapproved peril can be pinned
-status: active
+status: closed
 created: 2026-10-06            # original date 2026-09-30, set at the draft; minted 2026-10-06
 owner: auditor
 tree: 47d770e8fcbd2410fa101019ed8cf3aae69a1baa

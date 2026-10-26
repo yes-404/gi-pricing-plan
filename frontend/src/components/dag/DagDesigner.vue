@@ -17,20 +17,28 @@ import type {
   RatingAlgorithmDraft,
   RatingStep,
 } from "@/api/ratingAlgorithms";
+import type { SubGraphRef } from "@/api/subGraphs";
 
 import { edgesOf, layout } from "./graph";
 import DiffOverlay from "./DiffOverlay.vue";
 import GraphIssues from "./GraphIssues.vue";
+import MountInspector from "./MountInspector.vue";
+import MountNode from "./MountNode.vue";
 import NodeNavigator from "./NodeNavigator.vue";
 import StepInspector from "./StepInspector.vue";
 import StepNode from "./StepNode.vue";
 import { useGraphValidation } from "./useGraphValidation";
 
-const props = defineProps<{
-  draft: RatingAlgorithmDraft;
-  versionMode: ModelReferenceMode;
-  rateTablePins: string[];
-}>();
+const props = withDefaults(
+  defineProps<{
+    draft: RatingAlgorithmDraft;
+    versionMode: ModelReferenceMode;
+    rateTablePins: string[];
+    /** The Rating Version's `pins.sub_graphs`: the only versions a mount may name (RL-1835 (iii) 1). */
+    subGraphPins?: string[];
+  }>(),
+  { subGraphPins: () => [] },
+);
 
 const emit = defineEmits<{ "update:draft": [draft: RatingAlgorithmDraft] }>();
 
@@ -65,26 +73,52 @@ const diffMarks = computed(() => {
   for (const id of (diff.value.added_steps ?? [])) marks.set(id, "added");
   for (const c of (diff.value.changed_steps ?? [])) marks.set(c.step_id, "changed");
   for (const r of (diff.value.repointed_tables ?? [])) marks.set(r.step_id, "changed");
+  for (const m of (diff.value.sub_graph_mounts ?? [])) {
+    marks.set(m.mount_point, m.before == null ? "added" : "changed");
+  }
   return marks;
 });
 
 const steps = computed(() => props.draft.steps);
+const mounts = computed(() => props.draft.sub_graphs ?? []);
 const current = computed(() => steps.value.find((s) => s.step_id === selected.value));
+const currentMount = computed(() => mounts.value.find((m) => m.mount_point === selected.value));
 const nodes = computed(() => {
-  const at = layout(steps.value);
-  return steps.value.map((step) => ({
-    id: step.step_id,
-    type: "step",
-    position: at[step.step_id] ?? { x: 0, y: 0 },
-    data: {
-      step,
-      issues: byStep.value.get(step.step_id) ?? [],
-      diffMark: diffMarks.value.get(step.step_id) ?? null,
-    },
-    draggable: false,
-  }));
+  const at = layout(steps.value, mounts.value);
+  const place = (id: string): { x: number; y: number } => at[id] ?? { x: 0, y: 0 };
+  return [
+    ...steps.value.map((step) => ({
+      id: step.step_id,
+      type: "step",
+      position: place(step.step_id),
+      data: {
+        step,
+        issues: byStep.value.get(step.step_id) ?? [],
+        diffMark: diffMarks.value.get(step.step_id) ?? null,
+      },
+      draggable: false,
+    })),
+    ...mounts.value.map((mount) => ({
+      id: mount.mount_point,
+      type: "mount",
+      position: place(mount.mount_point),
+      data: {
+        mount,
+        issues: byStep.value.get(mount.mount_point) ?? [],
+        diffMark: diffMarks.value.get(mount.mount_point) ?? null,
+        // Shown, not enforced: the pin is the Rating Version's act (RL-1835 (ii) 3).
+        pinned: props.subGraphPins.includes(mount.ref),
+      },
+      draggable: false,
+    })),
+  ];
 });
-const edges = computed(() => edgesOf(steps.value));
+const edges = computed(() =>
+  edgesOf(steps.value, mounts.value).map(({ conditional, ...edge }) => ({
+    ...edge,
+    ...(conditional ? { style: { strokeDasharray: "6 4" } } : {}),
+  })),
+);
 
 const { fitView } = useVueFlow();
 
@@ -107,9 +141,34 @@ function replace(step: RatingStep): void {
   }
 }
 
+function emitMounts(next: SubGraphRef[]): void {
+  emit("update:draft", { ...props.draft, sub_graphs: next });
+}
+
 function remove(id: string): void {
-  emitSteps(steps.value.filter((s) => s.step_id !== id));
+  if (mounts.value.some((m) => m.mount_point === id)) {
+    emitMounts(mounts.value.filter((m) => m.mount_point !== id));
+  } else {
+    emitSteps(steps.value.filter((s) => s.step_id !== id));
+  }
   if (selected.value === id) selected.value = null;
+}
+
+function replaceMount(mount: SubGraphRef): void {
+  const id = selected.value;
+  emitMounts(mounts.value.map((m) => (m.mount_point === id ? mount : m)));
+  selected.value = mount.mount_point;
+}
+
+function addMount(): void {
+  const pin = props.subGraphPins[0];
+  if (pin === undefined) return;
+  const taken = new Set([...steps.value.map((s) => s.step_id), ...mounts.value.map((m) => m.mount_point)]);
+  let n = 1;
+  while (taken.has(`m_new_${n}`)) n += 1;
+  const id = `m_new_${n}`;
+  emitMounts([...mounts.value, { ref: pin, mount_point: id, inputs: {}, outputs: {} }]);
+  selected.value = id;
 }
 
 // A new step starts with its text fields empty (the required-field gaps then block a save).
@@ -174,6 +233,9 @@ function replaceContract(contract: RatingAlgorithmDraft["input_contract"]): void
           <template #node-step="nodeProps">
             <StepNode :data="nodeProps.data" />
           </template>
+          <template #node-mount="nodeProps">
+            <MountNode :data="nodeProps.data" />
+          </template>
         </VueFlow>
       </div>
       <p
@@ -210,6 +272,7 @@ function replaceContract(contract: RatingAlgorithmDraft["input_contract"]): void
     <div class="space-y-4">
       <NodeNavigator
         :steps="steps"
+        :mounts="mounts"
         :selected="selected"
         :issue-counts="issueCounts"
         @select="select"
@@ -248,8 +311,30 @@ function replaceContract(contract: RatingAlgorithmDraft["input_contract"]): void
           Add step
         </button>
       </div>
+      <div class="flex items-center gap-2">
+        <button
+          type="button"
+          class="rounded-md border border-slate-300 bg-white px-3 py-1 text-sm disabled:opacity-50"
+          :disabled="subGraphPins.length === 0"
+          @click="addMount"
+        >
+          Add sub-graph mount
+        </button>
+        <p
+          v-if="subGraphPins.length === 0"
+          class="text-sm text-slate-700"
+        >
+          This Rating Version pins no sub-graph
+        </p>
+      </div>
+      <MountInspector
+        v-if="currentMount"
+        :mount="currentMount"
+        :sub-graph-pins="subGraphPins"
+        @update:mount="replaceMount"
+      />
       <StepInspector
-        v-if="current"
+        v-else-if="current"
         :step="current"
         :is-new="added.has(current.step_id)"
         :input-contract="draft.input_contract"
@@ -262,7 +347,7 @@ function replaceContract(contract: RatingAlgorithmDraft["input_contract"]): void
         v-else
         class="text-sm text-slate-500"
       >
-        Select a step to edit it.
+        Select a step or mount to edit it.
       </p>
     </div>
   </div>

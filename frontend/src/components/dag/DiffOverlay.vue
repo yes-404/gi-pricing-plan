@@ -23,6 +23,7 @@ const hasChanges = computed(
       (result.value.removed_steps ?? []).length > 0 ||
       (result.value.changed_steps ?? []).length > 0 ||
       (result.value.repointed_tables ?? []).length > 0 ||
+      (result.value.sub_graph_mounts ?? []).length > 0 ||
       result.value.input_contract_changed ||
       result.value.outputs_changed),
 );
@@ -134,6 +135,19 @@ async function compare(): Promise<void> {
             :key="`${r.step_id}-${r.field}`"
           >
             {{ r.step_id }}: {{ r.before }} → {{ r.after }}
+          </li>
+        </ul>
+      </template>
+      <template v-if="(result.sub_graph_mounts ?? []).length > 0">
+        <h4 class="font-medium">
+          Sub-graph mounts
+        </h4>
+        <ul class="list-disc pl-5">
+          <li
+            v-for="m in result.sub_graph_mounts ?? []"
+            :key="m.mount_point"
+          >
+            {{ m.mount_point }}: {{ m.before ?? "none" }} → {{ m.after ?? "none" }}
           </li>
         </ul>
       </template>

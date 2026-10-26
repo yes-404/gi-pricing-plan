@@ -182,3 +182,5 @@ implementing slice G and checking this skill against the repository before relyi
 2026-08-30 — filed for RFC-895 adoption slice E
 (`docs/plans/INDEX.md#2026-08-30-nt-0012-0013-0014-adoptionmd` §2), against RL-907
 (`docs/rulings/INDEX.md#2026-08-30-nt-0014-q1-q3-q4-rulingsmd`).
+
+2026-10-25 (tree `ff976406`) — No writer since 2026-10-05 (runtime-state.json last written 2026-10-05 13:09:09Z; position last written 2026-09-29); Phase 3 decides whether it returns. — the maintainer, to-lead 2026-10-25 11:47:10 GMT (T1), wording 11:56:17 GMT.
