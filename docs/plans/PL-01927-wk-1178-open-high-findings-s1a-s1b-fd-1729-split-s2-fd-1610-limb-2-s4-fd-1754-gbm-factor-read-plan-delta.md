@@ -268,6 +268,34 @@ defect, reported to the lead.
     and the `LG-` says the limb is discharged by the probe's node ids. A loud error (not a price) is
     recorded and routed by the lead, not fixed here.
 
+**S1c** (FD-1951; row 5's dated line, 2026-10-26)
+
+20. **Reds by cause, in S1c's `LG-`** (`head=` first, `rc=` last), each on S1c's base (`eaddb4d9` or
+    later main) in a throwaway `postgres:16-alpine` with the role planted, before the fix: (a1)
+    `ALTER ROLE gip_app CREATEROLE` and (a2) `ALTER ROLE gip_app_login CREATEROLE` — startup does not
+    refuse; (a3) `GRANT gipricing TO gip_app_login WITH ADMIN TRUE, INHERIT FALSE, SET FALSE` —
+    startup does not refuse; (b1) a pre-planted `gip_app` with `CREATEROLE` keeps it after the base
+    `app-login-role.sql`; (b2) a pre-planted membership `WITH INHERIT FALSE, SET TRUE` keeps its
+    options after the base SQL; and one red per medium DP-S1c-1 takes in. Each turns green at the
+    head: startup refuses (a1)–(a3) naming the route, and `app-login-role.sql` resets (b1) and (b2).
+21. **Control, not a red:** `GRANT gipricing TO gip_app_login WITH ADMIN OPTION` (PostgreSQL 16
+    defaults: INHERIT and SET true) is refused at the base already, through `pg_has_role(…,
+    'MEMBER')`; the `LG-` records it refused at base and head.
+22. `git grep -n "rolcreaterole\|admin_option" -- backend/src/app/db/immutability.py` prints a hit
+    for each, inside `P_OWN` or a constant defined beside it and imported by the tests;
+    `git grep -n "WITH INHERIT TRUE, SET FALSE\|NOCREATEROLE" -- deploy/postgres/app-login-role.sql`
+    prints the membership line and an `ALTER ROLE gip_app` line.
+23. `FR-44` (`01-data-management.md:106`) carries a dated line naming SL 8266 (its minted id after
+    the mint) and the two routes; `uv run python scripts/req-coverage.py` exits 0.
+24. The full gate, both halves, rc table all 0 (or under seat brief item 31's 1(f) form only), at
+    the slice head; **the gate-cover rule for a role-changing slice:** after the last re-merge of
+    main, the full backend suite runs on the login role at the re-merged head before the PR, its
+    summary line and rc in the `LG-` (a patch-id cover is not enough; S1a's #1398 precedent).
+25. DP-S1c-1 carries a dated ruling, and every medium has its place: a step with its red here
+    (item 20), or a "carried by FD-1951 to <owner>" line in FD-1951's close.
+26. S1c's squash merge on `main` is dated on or before 2026-10-31 (`git log -1 --format=%cI <squash
+    sha>`).
+
 ## Global Constraints
 
 - **FR-239: no stored bundle reprices by omission.** (d) changes no price and no `content_hash`
@@ -339,6 +367,27 @@ S1a's flip; red form = owner-DSN run"** — the three cause-reds run with `GIP_T
 set to the owner DSN in the throwaway (red) and the default (green). **S1b's ledger is LG 8248**
 (reserved in `eta.md`, 22:46:21 UTC); its SL working id is reserved at S1b's GO (O6). The plan
 body is untouched.)*
+
+*(Delta, row 5 (S1c), dated 2026-10-26 from 13:08 GMT, by the planner (seat plan-fd1951), on the
+maintainer's entry "2026-10-26 11:38:32 GMT — Maintainer: postgres-pro review STOP — RULED (b): S1b
+proceeds on its ruled refusal set; the two HIGH concerns (CREATEROLE, ADMIN OPTION) and the five
+same-class mediums become ONE new FD, HIGH, owner WK-1178, fix-before-close, a red-first follow-up
+slice under PL-1927 before the P2 code freeze; the whole review goes into LG 8248 as a dated section"
+in `~/gi-pricing-plan.local/channel/to-lead.md`, condition (i) ("a follow-up slice under PL-1927 (a
+dated PL delta row, **SL reserved at that row**) that widens `P_OWN` to read `rolcreaterole` and
+`admin_option`, converges `gip_app` (`NOCREATEROLE`, and `WITH INHERIT TRUE, SET FALSE` on the
+membership), amends FR-44 by a dated line, and proves each refusal red-first on a planted role —
+**deadline Fri 31 Oct**"), owed after that day's PRs by the entries "2026-10-26 12:41:12 GMT" and
+"2026-10-26 13:03:18 GMT": **a new row 5, S1c — FD-1951: the CREATEROLE and ADMIN OPTION routes
+(red-first).** Its slice is **SL 8266** (reserved in `~/gi-pricing-plan.local/handover/eta.md`,
+13:05:37 UTC); its ledger: **LG reserved at S1c's GO**. Work **WK-1178**; **deadline Fri 31 Oct
+2026** (inside the P2 code-complete ETA, before the Wed 4 Nov freeze). The row, in the table's
+columns: Order 5; Scope (what the `LG-` quotes) Tasks S1c-0 to S1c-6 below; Requirements `01` §3:
+FR-44; Depends on S1b merged (#1399, `eaddb4d9`), DP-S1c-1 ruled, a granted throwaway DB window in a
+no-gate gap, a gate slot for the full gate; Lane A (backend db, `deploy/`); DB **yes** (throwaway
+`postgres:16-alpine` only for the planted roles); Size 1 day, 1½ if DP-S1c-1 takes every medium in.
+The SL row mints at S1c's turn, in S1c's own PR, under WK-1178 in `docs/roadmap.md` §6. Rows 1 to 4,
+their dated lines and the plan body are unchanged.)*
 
 **Order and serialisation against today's queue (E7).**
 - **S4** edits `modelling/factors.py` and two test files. Slice A (#1368) does not touch `factors.py`, but it
@@ -458,6 +507,91 @@ Each step below is `PL-1769`'s, executed as written there at S1a's base; this de
   only as the GO-time act the maintainer names); then Task 6 again because this edits `deploy/`.
 - [ ] **S1b-4.** Task 7 (`FR-44`'s dated line naming both slices, the postgres-pro review, the full
   gate); the `LG-`.
+
+### S1c — FD-1951: the CREATEROLE and ADMIN OPTION routes (red-first)
+
+*(Added by row 5's dated line, 2026-10-26.)* Every red is seen red **by its cause** on a **planted**
+role in a throwaway `postgres:16-alpine` (`127.0.0.1` only, `rm -fv` after, the window's two zeros,
+seat brief item 23), its line in S1c's `LG-` before the fix; the planted statement runs as the
+throwaway's superuser. The owner role is `gipricing`.
+
+- [ ] **S1c-0.** Re-read at S1c's base (S1b merged, `eaddb4d9` or later main): `P_OWN`
+  (`backend/src/app/db/immutability.py:42-57`), `deploy/postgres/app-login-role.sql:1-19`, FR-44
+  (`01-data-management.md:106`, with its 2026-10-26 amendment) and FD-1951 whole. Record in the
+  `LG-` the base's `pg_roles` / `pg_auth_members` read-back of the provisioned throwaway (FD-1951's
+  two queries), which shows neither route.
+- [ ] **S1c-1. (a) `P_OWN` sees CREATEROLE and ADMIN OPTION.** Reds first, each planted after a clean
+  provision and `alembic upgrade head`, each a startup that **does not refuse** at the base:
+  (a1) `ALTER ROLE gip_app CREATEROLE`; (a2) `ALTER ROLE gip_app_login CREATEROLE`; (a3) the
+  PostgreSQL 16 admin-without-membership form `GRANT gipricing TO gip_app_login WITH ADMIN TRUE,
+  INHERIT FALSE, SET FALSE` (fails `pg_has_role(…, 'MEMBER')`, so passes `P_OWN`). The plain
+  `… WITH ADMIN OPTION` form is a **control**, not a red: INHERIT and SET default to true, so the
+  base already refuses it; record it refused at base and head. Then widen `P_OWN`: a reachable role
+  (`pg_has_role(current_user, r.oid, 'MEMBER')`) with `r.rolcreaterole`, **or** a
+  `pg_auth_members` row with `admin_option` whose `member` is the current user or a role it reaches
+  and whose `roleid` is, or reaches, a role `P_OWN` already refuses (an owner, a superuser, a
+  `BYPASSRLS` role). The refusal message names the route (`createrole`, `admin option on <role>`),
+  never a credential. Tests in `backend/tests/test_application_role.py`, `req` marker FR-44, each
+  reading the constant `P_OWN`, never a copy. Green: (a1)–(a3) refused, the provisioned state
+  passes.
+- [ ] **S1c-2. (b) `app-login-role.sql` converges `gip_app` and the membership.** Reds first:
+  (b1) pre-plant `CREATE ROLE gip_app NOLOGIN CREATEROLE` (and `CREATEDB`, `REPLICATION`) before
+  the SQL runs: the base SQL leaves them; (b2) pre-plant `GRANT gip_app TO gip_app_login WITH
+  INHERIT FALSE, SET TRUE`: the base SQL's plain `GRANT` leaves those options. Then add, after the
+  create block: `ALTER ROLE gip_app NOLOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION
+  NOBYPASSRLS;` and replace the membership with `GRANT gip_app TO gip_app_login WITH INHERIT TRUE,
+  SET FALSE;` (the login role never needs `SET ROLE gip_app`; with SET false it cannot assume an
+  attribute of `gip_app` that membership does not pass on). Read back `rolcreaterole`, `rolcreatedb`,
+  `rolreplication` for both roles and `inherit_option`, `set_option`, `admin_option` from
+  `pg_auth_members`, before and after, in the `LG-`. Test in
+  `backend/tests/test_provision_app_role.py`, `req` FR-44. The SQL stays idempotent: a second run
+  is a no-op, shown by the same read-back.
+- [ ] **S1c-3. (c) FR-44's dated line.** Append to FR-44 (`01-data-management.md:106`) a line
+  *(Amended <date>, WK-1178 SL 8266, on FD-1951.)* naming the two routes: startup also refuses a
+  reachable role with CREATEROLE and an ADMIN OPTION on an owner-reachable role; the provisioner
+  converges `gip_app` and states the membership `WITH INHERIT TRUE, SET FALSE` — plus one clause per
+  medium DP-S1c-1 takes in. The spec commit lands before or with the code commit
+  (`spec-change`); `req-coverage.py` rc 0.
+- [ ] **S1c-4. (d) The five same-class mediums — DP-S1c-1 (open).** The decision is the
+  maintainer's; each is either a step here, with its red on a planted role, or "carried by FD-1951
+  to <owner>". The planner's recommendation, one line why each:
+  1. **Predefined roles** (`pg_write_all_data`, `pg_execute_server_program`,
+     `pg_write_server_files`, `pg_read_server_files`) — **in S1c**: one more disjunct in the same
+     predicate and the same test file; red `GRANT pg_write_all_data TO gip_app_login`, not refused
+     at base. It bypasses the grant map outright, the FD-1729 class exactly.
+  2. **`pg_parameter_acl` / `session_replication_role`** — **in S1c**: a startup refusal when
+     `has_parameter_privilege(current_user, 'session_replication_role', 'SET')` is true for the
+     connection role; red `GRANT SET ON PARAMETER session_replication_role TO gip_app_login`. It
+     switches the origin-only triggers off without ownership, the route FR-44's trigger layer
+     depends on not existing.
+  3. **Trigger-function and schema ownership** — **in S1c**: `P_OWN`'s ownership disjunct also
+     reads `pg_proc.proowner` for the pinned guard functions and `pg_namespace.nspowner` for
+     `public`; reds `ALTER FUNCTION <one pinned guard>() OWNER TO gip_app` and `ALTER SCHEMA public
+     OWNER TO gip_app`. Same query, same test; the md5 pin only catches a replaced body at the next
+     start.
+  4. **Membership and role-setting reset** — **split**: the settings reset (`ALTER ROLE gip_app_login
+     RESET ALL`, `VALID UNTIL 'infinity'`, `CONNECTION LIMIT -1`, the same for `gip_app`) **in S1c**,
+     one line each in the file S1c-2 already edits, red a planted `ALTER ROLE gip_app_login SET
+     search_path = shadow, public`; the strip of other memberships **carried by FD-1951 to WK-1178**, because
+     revoking memberships the deployer granted can break an operator's setup and the startup refusal
+     already catches every owner-reachable one.
+  5. **The PUBLIC revoke** — **in S1c**, test only: the exact grant-map test also asserts that
+     `PUBLIC` holds no privilege on any `public` table (read from `pg_class.relacl` via
+     `aclexplode`, grantee 0), red `GRANT UPDATE ON jobs TO PUBLIC` in a rolled-back transaction;
+     no migration, because nothing grants PUBLIC anything today (fails closed).
+  If the ruling carries any item, FD-1951's close line names it with its owner and a new `FD-`
+  holds it; FD-1951 does not close with a limb in no record.
+- [ ] **S1c-5.** `PL-1769` Task 6 again (the compose run on a separate project and a fresh volume),
+  because S1c edits `deploy/`, as S1b-3 did.
+- [ ] **S1c-6.** The full gate, both halves; after the last re-merge of main, the full backend
+  suite on the login role at the re-merged head before the PR (a role-changing slice: a patch-id
+  cover is not enough); `req-coverage.py`; the `LG-` with every red and green line.
+
+**Write set (S1c).** `backend/src/app/db/immutability.py` (and `session.py` only if the refusal's
+message is built there), `deploy/postgres/app-login-role.sql`, `backend/tests/test_application_role.py`,
+`backend/tests/test_provision_app_role.py`, `docs/specs/01-data-management.md` (FR-44's line),
+S1c's `LG-` and SL row, FD-1951's close in place and its register row. No migration unless
+DP-S1c-1 rules otherwise.
 
 ## Hand-off (not this plan's writes)
 
