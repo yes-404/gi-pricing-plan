@@ -34,7 +34,7 @@ Scope from the plan and the GO first, then the evidence. Merge-base `git merge-b
 | F3 | N | The gate's rc table is not "all 0" in the literal sense; it stands only under the maintainer's 1(f). | Below, "Gate of record". |
 | F4 | N | The count "120 bound" in LG-1947 is a different predicate from the label count. `owner-subject` rows = 108 of 143; 120 is the LG's "take `owner_database`" count (ast predicate, "same as N3 (RS-1946)"). Not reproduced by me with a different predicate; stated so the count names its predicate. | `python3 -I` ast over `OWNER_FIXTURE_USERS`: `143 {3} 143 108` (rows, arity set, distinct ids, `owner-subject` rows). |
 | F5 | N | The `::text` fix (`9bb24a68`) has no red commit of its own; it was found by R3's green failing and is covered by the T3 control (`await assert_least_privilege(connection)  # control: untouched head passes`, test_application_role.py:189). Recorded in LG-1947 as the "real draft bug the red-first found". Acceptable. | LG-1947 build log 09:36 entry; `git merge-base --is-ancestor 5fca0019 70a85145` rc 0. |
-| F6 | N | Gate-time audit-docs shows 5 FAILED lines (check 31 ×2, check 32 ×3 incl. `PL-8227` at LG :111); the last was the reason for 4a55dd22. 4a55dd22 rewords :111 to the space form; I did not re-run audit-docs (read-only brief). | `audit_docs.log` tail. The remaining ones are S1b's own working ids and clear at the mint. |
+| F6 | N | Gate-time audit-docs shows 5 FAILED lines (check 31 ×2, check 32 ×3 incl. `[…]` at LG :111); the last was the reason for 4a55dd22. 4a55dd22 rewords :111 to the space form; I did not re-run audit-docs (read-only brief). | `audit_docs.log` tail. The remaining ones are S1b's own working ids and clear at the mint. |
 
 ## Checks of the brief, one by one
 
@@ -91,3 +91,5 @@ Scope: F1 only (PL-1927:224–225 acceptance 10), on `draft/s1b-fd1729` at `c21c
 **Quote-parity 82853038..c21cc8be:** confirmed by content, not by the lead's rc. The `git diff` of the LG between the two commits touches only the two HIGH lines and adds the two marker lines; the two quoted HIGH lines at c21cc8be equal the review's text (empty diff above).
 
 **Proposed verdict on F1: CLEAN** — clause (a) met, (b) met, (c) N with the gate standing under 1(f), as the lead has already ruled. Residual for the lead: the LG Gate/Audit sections are still "pending" (F2, owed before the mint). I ran no tests, no gate, no audit-docs.
+
+2026-10-26 (mint) — one token at :37 is elided inside the quoted audit-docs output: the working id of PL 8227 in hyphen form, which check 32 cannot resolve (no INDEX row for a working id); the elision is marked `[…]`; every byte outside it equals the source (the F6 row as filed at `b383213e`); ruled in the maintainer's (by delegation) entry "2026-10-26 05:04:47 GMT" (`to-lead.md`), the standing rule for quoting hyphen-form working ids.
