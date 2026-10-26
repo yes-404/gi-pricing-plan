@@ -37,7 +37,7 @@ import sys
 from pathlib import Path
 
 import pytest
-from backend.tests.conftest_db import test_owner_database_url
+from backend.tests.conftest_db import owner_subject_settings
 from fastapi.testclient import TestClient
 from pydantic import SecretStr
 from sqlalchemy import text
@@ -63,10 +63,9 @@ _DEFINITION = "def " + "_declared("  # not a literal: this file would otherwise 
 
 def _owner_settings() -> Settings:
     """Settings whose database is the OWNER's and whose other stores are unreachable."""
-    return Settings(
+    return owner_subject_settings(
         version="test",
         dev_auth_enabled=True,
-        database_url=SecretStr(test_owner_database_url()),
         blob_endpoint_url=_UNREACHABLE,
         redis_url=SecretStr("redis://127.0.0.1:1/0"),
     )
@@ -96,7 +95,7 @@ def test_the_worker_refuses_to_start_as_the_owner() -> None:
     module runs `load_settings()` and `asyncio.run(...)` at import). Same ordering invariant."""
     env = {
         **os.environ,
-        "GIP_DATABASE_URL": test_owner_database_url(),
+        "GIP_DATABASE_URL": _owner_settings().database_url.get_secret_value(),
         "GIP_BLOB_ENDPOINT_URL": _UNREACHABLE,
         "GIP_REDIS_URL": "redis://127.0.0.1:1/0",
         "PYTHONPATH": os.pathsep.join(
@@ -404,7 +403,7 @@ async def test_every_table_grants_the_application_exactly_its_declared_privilege
     [
         (f"GRANT DELETE ON jobs TO {_APP_ROLE}", "jobs"),
         (f"REVOKE UPDATE (status) ON outbox FROM {_APP_ROLE}", "outbox"),
-        (f"GRANT UPDATE (name) ON sources TO {_APP_ROLE}", "sources"),
+        (f"GRANT UPDATE (kind) ON sources TO {_APP_ROLE}", "sources"),
     ],
     ids=["extra_table_grant", "missing_column_grant", "extra_column_grant"],
 )
@@ -470,7 +469,7 @@ def test_p_own_is_defined_once() -> None:
 
 @pytest.mark.req("FR-44")
 def test_declared_lives_in_the_application() -> None:
-    """S2. `def _declared(` is defined only in `app/db/immutability.py` under `backend/`."""
+    """S2. the `_declared` function is defined only in `app/db/immutability.py` under `backend/`."""
     defining = [
         path.relative_to(_REPO_ROOT).as_posix()
         for path in (_REPO_ROOT / "backend").rglob("*.py")

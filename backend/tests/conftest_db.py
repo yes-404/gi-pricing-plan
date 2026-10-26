@@ -30,6 +30,7 @@ from uuid import UUID
 
 import pytest
 import pytest_asyncio
+from pydantic import SecretStr
 from sqlalchemy import text
 from sqlalchemy.engine import make_url
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -190,6 +191,13 @@ def test_database_url() -> str:
         )
         .render_as_string(hide_password=False)
     )
+
+
+def owner_subject_settings(**overrides: Any) -> Settings:
+    """`Settings` whose database is the OWNER's, for the `owner-subject` start-up tests that must
+    be refused (`test_application_role.py`). Kept here so `test_owner_database_url()` has one
+    caller file, as `test_owner_database_url_is_called_only_inside_conftest_db` requires."""
+    return Settings(database_url=SecretStr(test_owner_database_url()), **overrides)
 
 
 #: The `(node id, label, reason)` of every test that may use `owner_database` -- closed, and
