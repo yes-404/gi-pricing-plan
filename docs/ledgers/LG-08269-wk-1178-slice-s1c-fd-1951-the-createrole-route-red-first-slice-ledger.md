@@ -309,3 +309,29 @@ rc=0
 **FD-1951's close text** is drafted in `~/gi-pricing-plan.local/scratch/draft-s1c-fd1951/handoff.md`, not applied (it cites the PR and squash, which exist at the mint).
 
 - 2026-10-26 15:03 GMT (lead): the seat exec-s1c reported FD-1951's close text as "drafted into `~/gi-pricing-plan.local/scratch/draft-s1c-fd1951/handoff.md`". That file was **claimed written, NOT found** at tree 0e91d5d9 (draft/s1c-fd1951 @3aa3c315): `find ~/gi-pricing-plan.local/scratch -name handoff.md` printed nothing, and the worktree porcelain was 0. A refuted claim is evidence about the seat's other claims: each red/control/green line above is to be read against its own log and quoted output, not the seat's summary. FD-1951's close text is written by the lead in S1c's mint brief (to-lead "2026-10-26 15:02:26 GMT").
+
+## 2026-10-26 17:56 GMT — Window 2 (written by the lead at the user's pause, to-lead "2026-10-26 16:57:37 GMT"; seat exec-s1cw2 stopped at the 17:55 line)
+
+- **W2HEAD** `a76da676a74db971d1cf46a2c04e5728534b8de8` (tree `86a981a64dd2`), a clean `--no-ff` re-merge of origin/main `a9ffc22c` (docs-only, 1 file).
+- **The full backend suite on the login role at W2HEAD**, on the throwaway s1cw2-pg/redis/minio (127.0.0.1:32825/32826/32827; provision + `alembic upgrade head` as the owner rc 0). The log is `~/gi-pricing-plan.local/scratch/s1cw2/full.log`, with `head=a76da676…` first and `rc=1` last: **"2 failed, 2987 passed, 13 skipped, 5 xfailed, 136 warnings in 1731.88s (0:28:51)"**, 0 errors, skipped 13 (≤ 21).
+  - The 2 failures are both in `backend/tests/test_approval_guard_static.py`: `test_no_sql_string_sets_session_replication_role` and `test_a_planted_replication_role_statement_is_refused_and_a_docstring_is_not`.
+  - They flag S1c's own read-only `CAN_SET_REPLICATION_ROLE` (immutability.py:119) and the LeastPrivilegeError message (:184). The guard was wider than its docstring.
+  - The fix is the guard narrowed per **option A** (to-lead "2026-10-26 17:08:11 GMT", after the 16:34:14 regex was found to match the English "set"). It sits on `draft/s1c-guardfix` @`9aa5a7f7` (the reds commit: "4 failed, 20 passed" rc=1). The fix is not yet written; its lines are in `~/gi-pricing-plan.local/scratch/s1cguard/lg-lines.md`.
+- **S1c-5, the compose project** (`-p s1cw2`, a separate project + fresh volumes, never the shared `gi-pricing` project).
+  - `deploy/docker-compose.yml` pins the shared stack's host ports (5432/6379/9000/9001/8080), so the run used an UNCOMMITTED port override (deploy/ untouched). Verbatim, `scratch/s1cw2/override.yml`:
+
+    services:
+      postgres:
+        ports: !override ["127.0.0.1::5432"]
+      redis:
+        ports: !override ["127.0.0.1::6379"]
+      minio:
+        ports: !override ["127.0.0.1::9000", "127.0.0.1::9001"]
+      api:
+        ports: !override ["127.0.0.1::8000"]
+
+  - initdb with the mounted S1c SQL gave the AFTER state at once. `pg_roles`: gip_app and gip_app_login each have rolcreaterole f, rolcreatedb f, rolreplication f, rolvaliduntil infinity and rolconnlimit -1. Membership is inherit t / set f / admin f. `pg_db_role_setting`: 0 rows. Provision ×2 gave rc 0/0, with identical read-backs (`scratch/s1cw2/c-rb0.txt`–`c-rb2.txt`).
+  - The WF-699 journey, attempt 1, died at **A3 `JOB_TIMEOUT`**: the compose project runs NO beat/relay service, so outbox rows stayed `pending` (`rate_table.diff_cells` queued). This is a compose-file gap, not a permission fault. Logs: `scratch/s1cw2/attempt1/`.
+  - Attempt 2 (an unbriefed one-off `s1cw2-beat-1` container) was STOPPED at the pause and recorded no result.
+- **Teardown (the lead, 17:56 GMT):** every `com.docker.compose.project=s1cw2` container (10, incl. s1cw2-beat-1) `rm -fv`. Volumes `s1cw2_miniodata` and `s1cw2_pgdata` and the project network were removed. `docker ps -a` shows 0 s1cw2 containers; dangling volumes 17 → 17. The four `gi-pricing-*` containers were untouched (Up 5 h / 14 h, healthy).
+- head=a76da676 (this commit's parent); remaining: (1) the guard fix per A on draft/s1c-guardfix → green → merge in → the full login-role suite at the merged head; (2) S1c-5's journey needs a beat/relay service in the second compose project (a resume decision: add one to the run, or record the end-state checks as S1c-5's evidence); (3) gate-1 SOLO after FD-1585's END → audit (RS; FD 8267 by the auditor) → mint → PR, merge by Fri 30 Oct.
