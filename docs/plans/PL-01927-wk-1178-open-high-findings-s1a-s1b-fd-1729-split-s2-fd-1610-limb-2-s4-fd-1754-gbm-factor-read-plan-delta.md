@@ -581,6 +581,15 @@ throwaway's superuser. The owner role is `gipricing`.
      no migration, because nothing grants PUBLIC anything today (fails closed).
   If the ruling carries any item, FD-1951's close line names it with its owner and a new `FD-`
   holds it; FD-1951 does not close with a limb in no record.
+  *(Ruled 2026-10-26, on the maintainer's entry "2026-10-26 13:12:34 GMT — DP-S1c-1 RULED" in
+  `~/gi-pricing-plan.local/channel/to-lead.md`: the recommendation above is adopted on all five. Items 1, 2, 3
+  and 5 are IN, each with its red. Item 4 is SPLIT, with two binding lines: the `RESET ALL` line carries a
+  comment that it discards an operator's role settings, and S1c's `LG-` quotes `pg_db_role_setting` for both
+  roles before and after, on the throwaway. The membership strip is CARRIED by FD-1951 to WK-1178. Its `FD-`
+  (MEDIUM, owner WK-1178) is minted in S1c's own PR, so FD-1951 closes in that PR with the limb in a record.
+  Acceptance 21 is accepted: the plain `WITH ADMIN OPTION` grant is the control, refused at the base and at the
+  head, and the red by cause is `WITH ADMIN TRUE, INHERIT FALSE, SET FALSE`. Added by the lead; the text above is
+  unchanged.)*
 - [ ] **S1c-5.** `PL-1769` Task 6 again (the compose run on a separate project and a fresh volume),
   because S1c edits `deploy/`, as S1b-3 did.
 - [ ] **S1c-6.** The full gate, both halves; after the last re-merge of main, the full backend
