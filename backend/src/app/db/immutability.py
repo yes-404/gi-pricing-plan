@@ -8,7 +8,7 @@ the process serves or consumes anything, on the connection it will run on:
    not a role that bypasses row security -- directly or through any membership, `INHERIT FALSE`
    included. An owner can `DISABLE TRIGGER`; a superuser can `SET session_replication_role`.
 2. **The triggers.** Every trigger the ORM declaration says a table carries (`_declared`, DP-8)
-   exists, is enabled for every session (`tgenabled = 'O'`), and runs a function whose body
+   exists, is enabled for every session (`tgenabled IN ('O', 'A')`), and runs a function whose body
    hashes to the pinned value. A trigger that was disabled, set to replica-only, dropped or
    given a `RETURN NEW` body is reported by table and trigger name.
 
@@ -78,6 +78,10 @@ PINNED_GUARD_FUNCTION_MD5: dict[str, str] = {
     "reference_table_versions_publish_only": "",
 }
 
+#: `pg_trigger.tgenabled`: `O` (origin, the default) and `A` (`ENABLE ALWAYS`) both fire in a normal
+#: session; `D` (disabled) and `R` (replica only) do not (PL-1769 Step 4.2).
+_ENABLED_FOR_EVERY_SESSION = frozenset({"O", "A"})
+
 _TRIGGERS = text("""
     SELECT c.relname AS tbl, t.tgname AS trigger, t.tgenabled AS enabled,
            p.proname AS function, md5(p.prosrc) AS body_md5
@@ -138,7 +142,7 @@ async def assert_least_privilege(connection: AsyncConnection) -> None:
         row = found.get((table, name))
         if row is None:
             raise LeastPrivilegeError(f"trigger {name} on {table} is missing (dropped?)")
-        if row.enabled != "O":
+        if row.enabled not in _ENABLED_FOR_EVERY_SESSION:
             raise LeastPrivilegeError(
                 f"trigger {name} on {table} is not enabled for every session "
                 f"(tgenabled={row.enabled!r})"
