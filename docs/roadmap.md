@@ -2997,6 +2997,26 @@ FD-1729's first part: the application connects as the `gip_app_login` role, a me
 
 (Minted 2026-10-26 from working id 8246, on the maintainer's (by delegation) entry "2026-10-26 02:07:55 GMT" (`to-lead.md`) (S1a mints as a new `SL-` row; SL-1771 is retired) and the mint map of "2026-10-26 02:26:20 GMT"; ledger LG-1941, audit RS-1946; executed on branch `draft/s1a-fd1729`.)
 
+#### SL-1948 — WK-1178 fix slice (S1b) — FD-1729 part 2: the startup refusal, the tamper proof and the exact grant map (PL-1927's S1b)
+
+```yaml
+id: SL-1948
+family: slice
+title: WK-1178 fix slice (S1b) — FD-1729 part 2: the startup refusal, the tamper proof and the exact grant map (PL-1927's S1b)
+status: active                    # draft → active → closed | retired (§1.2a)
+created: 2026-10-26
+owner: lead
+tree: 54e0fca083628964aa1227c0ada467d3d7b3a379
+phase: P2
+work: WK-1178
+corrected_by: []
+relates: [FD-1729, FD-1951, LG-1947, RS-1949, OQ-1950, PL-1927, PL-1769, SL-1942, SL-1771]
+```
+
+FD-1729's second part: the application refuses to start on a role holding more than the exact grant map, with the trigger-tamper proof and the exact grant map, with the red tests and their red table in the slice ledger. Slice S1b of PL-1927; the CREATEROLE and ADMIN OPTION routes it leaves open are FD-1951.
+
+(Minted 2026-10-26 from working id 8258, on the maintainer's (by delegation) entry "2026-10-26 11:29:13 GMT" (`to-lead.md`) (the S1b gate stands and the mint path is opened); ledger LG-1947, audit RS-1949, open question OQ-1950, residual finding FD-1951; executed on branch `draft/s1b-fd1729`.)
+
 #### SL-1773 — WK-1178 fix slice — FD 8097: a scalar one-row GLM predict for model_call, bit-identical to the polars path
 
 ```yaml
@@ -3795,6 +3815,7 @@ you never block on a decision you have not reached.
 | **Before WK-1250's Work close** — *added 2026-10-22* | **OQ-1591** *(raised 2026-10-10, owner WK-1250, stated "ruled before WK-1250's Work close": whether a batch run returns an engine trace on request (FR-258, FR-259's RL-890 clarification) or `trace` is always absent from the batch output; WK-1250 is active in P2, so the gate is live; back-filled 2026-10-22)* | 1 (1 open) |
 | **Before the first slice that wires FR-420 garbage collection** — *added 2026-10-25* | **OQ-1943** *raised open 2026-10-25 (working id 8252; owner WK-1178): which role runs FR-420 blob garbage collection, the login role with a new `DELETE` on `blobs` or an owner/maintenance DSN job (recommendation (b)). Placed at the slice that wires a GC caller, not a phase gate: the sweep has no caller in `backend/src` and nothing blocks on it* | 1 (1 open) |
 | **Before the first slice that wires an admin API for role grants and break-glass** — *added 2026-10-26* | **OQ-1944** *raised open 2026-10-26 (working id 8255; owner WK-1178): which role performs role grants and break-glass once an admin API wires `grant_role` and `grant_break_glass`, the login role with INSERT/UPDATE on `role_assignments`, a separate admin/owner DSN, or a SECURITY DEFINER function (recommendation (c)). Placed at the slice that wires an admin API, not a phase gate: neither function has a runtime caller today and nothing blocks on it* | 1 (1 open) |
+| **Before S1b's PR is decided** — *added 2026-10-26* | **OQ-1950** *raised open 2026-10-26 (working id 8260; owner WK-1178): whether a database behind the tenant-marker revision is refused with FR-436's upgrade hint or with O5's missing-trigger message (recommendation (i), a revision check first). Placed after S1b's PR, not a phase gate: an interim test patch holds the test and nothing blocks on it* | 1 (1 open) |
 | ~~**Before the FD-1439 fix plan mints**~~ ✔ **all decided** (FD-1439; discharged by S7, SL-1391, WK-673, the maintainer's (by delegation) 22:28:33 BST entry) — *added 2026-10-05* | ~~**OQ-1440**~~ ✔ *(raised open 2026-10-05: what latency budget a rate-table cells-diff page carries below `07` §1.3 R1's 2 s, on the rows and the parquet path; owner WK-673) — decided 2026-10-05 by RL-1441: (b) plus (e), one `03` §9 route NFR, p95 ≤ 300 ms after the first request for a key, measured at stated sizes, and a page cost bounded by its `limit`, applied by SL-1391 (S7, WK-673) (the maintainer's (by delegation) entry "2026-10-05 20:58:27 BST — FD 9487 and OQ 9486 drafts: the severity path accepted; OQ 9486 DECIDED as (b)+(e)")* | 1 (0 open) — *recounted 2026-10-05 (RL-1441): decided. Before that:* 1 (1 open) |
 | **Before WK-673's declared-reference slice** — *added 2026-10-05* | ~~OQ-1496~~ ✔ *decided 2026-10-05 by `RL-1470` Ruled 9 (#1155): option (c), a model with a `control`-intent factor is scored only with each such factor held at a reference value a versioned artifact declares, and compile refuses it otherwise; a spec change to `02` FR-88 and `03` FR-240 comes first, then its own WK-673 slice, not a G2 blocker (owner WK-673); raised and decided 2026-10-05 from FD-1495* | 1 (0 open) |
 | ~~**Before the FD-1424 fix plan mints**~~ ✔ **all decided** (PL-1562; WK-1178) — *added 2026-10-05* | ~~**OQ-1560**~~ ✔ *(raised open 2026-10-05: which numeric pairs beyond `money_minor` a declared output admits) — decided 2026-10-05 by the maintainer (by delegation), the 17:42:06 BST entry: (A1) `int` → `money_minor` refused, through an explicit `money_minor` expression step; (B3) widening only; delivered by the FD-1424 fix* | 1 (0 open) — *recounted 2026-10-05 (OQ-1560 decided). Before that:* 1 (1 open) |
