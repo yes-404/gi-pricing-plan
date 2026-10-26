@@ -151,7 +151,7 @@ backend/tests/test_wf01_journey.py:150:async def _principal(database: Database, 
 
 | Count (blocks) | Table / symptom | Cause | Proposed fix |
 |---|---|---|---|
-| 460 (the bulk: workspaces 305, roles 101, role_assignments 35, workspace_members 19) | `workspaces`, `roles`, `role_assignments`, `workspace_members` | tests and test helpers outside the 8 call `workspaces.ensure_workspace` / `rbac.seed_builtin_roles` / insert role and member rows on the application connection (41 files match `git grep -l -E 'ensure_workspace|seed_builtin_roles' -- 'backend/tests/*.py'`; `test_model_jobs.py` alone fails 231 blocks through its helper) | route each through `grant_roles_as_owner` / `seed_as_owner` (same seam, no new grant) |
+| 460 (the bulk: workspaces 305, roles 101, role_assignments 35, workspace_members 19) | `workspaces`, `roles`, `role_assignments`, `workspace_members` | tests and test helpers outside the 8 call `workspaces.ensure_workspace` / `rbac.seed_builtin_roles` / insert role and member rows on the application connection (41 files match `git grep -l -E 'ensure_workspace\|seed_builtin_roles' -- 'backend/tests/*.py'`; `test_model_jobs.py` alone fails 231 blocks through its helper) | route each through `grant_roles_as_owner` / `seed_as_owner` (same seam, no new grant) |
 | 9 (environment_settings 4, workspace_settings 2, blob_uploads 1, service_accounts 1, custom_metrics 1) | `workspace_settings`, `environment_settings`, `service_accounts`, `blob_uploads`, `custom_metrics` | tests seed or tamper with rows on the application connection (`test_settings_environment`, `test_management_rate_limit`, `test_api_service_accounts`, `test_api_blob_uploads`, `test_custom_metrics_table`) | `seed_as_owner`, or list the test in `OWNER_FIXTURE_USERS` if it proves the owner/app boundary |
 | 15 (blobs 5, session_replication_role 4, scoring_traces 2, deployment_requests 2, audit_events 2) | `blobs`, `scoring_traces`, `deployment_requests`, `audit_events` ("must be owner of table audit_events"), `session_replication_role` | append-only-guard tests (`test_blobs`, `test_artifact_immutability`, `test_traces`, `test_deployments`, `test_audit`, `test_api_audit`) tamper as the application, which the login role may not | owner-subject tests: `owner_database` + `OWNER_FIXTURE_USERS` label `owner-subject` |
 | 2 | `test_application_dsns.py` | asserts the stock `@localhost:5432/` default and an unset migration DSN; the run exports `GIP_DATABASE_URL` and `GIP_MIGRATION_DATABASE_URL` | environment-dependent; clear those variables in the test (`monkeypatch.delenv`) |
@@ -196,3 +196,15 @@ Totals (script-checked against the appendix): tests 15+14+5+3+3+4+3+2+1+4 = 54 t
 ## PRs
 
 None yet.
+
+## Full-suite runs on the login role
+
+Date, head, the whole last summary line of the log, rc, log path. Dates are the log's last-write date (UTC); the logs are local and not in the repository.
+
+- Run 1: 2026-10-25, @df215d55, `665 failed, 2179 passed, 13 skipped, 128 warnings, 51 errors in 1513.90s (0:25:13)`, rc 1, `~/gi-pricing-plan.local/scratch/exec-s1aseam/full.log`.
+- Run 2: 2026-10-25, @0ba5acf6, `532 failed, 2323 passed, 13 skipped, 128 warnings, 18 errors in 1652.47s (0:27:32)`, rc 1, `~/gi-pricing-plan.local/scratch/exec-s1arun2/full.log`.
+- Run 3: 2026-10-26, @10fd875c, `19 failed, 2854 passed, 13 skipped, 136 warnings in 1569.34s (0:26:09)`, rc 1, `~/gi-pricing-plan.local/scratch/exec-s1arun3/full.log`.
+- Run 4: 2026-10-26, @22c2b7d3, `1 failed, 2742 passed, 13 skipped, 91 warnings, 130 errors in 1491.88s (0:24:51)`, rc 1, `~/gi-pricing-plan.local/scratch/exec-s1arun4/full.log`. Cause: 16 four-field `OWNER_FIXTURE_USERS` rows, fixed by 163146f2.
+- Run 5: 2026-10-26, @163146f2, `2873 passed, 13 skipped, 136 warnings in 1428.35s (0:23:48)`, rc 0, `~/gi-pricing-plan.local/scratch/exec-s1arun5/full.log`. Three throwaway databases.
+
+Condition (iii) (to-lead 23:04:28 / 23:05:26) MET — accepted by the maintainer, to-lead 2026-10-26 01:42:44 GMT.
