@@ -61,21 +61,21 @@ P_OWN = text("""
 #: declaration reaches that is absent here is refused as unpinned. The values are filled from a
 #: throwaway migrated to head in S1b's DB window (LG 8248): an empty value never matches.
 PINNED_GUARD_FUNCTION_MD5: dict[str, str] = {
-    "approval_guard": "",
-    "artifact_append_only": "",
-    "audit_events_append_only": "",
-    "blobs_content_immutable": "",
-    "custom_metrics_definition_immutable": "",
-    "custom_metrics_undeletable": "",
-    "custom_objectives_definition_immutable": "",
-    "custom_objectives_undeletable": "",
-    "dataset_versions_snapshot_guard": "",
-    "models_fit_immutable": "",
-    "models_fitted_undeletable": "",
-    "peril_structures_composition_immutable": "",
-    "peril_structures_reconciled_undeletable": "",
-    "rate_tables_pointer_only": "",
-    "reference_table_versions_publish_only": "",
+    "approval_guard": "c4d56bfa76f12bfecba41b61975f1b65",
+    "artifact_append_only": "c37e697febc245839b2672b90cf0b0ac",
+    "audit_events_append_only": "1db7015bf61710795ac45ff15476fa06",
+    "blobs_content_immutable": "73dbe02fec4b21b62649add0bea1e3d2",
+    "custom_metrics_definition_immutable": "c6d3635fb58481053b519eba13b9e12c",
+    "custom_metrics_undeletable": "2b0dd007c255ddcf2d0c4fea547d0140",
+    "custom_objectives_definition_immutable": "d1632812ed74bd6752c02179f3aca414",
+    "custom_objectives_undeletable": "ab2cbcacacd4f23e63344ac9e811176a",
+    "dataset_versions_snapshot_guard": "3f3dd1ac44588b1f4c2e9d88154cb476",
+    "models_fit_immutable": "1be27a4ea6ec706b7062b1dd1d1af3d5",
+    "models_fitted_undeletable": "52df4a4825e7971dfdee640a6d1712fc",
+    "peril_structures_composition_immutable": "53d6958a1db9583f458168c72da2e8f8",
+    "peril_structures_reconciled_undeletable": "1e1dfaf61c4cb9240da81c7015b2c842",
+    "rate_tables_pointer_only": "cd911971d3cf0d2e98a5e26397cb7843",
+    "reference_table_versions_publish_only": "be3b2a9ff80fcc600e098725b7ff23c9",
 }
 
 #: `pg_trigger.tgenabled`: `O` (origin, the default) and `A` (`ENABLE ALWAYS`) both fire in a normal
