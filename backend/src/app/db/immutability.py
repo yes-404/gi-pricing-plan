@@ -59,7 +59,7 @@ P_OWN = text("""
 #: `md5(prosrc)` of every trigger function the migrations create, read from the head database
 #: (never typed by hand; `test_the_pinned_guard_function_hashes_match_the_head`). A function the
 #: declaration reaches that is absent here is refused as unpinned. The values are filled from a
-#: throwaway migrated to head in S1b's DB window (LG 8248): an empty value never matches.
+#: throwaway migrated to head in S1b's DB window (LG-1947): an empty value never matches.
 PINNED_GUARD_FUNCTION_MD5: dict[str, str] = {
     "approval_guard": "c4d56bfa76f12bfecba41b61975f1b65",
     "artifact_append_only": "c37e697febc245839b2672b90cf0b0ac",

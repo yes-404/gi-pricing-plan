@@ -1,9 +1,9 @@
-"""S1b (FD-1729 part 2, PL 8227 row 4, LG 8248): the start-up refusal, the trigger-tamper proof
+"""S1b (FD-1729 part 2, PL 8227 row 4, LG-1947): the start-up refusal, the trigger-tamper proof
 and the exact grant map. Requirement: `01` FR-44.
 
 **DB-backed, in a throwaway Postgres only** (never the shared cluster, never `gipricing`), except
 the two DB-free structural tests. **DRAFT: written DB-free on S1a's seam head; no test here has
-been run.** The reds are measured at S1b's base after S1a's squash (LG 8248, O4).
+been run.** The reds are measured at S1b's base after S1a's squash (LG-1947, O4).
 
 **The three cause-reds (R-b1 = T6, R-b5 = T4, R-b6 = T5) and O1 (a).** After S1a's flip the
 `database` fixture connects as the login role, so the cause these tests were written against
@@ -429,7 +429,7 @@ async def test_the_grant_comparison_sees_a_drift_in_both_directions(
 async def test_the_pinned_guard_function_hashes_match_the_head(database: Database) -> None:
     """T8 / DP-14 (b). For every trigger on an append-only or guarded table, `md5(prosrc)` of its
     function equals the pin. The pins are measured from the migrated head, never typed. Its
-    broken-input proof (owed, LG 8248): one pin altered in a scratch edit, red."""
+    broken-input proof (owed, LG-1947): one pin altered in a scratch edit, red."""
     tables = list(_declared("append_only") + _declared("guarded"))
     assert len(tables) >= 35, tables  # the derivation going quiet would pass vacuously
     async with database.session() as session:

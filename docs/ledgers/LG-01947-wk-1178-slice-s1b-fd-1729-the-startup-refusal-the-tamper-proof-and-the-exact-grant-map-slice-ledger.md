@@ -1,12 +1,12 @@
 ---
-id: LG-8248
+id: LG-1947
 family: ledger
 title: WK-1178 slice S1b — FD-1729 part 2, the startup refusal, the trigger-tamper proof and the exact grant map (slice ledger)
 status: active                 # active → closed (§1.2a)
-created: 2026-10-25            # working id 8248, unminted
+created: 2026-10-26   # drafted 2026-10-25 under working id 8248
 owner: executor
 tree: 1e0a8abbc90723ae9c887a901f700b72f6f94cc1   # origin/main at S1b's branch cut (S1a's squash, #1398); the red list below was drafted against S1a's seam head df215d55 and is re-measured at this base
-slice: SL-8258                 # working id, unminted
+slice: SL-1948
 phase: P2
 work: WK-1178
 plans: [PL-1769, PL-1927]
@@ -14,7 +14,7 @@ corrected_by: []
 relates: [FD-1729, PL-1927, PL-1769, FR-44]
 ---
 
-# LG-8248 — WK-1178 slice S1b: FD-1729 part 2, the startup refusal, the tamper proof and the exact grant map
+# LG-1947 — WK-1178 slice S1b: FD-1729 part 2, the startup refusal, the tamper proof and the exact grant map
 
 Working id 8248 (LG), reserved 2026-10-25 22:46:21 UTC by lead 28 in `eta.md` ("**8248** LG = S1b (PL-1927 row 4) slice ledger, drafted by the S1b planner"). The slice has **no `SL-` working id yet**: the lead reserves it at S1b's GO, and `slice:` is filled then (the form LG 8242 uses). Drafted by the planner seat `plan-s1b` under the maintainer's entry "2026-10-25 22:45:03 GMT" item (3) (*"S1b plan prep (PL-1927 row 4: startup refusal, tamper proof, exact grant map) — a planner seat drafts the S1b LG and red-test list against S1a's seam head, no runs"*). **Nothing below was run.** Every "red at the seam head" line is read from the code at `df215d55`, not measured; the executor measures each one at S1b's base and writes its line here, `head=` first and `rc=` last.
 
@@ -107,8 +107,8 @@ pending — S1b GO not yet requested.
 - **2026-10-26 09:30 GMT — pre-gate full backend suite, login role, `a9994754`:** `1 failed, 2972 passed, 13 skipped, 5 xfailed, 136 warnings in 1997.46s (0:33:17)`, rc=1 (`full.log`). The one failure: `test_tenant_binding.py::test_a_database_not_migrated_to_this_revision_stops_startup` — the scratch database sits at the revision before the tenant marker; `assert_least_privilege` runs first (O5) and raises `trigger approval_guard on approval_requests is missing (dropped?)` instead of the `TenantMismatchError` the test expects. Class: the O5 ordering consequence (refuse-before-tenant-binding), not fixed here.
 - **2026-10-26 09:36 GMT — `exec-s1bcut` (executor): a draft bug the reds found (`9bb24a68`).** asyncpg returns `pg_trigger.tgenabled` (a `"char"`) as bytes, so the draft's `!= "O"` compared `b'O'` with `'O'` and refused every trigger; `_TRIGGERS` now selects `t.tgenabled::text`. Seen first as the R3 green failing `5 failed` at `70a85145` with `tgenabled=b'O'`.
 - **2026-10-26 09:36 GMT — the FR-436 residue, ruled (a) by to-lead "2026-10-26 09:33:12 GMT" (`f0c8e095`).** The pre-gate suite's one failure (`test_tenant_binding.py::test_a_database_not_migrated_to_this_revision_stops_startup`) is O5's ordering: `assert_least_privilege` refuses a database behind the tenant-marker revision with a missing-trigger message before `require_tenant_binding` can print FR-436's `alembic upgrade head` hint. The test now patches `Database.assert_least_privilege` to a no-op inside that one function (not autouse, not module-level), its docstring and a comment citing the entry; T3 in `test_application_role.py` proves the missing-trigger refusal.
-- **2026-10-26 09:36 GMT — OQ 8260 rows (working id).** One row each in `docs/open-questions.md`, `docs/specs/07-platform.md` §10 and a gate row in `docs/roadmap.md` (after the OQ-1944 row): options (i) a revision check first, (ii) keep O5 and name the upgrade hint, (iii) accept and add a runbook line; recommendation (i) unless O5's record binds the revision read, else (ii); owner WK-1178. `PL 8227` cites in this file re-pointed to PL-1927 (`mint-repoint.py`, this file only; the other files the run touched were restored by `git checkout --`; one `draft/pl-8227` branch name stays as written).
-- **2026-10-26 10:10 GMT — pre-gate full backend suite, login role, fresh throwaway `s1b-{pg,redis,minio}-428853bf`, head `428853bf8c9e1d2db5950ef9008cc907afdc12fb`:** `2973 passed, 13 skipped, 5 xfailed, 136 warnings in 1990.56s (0:33:10)`, rc=0 (`full2.log`): 0 failed, 0 errors, skipped 13 (≤ 21). `audit-docs --light` at that head: only check 31 (gap 1946→8248; `created` order) and check 32 (`SL-8258` unresolved), all on this ledger's working ids; no hyphen-form token for PL 8227. `quote-parity.py 68cac0a2 HEAD`: 10 changed lines, 0 violations, rc=0. Containers removed (`docker rm -fv`), `docker ps -a --filter name=s1b-` 0, dangling volumes 16 → 16.
+- **2026-10-26 09:36 GMT — OQ-1950 rows (working id).** One row each in `docs/open-questions.md`, `docs/specs/07-platform.md` §10 and a gate row in `docs/roadmap.md` (after the OQ-1944 row): options (i) a revision check first, (ii) keep O5 and name the upgrade hint, (iii) accept and add a runbook line; recommendation (i) unless O5's record binds the revision read, else (ii); owner WK-1178. `PL 8227` cites in this file re-pointed to PL-1927 (`mint-repoint.py`, this file only; the other files the run touched were restored by `git checkout --`; one `draft/pl-8227` branch name stays as written).
+- **2026-10-26 10:10 GMT — pre-gate full backend suite, login role, fresh throwaway `s1b-{pg,redis,minio}-428853bf`, head `428853bf8c9e1d2db5950ef9008cc907afdc12fb`:** `2973 passed, 13 skipped, 5 xfailed, 136 warnings in 1990.56s (0:33:10)`, rc=0 (`full2.log`): 0 failed, 0 errors, skipped 13 (≤ 21). `audit-docs --light` at that head: only check 31 (gap 1946→8248; `created` order) and check 32 (`SL-1948` unresolved), all on this ledger's working ids; no hyphen-form token for PL 8227. `quote-parity.py 68cac0a2 HEAD`: 10 changed lines, 0 violations, rc=0. Containers removed (`docker rm -fv`), `docker ps -a --filter name=s1b-` 0, dangling volumes 16 → 16.
 
 ## PRs
 
@@ -116,7 +116,7 @@ None yet.
 
 ## 2026-10-26 11:41 GMT — PL-1769 Step 7.2: postgres-pro review of the grant map and the provisioning (evidence; to-lead 11:38:32 (ii))
 
-Authority: the maintainer's entry "2026-10-26 11:38:32 GMT" (`to-lead.md`), ruled (b), conditions (i), (ii), (v). The review below is the postgres-pro specialist's whole output, static, at `4a55dd22e59363ff8874d14008e9af78dcbd853f` (source `~/gi-pricing-plan.local/scratch/s1b-gate/pgpro-review-2026-10-26.md`), quoted verbatim with each line prefixed `> ` (so its headings stay out of this ledger's outline) and with " → FD 8265" appended to each of the two HIGH lines. No padded or hyphen-form working id appears in it, so none was rewritten.
+Authority: the maintainer's entry "2026-10-26 11:38:32 GMT" (`to-lead.md`), ruled (b), conditions (i), (ii), (v). The review below is the postgres-pro specialist's whole output, static, at `4a55dd22e59363ff8874d14008e9af78dcbd853f` (source `~/gi-pricing-plan.local/scratch/s1b-gate/pgpro-review-2026-10-26.md`), quoted verbatim with each line prefixed `> ` (so its headings stay out of this ledger's outline) and with " → FD-1951" appended to each of the two HIGH lines. No padded or hyphen-form working id appears in it, so none was rewritten.
 
 > # postgres-pro review: PL-1769 Step 7.2, slice S1b of FD-1729 (evidence only)
 >
@@ -153,11 +153,11 @@ Authority: the maintainer's entry "2026-10-26 11:38:32 GMT" (`to-lead.md`), rule
 > - OK: `tgenabled IN ('O','A')` (:83,145), a presence check on every expected trigger including `_no_truncate` (:113-127,141-144), and a pinned function-body md5 (:150). session.py:235-239 runs the check on the engine's own connection.
 > - CONCERN (severity high): The check does not look at CREATEROLE. On PostgreSQL 16 a CREATEROLE role can alter the password of any non-superuser role it administers, and can grant itself membership in roles it has ADMIN on. That is a route to the owner role `gipricing`. immutability.py:42-57 never reads `rolcreaterole`.
 
-→ FD 8265 (the lead's marker for the HIGH line above, outside the quote so that the mint re-points it; to-lead 11:38:32 (ii)).
+→ FD-1951 (the lead's marker for the HIGH line above, outside the quote so that the mint re-points it; to-lead 11:38:32 (ii)).
 
 > - CONCERN (severity high): The check ignores ADMIN OPTION. A role with admin on the owner group but no membership passes the MEMBER test and can still run `GRANT owner TO self`. `pg_auth_members.admin_option` is never read.
 
-→ FD 8265 (the lead's marker for the HIGH line above, outside the quote so that the mint re-points it; to-lead 11:38:32 (ii)).
+→ FD-1951 (the lead's marker for the HIGH line above, outside the quote so that the mint re-points it; to-lead 11:38:32 (ii)).
 
 > - CONCERN (severity medium): Predefined roles are not checked. Membership in `pg_write_all_data` bypasses the grant map entirely. `pg_execute_server_program`, `pg_write_server_files` and `pg_read_server_files` are further escape routes. P_OWN returns no row for any of them.
 > - CONCERN (severity medium): PostgreSQL 15 and later allow `GRANT SET ON PARAMETER session_replication_role` to a non-superuser. That bypasses origin-only triggers without ownership or superuser. `pg_parameter_acl` is never read and nothing tests it.
@@ -201,3 +201,15 @@ SELECT roleid::regrole, member::regrole, admin_option FROM pg_auth_members WHERE
 Neither route is present: `rolcreaterole` f and `rolsuper` f for both roles; `admin_option` f. Container proof after `docker rm -fv s1b-pgv-54e0fca0`: `docker ps -a --filter name=s1b-pgv` lists no container (header only); dangling volumes (`docker volume ls -qf dangling=true | wc -l`) 16 before, 16 after.
 
 **Step 7.1 census.** `git grep -n 'gip_app_login\|GIP_DATABASE_URL' docs/specs/07-platform.md` → no output (rc=1) → 07 names no DSN; no 07 line.
+
+## 2026-10-26 11:49 GMT — the GO, Gate and Audit records, filled at the mint (the sections above read "pending" and are not edited)
+
+**GO.** The maintainer's entry "2026-10-26 10:13:45 GMT" (`to-lead.md`): "GO CONFIRMED" for S1b at `draft/s1b-fd1729` `54e0fca083628964aa1227c0ada467d3d7b3a379`, gate-1 SOLO, gate script `s1b-gate.sh` `c1e4b6a11c27f94c` accepted.
+
+**Gate.** The maintainer's entry "2026-10-26 11:29:13 GMT" (`to-lead.md`): the S1b gate at `54e0fca0` (tree `bb2bd00c`, gate-1 SOLO) STANDS under 1(f). END `2026-10-26T11:28:03+00:00`, `rc=1`, `| END rc parts | python max=1 fe max=0 demo=0 restore rc_kc=0 role rc_role=0 skip rc_skip=0 |`. The rc files at `~/gi-pricing-plan.local/scratch/s1b-gate/gate/`: audit_docs=1, contracts=0, import_linter=0, mypy=0, pytest=1, req_coverage=0, ruff=0. The whole pytest summary line: `13 failed, 6982 passed, 21 skipped, 5 xfailed, 146 warnings in 3115.31s (0:51:55)`. The 13 FAILED node ids are identical, by `diff` of the sorted lines, to S1a's gate FAILED list: the 1(f) docs-tooling set, no other failure. `| pytest skipped | 21 (<= 21) |`; demo rc 0; keycloak restore rc 0. The conditions before the ACK are the mint (this commit), audit-docs rc 0 and those tests re-run on the minted head, which the S1b PR records.
+
+**Audit.** RS-1949: NOT-CLEAN on F1 at 4a55dd22, CLEAN after the F1 addendum at c21cc8be (lead adopted).
+
+**OWNER_FIXTURE_USERS predicate (RS-1949 F4, adopted).** `OWNER_FIXTURE_USERS` in `backend/tests/conftest_db.py` has 143 rows, of which 108 carry the label `owner-subject` (the auditor's `ast` walk over the tuple's rows). The "120" of the Build log entry of 2026-10-26 09:30 GMT (line 106 above: "120 take `owner_database`, 23 do not") counts a different predicate: the rows whose test takes the `owner_database` fixture (its own `ast` predicate, "same as N3 (RS-1946)"). The two counts are not comparable and neither replaces the other.
+
+**MERGE-ACK.** Pending, for the lead.

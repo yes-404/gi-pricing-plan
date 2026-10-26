@@ -1,21 +1,21 @@
 ---
-id: FD-8265
+id: FD-1951
 family: finding
 title: The startup least-privilege check misses CREATEROLE and ADMIN OPTION, two routes to the owner
 status: active
-created: 2026-10-26   # filed 2026-10-26 under working id 8265
+created: 2026-10-26   # drafted 2026-10-26 under working id 8265
 owner: auditor
 tree: 372bfe64197db2377c24f788f44381d258cdc38f
 corrected_by: []
 relates: [WK-1178, FD-1729, PL-1927, PL-1769]
 ---
 
-# FD-8265 — The startup least-privilege check misses CREATEROLE and ADMIN OPTION, two routes to the owner
+# FD-1951 — The startup least-privilege check misses CREATEROLE and ADMIN OPTION, two routes to the owner
 
 ## Finding
 
 **HIGH; owner WK-1178; fix before close, by Fri 31 Oct 2026.** Authority: the maintainer's entry "2026-10-26 11:38:32 GMT —
-Maintainer: postgres-pro review STOP — RULED (b)" (`to-lead.md`), condition (i): "FD 8265 reserved, HIGH, owner WK-1178, fix
+Maintainer: postgres-pro review STOP — RULED (b)" (`to-lead.md`), condition (i): "FD-1951 reserved, HIGH, owner WK-1178, fix
 before close". Filed under working id 8265.
 
 `Database.assert_least_privilege` (S1b of FD-1729, branch `draft/s1b-fd1729` at `372bfe64`) refuses to start a process whose
@@ -28,7 +28,7 @@ deployment would print "least privilege holds" while the application role could 
 
 ### The two HIGH routes
 
-The source is the postgres-pro review of Step 7.2 of PL-1769, static, at `4a55dd22`, quoted whole in LG 8248's dated section
+The source is the postgres-pro review of Step 7.2 of PL-1769, static, at `4a55dd22`, quoted whole in LG-1947's dated section
 "PL-1769 Step 7.2: postgres-pro review of the grant map and the provisioning".
 
 - **CREATEROLE** (`backend/src/app/db/immutability.py:42-57`, `P_OWN` never reads `rolcreaterole`). On PostgreSQL 16 a role with
@@ -113,7 +113,7 @@ by a dated line.
 
 ## Provenance
 
-Found by the postgres-pro review at S1b's Step 7.2, whole in LG 8248's dated section; the STOP and its ruling are the
+Found by the postgres-pro review at S1b's Step 7.2, whole in LG-1947's dated section; the STOP and its ruling are the
 maintainer's entry "2026-10-26 11:38:32 GMT" (`to-lead.md`), with the lead's confirmation by reading `P_OWN`.
 
 ## Disposition
