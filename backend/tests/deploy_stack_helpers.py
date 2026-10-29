@@ -296,7 +296,7 @@ def beat_fixture(built_n: str) -> Iterator[None]:
     _compose(built_n, "up", "-d", "--wait", "scheduler")
     rows = [
         json.loads(line)
-        for line in _compose(built_n, "ps", "-a", "--format", "json").stdout.splitlines()
+        for line in _compose(built_n, "ps", "-a", "--no-trunc", "--format", "json").stdout.splitlines()
         if line.strip()
     ]
     assert one_beat_problems(rows) == [], rows
