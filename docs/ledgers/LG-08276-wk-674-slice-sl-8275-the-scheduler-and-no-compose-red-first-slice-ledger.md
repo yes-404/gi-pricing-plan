@@ -130,3 +130,18 @@ E-line (`backend/tests/conftest_db.py:143`): `RuntimeError: GIP_TEST_DATABASE_UR
 Control (lead's order, 2026-10-29): `backend/tests/test_demo_command.py` alone, via run-small, on a clean detached throwaway worktree at `06caa8b99cf50725e7d69c654ad6fb836776cef7` (no test edits; run-small refuses node ids, so the whole file ran): `27 passed, 2 warnings, 2 errors in 2.10s`, rc=1, the same two ERROR node ids, the same `RuntimeError`, database name `gipricing_sl-8275-base_a3cf631f` (the red run's: `gipricing_sl-8275_cae0e2f1`). So the errors are the lane, not the change.
 
 Checks: `ruff check` on the two files rc 0. `ruff format --check`: `test_demo_command.py` clean; `test_deploy_stack.py` reports one hunk at line 71, in code the slice did not touch (`origin/main`'s copy gives rc 1 too with ruff 0.17.1); the slice's own hunks are clean.
+
+## Build log — Phase 1 (2026-10-29, exec-beatgreen)
+
+- Base: draft/sl-8275 `75938ac8` re-merged with origin/main `1e17ec63` (merge `90ef474d`, docs-only, no conflicts).
+- Taken from SL-1689 (read-only, `git show`): `c80009ad` `scheduler` block of `deploy/docker-compose.yml`
+  only; `1cc2fe80` the runtime test `test_the_scheduler_service_is_what_moves_a_job_out_of_the_outbox`;
+  `32257078` `one_beat_problems`, the rewired `beat_fixture` and its 5 one-beat tests. No `frontend` hunk.
+- `scripts/demo.py`: `--no-compose` and `check_infrastructure_up` (the four-service check; `check_compose_up`
+  would also demand `lb`/`api`, which the flag's R2.a green forbids). `deploy/README.md` and
+  dev-commands SKILL.md gain their lines.
+- Shape greens via run-small at `e7d6e69f`: `63 passed, 2 errors`, rc=1; the 2 errors are the existing DB-fixture
+  tests `test_the_seed_record_pre_flight_*` (no per-worktree DB; Phase 1 is DB-free), not slice tests.
+- Format-only commit: `ruff format backend/tests/test_deploy_stack.py` alone; script `ast.dump` sha256, before
+  = after = `f8528fa3ac4e566dbcd714d39445791cae175506976d4c421daf9bb9813e8a50` (3 lines changed).
+- `ruff check .` rc=0; `mypy` rc=0 (Success, 251 files).
