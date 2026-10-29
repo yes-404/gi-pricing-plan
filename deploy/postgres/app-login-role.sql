@@ -15,7 +15,7 @@ $do$;
 -- CREATEROLE, CREATEDB or REPLICATION is reset here on every run.
 ALTER ROLE gip_app_login LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION
   NOBYPASSRLS INHERIT;
--- Converge gip_app too (FD-1951, SL 8266): a pre-existing gip_app keeps no attribute the
+-- Converge gip_app too (FD-1951, SL-1962): a pre-existing gip_app keeps no attribute the
 -- login role could inherit.
 ALTER ROLE gip_app NOLOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS;
 -- RESET ALL DISCARDS EVERY ROLE-LEVEL SETTING AN OPERATOR HAS SET ON THESE TWO ROLES

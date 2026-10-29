@@ -158,7 +158,7 @@ async def test_an_inherit_false_membership_of_the_owner_is_refused(
 # Every route to the owner is refused at startup. Each case plants ONE route as the owner, in a
 # rolled-back transaction, and acts as the login role: `assert_least_privilege` must raise,
 # naming the route. A control before the plant proves the same call passes on the provisioned
-# state, so the raise is the plant's (SL 8266).
+# state, so the raise is the plant's (SL-1962).
 
 #: `{case id: ([statements the owner plants], the route the refusal names)}`.
 _ROUTES: dict[str, tuple[list[str], str]] = {

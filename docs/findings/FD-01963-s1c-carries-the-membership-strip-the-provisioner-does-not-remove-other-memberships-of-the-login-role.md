@@ -1,16 +1,16 @@
 ---
-id: FD-8267
+id: FD-1963
 family: finding
 title: S1c carries the membership strip — the provisioner does not remove other memberships of the login role
 status: active
-created: 2026-10-29
+created: 2026-10-29               # drafted 2026-10-29 under working id 8267
 owner: WK-1178
 tree: e239733c1477c5ab0e8d4c897638767cb4c3e0b9   # origin/draft/s1c-fd1951 as read by the auditor, 2026-10-29
 corrected_by: []
-relates: [FD-1951, SL-8266, LG-8269, PL-1927]
+relates: [FD-1951, SL-1962, LG-1964, PL-1927]
 ---
 
-# FD-8267 — S1c carries the membership strip: the provisioner does not remove other memberships of the login role
+# FD-1963 — S1c carries the membership strip: the provisioner does not remove other memberships of the login role
 
 ## Finding
 
@@ -49,7 +49,7 @@ A follow-up under WK-1178 that decides, with a ruling, whether the provisioner r
 
 ## Provenance
 
-FD-1951 (S1b Step 7.2 postgres-pro review, fifth medium); the rulings above; S1c = SL 8266, ledger LG 8269, branch
+FD-1951 (S1b Step 7.2 postgres-pro review, fifth medium); the rulings above; S1c = SL-1962, ledger LG-1964, branch
 `draft/s1c-fd1951` read at `e239733c`.
 
 ## Disposition

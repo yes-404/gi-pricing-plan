@@ -1,12 +1,12 @@
 ---
-id: LG-8269
+id: LG-1964
 family: ledger
 title: WK-1178 slice S1c — FD-1951, the CREATEROLE route and the five same-class mediums, red first (slice ledger)
 status: active                 # active → closed (§1.2a)
-created: 2026-10-26
+created: 2026-10-29               # drafted 2026-10-26 under working id 8269
 owner: executor
 tree: 7ed5c398333aa24432bd9917bd204f7b540fb39c   # origin/main at S1c's branch cut (#1401)
-slice: SL-8266
+slice: SL-1962
 phase: P2
 work: WK-1178
 plans: [PL-1769, PL-1927]
@@ -14,10 +14,10 @@ corrected_by: []
 relates: [FD-1951, PL-1927, FR-44]
 ---
 
-# LG-8269 — WK-1178 slice S1c: FD-1951, the CREATEROLE route and the five same-class mediums, red first
+# LG-1964 — WK-1178 slice S1c: FD-1951, the CREATEROLE route and the five same-class mediums, red first
 
-Working ids (space form in prose): **SL 8266** (this slice), **LG 8269** (this ledger), **FD 8267**
-(the carried membership strip, "FD 8267 (carried membership strip)"; its essay and register row are the
+Working ids (space form in prose): **SL-1962** (this slice), **LG-1964** (this ledger), **FD-1963**
+(the carried membership strip, "FD-1963 (carried membership strip)"; its essay and register row are the
 S1c auditor's, inside S1c's PR, MEDIUM, owner WK-1178: the lead's amendment Q3). Executor seat `exec-s1c`.
 Nothing is minted here.
 
@@ -334,7 +334,7 @@ rc=0
   - The WF-699 journey, attempt 1, died at **A3 `JOB_TIMEOUT`**: the compose project runs NO beat/relay service, so outbox rows stayed `pending` (`rate_table.diff_cells` queued). This is a compose-file gap, not a permission fault. Logs: `scratch/s1cw2/attempt1/`.
   - Attempt 2 (an unbriefed one-off `s1cw2-beat-1` container) was STOPPED at the pause and recorded no result.
 - **Teardown (the lead, 17:56 GMT):** every `com.docker.compose.project=s1cw2` container (10, incl. s1cw2-beat-1) `rm -fv`. Volumes `s1cw2_miniodata` and `s1cw2_pgdata` and the project network were removed. `docker ps -a` shows 0 s1cw2 containers; dangling volumes 17 → 17. The four `gi-pricing-*` containers were untouched (Up 5 h / 14 h, healthy).
-- head=a76da676 (this commit's parent); remaining: (1) the guard fix per A on draft/s1c-guardfix → green → merge in → the full login-role suite at the merged head; (2) S1c-5's journey needs a beat/relay service in the second compose project (a resume decision: add one to the run, or record the end-state checks as S1c-5's evidence); (3) gate-1 SOLO after FD-1585's END → audit (RS; FD 8267 by the auditor) → mint → PR, merge by Fri 30 Oct.
+- head=a76da676 (this commit's parent); remaining: (1) the guard fix per A on draft/s1c-guardfix → green → merge in → the full login-role suite at the merged head; (2) S1c-5's journey needs a beat/relay service in the second compose project (a resume decision: add one to the run, or record the end-state checks as S1c-5's evidence); (3) gate-1 SOLO after FD-1585's END → audit (RS; FD-1963 by the auditor) → mint → PR, merge by Fri 30 Oct.
 
 ## 2026-10-29 11:08 GMT — W2 resume (2026-10-29): the guard fix per RULING A (exec-s1cguard2, grant "2026-10-29 10:17:01 GMT")
 
@@ -345,7 +345,7 @@ rc=0
 - **Merge** into `draft/s1c-fd1951`: `--no-ff` of `origin/draft/s1c-guardfix`, no conflict; S1c head `09568e41054c16941ea5d7721a7d10d3bb1f9166` (tree `c938a66142e15f2fedfb17f65d2b60ea210a9a48`), pushed.
 - **The full backend suite on the login role at `09568e41`**, fresh throwaways `s1cg2-pg` (postgres:16-alpine, initdb with `deploy/postgres/app-login-role.sql`), `s1cg2-redis`, `s1cg2-minio` on `127.0.0.1` random ports; login role provisioned, `alembic upgrade head` as the owner (rc 0, head `b7e4c2a91d36`). Started at load1 3.04 to 3.61, 25 GB available. `uv run --directory <s1c wt> pytest -q backend -p no:cacheprovider` via `run-heavy.sh`, log `~/gi-pricing-plan.local/scratch/s1cguard2/full.log` (`head=09568e41…` first, `rc=0` last): **`2996 passed, 13 skipped, 5 xfailed, 136 warnings in 2557.96s (0:42:37)`**; 0 failed, 0 errors, skipped 13 (≤ 21).
 - **Cleanup:** the three throwaways `docker rm -fv`; `docker ps -a` shows 0 `s1cg2-*`; dangling volumes 17 → 17; the four `gi-pricing-*` containers untouched (Up, healthy). No shared resource was written (the run used its own redis and postgres).
-- head=09568e41; remaining: S1c-5's journey with beat/relay (exec-s1c5), gate-1 SOLO after FD-1585's END, audit (FD 8267), mint, PR.
+- head=09568e41; remaining: S1c-5's journey with beat/relay (exec-s1c5), gate-1 SOLO after FD-1585's END, audit (FD-1963), mint, PR.
 
 ## S1c-5 (2026-10-29): the compose run with a scheduler service
 
@@ -403,8 +403,8 @@ services:
 - **A3's outbox counts** (`select status, count(*) from outbox group by 1 order by 1`, against `s1c5-postgres-1`): before the journey `(0 rows)`; during (sampled each 5 s, `outbox-samples.txt`) `published|16` at 11:30:56, `pending|1 published|25` at 11:31:17, `published|36` by 11:31:58; **after: `published | 37`, no `pending` row.** The scheduler's beat drove the relay; with no scheduler (stage 1 of S1c-5, 2026-10-26) the same rows stayed `pending`.
 - **Teardown (by label `com.docker.compose.project=s1c5`):** 10 containers `rm -fv` (scheduler, worker-default, -compute, -scoring, -io, api, migrate, postgres, minio, redis); volumes `s1c5_pgdata`, `s1c5_miniodata` and network `s1c5_default` removed. Before: `docker ps -a` 17 lines, dangling volumes 17; after: 7 lines, dangling 17, 0 `s1c5` containers/volumes/networks. No prune of any form.
 - **The four `gi-pricing-*` containers:** before the run, StartedAt `2026-10-29T10:12:19Z` for all four. After: minio and redis unchanged (10:12:19Z); **keycloak and postgres read `2026-10-29T11:52:44Z`** (Up ~5 min, healthy), after the run's own teardown. No s1c5 command touched them (every command was by the `s1c5` label/project); the lead's attribution (2026-10-29): the restart at 11:52:44Z came from the FD-1585 gate's demo stage, which started at 11:52:42 (`fd1585-gate/gate.log:55`); `scripts/demo.py` brings up the shared compose stack, a known process-backlog item.
-- **Doc checks** (run after GATE END, 2026-10-29 12:14:44, gate slots free, `run-heavy --light` under the gate-2 flock, tree = `60902ab4` plus this commit's two LG edits; the first attempt on `4c5662eb` was refused rc=76 while gate-1b was held): `doc-index.py --check` rc 0 (`docs/INDEX.md: OK (byte-stable)`); `audit-docs.py` rc 1, `FAILED (2)`, both S1c's own working-id lints: `check 31: gap in the full allocation between 1955 and 8269` and `check 32: …LG-08269-…md:9: SL-8266 does not resolve in docs/INDEX.md`.
-- head=<this commit's parent 4c5662eb>; remaining: gate-1 SOLO after FD-1585's END, audit (FD 8267), mint, PR.
+- **Doc checks** (run after GATE END, 2026-10-29 12:14:44, gate slots free, `run-heavy --light` under the gate-2 flock, tree = `60902ab4` plus this commit's two LG edits; the first attempt on `4c5662eb` was refused rc=76 while gate-1b was held): `doc-index.py --check` rc 0 (`docs/INDEX.md: OK (byte-stable)`); `audit-docs.py` rc 1, `FAILED (2)`, both S1c's own working-id lints: `check 31: gap in the full allocation between 1955 and 8269` and `check 32: …LG-1964-…md:9: SL-1962 does not resolve in docs/INDEX.md`.
+- head=<this commit's parent 4c5662eb>; remaining: gate-1 SOLO after FD-1585's END, audit (FD-1963), mint, PR.
 
 ## Gate (gate-1, SOLO), 2026-10-29
 
@@ -415,12 +415,12 @@ services:
 - **pytest summary (whole line):** `16 failed, 7010 passed, 13 skipped, 5 xfailed, 148 warnings in 4336.55s (1:12:16)`; skipped 13 <= 21.
 - **The 16 FAILED identities** (sorted-unique, `grep '^FAILED' pytest.log | sed 's/ - .*//' | sort -u`, md5 `f9fbee49837aa2bc7d8f29624d5f81d3`): item 31's 13 (the docs-audit set: `tests/test_audit_docs_finding_citations.py::test_a_finding_resolved_only_by_a_closure_record_is_not_flagged`; `test_audit_docs_ids.py::test_doc_id_check_exits_0_on_the_real_tree`, `::test_the_real_tree_passes_all_ten_checks`; `test_audit_docs_process_core_digest.py::test_an_unrelated_file_edit_is_the_negative_control_and_stays_green`, `::test_the_committed_digest_currently_matches_the_committed_spec`; `test_audit_docs_w37_11_ceiling.py::test_audit_docs_end_to_end_exit_0_then_1_then_0_on_an_injected_residue`; `test_doc_index.py::test_an_index_skipping_a_reserved_block_breaks_contiguity`; `test_register_lint.py::test_check_29_is_wired_into_the_docs_gate`, `::test_check_29_note_carries_the_residue_line`, `::test_phase1b_residue_count_matches_check_29s_own_count`; `test_register_owed.py::test_check_29_wiring_is_undisturbed`; `test_repository_invariants.py::test_journey_citations_are_audited_in_ci`, `::test_money_discipline_is_enforced_by_the_docs_audit`) plus 3 in `examples/fremtpl2/test_seed.py`: `test_a_small_seed_is_refused_for_its_degenerate_fit`, `test_every_seeded_ingestion_run_balances_its_rows`, `test_the_seed_reruns_against_a_seeded_database`. Each of the 3 extras ends in `E   asyncpg.exceptions.UndefinedTableError: relation "role_assignments" does not exist` (pytest.log lines 10171, 10502, 10834). The lead's ruling (to-lead "2026-10-29 14:19:11 GMT") has a separate seat prove the 3 on main and rebuild the template; this record does not.
 - **Skipped 13 vs baseline 21:** the log was run with `-rf` (no `-rs`), so skip names are not recorded. What is known: `examples/fremtpl2/data/` holds `freMTPL2freq.arff` and `freMTPL2sev.arff` (copied in by exec-s1c5, LG section S1c-5, item 3), so the data-gated seed tests (`test_seed.py:136` `pytest.skip("run examples/fremtpl2/fetch.py first")`) ran instead of skipping; the 3 extra failures above are those. The `.arff` files are NOT removed here (the proof seat removes them, quoted).
-- **audit_docs rc 1 (FAILED (4)), all S1c's own working ids:** `check 31: gap in the full allocation between 1955 and 8269`; `check 32: …LG-08269-…md:9: SL-8266 does not resolve in docs/INDEX.md`; `check 32: …:406: padded id LG-08269 outside a link target`; `check 32: …:406: SL-8266 does not resolve in docs/INDEX.md`. No other FAILED line.
+- **audit_docs rc 1 (FAILED (4)), all S1c's own working ids:** `check 31: gap in the full allocation between 1955 and 8269`; `check 32: …LG-1964-…md:9: SL-1962 does not resolve in docs/INDEX.md`; `check 32: …:406: padded id LG-1964 outside a link target`; `check 32: …:406: SL-1962 does not resolve in docs/INDEX.md`. No other FAILED line.
 - **Demo (wf-699):** demo lock acquired 14:05:00Z; quiet window `load1 < 2.0 after 50 s` (wait 14:05:00 to 14:05:50, no timeout); no restart row. demo.py rc 0, `journey done in 1033s` and `served page: http://localhost:5173/ answered 200` in demo.log, gate.log `demo seconds` 1166; designed stop 14:25:13Z; D7 ok.
 - **Shared services (restore from tools-main):** postgres StartedAt 14:25:21Z, keycloak StartedAt 14:25:21Z; redis and minio StartedAt 10:12:19Z (unchanged); all four `working_dir` under tools-main. Keycloak bind source `/home/puzhenhao1989/gi-pricing-plan/.claude/worktrees/tools-main/deploy/keycloak-local` (under tools-main).
 - **Buckets:** `gip-test-blobs-gate-1` and `gip-blobs-demo-gate-1` removed (end) rc 0 each.
 - **Cleanup zeros:** gate row `own-DB count=0 redis RT db 1 dbsize=0 redis RD db 3 dbsize=0`; read back by hand after END: `redis-cli -n 1 dbsize` = 0, `-n 3 dbsize` = 0, `select count(*) from pg_database where datname like 'gipricing_s1c%'` = 0.
-- head=eb64354f72876db075b3edbc3dfee2d02308d864 (gated; this section's commit is the next one); remaining: audit (FD 8267), mint SL-1962/FD-1963/LG-1964, PR.
+- head=eb64354f72876db075b3edbc3dfee2d02308d864 (gated; this section's commit is the next one); remaining: audit (FD-1963), mint SL-1962/FD-1963/LG-1964, PR.
 
 ## Gate exception and the seed fixture (2026-10-29)
 
@@ -428,7 +428,7 @@ Written by exec-seedproof under the grant "2026-10-29 14:21:02 GMT" (to-lead.md)
 
 - **Skipped 13 vs baseline 21.** The three seed tests ran because `examples/fremtpl2/data/*.arff` were present in the gate worktree (S1c-5 setup fault 3), which lifted the skip at `examples/fremtpl2/test_seed.py:135–136`. The gate's pytest ran with `-rf`, not `-rs`, so no skip names were recorded in its log.
 - **The three ids:** `examples/fremtpl2/test_seed.py::test_a_small_seed_is_refused_for_its_degenerate_fit`, `::test_every_seeded_ingestion_run_balances_its_rows`, `::test_the_seed_reruns_against_a_seeded_database`. Each ends `E   asyncpg.exceptions.UndefinedTableError: relation "role_assignments" does not exist`.
-- **Root cause.** `backend/migrations/env.py:32–38` migrates only `GIP_MIGRATION_DATABASE_URL` and raises if it is unset (since #1398, S1a). The fixture `scratch_seed` (`test_seed.py:138–158`) creates its own scratch database on the shared server (admin URL hard-coded), sets only `GIP_DATABASE_URL` and runs `alembic upgrade head` with the inherited environment. `scratch/s1c-gate/s1c-gate.sh:72` exports `GIP_MIGRATION_DATABASE_URL` = the gate's own database for the whole python half. So in a gate the fixture's upgrade ran against `gipricing_s1c_gate` and the scratch database stayed empty; outside a gate the fixture hits the env.py refusal. Latent on main since #1398, unseen because CI has no `.arff`. The finding is FD 8277 (to be minted as FD-1965 in this PR); the fix is a separate small slice.
+- **Root cause.** `backend/migrations/env.py:32–38` migrates only `GIP_MIGRATION_DATABASE_URL` and raises if it is unset (since #1398, S1a). The fixture `scratch_seed` (`test_seed.py:138–158`) creates its own scratch database on the shared server (admin URL hard-coded), sets only `GIP_DATABASE_URL` and runs `alembic upgrade head` with the inherited environment. `scratch/s1c-gate/s1c-gate.sh:72` exports `GIP_MIGRATION_DATABASE_URL` = the gate's own database for the whole python half. So in a gate the fixture's upgrade ran against `gipricing_s1c_gate` and the scratch database stayed empty; outside a gate the fixture hits the env.py refusal. Latent on main since #1398, unseen because CI has no `.arff`. The finding is FD-1965 (to be minted as FD-1965 in this PR); the fix is a separate small slice.
 - **The gate's upgrade was a no-op.** The gate database is dropped at END, so its `alembic_version` cannot be quoted. Instead: `scratch/s1c-gate/gate/pre-upgrade.log`'s last line is `Running upgrade 9b3e7c15d4a2 -> b7e4c2a91d36, the application role's grants: exactly what the application does, nothing else`, and `alembic heads` at the S1c head is `b7e4c2a91d36` (at 18728e68 too). Together they show the fixture's upgrade found the gate database already at head.
 - **Proof at main (step 3).** `head=18728e68fe687f74ea886e8c25fa54b04db43c04`; `GIP_MIGRATION_DATABASE_URL=postgresql+asyncpg://gipricing:gipricing@localhost:5432/gipricing` (the rebuilt template, already at head, standing in for the gate's at-head database) and `GIP_REDIS_URL=redis://localhost:6379/11`; the .arff copies matched the `examples/fremtpl2/fetch.py` pins (sha256 `a45363e0…807cdd` freq, `04763201…aa10e0a` sev). Command: `pytest -q -p no:cacheprovider` on the three ids above, via run-heavy. Summary line whole: `3 failed in 34.36s`; run-heavy rc=1; all three E-lines as above. Same three red, same error as the gate: latent on main. After: the template's `alembic_version` still `b7e4c2a91d36`; `select datname from pg_database where datname like 'scratch_sl1409c_%'` empty before and after (the fixture dropped its own; none left to drop); the datname list unchanged; redis db 11 FLUSHDB then `dbsize` 0.
 - **Step-4 diff.** `git diff --name-only 18728e68 origin/draft/s1c-fd1951 -- examples/ backend/migrations/` = empty (origin tip 7f8f9d85 at the time).

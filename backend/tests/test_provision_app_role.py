@@ -4,7 +4,7 @@ role is provisioned by `deploy/postgres/app-login-role.sql` and `scripts/provisi
 DB-free by design: the SQL file is read as text, the verifier is checked against the
 RFC 7677 vector, and the script's refusals fire before it connects. The convergence proof
 (applied twice, attributes reset) is a DB-window act in S1a's `LG-`, not a test here.
-*(Amended 2026-10-26, SL 8266, FD-1951: the module is DB-backed from S1c, for the last test
+*(Amended 2026-10-26, SL-1962, FD-1951: the module is DB-backed from S1c, for the last test
 only, which plants a state as the owner in a rolled-back transaction and applies the SQL file
 over it.)*
 

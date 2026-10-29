@@ -528,7 +528,7 @@ async def test_a_stored_banding_cannot_be_updated_or_deleted(
 
     FR-101 holds for callers who remember it; this is what holds for a psql session. The
     `database` fixture is the login role, which inherits exactly `gip_app`'s grants and holds no
-    `SET ROLE` option on it (FD-1951, SL 8266), so the refusal is read as itself.
+    `SET ROLE` option on it (FD-1951, SL-1962), so the refusal is read as itself.
     """
     from sqlalchemy import text
 
