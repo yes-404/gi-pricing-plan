@@ -18,7 +18,7 @@ from typing import Any
 
 import pytest
 import yaml
-from backend.tests.deploy_stack_helpers import one_beat_problems
+from backend.tests.deploy_stack_helpers import one_beat_problems, own_postgres_owner_url
 
 from app.platform.jobs import DEFAULT_QUEUE_FOR_KIND
 from app.worker.celery_app import RELAY_QUEUE
@@ -490,3 +490,13 @@ def test_one_beat_is_exactly_one_running_scheduler_container() -> None:
 )
 def test_one_beat_goes_red_on_a_double_or_absent_beat(rows: list[dict[str, str]]) -> None:
     assert one_beat_problems(rows)
+
+
+@pytest.mark.req("FR-432")
+def test_provisioning_refuses_the_shared_postgres_port_and_names_the_projects_own() -> None:
+    """The runtime helpers run DDL (migrate, provision-app-role) against a URL they build from the
+    project's mapped port. 5432 is the shared stack's published port, so it is refused before any
+    DDL; an ephemeral port is the project's own (F2, condition (i))."""
+    with pytest.raises(ValueError, match="shared"):
+        own_postgres_owner_url(5432)
+    assert own_postgres_owner_url(49211).endswith("@127.0.0.1:49211/gipricing")

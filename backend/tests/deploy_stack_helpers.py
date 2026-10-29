@@ -27,7 +27,51 @@ LB_PORT = os.environ.get("GIP_LB_PORT", "18000")
 PROJECT = "gip-s4-runtime"
 
 
+SHARED_POSTGRES_PORT = 5432
+
+
+def own_postgres_owner_url(port: int) -> str:
+    """The owner URL of THIS project's postgres, from its mapped host port.
+
+    Refuses the shared stack's published port: the caller runs DDL against the URL (F2).
+    """
+    if port == SHARED_POSTGRES_PORT:
+        raise ValueError(f"port {port} is the shared stack's postgres, not this project's own")
+    return f"postgresql+asyncpg://gipricing:gipricing@127.0.0.1:{port}/gipricing"
+
+
+#: Projects whose own postgres has been migrated and had the application login role provisioned.
+_provisioned: set[str] = set()
+
+
+def _provision_once(sha: str) -> None:
+    """On a project's first `up`: its OWN postgres, `migrate`, then `provision-app-role.py`.
+
+    The `api` and the beat relay connect as `gip_app_login`, which exists on a fresh volume with
+    no password until `scripts/provision-app-role.py` runs (F2): without it `api` exits 3
+    ("password authentication failed for user gip_app_login", seen at origin/main 1e17ec63).
+    The owner URL is built from the project's mapped port and refused if it is the shared 5432,
+    BEFORE any DDL. The same URL becomes `GIP_TEST_DATABASE_URL` for the seed's owner connection, reset by `down`.
+    """
+    _provisioned.add(PROJECT)
+    compose(sha, "up", "-d", "--wait", "postgres")
+    url = own_postgres_owner_url(int(mapped("postgres", 5432)))
+    compose(sha, "run", "--rm", "migrate")
+    subprocess.run(
+        ["uv", "run", "--directory", str(ROOT), "python", "scripts/provision-app-role.py",
+         "--allow-default-password"],
+        cwd=ROOT, env={**os.environ, "GIP_MIGRATION_DATABASE_URL": url},
+        check=True, capture_output=True,
+    )
+    os.environ["GIP_TEST_DATABASE_URL"] = url
+
+
 def compose(sha: str, *args: str, check: bool = True) -> subprocess.CompletedProcess[str]:
+    if args[:1] == ("up",) and PROJECT not in _provisioned:
+        _provision_once(sha)
+    if args[:1] == ("down",):
+        _provisioned.discard(PROJECT)
+        os.environ.pop("GIP_TEST_DATABASE_URL", None)
     env = {**os.environ, "GIP_BUILD": sha, "GIP_LB_PORT": LB_PORT}
     return subprocess.run(
         [
