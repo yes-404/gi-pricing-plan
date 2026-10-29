@@ -681,11 +681,12 @@ server, S1d-5 only; Size ½ day. The SL row mints at S1d's turn, in S1d's own PR
   role assignments, in one committed unit of work) on **that** database. So with the variable pointing
   elsewhere, the seed **writes the demo principals into the foreign database**. The fix covers it,
   because the seed runs in-process after the fixture's `monkeypatch.setenv`. **Confirmed** by the
-  maintainer's read-only read at to-lead "2026-10-29 17:24:25 GMT" (and the lead's own read, reported
-  to this seat at about 17:28 GMT): the template `gipricing` held `workspaces` 3 (created_at
+  maintainer's read-only read at to-lead "2026-10-29 17:24:25 GMT" (and the lead's own read, from-lead
+  "2026-10-29 17:23:56 GMT"): the template `gipricing` held `workspaces` 3 (created_at
   14:28:30.294 / 14:28:37.721 / 14:28:45.353 UTC, the three seed tests of the 14:28 proof at
-  `18728e68`), `users` 7, `role_assignments` 30, `workspace_members` 21, `roles` 18, `environments` 3,
-  beside `alembic_version` 1 and `tenant_marker` 1. The same entry grants the template rebuild and
+  `18728e68`), `users` 7, `role_assignments` 30, `workspace_members` 21, `roles` 18, beside the migrations-only
+  `alembic_version` 1, `environments` 3 (seeded by migration `c4a81f6d2e95`:108–115, to-lead
+  "2026-10-29 17:27:58 GMT") and `tenant_marker` 1. The 17:24:25 entry grants the template rebuild and
   rules that the template is never named by a URL a seat sets (its rule 1).
 - **E-d4.** The three tests: `test_the_seed_reruns_against_a_seeded_database` (:168),
   `test_every_seeded_ingestion_run_balances_its_rows` (:191; FR-32, FR-31),
@@ -755,7 +756,8 @@ No production, spec or migration file.
   14:22:02 GMT" applies): `select datname from pg_database order by 1` before; create
   `scratch_pl8278_foreign` from the rebuilt template (`createdb -T gipricing scratch_pl8278_foreign`,
   17:24:25 rule 1; the template's non-empty-table list quoted first and refused unless it is
-  `alembic_version=1 tenant_marker=1`); S1d-2's
+  exactly `alembic_version=1 environments=3 tenant_marker=1`, the list as amended at to-lead
+  "2026-10-29 17:27:58 GMT"); S1d-2's
   reds at the base; then in the throwaway at the head the **greens**: G1, the three pass with the same
   foreign URL set and the foreign demo-row count before = after; G2, the three pass with the variable
   unset. Drop `scratch_pl8278_foreign`; `select datname` after = before (no `scratch_sl1409c_*` or
