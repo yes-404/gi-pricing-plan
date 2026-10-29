@@ -4,7 +4,7 @@ family: finding
 title: the compose runtime tests cannot provision the application login role, so no runtime test can go green, since #1398
 status: closed
 created: 2026-10-29               # drafted 2026-10-29 under working id 8280
-owner: WK-674
+owner: auditor
 tree: 67284ea12daab613b67353e3eb8b728a35ca5023   # origin/draft/sl-8275 as read by the auditor, 2026-10-29
 corrected_by: []
 relates: [FD-1661, SL-1968, LG-1969, PL-1688]
