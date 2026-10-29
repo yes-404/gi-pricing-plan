@@ -1052,6 +1052,102 @@ OWNER_FIXTURE_USERS: tuple[tuple[str, str, str], ...] = (
         "owner-subject",
         "sets a trigger to ENABLE ALWAYS as the owner (rolled back)",
     ),
+    (
+        "backend/tests/test_application_role.py::"
+        "test_a_route_to_the_owner_is_refused_at_startup[a1_gip_app_createrole]",
+        "owner-subject",
+        "plants one route to the owner as the owner (rolled back)",
+    ),
+    (
+        "backend/tests/test_application_role.py::"
+        "test_a_route_to_the_owner_is_refused_at_startup[a2_login_createrole]",
+        "owner-subject",
+        "plants one route to the owner as the owner (rolled back)",
+    ),
+    (
+        "backend/tests/test_application_role.py::"
+        "test_a_route_to_the_owner_is_refused_at_startup[m1_pg_write_all_data]",
+        "owner-subject",
+        "plants one route to the owner as the owner (rolled back)",
+    ),
+    (
+        "backend/tests/test_application_role.py::"
+        "test_a_route_to_the_owner_is_refused_at_startup[m1_pg_execute_server_program]",
+        "owner-subject",
+        "plants one route to the owner as the owner (rolled back)",
+    ),
+    (
+        "backend/tests/test_application_role.py::"
+        "test_a_route_to_the_owner_is_refused_at_startup[m1_pg_write_server_files]",
+        "owner-subject",
+        "plants one route to the owner as the owner (rolled back)",
+    ),
+    (
+        "backend/tests/test_application_role.py::"
+        "test_a_route_to_the_owner_is_refused_at_startup[m1_pg_read_server_files]",
+        "owner-subject",
+        "plants one route to the owner as the owner (rolled back)",
+    ),
+    (
+        "backend/tests/test_application_role.py::"
+        "test_a_route_to_the_owner_is_refused_at_startup[m2_session_replication_role]",
+        "owner-subject",
+        "plants one route to the owner as the owner (rolled back)",
+    ),
+    (
+        "backend/tests/test_application_role.py::"
+        "test_a_route_to_the_owner_is_refused_at_startup[m3a_guard_function_owner]",
+        "owner-subject",
+        "plants one route to the owner as the owner (rolled back)",
+    ),
+    (
+        "backend/tests/test_application_role.py::"
+        "test_a_route_to_the_owner_is_refused_at_startup[m3b_schema_owner]",
+        "owner-subject",
+        "plants one route to the owner as the owner (rolled back)",
+    ),
+    (
+        "backend/tests/test_application_role.py::"
+        "test_an_admin_option_on_the_owner_is_refused[plain_admin_option]",
+        "owner-subject",
+        "plants an ADMIN OPTION membership as the owner (rolled back)",
+    ),
+    (
+        "backend/tests/test_application_role.py::"
+        "test_an_admin_option_on_the_owner_is_refused[admin_only]",
+        "owner-subject",
+        "plants an ADMIN OPTION membership as the owner (rolled back)",
+    ),
+    (
+        "backend/tests/test_application_role.py::"
+        "test_the_grant_comparison_sees_a_drift_in_both_directions[public_table_grant]",
+        "owner-subject",
+        "plants a grant drift as the owner (rolled back)",
+    ),
+    (
+        "backend/tests/test_provision_app_role.py::"
+        "test_the_login_role_sql_converges_a_planted_state[b1_gip_app_attributes]",
+        "owner-subject",
+        "plants a role state as the owner and applies the login-role SQL over it (rolled back)",
+    ),
+    (
+        "backend/tests/test_provision_app_role.py::"
+        "test_the_login_role_sql_converges_a_planted_state[b2_membership_options]",
+        "owner-subject",
+        "plants a role state as the owner and applies the login-role SQL over it (rolled back)",
+    ),
+    (
+        "backend/tests/test_provision_app_role.py::"
+        "test_the_login_role_sql_converges_a_planted_state[m4_role_settings]",
+        "owner-subject",
+        "plants a role state as the owner and applies the login-role SQL over it (rolled back)",
+    ),
+    (
+        "backend/tests/test_provision_app_role.py::"
+        "test_the_login_role_sql_converges_a_planted_state[m4b_database_role_settings]",
+        "owner-subject",
+        "plants a role state as the owner and applies the login-role SQL over it (rolled back)",
+    ),
 )
 
 

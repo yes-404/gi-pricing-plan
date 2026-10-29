@@ -6,7 +6,10 @@ the process serves or consumes anything, on the connection it will run on:
 
 1. **P-own.** The connecting role is not an owner of a table in `public`, not a superuser and
    not a role that bypasses row security -- directly or through any membership, `INHERIT FALSE`
-   included. An owner can `DISABLE TRIGGER`; a superuser can `SET session_replication_role`.
+   included -- and reaches no role with `CREATEROLE`, no predefined role that bypasses the grant
+   map, no owner of a pinned guard function or of schema `public`, and may not set
+   `session_replication_role` (FD-1951). An owner can `DISABLE TRIGGER`; a superuser can
+   `SET session_replication_role`; `CREATEROLE` can grant itself the owner.
 2. **The triggers.** Every trigger the ORM declaration says a table carries (`_declared`, DP-8)
    exists, is enabled for every session (`tgenabled IN ('O', 'A')`), and runs a function whose body
    hashes to the pinned value. A trigger that was disabled, set to replica-only, dropped or
@@ -24,7 +27,9 @@ from sqlalchemy.ext.asyncio import AsyncConnection
 from app.db.base import Base
 
 __all__ = [
+    "CAN_SET_REPLICATION_ROLE",
     "PINNED_GUARD_FUNCTION_MD5",
+    "PREDEFINED_ROLES",
     "P_OWN",
     "LeastPrivilegeError",
     "assert_least_privilege",
@@ -34,27 +39,6 @@ __all__ = [
 class LeastPrivilegeError(RuntimeError):
     """The database connection holds more power than the platform may run with."""
 
-
-#: P-own: the roles `current_user` is a member of -- itself, directly or indirectly, `INHERIT
-#: FALSE` memberships included (`'MEMBER'`, not `'USAGE'`, which an `INHERIT FALSE` membership
-#: fails) -- that own a `public` table, are superusers, or bypass row security. One row per such
-#: role; no rows is the only passing result. Defined once: tests import this constant.
-P_OWN = text("""
-    SELECT r.rolname
-    FROM pg_roles r
-    WHERE pg_has_role(current_user, r.oid, 'MEMBER')
-      AND (
-        r.rolsuper
-        OR r.rolbypassrls
-        OR EXISTS (
-          SELECT 1 FROM pg_class c
-          WHERE c.relowner = r.oid
-            AND c.relnamespace = 'public'::regnamespace
-            AND c.relkind IN ('r', 'p')
-        )
-      )
-    ORDER BY r.rolname
-""")
 
 #: `md5(prosrc)` of every trigger function the migrations create, read from the head database
 #: (never typed by hand; `test_the_pinned_guard_function_hashes_match_the_head`). A function the
@@ -77,6 +61,63 @@ PINNED_GUARD_FUNCTION_MD5: dict[str, str] = {
     "rate_tables_pointer_only": "cd911971d3cf0d2e98a5e26397cb7843",
     "reference_table_versions_publish_only": "be3b2a9ff80fcc600e098725b7ff23c9",
 }
+
+#: The predefined roles that hand out what the grant map withholds: write or read every table,
+#: run a program or write a file as the server's operating-system user (FD-1951).
+PREDEFINED_ROLES = (
+    "pg_write_all_data",
+    "pg_execute_server_program",
+    "pg_write_server_files",
+    "pg_read_server_files",
+)
+
+_PINNED_GUARD_FUNCTIONS = ", ".join(f"'{name}'" for name in PINNED_GUARD_FUNCTION_MD5)
+_PREDEFINED_ROLES = ", ".join(f"'{name}'" for name in PREDEFINED_ROLES)
+
+#: P-own: the roles `current_user` is a member of -- itself, directly or indirectly, `INHERIT
+#: FALSE` and admin-only memberships included (`'MEMBER'`, not `'USAGE'`, which an `INHERIT FALSE`
+#: membership fails) -- that can take the immutability triggers away. One row per such role, with
+#: the first route that makes it one; no rows is the only passing result. The routes: a
+#: superuser, `BYPASSRLS`, `CREATEROLE` (it can grant itself the owner), a predefined role, the
+#: owner of a `public` table, of a pinned guard function or of schema `public`. Defined once:
+#: tests import this constant. Both constants name only the module's own literals, never input.
+P_OWN = text(f"""
+    SELECT rolname, route FROM (
+      SELECT r.rolname,
+             CASE
+               WHEN r.rolsuper THEN 'superuser'
+               WHEN r.rolbypassrls THEN 'bypasses row security'
+               WHEN r.rolcreaterole THEN 'createrole'
+               WHEN r.rolname IN ({_PREDEFINED_ROLES}) THEN 'predefined role'
+               WHEN EXISTS (
+                 SELECT 1 FROM pg_class c
+                 WHERE c.relowner = r.oid
+                   AND c.relnamespace = 'public'::regnamespace
+                   AND c.relkind IN ('r', 'p')
+               ) THEN 'owns a table'
+               WHEN EXISTS (
+                 SELECT 1 FROM pg_namespace n WHERE n.nspowner = r.oid AND n.nspname = 'public'
+               ) THEN 'owns schema public'
+               WHEN g.guard IS NOT NULL THEN 'owns ' || g.guard || '()'
+             END AS route
+      FROM pg_roles r
+      LEFT JOIN LATERAL (
+        SELECT min(p.proname) AS guard FROM pg_proc p
+        WHERE p.proowner = r.oid
+          AND p.pronamespace = 'public'::regnamespace
+          AND p.proname IN ({_PINNED_GUARD_FUNCTIONS})
+      ) g ON true
+      WHERE pg_has_role(current_user, r.oid, 'MEMBER')
+    ) reachable
+    WHERE route IS NOT NULL
+    ORDER BY rolname
+""")
+
+#: A role that may `SET session_replication_role` switches the origin-only triggers off without
+#: owning anything (`GRANT SET ON PARAMETER`, PostgreSQL 15+). Read-only, on `current_user`.
+CAN_SET_REPLICATION_ROLE = text(
+    "SELECT has_parameter_privilege(current_user, 'session_replication_role', 'SET')"
+)
 
 #: `pg_trigger.tgenabled`: `O` (origin, the default) and `A` (`ENABLE ALWAYS`) both fire in a normal
 #: session; `D` (disabled) and `R` (replica only) do not (PL-1769 Step 4.2).
@@ -130,12 +171,19 @@ def _expected_triggers() -> list[tuple[str, str]]:
 async def assert_least_privilege(connection: AsyncConnection) -> None:
     """Raise `LeastPrivilegeError` unless `connection`'s role passes P-own and every declared
     trigger is present, enabled and unmodified. Reads only; changes nothing."""
-    owners = [row[0] for row in (await connection.execute(P_OWN)).all()]
-    if owners:
+    routes = [f"{row.rolname} ({row.route})" for row in (await connection.execute(P_OWN)).all()]
+    if routes:
         raise LeastPrivilegeError(
-            f"the database connection is, or is a member of, {owners}: a role that owns a table, "
-            "is a superuser or bypasses row security can disable the immutability triggers. "
+            f"the database connection is, or is a member of, {', '.join(routes)}: a role that "
+            "owns a table or a guard function, is a superuser, bypasses row security, has "
+            "CREATEROLE or holds a predefined role can disable the immutability triggers. "
             "Connect as the application login role (scripts/provision-app-role.py)."
+        )
+    if (await connection.execute(CAN_SET_REPLICATION_ROLE)).scalar_one():
+        raise LeastPrivilegeError(
+            "the database connection may set session_replication_role, which switches the "
+            "immutability triggers off. Connect as the application login role "
+            "(scripts/provision-app-role.py)."
         )
     found = {(row.tbl, row.trigger): row for row in (await connection.execute(_TRIGGERS)).all()}
     for table, name in _expected_triggers():
