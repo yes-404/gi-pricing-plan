@@ -60,3 +60,5 @@ Found by the S1c gate (gate-1 SOLO, 2026-10-29) and proved at main by exec-seedp
 ## Disposition
 
 Open, owner WK-1178, MEDIUM; fix slice SL 8278 / LG 8279, Fri 30 Oct 2026 am. Filed under working id 8277.
+
+(Widened 2026-10-29 by the lead, on to-lead "2026-10-29 17:24:25 GMT" rule 3: the defect is wider than migration — examples/fremtpl2/seed.py:448–466 runs grant_demo_principals on settings.migration_database_url, so with GIP_MIGRATION_DATABASE_URL naming another database the seed WRITES demo principals into it. Observed: the template gipricing held workspaces 3 (created 14:28:30/37/45 UTC), users 7, role_assignments 30, workspace_members 21, roles 18 from a 14:28 proof run (from-lead "2026-10-29 17:23:56 GMT"); rebuilt on that entry's grant. Fix: PL-1927 row 6 (S1d).)
