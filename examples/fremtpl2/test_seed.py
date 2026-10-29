@@ -295,10 +295,18 @@ def test_a_small_seed_is_refused_for_its_degenerate_fit(scratch_seed: Path) -> N
 
 def _write_book(directory: Path, policies: int) -> None:
     """A synthetic freMTPL2 pair ordered by claim count, as the real file is."""
-    freq = ["@relation freMTPL2freq", "@attribute IDpol numeric", "@attribute ClaimNb numeric",
-            "@data"]
-    sev = ["@relation freMTPL2sev", "@attribute IDpol numeric", "@attribute ClaimAmount numeric",
-           "@data"]
+    freq = [
+        "@relation freMTPL2freq",
+        "@attribute IDpol numeric",
+        "@attribute ClaimNb numeric",
+        "@data",
+    ]
+    sev = [
+        "@relation freMTPL2sev",
+        "@attribute IDpol numeric",
+        "@attribute ClaimAmount numeric",
+        "@data",
+    ]
     claiming = policies // 20
     for index in range(policies):
         claims = 1 if index >= policies - claiming else 0
@@ -322,10 +330,24 @@ def test_claim_severity_is_the_mean_cost_per_claim_and_null_without_a_claim(
     import polars as pl
     import seed
 
-    freq = ["@relation freMTPL2freq", "@attribute IDpol numeric", "@attribute ClaimNb numeric",
-            "@data", "1,2", "2,0", "3,1"]
-    sev = ["@relation freMTPL2sev", "@attribute IDpol numeric", "@attribute ClaimAmount numeric",
-           "@data", "1,100.01", "1,50.00", "3,33.33"]
+    freq = [
+        "@relation freMTPL2freq",
+        "@attribute IDpol numeric",
+        "@attribute ClaimNb numeric",
+        "@data",
+        "1,2",
+        "2,0",
+        "3,1",
+    ]
+    sev = [
+        "@relation freMTPL2sev",
+        "@attribute IDpol numeric",
+        "@attribute ClaimAmount numeric",
+        "@data",
+        "1,100.01",
+        "1,50.00",
+        "3,33.33",
+    ]
     (tmp_path / "freMTPL2freq.arff").write_text("\n".join(freq) + "\n", encoding="utf-8")
     (tmp_path / "freMTPL2sev.arff").write_text("\n".join(sev) + "\n", encoding="utf-8")
     monkeypatch.setattr(seed, "DATA_DIR", tmp_path)
@@ -355,10 +377,27 @@ def test_a_claimant_with_no_severity_record_has_an_unknown_amount_not_zero(
     import polars as pl
     import seed
 
-    freq = ["@relation freMTPL2freq", "@attribute IDpol numeric", "@attribute ClaimNb numeric",
-            "@data", "1,2", "2,0", "3,1", "4,1", "5,2"]
-    sev = ["@relation freMTPL2sev", "@attribute IDpol numeric", "@attribute ClaimAmount numeric",
-           "@data", "1,100.01", "1,50.00", "3,33.33", "5,40.00"]
+    freq = [
+        "@relation freMTPL2freq",
+        "@attribute IDpol numeric",
+        "@attribute ClaimNb numeric",
+        "@data",
+        "1,2",
+        "2,0",
+        "3,1",
+        "4,1",
+        "5,2",
+    ]
+    sev = [
+        "@relation freMTPL2sev",
+        "@attribute IDpol numeric",
+        "@attribute ClaimAmount numeric",
+        "@data",
+        "1,100.01",
+        "1,50.00",
+        "3,33.33",
+        "5,40.00",
+    ]
     (tmp_path / "freMTPL2freq.arff").write_text("\n".join(freq) + "\n", encoding="utf-8")
     (tmp_path / "freMTPL2sev.arff").write_text("\n".join(sev) + "\n", encoding="utf-8")
     monkeypatch.setattr(seed, "DATA_DIR", tmp_path)
@@ -431,27 +470,39 @@ def test_the_seeded_portfolio_satisfies_the_dislocation_frame(
     monkeypatch.setattr(seed, "DATA_DIR", tmp_path)
     monkeypatch.setattr(seed, "PORTFOLIO_ROWS", 500)
     # the synthetic book has only IDpol and ClaimNb; the recipe also renames and casts the rest
-    raw = pl.read_csv(io.BytesIO(seed.build_portfolio_csv()),
-                      infer_schema=False)
+    raw = pl.read_csv(io.BytesIO(seed.build_portfolio_csv()), infer_schema=False)
     # ingestion snake-cases the headers before the recipe runs (`IDpol` -> `i_dpol`)
     raw = raw.rename({"IDpol": "i_dpol", "ClaimNb": "claim_nb"}).with_columns(
         pl.lit("0.5").alias("exposure")
     )
-    stored = apply_recipe({"policy_exposure": raw}, [
-        step if step["step"] != "cast" else {
-            **step, "params": {"columns": {c: t for c, t in step["params"]["columns"].items()
-                                           if c in {"exposure_years", "claim_count",
-                                                    "claim_amount_minor"}}}}
-        for step in recipe(drop_implausible_exposure=True)
-    ]).tables["policy_exposure"]
+    stored = apply_recipe(
+        {"policy_exposure": raw},
+        [
+            step
+            if step["step"] != "cast"
+            else {
+                **step,
+                "params": {
+                    "columns": {
+                        c: t
+                        for c, t in step["params"]["columns"].items()
+                        if c in {"exposure_years", "claim_count", "claim_amount_minor"}
+                    }
+                },
+            }
+            for step in recipe(drop_implausible_exposure=True)
+        ],
+    ).tables["policy_exposure"]
 
     book = pl.read_csv(io.BytesIO(build_csv(500)), infer_schema=False)
     assert "quote_id" not in book.columns
     # the only change to the sample is the added column: every other column and row is the book's
     assert raw.drop("quote_id").height == book.height
-    assert pl.read_csv(io.BytesIO(seed.build_portfolio_csv()), infer_schema=False).drop(
-        "quote_id"
-    ).equals(book)
+    assert (
+        pl.read_csv(io.BytesIO(seed.build_portfolio_csv()), infer_schema=False)
+        .drop("quote_id")
+        .equals(book)
+    )
     frame = read_portfolio(stored.lazy(), segments=()).collect()
     assert frame["quote_id"].null_count() == 0
     assert frame["quote_id"].n_unique() == frame.height
@@ -498,7 +549,13 @@ def test_the_demo_principals_use_existing_roles_and_cover_the_journey() -> None:
     from model_schema.permissions import BUILTIN_ROLES
 
     assert set(DEMO_PRINCIPALS) == {
-        "analyst", "actuary", "approver", "second_approver", "admin", "deployer", "prod_approver",
+        "analyst",
+        "actuary",
+        "approver",
+        "second_approver",
+        "admin",
+        "deployer",
+        "prod_approver",
     }
     for roles in DEMO_PRINCIPALS.values():
         assert set(roles) <= set(BUILTIN_ROLES)
