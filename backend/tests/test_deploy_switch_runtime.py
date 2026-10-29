@@ -35,10 +35,15 @@ import pytest
 from backend.tests.deploy_stack_helpers import (
     LB_PORT,
     PROJECT,
+    compose as _compose,
     beat_fixture,  # noqa: F401  (pytest fixture, used by name)
     built_n,  # noqa: F401  (pytest fixture, used by name)
     compose_settings,
     governed_workspace,
+)
+from backend.tests.test_deploy_stack_runtime import (
+    _worker_services,
+    down,  # noqa: F401  (pytest fixture, used by name)
 )
 from backend.tests.deploy_stack_helpers import api as _stack_api
 from backend.tests.deploy_stack_helpers import mapped as _mapped
@@ -171,8 +176,9 @@ def _fetch_blob(sha256: str, headers: dict[str, str]) -> bytes:
 
 
 def test_a_deploy_switches_every_api_process_and_a_default_live_quote_is_served(
-    built_n: str, beat_fixture: None  # noqa: F811
+    built_n: str, down: None, beat_fixture: None  # noqa: F811
 ) -> None:
+    _compose(built_n, "up", "-d", "--wait", "lb", *_worker_services(built_n))
     # `rating.compile` is refused with 409 `RATING_VERSION_IMMUTABLE` unless the version is a
     # draft (FR-239, `require_compilable`), so the route compiles the draft, and the SAME version
     # is then approved (D5.11). The approval evidence goes through the API as well, with no second

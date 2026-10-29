@@ -466,3 +466,5 @@ Row 1 and the plan body are unchanged.)*
     and FD-1661's register row.
 
   Anything else stops the slice. There is no spec edit and no new requirement id.
+
+*(Write-set amendment, 2026-10-29, by the maintainer (by delegation), on to-lead "2026-10-29 19:31:32 GMT": row 2's Write set gains `backend/tests/test_deploy_switch_runtime.py`, for one edit only — the test `test_a_deploy_switches_every_api_process_and_a_default_live_quote_is_served` takes the `down` fixture and starts the stack with the `up -d --wait lb <workers>` line that the other four `beat_fixture` callers use, and its "UNPROVEN" docstring sentence is replaced by a dated one naming the run that proved it. Nothing else in that file changes.)*
