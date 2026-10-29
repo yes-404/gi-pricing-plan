@@ -663,8 +663,8 @@ its Finding, Evidence and Remedy sections. **Tree read:** `origin/main`
 `7ceff4a16829c63f20f0cdbb56fafae22657c1ab`; `examples/` and `backend/migrations/` are unchanged from
 `447bcfd6`. The row, in the table's columns: Order 6; Scope (what the `LG-` quotes) Tasks S1d-0 to
 S1d-7 below; Requirements: none amended (the tests carry their existing markers, FR-31 and FR-32;
-no spec change); Depends on #1405 merged (met, `7ceff4a1`), DP-S1d-1 and DP-S1d-2 ruled, a granted DB
-window in a no-gate gap (seat brief items 12, 32); Lane examples (test-only); DB **yes**, the shared
+no spec change); Depends on #1405 merged (met, `7ceff4a1`), DP-S1d-1 and DP-S1d-2 ruled, the template
+rebuild (to-lead "2026-10-29 17:24:25 GMT") reported, a granted DB window in a no-gate gap (seat brief items 12, 32); Lane examples (test-only); DB **yes**, the shared
 server, S1d-5 only; Size ½ day. The SL row mints at S1d's turn, in S1d's own PR, under WK-1178 in
 `docs/roadmap.md` §6. Rows 1 to 5, their dated lines and the plan body are unchanged.)*
 
@@ -680,9 +680,13 @@ server, S1d-5 only; Size ½ day. The SL row mints at S1d's turn, in S1d's own PR
   `settings.migration_database_url` and runs `grant_demo_principals` (workspace, built-in roles, users,
   role assignments, in one committed unit of work) on **that** database. So with the variable pointing
   elsewhere, the seed **writes the demo principals into the foreign database**. The fix covers it,
-  because the seed runs in-process after the fixture's `monkeypatch.setenv`. *Inferred from the code,
-  not observed:* a run with the variable on the template `gipricing` may have committed those rows
-  there (see Hand-off below).
+  because the seed runs in-process after the fixture's `monkeypatch.setenv`. **Confirmed** by the
+  maintainer's read-only read at to-lead "2026-10-29 17:24:25 GMT" (and the lead's own read, reported
+  to this seat at about 17:28 GMT): the template `gipricing` held `workspaces` 3 (created_at
+  14:28:30.294 / 14:28:37.721 / 14:28:45.353 UTC, the three seed tests of the 14:28 proof at
+  `18728e68`), `users` 7, `role_assignments` 30, `workspace_members` 21, `roles` 18, `environments` 3,
+  beside `alembic_version` 1 and `tenant_marker` 1. The same entry grants the template rebuild and
+  rules that the template is never named by a URL a seat sets (its rule 1).
 - **E-d4.** The three tests: `test_the_seed_reruns_against_a_seeded_database` (:168),
   `test_every_seeded_ingestion_run_balances_its_rows` (:191; FR-32, FR-31),
   `test_a_small_seed_is_refused_for_its_degenerate_fit` (:235).
@@ -749,7 +753,9 @@ No production, spec or migration file.
 - [ ] **S1d-5. The DB window (the lead's written grant; load1 and `free -g` at start, item 15).** On
   the shared server (the fixture's admin URL is that server's, E-d2; the condition of "2026-10-29
   14:22:02 GMT" applies): `select datname from pg_database order by 1` before; create
-  `scratch_pl8278_foreign` as `gipricing` and `alembic upgrade head` it with the owner DSN; S1d-2's
+  `scratch_pl8278_foreign` from the rebuilt template (`createdb -T gipricing scratch_pl8278_foreign`,
+  17:24:25 rule 1; the template's non-empty-table list quoted first and refused unless it is
+  `alembic_version=1 tenant_marker=1`); S1d-2's
   reds at the base; then in the throwaway at the head the **greens**: G1, the three pass with the same
   foreign URL set and the foreign demo-row count before = after; G2, the three pass with the variable
   unset. Drop `scratch_pl8278_foreign`; `select datname` after = before (no `scratch_sl1409c_*` or
@@ -799,10 +805,9 @@ production or spec change: `examples/fremtpl2/seed.py`, `backend/src/**`, `env.p
 are outside the write set. The DB window is the lead's to grant in writing, never beside a held gate
 (items 12, 32).
 
-**Hand-off (S1d).** For the lead, unverified (E-d3): a run with the variable on the template
-`gipricing` (to-lead "2026-10-29 14:23:05 GMT", the proof at `18728e68`) may have committed demo
-principals there; a read-only `select count(*) from workspaces` on `gipricing` settles it, and the
-template rule names the rebuild if so; whether and when to look is the lead's (DB lane). Not this row:
+**Hand-off (S1d).** E-d3's template pollution is confirmed and its rebuild granted (to-lead
+"2026-10-29 17:24:25 GMT"); S1d's window starts only after that rebuild reports. FD-1965's widening
+by annotation (that entry's rule 3) rides the next docs batch, not this row. Not this row:
 which gate step should run `ruff format --check` (the process-backlog row's second limb).
 
 **Self-review (S1d).** Every 14:21:02 (2') clause has a place: the fixture sets the migration URL to
