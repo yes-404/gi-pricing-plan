@@ -1,12 +1,12 @@
 ---
-id: LG-8271
+id: LG-1957
 family: ledger
 title: WK-675 slice FD-1585 — the diff routes answer NOT_FOUND (slice ledger)
 status: active                 # active → closed (§1.2a)
-created: 2026-10-26
+created: 2026-10-29               # drafted 2026-10-26 under working id 8271
 owner: executor
 tree: 7ed5c398333aa24432bd9917bd204f7b540fb39c   # origin/main at the branch cut (#1401)
-slice: SL-8270
+slice: SL-1956
 phase: P2
 work: WK-675
 plans: [PL-1546]
@@ -14,9 +14,9 @@ corrected_by: []
 relates: [FD-1585, PL-1546, FR-231, FR-232]
 ---
 
-# LG-8271 — WK-675 slice FD-1585: the diff routes answer NOT_FOUND
+# LG-1957 — WK-675 slice FD-1585: the diff routes answer NOT_FOUND
 
-Working ids SL 8270 (slice) and LG 8271 (ledger), reserved by the lead. Plan: `PL-1546` delta row 9
+Working ids SL-1956 (slice) and LG-1957 (ledger), reserved by the lead. Plan: `PL-1546` delta row 9
 (branch `docs/pl1546-fd1585-delta-2026-10-26` @`67adc216`, PR #1402, unmerged when this was opened).
 Grant: to-lead "2026-10-26 15:32:26 GMT" (reds only today); throwaway rule: "2026-10-26 14:44:23 GMT" (d).
 
@@ -71,7 +71,7 @@ Not run today (reds-only grant): the two `with spec_not_found():` wraps, the `sp
 
 ### 2026-10-26 — docs checks on this ledger's commit
 
-`doc-index.py --root docs --check`: `docs/INDEX.md: OK (byte-stable)`, rc 0 (regenerated first). `audit-docs.py` via `run-heavy.sh --light`: rc 1, only the two lints on this slice's own working ids: `check 31: gap in the full allocation between 1955 and 8271` and `check 32: …LG-08271…:9: SL-8270 does not resolve in docs/INDEX.md`. Both clear at the mint (the ids are working ids until then).
+`doc-index.py --root docs --check`: `docs/INDEX.md: OK (byte-stable)`, rc 0 (regenerated first). `audit-docs.py` via `run-heavy.sh --light`: rc 1, only the two lints on this slice's own working ids: `check 31: gap in the full allocation between 1955 and 8271` and `check 32: …LG-1957…:9: SL-1956 does not resolve in docs/INDEX.md`. Both clear at the mint (the ids are working ids until then).
 
 - 2026-10-26 15:59 GMT (lead): `ruff format --check backend/tests/test_api_rate_tables.py` reports "1 file would be reformatted" on this branch, and the SAME on origin/main's copy (tools-main @a9ffc22c). The drift is pre-existing at main, not this slice's; `.github/workflows/python.yml` runs no `ruff format` step. No reformat in this slice (to-lead "2026-10-26 15:58:34 GMT").
 
@@ -85,11 +85,11 @@ Not run today (reds-only grant): the two `with spec_not_found():` wraps, the `sp
 - **Removal.** `docker rm -fv fd1585c-pg fd1585c-redis fd1585c-minio` rc 0, three names echoed (redis db 11 held 42 keys at removal; its container is gone); AFTER: `docker ps -a --filter name=fd1585` empty, dangling images 0.
 - **Checks** at `5b1464ec` (each via `run-heavy.sh --grant`, `…/checks.log`): `ruff check .` rc 0 ("All checks passed!"); `mypy` rc 0 ("no issues found in 251 source files"); `req-coverage.py` rc 0; `generate-contracts.py --check` rc 0 ("58 generated contracts match the models"); `ruff format --check backend/src/app/api/rate_tables.py` rc 1, **pre-existing**: origin/main's copy of the file reports the same rc 1, the `--diff` hunks lie at `:173`, `:246`, `:275` and later and none in this slice's lines, and CI runs no `ruff format` step (see the lead's 15:59 line above); not reformatted here.
 - **Acceptance 9–13** at `5b1464ec`: 9 `git grep -n 'with spec_not_found():' 5b1464ec -- backend/src/app/api/rate_tables.py` → 6 lines (`:169`, `:174`, `:440`, `:462`, `:483`, `:539`); 10 `git grep -c '"RATE_TABLE_MISS"' 5b1464ec -- backend/tests/test_api_rate_tables.py` → `1`, and `git grep -n 'RATE_TABLE_MISS' … backend/src/app/platform/rate_tables.py` → the same six lines as at `7ed5c398` (`:305 :1004 :1106 :1139 :1167 :1557`); 11 the reds-day rows above (R1–R5 red by cause) and the greens here (R1–R5, C1–C4 green); 12 `git diff --name-only origin/main...5b1464ec` → `backend/src/app/api/rate_tables.py`, `backend/tests/test_api_rate_tables.py`, `docs/INDEX.md`, this LG; 13 `generate-contracts.py --check` rc 0 and `req-coverage.py` rc 0. 14 (the gate) is the lead's on gate-1b; 15 and 16 are the mint and merge.
-- **Docs checks at the head before this commit** (`env -C <wt> python3 scripts/…` via `run-heavy.sh --light`): `doc-index.py --check` rc 0 (`OK (byte-stable)`); `audit-docs.py` rc 1, `FAILED (4)`, all on this slice's own working ids: `check 31` gap between 1955 and 8271; `check 32` at the LG's `:9` and `:74` (`SL-8270` does not resolve) and `:74` (the padded form of the ledger's own id, inside the reds-day line quoting the lint). The same command on tools-main `a9ffc22c` is rc 0, so the 849 other `  - ` lines it prints are baseline notes, not failures. All four clear at the mint.
+- **Docs checks at the head before this commit** (`env -C <wt> python3 scripts/…` via `run-heavy.sh --light`): `doc-index.py --check` rc 0 (`OK (byte-stable)`); `audit-docs.py` rc 1, `FAILED (4)`, all on this slice's own working ids: `check 31` gap between 1955 and 8271; `check 32` at the LG's `:9` and `:74` (`SL-1956` does not resolve) and `:74` (the padded form of the ledger's own id, inside the reds-day line quoting the lint). The same command on tools-main `a9ffc22c` is rc 0, so the 849 other `  - ` lines it prints are baseline notes, not failures. All four clear at the mint.
 
 - 2026-10-26 (exec-fd1585code, after the lead's 16:57:37 GMT pause order and the queue note): the lock-wait `rc=124` above is not a result. The greens and the full suite had already finished and the containers were already removed before those messages were read (uptime not quoted: the `fd1585c-*` containers were up about 1 h 5 min, from the 16:03 provisioning to the removal after the full suite).
 
-head=5b1464ecab1bc3f7df2d1f3670b2b500973a0632; remaining: the gate (lead, gate-1b Tue 27 Oct 08:00 GMT), the mint (SL 8270 / LG 8271 ids), FD-1585 discharge lines, the PR.
+head=5b1464ecab1bc3f7df2d1f3670b2b500973a0632; remaining: the gate (lead, gate-1b Tue 27 Oct 08:00 GMT), the mint (SL-1956 / LG-1957 ids), FD-1585 discharge lines, the PR.
 
 ### 2026-10-29 — Gate (gate-1b, SOLO) and the cover (exec-fd1585gate; grant "2026-10-29 10:17:01 GMT", cover "2026-10-29 10:55:25 GMT")
 
@@ -97,7 +97,7 @@ head=5b1464ecab1bc3f7df2d1f3670b2b500973a0632; remaining: the gate (lead, gate-1
 - **rc files:** `audit_docs.rc` 1, `contracts.rc` 0, `import_linter.rc` 0, `mypy.rc` 0, `pytest.rc` 1, `req_coverage.rc` 0, `ruff.rc` 0. END rc parts: `python max=1 fe max=0 demo=0 restore rc_kc=0 role rc_role=0 skip rc_skip=0`.
 - **Pytest summary (whole):** `13 failed, 6983 passed, 21 skipped, 5 xfailed, 146 warnings in 4731.29s (1:18:51)`; skipped 21 (<= 21).
 - **FAILED, by file (all eight docs-audit files of common item 31):** `test_audit_docs_finding_citations.py::test_a_finding_resolved_only_by_a_closure_record_is_not_flagged`; `test_audit_docs_ids.py::test_the_real_tree_passes_all_ten_checks`, `::test_doc_id_check_exits_0_on_the_real_tree`; `test_audit_docs_process_core_digest.py::test_an_unrelated_file_edit_is_the_negative_control_and_stays_green`, `::test_the_committed_digest_currently_matches_the_committed_spec`; `test_audit_docs_w37_11_ceiling.py::test_audit_docs_end_to_end_exit_0_then_1_then_0_on_an_injected_residue`; `test_doc_index.py::test_an_index_skipping_a_reserved_block_breaks_contiguity`; `test_register_lint.py::test_check_29_is_wired_into_the_docs_gate`, `::test_check_29_note_carries_the_residue_line`, `::test_phase1b_residue_count_matches_check_29s_own_count`; `test_register_owed.py::test_check_29_wiring_is_undisturbed`; `test_repository_invariants.py::test_money_discipline_is_enforced_by_the_docs_audit`, `::test_journey_citations_are_audited_in_ci`.
-- **audit-docs `FAILED (5)`, only this slice's own working ids:** `check 31: gap in the full allocation between 1955 and 8271`; `check 32` at this LG's lines 9, 74, 88 (`SL-8270 does not resolve in docs/INDEX.md` ×3) and line 74 (`padded id LG-08271 outside a link target`).
+- **audit-docs `FAILED (5)`, only this slice's own working ids:** `check 31: gap in the full allocation between 1955 and 8271`; `check 32` at this LG's lines 9, 74, 88 (`SL-1956 does not resolve in docs/INDEX.md` ×3) and line 74 (`padded id LG-1957 outside a link target`).
 - **Verdict (lead 29, item 31): STANDS pending mint** — conditions (mint, audit-docs rc 0, the eight files re-run on the minted head, CI) are not this seat's.
 - **Frontend half:** install, generate:api, lint, type-check, test (`--maxWorkers=2`), build all rc 0; tree after gate 0 changed paths.
 - **Demo (wf-699):** lock wait start 2026-10-29T11:46:49+00:00, acquired 11:46:49; quiet window `load1 < 2.0 after 350 s`; demo start 11:52:42 (load1 1.94); designed stop 12:13:53 (both lines seen); `--journey wf-699` rc 0; 1276 s; D7 ok.
@@ -105,7 +105,7 @@ head=5b1464ecab1bc3f7df2d1f3670b2b500973a0632; remaining: the gate (lead, gate-1
 - **Cover (a), main moved twice** (#1380 `550d2c9b`, #1381 `20a36ca3ce1118501f3210693a75df1efb0ba4e5`): `git merge --no-ff origin/main` clean, merge commit `69853e0c536f5dc130dce4a63d97c72fcf19c54b` (tree `036a941a6ad08df1c999a17c8efeef9e16b2ef05`). `git diff --stat 923c5642460691fdaab57a40a20d9d9cc14f0645 HEAD^{tree}`: `frontend/package.json | 14`, `frontend/pnpm-lock.yaml | 648`, `uv.lock | 8` (+4/−4); 3 files changed, 361 insertions(+), 309 deletions(-) — exactly the three expected, nothing else.
 - **Cover (b)** at `69853e0c536f5dc130dce4a63d97c72fcf19c54b`: `pnpm --dir …/frontend install --frozen-lockfile` rc 0 (vite 8.3.5); `uv sync --all-packages --frozen` rc 0 (opentelemetry-api 1.45.0 → 1.45.1); `uv run lint-imports` rc 0 (`Contracts: 4 kept, 0 broken.`). Fresh throwaway `fd1585d-{pg,redis,minio}` (`postgres:16-alpine`, `redis:7-alpine`, `minio/minio:latest`, 127.0.0.1 ephemeral ports, redis db 11, bucket `gip-test-blobs-fd1585d`), `alembic upgrade head` rc 0, `provision-app-role.py --allow-default-password` rc 0. Selection R1–R5 (`test_diff_404s_for_unknown_table_and_version`, `test_diff_seed_without_a_seed_origin_404s`, `test_import_preview_creates_nothing`, `test_import_confirm_cannot_override_the_verdict`, `test_diff_cells_404s_not_found_for_unknown_table_version_and_against`) + C1 + C2 + C3 (`test_rate_table_diff_portfolio.py`) + C4 (`test_worker_raise_sites.py`), log `~/gi-pricing-plan.local/scratch/fd1585-cover/greens.log`: `80 passed, 2 warnings in 78.20s (0:01:18)`, `rc=0`. Removal: `docker rm -fv` of the three rc 0; `docker ps -a --filter name=fd1585` before 3 names, after 0; dangling images 0; shared redis db 11/12/13 dbsize 0/0/0; `gipricing_fd1585%` databases 0. (c) is the PR's python CI, the lead's.
 
-head=69853e0c536f5dc130dce4a63d97c72fcf19c54b at this section's parent; remaining: the audit, the mint (SL 8270 / LG 8271 ids), FD-1585 discharge lines, the PR.
+head=69853e0c536f5dc130dce4a63d97c72fcf19c54b at this section's parent; remaining: the audit, the mint (SL-1956 / LG-1957 ids), FD-1585 discharge lines, the PR.
 
 ### 2026-10-29 — Additions to the gate section (exec-fd1585gate, at the lead's request after the maintainer's 12:16:21 verification)
 
