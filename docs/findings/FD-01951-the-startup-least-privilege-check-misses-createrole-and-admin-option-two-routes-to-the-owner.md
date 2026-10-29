@@ -2,7 +2,7 @@
 id: FD-1951
 family: finding
 title: The startup least-privilege check misses CREATEROLE and ADMIN OPTION, two routes to the owner
-status: active
+status: closed
 created: 2026-10-26   # drafted 2026-10-26 under working id 8265
 owner: auditor
 tree: 372bfe64197db2377c24f788f44381d258cdc38f
@@ -118,8 +118,8 @@ maintainer's entry "2026-10-26 11:38:32 GMT" (`to-lead.md`), with the lead's con
 
 ## Disposition
 
-Open, owner WK-1178; **fix before close**, by Fri 31 Oct 2026: *[Correction 2026-10-26: the weekday is Saturday (2026-10-31); the date governs.]* the follow-up slice under PL-1927. Closed in place citing the PR
-when that slice merges. Filed under working id 8265.
+Closed 2026-10-29 in place, citing this PR (S1c, SL-1962). Residual limb in a record: FD-1963 (the membership strip, MEDIUM, WK-1178).
+Filed under working id 8265. *Date of record: 2026-10-29 — #1405, squash 7ceff4a1 (merge 36).*
 
 ## Correction — 2026-10-26: HIGH-2 is refuted by measurement
 

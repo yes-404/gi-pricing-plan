@@ -391,6 +391,8 @@ no-gate gap, a gate slot for the full gate; Lane A (backend db, `deploy/`); DB *
 The SL row mints at S1c's turn, in S1c's own PR, under WK-1178 in `docs/roadmap.md` §6. Rows 1 to 4,
 their dated lines and the plan body are unchanged.)*
 
+*Closed 2026-10-29: merged as #1405 (squash 7ceff4a1, merge 36); SL-1962 / LG-1964; FD-1951 closed; residuals FD-1963 (WK-1178, by Thu 12 Nov 2026) and FD-1965 (the seed-fixture slice).*
+
 **Order and serialisation against today's queue (E7).**
 - **S4** edits `modelling/factors.py` and two test files. Slice A (#1368) does not touch `factors.py`, but it
   edits `model_schema/modelling.py` (where `FactorType` lives) and the GLM fit beside it; S4 runs
