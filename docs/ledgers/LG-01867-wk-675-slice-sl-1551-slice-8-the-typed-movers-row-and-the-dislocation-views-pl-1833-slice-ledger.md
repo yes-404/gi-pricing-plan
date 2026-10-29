@@ -2,7 +2,7 @@
 id: LG-1867
 family: ledger
 title: WK-675 slice SL-1551 — Slice 8, the typed movers row and the dislocation views (PL-1833) (slice ledger)
-status: active                 # active → closed (§1.2a)
+status: closed                 # active → closed (§1.2a)
 created: 2026-10-23  # drafted 2026-10-21 under working id 8146; minted 2026-10-23 as LG-1867
 owner: executor
 tree: 57adb9e2
@@ -101,3 +101,7 @@ Task rows are appended here as each task starts.
 ## PRs
 
 None. The slice stops at PR-READY; the lead opens the PR.
+
+## Closed
+
+**Closed 2026-10-27** at slice close: PR #1372 merged as squash `034781b3a3bd1031c02a08dab5b6dc002d963cb6` (tree `258561b4764b92e23d5c6f284a89159afdd7ffe9`) on the maintainer's (by delegation) merge entry, `to-lead.md` entry "2026-10-25 13:42:51 GMT — Maintainer: MERGE-ACK #1372 @d5994fb2 (tree 258561b4) at CI all-green". The roadmap row `SL-1551` is `closed` in the same commit.

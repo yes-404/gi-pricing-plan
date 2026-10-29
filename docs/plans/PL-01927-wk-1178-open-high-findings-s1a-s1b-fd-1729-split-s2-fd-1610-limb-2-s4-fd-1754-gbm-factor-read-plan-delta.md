@@ -383,7 +383,7 @@ membership), amends FR-44 by a dated line, and proves each refusal red-first on 
 "2026-10-26 13:03:18 GMT": **a new row 5, S1c — FD-1951: the CREATEROLE and ADMIN OPTION routes
 (red-first).** Its slice is **SL 8266** (reserved in `~/gi-pricing-plan.local/handover/eta.md`,
 13:05:37 UTC); its ledger: **LG reserved at S1c's GO**. Work **WK-1178**; **deadline Fri 31 Oct
-2026** (inside the P2 code-complete ETA, before the Wed 4 Nov freeze). The row, in the table's
+2026** *[Correction 2026-10-29: the weekday is Saturday (2026-10-31); the date governs.]* (inside the P2 code-complete ETA, before the Wed 4 Nov freeze). The row, in the table's
 columns: Order 5; Scope (what the `LG-` quotes) Tasks S1c-0 to S1c-6 below; Requirements `01` §3:
 FR-44; Depends on S1b merged (#1399, `eaddb4d9`), DP-S1c-1 ruled, a granted throwaway DB window in a
 no-gate gap, a gate slot for the full gate; Lane A (backend db, `deploy/`); DB **yes** (throwaway

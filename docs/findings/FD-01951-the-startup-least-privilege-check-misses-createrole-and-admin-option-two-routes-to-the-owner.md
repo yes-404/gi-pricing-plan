@@ -14,7 +14,7 @@ relates: [WK-1178, FD-1729, PL-1927, PL-1769]
 
 ## Finding
 
-**HIGH; owner WK-1178; fix before close, by Fri 31 Oct 2026.** Authority: the maintainer's entry "2026-10-26 11:38:32 GMT —
+**HIGH; owner WK-1178; fix before close, by Fri 31 Oct 2026.** *[Correction 2026-10-26: the weekday is Saturday (2026-10-31); the date governs.]* Authority: the maintainer's entry "2026-10-26 11:38:32 GMT —
 Maintainer: postgres-pro review STOP — RULED (b)" (`to-lead.md`), condition (i): "FD-1951 reserved, HIGH, owner WK-1178, fix
 before close". Filed under working id 8265.
 
@@ -106,7 +106,7 @@ A follow-up slice under PL-1927 (a dated PL delta row, its SL reserved at that r
 3. amends FR-44 by a dated line;
 4. proves each refusal red-first on a planted role.
 
-**Owner WK-1178; deadline Fri 31 Oct 2026**, inside the P2 code-complete ETA and before the Wed 4 Nov freeze. FD-1729 still closes
+**Owner WK-1178; deadline Fri 31 Oct 2026** *[Correction 2026-10-26: the weekday is Saturday (2026-10-31); the date governs.]*, inside the P2 code-complete ETA and before the Wed 4 Nov freeze. FD-1729 still closes
 at S1b's PR; its close line cites this finding as the residual that supersedes nothing and widens the guard. The mediums for
 predefined roles, parameter privileges and function/schema ownership are for the follow-up slice to settle in or out of its scope,
 by a dated line.
@@ -118,7 +118,7 @@ maintainer's entry "2026-10-26 11:38:32 GMT" (`to-lead.md`), with the lead's con
 
 ## Disposition
 
-Open, owner WK-1178; **fix before close**, by Fri 31 Oct 2026: the follow-up slice under PL-1927. Closed in place citing the PR
+Open, owner WK-1178; **fix before close**, by Fri 31 Oct 2026: *[Correction 2026-10-26: the weekday is Saturday (2026-10-31); the date governs.]* the follow-up slice under PL-1927. Closed in place citing the PR
 when that slice merges. Filed under working id 8265.
 
 ## Correction — 2026-10-26: HIGH-2 is refuted by measurement

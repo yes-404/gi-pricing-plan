@@ -2,7 +2,7 @@
 id: FD-1954
 family: finding
 title: WF-699 B9 says MONETARY_FLOAT_REFUSED at save where FR-227 refuses with RATING_TYPE_MISMATCH, and no §5.x row owns the code
-status: active
+status: closed
 created: 2026-10-26   # drafted 2026-10-26 under working id 8263
 owner: auditor
 tree: 1e0a8abbc90723ae9c887a901f700b72f6f94cc1

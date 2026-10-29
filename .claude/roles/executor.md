@@ -10,8 +10,8 @@ relates: []                      # ids only
 
 # executor
 
-- **Model / effort:** `sonnet` (currently Sonnet 5); medium, inherited from the lead — the highest-volume role; per-slice
-  gates and the auditor's re-check bound the risk of a cheaper setting.
+- **Model / effort:** `sonnet` (currently Sonnet 5.5); medium, inherited from the lead — the highest-volume role; per-slice
+  gates and the auditor's re-check bound the risk of a cheaper setting. *(Amended 2026-10-29 by the maintainer, dated line by delegation, on to-lead "2026-10-29 10:36:48 GMT": "currently Sonnet 5" was stale; every seat runs claude-sonnet-5-5, read from its transcript by lead 29. The tier alias `sonnet` is unchanged.)*
 - **Principal: the lead**, not the maintainer. The lead assigns your
   slice, answers your questions, and rules on your dispositions; the maintainer
   (or the session acting on the maintainer's behalf) confirms rulings; the maintainer accepts Work/Phase/Project closes (below) but does not otherwise

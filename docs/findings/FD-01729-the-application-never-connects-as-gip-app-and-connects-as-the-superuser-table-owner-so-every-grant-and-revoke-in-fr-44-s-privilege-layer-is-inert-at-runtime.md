@@ -143,4 +143,4 @@ is first and independent; FD-1704's revoke becomes meaningful only after this la
 start (`CLAUDE.md` §14). The event that next confirms or discharges it is the merge of S-b with the three reds above shown
 on the base tree by cause.
 
-*2026-10-26: closed, in place (R6, `to-lead.md` "2026-10-26 03:54:51 GMT" (5)), by #1398 (`1e0a8abb`, part 1: the application connects as `gip_app_login`) and the S1b PR (SL-1948, part 2: the startup refusal, the tamper proof and the exact grant map). Residual: FD-1951 (the CREATEROLE and ADMIN OPTION routes; HIGH, WK-1178, by Fri 31 Oct), per "2026-10-26 11:38:32 GMT" (iii).*
+*2026-10-26: closed, in place (R6, `to-lead.md` "2026-10-26 03:54:51 GMT" (5)), by #1398 (`1e0a8abb`, part 1: the application connects as `gip_app_login`) and the S1b PR (SL-1948, part 2: the startup refusal, the tamper proof and the exact grant map). Residual: FD-1951 (the CREATEROLE and ADMIN OPTION routes; HIGH, WK-1178, by Fri 31 Oct *[Correction 2026-10-29: the weekday is Saturday (2026-10-31); the date governs.]*), per "2026-10-26 11:38:32 GMT" (iii).*
