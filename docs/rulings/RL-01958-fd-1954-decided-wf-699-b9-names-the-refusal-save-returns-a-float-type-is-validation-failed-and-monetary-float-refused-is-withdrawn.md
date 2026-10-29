@@ -249,6 +249,7 @@ The evidence shows this option. The maintainer's framing did not name it.
   4. **`03:1136`**: the code stays in the enumeration as a tombstone. Its identifier is a
      product identifier and is not reused (`CLAUDE.md` §5). It gets: *"(withdrawn 2026-10-27,
      `RL-1958`: never raised; a float type is `VALIDATION_FAILED`, FR-227)"*.
+  *Correction 2026-10-29 (lead 29; to-lead 2026-10-29 10:12:41 item 3): the four prescribed texts at :240, :243, :246 and :250 say 2026-10-27, the planned landing day; the edits were written on 2026-10-26 and carry that date as applied (d93a36d6). The ruling's substance is unchanged.*
 - **This is FD-1490's second close path.** FD-1490's own disposition offers it: *"remove it
   from `RATING_ERROR_CODES` and `03:929` and say `VALIDATION_FAILED` is the answer"*. Tue 27
   does the spec half. The two code items below do the rest, and they include the pinned line
