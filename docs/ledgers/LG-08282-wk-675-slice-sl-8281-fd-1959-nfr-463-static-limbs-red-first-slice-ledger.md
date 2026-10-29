@@ -80,6 +80,46 @@ Method for F3, M3 and M4: the test records the live regions (`[role="status"], [
 
 **F2 baseline (item 20 (a)), no vitest red.** `git grep -n 'border-slate-300' HEAD -- frontend/src ':!*__tests__*'` at `a8303d94`: 122 hits (`f2-grep.log`; counted `grep -c "^HEAD:"`). On inputs, selects or textareas (R10-DP1 (b) set): `DecimalCellInput.vue:54`; `BulkOperationDialog.vue:81,107,116`; `RateTableDiffPanel.vue:140,160`; `RateTableEditorView.vue:310`; `QuoteSandboxView.vue:174`; `QuoteForm.vue:74,95,116,136`; `DagDesigner.vue:295`; `DislocationView.vue:114`; `RegressionSuiteView.vue:129`; `RatingVersionListView.vue:126`; and the sweep additions `dag/DiffOverlay.vue:86`, `RatingDesignView.vue:158`, `dag/MountInspector.vue:69` (the `field` constant), `dag/StepInspector.vue:44`. Other WK-675 hits are `<section>`, `<th>`, button or node borders, not F2's 1.4.11 limb (`RateTableDiffPanel.vue:126,213-250,303,311`, `RateTableGrid.vue:68`, `RateTableImportExport.vue:93,101`, `RateTableEditorView.vue:284,292,326,357`, `DagDesigner.vue:222,308,317`, `NodeNavigator.vue:163,202`, `StepNode.vue:24`, `MountNode.vue:49`, `DislocationView.vue:119`, `BulkOperationDialog.vue:65`).
 
+#### 2026-10-29 T2/T3 — the fix and the greens (lead's GO, to-lead 22:15:19 cont.)
+
+Source commit `0fd78f71`, test typing commit `6a0927c0` (head `6a0927c0b4301b8bec17e38b9af6d55feb690499`). Source edits only in `frontend/src/**/*.vue`: `DecimalCellInput` (F1: one message tied by `aria-describedby` whenever invalid, "Enter a decimal number" / "Enter a whole number"), `RateTableDiffPanel`, `BulkOperationDialog`, `RateTableImportExport`, `RateTableEditorView` (F3/M3: a `role="status"` region always rendered, only its text conditional; the editor also has an `sr-only` status that announces the review), `QuoteSandboxView` (M4: `sr-only` status "Score result: <outcome>."), F2 on the 23 input hits (`border-slate-300` → `border-slate-500`), F5 (`hover:underline` → `underline` at the 5 sites), F6 (`tabindex="0"` on the three scroll regions), L11 (`role="group"` + `tabindex="0"` on the counterexample `<pre>`), L12 (`<th scope="row">` for the first column of the golden and property tables). No `package.json`, lockfile, backend or deploy change.
+
+Each red file re-run singly at the fix head (logs `*.green.log`, `head=` first, `rc=` last): DecimalCellInput 7 passed rc=0; RateTableDiffPanel 11 passed rc=0; BulkOperationDialog 7 passed rc=0; RateTableImportExport 7 passed rc=0; RateTableEditorView 13 passed rc=0; QuoteSandboxView 20 passed rc=0; RegressionSuiteView 14 passed rc=0 (these ran at `0fd78f71`; `6a0927c0` changed only the helper's TypeScript signature, and the full suite below ran on it).
+
+**F2 evidence (item 20).** (b) `contrast.py` (quoted in `contrast.log`) reads `--color-slate-500: oklch(55.4% 0.046 257.417)` from the installed `tailwindcss/theme.css`: hex #62748e, relative luminance 0.17026, contrast against #ffffff = **4.77:1** (≥ 3:1). (a) `f2-after.log`: over the 14 R10-DP1 (b) files, `git grep -n -B8 'border-slate-300'` finds no `<input>`, `<select>` or `<textarea>`; the 21 remaining hits are a canvas, `<section>`, `<th>` and button borders. Outside WK-675 `border-slate-300` is still on inputs (`FactorCreateForm`, `RuleBuilder`, `FactorWorkbenchView`, …): R10-DP1 (c), not this slice.
+
+**GREEN set by import closure (item 29).** `python3 -I closure.py <wt>` (`closure.log`): changed non-test modules = `git diff --name-only origin/main...HEAD -- frontend/src` minus `__tests__` (15); closure = those + importers + one more level (43 files); GREEN = every test file importing a closure file (25): components/dag/__tests__/DagDesigner.test.ts, components/dag/__tests__/DagDesignerMounts.test.ts, components/dag/__tests__/DagDesignerValidation.test.ts, components/dag/__tests__/DiffOverlay.test.ts, components/dag/__tests__/MountInspector.test.ts, components/dag/__tests__/StepInspector.test.ts, components/rating/__tests__/BulkOperationDialog.test.ts, components/rating/__tests__/DecimalCellInput.test.ts, components/rating/__tests__/RateTableDiffPanel.test.ts, components/rating/__tests__/RateTableGrid.test.ts, components/rating/__tests__/RateTableImportExport.test.ts, router/__tests__/guard.test.ts, router/__tests__/index.test.ts, router/__tests__/objectiveEditorRoute.test.ts, router/__tests__/routeGraph.test.ts, views/__tests__/DiagnosticsView.test.ts, views/__tests__/DislocationView.test.ts, views/__tests__/ModelComparisonView.test.ts, views/__tests__/ModelDetailView.test.ts, views/__tests__/QuoteSandboxView.test.ts, views/__tests__/RateTableEditorView.test.ts, views/__tests__/RatingDesignView.test.ts, views/__tests__/RatingDesignViewMounts.test.ts, views/__tests__/RatingVersionListView.test.ts, views/__tests__/RegressionSuiteView.test.ts. The full suite below includes all of them.
+
+**The lows (item 21).**
+
+| Low | Disposition |
+|---|---|
+| F4 | **carried**: needs a FormField contract, not one line; owner WK-675, to the P2 close with OQ-1960 (the lead's ruling, R10-DP2 (a)) |
+| F5 | **fixed**: `hover:underline` → `underline` at `QuoteSandboxView.vue:117`, `DislocationView.vue:88`, `RegressionSuiteView.vue:80`, `RateTableEditorView.vue:224`, `RatingDesignView.vue:103`; grep: no `hover:underline` remains at them |
+| F6 | **fixed**: `tabindex="0"` at `RateTableEditorView` (grid wrapper), `RateTableDiffPanel` (results wrapper), `RegressionSuiteView` (counterexample `<pre>`); 3 tests green |
+| L4 | **carried** (behavioural; node tab stops against the navigator): owner WK-675, to the P2 close with OQ-1960 |
+| L5 | **carried**: the fix would edit `RateTableEditorView.test.ts:213`; existing tests stay unedited in this slice; owner WK-675, to the P2 close with OQ-1960 (the lead's ruling) |
+| L6 to L10 | **carried** (R10-DP2 (a)): owner WK-675, to the P2 close with OQ-1960 |
+| L11 | **fixed**: `role="group"` + `tabindex="0"` on the `<pre>`, `RegressionSuiteView.vue`; 1 test green |
+| L12 | **fixed**: `<th scope="row">` for the first column of the golden and property tables; 1 test green |
+
+#### 2026-10-29 T4 — the frontend half of the gate (R10-DP3 (b)), head `6a0927c0b4301b8bec17e38b9af6d55feb690499`
+
+Each command its own call, logs `gate-<name>.log` (`head=` first, `rc=` last), run in the slice worktree, load1 3.4 at the start:
+
+| Command (`pnpm --dir frontend …`) | rc |
+|---|---|
+| `install --frozen-lockfile` | 0 |
+| `generate:api` | 0 |
+| `lint` | 0 |
+| `type-check` | 0 |
+| `test` | 0 — `Test Files  137 passed (137)`, `Tests  905 passed (905)` |
+| `build` | 0 |
+
+A first run at `0fd78f71` had `type-check` rc=2 (12 `TS2379` errors in my new live-region helper's `HTMLElement` signature, which also failed `test` and `build`); fixed in `6a0927c0` (helper typed over `Element`) and the whole table re-run at the new head. The first-run logs were overwritten.
+
+Docs set: see the next entry.
+
 ## PRs
 
 (None yet.)
