@@ -3025,6 +3025,26 @@ FD-1729's first part: the application connects as the `gip_app_login` role, a me
 
 (Minted 2026-10-26 from working id 8246, on the maintainer's (by delegation) entry "2026-10-26 02:07:55 GMT" (`to-lead.md`) (S1a mints as a new `SL-` row; SL-1771 is retired) and the mint map of "2026-10-26 02:26:20 GMT"; ledger LG-1941, audit RS-1946; executed on branch `draft/s1a-fd1729`.)
 
+#### SL-1966 — WK-1178 fix slice (S1d) — FD-1965: the seed fixture migrates its own scratch database, red first (PL-1927's S1d)
+
+```yaml
+id: SL-1966
+family: slice
+title: WK-1178 fix slice (S1d) — FD-1965: the seed fixture migrates its own scratch database, red first (PL-1927's S1d)
+status: active                    # draft → active → closed | retired (§1.2a)
+created: 2026-10-29
+owner: lead
+tree: 2cf61612e0aeb79640f4dbef5263784d1fb7da46
+phase: P2
+work: WK-1178
+corrected_by: []
+relates: [FD-1965, LG-1967, PL-1927]
+```
+
+FD-1965's fix: the seed fixture migrates its own scratch database instead of the shared template, with the red tests and their red table in the slice ledger. Slice S1d of PL-1927.
+
+(Minted 2026-10-29 from working id 8278, on the lead's brief (lead 29) under the grant "2026-10-29 19:18:41 GMT" (S1d's FINAL accepted pre-mint at 2cf61612) and the mint tool of record `mint-repoint.py` (sha256 `4d83681a`); ledger LG-1967; executed on branch `draft/sl-8278`.)
+
 #### SL-1962 — WK-1178 fix slice (S1c) — FD-1951: the CREATEROLE route and the five same-class mediums, red first (PL-1927's S1c)
 
 ```yaml
