@@ -163,3 +163,23 @@ Checks: `ruff check` on the two files rc 0. `ruff format --check`: `test_demo_co
   services, not keycloak.
 
 (Recorded 2026-10-29 by the lead, on to-lead "2026-10-29 18:57:05 GMT": the gate script's template-guard red-proof (exec-beatgate; disposable copy scratch_beatgate_guard from gipricing: exact list rc 0; one planted environments row → environments=4, rc 1; dropdb rc 0; template re-read exact) ran inside S1d's DB window (18:53 → ≤ 19:53), between 18:54 and 18:56, under the lead's brief, which wrongly allowed it there. A DB window is single-tenant. The proof STANDS; the breach is recorded, not repeated. The maintainer's read at 18:57:05: template alembic_version=1 environments=3 tenant_marker=1; no beatgate database left. Script: scratch/sl8275-gate/sl8275-gate.sh sha256 7fbaa097f0c92e7083a3a2e1b189cb40d8b91a5b165acec85327974fdaa84d98.)
+
+## Build window — 2026-10-29 19:05 GMT onward (exec-beatgreen; project `gip-s4-runtime`, own volumes; never the shared stack)
+
+Image `gi-pricing-app:125779310f8528a300480357d050792ea3bcada2`, built with `docker build` from a `git archive` of that head.
+Drivers (scratch, not committed): `~/gi-pricing-plan.local/scratch/sl-8275-exec/{reds,onebeat}.py`; logs `reds2.log`, `onebeat.log`, `caller1-red.log`.
+The project's own Postgres was provisioned by hand (`scripts/provision-app-role.py --allow-default-password`, rc 0) — see F2.
+
+- **A3 (rc 0 for the driver):** RED1, no scheduler: `RED1 job 01a18914-867a-7ab3-b230-d2506b0b7a4c status queued | outbox: pending|1`.
+  RED2, scratch override without `--schedule` (never committed): `scheduler exited exit=1 Exited (1) 14 seconds ago`, log
+  `_gdbm.error: [Errno 13] Permission denied: 'celerybeat-schedule'`. GREEN: `GREEN job status succeeded scheduler: running | outbox: published|1`.
+- **F1 (found in the window; fixed in its own commit):** `docker compose ps --format json` truncates `Command` (`"celery -A app.worke…"`), so the
+  ported `one_beat_problems` saw no ` beat` in any row. RED, before the fix, on a correct single scheduler:
+  `ONE problems: ['0 beat containers running, not exactly 1']`. The fix is `--no-trunc` in `beat_fixture`'s `ps` call.
+  GREEN after it: `ONE problems: []`; RED against a real double beat (`worker-default run -d … beat`): `DOUBLE problems: ['2 beat containers running, not exactly 1']`;
+  after removing the extra: `AFTER-RM problems: []` (rc 0).
+- **F2 (base defect, not this slice's; held for the maintainer's ruling):** since S1c the compose `api` exits 3
+  (`password authentication failed for user "gip_app_login"`) unless `provision-app-role.py` has run on the stack's Postgres after `migrate`;
+  the owner seed also needs `GIP_TEST_DATABASE_URL`. An unprovisioned role also kills beat on its first relay tick (`scheduler exited`).
+  The unchanged caller `test_a_submitted_job_reaches_a_terminal_state_through_the_compose_worker` at head `1a3a8483463b42eee4a877068b9d8fe743b9b5f2`
+  under `GIP_DEPLOY_TESTS=1`: `1 failed, 2 warnings in 46.16s`, rc=1 (`CalledProcessError` from `docker compose … up`, then the conftest_db `GIP_TEST_DATABASE_URL is not set` warning).
