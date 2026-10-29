@@ -1,12 +1,12 @@
 ---
-id: LG-8282
+id: LG-1972
 family: ledger
-title: WK-675 slice SL-8281 — FD-1959's NFR-463 static limbs on the WK-675 surfaces, red first (slice ledger)
+title: WK-675 slice SL-1971 — FD-1959's NFR-463 static limbs on the WK-675 surfaces, red first (slice ledger)
 status: active                 # active → closed (§1.2a)
-created: 2026-10-29
+created: 2026-10-29               # drafted 2026-10-29 under working id 8282
 owner: executor
 tree: aad4fd58bde87f59fffe646466f4f86bb2373bf8   # origin/main at the branch cut
-slice: SL-8281
+slice: SL-1971
 phase: P2
 work: WK-675
 plans: [PL-1546]
@@ -14,7 +14,7 @@ corrected_by: []
 relates: [FD-1959, PL-1546]
 ---
 
-# LG-8282 — WK-675 slice SL-8281: FD-1959's NFR-463 static limbs, red first
+# LG-1972 — WK-675 slice SL-1971: FD-1959's NFR-463 static limbs, red first
 
 **GO:** to-lead "2026-10-29 22:13:59 GMT": PL-1546 row 10 ACCEPTED at 7e14e2e3; R10-DP1 (b), R10-DP2 (a), R10-DP3 (b), R10-DP4 (c); executor seated for T0 and T1 only (the fix, T2, is on the lead's word).
 **MERGE-ACK:** (added at merge.)
@@ -126,7 +126,7 @@ Logs `docs-audit.log`, `docs-index.log`, `docs-register.log` (`head=` first, `rc
 
 | Check | rc | Reading |
 |---|---|---|
-| `audit-docs.py` | 1 | 6 FAILED, all expected and named: check 32 ×5 (`LG-8282` and `SL-8281` do not resolve in `docs/INDEX.md`: working ids, minted by the lead) and check 39 (`docs/INDEX.md` stale: not regenerated before the mint, seat brief item 17). No other failure. |
+| `audit-docs.py` | 1 | 6 FAILED, all expected and named: check 32 ×5 (`LG-1972` and `SL-1971` do not resolve in `docs/INDEX.md`: working ids, minted by the lead) and check 39 (`docs/INDEX.md` stale: not regenerated before the mint, seat brief item 17). No other failure. |
 | `doc-index.py --check` | 1 | `docs/INDEX.md is stale` (the same check 39 cause: the new LG is not in it). |
 | `register-lint.py` | 0 | `register.md: OK (0 violations)` |
 

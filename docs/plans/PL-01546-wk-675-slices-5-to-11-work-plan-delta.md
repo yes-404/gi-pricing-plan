@@ -140,9 +140,9 @@ means seen red **by the stated cause** at the slice's base, its line verbatim in
 16. The slice's squash merge on `main` is dated on or before 2026-10-28 (`git log -1
     --format=%cI <squash sha>`).
 
-**Row 10 — FD-1959's fix slice** (row 10's dated line, 2026-10-29; SL 8281, LG 8282). Each item is
+**Row 10 — FD-1959's fix slice** (row 10's dated line, 2026-10-29; SL-1971, LG-1972). Each item is
 checked at the slice PR's merge tree, with the range `origin/main...<slice branch>` named. "Red"
-means seen red **by the stated cause** at base `aad4fd58`, its line verbatim in LG 8282 (`head=` first,
+means seen red **by the stated cause** at base `aad4fd58`, its line verbatim in LG-1972 (`head=` first,
 `rc=` last, seat brief item 37) before the fix. Every vitest run names one file (seat brief item 28:
 `test -f` first, `Test Files  1` in the output, load1 < 6 quoted).
 
@@ -161,26 +161,26 @@ means seen red **by the stated cause** at base `aad4fd58`, its line verbatim in 
     whose text announces the section or result (or focus moved to its heading, asserted by
     `document.activeElement`); red at base by cause, green at head, in `RateTableEditorView.test.ts`
     and `QuoteSandboxView.test.ts`.
-20. **F2 (not testable in vitest: happy-dom computes no rendered contrast).** Evidence, both in LG 8282:
+20. **F2 (not testable in vitest: happy-dom computes no rendered contrast).** Evidence, both in LG-1972:
     (a) `git grep -n 'border-slate-300' <head> -- <the files R10-DP1 rules in scope>` prints no line on an
     `<input>`, `<select>` or `<textarea>` (or a class constant bound to one), each remaining hit named
     with its element (a `<section>`, `<th>` or button border is not F2's 1.4.11 limb); (b) the new
     class's hex from the installed Tailwind v4 palette and its contrast against `#ffffff` by WCAG 2.2's
     relative-luminance formula, computed by a script quoted with its output, ≥ 3:1.
-21. **The lows.** LG 8282 has one line per low (F4, F5, F6, L4 to L12): **fixed**, with its hunk (one
+21. **The lows.** LG-1972 has one line per low (F4, F5, F6, L4 to L12): **fixed**, with its hunk (one
     line per site, FD-1959's Remedy rule) and its test or grep, or **carried**, with the reason it is
     not one line and its owner and date as R10-DP2 rules; FD-1959's essay gets the dated carry line.
 22. `git diff --name-only origin/main...<slice branch>` lists only `frontend/src/**/*.vue`,
-    `frontend/src/**/__tests__/*.test.ts` and docs records (LG 8282, SL 8281's row in `docs/roadmap.md`,
+    `frontend/src/**/__tests__/*.test.ts` and docs records (LG-1972, SL-1971's row in `docs/roadmap.md`,
     the FD-1959 essay, `docs/findings/register.md`, `docs/INDEX.md`): no `frontend/package.json` or
     `pnpm-lock.yaml` change (no new dependency; OQ-1960 stays open), no spec, no contract.
 23. **The GREEN set is derived by import closure** (seat brief item 29) from
-    `git diff --name-only origin/main...HEAD -- frontend/src`; the commands and the list in LG 8282;
+    `git diff --name-only origin/main...HEAD -- frontend/src`; the commands and the list in LG-1972;
     each file green at head.
-24. **The gate as R10-DP3 rules**, rc table all 0 at the slice head, its END row in LG 8282; the frontend
+24. **The gate as R10-DP3 rules**, rc table all 0 at the slice head, its END row in LG-1972; the frontend
     half's `Test Files  N passed` line quoted.
 25. **`accessibility-tester`** re-reads the changed components at the head (static, as FD-1959's
-    Method); its report is quoted in LG 8282 (item 5's form) and shows F1, F3, M3, M4 and the in-scope
+    Method); its report is quoted in LG-1972 (item 5's form) and shows F1, F3, M3, M4 and the in-scope
     F2 sites as PASS.
 26. **FD-1959's record in the same PR:** the register row (`docs/findings/register.md:426` at
     `aad4fd58`, found by its title) and the essay each get a dated line naming the PR, in the form
@@ -259,20 +259,20 @@ maintainer's entry "2026-10-29 22:06:20 GMT — Maintainer: merge 40 READ-BACK C
 DecimalCellInput.vue :34/:50/:51/:58 — the last WK-675 acceptance blocker, dated Tue 3 Nov) seated
 TONIGHT: a dated delta row in the WK-675 plan that owns the a11y work (name it by path), reds = vitest
 on the component (DB-free), fix + frontend gate Fri 30, merge Fri — pulling Tue 3 Nov forward"), and
-on the entry "2026-10-29 22:07:37 GMT" ("working ids SL 8281 / LG 8282, next 8283"); Lean P2 as the
+on the entry "2026-10-29 22:07:37 GMT" ("working ids SL 8281 / LG 8282, next 8283", a verbatim quote, kept; minted as SL-1971 / LG-1972); Lean P2 as the
 entry "2026-10-29 17:14:18 GMT" binds it (a dated row in the delta that owns the topic, no new `PL-`):
 **a new row 10 — FD-1959: NFR-463's static limbs on the WK-675 surfaces.** This file owns it because
 FD-1959 `relates:` `PL-1546`, row 1 (S5, the editor that renders `DecimalCellInput`) and row 2 (S6,
-the sandbox) carry NFR-463, and row 9 set the form for a WK-675 close blocker. Its slice is **SL 8281**;
-its ledger **LG 8282**. Work **WK-675**; due **Fri 30 Oct 2026** (`date -d 2026-10-30 +%A` prints
+the sandbox) carry NFR-463, and row 9 set the form for a WK-675 close blocker. Its slice is **SL-1971**
+(minted from working id 8281); its ledger **LG-1972** (minted from working id 8282). Work **WK-675**; due **Fri 30 Oct 2026** (`date -d 2026-10-30 +%A` prints
 Friday), pulling FD-1959's Tue 3 Nov 2026 forward. The row, in the table's columns: Order 10; Slice
-SL 8281 — FD-1959: NFR-463's static limbs; Scope (what the `LG-` quotes) the section "Row 10 —
+SL-1971 — FD-1959: NFR-463's static limbs; Scope (what the `LG-` quotes) the section "Row 10 —
 FD-1959" below (F1, F3, M3, M4 and F2 as R10-DP1 rules, the lows under FD-1959's own one-line rule, T0
 to T5); Requirements `00`: NFR-463 (no spec change: FD-1959's Remedy needs none); Depends on the
 maintainer's acceptance of this row (reds start on it), R10-DP1 ruled before T2, R10-DP3 before T4 (the
 gate), R10-DP2 and R10-DP4 before T5; Lane frontend (DB-free; no DB, no docker); Size 1; Ladder no (a close blocker, not a
 ladder rung). Acceptance items 17 to 27. The SL row is cut under WK-675 in `docs/roadmap.md` §6 in
-the slice's own PR, with LG 8282. Rows 1 to 9 and the plan body are unchanged.)*
+the slice's own PR, with LG-1972. Rows 1 to 9 and the plan body are unchanged.)*
 
 ### Changes since `PL-1286`, per slice
 
@@ -439,7 +439,7 @@ test asserts `aria-invalid` only for a syntax error (`DecimalCellInput.test.ts:1
   sites and their test files, and FD-1959 whole. Re-locate each low by its description (the report's
   lines are approximate; e.g. `RegressionSuiteView.vue:173` is a `<th scope="col">` at `aad4fd58`, not
   L12's first-column `<td>`) and classify it one-line or not. Record `head=` and the classification in
-  LG 8282.
+  LG-1972.
 - [ ] **T1. Reds** (items 17 to 19, and the testable one-line lows), each red by its cause at the base,
   one vitest file per run.
 - [ ] **T2. The fix.**
@@ -455,15 +455,15 @@ test asserts `aria-invalid` only for a syntax error (`DecimalCellInput.test.ts:1
 - [ ] **T3. Greens.** Items 17 to 19 green at the head; the GREEN set by import closure (item 23).
 - [ ] **T4. The gate** as R10-DP3 rules. Pre-PR: `bash ~/gi-pricing-plan.local/scratch/idsweep.sh
   origin/<branch>` quoted (seat brief item 26).
-- [ ] **T5. Records.** LG 8282 (scope = this section, the reds and greens, F2's ratio, the lows table,
-  `accessibility-tester`'s report, the gate END row); SL 8281's row under WK-675 in `docs/roadmap.md`;
+- [ ] **T5. Records.** LG-1972 (scope = this section, the reds and greens, F2's ratio, the lows table,
+  `accessibility-tester`'s report, the gate END row); SL-1971's row under WK-675 in `docs/roadmap.md`;
   FD-1959's dated line and its register row (item 26, R10-DP4); `docs/INDEX.md` regenerated after the
   mint (seat brief item 17).
 
 **Write set (row 10).** `frontend/src/components/rating/DecimalCellInput.vue` and its test; the F3, M3
 and M4 components and their existing test files (`RateTableDiffPanel`, `BulkOperationDialog`,
 `RateTableImportExport`, `RateTableEditorView`, `QuoteSandboxView`); the F2 sites R10-DP1 rules in; the
-one-line lows' files; LG 8282, SL 8281's row in `docs/roadmap.md`, the FD-1959 essay and register row,
+one-line lows' files; LG-1972, SL-1971's row in `docs/roadmap.md`, the FD-1959 essay and register row,
 `docs/INDEX.md`.
 
 **Gate proposal (R10-DP3).** The change is frontend-only plus docs records. From the path filters at
@@ -480,7 +480,7 @@ its 8 docs-audit pytest files via run-small). Seat brief item 30's own rule send
 | # | Question | Options | Recommendation | Kind | Blocking | Resolved by |
 |---|---|---|---|---|---|---|
 | DP-3 = OQ-1223 | How does an ordinal categorical input take part in a `monotone` property? (`PL-1286` DP-3) | as the OQ states them: (a) declare ordinality on `InputContractField`; (b) read the order of `domain` | the OQ's own (a), "when the rate-table editor introduces the order" | decision point | **yes, for S5's GO** (was "before S5's leaf plan goes active"; there is no leaf plan under L5) | decision-maker, by `RL-` |
-| R10-DP1 | F2's scope: which input borders does SL 8281 raise? FD-1959 lists 14 sites; a class sweep (`git grep -n 'border-slate-300' aad4fd58 -- frontend/src`) also finds text inputs on WK-675 surfaces it does not list (`dag/DiffOverlay.vue:86`, `views/RatingDesignView.vue:158`, the `field` class constants at `dag/MountInspector.vue:69` and `dag/StepInspector.vue:44`) and many outside WK-675 (`ModelSpecBuilderView.vue`, `FactorWorkbenchView.vue`, `RuleBuilder.vue`, …) | (a) the 14 listed sites only; (b) the listed sites plus every text-input border on the WK-675 surfaces (FD-1959's view table, and the `dag/`, `rating/` and `sandbox/` components), found by the sweep and classified at T0; (c) every text input in the SPA | **(b)**: NFR-463 is the requirement, not the list, and a sweep within WK-675 is cheap; (c) is outside WK-675 — the lead reports it to the auditor as a candidate finding, not this slice's work | decision point | yes, before T2 | decision-maker |
+| R10-DP1 | F2's scope: which input borders does SL-1971 raise? FD-1959 lists 14 sites; a class sweep (`git grep -n 'border-slate-300' aad4fd58 -- frontend/src`) also finds text inputs on WK-675 surfaces it does not list (`dag/DiffOverlay.vue:86`, `views/RatingDesignView.vue:158`, the `field` class constants at `dag/MountInspector.vue:69` and `dag/StepInspector.vue:44`) and many outside WK-675 (`ModelSpecBuilderView.vue`, `FactorWorkbenchView.vue`, `RuleBuilder.vue`, …) | (a) the 14 listed sites only; (b) the listed sites plus every text-input border on the WK-675 surfaces (FD-1959's view table, and the `dag/`, `rating/` and `sandbox/` components), found by the sweep and classified at T0; (c) every text input in the SPA | **(b)**: NFR-463 is the requirement, not the list, and a sweep within WK-675 is cheap; (c) is outside WK-675 — the lead reports it to the auditor as a candidate finding, not this slice's work | decision point | yes, before T2 | decision-maker |
 | R10-DP2 | The lows that are not one line (likely L6, L7, L8, L9, L10, at T0): who owns them, and by when? | (a) carried in FD-1959's essay with owner WK-675 and a date at the P2 close (with OQ-1960), listed in WK-675's close record as carried forward; (b) fix all 12 in this slice (size 1 → about 1½, Fri 30 at risk); (c) a Phase 3 owner | **(a)**: FD-1959's Remedy already permits a carry "with a dated line naming its owner"; (b) puts the Fri 30 date at risk for low-severity items | decision point | no (blocks T5's carry line only) | decision-maker |
 | R10-DP3 | The gate for a frontend-only change with docs records | (a) the full code gate, both halves (seat brief item 30's rule for anything outside `docs/`); (b) the frontend half plus item 30's docs-only set, with the PR's python CI run (it fires from `docs/**`) as the Python evidence | **(b)**: no Python file changes; the 22:06:20 entry names "frontend gate"; Python is still run once, by CI on the PR | decision point | yes, before T4 | the maintainer (item 30 is a standing rule) |
 | R10-DP4 | Does FD-1959 close at the merge? Its Disposition needs "F1 and the four moderates fixed …, the lows fixed or carried with a date, **and OQ-1960 is decided**"; OQ-1960 is decided at the P2 close | (a) the PR discharges the fix limb by a dated line; FD-1959 stays open on its carried limb until OQ-1960 is decided, and WK-675's acceptance reads both; (b) OQ-1960 is ruled now and, if (i), axe-core and Playwright enter this slice (a tech dependency, `skills-map.md` in the same PR; Fri 30 at risk); (c) an `RL-` amends the Disposition: FD-1959 closes at the merge and the browser-pass limb lives only in OQ-1960 (owner WK-675) | **(c)**: one question is held in one record, and the blocker the 22:06:20 entry names clears on Fri 30; (a) is the default if no ruling is made by T5 | decision point | no (blocks T5's FD line only) | decision-maker, by `RL-` |
