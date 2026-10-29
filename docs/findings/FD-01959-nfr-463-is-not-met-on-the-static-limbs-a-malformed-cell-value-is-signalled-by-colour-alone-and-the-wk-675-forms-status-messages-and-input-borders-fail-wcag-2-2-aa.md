@@ -1,16 +1,16 @@
 ---
-id: FD-8272
+id: FD-1959
 family: finding
 title: NFR-463 is not met on the static limbs — a malformed cell value is signalled by colour alone, and the WK-675 forms, status messages and input borders fail WCAG 2.2 AA
 status: active
-created: 2026-10-26
+created: 2026-10-29               # drafted 2026-10-26 under working id 8272
 owner: auditor
 tree: a3969209d62012cd6206a81598094d799efaa2cf
 corrected_by: []
 relates: [WK-675, CR-1952, PL-1546, RL-1307]
 ---
 
-# FD-8272 — NFR-463 is not met on the static limbs
+# FD-1959 — NFR-463 is not met on the static limbs
 
 ## Finding
 
@@ -116,10 +116,10 @@ otherwise carried in this essay with a dated line naming its owner.
 
 **Carried limb: the static-only limit.** Dated 2026-10-26: rendering checks (contrast as rendered, focus order, announcements, Focus Not
 Obscured 2.4.11, reflow, text spacing, target size) are unverified without a browser pass. The decision on adding axe-core and
-Playwright to `frontend/package.json` is OQ 8273, owner WK-675, decided at the P2 close; a "yes" changes `docs/skills-map.md` in the same PR.
-The user's acceptance of WK-675 reads this finding and OQ 8273, not a "pass".
+Playwright to `frontend/package.json` is OQ-1960, owner WK-675, decided at the P2 close; a "yes" changes `docs/skills-map.md` in the same PR.
+The user's acceptance of WK-675 reads this finding and OQ-1960, not a "pass".
 
 ## Disposition
 
 Open, owner WK-675. The finding closes when F1 and the four moderates are fixed and their tests are green on `origin/main`, the lows are
-fixed or carried with a date, and OQ 8273 is decided.
+fixed or carried with a date, and OQ-1960 is decided.

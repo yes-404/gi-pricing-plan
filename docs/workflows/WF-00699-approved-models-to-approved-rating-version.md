@@ -61,7 +61,7 @@ committee and is normally the one nobody can answer.
 | B6 | Frontend | Flags an error **on the node**: `s_office` consumes `commission_factor`, which nothing produces. The graph cannot be saved. | `03` FR-212, §5.3 |
 | B7 | Pricing Actuary | Mounts the reusable `sub_graph:ncd-ladder@4` rather than re-drawing it. | `03` FR-217 |
 | B8 | Pricing Actuary | Adds `output` steps with explicit rounding (`half_even`, 0 dp on pence). Rounding happens exactly once. | `03` FR-226 |
-| B9 | Backend | Type-checks on save. A float result or port type is refused at save, 422 `VALIDATION_FAILED` naming the field (no rating type is float; FR-227, R2). *(Amended 2026-10-26, RL 8268 (FD-1954): was `MONETARY_FLOAT_REFUSED`, which nothing raises.)* | `03` FR-227/245, R2 |
+| B9 | Backend | Type-checks on save. A float result or port type is refused at save, 422 `VALIDATION_FAILED` naming the field (no rating type is float; FR-227, R2). *(Amended 2026-10-26, RL-1958 (FD-1954): was `MONETARY_FLOAT_REFUSED`, which nothing raises.)* | `03` FR-227/245, R2 |
 
 ### Phase C — Compile and pin (Pricing Actuary)
 
@@ -109,7 +109,7 @@ committee and is normally the one nobody can answer.
 | Situation | Behaviour | Refs |
 |---|---|---|
 | Graph has a cycle or an unresolved reference | Rejected at save time, shown on the node | `03` FR-212, `RATING_GRAPH_CYCLIC` |
-| Monetary value would be float-typed | A float result or port type is refused at save, 422 `VALIDATION_FAILED` naming the field (no rating type is float; FR-227, R2) *(amended 2026-10-26, RL 8268)* | `03` R2, FR-227 |
+| Monetary value would be float-typed | A float result or port type is refused at save, 422 `VALIDATION_FAILED` naming the field (no rating type is float; FR-227, R2) *(amended 2026-10-26, RL-1958)* | `03` R2, FR-227 |
 | A pinned artifact is not yet approved | `PIN_NOT_APPROVED` at compile | `03` FR-240 |
 | A `control`-intent factor reaches a rate table | `CONTROL_FACTOR_IN_RATEABLE_PATH` | `02` FR-88, `03` FR-240 |
 | Rate table has a gap in key coverage | `RATE_TABLE_INCOMPLETE` at save | `03` FR-234 |

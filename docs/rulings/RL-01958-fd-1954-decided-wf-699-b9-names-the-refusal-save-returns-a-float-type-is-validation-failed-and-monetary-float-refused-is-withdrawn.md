@@ -1,9 +1,9 @@
 ---
-id: RL-8268
+id: RL-1958
 family: ruling
 title: FD-1954 decided — WF-699 B9 names the refusal save actually returns, a float result or port type is 422 VALIDATION_FAILED naming the field, and MONETARY_FLOAT_REFUSED is withdrawn from 03 (option (c))
 status: active                 # active → superseded | retired (§1.2a) — a ruling opens active; DRAFT until the maintainer adopts it and it is minted
-created: 2026-10-26               # drafted 2026-10-26 under working id 8268
+created: 2026-10-29               # drafted 2026-10-26 under working id 8268
 owner: decision-maker
 tree: 0996cadaaf0331a15e9387074a35eb28f4fb00d5
 phase: P2
@@ -14,11 +14,11 @@ corrected_by: []
 relates: [FD-1954, FD-1490, CR-1952, RL-1564, WF-699, WK-675, WK-673, PL-1544, FR-227, FR-245]
 ---
 
-# RL-8268 — FD-1954: which side is wrong about WF-699 B9
+# RL-1958 — FD-1954: which side is wrong about WF-699 B9
 
 **DRAFT — the maintainer rules.** It binds nothing until the maintainer adopts it, and the
 maintainer rules by Tue 27 Oct 2026 noon. Drafted 2026-10-26 by the decision-maker (seat
-dm-1954) on lead 28's brief `brief-dm-1954-2026-10-26.md`. The working id in prose, RL 8268, is
+dm-1954) on lead 28's brief `brief-dm-1954-2026-10-26.md`. The working id in prose, RL-1958, is
 not minted.
 
 ## Authority and scope
@@ -237,18 +237,18 @@ The evidence shows this option. The maintainer's framing did not name it.
   1. **WF-699 B9 (`:64`)**, the cell rewritten. The workflow is a journey; this is not an FR
      row. New cell: *"Type-checks on save. A step or output declared with a `float` type is
      refused: **422 `VALIDATION_FAILED`**, naming the field — no rating type is float (R2).
-     *(Amended 2026-10-27, `RL-8268` (FD-1954): was `MONETARY_FLOAT_REFUSED`, which nothing
+     *(Amended 2026-10-27, `RL-1958` (FD-1954): was `MONETARY_FLOAT_REFUSED`, which nothing
      raises.)*"* Refs: `03` FR-227/245, R2.
   2. **WF-699 §3 row (`:112`):** *"Monetary value would be float-typed | **422
-     `VALIDATION_FAILED`** at save, naming the field *(amended 2026-10-27, `RL-8268`)* | `03`
+     `VALIDATION_FAILED`** at save, naming the field *(amended 2026-10-27, `RL-1958`)* | `03`
      R2, FR-227"*.
   3. **FR-227 (`03:115`)**, one dated clause appended. The row text is not rewritten: *"(Amended
-     2026-10-27, `RL-8268` (FD-1954, FD-1490): **no rating type is float.** A `float` input,
+     2026-10-27, `RL-1958` (FD-1954, FD-1490): **no rating type is float.** A `float` input,
      result or port type is refused at parse, before the type check, with 422
      `VALIDATION_FAILED` naming the field; `MONETARY_FLOAT_REFUSED` is not raised.)"*
   4. **`03:1136`**: the code stays in the enumeration as a tombstone. Its identifier is a
      product identifier and is not reused (`CLAUDE.md` §5). It gets: *"(withdrawn 2026-10-27,
-     `RL-8268`: never raised; a float type is `VALIDATION_FAILED`, FR-227)"*.
+     `RL-1958`: never raised; a float type is `VALIDATION_FAILED`, FR-227)"*.
 - **This is FD-1490's second close path.** FD-1490's own disposition offers it: *"remove it
   from `RATING_ERROR_CODES` and `03:929` and say `VALIDATION_FAILED` is the answer"*. Tue 27
   does the spec half. The two code items below do the rest, and they include the pinned line
