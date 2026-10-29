@@ -235,8 +235,8 @@ describe("RateTableEditorView: Editor II (FR-231, FR-233, FR-235)", () => {
 
 // NFR-463 / WCAG 4.1.3 (FD-1959 F3 and M3): a status message is announced only if its live region is in
 // the DOM before the message arrives. A region that mounts together with its text (v-if) is not.
-const liveRegions = (root: HTMLElement): HTMLElement[] =>
-  Array.from(root.querySelectorAll<HTMLElement>('[role="status"], [aria-live="polite"]'));
+const liveRegions = (root: Element): Element[] =>
+  Array.from(root.querySelectorAll('[role="status"], [aria-live="polite"]'));
 
 describe("RateTableEditorView: persistent status regions (NFR-463, FD-1959 F3, M3)", () => {
   async function editAndReview(): Promise<void> {

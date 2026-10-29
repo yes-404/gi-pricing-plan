@@ -149,8 +149,8 @@ describe("RateTableDiffPanel (FR-231, FR-232)", () => {
 
 // NFR-463 / WCAG 4.1.3 (FD-1959 F3): a status message is announced only if its live region is in
 // the DOM before the message arrives. A region that mounts together with its text (v-if) is not.
-const liveRegions = (root: HTMLElement): HTMLElement[] =>
-  Array.from(root.querySelectorAll<HTMLElement>('[role="status"], [aria-live="polite"]'));
+const liveRegions = (root: Element): Element[] =>
+  Array.from(root.querySelectorAll('[role="status"], [aria-live="polite"]'));
 
 describe("RateTableDiffPanel: the status region is persistent (NFR-463, FD-1959 F3)", () => {
   it("holds the loading status in a live region that was in the DOM before Show changes", async () => {

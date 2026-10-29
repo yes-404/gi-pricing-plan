@@ -294,8 +294,8 @@ describe("the quote sandbox view", () => {
 
 // NFR-463 / WCAG 4.1.3 (FD-1959 M4): a status message is announced only if its live region is in
 // the DOM before the message arrives. A region that mounts together with its text (v-if) is not.
-const liveRegions = (root: HTMLElement): HTMLElement[] =>
-  Array.from(root.querySelectorAll<HTMLElement>('[role="status"], [aria-live="polite"]'));
+const liveRegions = (root: Element): Element[] =>
+  Array.from(root.querySelectorAll('[role="status"], [aria-live="polite"]'));
 
 describe("the quote sandbox view: the result is announced (NFR-463, FD-1959 M4)", () => {
   it("announces the score in a region that was already there, or by moving focus into the result", async () => {
