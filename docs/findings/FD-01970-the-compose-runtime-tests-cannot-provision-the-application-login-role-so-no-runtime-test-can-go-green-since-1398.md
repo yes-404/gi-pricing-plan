@@ -2,7 +2,7 @@
 id: FD-1970
 family: finding
 title: the compose runtime tests cannot provision the application login role, so no runtime test can go green, since #1398
-status: active
+status: closed
 created: 2026-10-29               # drafted 2026-10-29 under working id 8280
 owner: WK-674
 tree: 67284ea12daab613b67353e3eb8b728a35ca5023   # origin/draft/sl-8275 as read by the auditor, 2026-10-29
@@ -67,3 +67,5 @@ to-lead "2026-10-29 19:19:28 GMT". Drafted by the auditor from `LG-1969`'s F2 li
 
 Fixed in SL-1968 / LG-1969; see the close line. (Residual noted by the auditor: `_provisioned.add(PROJECT)` runs before the DDL steps, so a
 failed `migrate` leaves the project marked provisioned for the rest of the process; not a defect in a run that passes. Not a finding.)
+
+***Resolved 2026-10-29***: closed by the merged fix, this PR (SL-1968 / LG-1969; the merge sha is added at the read-back). `compose()` in `backend/tests/deploy_stack_helpers.py` runs the project's own postgres, `migrate`, `scripts/provision-app-role.py --allow-default-password` against the project's mapped port (refused on 5432 before any DDL), and sets `GIP_TEST_DATABASE_URL`, reset by `down`. Evidence: red at `1e17ec63`, `1 failed … 42.28s`, `api` exit 3; refusal red `DID NOT RAISE ValueError` then green `31 passed`; env before `None`, after up the project's own port, after down `None`; the four `beat_fixture` callers green at `c6716e04` (`2 passed` + `2 passed`), the fifth at `870d08f5` (`1 passed … 71.75s`). Gate: LG-1969 "END" and its audit section (A7).
