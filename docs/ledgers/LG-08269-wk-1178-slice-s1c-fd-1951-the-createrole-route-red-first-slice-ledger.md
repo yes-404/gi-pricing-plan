@@ -346,3 +346,61 @@ rc=0
 - **The full backend suite on the login role at `09568e41`**, fresh throwaways `s1cg2-pg` (postgres:16-alpine, initdb with `deploy/postgres/app-login-role.sql`), `s1cg2-redis`, `s1cg2-minio` on `127.0.0.1` random ports; login role provisioned, `alembic upgrade head` as the owner (rc 0, head `b7e4c2a91d36`). Started at load1 3.04 to 3.61, 25 GB available. `uv run --directory <s1c wt> pytest -q backend -p no:cacheprovider` via `run-heavy.sh`, log `~/gi-pricing-plan.local/scratch/s1cguard2/full.log` (`head=09568e41…` first, `rc=0` last): **`2996 passed, 13 skipped, 5 xfailed, 136 warnings in 2557.96s (0:42:37)`**; 0 failed, 0 errors, skipped 13 (≤ 21).
 - **Cleanup:** the three throwaways `docker rm -fv`; `docker ps -a` shows 0 `s1cg2-*`; dangling volumes 17 → 17; the four `gi-pricing-*` containers untouched (Up, healthy). No shared resource was written (the run used its own redis and postgres).
 - head=09568e41; remaining: S1c-5's journey with beat/relay (exec-s1c5), gate-1 SOLO after FD-1585's END, audit (FD 8267), mint, PR.
+
+## S1c-5 (2026-10-29): the compose run with a scheduler service
+
+Run by exec-s1c5 on `draft/s1c-fd1951` @`4c5662eb7b9eaf32756d910ac2141a227e12bf9b` (= ls-remote at the start), project `-p s1c5` (never the shared `gi-pricing` project), under the grant "2026-10-29 10:17:01 GMT", every heavy command through `run-heavy.sh`. Scripts and logs: `~/gi-pricing-plan.local/scratch/s1c5/` (`stageC.log`, `stageD.log`, `stageE.log`, `stageF.log`, `outbox-samples.txt`).
+
+- **FD-1661 instance line:** the shipped compose has no scheduler; the run added one in scratch; FD-1661 (owner WK-674) is the fix. Nothing under `deploy/` was edited.
+- **The override, whole** (`scratch/s1c5/override.yml`; the `scheduler` keys are copied from `worker-default`'s `x-gip-env`, build, image and `depends_on`; the `--schedule` flag is the one addition, see the next bullet):
+
+```yaml
+services:
+  postgres:
+    ports: !override ["127.0.0.1::5432"]
+  redis:
+    ports: !override ["127.0.0.1::6379"]
+  minio:
+    ports: !override ["127.0.0.1::9000", "127.0.0.1::9001"]
+  api:
+    ports: !override ["127.0.0.1::8000"]
+  scheduler:
+    profiles: ["app"]
+    image: gi-pricing-app:${GIP_BUILD:-unset}
+    build:
+      context: /home/puzhenhao1989/gi-pricing-plan/.claude/worktrees/s1c-fd1951
+      dockerfile: deploy/Dockerfile
+      args:
+        GIP_BUILD: ${GIP_BUILD:-unset}
+    command: ["celery", "-A", "app.worker.entrypoint", "beat", "--schedule", "/tmp/celerybeat-schedule"]
+    environment:
+      GIP_ENVIRONMENT: dev
+      GIP_BUILD: ${GIP_BUILD:-unset}
+      GIP_TENANT_ID: ${GIP_TENANT_ID:-compose-reference}
+      GIP_DEV_AUTH_ENABLED: ${GIP_DEV_AUTH_ENABLED:-true}
+      GIP_DATABASE_URL: postgresql+asyncpg://gip_app_login:gip_app_login@postgres:5432/gipricing
+      GIP_REDIS_URL: redis://redis:6379/0
+      GIP_BLOB_ENDPOINT_URL: http://minio:9000
+      GIP_BLOB_ACCESS_KEY: gipricing
+      GIP_BLOB_SECRET_KEY: gipricing
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+      redis: {condition: service_healthy}
+      minio: {condition: service_healthy}
+    stop_grace_period: 20s
+```
+
+- **Service list, verbatim** (`docker compose -p s1c5 -f deploy/docker-compose.yml -f override.yml --profile app --profile auth config --services`, rc 0): `minio redis postgres migrate worker-scoring api lb worker-compute worker-default worker-io keycloak scheduler` (one per line). Only the three backing services, then `api`, the four workers and `scheduler` were started; `lb` and `keycloak` pin host ports 8000/8080 of the shared stack and were not started.
+- **Setup faults met before the one journey attempt (the journey itself ran once):**
+  1. `docker compose build` refused ("compose build requires buildx 0.17.0 or later"; the host has buildx 0.13.1). The image was built with `docker build -f deploy/Dockerfile --build-arg GIP_BUILD=<head> -t gi-pricing-app:<head>` (rc 0), then `up --no-build`.
+  2. The first `scheduler` start exited 1: `[Errno 13] Permission denied: 'celerybeat-schedule'` (the container user cannot write its cwd). The override's command gained `--schedule /tmp/celerybeat-schedule`; this is a finding for FD-1661's fix, whose scheduler service must give beat a writable schedule path.
+  3. `examples/fremtpl2/data/` was absent in the worktree. The two `.arff` files were copied from the `sl-1736` worktree; their sha256 equal the pins in `examples/fremtpl2/fetch.py` (`a45363e0…`, `04763201…`). They are git-ignored; porcelain stayed 0.
+  4. The first seed call lacked `GIP_MIGRATION_DATABASE_URL` (my script); it was added and the seed then ran (rc 0).
+- **`docker compose ps` (after up):** api (healthy), minio, postgres, redis (healthy), `s1c5-scheduler-1` **Up** (`celery beat v5.6.3 … scheduler -> PersistentScheduler, db -> /tmp/celerybeat-schedule`), worker-compute, worker-default, worker-io, worker-scoring Up. `readyz 200 healthz 200`.
+- **End-state role checks:** initdb with the mounted S1c SQL gave `gip_app` and `gip_app_login` rolcreaterole f, rolcreatedb f, rolreplication f, rolvaliduntil infinity, rolconnlimit -1; membership inherit t / set f / admin f; `pg_db_role_setting` 0 rows. Provision ×2 rc 0/0; `diff rb1 rb2` rc 0 and `diff rb0 rb1` rc 0 (`scratch/s1c5/c-rb*.txt`, `stageC.log`).
+- **The WF-699 journey (`drive.py`, one attempt): `drive_rc=0`, "journey done 1586 s".** Every step `ok`, B9/D9/E5/E7 the journey's own known gaps or later-phase skips; the last line is `S1   ok  prod scored 95923 minor units from the live version`. **A3 is a real run:** no `JOB_TIMEOUT`; C2 `rating.compile` Job ran on the worker. The `PIN_NOT_APPROVED` tracebacks in the worker-default log are step C4's expected negative.
+- **A3's outbox counts** (`select status, count(*) from outbox group by 1 order by 1`, against `s1c5-postgres-1`): before the journey `(0 rows)`; during (sampled each 5 s, `outbox-samples.txt`) `published|16` at 11:30:56, `pending|1 published|25` at 11:31:17, `published|36` by 11:31:58; **after: `published | 37`, no `pending` row.** The scheduler's beat drove the relay; with no scheduler (stage 1 of S1c-5, 2026-10-26) the same rows stayed `pending`.
+- **Teardown (by label `com.docker.compose.project=s1c5`):** 10 containers `rm -fv` (scheduler, worker-default, -compute, -scoring, -io, api, migrate, postgres, minio, redis); volumes `s1c5_pgdata`, `s1c5_miniodata` and network `s1c5_default` removed. Before: `docker ps -a` 17 lines, dangling volumes 17; after: 7 lines, dangling 17, 0 `s1c5` containers/volumes/networks. No prune of any form.
+- **The four `gi-pricing-*` containers:** before the run, StartedAt `2026-10-29T10:12:19Z` for all four. After: minio and redis unchanged (10:12:19Z); **keycloak and postgres read `2026-10-29T11:52:44Z`** (Up ~5 min, healthy), after the run's own teardown. No s1c5 command touched them (every command was by the `s1c5` label/project); someone else restarted them (the FD-1585 gate window); recorded, not explained.
+- **Doc checks on `4c5662eb`** (`doc-index --check`, `audit-docs`) were refused rc=76 (gate-1b held) and are OWED until GATE END (the lead's hold).
+- head=<this commit's parent 4c5662eb>; remaining: gate-1 SOLO after FD-1585's END, audit (FD 8267), mint, PR.
