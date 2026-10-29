@@ -69,7 +69,8 @@ def migrations_are_their_own_step(compose: dict[str, Any]) -> list[str]:
     if gate.get("condition") != "service_completed_successfully":
         problems.append("api does not wait for migrate to complete successfully")
     problems += [
-        f"{name} runs alembic" for name, svc in services.items()
+        f"{name} runs alembic"
+        for name, svc in services.items()
         if name != "migrate" and _runs_alembic(svc)
     ]
     return problems
