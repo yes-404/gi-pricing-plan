@@ -183,6 +183,24 @@ R10-DP1 (b) left a candidate finding for the input borders outside WK-675's surf
 
 Unreconciled; the finding is filed in the next docs batch with a predicate-stated recount and owners per surface.
 
+#### 2026-10-29 mint — the records and the docs half of §11, at head `9c710d61f07e99e2286345a59b85611d2b64687e`
+
+Executor, on the lead's brief under the grant "2026-10-29 22:34:57 GMT". Free-check of ids 1971 to 1974 on `origin/main` `aad4fd58`: both greps empty. Mint tool `mint-repoint.py` (sha256 `4d83681a0f30b3301cc05afc7992634d67fb8499ef06f56c50df5f91902f286d`), `--frozen-on origin/main`: dry run 59 re-points, real run 59, identical (the three front-matter id lines were hand-edited first). The non-docs diff since the gated head is empty: `git diff --name-only 6a0927c0 HEAD -- . ':!docs'` printed nothing, so the frontend half stands at `6a0927c0` and was not re-run. Two corrections after the first audit-docs run at `729e58e5` (check 37 on RL-1973, check 32 on this ledger's audit section line quoting the scratch draft's file name) are named in the commit message of `9c710d61`.
+
+| Check (docs half, run at `9c710d61`) | rc | Result |
+|---|---|---|
+| `uv run ruff check .` | 0 | `All checks passed!` |
+| `audit-docs.py` (run-heavy `--light`) | 0 | `All checks passed.`, DISCLOSED 849 at or under the W37-11 ceiling |
+| `doc-index.py --check` | 0 | `OK (byte-stable)` |
+| `register-lint.py` | 0 | `OK (0 violations)` |
+| `req-coverage.py` | 0 | completed |
+| `generate-contracts.py --check` | 0 | `58 generated contracts match the models` |
+| `tests/test_audit_docs_finding_citations.py`, `test_audit_docs_ids.py`, `test_audit_docs_process_core_digest.py` (run-small) | 0 | `124 passed in 277.13s` |
+| `tests/test_audit_docs_w37_11_ceiling.py`, `test_doc_index.py`, `test_register_lint.py` (run-small) | 0 | `110 passed in 133.66s` |
+| `tests/test_register_owed.py`, `test_repository_invariants.py` (run-small) | 0 | `23 passed in 104.77s` |
+
+Quote parity `265a552e..729e58e5`: `quote-parity: 29 changed line(s), 0 violation(s); quote-parity rc=0`.
+
 ## PRs
 
 (None yet.)
