@@ -198,6 +198,21 @@ def scratch_seed(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[Pa
         asyncio.run(admin_sql(f'DROP DATABASE IF EXISTS "{name}" WITH (FORCE)'))
 
 
+@pytest.mark.req("FR-439")
+def test_the_scratch_fixture_refuses_when_no_owner_url_can_be_formed(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """FD-1965 control C1 (DB-free, data-free, so CI runs it): an admin URL with no user,
+    password or host cannot name the scratch database's owner, and the fixture refuses by
+    name rather than let `alembic` and the seed fall through to an inherited
+    `GIP_MIGRATION_DATABASE_URL` (which wrote demo principals into a foreign database)."""
+    monkeypatch.delenv("GIP_MIGRATION_DATABASE_URL", raising=False)
+    with pytest.raises(RuntimeError, match=r"cannot form the owner URL") as refused:
+        _scratch_owner_url("postgresql+asyncpg:///postgres", "scratch_x")
+    assert "user, password, host" in str(refused.value)
+    assert _scratch_owner_url(SCRATCH_ADMIN_URL, "scratch_x").endswith("localhost:5432/scratch_x")
+
+
 def test_the_seed_reruns_against_a_seeded_database(scratch_seed: Path) -> None:
     """FD 9717: the realm user's `(issuer, subject)` is unique, and the seed used to mint
     a fresh analyst id on every run, so a second seed died on `uq_users_issuer_subject`.
