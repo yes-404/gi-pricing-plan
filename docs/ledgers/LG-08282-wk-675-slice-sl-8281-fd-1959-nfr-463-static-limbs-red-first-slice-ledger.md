@@ -120,6 +120,18 @@ A first run at `0fd78f71` had `type-check` rc=2 (12 `TS2379` errors in my new li
 
 Docs set: see the next entry.
 
+#### 2026-10-29 T4 — the docs set, at head `69d14488ca2930925b599df7c60faa937d442051`
+
+Logs `docs-audit.log`, `docs-index.log`, `docs-register.log` (`head=` first, `rc=` last); audit-docs and doc-index through `run-heavy.sh --light` (load1 2.55), register-lint under the gate-2 flock. A first attempt was refused at load1 4.96 (rc=66) and retried at 2.55.
+
+| Check | rc | Reading |
+|---|---|---|
+| `audit-docs.py` | 1 | 6 FAILED, all expected and named: check 32 ×5 (`LG-8282` and `SL-8281` do not resolve in `docs/INDEX.md`: working ids, minted by the lead) and check 39 (`docs/INDEX.md` stale: not regenerated before the mint, seat brief item 17). No other failure. |
+| `doc-index.py --check` | 1 | `docs/INDEX.md is stale` (the same check 39 cause: the new LG is not in it). |
+| `register-lint.py` | 0 | `register.md: OK (0 violations)` |
+
+No `status:` or id was changed under `docs/` other than this ledger's own working ids, so `docs/INDEX.md` is left for the mint.
+
 ## PRs
 
 (None yet.)
