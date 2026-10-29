@@ -206,4 +206,13 @@ The project's own Postgres was provisioned by hand (`scripts/provision-app-role.
 - **The five `beat_fixture` callers under `GIP_DEPLOY_TESTS=1` at `c6716e048dc4bd98babeca0a4c7a709a7c17f2c5`:** `test_a_submitted_job_reaches_a_terminal_state_…` and
   `test_a_dataset_ingest_job_succeeds_…`: `2 passed in 132.40s`, rc=0; `test_a_score_batch_job_succeeds_…` and `test_a_sampled_trace_is_produced_…` with the switch test:
   `1 failed, 2 passed in 174.26s`, rc=1 — the failure is `test_deploy_switch_runtime.py::test_a_deploy_switches_every_api_process_and_a_default_live_quote_is_served`,
-  which brings up no `lb`/`api`/worker and has no `down` fixture (its docstring: "UNPROVEN … no stack was run for it"). See the F3 line below once ruled.
+  which brings up no `lb`/`api`/worker and has no `down` fixture (its docstring: "UNPROVEN … no stack was run for it"). See the F3 section below.
+
+## F3 — the switch test started no stack (found 2026-10-29 in the build window; ruled (A) by the maintainer at to-lead "2026-10-29 19:31:32 GMT")
+
+- **Red, the present failure** (head `c6716e04`, `GIP_DEPLOY_TESTS=1`): `FAILED backend/tests/test_deploy_switch_runtime.py::test_a_deploy_switches_every_api_process_and_a_default_live_quote_is_served`,
+  `subprocess.CalledProcessError` from `docker compose … port postgres 5432` inside `governed_workspace` → `compose_settings` → `mapped` (the stack was never started), and the run left
+  `gip-s4-runtime` postgres, redis and the exited migrate and scheduler containers up (4 containers, removed by project label).
+- **The edit**, its own commit (`870d08f5`): the test takes `down` and runs `up -d --wait lb <workers>` (`_worker_services`, as the other four callers do). Write-set amendment: PL-1688 row 2's dated line of 19:31:32.
+- **Green at `870d08f5ce68c06ef4ba345b55114ca29208e477`, `GIP_DEPLOY_TESTS=1`:** `1 passed, 2 warnings in 71.75s`, rc=0; 0 containers left by project label. The "UNPROVEN" docstring sentence is replaced by a dated one naming this run.
+- **All five `beat_fixture` callers are therefore green under `GIP_DEPLOY_TESTS=1`:** the four of F2 at `c6716e04` (`2 passed` + `2 passed`) and this one at `870d08f5`.
