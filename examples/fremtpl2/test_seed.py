@@ -116,6 +116,38 @@ def test_the_dictionary_covers_every_column_the_seed_produces() -> None:
 
 ARFF_DIR = Path(__file__).parent / "data"
 
+#: The server's maintenance database, reached as the schema owner `gipricing` (the role that
+#: runs migrations, FD-1729) -- the one place the fixture takes its credentials from.
+SCRATCH_ADMIN_URL = "postgresql+asyncpg://gipricing:gipricing@localhost:5432/postgres"
+
+
+def _scratch_owner_url(admin: str, name: str) -> str:
+    """The owner-role URL of the scratch database `name` on the server `admin` names.
+
+    FD-1965: `alembic` and the seed's `grant_demo_principals` both read
+    `GIP_MIGRATION_DATABASE_URL`, so the fixture must set it to its own scratch database; an
+    inherited value would migrate, and seed demo principals into, whatever database it names.
+    Refuses, naming what is missing, when `admin` cannot form that URL."""
+    from sqlalchemy.engine import make_url
+
+    parsed = make_url(admin)
+    missing = [
+        part
+        for part, value in (
+            ("user", parsed.username),
+            ("password", parsed.password),
+            ("host", parsed.host),
+        )
+        if not value
+    ]
+    if missing:
+        raise RuntimeError(
+            f"scratch_seed cannot form the owner URL for {name}: the admin URL has no "
+            f"{', '.join(missing)}; it refuses rather than migrate an inherited "
+            "GIP_MIGRATION_DATABASE_URL"
+        )
+    return parsed.set(database=name).render_as_string(hide_password=False)
+
 
 @pytest.fixture
 def scratch_seed(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[Path]:
@@ -136,7 +168,8 @@ def scratch_seed(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[Pa
         pytest.skip("run examples/fremtpl2/fetch.py first")
 
     name = f"scratch_sl1409c_{uuid4().hex[:8]}"
-    admin = "postgresql+asyncpg://gipricing:gipricing@localhost:5432/postgres"
+    admin = SCRATCH_ADMIN_URL
+    url = _scratch_owner_url(admin, name)
 
     async def admin_sql(statement: str) -> None:
         engine = create_async_engine(admin, isolation_level="AUTOCOMMIT")
@@ -148,8 +181,8 @@ def scratch_seed(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[Pa
 
     asyncio.run(admin_sql(f'CREATE DATABASE "{name}"'))
     try:
-        url = f"postgresql+asyncpg://gipricing:gipricing@localhost:5432/{name}"
         monkeypatch.setenv("GIP_DATABASE_URL", url)
+        monkeypatch.setenv("GIP_MIGRATION_DATABASE_URL", url)
         subprocess.run(
             ["uv", "run", "alembic", "upgrade", "head"],
             cwd=Path(__file__).resolve().parents[2],
