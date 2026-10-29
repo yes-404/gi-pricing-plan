@@ -1,7 +1,9 @@
 """The deployment switch on the compose path, running (WK-674 Slice 5; PL-1766 D5.11, D5.14).
 
-**UNPROVEN until the SOLO gate**: it needs the compose stack and the built image, and no stack
-was run for it. It runs only with `GIP_DEPLOY_TESTS=1` and `GIP_N_SHA` naming the build. The
+**Proven 2026-10-29** on the throwaway compose project `gip-s4-runtime` at head
+870d08f5ce68c06ef4ba345b55114ca29208e477 (`1 passed in 71.75s`, rc=0, SL 8275's build window;
+before that edit it started no stack and left containers up). It needs the compose stack, which
+the test starts and tears down, and the built image. It runs only with `GIP_DEPLOY_TESTS=1` and `GIP_N_SHA` naming the build. The
 `built_n` fixture builds that image if it is missing, and the `beat_fixture` fixture starts a
 beat for the run:
 
@@ -35,18 +37,20 @@ import pytest
 from backend.tests.deploy_stack_helpers import (
     LB_PORT,
     PROJECT,
-    compose as _compose,
     beat_fixture,  # noqa: F401  (pytest fixture, used by name)
     built_n,  # noqa: F401  (pytest fixture, used by name)
     compose_settings,
     governed_workspace,
 )
+from backend.tests.deploy_stack_helpers import api as _stack_api
+from backend.tests.deploy_stack_helpers import (
+    compose as _compose,
+)
+from backend.tests.deploy_stack_helpers import mapped as _mapped
 from backend.tests.test_deploy_stack_runtime import (
     _worker_services,
     down,  # noqa: F401  (pytest fixture, used by name)
 )
-from backend.tests.deploy_stack_helpers import api as _stack_api
-from backend.tests.deploy_stack_helpers import mapped as _mapped
 
 from model_schema import QuoteContext, RegressionSuiteVersionCreate
 
