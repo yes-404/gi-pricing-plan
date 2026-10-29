@@ -158,3 +158,6 @@ Checks: `ruff check` on the two files rc 0. `ruff format --check`: `test_demo_co
 - **What was done instead:** `INFRASTRUCTURE_SERVICES = {postgres, redis, minio, keycloak}` and
   `check_infrastructure_up(running)`, which raises `DemoRefusedError` naming each missing one. It takes the
   same `compose_running()` input as `check_compose_up`. `check_compose_up` is unchanged.
+- **Acceptance:** the maintainer accepted this deviation at `to-lead.md` entry "2026-10-29 18:52:58 GMT". The reason
+  given: DP-3's object was "any of the four shared services that is down", and `check_compose_up` checks the app
+  services, not keycloak.
