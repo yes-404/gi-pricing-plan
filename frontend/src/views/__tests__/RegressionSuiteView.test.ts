@@ -133,6 +133,7 @@ beforeEach(() => push.mockReset());
 afterEach(() => vi.unstubAllGlobals());
 
 describe("the Regression suite view (FR-1932)", () => {
+  // FR-260: golden-quote results, pass/fail and the money diff.
   it("opens the newest run by default and shows its golden quotes as money from minor units", async () => {
     const { calls } = stubFetch({ pages: [{ items: LIST, next_cursor: null }], runs: { [NEWEST]: run() } });
     render(RegressionSuiteView, { props });
@@ -183,6 +184,7 @@ describe("the Regression suite view (FR-1932)", () => {
     expect(push).toHaveBeenCalledWith({ query: { run: MIDDLE } });
   });
 
+  // FR-261: property results, the counterexample and its shrink state.
   it("shows a counterexample whose shrink completed, and labels an unminimised one", async () => {
     stubFetch({
       pages: [{ items: LIST, next_cursor: null }],
@@ -208,6 +210,7 @@ describe("the Regression suite view (FR-1932)", () => {
     expect(within(rowOfMonotone).queryByText(/unminimised/i)).not.toBeInTheDocument();
   });
 
+  // FR-261: property results, the counterexample and its shrink state.
   it("shows no counterexample for a MONOTONE_NO_COMPARABLE_PAIRS failure", async () => {
     stubFetch({
       pages: [{ items: LIST, next_cursor: null }],

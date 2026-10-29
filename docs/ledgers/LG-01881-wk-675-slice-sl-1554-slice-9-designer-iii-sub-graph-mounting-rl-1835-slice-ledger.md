@@ -2,7 +2,7 @@
 id: LG-1881
 family: ledger
 title: WK-675 slice SL-1554 — Slice 9, Designer III: sub-graph mounting (RL-1835) (slice ledger)
-status: active                 # active → closed (§1.2a)
+status: closed                 # active → closed (§1.2a)
 created: 2026-10-25   # drafted 2026-10-21 under working id 8141; minted 2026-10-25 as LG-1881
 owner: executor
 tree: c35113b2
@@ -212,3 +212,9 @@ Counts: 12 logs; 8 verified yes (all GREEN); 4 partial (all RED); 0 not establis
 | Record | Branch @ sha | Proposed verdict, as the record states it |
 |---|---|---|
 | RS-1886 | `aud-1554d-2026-10-25` @ `8e41438a` | CLEAN: the delta `beae0dff..11c3db18` is main's re-merge plus docs folds; the slice's own non-docs patch is unchanged (patch-id `7638106b…` at both heads); the gate lines read as claimed |
+
+## Closed
+
+**Closed 2026-10-27** at slice close: PR #1384 merged as squash `ef3ac6c8a7fde1559ee3f907e5340f6697d5a552` (tree `b9e058b6e89e44bdeb65ab6412b9a7d24ee5449c`) on the maintainer's (by delegation) merge entry, `to-lead.md` entry "2026-10-25 18:59:00 GMT — Maintainer: #1384 MERGED and VERIFIED (main ef3ac6c8, 11 merges); SL-1552 gate's one real failure RULED — pairing-exposed test-isolation defect; FD LOW; named exception on conditions; GRANT". The roadmap row `SL-1554` is `closed` in the same commit.
+
+**Gate of record:** `11c3db18`, STANDS under 1(f), `to-lead.md` entry "2026-10-25 14:19:54 GMT — Maintainer: SL-1554 (WK-675 S9) gate @11c3db18 STANDS under 1(f) — verified; SL-1569 next". Its written delta audit is `RS-1886` (CLEAN for `beae0dff..11c3db18`, as filed; the lead adopts at the PR's FINAL). The merge-ACK of #1384 is the entry "2026-10-25 18:56:15 GMT — Maintainer: MERGE-ACK #1384 (SL-1554 → LG-1881, RS-1882..1886) LIVE — ACK message received before the merge, run ids verified".

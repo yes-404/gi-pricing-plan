@@ -57,6 +57,7 @@ describe("RateTableDiffPanel (FR-231, FR-232)", () => {
     expect(within(rows[1]!).getByText("+5.0000%")).toBeInTheDocument();
   });
 
+  // FR-230: edits are diffed against the seed on request (the diff-vs-seed limb).
   it("compares against the seed on request", async () => {
     render(RateTableDiffPanel, { props });
     await show("seed");

@@ -2,7 +2,7 @@
 id: FD-1437
 family: finding
 title: FR-223's MODEL_REFERENCE_MODE_INCONSISTENT is emitted nowhere, and its "checked at save time" is unreachable
-status: active
+status: closed
 created: 2026-10-05            # original date 2026-10-01, set at the draft; minted 2026-10-05
 owner: auditor
 tree: a978dc2297bc8bfcc1c4da09ded37cefdcf92156

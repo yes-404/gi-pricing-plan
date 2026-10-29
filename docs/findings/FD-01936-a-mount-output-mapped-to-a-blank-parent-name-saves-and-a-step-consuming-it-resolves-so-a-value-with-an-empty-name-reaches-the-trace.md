@@ -2,7 +2,7 @@
 id: FD-1936
 family: finding
 title: A mount output mapped to a blank parent name saves, and a step consuming it resolves, so a value with an empty name reaches the trace
-status: active                  # active → closed | retired (§1.2a)
+status: closed                  # active → closed | retired (§1.2a)
 created: 2026-10-26               # drafted 2026-10-25 under working id 8204
 owner: auditor
 tree: 8c3d3013c3205fbecd6335e9db182a469426bdb2
