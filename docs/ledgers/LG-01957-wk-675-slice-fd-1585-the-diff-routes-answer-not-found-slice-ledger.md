@@ -113,3 +113,47 @@ head=69853e0c536f5dc130dce4a63d97c72fcf19c54b at this section's parent; remainin
 - **Two demo durations, two different clocks.** `demo.log` line 4854: `   journey done in 1125s` — demo.py's own timer for the WF-699 journey. `gate.log` line 58: `| demo seconds | 1276 |` — the gate script's `$((SECONDS - t0))` (script lines 136 and 158), t0 taken when the demo process was launched, read after the designed stop, so it also holds the server start-up, the frontend start and the stop; it is not the journey's duration. Designed stop, `gate.log` line 56: `| demo | designed stop at 2026-10-29T12:13:53+00:00 (both lines seen) |`; the two lines are `demo.log` 4854 (`journey done in 1125s`) and 4862 (`   served page: http://localhost:5173/ answered 200`). `gate.log` line 57: `| demo.py --journey wf-699 | rc=0 |`.
 - **Quiet window and start.** `gate.log` lines 46–55: `| demo lock wait start | 2026-10-29T11:46:49+00:00 |`, `| demo lock acquired | 2026-10-29T11:46:49+00:00 |`, `| quiet window | load1 < 2.0 after 350 s |`, `| demo start load1 | 1.94 at 2026-10-29T11:52:42+00:00 |`.
 - **Shared postgres and keycloak recreated at the demo start.** `demo.log` lines 5–12: `Container gi-pricing-postgres-1 Recreate`, `Container gi-pricing-keycloak-1 Recreate`, `… Recreated` (both), `… Starting` (both), `… Started` (both); minio and redis `Running`. The log lines carry no timestamp; the lead's reading of the recreate is 11:52:44Z and I have not verified it from a timestamped source.
+
+## Audit (auditor, 2026-10-29)
+
+Auditor `aud-fd1585` (Sonnet 5.5, effort medium). Read-only: `git -C /home/puzhenhao1989/gi-pricing-plan` at `origin/fix/fd1585-diff-not-found` = `d666a4051c036ae588a5c96dec4be88b8c5bdfb9` (ls-remote re-read at the end of this audit; same sha). Range named: `origin/main...origin/fix/fd1585-diff-not-found` (main `20a36ca3`, merge-base `a9ffc22c`). No test, DB, docker or git write was run. **Proposals only; verdicts are the lead's.**
+
+### Scope (derived first, from PL-1546 Row 9 and FD-1585, before any evidence)
+
+FR-231 and FR-232 (`03` §3.3); `03` §5.1 `:1102`/`:1103` (unknown table, version or `against` on `diff` and `diff/cells` is 404 `NOT_FOUND`); RL-1584 and the to-lead "2026-10-10 04:19:42 BST" item 3 (fix at the route layer; loaders keep `RATE_TABLE_MISS`); FD-1585's disposition ("fix before close, owner WK-675; event that discharges it: the fixing slice's PR with the re-pointed tests red at the parent"). Row 9: R-0..R-6, reds R1–R5, controls C1–C4, acceptance items 9–16.
+
+### Items 9–16
+
+| # | Command / evidence (tree) | Result | Proposed verdict |
+|---|---|---|---|
+| 9 | `git grep -n 'with spec_not_found():' d666a405 -- backend/src/app/api/rate_tables.py` | 6 lines: `:169 :174 :440 :462 :483 :539`. At `7ed5c398`: 4 lines `:168 :173 :460 :481`. `:440` lies in `rate_table_diff`, `:539` in `rate_table_diff_cells` (diff hunks `@@ -436` and `@@ -534`). | **Delivered, evidenced** |
+| 10 | `git grep -c '"RATE_TABLE_MISS"' d666a405 -- backend/tests/test_api_rate_tables.py`; same at `7ed5c398`; `git grep -n 'RATE_TABLE_MISS' … backend/src/app/platform/rate_tables.py` | `1` at head (`5` at base). Loader lines `:305 :1004 :1106 :1139 :1167 :1557`, identical at base and head. | **Delivered, evidenced** |
+| 11 | LG-1957 `:54-62` (reds), `:66` (controls), `:83` (greens); `~/gi-pricing-plan.local/scratch/fd1585/reds.log` | reds.log `head=84f41899…` first, `5 failed, 1 warning in 3.85s`, `rc=1` last. **By cause verified in the asserts, not the summary:** all five tracebacks are `AssertionError: assert 'RATE_TABLE_MISS' == 'NOT_FOUND'` (`:506`, `:640`, `:1160`, `:1223`, `:547`; the `- NOT_FOUND / + RATE_TABLE_MISS` diff lines follow each). Controls at base `75 passed`, `rc=0` (controls.log). Greens at `5b1464ec`: `80 passed, 2 warnings in 71.27s`, `rc=0` (LG `:83`). Containers `fbf1ed84a319` (base), `99a411820e6a` (head) named in LG. **Caveat:** at base R1 stops at its first assert (`:506`), so R1's later asserts (`@9`, `against=previous`, `against=7`) are not shown red by cause; they are shown green only. Same for R5's 2nd and 3rd GETs. The fix wraps one call in each handler, so the same cause covers them, but the red evidence for those sub-asserts is by inference. | **Delivered, evidenced** (sub-asserts: delivered, red-at-base by inference; the lead may accept) |
+| 12 | `git diff --name-status origin/main...d666a405` | `M backend/src/app/api/rate_tables.py`, `M backend/tests/test_api_rate_tables.py`, `M docs/INDEX.md`, `A docs/ledgers/LG-1957-…md`. No spec, no contract. Roadmap SL-1956 row, FD-1585 and `register.md` are **not yet** in the diff (the mint/discharge seat). | **Delivered for the code; docs records owed at the mint** |
+| 13 | LG `:86`; `~/gi-pricing-plan.local/scratch/fd1585-gate/gate/contracts.rc`, `req_coverage.rc` | `generate-contracts.py --check` rc 0 ("58 generated contracts match the models"); `req-coverage.py` rc 0 (both at the gate head `d666a405`). | **Delivered, evidenced** |
+| 14 | `…/fd1585-gate/gate/gate.log:1,28-43,78-79` | `START head: d666a405…` (tree `923c5642…`), slot `gate-1b` (`:10`). rcs: ruff 0, mypy 0, import_linter 0, req_coverage 0, contracts 0, audit_docs 1, pytest 1 (`13 failed, 6983 passed, 21 skipped, 5 xfailed`), fe install/generate/lint/type-check/test/build 0, demo 0, restore 0. `END … rc=1` = python max 1 only. Skipped 21 ≤ 21. See "Gate" below: the two rc 1 are the item-31 shape. **The END row is not yet in LG-1957** (LG last line `:92` is the pre-gate "remaining" line). | **Delivered under item 31 (1f), conditions open:** mint, audit-docs rc 0, 8 files re-run on the minted head, CI python; END row to be folded into the LG |
+| 15 | register row `docs/findings/register.md:334` (by title) and the essay exist on `origin/main`; neither carries a discharge line; CR-1952 `docs/closures/CR-01952-wk-675-close-audit.md:441` row (2) "Discharged by" cell reads "a gated code slice from `main`" | Not yet done (needs the PR number). Draft in `fd1585-close.md`. | **Not started — owner: mint/closing seat at the PR; the CR cell via the WK-675 close addendum** |
+| 16 | "The slice's squash merge on `main` is dated on or before 2026-10-28" | Today is 2026-10-29 and no PR is open (`origin/main` `20a36ca3` does not contain the slice). **The criterion cannot be met.** CR-1952's owed date for row (2) was also "Wed 28 Oct 2026" (`:441`). | **Not met: reassign.** The lead asks the maintainer for a dated line moving the date (or accepting the miss) before the PR; do not edit the plan (frozen). |
+
+### Gate (item 31 shape, confirmed from the logs)
+
+- `pytest.log`: 13 `FAILED` lines, by file: `test_audit_docs_finding_citations.py` 1, `test_audit_docs_ids.py` 2, `test_audit_docs_process_core_digest.py` 2, `test_audit_docs_w37_11_ceiling.py` 1, `test_doc_index.py` 1, `test_register_lint.py` 3, `test_register_owed.py` 1, `test_repository_invariants.py` 2 = exactly the eight-file set, nothing else.
+- `audit_docs.log:882-888`: `FAILED (5)`: `check 31: gap in the full allocation between 1955 and 8271`; `check 32` at LG `:9` (`SL-1956` does not resolve), `:74` (padded `LG-1957`; `SL-1956` does not resolve), `:88` (`SL-1956` does not resolve). Only checks 31/32, only on SL-1956 / LG-1957. Note the line numbers are those of the gated head; they move when the mint rewrites the ids.
+- Every other rc 0 (table above); skipped 21 (`gate.log:36` "21 (<= 21)").
+- Conditions still open before the ACK: the mint, `audit-docs.py` rc 0, the eight files re-run via run-small on the minted head, CI python.
+
+### Cover after main moved
+
+**Not yet evidenced.** At the time of this audit `origin/fix/fd1585-diff-not-found` is still `d666a405`, the gated head, and LG-1957 holds no gate/cover section. The named three-file diff and the install / lint-imports / selection rcs are owed from exec-fd1585gate's lines; **proposed verdict: delivered-untested until those lines land; the lead re-reads at origin.** (Main moved `a9ffc22c` → `20a36ca3`; the branch has not re-merged it.)
+
+### Two-way ledger check
+
+`git merge-base --is-ancestor <sha> origin/fix/fd1585-diff-not-found` rc 0 for each of `84f41899`, `ce447a55`, `b6f47e6f`, `768e3b64`, `5b1464ec`, `477e34d5`, `d666a405` (LG-cited SHAs: `84f41899`, `768e3b64`, `5b1464ec`; the rest are the branch's own commits).
+
+### Findings for the record
+
+1. LG `:8` `tree:` is `7ed5c398` but the branch's merge-base with current main is `a9ffc22c` (re-merge `768e3b64`); name both in the PR range line.
+2. Item 11's "by cause" is shown for the first assert of R1 and R5 only (caveat above).
+3. Item 16 cannot be met (above).
+
+Verdicts (lead 29, from-lead 2026-10-29 12:19:50 GMT): 9–13 delivered; 11 the first-assert caveat accepted; 14 STANDS under item 31; 15 discharged by this PR; 16 re-dated (below); the 12:14:00Z END-restore recreate of postgres/keycloak is in gate.log's restore rows.
