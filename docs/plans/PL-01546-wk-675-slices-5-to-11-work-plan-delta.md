@@ -328,6 +328,8 @@ shared database and not a DB-lane gap. LG 8271 quotes `head=`, the container id 
 LG 8271, SL 8270's row under WK-675 in `docs/roadmap.md`, FD-1585's discharge line and its
 register row, `docs/INDEX.md`.
 
+*Acceptance 16's 'merged on or before 2026-10-28' (CR-1952's owed date) was made unmeetable by the user's pause of Mon 26 Oct 16:57 → Thu 29 Oct 10:07 GMT; re-dated by the pause, as every date in the 10:12:41 plan was, to on or before 2026-10-30 (the maintainer, to-lead "2026-10-29 12:20:17 GMT", by delegation; plan of record to-lead "2026-10-29 10:12:41 GMT").*
+
 ## Decision points
 
 | # | Question | Options | Recommendation | Kind | Blocking | Resolved by |
