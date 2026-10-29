@@ -4,10 +4,10 @@ family: finding
 title: the examples seed fixture migrates whatever `GIP_MIGRATION_DATABASE_URL` names, not its own scratch database, since #1398
 status: active
 created: 2026-10-29               # drafted 2026-10-29 under working id 8277
-owner: WK-1178
+owner: auditor
 tree: e239733c1477c5ab0e8d4c897638767cb4c3e0b9   # origin/draft/s1c-fd1951 as read by the auditor, 2026-10-29
 corrected_by: []
-relates: [FD-1951, SL-1962, LG-1964, SL-8278, LG-8279]
+relates: [FD-1951, SL-1962, LG-1964]
 ---
 
 # FD-1965 — the examples seed fixture migrates whatever `GIP_MIGRATION_DATABASE_URL` names, not its own scratch database, since #1398

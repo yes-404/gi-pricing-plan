@@ -4,7 +4,7 @@ family: finding
 title: S1c carries the membership strip — the provisioner does not remove other memberships of the login role
 status: active
 created: 2026-10-29               # drafted 2026-10-29 under working id 8267
-owner: WK-1178
+owner: auditor
 tree: e239733c1477c5ab0e8d4c897638767cb4c3e0b9   # origin/draft/s1c-fd1951 as read by the auditor, 2026-10-29
 corrected_by: []
 relates: [FD-1951, SL-1962, LG-1964, PL-1927]
@@ -21,6 +21,12 @@ written by S1c's auditor, inside S1c's PR, so FD-1951 closes with the limb in a 
 `deploy/postgres/app-login-role.sql` at S1c's head converges `gip_app` (`:20`), states the membership `GRANT gip_app TO
 gip_app_login WITH INHERIT TRUE, SET FALSE` (`:36`) and resets both roles' settings. It does **not** revoke any other membership
 of `gip_app_login` or `gip_app` that a deployer or an operator granted by hand (for example `GRANT gipricing TO gip_app_login`).
+
+## Evidence
+
+`deploy/postgres/app-login-role.sql` at S1c's head `e239733c`: `:20` converges `gip_app` (`ALTER ROLE gip_app NOLOGIN ...`) and `:36` states
+`GRANT gip_app TO gip_app_login WITH INHERIT TRUE, SET FALSE;`; no `REVOKE` of any other membership appears in the file. The startup
+`P_OWN` already refuses every owner-reachable one, because on PostgreSQL 16 any `pg_auth_members` row counts as `MEMBER` (below).
 
 ## What the limb is, and where FD-1951 carried it
 
