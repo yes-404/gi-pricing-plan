@@ -645,7 +645,7 @@ DP-S1c-1 rules otherwise.
 
 ## Delta, row 6 (S1d) — FD-1965: the seed fixture migrates its own scratch database (test-only, red-first)
 
-*(Delta, row 6 (S1d), dated 2026-10-29 from 17:30 GMT, by the planner (seat plan-seedfix, Opus 5.5,
+*(Delta, row 6 (S1d), dated 2026-10-29 from 17:24 GMT, by the planner (seat plan-seedfix, Opus 5.5,
 effort medium), on the maintainer's entries "2026-10-29 14:21:02 GMT" item 2 ((2'): *"Fix
 **red-first in its own small test-only slice tomorrow, Fri 30 am** (not riding the beat slice — one
 thing per slice): the fixture also sets `GIP_MIGRATION_DATABASE_URL` to the scratch database as the
