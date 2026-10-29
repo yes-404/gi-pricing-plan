@@ -157,3 +157,7 @@ FR-231 and FR-232 (`03` §3.3); `03` §5.1 `:1102`/`:1103` (unknown table, versi
 3. Item 16 cannot be met (above).
 
 Verdicts (lead 29, from-lead 2026-10-29 12:19:50 GMT): 9–13 delivered; 11 the first-assert caveat accepted; 14 STANDS under item 31; 15 discharged by this PR; 16 re-dated (below); the 12:14:00Z END-restore recreate of postgres/keycloak is in gate.log's restore rows.
+
+### 2026-10-29 — Re-merge of main d83a4c3f (#1382) after the gate (exec-fd1585mint, at the lead's message)
+
+`git merge --no-ff origin/main` (d83a4c3f, #1382) into `675148a6` → merge commit `8d75ae8c`; `git diff --stat HEAD^1 HEAD` = `uv.lock | 73 +++---` only (37 insertions, 36 deletions). Gated-tree cover: the non-docs files the gated tree `d666a405` differs from the code of `origin/main` in are `uv.lock`, `frontend/package.json` and `frontend/pnpm-lock.yaml` (all from main's dependency bumps, none written by this slice), with `uv.lock` now carrying both Python bumps (#1380/#1381 in the gated tree, #1382 here); the slice's own code is `backend/src/app/api/rate_tables.py` and `backend/tests/test_api_rate_tables.py`, unchanged by the merge.
