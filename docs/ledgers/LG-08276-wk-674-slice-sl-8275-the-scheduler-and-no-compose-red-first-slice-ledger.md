@@ -216,3 +216,11 @@ The project's own Postgres was provisioned by hand (`scripts/provision-app-role.
 - **The edit**, its own commit (`870d08f5`): the test takes `down` and runs `up -d --wait lb <workers>` (`_worker_services`, as the other four callers do). Write-set amendment: PL-1688 row 2's dated line of 19:31:32.
 - **Green at `870d08f5ce68c06ef4ba345b55114ca29208e477`, `GIP_DEPLOY_TESTS=1`:** `1 passed, 2 warnings in 71.75s`, rc=0; 0 containers left by project label. The "UNPROVEN" docstring sentence is replaced by a dated one naming this run.
 - **All five `beat_fixture` callers are therefore green under `GIP_DEPLOY_TESTS=1`:** the four of F2 at `c6716e04` (`2 passed` + `2 passed`) and this one at `870d08f5`.
+
+## Build window END — 2026-10-29 19:36 GMT (exec-beatgreen)
+
+- Project `gip-s4-runtime`: 0 containers, 0 volumes (`down -v`, by project label). `docker ps -a` after = the four shared containers (Up, healthy) plus the two pre-existing exited ones; before = the same.
+- The four shared containers' `docker inspect -f '{{.Name}} {{.Id}} {{.State.StartedAt}}'` before vs after: `diff` rc 0.
+- Images removed by explicit tag, each `rmi` rc 0: `gi-pricing-app:` `870d08f5ce68…`, `c6716e048dc4…`, `1e17ec6382de…`, `1a3a8483463b…`, `125779310f85…` (full tags in the transcript); 0 `gi-pricing-app` images remain.
+- `env | grep GIP_TEST_DATABASE_URL`: empty (rc 1). `df -h /`: `/dev/sda1 59G 49G 7.7G 87% /`.
+- Throwaway worktree `exec-beatgreen-main`: porcelain 0, no shared container bound to it, `git worktree remove` rc 0.
