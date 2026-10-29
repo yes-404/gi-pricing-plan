@@ -124,9 +124,21 @@ def _session_level_flag_sets(sources: dict[str, str]) -> list[str]:
     return bad
 
 
+_SETS_REPLICATION_ROLE = re.compile(
+    r"\bSET\s+(LOCAL\s+|SESSION\s+)?session_replication_role\s*(=|\bTO\b)"
+    r"|set_config\(\s*'session_replication_role'"
+    r"|\bALTER\s+(ROLE|DATABASE|SYSTEM)\b[^;]*\bSET\s+session_replication_role\s*(=|\bTO\b)",
+    re.IGNORECASE,
+)
+
+
 def _replication_role_sql(sources: dict[str, str]) -> list[str]:
-    """`session_replication_role` in a string that is not a docstring: SQL that suspends
-    every user trigger, the guard included."""
+    """SQL that suspends every user trigger, the guard included, in a string that is not a
+    docstring. Three shapes write the parameter: `SET [LOCAL|SESSION] session_replication_role
+    = | TO`, `set_config('session_replication_role', …)`, and the persistent `ALTER
+    ROLE|DATABASE|SYSTEM … SET session_replication_role = | TO`. A read
+    (`has_parameter_privilege`, `current_setting`, `pg_settings`) or a message that merely
+    names the parameter is not refused."""
     bad = []
     for path, source in sources.items():
         tree = ast.parse(source)
@@ -142,7 +154,7 @@ def _replication_role_sql(sources: dict[str, str]) -> list[str]:
             if (
                 isinstance(node, ast.Constant)
                 and isinstance(node.value, str)
-                and "session_replication_role" in node.value
+                and _SETS_REPLICATION_ROLE.search(node.value)
                 and id(node) not in docstrings
             ):
                 bad.append(f"{path}:{node.lineno}")
@@ -312,7 +324,7 @@ def test_a_read_or_a_message_naming_the_replication_role_is_not_refused(text: st
 
 @pytest.mark.req("FR-351")
 @pytest.mark.parametrize(
-    "call", ["asyncio.create_task(g())","asyncio.gather(g())", "loop.run_in_executor(None, g)"]
+    "call", ["asyncio.create_task(g())", "asyncio.gather(g())", "loop.run_in_executor(None, g)"]
 )
 def test_a_planted_task_inside_the_block_is_refused(call: str) -> None:
     source = f"async def f(session):\n    async with approval_decision(session):\n        {call}\n"
