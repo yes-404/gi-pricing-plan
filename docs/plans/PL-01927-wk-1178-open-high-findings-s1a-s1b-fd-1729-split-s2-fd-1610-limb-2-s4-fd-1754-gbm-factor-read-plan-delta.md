@@ -763,6 +763,10 @@ No production, spec or migration file.
   unset. Drop `scratch_pl8278_foreign`; `select datname` after = before (no `scratch_sl1409c_*` or
   `scratch_pl8278_*` left); the shared `gipricing` database never written; redis db 11, 12 or 13
   (item 33), `dbsize` 0 after FLUSHDB; the window's two zeros (item 23).
+  (Amended 2026-10-29 by the lead, on to-lead "2026-10-29 17:32:19 GMT": the window's databases are
+  named `scratch_s1d_*` — the foreign database is `scratch_s1d_foreign`, not `scratch_pl8278_foreign` —
+  dropped at END; the window is ≤ 60 min, in a no-gate gap with all three slots free at start, and the
+  template's non-empty-table list is quoted before and after.)
 - [ ] **S1d-6. The format commit, then the gate.** If S1d-0 read rc 1: `uv run ruff format
   backend/tests/test_transformations.py` alone in its own commit, `style(backend): ruff format
   backend/tests/test_transformations.py (process-backlog 2026-10-29 14:44 GMT)`; `ast.dump` equal
