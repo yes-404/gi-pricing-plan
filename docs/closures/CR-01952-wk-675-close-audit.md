@@ -438,7 +438,7 @@ delegation) ruled them; the lead's verdict pack is the source of the contents.
 | # | Owed | Owner | Date | Discharged by |
 |---|---|---|---|---|
 | (1) | **One docs PR, lane C:** FD-1656's docstring correction (three sites, §5b); the closing acts for SL-1551, SL-1552, SL-1553, SL-1554 and SL-1938, and LG-1902, LG-1933 and LG-1939; RL-1909's four edits applied in `03` (FD-1953); PL-1546 item 3 (one `// FR-xxx` naming line per frontend test, **or** the item amended by a dated line to say the behaviour is tested under the slice's LG) and item 5; and FD-1955's typed-cursor proof re-run on genuinely broken input | the lead (lead 28) | Tue 27 Oct 2026 | that docs PR |
-| (2) | **FD-1585 fix** (the two diff routes answer `RATE_TABLE_MISS`; register `docs/findings/register.md:334`, "The existing rate-table diff routes answer 404 `RATE_TABLE_MISS` …") | WK-675 | Wed 28 Oct 2026 | this PR (#1403, squash 18728e68), SL-1956/LG-1957 |
+| (2) | **FD-1585 fix** (the two diff routes answer `RATE_TABLE_MISS`; register `docs/findings/register.md:334`, "The existing rate-table diff routes answer 404 `RATE_TABLE_MISS` …") | WK-675 | Wed 28 Oct 2026 | #1403 (squash 18728e68), SL-1956/LG-1957 |
 | (3) | **FD-1652's stored-data query** (the two read-only `jsonb_typeof` counts; register `docs/findings/register.md:347`) | WK-675 | the next DB window, by Wed 28 Oct 2026 | the counts quoted in FD-1652's register row |
 | (4) | **NFR-463 deferred:** one `accessibility-tester` pass over the six P2 views | WK-675 | Mon 3 Nov 2026 (before the docs freeze) | the measurement lines in the CR addendum |
 | (5) | **A fresh full gate** on gate-1b at this record's head, after S1b's END | the lead | after S1b's END | the END row, below |
