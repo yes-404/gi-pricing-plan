@@ -63,9 +63,14 @@ async def _banding(
     database: Database, workspace_id: UUID, actor: Principal, dataset_id: UUID, **over: object
 ) -> Banding:
     base: dict[str, object] = {
-        "id": uuid4(), "slug": f"amt-{uuid4().hex[-6:]}", "dataset_id": dataset_id,
-        "version": 1, "column": "claim_amount_minor", "method": BandingMethod.MANUAL,
-        "boundaries": (0.0, 150_000.0, 300_000.0), "labels": ("low", "high"),
+        "id": uuid4(),
+        "slug": f"amt-{uuid4().hex[-6:]}",
+        "dataset_id": dataset_id,
+        "version": 1,
+        "column": "claim_amount_minor",
+        "method": BandingMethod.MANUAL,
+        "boundaries": (0.0, 150_000.0, 300_000.0),
+        "labels": ("low", "high"),
     }
     base.update(over)
     banding = Banding(**base)  # type: ignore[arg-type]
@@ -87,8 +92,13 @@ async def test_a_second_banding_of_one_slug_allocates_the_next_version(
 
     first = await _banding(database, workspace_id, actor, dataset_id, slug=slug)
     second = await _banding(
-        database, workspace_id, actor, dataset_id, slug=slug,
-        boundaries=(0.0, 120_000.0, 300_000.0), labels=("low", "high"),
+        database,
+        workspace_id,
+        actor,
+        dataset_id,
+        slug=slug,
+        boundaries=(0.0, 120_000.0, 300_000.0),
+        labels=("low", "high"),
     )
 
     assert (first.version, second.version) == (1, 2)
@@ -121,7 +131,11 @@ async def test_creating_a_grouping_emits_an_audit_event(
             workspace_id=workspace_id,
             actor=actor,
             grouping=Grouping(
-                id=uuid4(), slug=slug, dataset_id=dataset_id, version=1, column="area",
+                id=uuid4(),
+                slug=slug,
+                dataset_id=dataset_id,
+                version=1,
+                column="area",
                 method=GroupingMethod.MANUAL,
                 mapping={"urban": "ALL", "rural": "ALL"},
                 unseen_level_behaviour=UnseenLevelBehaviour.ERROR,
@@ -184,9 +198,7 @@ async def test_a_proposal_reads_the_version_and_persists_nothing(
     """FR-98: the platform proposes, the actuary edits, and nothing is stored yet."""
     actor = await _actuary(database, workspace_id)
     dataset_id = await _dataset(database, blob_store, workspace_id, actor)
-    version_id = await _validated_version(
-        database, blob_store, workspace_id, actor, dataset_id
-    )
+    version_id = await _validated_version(database, blob_store, workspace_id, actor, dataset_id)
 
     async with database.session() as session:
         proposed = await transform_service.propose_banding_for_version(
@@ -208,10 +220,14 @@ async def test_a_proposal_reads_the_version_and_persists_nothing(
 
     async with database.session() as session:
         stored = (
-            await session.execute(
-                select(BandingRow).where(BandingRow.workspace_id == workspace_id)
+            (
+                await session.execute(
+                    select(BandingRow).where(BandingRow.workspace_id == workspace_id)
+                )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
     assert stored == [], "proposing is not persisting"
 
 
@@ -222,9 +238,7 @@ async def test_a_grouping_proposal_carries_its_change_in_fit(
     """FR-107's evidence, from the real read path rather than a fixture frame."""
     actor = await _actuary(database, workspace_id)
     dataset_id = await _dataset(database, blob_store, workspace_id, actor)
-    version_id = await _validated_version(
-        database, blob_store, workspace_id, actor, dataset_id
-    )
+    version_id = await _validated_version(database, blob_store, workspace_id, actor, dataset_id)
 
     async with database.session() as session:
         proposed = await transform_service.propose_grouping_for_version(
@@ -267,15 +281,18 @@ async def test_evaluating_edited_boundaries_moves_the_band_statistics(
 
     actor = await _actuary(database, workspace_id)
     dataset_id = await _dataset(database, blob_store, workspace_id, actor)
-    version_id = await _validated_version(
-        database, blob_store, workspace_id, actor, dataset_id
-    )
+    version_id = await _validated_version(database, blob_store, workspace_id, actor, dataset_id)
 
     async def _stats(cut: float) -> dict[str, tuple[float, int]]:
         banding = Banding(
-            id=uuid4(), slug="amt", dataset_id=dataset_id, version=1,
-            column="claim_amount_minor", method=BandingMethod.MANUAL,
-            boundaries=(0.0, cut, 300_000.0), labels=("low", "high"),
+            id=uuid4(),
+            slug="amt",
+            dataset_id=dataset_id,
+            version=1,
+            column="claim_amount_minor",
+            method=BandingMethod.MANUAL,
+            boundaries=(0.0, cut, 300_000.0),
+            labels=("low", "high"),
         )
         async with database.session() as session:
             evaluated = await transform_service.evaluate_banding_for_version(
@@ -283,14 +300,11 @@ async def test_evaluating_edited_boundaries_moves_the_band_statistics(
                 workspace_id=workspace_id,
                 actor=actor,
                 blob_store=blob_store,
-                evaluation=BandingEvaluation(
-                    dataset_version_id=version_id, banding=banding
-                ),
+                evaluation=BandingEvaluation(dataset_version_id=version_id, banding=banding),
             )
         assert evaluated.derived_on_dataset_version_id == version_id
         return {
-            row.level: (float(row.exposure_years), row.claim_count)
-            for row in evaluated.band_stats
+            row.level: (float(row.exposure_years), row.claim_count) for row in evaluated.band_stats
         }
 
     # `BOOK` puts 100 000 minor units on three quarters of the rows and 200 000 on the rest.
@@ -319,14 +333,17 @@ async def test_evaluating_an_edited_mapping_moves_the_evidence(
 
     actor = await _actuary(database, workspace_id)
     dataset_id = await _dataset(database, blob_store, workspace_id, actor)
-    version_id = await _validated_version(
-        database, blob_store, workspace_id, actor, dataset_id
-    )
+    version_id = await _validated_version(database, blob_store, workspace_id, actor, dataset_id)
 
     async def _evidence(mapping: dict[str, str]):
         grouping = Grouping(
-            id=uuid4(), slug="area", dataset_id=dataset_id, version=1, column="area",
-            method=GroupingMethod.MANUAL, mapping=mapping,
+            id=uuid4(),
+            slug="area",
+            dataset_id=dataset_id,
+            version=1,
+            column="area",
+            method=GroupingMethod.MANUAL,
+            mapping=mapping,
             unseen_level_behaviour=UnseenLevelBehaviour.ERROR,
         )
         async with database.session() as session:
@@ -335,9 +352,7 @@ async def test_evaluating_an_edited_mapping_moves_the_evidence(
                 workspace_id=workspace_id,
                 actor=actor,
                 blob_store=blob_store,
-                evaluation=GroupingEvaluation(
-                    dataset_version_id=version_id, grouping=grouping
-                ),
+                evaluation=GroupingEvaluation(dataset_version_id=version_id, grouping=grouping),
             )
         assert evaluated.evidence is not None
         return evaluated.evidence
@@ -378,9 +393,14 @@ async def test_evaluating_needs_a_validated_version_too(
                 evaluation=BandingEvaluation(
                     dataset_version_id=draft,
                     banding=Banding(
-                        id=uuid4(), slug="amt", dataset_id=dataset_id, version=1,
-                        column="claim_amount_minor", method=BandingMethod.MANUAL,
-                        boundaries=(0.0, 150_000.0, 300_000.0), labels=("low", "high"),
+                        id=uuid4(),
+                        slug="amt",
+                        dataset_id=dataset_id,
+                        version=1,
+                        column="claim_amount_minor",
+                        method=BandingMethod.MANUAL,
+                        boundaries=(0.0, 150_000.0, 300_000.0),
+                        labels=("low", "high"),
                     ),
                 ),
             )
@@ -396,9 +416,7 @@ async def test_evaluating_persists_nothing(
 
     actor = await _actuary(database, workspace_id)
     dataset_id = await _dataset(database, blob_store, workspace_id, actor)
-    version_id = await _validated_version(
-        database, blob_store, workspace_id, actor, dataset_id
-    )
+    version_id = await _validated_version(database, blob_store, workspace_id, actor, dataset_id)
 
     async with database.session() as session:
         await transform_service.evaluate_banding_for_version(
@@ -409,19 +427,28 @@ async def test_evaluating_persists_nothing(
             evaluation=BandingEvaluation(
                 dataset_version_id=version_id,
                 banding=Banding(
-                    id=uuid4(), slug="amt", dataset_id=dataset_id, version=1,
-                    column="claim_amount_minor", method=BandingMethod.MANUAL,
-                    boundaries=(0.0, 150_000.0, 300_000.0), labels=("low", "high"),
+                    id=uuid4(),
+                    slug="amt",
+                    dataset_id=dataset_id,
+                    version=1,
+                    column="claim_amount_minor",
+                    method=BandingMethod.MANUAL,
+                    boundaries=(0.0, 150_000.0, 300_000.0),
+                    labels=("low", "high"),
                 ),
             ),
         )
 
     async with database.session() as session:
         stored = (
-            await session.execute(
-                select(BandingRow).where(BandingRow.workspace_id == workspace_id)
+            (
+                await session.execute(
+                    select(BandingRow).where(BandingRow.workspace_id == workspace_id)
+                )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
     assert stored == []
 
 
@@ -437,9 +464,7 @@ async def test_a_model_fits_through_a_stored_banding(
     """
     actor = await _actuary(database, workspace_id)
     dataset_id = await _dataset(database, blob_store, workspace_id, actor)
-    version_id = await _validated_version(
-        database, blob_store, workspace_id, actor, dataset_id
-    )
+    version_id = await _validated_version(database, blob_store, workspace_id, actor, dataset_id)
     banding = await _banding(database, workspace_id, actor, dataset_id)
 
     async with database.unit_of_work() as session:
@@ -448,9 +473,13 @@ async def test_a_model_fits_through_a_stored_banding(
             workspace_id=workspace_id,
             actor=actor,
             factor=Factor(
-                id=uuid4(), slug=f"amt-banded-{uuid4().hex[-6:]}", dataset_id=dataset_id,
-                version=1, type=FactorType.BANDING,
-                source_columns=("claim_amount_minor",), banding_id=banding.id,
+                id=uuid4(),
+                slug=f"amt-banded-{uuid4().hex[-6:]}",
+                dataset_id=dataset_id,
+                version=1,
+                type=FactorType.BANDING,
+                source_columns=("claim_amount_minor",),
+                banding_id=banding.id,
             ),
         )
         factor_id = factor_row.id
@@ -459,16 +488,23 @@ async def test_a_model_fits_through_a_stored_banding(
 
     async with database.unit_of_work() as session:
         row, should_fit = await model_service.reserve_model(
-            session, workspace_id=workspace_id, actor=actor,
+            session,
+            workspace_id=workspace_id,
+            actor=actor,
             spec=_spec(version_id, (factor_id,), split_ref=split),
         )
         assert should_fit is True
         model_id = row.id
         job = await job_service.submit(
-            session, JobKind.MODEL_FIT,
-            {"workspace_id": str(workspace_id), "actor": actor.model_dump(mode="json"),
-             "model_id": str(model_id)},
-            actor, workspace_id=workspace_id,
+            session,
+            JobKind.MODEL_FIT,
+            {
+                "workspace_id": str(workspace_id),
+                "actor": actor.model_dump(mode="json"),
+                "model_id": str(model_id),
+            },
+            actor,
+            workspace_id=workspace_id,
         )
     assert await execute_job(database, job.id, blob_store) is JobStatus.SUCCEEDED
 
@@ -489,9 +525,7 @@ async def test_a_fit_naming_a_banding_that_does_not_exist_fails_the_job(
     """A dangling reference is a `404` naming the id, not a fit on the raw column."""
     actor = await _actuary(database, workspace_id)
     dataset_id = await _dataset(database, blob_store, workspace_id, actor)
-    version_id = await _validated_version(
-        database, blob_store, workspace_id, actor, dataset_id
-    )
+    version_id = await _validated_version(database, blob_store, workspace_id, actor, dataset_id)
 
     async with database.unit_of_work() as session:
         factor_row = await model_service.create_factor(
@@ -499,23 +533,34 @@ async def test_a_fit_naming_a_banding_that_does_not_exist_fails_the_job(
             workspace_id=workspace_id,
             actor=actor,
             factor=Factor(
-                id=uuid4(), slug=f"ghost-{uuid4().hex[-6:]}", dataset_id=dataset_id,
-                version=1, type=FactorType.BANDING,
-                source_columns=("claim_amount_minor",), banding_id=uuid4(),
+                id=uuid4(),
+                slug=f"ghost-{uuid4().hex[-6:]}",
+                dataset_id=dataset_id,
+                version=1,
+                type=FactorType.BANDING,
+                source_columns=("claim_amount_minor",),
+                banding_id=uuid4(),
             ),
         )
         factor_id = factor_row.id
 
     async with database.unit_of_work() as session:
         row, _ = await model_service.reserve_model(
-            session, workspace_id=workspace_id, actor=actor,
+            session,
+            workspace_id=workspace_id,
+            actor=actor,
             spec=_spec(version_id, (factor_id,)),
         )
         job = await job_service.submit(
-            session, JobKind.MODEL_FIT,
-            {"workspace_id": str(workspace_id), "actor": actor.model_dump(mode="json"),
-             "model_id": str(row.id)},
-            actor, workspace_id=workspace_id,
+            session,
+            JobKind.MODEL_FIT,
+            {
+                "workspace_id": str(workspace_id),
+                "actor": actor.model_dump(mode="json"),
+                "model_id": str(row.id),
+            },
+            actor,
+            workspace_id=workspace_id,
         )
     assert await execute_job(database, job.id, blob_store) is JobStatus.FAILED
 
@@ -545,9 +590,7 @@ async def test_a_stored_banding_cannot_be_updated_or_deleted(
 
     async with database.session() as session:
         with pytest.raises(Exception, match=r"permission denied|InsufficientPrivilege"):
-            await session.execute(
-                text("DELETE FROM bandings WHERE id = :i"), {"i": banding.id}
-            )
+            await session.execute(text("DELETE FROM bandings WHERE id = :i"), {"i": banding.id})
 
 
 @pytest.mark.req("FR-104")
@@ -574,9 +617,7 @@ async def test_loading_a_banding_that_does_not_exist_names_the_id(
     missing = uuid4()
     with pytest.raises(PlatformError) as refused:
         async with database.session() as session:
-            await transform_service.load_bandings(
-                session, workspace_id=workspace_id, ids=[missing]
-            )
+            await transform_service.load_bandings(session, workspace_id=workspace_id, ids=[missing])
     assert refused.value.code == "NOT_FOUND"
     assert str(missing) in (refused.value.detail or "")
 
@@ -598,8 +639,12 @@ async def test_a_grouping_row_records_its_parent_for_a_hierarchy(
             workspace_id=workspace_id,
             actor=actor,
             grouping=Grouping(
-                id=uuid4(), slug=f"area-{uuid4().hex[-6:]}", dataset_id=dataset_id,
-                version=1, column="area", method=GroupingMethod.MANUAL,
+                id=uuid4(),
+                slug=f"area-{uuid4().hex[-6:]}",
+                dataset_id=dataset_id,
+                version=1,
+                column="area",
+                method=GroupingMethod.MANUAL,
                 mapping={"urban": "ALL", "rural": "ALL"},
                 unseen_level_behaviour=UnseenLevelBehaviour.ERROR,
                 parent_grouping_id=parent_id,

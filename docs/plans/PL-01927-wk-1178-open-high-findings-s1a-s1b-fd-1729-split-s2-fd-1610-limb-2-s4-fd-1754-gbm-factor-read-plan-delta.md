@@ -659,7 +659,7 @@ item (1) (*"the data goes in a throwaway checkout, never a slice worktree"*) and
 GMT" (*"the seed-fixture slice = a dated delta row in PL-1927 (FD-1965 is S1c's follow-on; relates:
 PL-1927, WK-1178), no new PL"*), all in `~/gi-pricing-plan.local/channel/to-lead.md`: **a new row 6,
 S1d — FD-1965: the seed fixture migrates its own scratch database.** Its slice is **SL 8278** and its
-ledger **LG 8279** (working ids; minted in merge order at the slice's turn). Work **WK-1178**; relates
+ledger **LG 8279** (working ids; minted in merge order at the slice's turn, as SL-1966 / LG-1967). Work **WK-1178**; relates
 PL-1927, WK-1178; the finding `FD-1965` (minted by #1405, squash `7ceff4a1`) is its specification —
 its Finding, Evidence and Remedy sections. **Tree read:** `origin/main`
 `7ceff4a16829c63f20f0cdbb56fafae22657c1ab`; `examples/` and `backend/migrations/` are unchanged from
@@ -721,7 +721,7 @@ docs, history-policy (frontend does not fire, E-d5). G2 lapses to G1 if the slic
 (`origin/main...<slice branch>`) touches `conftest*.py`, `env.py` or `seed.py`.
 
 **Write set (S1d).** `examples/fremtpl2/test_seed.py`; `backend/tests/test_transformations.py`
-(format only, its own commit); `LG 8279`; the SL row; FD-1965's close in place and its register row.
+(format only, its own commit); `LG-1967`; the SL row; FD-1965's close in place and its register row.
 No production, spec or migration file.
 
 - [ ] **S1d-0. Base.** Branch from `origin/main` at or after `7ceff4a1`. Re-read E-d1 to E-d4 at the
@@ -773,12 +773,12 @@ No production, spec or migration file.
   backend/tests/test_transformations.py` alone in its own commit, `style(backend): ruff format
   backend/tests/test_transformations.py (process-backlog 2026-10-29 14:44 GMT)`; `ast.dump` equal
   before/after. Then the gate DP-S1d-2 rules.
-- [ ] **S1d-7. Records.** `LG 8279` (`docs/_templates/LG.md`; scope = this row; every red/green line
+- [ ] **S1d-7. Records.** `LG-1967` (`docs/_templates/LG.md`; scope = this row; every red/green line
   with `head=` first and `rc=` last, item 37); the SL row; FD-1965 closed in place and its register
-  row; the mint of SL 8278 / LG 8279 at S1d's turn (items 17, 19, 26).
+  row; the mint of SL 8278 / LG 8279 (minted as SL-1966 / LG-1967) at S1d's turn (items 17, 19, 26).
 
 **Acceptance (S1d)** — the plan's Acceptance Standard rules apply (the merge tree, the range
-`origin/main...<slice branch>` named, red by the stated cause at the base, its line in `LG 8279`
+`origin/main...<slice branch>` named, red by the stated cause at the base, its line in `LG-1967`
 before the fix):
 
 - **d1.** `git diff --name-only origin/main...<slice branch>` lists only
@@ -787,21 +787,21 @@ before the fix):
 - **d2.** `git log --format=%s origin/main..<slice branch> -- backend/tests/test_transformations.py`
   prints exactly one subject, beginning `style(backend): ruff format`, and its `git show --stat`
   lists that one file.
-- **d3.** `LG 8279` carries R1–R3 red by cause `UndefinedTableError: relation "role_assignments" does
+- **d3.** `LG-1967` carries R1–R3 red by cause `UndefinedTableError: relation "role_assignments" does
   not exist` at the base (data present, the migration URL on `scratch_pl8278_foreign`), each with its
   node id, and the foreign demo-row count rising.
-- **d4.** `LG 8279` carries G1 (the three passed, same foreign URL, foreign demo-row count before =
+- **d4.** `LG-1967` carries G1 (the three passed, same foreign URL, foreign demo-row count before =
   after) and G2 (the three passed, variable unset) at the head, in the throwaway checkout.
 - **d5.** `uv run pytest -q examples/fremtpl2/test_seed.py -k owner_url` passes with no data present
-  (C1); `LG 8279` carries C1's mutation red (`DID NOT RAISE`) and its restore green.
+  (C1); `LG-1967` carries C1's mutation red (`DID NOT RAISE`) and its restore green.
 - **d6.** `grep -n 'GIP_MIGRATION_DATABASE_URL' examples/fremtpl2/test_seed.py` shows the fixture
   setting it, and the helper call precedes `CREATE DATABASE` in `scratch_seed` (read the lines).
 - **d7.** `uv run ruff check .` rc 0; `uv run ruff format --check examples/fremtpl2/test_seed.py
   backend/tests/test_transformations.py` rc 0.
-- **d8.** The window's read-backs in `LG 8279`: `pg_database` names before = after, no
+- **d8.** The window's read-backs in `LG-1967`: `pg_database` names before = after, no
   `scratch_pl8278_*` or `scratch_sl1409c_*` left; redis `dbsize` 0 on the seat's db; no `.arff` under
   the slice worktree.
-- **d9.** The gate DP-S1d-2 rules: its END row and rc files in `LG 8279`; after the mint, audit-docs,
+- **d9.** The gate DP-S1d-2 rules: its END row and rc files in `LG-1967`; after the mint, audit-docs,
   doc-index `--check` and register-lint exit 0; PR CI python, docs and history-policy green.
 - **d10.** FD-1965 reads closed in place and in `docs/findings/register.md`, naming the slice's minted
   `SL-` id.
