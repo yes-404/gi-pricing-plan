@@ -120,6 +120,13 @@ Each new test's E-line:
 
 **Control (green at the base, as planned):** `test_without_no_compose_the_infrastructure_is_still_started_by_compose` (R2.c) passed.
 
-**The two ERRORs are not reds.** `test_the_seed_record_pre_flight_refuses_a_workspace_the_database_lost` and `…_an_analyst_who_is_not_a_member` take the `database` fixture, which refuses without a per-worktree test database: `RuntimeError: GIP_TEST_DATABASE_URL is not set, and the per-worktree test database 'gipricing_sl-8275_cae0e2f1' does not exist yet.` The DB-free lane has no database by design; both tests are untouched by this slice.
+**Not run: DB-backed, lane is DB-free (excluded from the red count by node id).** Two existing tests ERROR in `database` fixture setup, identically with and without this slice's test edits:
+
+- `backend/tests/test_demo_command.py::test_the_seed_record_pre_flight_refuses_a_workspace_the_database_lost`
+- `backend/tests/test_demo_command.py::test_the_seed_record_pre_flight_refuses_an_analyst_who_is_not_a_member`
+
+E-line (`backend/tests/conftest_db.py:143`): `RuntimeError: GIP_TEST_DATABASE_URL is not set, and the per-worktree test database '<name>' does not exist yet. Refused rather than silently falling back to the shared 'gipricing' database …`.
+
+Control (lead's order, 2026-10-29): `backend/tests/test_demo_command.py` alone, via run-small, on a clean detached throwaway worktree at `06caa8b99cf50725e7d69c654ad6fb836776cef7` (no test edits; run-small refuses node ids, so the whole file ran): `27 passed, 2 warnings, 2 errors in 2.10s`, rc=1, the same two ERROR node ids, the same `RuntimeError`, database name `gipricing_sl-8275-base_a3cf631f` (the red run's: `gipricing_sl-8275_cae0e2f1`). So the errors are the lane, not the change.
 
 Checks: `ruff check` on the two files rc 0. `ruff format --check`: `test_demo_command.py` clean; `test_deploy_stack.py` reports one hunk at line 71, in code the slice did not touch (`origin/main`'s copy gives rc 1 too with ruff 0.17.1); the slice's own hunks are clean.
