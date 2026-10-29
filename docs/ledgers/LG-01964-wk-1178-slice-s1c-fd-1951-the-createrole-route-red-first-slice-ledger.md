@@ -435,3 +435,48 @@ Written by exec-seedproof under the grant "2026-10-29 14:21:02 GMT" (to-lead.md)
 - **Template rebuild (ruling item 4), before/after.** `gipricing` `alembic_version` `d4e81b7a2c95` -> `b7e4c2a91d36`; public tables 60 -> 64; 0 active connections before the drop; `dropdb` rc 0, `createdb` rc 0, `alembic upgrade head` rc 0 (migrations only, no data, run from the seedproof worktree at 18728e68; tools-main not written). Datnames before = after: `gipricing postgres template0 template1`. `select rolname from pg_roles where rolname like 'gip%' order by 1` before = after: `gip_app gip_app_login gipricing`. This discharges the backlog row; it is not the fix for the seed fixture.
 - **Brief error caught.** `alembic` needs the worktree root (`alembic.ini` there): `uv run --directory <wt>/backend alembic heads` fails with `No 'script_location' key found in configuration`; `uv run --directory <wt> alembic heads` with `GIP_MIGRATION_DATABASE_URL` set printed `b7e4c2a91d36 (head)`.
 - **.arff removal (ruling item 3).** From `examples/fremtpl2/data/` of this worktree, before: `celerybeat-schedule.db` (12288 B), `freMTPL2freq.arff` (36288567 B), `freMTPL2sev.arff` (376555 B), `last-seed.json` (609 B), all matched by `.gitignore:61`, none tracked; after: the directory is empty and `git status --porcelain` is 0. No tracked file touched.
+
+## Audit (auditor, 2026-10-29)
+
+Auditor seat aud-s1c (Sonnet 5.5). Object: `origin/draft/s1c-fd1951` = `e239733c1477c5ab0e8d4c897638767cb4c3e0b9` (re-read with `git ls-remote` at the start; re-read again before the mint). Read-only: no test, no DB, no git write. Gate object: `eb64354f` (gated head). Proposed verdicts; the lead adopts.
+
+### Scope (derived from the spec first)
+
+FR-44 (`01-data-management.md:106`) and FD-1951 as the plan states it: HIGH-1 CREATEROLE (stands); HIGH-2 ADMIN OPTION (refuted 2026-10-26, two controls); the five mediums (predefined roles, `session_replication_role`, guard-function and schema ownership, settings reset, PUBLIC read) in S1c; the membership strip carried to WK-1178 (FD-1963). PL-1927 acceptance 20–26 and S1c-0…S1c-6.
+
+### Acceptance items
+
+| # | Evidence | Proposed verdict |
+|---|---|---|
+| 20 reds by cause (a1, a2, b1, b2 + one per taken medium; green at head) | LG-1964 "Window 1": tests-only `e905ada9` → `10 failed, 2 passed` (nine `DID NOT RAISE LeastPrivilegeError` at `test_application_role.py:213`, one `AssertionError: []` at `:513`) and `test_provision_app_role.py` `4 failed, 6 passed` (b1, b2, m4, m4b by state assert); greens at `037311cc` `41 passed`; head logs carry `head=` first, `rc=` last. Read from the LG's quoted asserts, not the summaries. Not re-run by the auditor (no-test ban). | delivered (evidenced in the LG; re-run at the minted head is the gate's) |
+| 21 two controls | LG-1964 Window 1: both ADMIN forms refused at base and head, "still refused at head" in the 41-pass run. | delivered |
+| 22 greps | `git grep -n rolcreaterole origin/draft/s1c-fd1951 -- backend/src/app/db/immutability.py` → `:90 WHEN r.rolcreaterole THEN 'createrole'`; `git grep -n "WITH INHERIT TRUE, SET FALSE\|NOCREATEROLE" … deploy/postgres/app-login-role.sql` → `:20 ALTER ROLE gip_app NOLOGIN … NOCREATEROLE …`, `:36 GRANT gip_app TO gip_app_login WITH INHERIT TRUE, SET FALSE;` (run by the auditor at e239733c). | delivered |
+| 23 FR-44 dated line | `docs/specs/01-data-management.md:106` carries `*(Amended 2026-10-26, WK-1178 SL-1962, on FD-1951.)*` naming the routes; `req-coverage.py` rc 0 (gate `req_coverage.rc=0`). The line carries the working id SL-1962: the mint must re-point it (`git grep` the whole tree). | delivered (re-point owed at the mint) |
+| 24 full gate, both halves; login-role suite at the re-merged head | Gate gate-1 SOLO at `eb64354f` (LG "Gate"): ruff, mypy, import_linter, contracts, req_coverage rc 0; frontend six rows rc 0; demo rc 0; pytest and audit_docs rc 1 only as below. The gate exports `GIP_DATABASE_URL` as `gip_app_login` (`s1c-gate.sh:71–72`), so its pytest is the full backend suite on the login role at the last re-merge (`eb64354f` = `uv.lock` only over `d83a4c3f`). Earlier: W2 resume, full suite on the login role at `09568e41` green. | delivered under seat brief item 31 (1(f)) with the named exception; conditions open (below) |
+| 25 DP-S1c-1 ruled; every medium placed | "2026-10-26 13:12:34 GMT" ruling (PL-1927 dated line): 1, 2, 3, 5 in S1c with reds; 4 split — reset in S1c, strip carried to WK-1178. Strip's record: FD-1963 (drafted, MEDIUM, WK-1178). | delivered; the carried limb in a record once FD-1963 is minted in this PR |
+| 26 merge on or before 2026-10-31 | **Open** — no merge exists; `git log -1 --format=%cI <squash>` cannot run. | not started (a time-box; the lead's merge decides); at risk only if the PR slips past Fri 31 |
+
+S1c-5 (compose run): LG section S1c-5, `drive_rc=0`, A3 a real run, 37 outbox rows published, none pending; teardown and four shared containers recorded. delivered. Note `drive.py` stages D/E non-runs are disclosed in the LG.
+
+### Gate confirmation
+
+`pytest.log` (`scratch/s1c-gate/gate/pytest.log`, tail line `16 failed, 7010 passed, 13 skipped, 5 xfailed, 148 warnings in 4336.55s`): `grep '^FAILED' | sed 's/ - .*//' | sort -u` = 16 ids, md5 `f9fbee49837aa2bc7d8f29624d5f81d3`; minus the three `examples/fremtpl2/test_seed.py` ids → 13 ids, md5 `3de106a917346a44197bdbaf5db31b82`. The 13 are the 8 docs-audit files exactly (finding_citations 1, ids 2, process_core_digest 2, w37_11_ceiling 1, doc_index 1, register_lint 3, register_owed 1, repository_invariants 2). Their asserts are the gap `1955 → 8269` / `requirement numbering` lines. Every other rc is 0 (`ruff mypy import_linter contracts req_coverage` rc files; `gate.log` rows for frontend, demo, restore, buckets, cleanup, END parts). `audit_docs` rc 1 is `FAILED (4)`: check 31 gap 1955→8269 and check 32 on `LG-1964` / `SL-1962` — S1c's own working ids only. Demo lines present (`journey done in 1033s`, served page 200). Observations: `pytest.log` line 1 is a progress row, not `head=` (item 37; the head is in `gate.log`); skipped 13 ≤ 21.
+
+### The named exception
+
+The three seed ids are not item 31's set. Cause (LG "Gate exception"): `backend/migrations/env.py:32–38` migrates only `GIP_MIGRATION_DATABASE_URL`; the fixture `test_seed.py:138–158` sets only `GIP_DATABASE_URL`; the `.arff` files copied into the worktree by exec-s1c5 lifted the skip, so the tests ran and hit `relation "role_assignments" does not exist`. Proof it is main's: head `18728e68`, same three, "3 failed", same E-line (from-lead 14:29:50 GMT). `git diff --name-only 18728e68 origin/draft/s1c-fd1951 -- examples/ backend/migrations/` is empty (S1c does not touch either). Proposed: the exception STANDS, carried by FD-1965 (MEDIUM, WK-1178, SL 8278 Fri 30 am).
+
+### Conditions still open before the ACK (item 31)
+
+(1) the mint at its turn (SL-1962 / FD-1963 / LG-1964 per the gate section) with a whole-tree re-point (the FR-44 line, the LG, the register); (2) `audit-docs.py` rc 0 after the mint; (3) the 8 docs-audit tests re-run through run-small on the minted head, summaries verbatim; (4) PR CI including python; (5) FD-1951 closed in place citing the PR; FD-1963 and FD-1965 minted in the PR. Item 26 stays open until the merge.
+
+**Verdicts (lead 29, from-lead 2026-10-29 14:34:00 GMT):** 20–25 delivered (23 by this mint's FR-44 re-point; 25 by FD-1963 minted here); 26 open until the merge (on or before 2026-10-31); S1c-5 delivered; the gate STANDS under 1(f) with the named exception (the three seed ids; proof at 18728e68; FD-1965), unconditionally per the maintainer 2026-10-29 14:30:58 GMT.
+
+### Comment-only cover for the mint's four non-docs re-points (lead 29, ruling A, from-lead 2026-10-29)
+
+The gate ran at `eb64354f`; the mint commit `a5a9ba35` re-points `SL 8266` to `SL-1962` in four comments outside `docs/`. Evidence, measured at head `a5a9ba35` against `eb64354f`:
+
+- `backend/tests/test_application_role.py:161` (a `#` comment): `ast.dump` sha256 at both revisions `8624822b580e991257e91b9cde1469628e26d4511374fc15d7047db093aab055`, equal.
+- `backend/tests/test_provision_app_role.py:7` (inside the module docstring) and `backend/tests/test_transformations.py:531` (inside a function docstring): the whole-tree `ast.dump` digests differ (`96230eaf…` to `b934c082…`; `31d84b4b…` to `8b753a22…`), because a docstring is a string constant in the AST and the edit changes it. With the docstring constants blanked, the digests are equal (`6aa06473e6c4f968` and `01ee8712869cf5ae`, both sides). Each file's diff is 1 line removed and 1 added: `git diff eb64354f HEAD -U0 -- backend`.
+- `deploy/postgres/app-login-role.sql:18` (hand edit, a tool-blind file type): `git diff eb64354f HEAD -- deploy/postgres/app-login-role.sql` is 1 removed and 1 added line, each starting `--`.
+- `ruff check` on the three `.py` files, rc 0 ("All checks passed!"); `ruff format --check`, rc 1 on `test_transformations.py` only, which is rc 1 at `eb64354f` and at `origin/main` `18728e68` too (read with `--stdin-filename`), so not caused by this edit.
