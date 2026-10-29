@@ -42,12 +42,31 @@ FD-1965's close.
 - [x] **S1d-3. The fix** (DP-S1d-1 (a)); commit `c44fa2d7`.
 - [x] **S1d-4. Control C1** and its mutation red; commit `e7244a2a`.
 - [x] **S1d-5. Greens G1 and G2** (DB window; entry 2).
-- [x] **S1d-6. The format commits, then the gate** (DP-S1d-2 G2 narrow cover; entries 3, 4, 6).
+- [x] **S1d-6. The format commits, then the gate** (DP-S1d-2 G2 narrow cover; entries 3, 4, Gate).
 - [x] **S1d-7. Records** (less the mint, which is the lead's).
 
 ### Gate
 
-Pending (S1d-6).
+DP-S1d-2 G2 (the narrow cover), unminted head `8628ff39247d78316875df0df413740457096459` (docs half;
+the code half is entry 3 and 4's lines, run at `5d8c2649`/`e7244a2a`, the format commit after it being
+AST-equal). Logs under `~/gi-pricing-plan.local/scratch/s1d/`.
+
+| Check | Result |
+|---|---|
+| `git diff --stat origin/main...HEAD` | only `backend/tests/test_transformations.py`, `examples/fremtpl2/test_seed.py`, `docs/ledgers/LG-08279-…`, `docs/process/process-backlog.md` |
+| `uv run ruff check .` (at `5d8c2649`) | rc=0 |
+| `ruff format --check` both files (at `e9d5d6fe`) | rc=0 |
+| `test_seed.py`, no data, `run-small.sh` (at `5d8c2649`) | `15 passed, 3 skipped`, rc=0 |
+| `audit-docs.py` | rc=1: check 32 on LG-8279, SL-8278 (unminted) and check 39 (INDEX stale), nothing else |
+| `doc-index.py --check` | rc=1 (INDEX stale until the mint) |
+| `register-lint.py` | rc=0 |
+| `req-coverage.py` | rc=0 |
+| `generate-contracts.py --check` | rc=0 ("58 generated contracts match the models") |
+| 8 docs-audit pytest files, 3 `run-small.sh` runs | 6 + 4 + 3 = 13 failed (`docs-failed13.txt`), 118 + 106 + 20 passed |
+
+The 13 are the 1(f) set (tests that run `audit-docs`, which fails on this slice's own unminted ids).
+The row quotes md5 `3de106a91734` for it; its predicate is not stated, so no digest of mine is claimed
+to match it. After the mint they are owed 0 (the lead's step).
 
 ### Audit
 
