@@ -60,7 +60,7 @@ Lows, re-located by description at the base:
 | L5 | `BulkOperationDialog.vue:63` `role="dialog"` | one line, **but** `RateTableEditorView.test.ts:213` asserts `getByRole("dialog", { name: "Bulk operation" })`: the fix needs that existing assertion edited, which needs the lead's OK | grep: `role="dialog"` at :63; no test written |
 | L6 to L10 | as FD-1959 lists | not one line | none; carried (R10-DP2 (a)) |
 | L11 | `RegressionSuiteView.vue:243-244` `aria-label` on a bare `<pre>` | one line (a role, or move the label) | 1 test |
-| L12 | first column is `<td>` (golden :199, property rows); `:173` is a `<th scope="col">` as the row said | one line per table | 1 test |
+| L12 | first column is `<td>` (golden :186, property :229); `:173` is a `<th scope="col">` as the row said | one line per table | 1 test |
 
 #### 2026-10-29 T1 — the reds
 
@@ -78,7 +78,7 @@ Tests commit `9fe6a6b0` on `draft/sl-8281`. Each file run alone, `Test Files  1`
 
 Method for F3, M3 and M4: the test records the live regions (`[role="status"], [aria-live="polite"]`) before the trigger, and asserts the element that holds the message after the trigger is one of them, so a region that mounts with its text by `v-if` fails and a persistent region passes. M3 and M4 also pass if focus moves to the heading or into the result.
 
-**F2 baseline (item 20 (a)), no vitest red.** `git grep -n 'border-slate-300' HEAD -- frontend/src ':!*__tests__*'` at `a8303d94`: 124 hits (`f2-grep.log`). On inputs, selects or textareas (R10-DP1 (b) set): `DecimalCellInput.vue:54`; `BulkOperationDialog.vue:81,107,116`; `RateTableDiffPanel.vue:140,160`; `RateTableEditorView.vue:310`; `QuoteSandboxView.vue:174`; `QuoteForm.vue:74,95,116,136`; `DagDesigner.vue:295`; `DislocationView.vue:114`; `RegressionSuiteView.vue:129`; `RatingVersionListView.vue:126`; and the sweep additions `dag/DiffOverlay.vue:86`, `RatingDesignView.vue:158`, `dag/MountInspector.vue:69` (the `field` constant), `dag/StepInspector.vue:44`. Other WK-675 hits are `<section>`, `<th>`, button or node borders, not F2's 1.4.11 limb (`RateTableDiffPanel.vue:126,213-250,303,311`, `RateTableGrid.vue:68`, `RateTableImportExport.vue:93,101`, `RateTableEditorView.vue:284,292,326,357`, `DagDesigner.vue:222,308,317`, `NodeNavigator.vue:163,202`, `StepNode.vue:24`, `MountNode.vue:49`, `DislocationView.vue:119`, `BulkOperationDialog.vue:65`).
+**F2 baseline (item 20 (a)), no vitest red.** `git grep -n 'border-slate-300' HEAD -- frontend/src ':!*__tests__*'` at `a8303d94`: 122 hits (`f2-grep.log`; counted `grep -c "^HEAD:"`). On inputs, selects or textareas (R10-DP1 (b) set): `DecimalCellInput.vue:54`; `BulkOperationDialog.vue:81,107,116`; `RateTableDiffPanel.vue:140,160`; `RateTableEditorView.vue:310`; `QuoteSandboxView.vue:174`; `QuoteForm.vue:74,95,116,136`; `DagDesigner.vue:295`; `DislocationView.vue:114`; `RegressionSuiteView.vue:129`; `RatingVersionListView.vue:126`; and the sweep additions `dag/DiffOverlay.vue:86`, `RatingDesignView.vue:158`, `dag/MountInspector.vue:69` (the `field` constant), `dag/StepInspector.vue:44`. Other WK-675 hits are `<section>`, `<th>`, button or node borders, not F2's 1.4.11 limb (`RateTableDiffPanel.vue:126,213-250,303,311`, `RateTableGrid.vue:68`, `RateTableImportExport.vue:93,101`, `RateTableEditorView.vue:284,292,326,357`, `DagDesigner.vue:222,308,317`, `NodeNavigator.vue:163,202`, `StepNode.vue:24`, `MountNode.vue:49`, `DislocationView.vue:119`, `BulkOperationDialog.vue:65`).
 
 ## PRs
 
