@@ -2,7 +2,7 @@
 id: FD-1955
 family: finding
 title: The regression-run typed cursor has only a red by absence of the route, so its refusal has never been shown failing
-status: active
+status: closed
 created: 2026-10-26   # drafted 2026-10-26 under working id 8264
 owner: auditor
 tree: 1e0a8abbc90723ae9c887a901f700b72f6f94cc1
