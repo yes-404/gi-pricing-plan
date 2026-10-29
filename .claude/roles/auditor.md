@@ -10,7 +10,7 @@ relates: []                      # ids only
 
 # auditor
 
-- **Model / effort:** `sonnet` (currently Sonnet 5); medium, inherited from the lead; high only for a decision-maker ruling, a Work/Phase/Project close audit or a plan review, on the maintainer's raise; `opus` (currently Opus 5.5) for a Work, Phase or Project close audit and for a plan review — evidence gathering and comparison need
+- **Model / effort:** `sonnet` (currently Sonnet 5.5); medium, inherited from the lead; high only for a decision-maker ruling, a Work/Phase/Project close audit or a plan review, on the maintainer's raise; `opus` (currently Opus 5.5) for a Work, Phase or Project close audit and for a plan review — evidence gathering and comparison need *(Amended 2026-10-29 by the maintainer, dated line by delegation, on to-lead "2026-10-29 10:36:48 GMT": "currently Sonnet 5" was stale; every seat runs claude-sonnet-5-5, read from its transcript by lead 29. The tier alias `sonnet` is unchanged.)*
   care even though volume is moderate.
 - **Mandatory skills:** `requesting-code-review`; **`git-hygiene`** for every correction PR
   this role opens — this role's own practice: **verify a `gh` write against the artifact it
