@@ -2,7 +2,7 @@
 id: FD-1585
 family: finding
 title: The existing rate-table diff routes answer 404 RATE_TABLE_MISS for an unknown table, version or against, where 03 §5.1 types it 404 NOT_FOUND
-status: active
+status: closed
 created: 2026-10-10            # original date 2026-10-10, set at the draft; minted 2026-10-10
 owner: auditor
 tree: 2ef1393fec8eb0d974eb366f558a42e585771f35
@@ -64,3 +64,5 @@ All read at `2ef1393f` (the worktree `.claude/worktrees/d6b`, `origin/main`); no
 **Fix point:** the next WK-675 slice that touches those two routes, before WK-675's Work close. Per the ruling's item 3, if S4 (`SL-1559`) already touches the routes' module and the fix is under about 20 lines, S4 may include it and say so in its ledger; once S4 lands `spec_not_found()` in `backend/src/app/api/rate_tables.py`, the diff handlers are in the same module and the same helper applies.
 
 **Event that next confirms or discharges it:** the fixing slice's PR, with the re-pointed tests red at its parent commit; or WK-675's Work close audit, which lists this row.
+
+***Resolved 2026-10-29*** — fixed by this PR (merge sha written at the read-back), slice SL-1956, ledger LG-1957. The event that this essay named ("the fixing slice's PR, with the re-pointed tests red at its parent commit") occurred: the five reds at `84f41899` (R1 `test_diff_404s_for_unknown_table_and_version`, R2 `test_diff_seed_without_a_seed_origin_404s`, R3 `test_import_preview_creates_nothing`, R4 `test_import_confirm_cannot_override_the_verdict`, R5 new `test_diff_cells_404s_not_found_for_unknown_table_version_and_against`) each fail with `assert 'RATE_TABLE_MISS' == 'NOT_FOUND'`; at the head they pass. Scope fence held: `bulk-operation` (`C1`, still `RATE_TABLE_MISS`) and the loaders are unchanged. The fix landed after the date CR-1952 §5e row (2) owed (Wed 28 Oct 2026); the maintainer (by delegation) re-dated acceptance 16 to on or before 2026-10-30 (to-lead "2026-10-29 12:20:17 GMT", recorded in PL-1546 Row 9).

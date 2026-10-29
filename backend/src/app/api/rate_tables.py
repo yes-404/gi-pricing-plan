@@ -71,7 +71,8 @@ BlobStoreDep = Annotated[BlobStore, Depends(_blob_store)]
 def spec_not_found() -> Iterator[None]:
     """`03` §5.1 types the S4 routes' unknown table, version or `base_version` as 404
     `NOT_FOUND` (RL-1555 T1; the maintainer's rulings of 2026-10-10 04:19:42 and 04:23:36: the
-    spec governs, and the reads follow the edit route).
+    spec governs, and the reads follow the edit route). The two diff routes' unknown table,
+    version or `against` take the same mapping (FD-1585).
     The shared loaders keep `RATE_TABLE_MISS`, which the scoring path relies on, so the route
     maps it here and nothing below it changes."""
     try:
@@ -436,10 +437,11 @@ async def rate_table_diff(
                 permission=Permission.DATASET_READ,
                 credential_permissions=caller.permissions,
             )
-    answer = await service.diff_from_artifact(
-        database, caller.workspace_id, slug, version, baseline,
-        blob_store=blob_store, portfolio_dataset_version_id=portfolio,
-    )
+    with spec_not_found():
+        answer = await service.diff_from_artifact(
+            database, caller.workspace_id, slug, version, baseline,
+            blob_store=blob_store, portfolio_dataset_version_id=portfolio,
+        )
     if isinstance(answer, service.DiffCellsJobNeeded):
         return await _cells_job_response(
             answer, caller, database, response,
@@ -534,11 +536,12 @@ async def rate_table_diff_cells(
                 permission=Permission.DATASET_READ,
                 credential_permissions=caller.permissions,
             )
-    answer = await service.diff_cells_page(
-        database, caller.workspace_id, slug, version, baseline,
-        blob_store=blob_store, portfolio_dataset_version_id=portfolio,
-        limit=limit, cursor=cursor,
-    )
+    with spec_not_found():
+        answer = await service.diff_cells_page(
+            database, caller.workspace_id, slug, version, baseline,
+            blob_store=blob_store, portfolio_dataset_version_id=portfolio,
+            limit=limit, cursor=cursor,
+        )
     if isinstance(answer, service.DiffCellsJobNeeded):
         return await _cells_job_response(
             answer, caller, database, response,

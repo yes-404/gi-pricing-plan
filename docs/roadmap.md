@@ -1690,6 +1690,26 @@ A mount never maps a port to a blank parent name: `graph_invariant_issues` refus
 
 **Closed 2026-10-27** as a Slice: merged as #1397 (squash `8f5aead6a826f9dbb82589cee0e5b355ab9f49ed`, tree `5a8cff218d35e5bf189120b4d7d935769f4afb75`) on the maintainer's (by delegation) merge entry, `to-lead.md` entry "2026-10-26 05:49:38 GMT — Maintainer: MERGE 25 (#1397, PL 8205 slice — FD-1936 fixed, SL-1938) VERIFIED on origin = 8f5aead6a826; WK-675's last fix slice is on main; S1a's turn is open" (CLAUDE.md §13: a Slice closes on a clean audit and the lead's merge). Ledger: `LG-1939`. Audit: `RS-1940` (CLEAN for the build at `dc4f061a`, as filed; the lead adopts at the PR's FINAL).
 
+#### SL-1956 — WK-675 slice FD-1585 — the diff routes answer NOT_FOUND
+
+```yaml
+id: SL-1956
+family: slice
+title: WK-675 slice FD-1585 — the diff routes answer NOT_FOUND
+status: active                    # draft → active → closed | retired (§1.2a)
+created: 2026-10-29
+owner: lead
+tree: d666a4051c036ae588a5c96dec4be88b8c5bdfb9
+phase: P2
+work: WK-675
+corrected_by: []
+relates: [FD-1585, LG-1957, PL-1546]
+```
+
+The diff routes answer NOT_FOUND: the fix slice of FD-1585 under PL-1546, executed on branch `fix/fd1585-diff-not-found`.
+
+(Minted 2026-10-29 from working id 8270, on the lead's brief (lead 29) under the grant "2026-10-29 12:16:21 GMT"; finding FD-1585, ledger LG-1957.)
+
 ### WK-690 — **`expression` custom objectives** — SymPy derivation, the gradient/hessian compilation target, the authoring UI, and lifting `expression_objectives_enabled` **plus `custom_objective:author` and its check, which `06` FR-367 requires the `expression` kind to arrive with**
 
 ```yaml
