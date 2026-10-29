@@ -1,12 +1,12 @@
 ---
-id: LG-8279
+id: LG-1967
 family: ledger
 title: WK-1178 slice S1d — FD-1965, the seed fixture migrates its own scratch database, red first (slice ledger)
 status: active                 # active → closed (§1.2a)
-created: 2026-10-29
+created: 2026-10-29   # drafted 2026-10-29 under working id 8279
 owner: executor
 tree: 1e17ec6382de5919b6e3011242b584a59bb880e7   # origin/main at S1d's branch cut (#1407)
-slice: SL-8278
+slice: SL-1966
 phase: P2
 work: WK-1178
 plans: [PL-1927]
@@ -14,9 +14,9 @@ corrected_by: []
 relates: [FD-1965, PL-1927, FR-31, FR-32]
 ---
 
-# LG-8279 — WK-1178 slice S1d: FD-1965, the seed fixture migrates its own scratch database, red first
+# LG-1967 — WK-1178 slice S1d: FD-1965, the seed fixture migrates its own scratch database, red first
 
-Working ids (space form in prose): **SL 8278** (this slice), **LG 8279** (this ledger). Executor seat
+Working ids (space form in prose): **SL-1966** (this slice), **LG-1967** (this ledger). Executor seat
 `exec-s1d`. Nothing is minted here.
 
 **GO:** the lead's brief `brief-exec-s1d-2026-10-30.md`, pulled forward to Thu 2026-10-29 by to-lead
@@ -53,11 +53,11 @@ AST-equal). Logs under `~/gi-pricing-plan.local/scratch/s1d/`.
 
 | Check | Result |
 |---|---|
-| `git diff --stat origin/main...HEAD` | only `backend/tests/test_transformations.py`, `examples/fremtpl2/test_seed.py`, `docs/ledgers/LG-08279-…`, `docs/process/process-backlog.md` |
+| `git diff --stat origin/main...HEAD` | only `backend/tests/test_transformations.py`, `examples/fremtpl2/test_seed.py`, `docs/ledgers/LG-1967-…`, `docs/process/process-backlog.md` |
 | `uv run ruff check .` (at `5d8c2649`) | rc=0 |
 | `ruff format --check` both files (at `e9d5d6fe`) | rc=0 |
 | `test_seed.py`, no data, `run-small.sh` (at `5d8c2649`) | `15 passed, 3 skipped`, rc=0 |
-| `audit-docs.py` | rc=1: check 32 on LG-8279, SL-8278 (unminted) and check 39 (INDEX stale), nothing else |
+| `audit-docs.py` | rc=1: check 32 on LG-1967, SL-1966 (unminted) and check 39 (INDEX stale), nothing else |
 | `doc-index.py --check` | rc=1 (INDEX stale until the mint) |
 | `register-lint.py` | rc=0 |
 | `req-coverage.py` | rc=0 |
