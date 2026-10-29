@@ -42,8 +42,8 @@ FD-1965's close.
 - [x] **S1d-3. The fix** (DP-S1d-1 (a)); commit `c44fa2d7`.
 - [x] **S1d-4. Control C1** and its mutation red; commit `e7244a2a`.
 - [x] **S1d-5. Greens G1 and G2** (DB window; entry 2).
-- [ ] **S1d-6. The format commit, then the gate** (DP-S1d-2 G2 narrow cover).
-- [ ] **S1d-7. Records.**
+- [x] **S1d-6. The format commits, then the gate** (DP-S1d-2 G2 narrow cover; entries 3, 4, 6).
+- [x] **S1d-7. Records** (less the mint, which is the lead's).
 
 ### Gate
 
@@ -96,6 +96,12 @@ Pending (the auditor's).
      0); template non-empty tables after `alembic_version=1 environments=3 tenant_marker=1`; redis db
      11, 12, 13 `dbsize` 0 after FLUSHDB. `git status --ignored -- examples/fremtpl2/data` in the slice
      worktree: nothing.
+   - (Recorded 2026-10-29 by the lead, on to-lead "2026-10-29 18:57:05 GMT": a foreign createdb/dropdb of
+     scratch_beatgate_guard (another seat's gate-script guard proof, under the lead's brief) occurred inside
+     this window between 18:54 and 18:56. No scratch_s1d_* database was touched. The END datname list is
+     compared against START excluding it; it was dropped before END.)
+   - O1 gap, accepted by the lead (to-lead "2026-10-29 19:03:34 GMT" ruling (2)): env.py's `RuntimeError`
+     text was cut from the captured stderr (tail), and there is no second window.
 3. **2026-10-29, Phase C start.** S1d-6 format commit `5d8c2649`
    (`style(backend): ruff format backend/tests/test_transformations.py (process-backlog 2026-10-29
    14:44 GMT)`), alone. `ast.dump` equality: script `~/gi-pricing-plan.local/scratch/s1d/astdump.py`
@@ -108,6 +114,19 @@ Pending (the auditor's).
    **Open (reported to the lead):** `ruff format --check examples/fremtpl2/test_seed.py` reads rc=1 at
    the base `1e17ec63` over six pre-existing hunks outside this slice; acceptance d7 awaits the lead's
    ruling.
+4. **2026-10-29, Phase C (ruling (A), the maintainer's, to-lead "2026-10-29 19:03:34 GMT").** Second
+   named format commit `e9d5d6fe` (`style(examples): ruff format examples/fremtpl2/test_seed.py`), that
+   file alone, after the fix and C1 commits. `ast.dump` equality, same script `astdump.py`: before = after =
+   `65ec15eceb97ded8c97b3f784c47a0883cae8b81d14473e171b91970e0bb7587`. `uv run ruff format --check
+   examples/fremtpl2/test_seed.py backend/tests/test_transformations.py` rc=0 ("2 files already
+   formatted"). G1, G2 and C1 ran at `e7244a2a`, before this AST-equal commit. Per file, `git log
+   --format=%s origin/main..HEAD -- <file>`: `backend/tests/test_transformations.py` prints exactly one
+   subject (`style(backend): ruff format backend/tests/test_transformations.py (process-backlog
+   2026-10-29 14:44 GMT)`); `examples/fremtpl2/test_seed.py` prints three (`style(examples): ruff format
+   examples/fremtpl2/test_seed.py`, `test(examples): control C1 …`, `test(examples): the seed fixture
+   migrates and seeds its own scratch database (FD-1965)`).
+5. **2026-10-29, process-backlog row**, its own docs commit (the lead's instruction): "A DB window is
+   single-tenant on the shared server" (`docs/process/process-backlog.md`, owner the lead).
 
 ## PRs
 
