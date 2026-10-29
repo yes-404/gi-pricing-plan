@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import sys
 from pathlib import Path
 
 import pytest
@@ -522,3 +523,64 @@ def test_the_demo_env_keeps_compose_file_for_its_compose_subprocesses(
     """The compose calls run with `demo_env()`; `COMPOSE_FILE` must reach them."""
     monkeypatch.setenv("COMPOSE_FILE", "/stack/docker-compose.yml:/stack/override.yml")
     assert demo_script.demo_env()["COMPOSE_FILE"] == "/stack/docker-compose.yml:/stack/override.yml"
+
+
+_INFRA_SERVICES = ("postgres", "redis", "minio", "keycloak")
+
+
+def _record_the_local_demo(monkeypatch: pytest.MonkeyPatch, argv: list[str]) -> list[list[str]]:
+    """Run `main()` on `argv` with every step stubbed: `run` records its command, and stops the
+    demo at the migrations step, so nothing past the infrastructure choice is exercised."""
+    commands: list[list[str]] = []
+
+    def record(command: list[str], *, step: str, env: dict[str, str] | None = None) -> None:
+        commands.append(command)
+        if step == "migrations":
+            raise demo_script.DemoRefusedError("stopped at migrations")
+
+    monkeypatch.setattr(demo_script, "check_environment", lambda *_a, **_k: None)
+    monkeypatch.setattr(demo_script, "run", record)
+    monkeypatch.setattr(sys, "argv", ["demo.py", *argv])
+    demo_script.main()
+    return commands
+
+
+def _is_compose_up(command: list[str]) -> bool:
+    return command[:2] == ["docker", "compose"] and "up" in command
+
+
+@pytest.mark.req("FR-408")
+def test_no_compose_runs_no_compose_up(monkeypatch: pytest.MonkeyPatch) -> None:
+    """R2.a: `--no-compose` leaves the stack already up alone. `name: gi-pricing` makes a plain
+    `docker compose up` from any worktree act on the shared project."""
+    monkeypatch.setattr(
+        demo_script, "compose_running", lambda: {name: 1 for name in _INFRA_SERVICES}
+    )
+    commands = _record_the_local_demo(monkeypatch, ["--no-compose", "--no-frontend"])
+    assert not [c for c in commands if _is_compose_up(c)]
+    assert commands[-1][:4] == ["uv", "run", "alembic", "upgrade"]
+
+
+@pytest.mark.req("FR-408")
+@pytest.mark.parametrize("down", _INFRA_SERVICES)
+def test_no_compose_refuses_before_migrations_naming_the_service_that_is_down(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str], down: str
+) -> None:
+    """R2.b: with the flag the demo expects the four infrastructure services to be up, and
+    refuses through `check_compose_up` before any migration, naming the one that is not."""
+    running = {name: 1 for name in _INFRA_SERVICES if name != down}
+    monkeypatch.setattr(demo_script, "compose_running", lambda: running)
+    commands = _record_the_local_demo(monkeypatch, ["--no-compose", "--no-frontend"])
+    assert commands == []
+    assert down in capsys.readouterr().err
+
+
+@pytest.mark.req("FR-408")
+def test_without_no_compose_the_infrastructure_is_still_started_by_compose(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """R2.c (a control, green at the base): scripts/demo.py's compose call is unchanged when the
+    flag is absent."""
+    commands = _record_the_local_demo(monkeypatch, ["--no-frontend"])
+    up = "docker compose -f deploy/docker-compose.yml --profile auth up -d --wait"
+    assert commands[0] == up.split()
