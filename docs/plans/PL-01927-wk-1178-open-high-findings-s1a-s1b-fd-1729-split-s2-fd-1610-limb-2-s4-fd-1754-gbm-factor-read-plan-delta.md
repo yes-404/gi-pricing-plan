@@ -644,3 +644,185 @@ DP-S1c-1 rules otherwise.
   row that does not exist (E6).
 - The open names are DP-S2, never a silent pick; the code and field names in the tasks are the
   recommendations and change with the ruling.
+
+## Delta, row 6 (S1d) — FD-1965: the seed fixture migrates its own scratch database (test-only, red-first)
+
+*(Delta, row 6 (S1d), dated 2026-10-29 from 17:24 GMT, by the planner (seat plan-seedfix, Opus 5.5,
+effort medium), on the maintainer's entries "2026-10-29 14:21:02 GMT" item 2 ((2'): *"Fix
+**red-first in its own small test-only slice tomorrow, Fri 30 am** (not riding the beat slice — one
+thing per slice): the fixture also sets `GIP_MIGRATION_DATABASE_URL` to the scratch database as the
+owner role; red = the three tests with data present and the env pointing elsewhere; green = the three
+passing; plus a control that the fixture refuses when no migration URL can be formed. Its SL/LG
+reserved after S1c's ids."*), "2026-10-29 14:22:02 GMT" (the ids), "2026-10-29 14:42:55 GMT" (the
+one-file `ruff format` fix rides this slice "as a named, separate commit"), "2026-10-29 17:11:12 GMT"
+item (1) (*"the data goes in a throwaway checkout, never a slice worktree"*) and "2026-10-29 17:14:18
+GMT" (*"the seed-fixture slice = a dated delta row in PL-1927 (FD-1965 is S1c's follow-on; relates:
+PL-1927, WK-1178), no new PL"*), all in `~/gi-pricing-plan.local/channel/to-lead.md`: **a new row 6,
+S1d — FD-1965: the seed fixture migrates its own scratch database.** Its slice is **SL 8278** and its
+ledger **LG 8279** (working ids; minted in merge order at the slice's turn). Work **WK-1178**; relates
+PL-1927, WK-1178; the finding `FD-1965` (minted by #1405, squash `7ceff4a1`) is its specification —
+its Finding, Evidence and Remedy sections. **Tree read:** `origin/main`
+`7ceff4a16829c63f20f0cdbb56fafae22657c1ab`; `examples/` and `backend/migrations/` are unchanged from
+`447bcfd6`. The row, in the table's columns: Order 6; Scope (what the `LG-` quotes) Tasks S1d-0 to
+S1d-7 below; Requirements: none amended (the tests carry their existing markers, FR-31 and FR-32;
+no spec change); Depends on #1405 merged (met, `7ceff4a1`), DP-S1d-1 and DP-S1d-2 ruled, the template
+rebuild (to-lead "2026-10-29 17:24:25 GMT") reported, a granted DB window in a no-gate gap (seat brief items 12, 32); Lane examples (test-only); DB **yes**, the shared
+server, S1d-5 only; Size ½ day. The SL row mints at S1d's turn, in S1d's own PR, under WK-1178 in
+`docs/roadmap.md` §6. Rows 1 to 5, their dated lines and the plan body are unchanged.)*
+
+**Evidence at `7ceff4a1`.**
+- **E-d1.** `backend/migrations/env.py:31–38`: `_migration_url = load_settings().migration_database_url`;
+  `None` → `RuntimeError("GIP_MIGRATION_DATABASE_URL is not set: …")`. No fallback (FD-1729).
+- **E-d2.** `examples/fremtpl2/test_seed.py:120–165` (`scratch_seed`): the scratch name
+  `scratch_sl1409c_<hex8>`; the admin URL is a literal,
+  `postgresql+asyncpg://gipricing:gipricing@localhost:5432/postgres` (:139); only `GIP_DATABASE_URL` is
+  set (:151); `uv run alembic upgrade head` runs with `env=dict(os.environ)` (:152–158); the skip is
+  :135–136 (no `data/freMTPL2freq.arff`).
+- **E-d3, wider than migration.** `examples/fremtpl2/seed.py:448–466`: the seed itself reads
+  `settings.migration_database_url` and runs `grant_demo_principals` (workspace, built-in roles, users,
+  role assignments, in one committed unit of work) on **that** database. So with the variable pointing
+  elsewhere, the seed **writes the demo principals into the foreign database**. The fix covers it,
+  because the seed runs in-process after the fixture's `monkeypatch.setenv`. **Confirmed** by the
+  maintainer's read-only read at to-lead "2026-10-29 17:24:25 GMT" (and the lead's own read, from-lead
+  "2026-10-29 17:23:56 GMT"): the template `gipricing` held `workspaces` 3 (created_at
+  14:28:30.294 / 14:28:37.721 / 14:28:45.353 UTC, the three seed tests of the 14:28 proof at
+  `18728e68`), `users` 7, `role_assignments` 30, `workspace_members` 21, `roles` 18, beside the migrations-only
+  `alembic_version` 1, `environments` 3 (seeded by migration `c4a81f6d2e95`:108–115, to-lead
+  "2026-10-29 17:27:58 GMT") and `tenant_marker` 1. The 17:24:25 entry grants the template rebuild and
+  rules that the template is never named by a URL a seat sets (its rule 1).
+- **E-d4.** The three tests: `test_the_seed_reruns_against_a_seeded_database` (:168),
+  `test_every_seeded_ingestion_run_balances_its_rows` (:191; FR-32, FR-31),
+  `test_a_small_seed_is_refused_for_its_degenerate_fit` (:235).
+- **E-d5, CI.** `.github/workflows/python.yml:21,59` filter on `examples/**` and `backend/**`;
+  `pyproject.toml` `testpaths` includes `examples/fremtpl2`; CI has no `.arff`, so it skips the three
+  and runs the rest of the file. `frontend.yml`'s paths match neither changed file.
+- **E-d6.** `backend/tests/test_transformations.py`: `git show origin/main:backend/tests/test_transformations.py
+  | uv run ruff format --check --stdin-filename backend/tests/test_transformations.py -` reads rc 1 at
+  `7ceff4a1` (#1405 edited the file and did not carry the format fix; process-backlog row
+  "2026-10-29 14:44 GMT").
+
+**Decision points (S1d).** S1d stays unstarted while either is open.
+
+| # | Question | Options | Recommendation | Kind | Blocking | Resolved by |
+|---|---|---|---|---|---|---|
+| DP-S1d-1 | What is "no migration URL can be formed" when the admin URL is a literal (E-d2), so the case is unreachable today? | (a) a module-level helper `_scratch_owner_url(admin, name)` on `sqlalchemy.engine.make_url(admin).set(database=name)`, refusing by name when the admin URL has no user, password or host, called before `CREATE DATABASE`; the control calls it with such a URL · (b) the admin URL from a new env var, the literal as default; the control unsets it · (c) no control; the case recorded as unreachable | **(a)**: the only reachable failure is a malformed admin URL, and (a) tests exactly that, DB-free and data-free, in CI; (b) adds configuration for a fixed value; (c) drops a ruled control | decision point | yes (S1d-3) | |
+| DP-S1d-2 | Which gate? (seat brief item 30: outside `docs/` → the full code gate by default) | (G1) the full code gate, both halves · (G2) the narrow cover below | **(G2)**; (G1) if G2 is not granted | decision point | yes (S1d-6) | |
+
+**DP-S1d-2 (G2), the narrow cover, proposed.** Two test files change. Nothing imports a test file, so
+`test_seed.py`'s import closure is itself (seat brief item 29), and a format-only commit leaves the
+AST unchanged (DP-T27-6's criterion, applied unstripped). (i) `uv run ruff check .` rc 0 and
+`uv run ruff format --check` on the two files rc 0; (ii) `ast.dump` of
+`backend/tests/test_transformations.py` byte-equal before/after the format commit (script and both
+digests in the `LG-`); (iii) `examples/fremtpl2/test_seed.py` whole through `run-small.sh` with **no**
+data (the CI form: the three skip, the control runs); (iv) the DB window, S1d-5; (v) item 30's docs
+half (the gate-2 checks and the eight docs-audit pytest files via `run-small.sh`; at an unminted head
+their failures are the 13-id 1(f) set, md5 `3de106a91734`, and after the mint 0); (vi) PR CI: python,
+docs, history-policy (frontend does not fire, E-d5). G2 lapses to G1 if the slice's own diff
+(`origin/main...<slice branch>`) touches `conftest*.py`, `env.py` or `seed.py`.
+
+**Write set (S1d).** `examples/fremtpl2/test_seed.py`; `backend/tests/test_transformations.py`
+(format only, its own commit); `LG 8279`; the SL row; FD-1965's close in place and its register row.
+No production, spec or migration file.
+
+- [ ] **S1d-0. Base.** Branch from `origin/main` at or after `7ceff4a1`. Re-read E-d1 to E-d4 at the
+  base; quote `git diff --name-only 7ceff4a1..<base> -- examples/ backend/migrations/` (non-empty →
+  re-read and report before S1d-1). Run E-d6's format check at the base: rc 1 → S1d-6's format commit
+  is owed; rc 0 → it is dropped and the `LG-` says why.
+- [ ] **S1d-1. The throwaway checkout.** A `git worktree add` of the base under the executor's own
+  scratch dir, never the slice worktree; `uv sync --all-packages --frozen` there; the two `.arff` in
+  **its** `examples/fremtpl2/data/` (fetch or copy). At END, `git -C <slice wt> status --ignored --
+  examples/fremtpl2/data` quoted: no `.arff`.
+- [ ] **S1d-2. Reds R1–R3 (inside the S1d-5 window).** In the throwaway at the base, data present,
+  `GIP_MIGRATION_DATABASE_URL` on the **foreign** database `scratch_pl8278_foreign` (at head; never the
+  template, E-d3): the three tests (E-d4) by node id, each failing by cause `UndefinedTableError:
+  relation "role_assignments" does not exist`, the three FAILED lines verbatim in the `LG-`. The
+  foreign database's `select count(*) from workspaces where name = 'freMTPL2 demo'` before and after:
+  after > before is the E-d3 red, quoted. **O1 (observation):** the same three with the variable unset
+  fail at the fixture with `CalledProcessError`, env.py's `RuntimeError` in the captured stderr; one
+  line quoted.
+- [ ] **S1d-3. The fix (on DP-S1d-1; (a) shown).** In `test_seed.py`: `_scratch_owner_url(admin: str,
+  name: str) -> str` on `make_url`, raising `RuntimeError("scratch_seed cannot form the owner URL for
+  <name> …; it refuses rather than migrate an inherited GIP_MIGRATION_DATABASE_URL")` when the admin
+  URL has no user, password or host. The fixture calls it **before** `CREATE DATABASE` and sets
+  **both** `GIP_DATABASE_URL` and `GIP_MIGRATION_DATABASE_URL` to the result (owner role `gipricing`,
+  as today's URL). Commit: `test(examples): the seed fixture migrates and seeds its own scratch
+  database (FD-1965)`.
+- [ ] **S1d-4. Control C1.** `test_the_scratch_fixture_refuses_when_no_owner_url_can_be_formed`, a
+  `req` marker the file already carries for the seed path (the executor confirms it at the base): with
+  `GIP_MIGRATION_DATABASE_URL` deleted (`monkeypatch.delenv(..., raising=False)`), the helper given
+  `postgresql+asyncpg:///postgres` raises `RuntimeError` matching `cannot form the owner URL`. **Red on
+  broken input:** the guard deleted (one edit, assert count 1) → C1 fails `DID NOT RAISE`; restored →
+  passes; both lines in the `LG-`.
+- [ ] **S1d-5. The DB window (the lead's written grant; load1 and `free -g` at start, item 15).** On
+  the shared server (the fixture's admin URL is that server's, E-d2; the condition of "2026-10-29
+  14:22:02 GMT" applies): `select datname from pg_database order by 1` before; create
+  `scratch_pl8278_foreign` from the rebuilt template (`createdb -T gipricing scratch_pl8278_foreign`,
+  17:24:25 rule 1; the template's non-empty-table list quoted first and refused unless it is
+  exactly `alembic_version=1 environments=3 tenant_marker=1`, the list as amended at to-lead
+  "2026-10-29 17:27:58 GMT"); S1d-2's
+  reds at the base; then in the throwaway at the head the **greens**: G1, the three pass with the same
+  foreign URL set and the foreign demo-row count before = after; G2, the three pass with the variable
+  unset. Drop `scratch_pl8278_foreign`; `select datname` after = before (no `scratch_sl1409c_*` or
+  `scratch_pl8278_*` left); the shared `gipricing` database never written; redis db 11, 12 or 13
+  (item 33), `dbsize` 0 after FLUSHDB; the window's two zeros (item 23).
+  (Amended 2026-10-29 by the lead, on to-lead "2026-10-29 17:32:19 GMT": the window's databases are
+  named `scratch_s1d_*` — the foreign database is `scratch_s1d_foreign`, not `scratch_pl8278_foreign` —
+  dropped at END; the window is ≤ 60 min, in a no-gate gap with all three slots free at start, and the
+  template's non-empty-table list is quoted before and after.)
+- [ ] **S1d-6. The format commit, then the gate.** If S1d-0 read rc 1: `uv run ruff format
+  backend/tests/test_transformations.py` alone in its own commit, `style(backend): ruff format
+  backend/tests/test_transformations.py (process-backlog 2026-10-29 14:44 GMT)`; `ast.dump` equal
+  before/after. Then the gate DP-S1d-2 rules.
+- [ ] **S1d-7. Records.** `LG 8279` (`docs/_templates/LG.md`; scope = this row; every red/green line
+  with `head=` first and `rc=` last, item 37); the SL row; FD-1965 closed in place and its register
+  row; the mint of SL 8278 / LG 8279 at S1d's turn (items 17, 19, 26).
+
+**Acceptance (S1d)** — the plan's Acceptance Standard rules apply (the merge tree, the range
+`origin/main...<slice branch>` named, red by the stated cause at the base, its line in `LG 8279`
+before the fix):
+
+- **d1.** `git diff --name-only origin/main...<slice branch>` lists only
+  `examples/fremtpl2/test_seed.py`, `backend/tests/test_transformations.py` (only if S1d-0 read rc 1)
+  and files under `docs/`.
+- **d2.** `git log --format=%s origin/main..<slice branch> -- backend/tests/test_transformations.py`
+  prints exactly one subject, beginning `style(backend): ruff format`, and its `git show --stat`
+  lists that one file.
+- **d3.** `LG 8279` carries R1–R3 red by cause `UndefinedTableError: relation "role_assignments" does
+  not exist` at the base (data present, the migration URL on `scratch_pl8278_foreign`), each with its
+  node id, and the foreign demo-row count rising.
+- **d4.** `LG 8279` carries G1 (the three passed, same foreign URL, foreign demo-row count before =
+  after) and G2 (the three passed, variable unset) at the head, in the throwaway checkout.
+- **d5.** `uv run pytest -q examples/fremtpl2/test_seed.py -k owner_url` passes with no data present
+  (C1); `LG 8279` carries C1's mutation red (`DID NOT RAISE`) and its restore green.
+- **d6.** `grep -n 'GIP_MIGRATION_DATABASE_URL' examples/fremtpl2/test_seed.py` shows the fixture
+  setting it, and the helper call precedes `CREATE DATABASE` in `scratch_seed` (read the lines).
+- **d7.** `uv run ruff check .` rc 0; `uv run ruff format --check examples/fremtpl2/test_seed.py
+  backend/tests/test_transformations.py` rc 0.
+- **d8.** The window's read-backs in `LG 8279`: `pg_database` names before = after, no
+  `scratch_pl8278_*` or `scratch_sl1409c_*` left; redis `dbsize` 0 on the seat's db; no `.arff` under
+  the slice worktree.
+- **d9.** The gate DP-S1d-2 rules: its END row and rc files in `LG 8279`; after the mint, audit-docs,
+  doc-index `--check` and register-lint exit 0; PR CI python, docs and history-policy green.
+- **d10.** FD-1965 reads closed in place and in `docs/findings/register.md`, naming the slice's minted
+  `SL-` id.
+
+**Constraints (S1d).** Two DSNs (FD-1729; `dev-commands` "Two DSNs"): migrations run as the owner,
+`gipricing`. The template `gipricing` is migrations-only (`dev-commands`): no red, green or proof in
+S1d points `GIP_MIGRATION_DATABASE_URL` at it. No data in a slice worktree (17:11:12 item (1)). No
+production or spec change: `examples/fremtpl2/seed.py`, `backend/src/**`, `env.py` and `docs/specs/**`
+are outside the write set. The DB window is the lead's to grant in writing, never beside a held gate
+(items 12, 32).
+
+**Hand-off (S1d).** E-d3's template pollution is confirmed and its rebuild granted (to-lead
+"2026-10-29 17:24:25 GMT"); S1d's window starts only after that rebuild reports. FD-1965's widening
+by annotation (that entry's rule 3) rides the next docs batch, not this row. Not this row:
+which gate step should run `ruff format --check` (the process-backlog row's second limb).
+
+**Self-review (S1d).** Every 14:21:02 (2') clause has a place: the fixture sets the migration URL to
+its scratch database as the owner role (S1d-3, d6); red = the three with data present and the env
+elsewhere (S1d-2, d3); green = the three passing (S1d-5, d4); the refusal control (S1d-4,
+DP-S1d-1, d5); its own small test-only slice (the row, d1). The 14:42:55 format fix is a named,
+separate commit, dropped only on a base reading rc 0 (S1d-0, S1d-6, d2). The data rule: S1d-1, d8.
+One departure from the brief's wording, named: the red's "other at-head database" is a disposable one,
+not the template, because of E-d3. The open choices are DP-S1d-1 and DP-S1d-2, never a silent pick;
+S1d-3 and S1d-4 follow DP-S1d-1 (a) and change with the ruling.

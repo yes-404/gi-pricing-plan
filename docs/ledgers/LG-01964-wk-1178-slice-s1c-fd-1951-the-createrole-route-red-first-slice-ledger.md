@@ -503,3 +503,5 @@ Executor exec-s1cpy, on the lead's ruling "2026-10-29 15:35:53 GMT" (a) and the 
 - END row: `END 2026-10-29T16:41:03+00:00 1.35 1.47 1.47 (date l1 l5 l15) rc=0`; END rc parts `python max=0 fe max=0 demo=0 restore rc_kc=0 role rc_role=0 skip rc_skip=0` (`fe` and `demo` are 0 by the NOT RUN row, not a pass).
 
 **Frontend half and demo: covered, not run.** (a) S1c's own diff (`origin/main...HEAD`, above) has no `frontend/` path and under `deploy/` only `deploy/postgres/app-login-role.sql`; (b) the PR's own CI set is derived from the workflows' `on:` blocks at step 8 of the mint brief.
+
+(Noted 2026-10-29 by the lead, on to-lead "2026-10-29 17:24:25 GMT": S1c's python half (15:38, a createdb -T gipricing copy) ran with the template polluted by the 14:28 proof (FD-1965's widening) and was green; #1405's CI python run 40914536522, on a fresh database, is the clean evidence and is green, so no re-gate.)
