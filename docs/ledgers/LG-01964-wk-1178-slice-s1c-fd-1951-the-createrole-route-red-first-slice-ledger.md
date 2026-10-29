@@ -464,7 +464,7 @@ S1c-5 (compose run): LG section S1c-5, `drive_rc=0`, A3 a real run, 37 outbox ro
 
 ### The named exception
 
-The three seed ids are not item 31's set. Cause (LG "Gate exception"): `backend/migrations/env.py:32–38` migrates only `GIP_MIGRATION_DATABASE_URL`; the fixture `test_seed.py:138–158` sets only `GIP_DATABASE_URL`; the `.arff` files copied into the worktree by exec-s1c5 lifted the skip, so the tests ran and hit `relation "role_assignments" does not exist`. Proof it is main's: head `18728e68`, same three, "3 failed", same E-line (from-lead 14:29:50 GMT). `git diff --name-only 18728e68 origin/draft/s1c-fd1951 -- examples/ backend/migrations/` is empty (S1c does not touch either). Proposed: the exception STANDS, carried by FD-1965 (MEDIUM, WK-1178, SL 8278 Fri 30 am).
+The three seed ids are not item 31's set. Cause (LG "Gate exception"): `backend/migrations/env.py:32–38` migrates only `GIP_MIGRATION_DATABASE_URL`; the fixture `test_seed.py:138–158` sets only `GIP_DATABASE_URL`; the `.arff` files copied into the worktree by exec-s1c5 lifted the skip, so the tests ran and hit `relation "role_assignments" does not exist`. Proof it is main's: head `18728e68`, same three, "3 failed", same E-line (from-lead 14:29:50 GMT). `git diff --name-only 18728e68 origin/draft/s1c-fd1951 -- examples/ backend/migrations/` is empty (S1c does not touch either). Proposed: the exception STANDS, carried by FD-1965 (MEDIUM, WK-1178, SL-1966 Fri 30 am).
 
 ### Conditions still open before the ACK (item 31)
 

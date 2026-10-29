@@ -14,7 +14,7 @@ relates: [FD-1951, SL-1962, LG-1964]
 
 ## Finding
 
-**MEDIUM; owner WK-1178; fix slice SL 8278 / LG 8279, Fri 30 Oct 2026 am, test-only, red-first.** Authority: the lead's
+**MEDIUM; owner WK-1178; fix slice SL-1966 / LG-1967, Fri 30 Oct 2026 am, test-only, red-first.** Authority: the lead's
 "2026-10-29 14:21:02 GMT" (2'). Filed under working id 8277.
 
 Since #1398 (S1a), `backend/migrations/env.py:32–38` migrates only the URL in `GIP_MIGRATION_DATABASE_URL` and raises when it is
@@ -48,7 +48,7 @@ seed on any gated run since #1398, and the S1c gate read 3 spurious reds that th
 
 ## Remedy
 
-SL 8278 / LG 8279 (Fri 30 Oct am, test-only, red-first): the fixture also sets `GIP_MIGRATION_DATABASE_URL` to its scratch
+SL-1966 / LG-1967 (Fri 30 Oct am, test-only, red-first): the fixture also sets `GIP_MIGRATION_DATABASE_URL` to its scratch
 database **as the owner role** (the same `gipricing` URL it already builds), so `alembic` migrates the scratch database. Red first:
 with the variable set to a different database, the scratch database ends without `role_assignments`. Control: the fixture refuses
 (fails loudly, never migrates a foreign database) when no migration URL can be formed.
@@ -59,7 +59,7 @@ Found by the S1c gate (gate-1 SOLO, 2026-10-29) and proved at main by exec-seedp
 
 ## Disposition
 
-Open, owner WK-1178, MEDIUM; fix slice SL 8278 / LG 8279, Fri 30 Oct 2026 am. Filed under working id 8277.
+Open, owner WK-1178, MEDIUM; fix slice SL-1966 / LG-1967, Fri 30 Oct 2026 am. Filed under working id 8277.
 
 (Widened 2026-10-29 by the lead, on to-lead "2026-10-29 17:24:25 GMT" rule 3: the defect is wider than migration — examples/fremtpl2/seed.py:448–466 runs grant_demo_principals on settings.migration_database_url, so with GIP_MIGRATION_DATABASE_URL naming another database the seed WRITES demo principals into it. Observed: the template gipricing held workspaces 3 (created 14:28:30/37/45 UTC), users 7, role_assignments 30, workspace_members 21, roles 18 from a 14:28 proof run (from-lead "2026-10-29 17:23:56 GMT"); rebuilt on that entry's grant. Fix: PL-1927 row 6 (S1d).)
 
