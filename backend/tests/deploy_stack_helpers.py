@@ -51,7 +51,8 @@ def _provision_once(sha: str) -> None:
     no password until `scripts/provision-app-role.py` runs (F2): without it `api` exits 3
     ("password authentication failed for user gip_app_login", seen at origin/main 1e17ec63).
     The owner URL is built from the project's mapped port and refused if it is the shared 5432,
-    BEFORE any DDL. The same URL becomes `GIP_TEST_DATABASE_URL` for the seed's owner connection, reset by `down`.
+    BEFORE any DDL. The same URL becomes `GIP_TEST_DATABASE_URL` for the seed's owner
+    connection, reset by `down`.
     """
     _provisioned.add(PROJECT)
     compose(sha, "up", "-d", "--wait", "postgres")
