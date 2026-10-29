@@ -299,3 +299,172 @@ SL-1689 is cut in `docs/roadmap.md` under WK-674, after `SL-1260`, as `draft` (`
   entries. Slice 4's branch is a moving premise until it merges, which is why Task 0 re-reads it.
 - **Placeholders.** `<row branch>`, `<head>`, `<dir>` and `<date>` are values read when the row
   runs.
+
+*(Delta, row 2 (the scheduler limb), added 2026-10-29 by the planner (seat plan-beat, lead 29), on
+the maintainer's entries in `~/gi-pricing-plan.local/channel/to-lead.md`: "2026-10-21 15:12:08
+BST" item (c) (SL-1689 option A, `beat_fixture`); "2026-10-29 10:26:13 GMT" **Ruled** ("The
+scheduler service lands in `deploy/docker-compose.yml` under WK-674 before the code freeze: a
+slice, red-first … merged by Tue 3 Nov"); "2026-10-29 12:00:32 GMT" items (2) and (3) (the
+writable-path red; "the `--no-compose` / env switch rides SL-1968 (the beat slice) as a second
+red"); "2026-10-29 17:14:18 GMT" ("the beat slice = a dated delta row in PL-1688 (relates: WK-674),
+no new PL"); and "2026-10-29 17:21:17 GMT" (DP-1 ruled (a), DP-2 and DP-3 accepted, the sl-1689
+condition, the callers' list). Also on the lead's from-lead "2026-10-29 11:30:06 GMT" item (1).
+**A new row 2: SL-1968 — the scheduler service in `deploy/docker-compose.yml` (FD-1661's
+scheduler limb) and the demo's `--no-compose` switch, red first.** Ledger **LG-1969**. Both are
+working ids, written in space form until the mint. Work **WK-674**; merged by **Tue 3 Nov 2026**.
+The row, in the table's columns: Order 2; Slice SL-1968; Scope (what the `LG-` quotes) items
+R0 to R2, G and A1 to A8 below; Requirements `07` §3.2: FR-432 (the `scheduler` limb only),
+FR-406 (the outbox relay that the beat schedule runs), FR-413 (the beat process; the tick itself
+is not built here) and FR-408 (the demo entrance; an optional flag leaves its one command
+unchanged), with register FD-1661 (its scheduler limb closes at merge); Depends on `SL-1258`
+merged (#1337, `eea416ca`), S1c merged (#1405, `7ceff4a1`) and a build window booked (B0.4); Size
+1 + a build window. **DP-1 is ruled (a)** (17:21:17): SL-1968 takes FR-432's `scheduler` limb, and
+SL-1689 keeps the `frontend`-image limb only. That is recorded by ONE dated line appended to
+SL-1689's roadmap row at SL-1968's mint, with its status and other fields unchanged. The line also
+says that FD-1661's scheduler limb moves to SL-1968, and that its worker limb stayed with #1337.
+Row 1 and the plan body are unchanged.)*
+
+*(Added by row 2's dated line, 2026-10-29.)* Every `file:line` below is at `origin/main`
+`7ceff4a1` unless marked otherwise.
+
+- **R0 — the starting commits (the condition of 17:21:17).**
+  - The sl-1689 worktree is on the KEEP list and is read only here, never written. It is
+    `/home/puzhenhao1989/gi-pricing-plan/.claude/worktrees/sl-1689`, on branch
+    `sl-1689-wk674-scheduler-frontend-image`, with HEAD `19c528e40e848b690055e0d6266effeaa7911dfe`.
+    `git ls-remote` gives the same head.
+  - `git -C <that wt> diff --stat origin/main...HEAD` lists 13 files, 496 insertions and 13
+    deletions:
+    - `backend/tests/deploy_stack_helpers.py`, `backend/tests/test_deploy_stack.py` and
+      `backend/tests/test_deploy_stack_runtime.py`;
+    - `deploy/README.md`, `deploy/docker-compose.yml`, `deploy/frontend.Dockerfile`,
+      `deploy/frontend.Dockerfile.dockerignore` and `deploy/frontend.nginx.conf`;
+    - `docs/INDEX.md`, its ledger (LG 8137), `docs/roadmap.md`, `docs/skills-map.md` and
+      `docs/specs/07-platform.md`.
+  - **It carries scheduler work.** SL-1968 starts from the scheduler hunks of these three
+    commits, named here and taken, not dropped:
+    - `c80009ad` "feat(deploy): SL-1689 — the scheduler and frontend services, shape tests
+      first". It adds the `scheduler` service, with `--schedule /tmp/celerybeat-schedule` and
+      `depends_on` `migrate` and `redis`, and the shape tests
+      `test_the_scheduler_runs_beat_from_the_one_image`, `test_the_scheduler_is_one_process` and
+      `test_the_scheduler_waits_for_migrate_and_redis`.
+    - `1cc2fe80` "test(deploy): SL-1689 — the scheduler service moves a Job out of the outbox; red
+      with it stopped". It adds `test_the_scheduler_service_is_what_moves_a_job_out_of_the_outbox`.
+    - `32257078` "test(deploy): SL-1689 — beat_fixture starts the compose scheduler and proves
+      exactly one beat runs". It adds `one_beat_problems` and rewires `beat_fixture` under option
+      A of 2026-10-21 15:12:08 (c).
+  - **Not taken, and they stay SL-1689's:**
+    - every `frontend` hunk of `c80009ad`;
+    - `cac622f8` (nginx in `docs/skills-map.md` and `07` §8; the README's frontend lines);
+    - `cdd37815` (SL-1689's activation);
+    - the ledger commits `9c938617` and `19c528e4`;
+    - the two merges `adacf20d` and `05c27ef6`.
+  - **Method.** The executor ports the named hunks onto a branch from `origin/main`. It does not
+    merge or rebase the sl-1689 branch, and it does not move it. The `LG-` lists each hunk it
+    took with its source commit.
+  - **The reds are seen again at SL-1968's base.** LG 8137's reds (`12 failed, 23 passed` at
+    `cdd37815`) were taken on another base, and its runtime reds were owed to a build window that
+    never ran (LG 8137, "PREP window — 2026-10-22").
+- **R1 — the scheduler, red first.**
+  - **Shape tests** in `backend/tests/test_deploy_stack.py` (from `c80009ad`, plus R1.c), each
+    marked `req("FR-432")`, the beat checks also marked `req("FR-406")` and `req("FR-413")`. Each
+    is seen red **by its cause** at the base:
+    - R1.a: `scheduler` exists under the `app` profile;
+    - R1.b: it runs `celery -A app.worker.entrypoint beat` from the image that `api` and the
+      workers use;
+    - R1.c: its command passes `--schedule` with a path under `/tmp`. A new check; its docstring
+      cites the `Permission denied: 'celerybeat-schedule'` exit in S1c's ledger, section S1c-5,
+      setup fault 2;
+    - R1.d: it runs as one process (no `deploy.replicas` and no `scale` above 1).
+  - **The compose edit** is `c80009ad`'s `scheduler` block.
+  - **Runtime, on a throwaway `-p` project, never the shared stack**, in the build window. Images
+    are built with `docker build` and started with `up --no-build`, because the host's buildx
+    0.13.1 is below the 0.17.0 that `compose build` needs.
+    - Red, part 1, no scheduler: `test_the_scheduler_service_is_what_moves_a_job_out_of_the_outbox`'s
+      first half. A `rating.compile` Job stays `queued`, and `select status, count(*) from
+      outbox group by 1 order by 1` shows a `pending` row (A3's `JOB_TIMEOUT` class).
+    - Red, part 2, no writable path: a scratch override without `--schedule`, never committed.
+      `docker compose ps -a` shows `Exited (1)`, and the log shows `Permission denied:
+      'celerybeat-schedule'`.
+    - Green: `scheduler` Up, the same Job `succeeded`, and the outbox shows `published | N` with
+      no `pending` row.
+- **R1.e — `beat_fixture`, a shared-fixture change.** The fixture is **rewired, not deleted**,
+  under the standing ruling 2026-10-21 15:12:08 (c). It keeps its name and starts the compose
+  `scheduler` (`up -d --wait scheduler`). It starts no beat of its own, and it asserts exactly one
+  beat by `one_beat_problems`, all from `32257078`.
+  - The one-beat check is shown red first against a double-beat setup (two schedulers, or the
+    fixture plus the service) and then green, as condition (2) of that ruling asks.
+  - Its callers stay unchanged. `git grep -n beat_fixture -- backend/tests` at `7ceff4a1` prints:
+    - `backend/tests/deploy_stack_helpers.py:270` (the definition);
+    - `backend/tests/test_deploy_stack_runtime.py:45` (the import);
+    - `backend/tests/test_deploy_stack_runtime.py:311`
+      `test_a_submitted_job_reaches_a_terminal_state_through_the_compose_worker`;
+    - `backend/tests/test_deploy_stack_runtime.py:457`
+      `test_a_dataset_ingest_job_succeeds_through_the_compose_io_worker`;
+    - `backend/tests/test_deploy_stack_runtime.py:503`
+      `test_a_score_batch_job_succeeds_through_the_compose_scoring_worker`;
+    - `backend/tests/test_deploy_stack_runtime.py:582`
+      `test_a_sampled_trace_is_produced_through_the_compose_scoring_worker`;
+    - `backend/tests/test_deploy_switch_runtime.py:5` (its docstring), `:38` (the import) and
+      `:174` `test_a_deploy_switches_every_api_process_and_a_default_live_quote_is_served`.
+  - The five callers run in the build window under `GIP_DEPLOY_TESTS=1`. The full gate SOLO
+    (G) is the cover for the rest of the suite.
+- **R2 — the demo's `--no-compose` switch, red first (DP-2 and DP-3 accepted at 17:21:17).**
+  - **Tests** in `backend/tests/test_demo_command.py`, marked `req("FR-408")`:
+    - R2.a: with `--no-compose`, the local demo runs no `docker compose … up` (the test records
+      the commands passed to `run`). It is red on the base because `argparse` exits 2: the flag is
+      absent.
+    - R2.b: with the flag, the demo refuses before the migrations step when `postgres`, `redis`,
+      `minio` or `keycloak` is not running, and names the service. It reuses `check_compose_up`
+      (`scripts/demo.py:317`).
+    - R2.c: without the flag, the compose call of `scripts/demo.py:478-486` is unchanged.
+  - **The edit:** a `--no-compose` flag only, with no env variable (DP-2).
+  - **Live check:** `docker inspect -f '{{.Name}} {{.Id}} {{.State.StartedAt}}'
+    gi-pricing-postgres-1 gi-pricing-redis-1 gi-pricing-minio-1 gi-pricing-keycloak-1`, before
+    and after. Both fields are kept: a restart changes `StartedAt`, and a recreate also changes
+    `Id`.
+    - The red, without the switch: at least one line differs. It is quoted from an existing gate
+      log that recorded both readings. If there is none, the executor asks the lead for one
+      granted run in a no-gate gap, and never runs one unasked.
+    - The green, the gate's demo stage with `--no-compose`: the before and after files are equal,
+      `diff` rc 0.
+  - `.claude/skills/dev-commands/SKILL.md`, "The demo entrance (FR-408)", gains the flag and its
+    reason (`name: gi-pricing` makes the plain call act on the shared stack from any worktree),
+    with a refreshed `Verified` date.
+- **G — the gate.** The full code gate, both halves of `CLAUDE.md` §11, named against
+  `origin/main...<slice branch>`, on gate-1 **SOLO**. Its demo stage exercises both changes: the
+  journey runs under `--no-compose`, with a `scheduler` in the stack. `deploy/`, `scripts/` and a
+  shared test fixture change, so the docs-only gate does not apply. The red/green table is in the
+  `LG-` before the audit.
+- **Acceptance (row 2, items A1 to A8)** — each is checkable on the slice's merge tree:
+  - **A1** The row's docs checks: `audit-docs.py` and `doc-index.py --check` exit 0 at the slice
+    head, except lines naming its own working ids (SL-1968, LG-1969) before the mint.
+  - **A2** `docker compose -f deploy/docker-compose.yml --profile app config --services | grep -x
+    scheduler` prints `scheduler`. `uv run pytest -q backend/tests/test_deploy_stack.py -k
+    scheduler` exits 0, with at least 4 tests (R1.a to R1.d), each red line from the base quoted
+    in the `LG-`.
+  - **A3** The `LG-` quotes R1's two runtime reds and its green from the build window, with the
+    project name, the image tag and each rc.
+  - **A4** The one-beat check's red against a double beat, then its green, are quoted. Under
+    `GIP_DEPLOY_TESTS=1`, the five `beat_fixture` callers listed in R1.e exit 0, with each
+    summary line quoted.
+  - **A5** `uv run pytest -q backend/tests/test_demo_command.py -k no_compose` exits 0, with at
+    least 3 tests (R2.a to R2.c), each seen red at the base.
+  - **A6** The four `docker inspect` lines before and after the gate's demo stage are equal
+    (`diff` rc 0), with R2's red quoted beside them.
+  - **A7** G is green, with `git diff --name-only origin/main...<slice branch>` quoted first. The
+    dev-commands skill shows the `--no-compose` line and a refreshed `Verified` date.
+  - **A8** The slice merges by **Tue 3 Nov 2026** (`date -d 2026-11-03 +%A` = Tuesday). No
+    window of the slice overlaps nfr-bench-1's session, Mon 2 – Tue 3 Nov.
+- **Write set:**
+  - `deploy/docker-compose.yml` (the `scheduler` block only) and `deploy/README.md` (its
+    `scheduler` lines only);
+  - `backend/tests/test_deploy_stack.py`, `backend/tests/test_deploy_stack_runtime.py` and
+    `backend/tests/deploy_stack_helpers.py`;
+  - `scripts/demo.py` and `backend/tests/test_demo_command.py`;
+  - `.claude/skills/dev-commands/SKILL.md` and the slice's `LG-`;
+  - at the mint: the slice row in `docs/roadmap.md`, SL-1689's dated line (DP-1), `docs/INDEX.md`
+    and FD-1661's register row.
+
+  Anything else stops the slice. There is no spec edit and no new requirement id.
+
+*(Write-set amendment, 2026-10-29, by the maintainer (by delegation), on to-lead "2026-10-29 19:31:32 GMT": row 2's Write set gains `backend/tests/test_deploy_switch_runtime.py`, for one edit only — the test `test_a_deploy_switches_every_api_process_and_a_default_live_quote_is_served` takes the `down` fixture and starts the stack with the `up -d --wait lb <workers>` line that the other four `beat_fixture` callers use, and its "UNPROVEN" docstring sentence is replaced by a dated one naming the run that proved it. Nothing else in that file changes.)*

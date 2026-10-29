@@ -140,6 +140,9 @@ docker compose -f deploy/docker-compose.yml --profile app up -d --wait --scale a
   `api` replicas through Docker DNS (`deploy/lb.conf`).
 - **`worker`** runs Celery with a container `mem_limit`; a Job's own `resource_budget.memory_gb`
   is checked inside the process and fails the Job naming the budget (FR-412, FR-415).
+- **`scheduler`** is the Celery beat process (FR-432, FR-413, FR-406): the outbox relay is a beat
+  schedule entry, so without it a committed Job stays `queued`. It is one process and never
+  scaled; its schedule file is under `/tmp`, because the image's working directory is not writable.
 - **Shutdown** (FD-1211): each process finalizes the interpreter on SIGTERM, then the container is
   replaced.
 - **Production identity provider:** `deploy/keycloak/` is a reference you operate (FR-437).

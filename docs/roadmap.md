@@ -1282,6 +1282,26 @@ E4.8 as PL 8061 specifies it: `test_a_dataset_ingest_job_succeeds_through_the_co
 
 *Dated 2026-10-19 by the planner (planner-d26, D26; a draft for the lead to adopt or amend): **the WK-674 NFR measurement session on `nfr-bench-1` is the owner row** for the deferred measured verdicts of `SL-1259` (NFR-489, NFR-490, NFR-493, NFR-494, NFR-501, NFR-502, F1, O4 and D5.12's run), on the maintainer's (by delegation) entry "2026-10-19 04:41:23 BST — Maintainer: SL-1259 §13 verdicts (from-lead 04:40:22): accepted with two corrections + the carry-form extension ruled", Correction 1 (a deferral's owner is a work row; the maintainer is named only as "VM coordination (user action)"). No other roadmap row carried it when this line was written (grep of `docs/roadmap.md` for `nfr-bench-1` and "measurement session", 0 hits). Due, per Correction 2: NFR-489 before the 12 Nov exit demo (a §12 row 2 exit criterion, per that entry); the others before P2 close. The carry form applies to O4 and NFR-501 as well, per `RL-1828`. Host facts, from the maintainer's entries "2026-10-19 09:26:21 BST" and "2026-10-19 09:26:51 BST": `nfr-bench-1`, e2-standard-8, europe-west2-b, currently powered OFF; set-up (about 1 h) runs at the start of the first session; the start is a user action (`gcloud compute instances start nfr-bench-1 --zone=europe-west2-b`); delete happens when the S5 measurement sessions are finished. This line changes no field of any row.*
 
+#### SL-1968 — WK-674 slice — the scheduler service and the demo's `--no-compose` switch, red first (PL-1688 row 2; FD-1661's scheduler limb)
+
+```yaml
+id: SL-1968
+family: slice
+title: WK-674 slice — the scheduler service and the demo's `--no-compose` switch, red first (PL-1688 row 2; FD-1661's scheduler limb)
+status: active                    # draft → active → closed | retired (§1.2a)
+created: 2026-10-29
+owner: lead
+tree: 67284ea12daab613b67353e3eb8b728a35ca5023
+phase: P2
+work: WK-674
+corrected_by: []
+relates: [FD-1661, FD-1970, LG-1969, PL-1688]
+```
+
+PL-1688 row 2: the compose `beat` scheduler service that moves a Job out of the outbox, and the demo's `--no-compose` switch, with the red tests and their red table in the slice ledger; FD-1970 (the compose runtime tests could not provision the application login role) is found and fixed in the same slice.
+
+(Minted 2026-10-29 from working id 8275, on the lead's brief (lead 29) under the grant "2026-10-29 21:05:13 GMT" (the gate stands under 1(f)) and the mint tool of record `mint-repoint.py` (sha256 `4d83681a`); ledger LG-1969, finding FD-1970; executed on branch `draft/sl-8275`.)
+
 
 ### WK-675 — Frontend: **DAG designer (Vue Flow)**, rate table editor, quote sandbox + ladder waterfall, dislocation views
 
