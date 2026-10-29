@@ -41,3 +41,11 @@ relates: [FD-1959, FD-1974, OQ-1960, PL-1546, SL-1971]
 ## The carry date
 
 R10-DP2 (a) named "the P2 close" without a calendar date; the lead's "2026-10-29 22:34:57 GMT" ruling (a) names it: **Thu 12 Nov 2026**, the P2 exit demo (`date -d 2026-11-12 +%A` prints Thursday), recorded in FD-1974.
+
+## Acceptance — the violation that must become detectable
+
+The violation: FD-1959 is closed while no record holds its carried lows, its browser-verification limb, or the amended Disposition. This ruling adds no script; the three greps below are the checks, and each prints nothing at `origin/main` `aad4fd58` (the broken input: the state before this PR), which is how each was shown red.
+
+- *Violation: the carried lows have no finding.* `git grep -n 'FD-1974' -- docs/findings/FD-01959-*.md docs/findings/register.md` at the PR's head prints the essay's `relates:` line and its Resolved paragraph, the FD-1959 register row (`register.md:426`) and FD-1974's own row (`:430`); at `aad4fd58` it prints nothing. A closed FD-1959 whose essay or row lacks the name is the defect.
+- *Violation: OQ-1960's two mirrors diverge, or one lacks the cross-reference.* `git grep -n 'Cross-reference (RL-1973, 2026-10-29)' -- docs/open-questions.md docs/specs/00-overview.md` prints exactly two lines (`open-questions.md:233`, `00-overview.md:617`); one line, or none, is the defect.
+- *Violation: FD-1959 closes without the Disposition amendment.* `git grep -n 'Amended 2026-10-29 by RL-1973' -- docs/findings` prints one line in the FD-1959 essay while its front matter reads `status: closed`; a closed essay without that line is the defect.
