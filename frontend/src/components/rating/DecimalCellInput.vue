@@ -33,6 +33,12 @@ const syntaxError = computed(
 );
 const isInvalid = computed(() => syntaxError.value || Boolean(props.invalid));
 const errorId = useId();
+/** The message the input is described by: the server's, else the syntax rule it broke. */
+const message = computed(() => {
+  if (props.invalid) return props.invalid;
+  if (!syntaxError.value) return "";
+  return props.integer ? "Enter a whole number" : "Enter a decimal number";
+});
 
 function onInput(event: Event): void {
   text.value = (event.target as HTMLInputElement).value;
@@ -48,16 +54,16 @@ function onInput(event: Event): void {
       :value="text"
       :aria-label="label"
       :aria-invalid="isInvalid ? 'true' : 'false'"
-      :aria-describedby="invalid ? errorId : undefined"
+      :aria-describedby="isInvalid ? errorId : undefined"
       autocomplete="off"
       class="w-28 rounded border px-2 py-1 text-right font-mono text-sm"
-      :class="isInvalid ? 'border-red-600' : 'border-slate-300'"
+      :class="isInvalid ? 'border-red-600' : 'border-slate-500'"
       @input="onInput"
     >
     <span
-      v-if="invalid"
+      v-if="isInvalid"
       :id="errorId"
       class="text-xs text-red-700"
-    >{{ invalid }}</span>
+    >{{ message }}</span>
   </span>
 </template>

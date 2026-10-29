@@ -292,7 +292,7 @@ function replaceContract(contract: RatingAlgorithmDraft["input_contract"]): void
           <select
             id="dd-add-type"
             v-model="nextType"
-            class="w-full rounded-md border border-slate-300 px-2 py-1 text-sm"
+            class="w-full rounded-md border border-slate-500 px-2 py-1 text-sm"
           >
             <option
               v-for="type in STEP_TYPES"

@@ -26,6 +26,12 @@ const against = ref<"previous" | "seed">("previous");
 const portfolio = ref("");
 const stage = ref<Stage>("idle");
 const message = ref("");
+/** The progress text of the always-present status region (NFR-463, 4.1.3). */
+const progress = computed(() => {
+  if (stage.value === "waiting") return "Building the comparison…";
+  if (stage.value === "loading") return "Loading…";
+  return stage.value === "stalled" ? message.value : "";
+});
 const items = ref<RateTableDiffCell[]>([]);
 const nextCursor = ref<string | null>(null);
 /** The cursors of the pages before this one; `undefined` is the first page. */
@@ -137,7 +143,7 @@ function shadeClass(rel: string | null): string {
         <select
           id="diff-against"
           v-model="against"
-          class="rounded border border-slate-300 px-2 py-1 text-sm"
+          class="rounded border border-slate-500 px-2 py-1 text-sm"
         >
           <option value="previous">
             Previous version
@@ -157,7 +163,7 @@ function shadeClass(rel: string | null): string {
           v-model="portfolio"
           type="text"
           autocomplete="off"
-          class="rounded border border-slate-300 px-2 py-1 font-mono text-sm"
+          class="rounded border border-slate-500 px-2 py-1 font-mono text-sm"
         >
       </div>
       <button
@@ -171,21 +177,14 @@ function shadeClass(rel: string | null): string {
     </div>
 
     <p
-      v-if="stage === 'loading' || stage === 'waiting'"
-      aria-live="polite"
-      class="mt-3 text-sm text-slate-500"
+      role="status"
+      class="text-sm text-slate-600"
+      :class="{ 'mt-3': progress }"
     >
-      {{ stage === "waiting" ? "Building the comparison…" : "Loading…" }}
+      {{ progress }}
     </p>
     <p
-      v-else-if="stage === 'stalled'"
-      aria-live="polite"
-      class="mt-3 text-sm text-slate-600"
-    >
-      {{ message }}
-    </p>
-    <p
-      v-else-if="stage === 'failed'"
+      v-if="stage === 'failed'"
       role="alert"
       class="mt-3 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-800"
     >
@@ -202,6 +201,7 @@ function shadeClass(rel: string | null): string {
       <div
         v-else
         class="mt-3 overflow-x-auto"
+        tabindex="0"
       >
         <table class="min-w-full border-collapse text-sm">
           <thead>

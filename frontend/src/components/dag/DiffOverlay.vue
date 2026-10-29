@@ -83,7 +83,7 @@ async function compare(): Promise<void> {
           type="number"
           min="1"
           :value="against ?? ''"
-          class="w-full rounded-md border border-slate-300 px-2 py-1 text-sm"
+          class="w-full rounded-md border border-slate-500 px-2 py-1 text-sm"
           @input="onInput"
         >
       </div>
