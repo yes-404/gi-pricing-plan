@@ -1,12 +1,12 @@
 ---
-id: LG-8276
+id: LG-1969
 family: ledger
-title: WK-674 slice SL 8275 — the scheduler service and the demo's --no-compose switch, red first (slice ledger)
+title: WK-674 slice SL-1968 — the scheduler service and the demo's --no-compose switch, red first (slice ledger)
 status: active                 # active → closed (§1.2a)
-created: 2026-10-29
+created: 2026-10-29               # drafted 2026-10-29 under working id 8276
 owner: executor
 tree: 7ceff4a16829c63f20f0cdbb56fafae22657c1ab   # origin/main at the branch cut
-slice: SL-8275
+slice: SL-1968
 phase: P2
 work: WK-674
 plans: [PL-1688]
@@ -14,10 +14,10 @@ corrected_by: []
 relates: [FD-1661, PL-1688]
 ---
 
-# LG-8276 — WK-674 slice SL 8275: the scheduler service and `--no-compose`, red first
+# LG-1969 — WK-674 slice SL-1968: the scheduler service and `--no-compose`, red first
 
-Working ids (space form in prose): **SL 8275** (this slice), **LG 8276** (this ledger). Plan of
-record: `PL-1688` row 2 (accepted at `7e3555eb`). Executor seat `exec-beatreds`. Nothing is minted here.
+Drafted under working ids **SL 8275** (this slice), **LG 8276** (this ledger) and **FD 8280** (the finding filed in the slice), minted
+as **SL-1968**, **LG-1969** and **FD-1970** on 2026-10-29. Plan of record: `PL-1688` row 2 (accepted at `7e3555eb`). Executor seat `exec-beatreds`.
 
 **GO:** the lead's grant "2026-10-29 17:27:16 GMT" ("The reds may start now"). **MERGE-ACK:** pending.
 
@@ -184,7 +184,7 @@ The project's own Postgres was provisioned by hand (`scripts/provision-app-role.
   The unchanged caller `test_a_submitted_job_reaches_a_terminal_state_through_the_compose_worker` at head `1a3a8483463b42eee4a877068b9d8fe743b9b5f2`
   under `GIP_DEPLOY_TESTS=1`: `1 failed, 2 warnings in 46.16s`, rc=1 (`CalledProcessError` from `docker compose … up`, then the conftest_db `GIP_TEST_DATABASE_URL is not set` warning).
 
-## F2 — the compose runtime tests never provisioned the application login role (found 2026-10-29 in the build window; ruled (A) by the maintainer at to-lead "2026-10-29 19:19:28 GMT"; finding FD 8280, MEDIUM, owner WK-674, drafted by the auditor from these lines)
+## F2 — the compose runtime tests never provisioned the application login role (found 2026-10-29 in the build window; ruled (A) by the maintainer at to-lead "2026-10-29 19:19:28 GMT"; finding FD-1970, MEDIUM, owner WK-674, drafted by the auditor from these lines)
 
 - **The defect, proven at `origin/main` `1e17ec6382de5919b6e3011242b584a59bb880e7`** (condition (iii); a throwaway detached checkout
   `.claude/worktrees/exec-beatgreen-main`, not the slice worktree): `test_a_submitted_job_reaches_a_terminal_state_through_the_compose_worker`

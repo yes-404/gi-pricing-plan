@@ -319,7 +319,7 @@ INFRASTRUCTURE_SERVICES = frozenset({"postgres", "redis", "minio", "keycloak"})
 
 def check_infrastructure_up(running: dict[str, int]) -> None:
     """`--no-compose`: refuse, naming each of the four infrastructure services that is not running,
-    before the migrations step (SL 8275 R2.b)."""
+    before the migrations step (SL-1968 R2.b)."""
     missing = sorted(INFRASTRUCTURE_SERVICES - running.keys())
     if missing:
         raise DemoRefusedError(

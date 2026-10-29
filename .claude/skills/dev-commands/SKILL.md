@@ -922,7 +922,7 @@ uv run python scripts/demo.py --no-compose   # the four infrastructure services 
 `--no-compose` skips the `docker compose up` and refuses, naming the service, when postgres,
 redis, minio or keycloak is not running. Use it from any worktree but tools-main: `name:
 gi-pricing` makes a plain `docker compose up` act on the shared stack from any worktree, and
-recreates keycloak onto that worktree's bind mount (SL 8275, FD-1661).
+recreates keycloak onto that worktree's bind mount (SL-1968, FD-1661).
 
 One command from a clean checkout to a browser: compose, migrations, freMTPL2 seeded
 through the **real Job path**, the API and the frontend, with a development identity for the

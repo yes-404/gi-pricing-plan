@@ -305,23 +305,23 @@ the maintainer's entries in `~/gi-pricing-plan.local/channel/to-lead.md`: "2026-
 BST" item (c) (SL-1689 option A, `beat_fixture`); "2026-10-29 10:26:13 GMT" **Ruled** ("The
 scheduler service lands in `deploy/docker-compose.yml` under WK-674 before the code freeze: a
 slice, red-first … merged by Tue 3 Nov"); "2026-10-29 12:00:32 GMT" items (2) and (3) (the
-writable-path red; "the `--no-compose` / env switch rides SL 8275 (the beat slice) as a second
+writable-path red; "the `--no-compose` / env switch rides SL-1968 (the beat slice) as a second
 red"); "2026-10-29 17:14:18 GMT" ("the beat slice = a dated delta row in PL-1688 (relates: WK-674),
 no new PL"); and "2026-10-29 17:21:17 GMT" (DP-1 ruled (a), DP-2 and DP-3 accepted, the sl-1689
 condition, the callers' list). Also on the lead's from-lead "2026-10-29 11:30:06 GMT" item (1).
-**A new row 2: SL 8275 — the scheduler service in `deploy/docker-compose.yml` (FD-1661's
-scheduler limb) and the demo's `--no-compose` switch, red first.** Ledger **LG 8276**. Both are
+**A new row 2: SL-1968 — the scheduler service in `deploy/docker-compose.yml` (FD-1661's
+scheduler limb) and the demo's `--no-compose` switch, red first.** Ledger **LG-1969**. Both are
 working ids, written in space form until the mint. Work **WK-674**; merged by **Tue 3 Nov 2026**.
-The row, in the table's columns: Order 2; Slice SL 8275; Scope (what the `LG-` quotes) items
+The row, in the table's columns: Order 2; Slice SL-1968; Scope (what the `LG-` quotes) items
 R0 to R2, G and A1 to A8 below; Requirements `07` §3.2: FR-432 (the `scheduler` limb only),
 FR-406 (the outbox relay that the beat schedule runs), FR-413 (the beat process; the tick itself
 is not built here) and FR-408 (the demo entrance; an optional flag leaves its one command
 unchanged), with register FD-1661 (its scheduler limb closes at merge); Depends on `SL-1258`
 merged (#1337, `eea416ca`), S1c merged (#1405, `7ceff4a1`) and a build window booked (B0.4); Size
-1 + a build window. **DP-1 is ruled (a)** (17:21:17): SL 8275 takes FR-432's `scheduler` limb, and
+1 + a build window. **DP-1 is ruled (a)** (17:21:17): SL-1968 takes FR-432's `scheduler` limb, and
 SL-1689 keeps the `frontend`-image limb only. That is recorded by ONE dated line appended to
-SL-1689's roadmap row at SL 8275's mint, with its status and other fields unchanged. The line also
-says that FD-1661's scheduler limb moves to SL 8275, and that its worker limb stayed with #1337.
+SL-1689's roadmap row at SL-1968's mint, with its status and other fields unchanged. The line also
+says that FD-1661's scheduler limb moves to SL-1968, and that its worker limb stayed with #1337.
 Row 1 and the plan body are unchanged.)*
 
 *(Added by row 2's dated line, 2026-10-29.)* Every `file:line` below is at `origin/main`
@@ -340,7 +340,7 @@ Row 1 and the plan body are unchanged.)*
       `deploy/frontend.Dockerfile.dockerignore` and `deploy/frontend.nginx.conf`;
     - `docs/INDEX.md`, its ledger (LG 8137), `docs/roadmap.md`, `docs/skills-map.md` and
       `docs/specs/07-platform.md`.
-  - **It carries scheduler work.** SL 8275 starts from the scheduler hunks of these three
+  - **It carries scheduler work.** SL-1968 starts from the scheduler hunks of these three
     commits, named here and taken, not dropped:
     - `c80009ad` "feat(deploy): SL-1689 — the scheduler and frontend services, shape tests
       first". It adds the `scheduler` service, with `--schedule /tmp/celerybeat-schedule` and
@@ -361,7 +361,7 @@ Row 1 and the plan body are unchanged.)*
   - **Method.** The executor ports the named hunks onto a branch from `origin/main`. It does not
     merge or rebase the sl-1689 branch, and it does not move it. The `LG-` lists each hunk it
     took with its source commit.
-  - **The reds are seen again at SL 8275's base.** LG 8137's reds (`12 failed, 23 passed` at
+  - **The reds are seen again at SL-1968's base.** LG 8137's reds (`12 failed, 23 passed` at
     `cdd37815`) were taken on another base, and its runtime reds were owed to a build window that
     never ran (LG 8137, "PREP window — 2026-10-22").
 - **R1 — the scheduler, red first.**
@@ -437,7 +437,7 @@ Row 1 and the plan body are unchanged.)*
   `LG-` before the audit.
 - **Acceptance (row 2, items A1 to A8)** — each is checkable on the slice's merge tree:
   - **A1** The row's docs checks: `audit-docs.py` and `doc-index.py --check` exit 0 at the slice
-    head, except lines naming its own working ids (SL 8275, LG 8276) before the mint.
+    head, except lines naming its own working ids (SL-1968, LG-1969) before the mint.
   - **A2** `docker compose -f deploy/docker-compose.yml --profile app config --services | grep -x
     scheduler` prints `scheduler`. `uv run pytest -q backend/tests/test_deploy_stack.py -k
     scheduler` exits 0, with at least 4 tests (R1.a to R1.d), each red line from the base quoted
