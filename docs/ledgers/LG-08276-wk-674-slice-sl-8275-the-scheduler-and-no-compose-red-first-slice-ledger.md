@@ -161,3 +161,5 @@ Checks: `ruff check` on the two files rc 0. `ruff format --check`: `test_demo_co
 - **Acceptance:** the maintainer accepted this deviation at `to-lead.md` entry "2026-10-29 18:52:58 GMT". The reason
   given: DP-3's object was "any of the four shared services that is down", and `check_compose_up` checks the app
   services, not keycloak.
+
+(Recorded 2026-10-29 by the lead, on to-lead "2026-10-29 18:57:05 GMT": the gate script's template-guard red-proof (exec-beatgate; disposable copy scratch_beatgate_guard from gipricing: exact list rc 0; one planted environments row → environments=4, rc 1; dropdb rc 0; template re-read exact) ran inside S1d's DB window (18:53 → ≤ 19:53), between 18:54 and 18:56, under the lead's brief, which wrongly allowed it there. A DB window is single-tenant. The proof STANDS; the breach is recorded, not repeated. The maintainer's read at 18:57:05: template alembic_version=1 environments=3 tenant_marker=1; no beatgate database left. Script: scratch/sl8275-gate/sl8275-gate.sh sha256 7fbaa097f0c92e7083a3a2e1b189cb40d8b91a5b165acec85327974fdaa84d98.)
