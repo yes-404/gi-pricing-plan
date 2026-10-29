@@ -163,6 +163,72 @@ def api_declares_its_worker_count(compose: dict[str, Any]) -> list[str]:
     return problems
 
 
+def _beat_words(compose: dict[str, Any]) -> list[str]:
+    command = compose["services"].get("scheduler", {}).get("command") or []
+    return command.split() if isinstance(command, str) else list(command)
+
+
+def scheduler_is_under_the_app_profile(compose: dict[str, Any]) -> list[str]:
+    """FR-432 / FR-413: a `scheduler` service exists, and only the `app` profile starts it."""
+    scheduler = compose["services"].get("scheduler")
+    if scheduler is None:
+        return ["no service named scheduler"]
+    if "app" not in (scheduler.get("profiles") or []):
+        return ["scheduler is not under the app profile"]
+    return []
+
+
+def scheduler_runs_beat_from_the_one_image(compose: dict[str, Any]) -> list[str]:
+    """FR-432 / FR-413 / FR-406: `scheduler` runs `celery -A app.worker.entrypoint beat` from
+    `api`'s image (ported from SL-1689's c80009ad)."""
+    scheduler = compose["services"].get("scheduler")
+    if scheduler is None:
+        return ["no service named scheduler"]
+    problems = []
+    if scheduler.get("image") != compose["services"]["api"].get("image"):
+        problems.append("scheduler does not use api's image")
+    words = _beat_words(compose)
+    if words[:4] != ["celery", "-A", "app.worker.entrypoint", "beat"]:
+        problems.append(f"scheduler command is {words!r}, not celery ... beat")
+    return problems
+
+
+def scheduler_keeps_its_schedule_file_under_tmp(compose: dict[str, Any]) -> list[str]:
+    """FR-432 / FR-413: the image's cwd is not writable by the container user, so beat must be
+    given `--schedule <path under /tmp>`. S1c's ledger, section S1c-5, setup fault 2: the first
+    `scheduler` start exited 1 with `Permission denied: 'celerybeat-schedule'`."""
+    if "scheduler" not in compose["services"]:
+        return ["no service named scheduler"]
+    words = _beat_words(compose)
+    if "--schedule" not in words:
+        return ["scheduler names no --schedule file"]
+    at = words.index("--schedule") + 1
+    path = words[at] if at < len(words) else ""
+    return (
+        [] if path.startswith("/tmp/") else [f"scheduler --schedule is {path!r}, not under /tmp/"]
+    )
+
+
+def scheduler_is_one_process(compose: dict[str, Any]) -> list[str]:
+    """FR-413: the tick is "a single periodic Celery beat task"; two beats relay twice."""
+    scheduler = compose["services"].get("scheduler", {})
+    copies = max((scheduler.get("deploy") or {}).get("replicas", 1), scheduler.get("scale", 1))
+    return (
+        [f"scheduler runs {copies} copies; two beats relay the outbox twice"] if copies > 1 else []
+    )
+
+
+def scheduler_starts_after_its_dependencies(compose: dict[str, Any]) -> list[str]:
+    """It reads the schema and talks to Redis, as `worker` does, so waits for both."""
+    deps = compose["services"].get("scheduler", {}).get("depends_on") or {}
+    problems = []
+    if (deps.get("migrate") or {}).get("condition") != "service_completed_successfully":
+        problems.append("scheduler does not wait for migrate to complete")
+    if (deps.get("redis") or {}).get("condition") != "service_healthy":
+        problems.append("scheduler does not wait for redis to be healthy")
+    return problems
+
+
 CHECKS = [
     api_needs_no_worker,
     migrations_are_their_own_step,
@@ -171,6 +237,11 @@ CHECKS = [
     each_worker_consumes_one_pool,
     one_image_three_roles,
     api_declares_its_worker_count,
+    scheduler_is_under_the_app_profile,
+    scheduler_runs_beat_from_the_one_image,
+    scheduler_keeps_its_schedule_file_under_tmp,
+    scheduler_is_one_process,
+    scheduler_starts_after_its_dependencies,
 ]
 
 
@@ -250,6 +321,39 @@ def test_api_worker_and_migrate_are_one_image() -> None:
 @pytest.mark.req("NFR-489")
 def test_api_declares_its_worker_count_through_web_concurrency() -> None:
     assert api_declares_its_worker_count(_load()) == []
+
+
+@pytest.mark.req("FR-432")
+@pytest.mark.req("FR-413")
+@pytest.mark.req("FR-406")
+def test_the_scheduler_exists_under_the_app_profile() -> None:
+    assert scheduler_is_under_the_app_profile(_load()) == []
+
+
+@pytest.mark.req("FR-432")
+@pytest.mark.req("FR-413")
+@pytest.mark.req("FR-406")
+def test_the_scheduler_runs_beat_from_the_one_image() -> None:
+    assert scheduler_runs_beat_from_the_one_image(_load()) == []
+
+
+@pytest.mark.req("FR-432")
+@pytest.mark.req("FR-413")
+@pytest.mark.req("FR-406")
+def test_the_scheduler_keeps_its_beat_schedule_file_under_tmp() -> None:
+    assert scheduler_keeps_its_schedule_file_under_tmp(_load()) == []
+
+
+@pytest.mark.req("FR-432")
+@pytest.mark.req("FR-413")
+def test_the_scheduler_is_one_process() -> None:
+    assert "scheduler" in _load()["services"], "no service named scheduler"
+    assert scheduler_is_one_process(_load()) == []
+
+
+@pytest.mark.req("FR-432")
+def test_the_scheduler_waits_for_migrate_and_redis() -> None:
+    assert scheduler_starts_after_its_dependencies(_load()) == []
 
 
 @pytest.mark.req("FR-434")
