@@ -18,6 +18,7 @@ from typing import Any
 
 import pytest
 import yaml
+from backend.tests.deploy_stack_helpers import one_beat_problems
 
 from app.platform.jobs import DEFAULT_QUEUE_FOR_KIND
 from app.worker.celery_app import RELAY_QUEUE
@@ -453,3 +454,38 @@ def test_the_reference_keycloak_is_marked_as_the_deployers_to_operate() -> None:
     assert "ports" not in service, "the reference publishes no port; the proxy fronts it"
     for key in ("KC_DB_PASSWORD", "KC_BOOTSTRAP_ADMIN_PASSWORD"):
         assert ":?" in service["environment"][key], f"{key} must be required, not defaulted"
+
+
+def _ps(*rows: tuple[str, str, str]) -> list[dict[str, str]]:
+    """`docker compose ps --format json` rows: (Service, State, Command)."""
+    return [{"Service": svc, "State": state, "Command": cmd} for svc, state, cmd in rows]
+
+
+_BEAT = '"celery -A app.worker.entrypoint beat --schedule /tmp/celerybeat-schedule"'
+_WORKER = '"celery -A app.worker.entrypoint worker --queues default"'
+
+
+@pytest.mark.req("FR-432")
+@pytest.mark.req("FR-413")
+def test_one_beat_is_exactly_one_running_scheduler_container() -> None:
+    ok = _ps(("scheduler", "running", _BEAT), ("worker-default", "running", _WORKER))
+    assert one_beat_problems(ok) == []
+
+
+@pytest.mark.req("FR-432")
+@pytest.mark.req("FR-413")
+@pytest.mark.parametrize(
+    "rows",
+    [
+        # two scheduler containers
+        _ps(("scheduler", "running", _BEAT), ("scheduler", "running", _BEAT)),
+        # the service plus a one-off beat container (the old fixture's shape)
+        _ps(("scheduler", "running", _BEAT), ("worker-default", "running", _BEAT)),
+        # no beat at all
+        _ps(("worker-default", "running", _WORKER)),
+        # a stopped scheduler is not a running one
+        _ps(("scheduler", "exited", _BEAT)),
+    ],
+)
+def test_one_beat_goes_red_on_a_double_or_absent_beat(rows: list[dict[str, str]]) -> None:
+    assert one_beat_problems(rows)

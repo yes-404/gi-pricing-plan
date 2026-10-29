@@ -314,6 +314,21 @@ def compose_running() -> dict[str, int]:
     return counts
 
 
+INFRASTRUCTURE_SERVICES = frozenset({"postgres", "redis", "minio", "keycloak"})
+
+
+def check_infrastructure_up(running: dict[str, int]) -> None:
+    """`--no-compose`: refuse, naming each of the four infrastructure services that is not running,
+    before the migrations step (SL 8275 R2.b)."""
+    missing = sorted(INFRASTRUCTURE_SERVICES - running.keys())
+    if missing:
+        raise DemoRefusedError(
+            f"--no-compose needs the infrastructure already up. Missing: {', '.join(missing)}. "
+            f"Start it from tools-main: "
+            f"`docker compose -f {COMPOSE_FILE} --profile auth up -d --wait`."
+        )
+
+
 def check_compose_up(running: dict[str, int]) -> None:
     """Refuse, naming what is missing, before anything is seeded (R9). `api` must run twice."""
     missing = sorted(compose_services() - running.keys() - {"api"})
@@ -453,6 +468,7 @@ def demo(
     frontend: bool,
     journey: str | None = None,
     target: str = "local",
+    no_compose: bool = False,
 ) -> int:
     if target == "compose":
         if journey != "wf-701":
@@ -476,14 +492,20 @@ def demo(
 
     env = demo_env()
 
-    run(
-        [
-            "docker", "compose", "-f", "deploy/docker-compose.yml",
-            "--profile", "auth", "up", "-d", "--wait",
-        ],
-        step="infrastructure (postgres, redis, minio, keycloak)",
-        env=env,
-    )
+    if no_compose:
+        # `name: gi-pricing` makes a plain `docker compose up` act on the shared stack from any
+        # worktree (it recreates keycloak onto this worktree's bind mount), so a caller that
+        # already has the stack up asks for it to be left alone.
+        check_infrastructure_up(compose_running())
+    else:
+        run(
+            [
+                "docker", "compose", "-f", "deploy/docker-compose.yml",
+                "--profile", "auth", "up", "-d", "--wait",
+            ],
+            step="infrastructure (postgres, redis, minio, keycloak)",
+            env=env,
+        )
     run(["uv", "run", "alembic", "upgrade", "head"], step="migrations", env=env)
     run(
         ["uv", "run", "python", "scripts/provision-app-role.py", "--allow-default-password"],
@@ -662,6 +684,12 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--no-frontend", action="store_true", help="API only")
     parser.add_argument(
+        "--no-compose",
+        action="store_true",
+        help="Do not run `docker compose up`: expect postgres, redis, minio and keycloak already "
+        "running, and refuse naming the one that is not",
+    )
+    parser.add_argument(
         "--journey",
         choices=JOURNEYS,
         help="After the seed, start a worker and walk this scripted journey over HTTP, "
@@ -687,6 +715,7 @@ def main() -> int:
             frontend=not args.no_frontend,
             journey=args.journey,
             target=args.target,
+            no_compose=args.no_compose,
         )
     except DemoRefusedError as exc:
         print(f"\n  {exc}\n", file=sys.stderr, flush=True)

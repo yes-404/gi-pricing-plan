@@ -915,6 +915,15 @@ uv run python scripts/demo.py                # then open http://localhost:5173/d
 uv run python scripts/demo.py --rows 60000   # a sample; the full seed is 678 013 rows
 ```
 
+```bash
+uv run python scripts/demo.py --no-compose   # the four infrastructure services are already up
+```
+
+`--no-compose` skips the `docker compose up` and refuses, naming the service, when postgres,
+redis, minio or keycloak is not running. Use it from any worktree but tools-main: `name:
+gi-pricing` makes a plain `docker compose up` act on the shared stack from any worktree, and
+recreates keycloak onto that worktree's bind mount (SL 8275, FD-1661).
+
 One command from a clean checkout to a browser: compose, migrations, freMTPL2 seeded
 through the **real Job path**, the API and the frontend, with a development identity for the
 seeded workspace. Ctrl-C stops everything it started.
@@ -1205,7 +1214,7 @@ build log showing no actual build (wrong cwd), one tmpdir ls -i showing identica
 (collision). This section drafted by executor-h; verified by deputy as measured. Reference: 
 to-lead.md entries 10:55:17, 11:02:41, 11:48:50, 14:33:28 (maintainer instruction).
 
-Verified: 2026-10-29 against the tree 45ac1d6730e0a8c34d0dd99e22447a19f4cfefd0 (docs/tue27-lanec-2026-10-27 at c427e92e, before this commit; new paragraph in the Migrations section: alembic runs from the worktree root, from exec-seedproof's report, not re-run here); previously 2026-10-18 against main 8ac6290b (the tree of merge 96260086 on docs-d21-2026-10-17) (new line in the two-code-gate-slots section: vitest `--maxWorkers=2` and the FR-1530 re-run-once rule, both from the rulings it cites, not re-run here); previously 2026-10-17 against main 9469721d (the tree of merge 40bb4694 on docs-d20-2026-10-17) (new section: two code-gate slots, per-slot isolation, LOKY_MAX_CPU_COUNT, run-to-run hash noise; the rulings are cited in it, not re-run here); previously 2026-10-14 against main 8eaf6d5f (new section: scripts/run-small.sh, RL-1626; its test passes at this tree); previously 2026-10-10 against the PL 9617 slice branch (based on main fe0b0627; gate wrapper and bare-pytest lock take gate-1 only, RL-1445); previously 2026-10-10 against main db0642c4 (new paragraph: the gate-2 standing rule, one docs check beside one code gate); previously 2026-10-08 against main d85cf854 (new rule: no background process inside a held slot, `fuser` check); previously 2026-10-06 against main a9ef6777 (new section: a slot probe that gates a check); previously 2026-09-29 against main 4819ec88 (gate slot budget 3 → 2 for the 8-vCPU box, WK-1178; the wrapper loop and `conftest.py` `_SLOT_COUNT` re-read together)
+Verified: 2026-10-29 against the tree of sl-8275 at 90ef474d plus its uncommitted edits (the demo `--no-compose` paragraph; run-small passes test_demo_command.py, not re-run live); previously 2026-10-29 against the tree 45ac1d6730e0a8c34d0dd99e22447a19f4cfefd0 (docs/tue27-lanec-2026-10-27 at c427e92e, before this commit; new paragraph in the Migrations section: alembic runs from the worktree root, from exec-seedproof's report, not re-run here); previously 2026-10-18 against main 8ac6290b (the tree of merge 96260086 on docs-d21-2026-10-17) (new line in the two-code-gate-slots section: vitest `--maxWorkers=2` and the FR-1530 re-run-once rule, both from the rulings it cites, not re-run here); previously 2026-10-17 against main 9469721d (the tree of merge 40bb4694 on docs-d20-2026-10-17) (new section: two code-gate slots, per-slot isolation, LOKY_MAX_CPU_COUNT, run-to-run hash noise; the rulings are cited in it, not re-run here); previously 2026-10-14 against main 8eaf6d5f (new section: scripts/run-small.sh, RL-1626; its test passes at this tree); previously 2026-10-10 against the PL 9617 slice branch (based on main fe0b0627; gate wrapper and bare-pytest lock take gate-1 only, RL-1445); previously 2026-10-10 against main db0642c4 (new paragraph: the gate-2 standing rule, one docs check beside one code gate); previously 2026-10-08 against main d85cf854 (new rule: no background process inside a held slot, `fuser` check); previously 2026-10-06 against main a9ef6777 (new section: a slot probe that gates a check); previously 2026-09-29 against main 4819ec88 (gate slot budget 3 → 2 for the 8-vCPU box, WK-1178; the wrapper loop and `conftest.py` `_SLOT_COUNT` re-read together)
 Prior: 2026-09-17 against main 71f5a2208c7a92bad486ae128775a4a42c7ebc63
 
 2026-09-06 — the gate body's seven stages now run in parallel inside one slot, each
