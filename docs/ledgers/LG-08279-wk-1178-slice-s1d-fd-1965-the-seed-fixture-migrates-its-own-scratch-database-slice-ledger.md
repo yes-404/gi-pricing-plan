@@ -38,10 +38,10 @@ FD-1965's close.
 
 - [x] **S1d-0. Base.** See the Build log, entry 1.
 - [x] **S1d-1. The throwaway checkout.** See the Build log, entry 1.
-- [ ] **S1d-2. Reds R1 to R3** (DB window).
-- [ ] **S1d-3. The fix** (DP-S1d-1 (a)).
-- [ ] **S1d-4. Control C1** and its mutation red.
-- [ ] **S1d-5. Greens G1 and G2** (DB window).
+- [x] **S1d-2. Reds R1 to R3** (DB window; Build log, entry 2).
+- [x] **S1d-3. The fix** (DP-S1d-1 (a)); commit `c44fa2d7`.
+- [x] **S1d-4. Control C1** and its mutation red; commit `e7244a2a`.
+- [x] **S1d-5. Greens G1 and G2** (DB window; entry 2).
 - [ ] **S1d-6. The format commit, then the gate** (DP-S1d-2 G2 narrow cover).
 - [ ] **S1d-7. Records.**
 
@@ -66,6 +66,48 @@ Pending (the auditor's).
    - S1d-1: throwaway detached worktree of the base at `~/gi-pricing-plan.local/scratch/s1d/tw`
      (outside the slice worktree), `uv sync --all-packages --frozen` rc=0; the two `.arff` copied into
      **its** `examples/fremtpl2/data/` only, sha256 equal to the pins in `fetch.py`.
+
+2. **2026-10-29, Phase B (the DB window, the lead's written start 18:53 GMT; START 18:53:21, END
+   19:02:46).** START: load1 1.09, `free -g` available 19, slots gate-1, gate-1b, gate-2 (read HELD for
+   about 15 s at 18:53:25, then free), small-test, verify-1, demo, seat-heavy free; `select datname`
+   = `gipricing postgres template0 template1`; the template `gipricing` non-empty tables exactly
+   `alembic_version=1 environments=3 tenant_marker=1`. `scratch_s1d_foreign` made by
+   `create database … template gipricing`; no URL set by the seat names `gipricing`; redis db 11.
+   Logs are under `~/gi-pricing-plan.local/scratch/s1d/` (`red.log`, `o1.log`, `c1.log`, `green.log`).
+   - **R1 to R3 (red, `head=1e17ec6382de5919b6e3011242b584a59bb880e7`, throwaway, data present,
+     `GIP_MIGRATION_DATABASE_URL` on `scratch_s1d_foreign`):**
+     `FAILED examples/fremtpl2/test_seed.py::test_the_seed_reruns_against_a_seeded_database`,
+     `FAILED examples/fremtpl2/test_seed.py::test_every_seeded_ingestion_run_balances_its_rows`,
+     `FAILED examples/fremtpl2/test_seed.py::test_a_small_seed_is_refused_for_its_degenerate_fit`;
+     `3 failed in 36.99s`, `rc=1`; each by `UndefinedTableError: relation "role_assignments" does not
+     exist`. Foreign `select count(*) from workspaces where name = 'freMTPL2 demo'`: before 0, after 3
+     (the E-d3 red).
+   - **O1** (variable unset, one test, same base): fails at the fixture,
+     `subprocess.CalledProcessError: Command '['uv', 'run', 'alembic', 'upgrade', 'head']' returned
+     non-zero exit status 1`, `rc=1`. (env.py's RuntimeError text was not captured in the tail.)
+   - **Fix and C1** (S1d-3, S1d-4; slice head `e7244a2a3f63e81841db58105527ee8cff70f9d9`, synced into
+     the throwaway): C1 green `1 passed in 0.87s` (no database, no data). Guard mutated once (`if
+     missing:` replaced by `if False and missing:`, assert count 1): `Failed: DID NOT RAISE
+     RuntimeError`, `1 failed in 0.95s`. Restored: `1 passed in 0.86s`.
+   - **G1** (`head=e7244a2a…`, the three, same foreign URL set): `3 passed in 216.19s`, `rc=0`; foreign
+     demo count 3 before, 3 after. **G2** (variable unset): `3 passed in 202.44s`, `rc=0`; foreign count
+     3 after.
+   - **END:** `scratch_s1d_foreign` dropped; `select datname` after = before; no `scratch_s1d_*` (count
+     0); template non-empty tables after `alembic_version=1 environments=3 tenant_marker=1`; redis db
+     11, 12, 13 `dbsize` 0 after FLUSHDB. `git status --ignored -- examples/fremtpl2/data` in the slice
+     worktree: nothing.
+3. **2026-10-29, Phase C start.** S1d-6 format commit `5d8c2649`
+   (`style(backend): ruff format backend/tests/test_transformations.py (process-backlog 2026-10-29
+   14:44 GMT)`), alone. `ast.dump` equality: script `~/gi-pricing-plan.local/scratch/s1d/astdump.py`
+   (sha256 of `ast.dump(ast.parse(source))`), before = after =
+   `8b753a2242991fbf1e14ec472c8310f4826bdcc39d4a4c6cfe11d896c578e35a`.
+   G2 precondition: `git diff --stat origin/main...HEAD` lists only `backend/tests/test_transformations.py`,
+   `examples/fremtpl2/test_seed.py` and the ledger under `docs/`. `uv run ruff check .` rc=0 at
+   `5d8c2649`. `examples/fremtpl2/test_seed.py` through `scripts/run-small.sh`, no data present (CI
+   form): `15 passed, 3 skipped in 11.45s`, `rc=0`, `head=5d8c2649f009a5260fb92a39dc4bde2ef440353f`.
+   **Open (reported to the lead):** `ruff format --check examples/fremtpl2/test_seed.py` reads rc=1 at
+   the base `1e17ec63` over six pre-existing hunks outside this slice; acceptance d7 awaits the lead's
+   ruling.
 
 ## PRs
 
