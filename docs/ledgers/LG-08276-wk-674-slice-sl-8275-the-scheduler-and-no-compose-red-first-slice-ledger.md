@@ -145,3 +145,16 @@ Checks: `ruff check` on the two files rc 0. `ruff format --check`: `test_demo_co
 - Format-only commit: `ruff format backend/tests/test_deploy_stack.py` alone; script `ast.dump` sha256, before
   = after = `f8528fa3ac4e566dbcd714d39445791cae175506976d4c421daf9bb9813e8a50` (3 lines changed).
 - `ruff check .` rc=0; `mypy` rc=0 (Success, 251 files).
+
+## Deviation — R2.b, `check_infrastructure_up` (2026-10-29, exec-beatgreen; accepted by the lead pending the maintainer's word)
+
+- **What R2.b says:** with the flag the demo "reuses `check_compose_up` (`scripts/demo.py:317`)".
+- **Why reuse fails:** `check_compose_up` refuses on `compose_services() - running.keys() - {"api"}`, and
+  `compose_services()` (`scripts/demo.py`, the function of that name) returns
+  `{"postgres", "redis", "minio", "lb", "api", *{f"worker-{queue.value}" for queue in DEFAULT_QUEUE_FOR_KIND.values()}}`.
+  It names `lb`, `api` (x2) and the worker pools, which `--no-compose` does not start, and it does not name
+  `keycloak`, which R2.b requires. With only the four infrastructure services up, as in R2.a, it would refuse
+  and R2.a's green (`alembic upgrade` reached) could not hold.
+- **What was done instead:** `INFRASTRUCTURE_SERVICES = {postgres, redis, minio, keycloak}` and
+  `check_infrastructure_up(running)`, which raises `DemoRefusedError` naming each missing one. It takes the
+  same `compose_running()` input as `check_compose_up`. `check_compose_up` is unchanged.
