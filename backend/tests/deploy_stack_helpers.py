@@ -294,11 +294,8 @@ def beat_fixture(built_n: str) -> Iterator[None]:
     container runs (`one_beat_problems`). It is stopped in teardown.
     """
     _compose(built_n, "up", "-d", "--wait", "scheduler")
-    rows = [
-        json.loads(line)
-        for line in _compose(built_n, "ps", "-a", "--no-trunc", "--format", "json").stdout.splitlines()
-        if line.strip()
-    ]
+    listing = _compose(built_n, "ps", "-a", "--no-trunc", "--format", "json").stdout
+    rows = [json.loads(line) for line in listing.splitlines() if line.strip()]
     assert one_beat_problems(rows) == [], rows
     try:
         yield
