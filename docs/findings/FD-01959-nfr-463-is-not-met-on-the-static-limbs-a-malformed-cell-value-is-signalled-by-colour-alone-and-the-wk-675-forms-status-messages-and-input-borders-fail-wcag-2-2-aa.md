@@ -2,12 +2,12 @@
 id: FD-1959
 family: finding
 title: NFR-463 is not met on the static limbs — a malformed cell value is signalled by colour alone, and the WK-675 forms, status messages and input borders fail WCAG 2.2 AA
-status: active
+status: closed
 created: 2026-10-29               # drafted 2026-10-26 under working id 8272
 owner: auditor
 tree: a3969209d62012cd6206a81598094d799efaa2cf
 corrected_by: []
-relates: [WK-675, CR-1952, PL-1546, RL-1307]
+relates: [WK-675, CR-1952, PL-1546, RL-1307, RL-1973, FD-1974, OQ-1960, SL-1971, LG-1972]
 ---
 
 # FD-1959 — NFR-463 is not met on the static limbs
@@ -123,3 +123,7 @@ The user's acceptance of WK-675 reads this finding and OQ-1960, not a "pass".
 
 Open, owner WK-675. The finding closes when F1 and the four moderates are fixed and their tests are green on `origin/main`, the lows are
 fixed or carried with a date, and OQ-1960 is decided.
+
+*(Amended 2026-10-29 by RL-1973, on the maintainer's entry "2026-10-29 22:13:59 GMT" (`to-lead.md`), R10-DP4 (c); append-only — the paragraph above is kept.)* FD-1959 closes at the merge of SL-1971 on its static limbs: F1, F2, F3, M3, M4 and the lows as R10-DP2 sets them. The condition "and OQ-1960 is decided" no longer gates the close: the browser-verification limb (axe-core and Playwright; rendered contrast, focus order, announcements, 2.4.11, reflow, text spacing, target size) lives in OQ-1960 only, owner WK-675, decided at the P2 close.
+
+***Resolved 2026-10-29***: closed by the merged fix, this PR (SL-1971 / LG-1972; the merge sha is added at the read-back) and amended by RL-1973. Fixed: F1 (`DecimalCellInput.vue`: one message tied by `aria-describedby` whenever invalid), F3 at the four sites and M3, M4 (a persistent `role="status"` region), F2 (`border-slate-300` to `border-slate-500`, 4.77:1 on white by the seat's script and 4.76:1 recomputed by the auditor and the accessibility-tester, at the R10-DP1 (b) input sites), F5, F6, L11, L12. Carried, owner WK-675, due Thu 12 Nov 2026 (the P2 exit demo), as **FD-1974**: F4, L4, L5, L6, L7, L8, L9, L10, and two found at the head by the accessibility-tester (the unnamed focusable scroll regions at `RateTableEditorView.vue:277` and `RateTableDiffPanel.vue:203`; a repeated identical status text that may not re-announce at `QuoteSandboxView.vue:208-213` and `RateTableEditorView.vue:256-261`). The browser-verification limb is held by **OQ-1960** alone. Evidence: reds by cause at base `aad4fd58` and greens at the slice head, frontend gate `Test Files  137 passed (137)` at `6a0927c0`, the F2 ratio and grep, and the accessibility-tester's report: LG-1972 "Build log" and "Audit". The input borders outside WK-675's surfaces (53 input-like hits in 13 files by the auditor's `classify.py`, "about 60" by the accessibility-tester, unreconciled) are not filed in this PR; LG-1972 carries a register-free note and the finding is filed in the next docs batch.
