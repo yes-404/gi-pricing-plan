@@ -28,6 +28,7 @@ from typing import Any
 from uuid import UUID, uuid4
 
 import pytest
+from backend.tests.conftest_db import seed_as_owner
 from backend.tests.test_api_datasets import _headers
 from backend.tests.test_data_jobs import _validate
 from backend.tests.test_model_jobs import _actuary, _dataset
@@ -628,7 +629,8 @@ async def _rating_only_caller(database: Database, workspace_id: UUID) -> dict[st
     from model_schema import ScopeType
 
     caller = uuid4()
-    async with database.unit_of_work() as session:
+
+    async def seed(session: AsyncSession) -> None:
         role = RoleRow(
             workspace_id=workspace_id, slug=f"rating-only-{uuid4().hex[:6]}",
             description="rating:read only", permissions=["rating:read"], builtin=False,
@@ -642,6 +644,8 @@ async def _rating_only_caller(database: Database, workspace_id: UUID) -> dict[st
             )
         )
         session.add(WorkspaceMemberRow(user_id=caller, workspace_id=workspace_id))
+
+    await seed_as_owner(seed)
     return _headers(caller, workspace_id)
 
 
@@ -1178,8 +1182,11 @@ async def test_a_parquet_cells_request_runs_one_job_then_pages(
     assert finished.result is not None
     from sqlalchemy import delete
 
-    async with database.unit_of_work() as session:
+    # Test-side cleanup: the login role holds no DELETE on `blobs`, so the removal is the owner's.
+    async def remove(session) -> None:  # type: ignore[no-untyped-def]
         await session.execute(delete(BlobRow).where(BlobRow.sha256 == finished.result["ref"]))
+
+    await seed_as_owner(remove)
     again = api_client.get(_cells_url(parquet), params=params, headers=analyst)
     assert again.status_code == 202, again.text
 

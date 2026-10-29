@@ -10,8 +10,10 @@ import hashlib
 from datetime import UTC, datetime, timedelta
 
 import pytest
+from backend.tests.conftest_db import seed_as_owner
 from botocore.exceptions import ClientError
 from sqlalchemy import select, update
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models import AuditEventRow, BlobRow
 from app.db.session import Database
@@ -60,9 +62,7 @@ async def test_put_stores_content_and_records_size_and_type(
 
 
 @pytest.mark.req("FR-419")
-async def test_identical_content_is_stored_once(
-    database: Database, blob_store: BlobStore
-) -> None:
+async def test_identical_content_is_stored_once(database: Database, blob_store: BlobStore) -> None:
     """FR-419: writing identical content is a no-op returning the existing reference."""
     payload = unique(b"identical bytes")
     async with database.unit_of_work() as session:
@@ -74,8 +74,10 @@ async def test_identical_content_is_stored_once(
 
     async with database.session() as session:
         rows = (
-            await session.execute(select(BlobRow).where(BlobRow.sha256 == first.sha256))
-        ).scalars().all()
+            (await session.execute(select(BlobRow).where(BlobRow.sha256 == first.sha256)))
+            .scalars()
+            .all()
+        )
     assert len(rows) == 1
 
 
@@ -90,9 +92,7 @@ async def test_different_content_gets_a_different_reference(
 
 
 @pytest.mark.req("FR-418")
-async def test_content_round_trips_byte_for_byte(
-    database: Database, blob_store: BlobStore
-) -> None:
+async def test_content_round_trips_byte_for_byte(database: Database, blob_store: BlobStore) -> None:
     payload = bytes(range(256)) * 40
     async with database.unit_of_work() as session:
         ref = await blob_store.put(session, payload, "application/octet-stream")
@@ -188,7 +188,7 @@ async def test_gc_defaults_to_dry_run_and_deletes_nothing(
 
 @pytest.mark.req("FR-420")
 async def test_gc_spares_a_referenced_blob(
-    database: Database, blob_store: BlobStore, workspace_id, principal
+    database: Database, owner_database: Database, blob_store: BlobStore, workspace_id, principal
 ) -> None:
     """Negative: collecting a referenced blob deletes a dataset someone still points at."""
     async with database.unit_of_work() as session:
@@ -196,7 +196,7 @@ async def test_gc_spares_a_referenced_blob(
         await blobs.retain(session, ref.sha256)
     await _age_blob(database, ref.sha256, days=60)
 
-    async with database.unit_of_work() as session:
+    async with owner_database.unit_of_work() as session:
         report = await blob_store.collect_garbage(
             session, actor=principal, workspace_id=workspace_id, dry_run=False
         )
@@ -208,13 +208,13 @@ async def test_gc_spares_a_referenced_blob(
 
 @pytest.mark.req("FR-420")
 async def test_gc_spares_a_young_unreferenced_blob(
-    database: Database, blob_store: BlobStore, workspace_id, principal
+    database: Database, owner_database: Database, blob_store: BlobStore, workspace_id, principal
 ) -> None:
     """A blob exists before the artifact that references it — the grace period is that gap."""
     async with database.unit_of_work() as session:
         ref = await blob_store.put(session, unique(b"just uploaded"), "text/plain")
 
-    async with database.unit_of_work() as session:
+    async with owner_database.unit_of_work() as session:
         report = await blob_store.collect_garbage(
             session, actor=principal, workspace_id=workspace_id, dry_run=False
         )
@@ -226,13 +226,15 @@ async def test_gc_spares_a_young_unreferenced_blob(
 
 @pytest.mark.req("FR-420")
 async def test_gc_deletes_an_old_unreferenced_blob_and_audits_it(
-    database: Database, blob_store: BlobStore, workspace_id, principal
+    database: Database, owner_database: Database, blob_store: BlobStore, workspace_id, principal
 ) -> None:
+    """The sweep deletes, and the census grants the application role no DELETE on `blobs`
+    (OQ-1943: which role runs FR-420 garbage collection), so it runs on the owner."""
     async with database.unit_of_work() as session:
         ref = await blob_store.put(session, unique(b"collect me"), "text/plain")
     await _age_blob(database, ref.sha256, days=60)
 
-    async with database.unit_of_work() as session:
+    async with owner_database.unit_of_work() as session:
         report = await blob_store.collect_garbage(
             session, actor=principal, workspace_id=workspace_id, dry_run=False
         )
@@ -314,12 +316,15 @@ async def test_no_credential_survives_a_settings_dump() -> None:
 
 async def _age_blob(database: Database, sha256: str, *, days: int) -> None:
     """Backdate a blob so the grace period can be exercised without waiting 30 days."""
-    async with database.unit_of_work() as session:
+
+    async def _backdate(session: AsyncSession) -> None:
         await session.execute(
             update(BlobRow)
             .where(BlobRow.sha256 == sha256)
             .values(created_at=datetime.now(UTC) - timedelta(days=days))
         )
+
+    await seed_as_owner(_backdate)
 
 
 @pytest.mark.req("FR-421")
@@ -420,3 +425,87 @@ async def test_a_gone_multipart_upload_with_no_object_is_the_named_failure(
         blob_store._complete_staged("staging/k", "gone", 2)
     assert caught.value.code == "VALIDATION_FAILED"
     assert caught.value.title == "The upload is missing"
+
+
+class _RacingS3:
+    """S3 client stub for a concurrent first start (FD-1850): the bucket is absent at
+    `head_bucket`, a peer creates it before our `create_bucket`, so that call raises
+    `create_code`. After that the bucket exists unless `head_after` says otherwise."""
+
+    def __init__(self, create_code: str, *, head_after: str | None = None) -> None:
+        self.create_code = create_code
+        self.head_after = head_after
+        self.heads = 0
+        self.lifecycle: dict[str, object] | None = None
+
+    def head_bucket(self, Bucket: str) -> None:  # noqa: N803 - boto3 keyword names
+        self.heads += 1
+        if self.heads == 1:
+            raise _client_error("404", "HeadBucket")
+        if self.head_after is not None:
+            raise _client_error(self.head_after, "HeadBucket")
+
+    def create_bucket(self, Bucket: str) -> None:  # noqa: N803
+        raise _client_error(self.create_code, "CreateBucket")
+
+    def get_bucket_lifecycle_configuration(self, Bucket: str) -> dict[str, object]:  # noqa: N803
+        raise _client_error("NoSuchLifecycleConfiguration", "GetBucketLifecycleConfiguration")
+
+    def put_bucket_lifecycle_configuration(
+        self,
+        Bucket: str,  # noqa: N803
+        LifecycleConfiguration: dict[str, object],  # noqa: N803
+    ) -> None:
+        self.lifecycle = LifecycleConfiguration
+
+
+def _store_with(client: _RacingS3) -> BlobStore:
+    store = BlobStore.__new__(BlobStore)
+    store._bucket = "race-bucket"
+    store._client = client  # type: ignore[assignment]
+    return store
+
+
+@pytest.mark.req("FR-421")
+async def test_ensure_bucket_survives_bucket_already_owned_by_you() -> None:
+    """FD-1850 (i): the loser of a first-start create race gets `BucketAlreadyOwnedByYou`;
+    that is success and the lifecycle rule is still set."""
+    client = _RacingS3("BucketAlreadyOwnedByYou")
+    await _store_with(client).ensure_bucket()
+    assert client.lifecycle is not None
+
+
+@pytest.mark.req("FR-421")
+async def test_ensure_bucket_accepts_bucket_already_exists_when_head_now_succeeds() -> None:
+    """FD-1850 (ii): MinIO may answer `BucketAlreadyExists` to the race loser; the re-run
+    `head_bucket` succeeds (our access), so it is success."""
+    client = _RacingS3("BucketAlreadyExists")
+    await _store_with(client).ensure_bucket()
+    assert client.lifecycle is not None
+    assert client.heads == 2  # the bucket was re-checked, not assumed
+
+
+@pytest.mark.req("FR-421")
+@pytest.mark.parametrize("head_code", ["403", "404"])
+async def test_ensure_bucket_raises_bucket_already_exists_when_head_still_fails(
+    head_code: str,
+) -> None:
+    """FD-1850 (iii), breaker: in S3 `BucketAlreadyExists` means another owner. Treating it
+    as success when we still cannot reach the bucket leaves every later call failing far
+    from the cause; the original error is raised."""
+    client = _RacingS3("BucketAlreadyExists", head_after=head_code)
+    with pytest.raises(ClientError) as info:
+        await _store_with(client).ensure_bucket()
+    assert info.value.response["Error"]["Code"] == "BucketAlreadyExists"
+    cause = info.value.__cause__
+    assert isinstance(cause, ClientError)
+    assert cause.response["Error"]["Code"] == head_code  # the head error is chained
+    assert client.lifecycle is None
+
+
+@pytest.mark.req("FR-421")
+async def test_ensure_bucket_reraises_any_other_create_failure() -> None:
+    client = _RacingS3("AccessDenied")
+    with pytest.raises(ClientError):
+        await _store_with(client).ensure_bucket()
+    assert client.lifecycle is None

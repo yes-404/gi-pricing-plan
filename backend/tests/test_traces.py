@@ -14,7 +14,9 @@ import random
 from datetime import UTC, datetime, timedelta
 
 import pytest
-from sqlalchemy import update
+from backend.tests.conftest_db import seed_as_owner
+from sqlalchemy import ColumnElement, update
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models import BlobRow, ScoringTraceRow
 from app.db.session import Database
@@ -165,6 +167,18 @@ def _bundle_hash() -> str:
     return f"sha256:{new_uuid7().hex.ljust(64, '0')[:64]}"
 
 
+async def _backdate(model: type, where: ColumnElement[bool], *, days: int) -> None:
+    """Backdate a row the application may not UPDATE (`scoring_traces` is append-only, and
+    `blobs` grants only `ref_count`), as the owner."""
+
+    async def _update(session: AsyncSession) -> None:
+        await session.execute(
+            update(model).where(where).values(created_at=datetime.now(UTC) - timedelta(days=days))
+        )
+
+    await seed_as_owner(_update)
+
+
 async def _write(
     database: Database, blob_store: BlobStore, workspace_id, *, trace: Trace, sample_reason="rate"
 ) -> ScoringTraceRow:
@@ -220,9 +234,7 @@ async def test_row_and_body_are_written_from_one_serialisation(
 
     assert row.quote_id == body.quote_id == original.quote_id
     assert (
-        row.rating_version_ref
-        == str(body.rating_version_ref)
-        == str(original.rating_version_ref)
+        row.rating_version_ref == str(body.rating_version_ref) == str(original.rating_version_ref)
     )
     assert row.bundle_hash == body.bundle_hash == original.bundle_hash
 
@@ -295,12 +307,7 @@ async def test_deleting_a_trace_outside_the_retention_floor_is_permitted(
             bundle_hash=_bundle_hash(),
         ),
     )
-    async with database.unit_of_work() as session:
-        await session.execute(
-            update(ScoringTraceRow)
-            .where(ScoringTraceRow.id == row.id)
-            .values(created_at=datetime.now(UTC) - timedelta(days=400))
-        )
+    await _backdate(ScoringTraceRow, ScoringTraceRow.id == row.id, days=400)
 
     async with database.unit_of_work() as session:
         await traces.delete_trace(session, row.id)
@@ -329,12 +336,7 @@ async def test_a_referenced_trace_blob_survives_garbage_collection(
             bundle_hash=_bundle_hash(),
         ),
     )
-    async with database.unit_of_work() as session:
-        await session.execute(
-            update(BlobRow)
-            .where(BlobRow.sha256 == row.blob_sha256)
-            .values(created_at=datetime.now(UTC) - timedelta(days=60))
-        )
+    await _backdate(BlobRow, BlobRow.sha256 == row.blob_sha256, days=60)
 
     async with database.unit_of_work() as session:
         report = await blob_store.collect_garbage(
@@ -514,12 +516,7 @@ async def test_deleting_a_pending_trace_does_not_try_to_release_a_missing_blob(
     """Negative: a pending row has `blob_sha256 IS NULL`; `delete_trace` must not try to
     release it (`blobs.release` on `None` would be the bug this guards)."""
     pending = await _write_pending(database, workspace_id)
-    async with database.unit_of_work() as session:
-        await session.execute(
-            update(ScoringTraceRow)
-            .where(ScoringTraceRow.id == pending.id)
-            .values(created_at=datetime.now(UTC) - timedelta(days=400))
-        )
+    await _backdate(ScoringTraceRow, ScoringTraceRow.id == pending.id, days=400)
     async with database.unit_of_work() as session:
         await traces.delete_trace(session, pending.id)
     async with database.session() as session:

@@ -79,6 +79,11 @@ _INPUT_FREE = {
     # (`test_the_ladder_refusal_never_carries_a_quote_input` drives it with a sentinel).
     ("rating/score.py", "build_scoring_result"): 1,
     ("rating/score.py", "score_one"): 1,  # a fixed sentence about a missing rating_version_ref
+    # RL-1567 entries (1) and (2): an integral output whose value is not integral; the text names
+    # the output and its declared type, never the value
+    # (`test_a_near_integer_under_an_integral_type_is_refused_with_rating_type_mismatch` drives it
+    # with `2.9999999999` and asserts that value is absent from the message).
+    ("rating/score.py", "_build_outputs"): 1,
     ("rating/score.py", "_raise_named"): 1,  # the constructor helper itself (`from None`)
     # The model-call sentinel re-raised as a coded error: its text is `MODEL_CALL_FAILED: ` plus a
     # static sentence built in `runtime.py`, never a model's or the engine's own error text.
@@ -90,8 +95,10 @@ _INPUT_FREE = {
     # and, for a GLM or peril component scorer failure (PL-1464, the 2026-10-10 03:20:34 BST
     # ruling), the error code and the ref string only, through the one shared `except`:
     # f"{exc.code}: {ref_str} could not be scored for this quote (FR-255)", never the model's
-    # text (`test_a_glm_failure_reports_its_code_and_never_the_models_text` drives it).
-    ("rating/runtime.py", "handler"): 3,
+    # text (`test_a_glm_failure_reports_its_code_and_never_the_models_text` drives it); and the
+    # fourth, FD-1610 limb 2 (c): `MODEL_CALL_REQUIRED_INPUT_ABSENT`, step id and graph names
+    # only, never a value (`test_rating_model_call_dropped_inputs.py` drives it).
+    ("rating/runtime.py", "handler"): 4,
     ("rating/compile.py", "check_step_refs_pinned"): 1,  # step id and ref string, no quote
     # artifact-level (compile time), no quote; the sixth is FR-223 (mode mismatch),
     # whose text (`ModelReferenceModeError`, caught by class) is the step id and two declared modes

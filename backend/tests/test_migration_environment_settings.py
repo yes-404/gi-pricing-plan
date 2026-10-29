@@ -46,7 +46,7 @@ async def test_environment_settings_round_trip_leaves_api_keys_unchanged(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """`upgrade`, `downgrade`, `upgrade` over a database holding `api_keys` rows (FD-1650)."""
-    monkeypatch.setenv("GIP_DATABASE_URL", scratch_database)
+    monkeypatch.setenv("GIP_MIGRATION_DATABASE_URL", scratch_database)
     cfg = _alembic_config()
     await _upgrade(cfg, _BEFORE)
     account = await _insert_account(scratch_database, "round-trip", ["dev", "uat"])

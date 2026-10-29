@@ -20,6 +20,7 @@ from __future__ import annotations
 from uuid import UUID
 
 import pytest
+from backend.tests.conftest_db import grant_roles_as_owner
 from backend.tests.test_diagnostics import _fit
 from sqlalchemy import select, text
 from sqlalchemy.exc import DBAPIError
@@ -28,14 +29,11 @@ from app.db.models import (
     DatasetVersionRow,
     DiagnosticsRow,
     ModelRow,
-    RoleAssignmentRow,
-    RoleRow,
-    WorkspaceMemberRow,
 )
 from app.db.session import Database
 from app.errors import PlatformError
 from app.platform import approvals as approval_service
-from app.platform import audit, rbac
+from app.platform import audit
 from app.platform import modelling as service
 from model_schema import (
     ActorKind,
@@ -46,7 +44,6 @@ from model_schema import (
     JobSource,
     ModelStatus,
     Principal,
-    ScopeType,
     new_uuid7,
 )
 
@@ -63,42 +60,13 @@ async def _grant_role(
     The membership row (W6b-11) is the other half of the same rule as the `grant`
     fixture's: the dev caller resolves through the memberships the database holds, so a
     principal granted a role but not a membership is refused before any permission check
-    runs. Idempotent — a caller may be granted two roles across two calls.
+    runs. Idempotent — a caller may be granted two roles across two calls. The workspace
+    row is created first for the membership FK (FR-395). The writes run on the owner's
+    engine (`grant_roles_as_owner`); `database` stays in the signature for the callers.
     """
-    async with database.unit_of_work() as session:
-        # The workspace row must exist for the membership FK (FR-395).
-        from app.platform import workspaces
-
-        await workspaces.ensure_workspace(session, workspace_id=workspace_id)
-        await rbac.seed_builtin_roles(session, workspace_id)
-        role = (
-            await session.execute(
-                select(RoleRow).where(
-                    RoleRow.workspace_id == workspace_id, RoleRow.slug == role_slug
-                )
-            )
-        ).scalar_one()
-        session.add(
-            RoleAssignmentRow(
-                workspace_id=workspace_id,
-                principal_kind="user",
-                principal_id=principal_id,
-                role_id=role.id,
-                scope_type=ScopeType.WORKSPACE.value,
-            )
-        )
-        existing = (
-            await session.execute(
-                select(WorkspaceMemberRow).where(
-                    WorkspaceMemberRow.user_id == principal_id,
-                    WorkspaceMemberRow.workspace_id == workspace_id,
-                )
-            )
-        ).scalar_one_or_none()
-        if existing is None:
-            session.add(
-                WorkspaceMemberRow(user_id=principal_id, workspace_id=workspace_id)
-            )
+    await grant_roles_as_owner(
+        workspace_id, principal_id, role_slug, workspace=True, membership=True
+    )
 
 
 async def _principal_with(

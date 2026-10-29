@@ -14,13 +14,13 @@ from uuid import UUID
 
 import pytest
 from backend.tests.approved_rows import add_approved
+from backend.tests.conftest_db import grant_roles_as_owner
 from sqlalchemy import select
 
-from app.db.models import DatasetVersionRow, RoleAssignmentRow, RoleRow, ValidationRuleRow
+from app.db.models import DatasetVersionRow, ValidationRuleRow
 from app.db.session import Database
 from app.platform import datasets as dataset_service
 from app.platform import jobs as job_service
-from app.platform import rbac
 from app.platform import validation as validation_service
 from app.platform import validation_rules as rule_service
 from app.platform.blobs import BlobStore
@@ -32,7 +32,6 @@ from model_schema import (
     JobStatus,
     Principal,
     RuleOutcome,
-    ScopeType,
     Severity,
     ValidationLayer,
     new_uuid7,
@@ -46,22 +45,7 @@ _BOOK = _HEADER + b"P1,0.5,0,0,G1,30\nP2,0.5,1,250000,G2,40\nP3,1.0,0,0,G1,25\n"
 
 async def _actor(database: Database, workspace_id: UUID, role: str) -> Principal:
     who = Principal(kind=ActorKind.USER, id=new_uuid7(), display=f"{role}@insurer.example")
-    async with database.unit_of_work() as session:
-        await rbac.seed_builtin_roles(session, workspace_id)
-        role_row = (
-            await session.execute(
-                select(RoleRow).where(RoleRow.workspace_id == workspace_id, RoleRow.slug == role)
-            )
-        ).scalar_one()
-        session.add(
-            RoleAssignmentRow(
-                workspace_id=workspace_id,
-                principal_kind="user",
-                principal_id=who.id,
-                role_id=role_row.id,
-                scope_type=ScopeType.WORKSPACE.value,
-            )
-        )
+    await grant_roles_as_owner(workspace_id, who.id, role)
     return who
 
 

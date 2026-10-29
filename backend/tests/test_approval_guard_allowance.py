@@ -13,36 +13,21 @@ from contextlib import asynccontextmanager
 from typing import Any
 
 import pytest
-from sqlalchemy import select
+from backend.tests.conftest_db import grant_roles_as_owner
 from sqlalchemy.exc import DBAPIError
 
-from app.db.models import RoleAssignmentRow, RoleRow, ValidationRuleRow
+from app.db.models import ValidationRuleRow
 from app.db.session import Database
-from app.platform import approvals, datasets, rbac
+from app.platform import approvals, datasets
 from app.platform import validation_rules as rule_service
-from model_schema import ActorKind, Principal, ScopeType, Severity, ValidationLayer, new_uuid7
+from model_schema import ActorKind, Principal, Severity, ValidationLayer, new_uuid7
 
 GUARD_SQLSTATE = "GP001"
 
 
 async def _principal_with_role(database: Database, workspace_id: Any, slug: str) -> Principal:
     user = Principal(kind=ActorKind.USER, id=new_uuid7(), display=f"{slug}@insurer.example")
-    async with database.unit_of_work() as session:
-        await rbac.seed_builtin_roles(session, workspace_id)
-        role = (
-            await session.execute(
-                select(RoleRow).where(RoleRow.workspace_id == workspace_id, RoleRow.slug == slug)
-            )
-        ).scalar_one()
-        session.add(
-            RoleAssignmentRow(
-                workspace_id=workspace_id,
-                principal_kind="user",
-                principal_id=user.id,
-                role_id=role.id,
-                scope_type=ScopeType.WORKSPACE.value,
-            )
-        )
+    await grant_roles_as_owner(workspace_id, user.id, slug)
     return user
 
 

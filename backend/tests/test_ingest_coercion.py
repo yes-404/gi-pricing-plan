@@ -15,19 +15,16 @@ from typing import Any
 import polars as pl
 import pytest
 import pytest_asyncio
+from backend.tests.conftest_db import grant_roles_as_owner
 from sqlalchemy import select
 
 from app.db.models import (
     DatasetVersionRow,
     IngestionRunRow,
-    RoleAssignmentRow,
-    RoleRow,
-    WorkspaceMemberRow,
 )
 from app.db.session import Database
 from app.platform import datasets as dataset_service
 from app.platform import jobs as job_service
-from app.platform import rbac
 from app.platform.blobs import BlobStore
 from app.worker.data_handlers import register_data_handlers
 from app.worker.tasks import execute_job
@@ -37,7 +34,6 @@ from model_schema import (
     JobKind,
     JobStatus,
     Principal,
-    ScopeType,
     new_uuid7,
 )
 
@@ -82,25 +78,9 @@ def _handlers() -> None:
 @pytest_asyncio.fixture
 async def actor(database: Database, workspace_id) -> Principal:
     user = Principal(kind=ActorKind.USER, id=new_uuid7(), display="a@insurer.example")
-    async with database.unit_of_work() as session:
-        from app.platform import workspaces
-
-        await workspaces.ensure_workspace(session, workspace_id=workspace_id)
-        await rbac.seed_builtin_roles(session, workspace_id)
-        session.add(WorkspaceMemberRow(user_id=user.id, workspace_id=workspace_id))
-        role = (
-            await session.execute(
-                select(RoleRow).where(
-                    RoleRow.workspace_id == workspace_id, RoleRow.slug == "analyst"
-                )
-            )
-        ).scalar_one()
-        session.add(
-            RoleAssignmentRow(
-                workspace_id=workspace_id, principal_kind="user", principal_id=user.id,
-                role_id=role.id, scope_type=ScopeType.WORKSPACE.value,
-            )
-        )
+    await grant_roles_as_owner(
+        workspace_id, user.id, "analyst", workspace=True, membership=True
+    )
     return user
 
 

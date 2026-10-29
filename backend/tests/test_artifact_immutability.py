@@ -17,9 +17,11 @@ from pathlib import Path
 from uuid import uuid4
 
 import pytest
+from backend.tests.conftest_db import seed_as_owner
 from sqlalchemy import text
 from sqlalchemy.exc import DBAPIError
 
+from app.db.immutability import _declared
 from app.db.models import Base, DatasetVersionRow
 from app.db.session import Database
 from app.platform import datasets, profiles, validation
@@ -39,21 +41,6 @@ from model_schema.datasets import VALID_DATASET_TRANSITIONS, DatasetStatus
 ACTOR = Principal(kind=ActorKind.USER, id=new_uuid7(), display="a@insurer.example")
 
 
-
-def _declared(kind: str) -> tuple[str, ...]:
-    """The tables whose ORM declaration says `kind` (DP-8): derived, never restated.
-
-    Every mapped table declares `immutability` in `__table_args__` (`app/db/models.py`); a table
-    that declares nothing fails `test_every_mapped_table_declares_its_immutability`. The set of
-    tables Layer 1 locks is therefore read from where the table is written, and a new artifact
-    table cannot be forgotten silently (FD-1728). It replaces the list that was written out here,
-    which had thirteen names and was why eleven artifact tables were missed.
-    """
-    return tuple(
-        sorted(t.name for t in Base.metadata.sorted_tables if t.info.get("immutability") == kind)
-    )
-
-
 async def _grant(database: Database, workspace_id) -> None:
     """The actor needs `dataset:write` to create the artifacts these tests then protect."""
     from sqlalchemy import select
@@ -62,7 +49,7 @@ async def _grant(database: Database, workspace_id) -> None:
     from app.platform import rbac
     from model_schema import ScopeType
 
-    async with database.unit_of_work() as session:
+    async def _seed(session):
         await rbac.seed_builtin_roles(session, workspace_id)
         role = (
             await session.execute(
@@ -77,6 +64,7 @@ async def _grant(database: Database, workspace_id) -> None:
                 role_id=role.id, scope_type=ScopeType.WORKSPACE.value,
             )
         )
+    await seed_as_owner(_seed)
 
 
 async def _version(database: Database, workspace_id):
@@ -116,12 +104,16 @@ async def _report(database: Database, workspace_id, version_id):
 
 
 @pytest.mark.req("FR-43")
-async def test_a_stored_report_cannot_be_rewritten(database: Database, workspace_id) -> None:
+async def test_a_stored_report_cannot_be_rewritten(
+    database: Database, owner_database: Database, workspace_id
+) -> None:
     """The exact statement an audit used to turn 190 failures into passes."""
     report_id = await _report(database, workspace_id, await _version(database, workspace_id))
 
+    # Trigger probe: the trigger is what is asserted, so the statement runs as the owner (on the
+    # login role the privilege check refuses first). Setup and reads stay on `database`.
     with pytest.raises(DBAPIError) as refused:
-        async with database.unit_of_work() as session:
+        async with owner_database.unit_of_work() as session:
             await session.execute(
                 text("UPDATE validation_reports SET overall = 'pass' WHERE id = :id"),
                 {"id": report_id},
@@ -140,7 +132,7 @@ async def test_a_stored_report_cannot_be_rewritten(database: Database, workspace
 
 @pytest.mark.req("FR-43")
 async def test_a_stored_report_cannot_be_deleted_or_truncated(
-    database: Database, workspace_id
+    database: Database, owner_database: Database, workspace_id
 ) -> None:
     """`DELETE` removes the evidence; `TRUNCATE` removes all of it.
 
@@ -149,21 +141,25 @@ async def test_a_stored_report_cannot_be_deleted_or_truncated(
     """
     report_id = await _report(database, workspace_id, await _version(database, workspace_id))
 
+    # Trigger probe: the trigger is what is asserted, so the statement runs as the owner (on the
+    # login role the privilege check refuses first). Setup and reads stay on `database`.
     with pytest.raises(DBAPIError) as deleted:
-        async with database.unit_of_work() as session:
+        async with owner_database.unit_of_work() as session:
             await session.execute(
                 text("DELETE FROM validation_reports WHERE id = :id"), {"id": report_id}
             )
     assert "append-only" in str(deleted.value)
 
     with pytest.raises(DBAPIError) as truncated:
-        async with database.unit_of_work() as session:
+        async with owner_database.unit_of_work() as session:
             await session.execute(text("TRUNCATE validation_reports"))
     assert "append-only" in str(truncated.value)
 
 
 @pytest.mark.req("FR-43")
-async def test_a_profile_cannot_be_rewritten(database: Database, workspace_id) -> None:
+async def test_a_profile_cannot_be_rewritten(
+    database: Database, owner_database: Database, workspace_id
+) -> None:
     """A profile is what the factor workbench reads and what drift is measured against.
 
     A rewritten profile makes two runs of the same comparison disagree with no artifact
@@ -179,8 +175,10 @@ async def test_a_profile_cannot_be_rewritten(database: Database, workspace_id) -
             session, workspace_id=workspace_id, actor=ACTOR, profile=profile
         )
 
+    # Trigger probe: the trigger is what is asserted, so the statement runs as the owner (on the
+    # login role the privilege check refuses first). Setup and reads stay on `database`.
     with pytest.raises(DBAPIError) as refused:
-        async with database.unit_of_work() as session:
+        async with owner_database.unit_of_work() as session:
             await session.execute(
                 text("UPDATE profiles SET body = '{}'::jsonb WHERE id = :id"), {"id": profile.id}
             )
@@ -189,7 +187,7 @@ async def test_a_profile_cannot_be_rewritten(database: Database, workspace_id) -
 
 @pytest.mark.req("FR-43")
 async def test_an_acknowledgement_cannot_be_rewritten_or_removed(
-    database: Database, workspace_id
+    database: Database, owner_database: Database, workspace_id
 ) -> None:
     """An acknowledgement is a named person accepting a warning (FR-47).
 
@@ -210,22 +208,24 @@ async def test_an_acknowledgement_cannot_be_rewritten_or_removed(
              "rule": uuid4(), "user": ACTOR.id, "why": "Reviewed with the reserving team."},
         )
 
+    # Trigger probe: the trigger is what is asserted, so the statement runs as the owner (on the
+    # login role the privilege check refuses first). Setup and reads stay on `database`.
     with pytest.raises(DBAPIError) as edited:
-        async with database.unit_of_work() as session:
+        async with owner_database.unit_of_work() as session:
             await session.execute(
                 text("UPDATE validation_acknowledgements SET justification = 'ok'")
             )
     assert "append-only" in str(edited.value)
 
     with pytest.raises(DBAPIError) as removed:
-        async with database.unit_of_work() as session:
+        async with owner_database.unit_of_work() as session:
             await session.execute(text("DELETE FROM validation_acknowledgements"))
     assert "append-only" in str(removed.value)
 
 
 @pytest.mark.req("FR-43")
 async def test_a_blobs_content_cannot_change_while_its_lifecycle_can(
-    database: Database, workspace_id
+    owner_database: Database, workspace_id
 ) -> None:
     """`blobs` is deliberately **not** append-only, and the requirement was corrected to say so.
 
@@ -234,7 +234,7 @@ async def test_a_blobs_content_cannot_change_while_its_lifecycle_can(
     content's own address: changed bytes are a different row, not an edited one.
     """
     digest = (new_uuid7().hex * 2)[:64]  # the column is the bare 64-char digest
-    async with database.unit_of_work() as session:
+    async with owner_database.unit_of_work() as session:
         await session.execute(
             text(
                 "INSERT INTO blobs (sha256, bytes, media_type, ref_count, created_at) "
@@ -244,21 +244,21 @@ async def test_a_blobs_content_cannot_change_while_its_lifecycle_can(
         )
 
     # Lifecycle: permitted, because GC and referencing depend on it.
-    async with database.unit_of_work() as session:
+    async with owner_database.unit_of_work() as session:
         await session.execute(
             text("UPDATE blobs SET ref_count = ref_count + 1 WHERE sha256 = :d"), {"d": digest}
         )
 
     # Content: refused.
     with pytest.raises(DBAPIError) as refused:
-        async with database.unit_of_work() as session:
+        async with owner_database.unit_of_work() as session:
             await session.execute(
                 text("UPDATE blobs SET bytes = 99 WHERE sha256 = :d"), {"d": digest}
             )
     assert "digest of its bytes" in str(refused.value)
 
     # And deletion stays possible: reference-counted GC is a requirement, not a leak.
-    async with database.unit_of_work() as session:
+    async with owner_database.unit_of_work() as session:
         await session.execute(
             text("UPDATE blobs SET ref_count = 0 WHERE sha256 = :d"), {"d": digest}
         )
@@ -512,7 +512,7 @@ _CASES = [
 @pytest.mark.req("FR-44")
 @pytest.mark.parametrize(("table", "statement"), _CASES)
 async def test_an_artifact_cannot_be_rewritten_from_the_owner_connection(
-    database: Database, workspace_id, table: str, statement: str
+    owner_database: Database, workspace_id, table: str, statement: str
 ) -> None:
     """Each artifact table refuses each of `UPDATE`, `DELETE` and `TRUNCATE`, one case apiece.
 
@@ -524,7 +524,7 @@ async def test_an_artifact_cannot_be_rewritten_from_the_owner_connection(
     """
     row_id = new_uuid7()
     params = _row_params(workspace_id, row_id)
-    async with database.unit_of_work() as session:
+    async with owner_database.unit_of_work() as session:
         for insert in _statements(_APPEND_ONLY_ROWS[table]):
             await session.execute(text(insert), params)
 
@@ -532,12 +532,12 @@ async def test_an_artifact_cannot_be_rewritten_from_the_owner_connection(
         "UPDATE": f"UPDATE {table} SET id = id WHERE id = :id",
         "DELETE": f"DELETE FROM {table} WHERE id = :id",
         # a row trigger does not fire on this, which is why two exist
-        "TRUNCATE": f"TRUNCATE {await _referencing_closure(database, table)}",
+        "TRUNCATE": f"TRUNCATE {await _referencing_closure(owner_database, table)}",
     }[statement]
-    refused = await _probe(database, [(sql, {"id": row_id})])
+    refused = await _probe(owner_database, [(sql, {"id": row_id})])
     assert "append-only" in _assert_refused(refused, f"{table}: {sql}")
 
-    async with database.session() as session:
+    async with owner_database.session() as session:
         survived = (
             await session.execute(
                 text(f"SELECT count(*) FROM {table} WHERE id = :id"), {"id": row_id}
@@ -628,7 +628,7 @@ async def test_a_guarded_artifact_moves_only_forward_from_the_owner_connection(
 
 @pytest.mark.req("FR-44")
 async def test_a_gip_app_update_on_factors_is_refused_by_the_trigger_not_only_the_grant(
-    database: Database, workspace_id
+    owner_database: Database, workspace_id
 ) -> None:
     """FD-1704 and the maintainer's ADD (PL-1769 DP-1 (a)): the planted UPDATE is refused.
 
@@ -638,13 +638,13 @@ async def test_a_gip_app_update_on_factors_is_refused_by_the_trigger_not_only_th
     """
     row_id = new_uuid7()
     row = _row_params(workspace_id, row_id)
-    async with database.unit_of_work() as session:
+    async with owner_database.unit_of_work() as session:
         await session.execute(text(str(_APPEND_ONLY_ROWS["factors"])), row)
     planted = text("UPDATE factors SET body = '{\"rewritten\": true}' WHERE id = :id")
 
     async def as_gip_app(*, reopen_layer_1: bool) -> None:
-        # `database.session()` never commits, so neither the role switch nor the GRANT survives.
-        async with database.session() as session:
+        # `owner_database.session()` never commits: neither the role switch nor the GRANT survives.
+        async with owner_database.session() as session:
             if reopen_layer_1:
                 await session.execute(text("GRANT UPDATE ON factors TO gip_app"))
             await session.execute(text("SET LOCAL ROLE gip_app"))
@@ -660,7 +660,7 @@ async def test_a_gip_app_update_on_factors_is_refused_by_the_trigger_not_only_th
         await as_gip_app(reopen_layer_1=True)
     assert "factors is append-only: UPDATE rejected (01 FR-42, FR-43)" in str(by_trigger.value)
 
-    async with database.session() as session:
+    async with owner_database.session() as session:
         leaked = (
             await session.execute(
                 text("SELECT has_table_privilege('gip_app', 'factors', 'UPDATE')")
@@ -687,7 +687,7 @@ _ROW_GUARDED_ONLY = (
 @pytest.mark.req("FR-44")
 @pytest.mark.parametrize("table", _ROW_GUARDED_ONLY)
 async def test_a_row_guarded_table_refuses_truncate_from_the_owner_connection(
-    database: Database, table: str
+    owner_database: Database, table: str
 ) -> None:
     """A row guard does not fire on `TRUNCATE`: six tables had one and could still be emptied.
 
@@ -696,8 +696,8 @@ async def test_a_row_guarded_table_refuses_truncate_from_the_owner_connection(
     trigger already refuses, that message is the one printed here (plan review R2); the catalog
     test `<table>_no_truncate` is the table-specific proof.
     """
-    sql = f"TRUNCATE {await _referencing_closure(database, table)}"
-    refused = await _probe(database, [(sql, {})])
+    sql = f"TRUNCATE {await _referencing_closure(owner_database, table)}"
+    refused = await _probe(owner_database, [(sql, {})])
     message = _assert_refused(refused, sql)
     assert "append-only" in message, message
     print(f"{table}: {message.splitlines()[0] if message else message}")

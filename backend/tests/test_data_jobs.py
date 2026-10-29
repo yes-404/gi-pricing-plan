@@ -16,6 +16,7 @@ from uuid import UUID
 import pytest
 import pytest_asyncio
 from backend.tests.approved_rows import add_approved
+from backend.tests.conftest_db import seed_as_owner
 from backend.tests.test_ingest_coercion import assert_row_identity
 from sqlalchemy import select
 
@@ -91,7 +92,7 @@ def _handlers() -> None:
 @pytest_asyncio.fixture
 async def actuary(database: Database, workspace_id) -> Principal:
     user = Principal(kind=ActorKind.USER, id=new_uuid7(), display="a@insurer.example")
-    async with database.unit_of_work() as session:
+    async def _seed(session):
         # The workspace row must exist for the membership FK (FR-395).
         from app.platform import workspaces
 
@@ -115,6 +116,7 @@ async def actuary(database: Database, workspace_id) -> Principal:
                     role_id=role.id, scope_type=ScopeType.WORKSPACE.value,
                 )
             )
+    await seed_as_owner(_seed)
     return user
 
 

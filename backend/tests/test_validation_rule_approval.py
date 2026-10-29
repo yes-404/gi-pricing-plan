@@ -19,10 +19,12 @@ from uuid import UUID
 import pytest
 import pytest_asyncio
 from backend.tests.approved_rows import add_approved, mark_approved
+from backend.tests.conftest_db import seed_as_owner
 from backend.tests.test_api_approvals import _headers, _require_two_approvals
 from backend.tests.test_data_jobs import CLEAN, DIRTY, _ingest
 from fastapi.testclient import TestClient
 from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import Environment, Settings
 from app.db.models import (
@@ -505,7 +507,8 @@ async def test_an_approver_without_a_policy_role_is_refused(
     created = await _submitted_rule(client, database, blob_store, workspace_id, principal, author)
     custom = new_uuid7()
     await grant("analyst", principal_id=custom)  # seeds the workspace and the membership
-    async with database.unit_of_work() as session:
+
+    async def seed(session: AsyncSession) -> None:
         role = RoleRow(workspace_id=workspace_id, slug="decider", permissions=["approval:decide"])
         session.add(role)
         await session.flush()
@@ -519,6 +522,7 @@ async def test_an_approver_without_a_policy_role_is_refused(
             )
         )
 
+    await seed_as_owner(seed)
     refused = client.post(
         f"/api/v1/validation-rules/{created['id']}/approve",
         headers=_headers(custom, workspace_id),

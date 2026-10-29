@@ -211,12 +211,17 @@ async def test_the_seed_record_pre_flight_refuses_an_analyst_who_is_not_a_member
     the negative, so the check cannot pass by always refusing: a member passes."""
     import io
 
+    from backend.tests.conftest_db import seed_as_owner
+
     from app.platform import workspaces
     from model_schema import new_uuid7
 
     check = _load_script("gi_check_seed_record", "check-seed-record.py")
     workspace_id, member_id, stranger_id = new_uuid7(), new_uuid7(), new_uuid7()
-    async with database.unit_of_work() as session:
+
+    # `ensure_member` has no application caller: only the SEED runs as the owner. The
+    # pre-flight under test (`check.check(database, ...)`) stays on the application session.
+    async def seed(session) -> None:  # type: ignore[no-untyped-def]
         await workspaces.ensure_workspace(session, workspace_id=workspace_id)
         await workspaces.ensure_member(
             session,
@@ -225,6 +230,8 @@ async def test_the_seed_record_pre_flight_refuses_an_analyst_who_is_not_a_member
             issuer="http://localhost:8080/realms/gi-pricing",
             subject=f"sub-{member_id.hex[-12:]}",
         )
+
+    await seed_as_owner(seed)
     out, err = io.StringIO(), io.StringIO()
     assert await check.check(database, workspace_id, stranger_id, out=out, err=err) == 1
     assert "not a member" in err.getvalue()

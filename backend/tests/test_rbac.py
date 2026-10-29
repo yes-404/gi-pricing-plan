@@ -4,7 +4,9 @@ FR-349)."""
 from __future__ import annotations
 
 import pytest
+from backend.tests.conftest_db import seed_as_owner
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models import AuditEventRow, RoleAssignmentRow, RoleRow
 from app.db.session import Database
@@ -35,7 +37,7 @@ async def _assign(
     scope_type: ScopeType = ScopeType.WORKSPACE,
     scope_id=None,
 ) -> None:
-    async with database.unit_of_work() as session:
+    async def seed(session: AsyncSession) -> None:
         await rbac.seed_builtin_roles(session, workspace_id)
         role = (
             await session.execute(
@@ -54,6 +56,8 @@ async def _assign(
                 scope_id=scope_id,
             )
         )
+
+    await seed_as_owner(seed)
 
 
 # -- the role catalogue ---------------------------------------------------------------
@@ -294,13 +298,15 @@ async def test_a_user_cannot_grant_a_permission_they_do_not_hold(
 
 @pytest.mark.req("FR-348")
 async def test_a_grant_within_what_the_granter_holds_succeeds_and_is_audited(
-    database: Database, workspace_id
+    database: Database, owner_database: Database, workspace_id
 ) -> None:
     admin, target = _user(), _user()
     await _assign(database, workspace_id, admin, "admin")
     await _assign(database, workspace_id, admin, "approver")
 
-    async with database.unit_of_work() as session:
+    # `grant_role` has no application caller: it runs as the owner. The reads below stay on
+    # the application's login role.
+    async with owner_database.unit_of_work() as session:
         await rbac.grant_role(
             session,
             workspace_id=workspace_id,
@@ -335,14 +341,16 @@ async def test_a_grant_within_what_the_granter_holds_succeeds_and_is_audited(
 
 @pytest.mark.req("FR-349")
 async def test_break_glass_is_time_boxed_and_expires(
-    database: Database, workspace_id
+    database: Database, owner_database: Database, workspace_id
 ) -> None:
     from datetime import UTC, datetime, timedelta
 
     admin, target = _user(), _user()
     await _assign(database, workspace_id, admin, "admin")
 
-    async with database.unit_of_work() as session:
+    # `grant_break_glass` has no application caller: it runs as the owner (and so does the
+    # test's own expiry edit below); the permission reads stay on the login role.
+    async with owner_database.unit_of_work() as session:
         assignment = await rbac.grant_break_glass(
             session,
             workspace_id=workspace_id,
@@ -363,7 +371,7 @@ async def test_break_glass_is_time_boxed_and_expires(
     assert Permission.APPROVAL_DECIDE in held
 
     # Expire it and confirm the grant stops conferring anything.
-    async with database.unit_of_work() as session:
+    async with owner_database.unit_of_work() as session:
         row = await session.get(RoleAssignmentRow, assignment.id)
         row.expires_at = datetime.now(UTC) - timedelta(seconds=1)
     async with database.session() as session:
@@ -410,13 +418,15 @@ async def test_break_glass_cannot_be_open_ended(database: Database, workspace_id
 
 @pytest.mark.req("FR-349")
 async def test_break_glass_is_audited_and_flagged(
-    database: Database, workspace_id
+    database: Database, owner_database: Database, workspace_id
 ) -> None:
     admin, target = _user(), _user()
     await _assign(database, workspace_id, admin, "admin")
     reason = "Incident INC-4471: approver unavailable, rating fix blocked."
 
-    async with database.unit_of_work() as session:
+    # `grant_break_glass` has no application caller: it runs as the owner; the audit read
+    # below stays on the login role.
+    async with owner_database.unit_of_work() as session:
         await rbac.grant_break_glass(
             session,
             workspace_id=workspace_id,
@@ -440,10 +450,12 @@ async def test_break_glass_is_audited_and_flagged(
 
 
 @pytest.mark.req("FR-344")
-async def test_seeding_roles_is_idempotent(database: Database, workspace_id) -> None:
-    async with database.unit_of_work() as session:
+@pytest.mark.production_seed
+async def test_seeding_roles_is_idempotent(owner_database: Database, workspace_id) -> None:
+    # `seed_builtin_roles` has no application caller: the whole test runs as the owner.
+    async with owner_database.unit_of_work() as session:
         first = await rbac.seed_builtin_roles(session, workspace_id)
-    async with database.unit_of_work() as session:
+    async with owner_database.unit_of_work() as session:
         second = await rbac.seed_builtin_roles(session, workspace_id)
     assert len(first) == len(BUILTIN_ROLES)
     assert second == []

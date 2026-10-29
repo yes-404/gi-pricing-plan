@@ -245,6 +245,13 @@ export const routes: RouteRecordRaw[] = [
     props: true,
   },
   {
+    // `03` §5.3's Rating Version list (FR-1903): the shell's entry to the `03` views.
+    path: "/rating",
+    name: "rating-versions",
+    meta: { requiresAuth: true },
+    component: () => import("@/views/RatingVersionListView.vue"),
+  },
+  {
     // `03` §5.3's DAG designer. `:slug` and `:version` are the Rating Version's own
     // (RL-1473), never its algorithm's.
     path: "/rating/:slug/v/:version/design",
@@ -254,6 +261,32 @@ export const routes: RouteRecordRaw[] = [
     props: (route) => ({
       slug: String(route.params.slug),
       version: String(route.params.version),
+    }),
+  },
+  {
+    // `03` §5.3's dislocation views. `:slug` and `:version` are the Rating Version's own
+    // (RL-1473); the Dislocation Run is cited by id in `?run=` (FR-265).
+    path: "/rating/:slug/v/:version/dislocation",
+    name: "rating-dislocation",
+    meta: { requiresAuth: true },
+    component: () => import("@/views/DislocationView.vue"),
+    props: (route) => ({
+      slug: String(route.params.slug),
+      version: String(route.params.version),
+      run: typeof route.query.run === "string" ? route.query.run : undefined,
+    }),
+  },
+  {
+    // `03` §5.3's Regression suite view (FR-1932). `:slug` and `:version` are the Rating
+    // Version's own (RL-1473); the run is cited by id in `?run=`.
+    path: "/rating/:slug/v/:version/tests",
+    name: "rating-tests",
+    meta: { requiresAuth: true },
+    component: () => import("@/views/RegressionSuiteView.vue"),
+    props: (route) => ({
+      slug: String(route.params.slug),
+      version: String(route.params.version),
+      run: typeof route.query.run === "string" ? route.query.run : undefined,
     }),
   },
   {

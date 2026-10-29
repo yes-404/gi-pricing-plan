@@ -109,6 +109,37 @@ Each item is checked by a command a fresh reviewer can run from the repository r
 8. **The gate is green on each slice's merge tree**: the `CLAUDE.md` §11 commands, both halves,
    each exit 0, against `origin/main...<slice branch>`.
 
+**Row 9 — FD-1585's fix slice** (row 9's dated line, 2026-10-26; SL 8270, LG 8271). Each item is
+checked at the slice PR's merge tree, with the range `origin/main...<slice branch>` named. "Red"
+means seen red **by the stated cause** at the slice's base, its line verbatim in LG 8271 (with
+`head=` first and `rc=` last, seat brief item 37) before the fix.
+
+9. `git grep -n 'with spec_not_found():' <head> -- backend/src/app/api/rate_tables.py` prints six
+   lines at the slice head (four at base `7ed5c398`: `:168`, `:173`, `:460`, `:481`); the two new
+   ones lie inside `rate_table_diff` (`:398` at base) and `rate_table_diff_cells` (`:497` at base).
+10. `git grep -c '"RATE_TABLE_MISS"' <head> -- backend/tests/test_api_rate_tables.py` prints `1`
+    (C1's `:929` only; five at base); `git grep -n 'RATE_TABLE_MISS' <head> --
+    backend/src/app/platform/rate_tables.py` prints the same six lines as at base (`:305`, `:1004`,
+    `:1106`, `:1139`, `:1167`, `:1557` at `7ed5c398`): the loaders are unchanged.
+11. R1 to R5 red by cause at the base (the response `code` is `"RATE_TABLE_MISS"`), and green at the
+    head; C1 to C4 green at both; each line in LG 8271, run on a throwaway `postgres:16-alpine`, with
+    LG 8271 quoting `head=`, the container id and each red's rc.
+12. `git diff --name-only origin/main...<slice branch>` lists only
+    `backend/src/app/api/rate_tables.py`, `backend/tests/test_api_rate_tables.py` and docs records
+    (LG 8271, SL 8270's row in `docs/roadmap.md`, FD-1585, `docs/findings/register.md`,
+    `docs/INDEX.md`): no spec, no contract.
+13. `uv run python scripts/generate-contracts.py --check` exits 0 (no shape change), and
+    `uv run python scripts/req-coverage.py` exits 0.
+14. The full gate, both halves, rc table all 0 (or under seat brief item 31's 1(f) form only), at
+    the slice head; its END row in LG 8271, which also names the slot and the window (row 9's
+    "Depends on").
+15. FD-1585 is discharged in the same PR: the register row (`docs/findings/register.md:334` at
+    `7ed5c398`, found by its title, not by an id token) gets a dated "discharged by <PR>" line,
+    and the FD a dated discharge line (the auditor's or the lead's act at the mint, `CLAUDE.md`
+    §13); CR-1952 §5e row (2)'s "discharged by" points at the PR in the WK-675 close addendum.
+16. The slice's squash merge on `main` is dated on or before 2026-10-28 (`git log -1
+    --format=%cI <squash sha>`).
+
 ## Global Constraints
 
 `PL-1286`'s Global Constraints apply unchanged: Vue 3 `<script setup lang="ts">` only; no hand-written
@@ -151,6 +182,28 @@ If exit demo (b)'s served page is S8's view (the #1164 pass), S8 is a demo need 
 | 6 | SL-1552 — S10: Rating version list | `PL-1286` S10 row, as changed by R10.1 | `03` §3.4: one new FR (spec first, R10.1); FR-25; `FD-1283` option A | S8 (order, item D); DP-5 (`RL-1473`, met); `SL-1256` (closed, met); **`03` §3.4 serialised with WK-674 S6** (`SL-1260`, R10.2) | at GO | 1 | **candidate, rung 2** (with S11) |
 | 7 | SL-1553 — S11: Regression suite view | `PL-1286` S11 row | `03` §3.8: FR-260, FR-261, FR-1221; `FD-1283` option A; a run-list read route under DP-4 (a) only if the version's evidence gives no run id | S10 (order); DP-5 (met) | at GO | 1 | **candidate, rung 2** (with S10) |
 | 8 | SL-1554 — S9: Designer III: sub-graph mounting | `PL-1286` S9 row | `03` §3.1: FR-217 (the mount), FR-218 (authoring view) | S3 closed; **`SL-1341`** (WK-1250 S3) closed | at GO | 1 | **candidate, rung 1** |
+
+*(Delta, row 9 (FD-1585), dated 2026-10-26 from 14:52 GMT, by the planner (seat plan-fd1585row), on
+the maintainer's entry "2026-10-26 14:44:23 GMT — Maintainer: RULINGS on the FD-1585 slice and
+FD-1652 window plans (`handover/plan-fd1585-fd1652-2026-10-26.md` at 0996cada); FD-1652 window
+GRANTED for today 15:00" in `~/gi-pricing-plan.local/channel/to-lead.md`, items (a) ("**Owner A =
+WK-675.** … The slice's SL row and LG go under WK-675; it is one of the WK-675 acceptance
+blockers"), (b) ("**Gate: after S1c's SOLO END, or earlier in a free slot while S1c is not
+gating.**") and (d) ("**FD-1585 red runs: on a throwaway `postgres:16-alpine`, not the shared DB and
+not a DB-lane gap.**"), and on the entry "2026-10-26 10:54:44 GMT", owed row (2) ("FD-1585 fix —
+**Wed 28 Oct, owner WK-675 (a code slice from main, gated)**"): **a new row 9 — FD-1585: the diff
+routes answer `NOT_FOUND`.** Its slice is **SL 8270**; its ledger **LG 8271** (both reserved in
+`~/gi-pricing-plan.local/handover/eta.md`, 14:46:06 UTC). Work **WK-675**; due **Wed 28 Oct 2026**.
+The row, in the table's columns: Order 9; Slice SL 8270 — FD-1585: the diff routes' `NOT_FOUND`;
+Scope (what the `LG-` quotes) the section "Row 9 — FD-1585" below (R1 to R5, C1 to C4, the two
+`with spec_not_found():` wraps, the docstring); Requirements `03` §3.3: FR-231, FR-232; Depends on
+a throwaway `postgres:16-alpine` for the reds (no grant beyond (d)), and a gate slot: gate-1 after
+S1c's SOLO END, or a free slot (gate-1b or gate-1) in any window S1c's gate is not running (Tue 27
+before S1c's gate if the reds and code are ready, else Wed 28 pm after S1c's END; the lead
+schedules, LG 8271 names the slot and the window); Lane backend API (files disjoint from S1c's);
+Size ½; Ladder no (a close blocker, not a ladder rung). Acceptance items 9 to 16. The SL row is
+cut under WK-675 in `docs/roadmap.md` §6 in the slice's own PR, with LG 8271. Rows 1 to 8 and the
+plan body are unchanged.)*
 
 ### Changes since `PL-1286`, per slice
 
@@ -205,6 +258,75 @@ and S11 leaves `FD-1283`'s two views unbuilt, keeps the interim FR-25 path throu
 FR-266's view limbs for Phase 3; the rung is void if exit demo (b)'s served page is S8's view. Until
 a dated move line applies a rung, these rows stand, and the reverse ladder order schedules them
 last.
+
+### Row 9 — FD-1585: the diff routes answer `NOT_FOUND`
+
+*(Added by row 9's dated line, 2026-10-26.)* Every `file:line` is at base `origin/main`
+`7ed5c398333aa24432bd9917bd204f7b540fb39c` (#1401); the backend and `03` are unchanged from
+`0996cada`, where the working plan `~/gi-pricing-plan.local/handover/plan-fd1585-fd1652-2026-10-26.md`
+§1 read them. Executor: `.claude/roles/executor.md`; skills `test-driven-development`,
+`python-test`, `fastapi-service`, `dev-commands`, `git-hygiene`.
+
+**Defect.** `GET /api/v1/rate-tables/{slug}@{version}/diff` and `…/diff/cells` answer 404
+`RATE_TABLE_MISS` for an unknown table, version or `against`, where `03` §5.1 types it 404
+`NOT_FOUND` (`docs/specs/03-rating-engine.md:1103`, the `diff/cells` row, which binds the `:1102`
+diff row by the same sentence). The handlers `rate_table_diff` (`backend/src/app/api/rate_tables.py:398`)
+and `rate_table_diff_cells` (`:497`) call `service.diff_from_artifact` (`:439`) and
+`service.diff_cells_page` (`:537`) with no `spec_not_found()` (`:71`). Requirements `03` §3.3:
+FR-231, FR-232. Ruling: to-lead "2026-10-10 04:19:42 BST" item 3 (the spec governs; the fix is at
+the route layer) and `RL-1584` (the same mapping for the reads). **No spec change.**
+
+**Scope fence.** The shared loaders keep `RATE_TABLE_MISS` (`backend/src/app/platform/rate_tables.py:305`,
+`:1106`, `:1139`, `:1167`; scoring-path raise sites at `backend/tests/test_worker_raise_sites.py:144-157`).
+`bulk-operation` is out (FD-1585 Evidence item 3, its last line): the `:1557` site and its route are untouched.
+
+**Where the reds run** (the 14:44:23 entry, item (d)): a throwaway `postgres:16-alpine`, its own
+container on `127.0.0.1`, `rm -fv` after, the login role provisioned as the suite does; not the
+shared database and not a DB-lane gap. LG 8271 quotes `head=`, the container id and each red's rc.
+
+- [ ] **R-0.** Re-read at the slice's base: the two handlers, `spec_not_found` (`:71-76`), the
+  tests named below, and FD-1585 whole. Record the base `head=` in LG 8271.
+- [ ] **R-1. Reds first** (`backend/tests/test_api_rate_tables.py` unless named), each red by its
+  cause (`code == "RATE_TABLE_MISS"`) at the base:
+  - **R1** `test_diff_404s_for_unknown_table_and_version` (`:487`): re-point `:506`; add a code
+    assert after `:513` (missing version, `@9`) and after the `no_previous` status assert (`:520`)
+    (`against=previous` on v1); add an explicit unknown `against` (`{"against": "7"}` on `@1`).
+    Each: `404` and `json()["code"] == "NOT_FOUND"`, four times.
+  - **R2** `test_diff_seed_without_a_seed_origin_404s` (`:547`): re-point `:601`; correct the
+    docstring `:552` ("answers 404 RATE_TABLE_MISS" → `NOT_FOUND`).
+  - **R3** `test_import_preview_creates_nothing` (`:1097`): re-point `:1121`.
+  - **R4** `test_import_confirm_cannot_override_the_verdict` (`:1164`): re-point `:1184`.
+  - **R5** new `test_diff_cells_404s_not_found_for_unknown_table_version_and_against`, marked
+    `@pytest.mark.req("FR-231")` and `@pytest.mark.req("FR-232")`: three GETs on `…/diff/cells`
+    (unknown table; unknown version `@9`; unknown explicit `against` `"7"`) on a seeded table
+    (reuse `_seeded_table` / `_diff_ready`), each `404` and `"NOT_FOUND"`.
+- [ ] **R-2. Controls** (green at base and head, not reds):
+  - **C1** `test_bulk_operation_on_a_missing_version_is_refused` (`:919`, assert `:929`), the
+    BULK test: **stays `RATE_TABLE_MISS`, unedited** (out of FD-1585's scope; CR-1952 §5b's `:929`
+    is the bulk route, accepted as a control in the 14:44:23 entry's closing line).
+  - **C2** `test_diff_rejects_an_unknown_baseline` (`:524`): `against=banana` stays 422
+    `VALIDATION_FAILED`.
+  - **C3** `backend/tests/test_rate_table_diff_portfolio.py`: the portfolio `NOT_FOUND`s stay
+    green.
+  - **C4** `backend/tests/test_worker_raise_sites.py` (no DB): green, the loader raise sites
+    unchanged.
+- [ ] **R-3. The fix.** Wrap `answer = await service.diff_from_artifact(…)` (`:439-442`) and
+  `answer = await service.diff_cells_page(…)` (`:537-541`) each in `with spec_not_found():`. Not
+  wrapped: `_parse_against` (422), the portfolio permission check (403), `_cells_job_response`.
+  Non-goal: a 202 Job whose table vanishes before the worker runs is the Job's failure, not this
+  route's answer.
+- [ ] **R-4. The docstring.** `spec_not_found`'s docstring (`:72-76`) names the diff routes and
+  FD-1585 beside "the S4 routes"; no behaviour change.
+- [ ] **R-5. Greens.** R1 to R5 green at the head and C1 to C4 green, on the throwaway, each line
+  in LG 8271.
+- [ ] **R-6. The gate.** The full gate, both halves (`CLAUDE.md` §11), at the slice head, in the
+  slot and window row 9 names; END row in LG 8271. Pre-PR: `bash
+  ~/gi-pricing-plan.local/scratch/idsweep.sh origin/<branch>` quoted (seat brief item 26); `ruff`
+  rc quoted after any post-gate `.py` edit (item 16).
+
+**Write set (row 9).** `backend/src/app/api/rate_tables.py`, `backend/tests/test_api_rate_tables.py`,
+LG 8271, SL 8270's row under WK-675 in `docs/roadmap.md`, FD-1585's discharge line and its
+register row, `docs/INDEX.md`.
 
 ## Decision points
 

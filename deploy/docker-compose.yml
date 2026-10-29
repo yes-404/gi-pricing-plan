@@ -17,7 +17,7 @@ x-gip-env: &gip-env
   GIP_BUILD: ${GIP_BUILD:-unset}
   GIP_TENANT_ID: ${GIP_TENANT_ID:-compose-reference}
   GIP_DEV_AUTH_ENABLED: ${GIP_DEV_AUTH_ENABLED:-true}   # reference path only; FR-437 for production
-  GIP_DATABASE_URL: postgresql+asyncpg://gipricing:gipricing@postgres:5432/gipricing
+  GIP_DATABASE_URL: postgresql+asyncpg://gip_app_login:gip_app_login@postgres:5432/gipricing   # FD-1729: the application's login role (DP-16 (a))
   GIP_REDIS_URL: redis://redis:6379/0
   GIP_BLOB_ENDPOINT_URL: http://minio:9000
   GIP_BLOB_ACCESS_KEY: gipricing
@@ -36,8 +36,12 @@ services:
       POSTGRES_USER: gipricing
       POSTGRES_PASSWORD: gipricing            # local only; production uses a secret ref
       POSTGRES_DB: gipricing
-    ports: ["5432:5432"]
-    volumes: ["pgdata:/var/lib/postgresql/data"]
+    ports: ["127.0.0.1:5432:5432"]
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      # FD-1729: the application's login role, on fresh volumes (no password: the compose run
+      # calls scripts/provision-app-role.py).
+      - ./postgres/app-login-role.sql:/docker-entrypoint-initdb.d/10-app-login-role.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U gipricing"]
       interval: 5s
@@ -47,7 +51,7 @@ services:
   redis:
     image: redis:7-alpine
     command: ["redis-server", "--appendonly", "no"]
-    ports: ["6379:6379"]
+    ports: ["127.0.0.1:6379:6379"]
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -62,7 +66,7 @@ services:
     environment:
       MINIO_ROOT_USER: gipricing
       MINIO_ROOT_PASSWORD: gipricing
-    ports: ["9000:9000", "9001:9001"]
+    ports: ["127.0.0.1:9000:9000", "127.0.0.1:9001:9001"]
     volumes: ["miniodata:/data"]
     healthcheck:
       test: ["CMD", "mc", "ready", "local"]
@@ -88,7 +92,7 @@ services:
       KC_BOOTSTRAP_ADMIN_USERNAME: admin
       KC_BOOTSTRAP_ADMIN_PASSWORD: admin      # local only, as with postgres above
       KC_HEALTH_ENABLED: "true"
-    ports: ["8080:8080"]
+    ports: ["127.0.0.1:8080:8080"]
     # Port 9000 is Keycloak's management interface and is deliberately NOT published:
     # minio above already publishes 9000 to the host.
     volumes: ["./keycloak-local:/opt/keycloak/data/import:ro"]
@@ -106,7 +110,10 @@ services:
     image: gi-pricing-app:${GIP_BUILD:-unset}
     build: *gip-build
     command: ["alembic", "upgrade", "head"]
-    environment: *gip-env
+    environment:
+      <<: *gip-env
+      # FD-1729: migrations run as the owner and refuse to fall back to GIP_DATABASE_URL.
+      GIP_MIGRATION_DATABASE_URL: postgresql+asyncpg://gipricing:gipricing@postgres:5432/gipricing
     restart: "no"
     depends_on:
       postgres: {condition: service_healthy}
@@ -184,7 +191,7 @@ services:
     profiles: ["app"]
     image: nginx:1.27-alpine
     volumes: ["./lb.conf:/etc/nginx/conf.d/default.conf:ro"]
-    ports: ["${GIP_LB_PORT:-8000}:8000"]
+    ports: ["127.0.0.1:${GIP_LB_PORT:-8000}:8000"]
     depends_on:
       api: {condition: service_healthy}
 

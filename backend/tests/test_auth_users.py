@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import pytest
+from backend.tests.conftest_db import seed_as_owner
 from sqlalchemy import select
 
 from app.auth.oidc import TokenClaims
@@ -105,11 +106,15 @@ async def test_membership_grants_exactly_one_workspace(
     subject = f"user-{new_uuid7().hex[-12:]}"
     async with database.unit_of_work() as session:
         identity = await authenticate_bearer(session, StubVerifier(_claims(subject)), "t")
+
+    async def _seed(session):
         # A membership names a workspace that exists (FR-395's foreign key).
         await workspaces.ensure_workspace(session, workspace_id=workspace_id)
         session.add(
             WorkspaceMemberRow(user_id=identity.principal.id, workspace_id=workspace_id)
         )
+
+    await seed_as_owner(_seed)
 
     async with database.unit_of_work() as session:
         identity = await authenticate_bearer(session, StubVerifier(_claims(subject)), "t")
@@ -128,10 +133,14 @@ async def test_membership_of_several_workspaces_requires_a_choice(
     subject = f"user-{new_uuid7().hex[-12:]}"
     async with database.unit_of_work() as session:
         identity = await authenticate_bearer(session, StubVerifier(_claims(subject)), "t")
+
+    async def _seed(session):
         for _ in range(2):
             other = new_uuid7()
             await workspaces.ensure_workspace(session, workspace_id=other)
             session.add(WorkspaceMemberRow(user_id=identity.principal.id, workspace_id=other))
+
+    await seed_as_owner(_seed)
 
     async with database.unit_of_work() as session:
         identity = await authenticate_bearer(session, StubVerifier(_claims(subject)), "t")

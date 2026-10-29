@@ -940,15 +940,22 @@ than a dev loop.
 ## Migrations — the bare command does not work against the compose stack
 
 ```bash
-GIP_DATABASE_URL=postgresql+asyncpg://gipricing:gipricing@localhost:5432/gipricing \
+GIP_MIGRATION_DATABASE_URL=postgresql+asyncpg://gipricing:gipricing@localhost:5432/gipricing \
     uv run alembic upgrade head
 ```
 
-`CLAUDE.md` §11 claimed the bare `alembic upgrade head` worked until 2026-08-22. It does
-not: `backend/src/app/config.py`'s `database_url` defaults to `gip:gip@localhost:5432/gip`
+**Two DSNs (FD-1729).** `GIP_MIGRATION_DATABASE_URL` is the owner's and only Alembic (and
+`scripts/provision-app-role.py`) reads it; `migrations/env.py` raises a `RuntimeError` naming it when
+unset and never falls back. `GIP_DATABASE_URL` is the application's, default
+`gip_app_login:gip_app_login@localhost:5432/gipricing`. Create the login role once per database
+cluster: `GIP_MIGRATION_DATABASE_URL=… GIP_APP_DB_PASSWORD=… uv run python scripts/provision-app-role.py`
+(`--allow-default-password` for a fresh local volume or CI only).
+
+`CLAUDE.md` §11 claimed the bare `alembic upgrade head` worked until 2026-08-22. It did
+not (then, `backend/src/app/config.py`'s `database_url` defaulted to `gip:gip@localhost:5432/gip`
 while `deploy/docker-compose.yml` provisions `gipricing:gipricing@…/gipricing`, and Alembic
 reads `Settings`, so it dies with
-`InvalidPasswordError: password authentication failed for user "gip"`.
+`InvalidPasswordError: password authentication failed for user "gip"`).
 
 **Why it survived every green suite:** `backend/tests/conftest_db.py`'s `DEFAULT_TEST_DSN`
 carries the compose credentials itself, so the tests never touch the default.

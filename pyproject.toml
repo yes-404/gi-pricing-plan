@@ -201,4 +201,5 @@ markers = [
     # Requirement traceability: mark each test with the requirement it satisfies.
     # skills-map §9.1 "spec-to-implementation conformance".
     "req: the requirement ID this test satisfies, e.g. @pytest.mark.req('FR-10')",
+    "production_seed: the test exercises the production ensure_workspace / seed_builtin_roles itself, so the autouse owner-seam patch in backend/tests/conftest_db.py is skipped and it runs as the login role (FD-1729)",
 ]

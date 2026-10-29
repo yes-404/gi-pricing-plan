@@ -28,9 +28,11 @@ from backend.tests.test_migration_dataset_owner import (  # noqa: F401  (fixture
 from fastapi.testclient import TestClient
 from pydantic import SecretStr
 from sqlalchemy import text
+from sqlalchemy.engine import make_url
 from sqlalchemy.ext.asyncio import create_async_engine
 
 from app.config import Settings
+from app.db.session import Database
 from app.main import create_app
 from app.platform.blobs import BlobStore
 from app.platform.tenancy import TENANT_BLOB_KEY, TENANT_REDIS_KEY, TenantMismatchError
@@ -41,8 +43,12 @@ _MARKER_MIGRATION_DOWN_REVISION = "c4d1e8a7b302"
 
 @pytest.fixture
 def redis_url() -> str:
-    """A Redis database index of its own, so a planted marker stays in this test."""
-    return f"redis://localhost:6379/{1 + secrets.randbelow(15)}"
+    """A Redis database index of its own, so a planted marker stays in this test.
+
+    FD-1920: `GIP_REDIS_URL`'s own db when set; else one of 5-10, which no gate (1-4) or
+    seat run (11-13) uses.
+    """
+    return os.environ.get("GIP_REDIS_URL") or f"redis://localhost:6379/{5 + secrets.randbelow(6)}"
 
 
 @pytest.fixture
@@ -145,13 +151,20 @@ async def migrated_scratch(
     monkeypatch: pytest.MonkeyPatch,
 ) -> str:
     """A scratch database migrated to head, so it carries this revision's marker table."""
-    monkeypatch.setenv("GIP_DATABASE_URL", scratch_database)
+    monkeypatch.setenv("GIP_MIGRATION_DATABASE_URL", scratch_database)
     await _upgrade(_alembic_config(), "head")
     return scratch_database
 
 
 def _scratch_settings(base: Settings, url: str) -> Settings:
-    return base.model_copy(update={"database_url": SecretStr(url)})
+    """The application's start-up path on a scratch database: the login role, not the owner
+    that created it (the scratch URL is the owner's, for DDL)."""
+    login = make_url(url).set(
+        username="gip_app_login", password=os.environ.get("GIP_APP_DB_PASSWORD", "gip_app_login")
+    )
+    return base.model_copy(
+        update={"database_url": SecretStr(login.render_as_string(hide_password=False))}
+    )
 
 
 @pytest.mark.req("FR-436")
@@ -182,7 +195,21 @@ async def test_a_database_not_migrated_to_this_revision_stops_startup(
     scratch_database: str,  # noqa: F811
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setenv("GIP_DATABASE_URL", scratch_database)
+    """FR-436: a database behind the tenant-marker revision refuses startup with the
+    `alembic upgrade head` hint.
+
+    O5 runs `assert_least_privilege` before `require_tenant_binding`, and on a database this
+    far behind it would refuse first (a missing trigger). This test isolates FR-436's upgrade
+    refusal, which is the thing under test; S1b's T3 (`test_application_role.py`) proves the
+    missing-trigger refusal.
+    """
+
+    async def _skip(self: Database) -> None:
+        return None
+
+    # to-lead "2026-10-26 09:33:12 GMT": the FR-436 residue ruled (a): this test only.
+    monkeypatch.setattr(Database, "assert_least_privilege", _skip)
+    monkeypatch.setenv("GIP_MIGRATION_DATABASE_URL", scratch_database)
     await _upgrade(_alembic_config(), _MARKER_MIGRATION_DOWN_REVISION)
 
     with pytest.raises(TenantMismatchError) as exc:
@@ -200,7 +227,7 @@ async def test_a_database_not_migrated_to_this_revision_stops_startup(
 async def test_the_migration_writes_the_configured_tenant_and_refuses_a_second_row(
     scratch_database: str, monkeypatch: pytest.MonkeyPatch  # noqa: F811
 ) -> None:
-    monkeypatch.setenv("GIP_DATABASE_URL", scratch_database)
+    monkeypatch.setenv("GIP_MIGRATION_DATABASE_URL", scratch_database)
     monkeypatch.setenv("GIP_TENANT_ID", "acme-motor")
     await _upgrade(_alembic_config(), "head")
 

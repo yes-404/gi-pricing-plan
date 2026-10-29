@@ -2,7 +2,7 @@
 id: FD-1729
 family: finding
 title: The application never connects as gip_app; it connects as the superuser table owner, so every grant and revoke in FR-44's privilege layer is inert at runtime
-status: active
+status: closed
 created: 2026-10-14
 owner: auditor
 tree: a3fc2e8dd384de6abf909f662f43011b8078fb4e
@@ -142,3 +142,5 @@ Carry forward, owner WK-1178: fixed in P2 (D17), by PL-1769's slice S-b (SL-1771
 is first and independent; FD-1704's revoke becomes meaningful only after this lands. It needs a resolution before any P3
 start (`CLAUDE.md` §14). The event that next confirms or discharges it is the merge of S-b with the three reds above shown
 on the base tree by cause.
+
+*2026-10-26: closed, in place (R6, `to-lead.md` "2026-10-26 03:54:51 GMT" (5)), by #1398 (`1e0a8abb`, part 1: the application connects as `gip_app_login`) and the S1b PR (SL-1948, part 2: the startup refusal, the tamper proof and the exact grant map). Residual: FD-1951 (the CREATEROLE and ADMIN OPTION routes; HIGH, WK-1178, by Fri 31 Oct), per "2026-10-26 11:38:32 GMT" (iii).*

@@ -10,6 +10,7 @@ from __future__ import annotations
 import io
 from dataclasses import dataclass
 from datetime import date
+from fractions import Fraction
 from typing import Any
 from uuid import UUID, uuid4
 
@@ -17,6 +18,7 @@ import polars as pl
 import pytest
 import pytest_asyncio
 from backend.tests.blob_fixtures import blob_row, digest, job_result_owner
+from backend.tests.conftest_db import seed_as_owner
 from backend.tests.test_rating_version_compile import (
     _empty_pins,
     _headers,
@@ -551,7 +553,7 @@ async def _caller_with(
     """Headers for a member holding exactly `permissions` (a stored custom role: no built-in
     role is narrow enough for the refusals below)."""
     caller = uuid4()
-    async with database.unit_of_work() as session:
+    async def _seed(session):
         role = RoleRow(
             workspace_id=workspace_id, slug=f"narrow-{uuid4().hex[:6]}",
             description=", ".join(permissions), permissions=permissions, builtin=False,
@@ -563,6 +565,7 @@ async def _caller_with(
             role_id=role.id, scope_type=ScopeType.WORKSPACE.value,
         ))
         session.add(WorkspaceMemberRow(user_id=caller, workspace_id=workspace_id))
+    await seed_as_owner(_seed)
     return _headers_of(caller, workspace_id)
 
 
@@ -702,10 +705,23 @@ async def test_movers_route_joins_the_portfolio_columns_at_read(
     portfolio = _portfolio()
     assert [r["quote_id"] for r in served] == stored["quote_id"].to_list()  # §4.6's mover order
     assert served, "a threshold of 1% moves every policy of this fixture"
+    stored_rows = {r["quote_id"]: r for r in stored.iter_rows(named=True)}
     for r in served:
         source = portfolio.filter(pl.col("quote_id") == r["quote_id"]).row(0, named=True)
-        assert (r["premium_in"], r["channel"]) == (source["premium_in"], source["channel"])
-        assert set(r) == {*MOVERS_COLUMNS, "exposure_years", "premium_in", "channel"}
+        # PL-1833 Task 1: the stored columns are typed fields, the joined ones sit in `columns`
+        assert (r["columns"]["premium_in"], r["columns"]["channel"]) == (
+            source["premium_in"],
+            source["channel"],
+        )
+        assert set(r) == {*MOVERS_COLUMNS, "change_pct", "columns"}
+        assert set(r["columns"]) == {"exposure_years", "premium_in", "channel"}
+        for column in MOVERS_COLUMNS:
+            assert r[column] == stored_rows[r["quote_id"]][column], column
+        # change_pct: exact fraction, 6 places, away from zero (DP-S8-2 (a)); recomputed here
+        # from the stored integers, not through the helper under test
+        exact = Fraction(r["change_minor"] * 100, r["baseline_minor"])
+        up = -((-abs(exact.numerator * 10**6)) // exact.denominator)
+        assert r["change_pct"] == f"{'-' if exact < 0 else ''}{up // 10**6}.{up % 10**6:06d}"
     # `dataset:read` is a separate permission from `rating:read` (RL-1504 item 5).
     rating_only = await _caller_with(database, world.workspace_id, ["rating:read"])
     refused = api_client.get(url, headers=rating_only)

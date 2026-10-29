@@ -293,7 +293,7 @@ async def test_a_version_missing_a_scored_column_is_refused_before_the_queue(
 
 @pytest.mark.req("FR-43")
 async def test_a_backtest_cannot_be_rewritten_at_either_layer(
-    database, blob_store, workspace_id
+    database, owner_database, blob_store, workspace_id
 ) -> None:
     """**Both layers, and the trigger is the one that matters.**
 
@@ -328,7 +328,9 @@ async def test_a_backtest_cannot_be_rewritten_at_either_layer(
 
     backtest_id = await _run_backtest(database, blob_store, workspace_id)
 
-    async with database.session() as session:
+    # Trigger probe: the trigger is what is asserted, so the statement runs as the owner (on the
+    # login role the privilege check refuses first).
+    async with owner_database.session() as session:
         with pytest.raises(Exception, match="append-only"):
             await session.execute(
                 text("UPDATE backtests SET payload = '{}'::jsonb WHERE id = :i"),
