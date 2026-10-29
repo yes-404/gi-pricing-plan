@@ -119,7 +119,7 @@ maintainer's entry "2026-10-26 11:38:32 GMT" (`to-lead.md`), with the lead's con
 ## Disposition
 
 Closed 2026-10-29 in place, citing this PR (S1c, SL-1962). Residual limb in a record: FD-1963 (the membership strip, MEDIUM, WK-1178).
-Filed under working id 8265.
+Filed under working id 8265. *Date of record: 2026-10-29 — #1405, squash 7ceff4a1 (merge 36).*
 
 ## Correction — 2026-10-26: HIGH-2 is refuted by measurement
 
