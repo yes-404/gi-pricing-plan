@@ -183,3 +183,27 @@ The project's own Postgres was provisioned by hand (`scripts/provision-app-role.
   the owner seed also needs `GIP_TEST_DATABASE_URL`. An unprovisioned role also kills beat on its first relay tick (`scheduler exited`).
   The unchanged caller `test_a_submitted_job_reaches_a_terminal_state_through_the_compose_worker` at head `1a3a8483463b42eee4a877068b9d8fe743b9b5f2`
   under `GIP_DEPLOY_TESTS=1`: `1 failed, 2 warnings in 46.16s`, rc=1 (`CalledProcessError` from `docker compose … up`, then the conftest_db `GIP_TEST_DATABASE_URL is not set` warning).
+
+## F2 — the compose runtime tests never provisioned the application login role (found 2026-10-29 in the build window; ruled (A) by the maintainer at to-lead "2026-10-29 19:19:28 GMT"; finding FD 8280, MEDIUM, owner WK-674, drafted by the auditor from these lines)
+
+- **The defect, proven at `origin/main` `1e17ec6382de5919b6e3011242b584a59bb880e7`** (condition (iii); a throwaway detached checkout
+  `.claude/worktrees/exec-beatgreen-main`, not the slice worktree): `test_a_submitted_job_reaches_a_terminal_state_through_the_compose_worker`
+  under `GIP_DEPLOY_TESTS=1` → `1 failed, 2 warnings in 42.28s`, rc=1. The `api` container: `exited exit=3`, log
+  `password authentication failed for user "gip_app_login"`. Cause: `gip_app_login` exists on a fresh volume with no password until
+  `scripts/provision-app-role.py --allow-default-password` runs (`deploy/docker-compose.yml`, the postgres volume comment: "the compose run calls
+  scripts/provision-app-role.py"); no runtime test calls it. This record does not say since when; only that it holds at `1e17ec63`.
+  A second effect: an unprovisioned role kills beat on its first relay tick (`scheduler exited`).
+- **The fix (A)**, `backend/tests/deploy_stack_helpers.py`: on a project's first `up`, `compose()` brings up the project's own postgres, then
+  builds the owner URL from the mapped port, then runs `migrate`, then `provision-app-role.py --allow-default-password` against it, then sets
+  `GIP_TEST_DATABASE_URL` to that URL; `down` resets both.
+- **(i) the refusal, red then green.** `own_postgres_owner_url(port)` raises on the shared 5432 *before* any DDL. Test
+  `test_provisioning_refuses_the_shared_postgres_port_and_names_the_projects_own` (`backend/tests/test_deploy_stack.py`), run-small:
+  RED on a stub with no guard: `Failed: DID NOT RAISE ValueError`, `1 failed, 30 passed`, rc=1 (head `d72b064e` + the stub);
+  GREEN with the guard: `31 passed`, rc=0.
+- **(ii) the env does not leak.** `envcheck.py` at `c6716e04`: `before: None`; `after up: postgresql+asyncpg://gipricing:gipricing@127.0.0.1:32833/gipricing`
+  (the project's own ephemeral port) with `provisioned: ['gip-s4-runtime']`; `after down: None` with `provisioned: []`; and in the shell after the run
+  `env | grep GIP_TEST_DATABASE_URL` is empty, `grep` rc=1.
+- **The five `beat_fixture` callers under `GIP_DEPLOY_TESTS=1` at `c6716e048dc4bd98babeca0a4c7a709a7c17f2c5`:** `test_a_submitted_job_reaches_a_terminal_state_…` and
+  `test_a_dataset_ingest_job_succeeds_…`: `2 passed in 132.40s`, rc=0; `test_a_score_batch_job_succeeds_…` and `test_a_sampled_trace_is_produced_…` with the switch test:
+  `1 failed, 2 passed in 174.26s`, rc=1 — the failure is `test_deploy_switch_runtime.py::test_a_deploy_switches_every_api_process_and_a_default_live_quote_is_served`,
+  which brings up no `lb`/`api`/worker and has no `down` fixture (its docstring: "UNPROVEN … no stack was run for it"). See the F3 line below once ruled.
