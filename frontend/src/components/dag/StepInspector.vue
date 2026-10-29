@@ -41,7 +41,7 @@ const ON_MISS = ["error", "default"] as const;
 const ON_VIOLATION = ["clamp", "decline", "error"] as const;
 
 const control =
-  "w-full rounded-md border border-slate-300 px-2 py-1 text-sm focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-sky-700";
+  "w-full rounded-md border border-slate-500 px-2 py-1 text-sm focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-sky-700";
 
 const problems = computed(() => stepProblems(props.step));
 /** `aria-invalid` for the field a problem names (3.3.1): problems start with the field name. */

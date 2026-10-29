@@ -78,7 +78,7 @@ async function apply(): Promise<void> {
       <select
         id="bulk-kind"
         v-model="kind"
-        class="rounded border border-slate-300 px-2 py-1 text-sm"
+        class="rounded border border-slate-500 px-2 py-1 text-sm"
       >
         <option
           v-for="entry in BULK_KINDS"
@@ -104,7 +104,7 @@ async function apply(): Promise<void> {
         v-model="values[field]"
         rows="3"
         placeholder="area: A, B"
-        class="w-full rounded border border-slate-300 px-2 py-1 font-mono text-sm"
+        class="w-full rounded border border-slate-500 px-2 py-1 font-mono text-sm"
       />
       <input
         v-else
@@ -113,7 +113,7 @@ async function apply(): Promise<void> {
         type="text"
         inputmode="decimal"
         autocomplete="off"
-        class="rounded border border-slate-300 px-2 py-1 font-mono text-sm"
+        class="rounded border border-slate-500 px-2 py-1 font-mono text-sm"
       >
     </div>
     <p
@@ -124,9 +124,8 @@ async function apply(): Promise<void> {
       {{ problem }}
     </p>
     <p
-      v-if="created"
-      aria-live="polite"
-      class="mt-3 rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800"
+      role="status"
+      :class="created ? 'mt-3 rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800' : ''"
     >
       {{ created }}
     </p>

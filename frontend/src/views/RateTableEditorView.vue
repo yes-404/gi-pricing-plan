@@ -221,7 +221,7 @@ async function onCreated(made: RateTableVersion): Promise<void> {
       <RouterLink
         v-if="rating"
         :to="`/rating-versions/${rating.id}`"
-        class="hover:underline"
+        class="underline"
       >
         {{ rating.slug }}@{{ rating.version }}
       </RouterLink>
@@ -248,11 +248,16 @@ async function onCreated(made: RateTableVersion): Promise<void> {
       </h1>
 
       <p
-        v-if="created"
-        aria-live="polite"
-        class="mt-3 rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800"
+        role="status"
+        :class="created ? 'mt-3 rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800' : ''"
       >
         {{ created }}
+      </p>
+      <p
+        role="status"
+        class="sr-only"
+      >
+        {{ diff ? `Review ready: ${diff.changed_cells} cell${diff.changed_cells === 1 ? "" : "s"} changed.` : "" }}
       </p>
 
       <div
@@ -268,7 +273,10 @@ async function onCreated(made: RateTableVersion): Promise<void> {
         </p>
       </div>
 
-      <div class="mt-4 overflow-x-auto">
+      <div
+        class="mt-4 overflow-x-auto"
+        tabindex="0"
+      >
         <RateTableGrid
           :table="table"
           :rows="rows"
@@ -307,7 +315,7 @@ async function onCreated(made: RateTableVersion): Promise<void> {
           id="change-note"
           v-model="changeNote"
           type="text"
-          class="w-full rounded border border-slate-300 px-2 py-1 text-sm"
+          class="w-full rounded border border-slate-500 px-2 py-1 text-sm"
           @input="diff = null"
         >
         <button

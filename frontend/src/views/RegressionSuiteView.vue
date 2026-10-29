@@ -77,7 +77,7 @@ async function choose(event: Event): Promise<void> {
       <RouterLink
         v-if="rating"
         :to="`/rating-versions/${rating.id}`"
-        class="hover:underline"
+        class="underline"
       >
         {{ heading }}
       </RouterLink>
@@ -126,7 +126,7 @@ async function choose(event: Event): Promise<void> {
         <select
           id="regression-run"
           :value="selected"
-          class="mt-1 rounded-md border border-slate-300 px-2 py-1.5 font-mono text-sm"
+          class="mt-1 rounded-md border border-slate-500 px-2 py-1.5 font-mono text-sm"
           @change="choose"
         >
           <option
@@ -183,7 +183,12 @@ async function choose(event: Event): Promise<void> {
               v-for="golden in result.golden_results"
               :key="golden.name"
             >
-              <td>{{ golden.name }}</td>
+              <th
+                scope="row"
+                class="font-normal"
+              >
+                {{ golden.name }}
+              </th>
               <td>{{ golden.status }}</td>
               <td>{{ formatMinor(golden.expected_minor) }}</td>
               <td>{{ formatMinor(golden.actual_minor) }}</td>
@@ -226,7 +231,12 @@ async function choose(event: Event): Promise<void> {
               v-for="property in result.property_results"
               :key="property.name"
             >
-              <td>{{ property.name }}</td>
+              <th
+                scope="row"
+                class="font-normal"
+              >
+                {{ property.name }}
+              </th>
               <td>{{ property.status }}</td>
               <td>{{ property.cases_run }}</td>
               <td>
@@ -240,6 +250,8 @@ async function choose(event: Event): Promise<void> {
                   "
                 >
                   <pre
+                    role="group"
+                    tabindex="0"
                     :aria-label="`Counterexample of ${property.name}`"
                     class="mt-1 overflow-x-auto font-mono text-xs"
                   >{{ JSON.stringify(property.counterexample, null, 2) }}</pre>

@@ -140,6 +140,54 @@ means seen red **by the stated cause** at the slice's base, its line verbatim in
 16. The slice's squash merge on `main` is dated on or before 2026-10-28 (`git log -1
     --format=%cI <squash sha>`).
 
+**Row 10 — FD-1959's fix slice** (row 10's dated line, 2026-10-29; SL-1971, LG-1972). Each item is
+checked at the slice PR's merge tree, with the range `origin/main...<slice branch>` named. "Red"
+means seen red **by the stated cause** at base `aad4fd58`, its line verbatim in LG-1972 (`head=` first,
+`rc=` last, seat brief item 37) before the fix. Every vitest run names one file (seat brief item 28:
+`test -f` first, `Test Files  1` in the output, load1 < 6 quoted).
+
+17. **F1.** `frontend/src/components/rating/__tests__/DecimalCellInput.test.ts` gains tests that type a
+    malformed value (`"1.2.3"`; `"12.5"` with `integer`) and assert the input
+    `toHaveAccessibleDescription(<the syntax message>)` with a non-empty message, and the message as
+    visible text (`getByText`); red at base by cause (the description is `""`: `:51` and `:58` follow
+    the `invalid` prop only), green at head. The server-error test (`:36-41`) stays green unedited.
+18. **F3.** At each of the four sites (`RateTableDiffPanel.vue:173-186`, `RateTableEditorView.vue:250-256`,
+    `BulkOperationDialog.vue:126-131`, `RateTableImportExport.vue:137-142`) a test in that component's
+    existing test file asserts that the live region (`role="status"` or `aria-live="polite"`) is in the
+    DOM **before** the trigger and holds the status text after it; red at base by cause (no region
+    before the trigger: the `<p>` and its `aria-live` mount together by `v-if`), green at head.
+19. **M3 and M4.** The same form for "Review changes" (`RateTableEditorView.vue:313-330`, the section
+    `v-if="diff"`) and the score result (`QuoteSandboxView.vue:208-226`): a persistent status region
+    whose text announces the section or result (or focus moved to its heading, asserted by
+    `document.activeElement`); red at base by cause, green at head, in `RateTableEditorView.test.ts`
+    and `QuoteSandboxView.test.ts`.
+20. **F2 (not testable in vitest: happy-dom computes no rendered contrast).** Evidence, both in LG-1972:
+    (a) `git grep -n 'border-slate-300' <head> -- <the files R10-DP1 rules in scope>` prints no line on an
+    `<input>`, `<select>` or `<textarea>` (or a class constant bound to one), each remaining hit named
+    with its element (a `<section>`, `<th>` or button border is not F2's 1.4.11 limb); (b) the new
+    class's hex from the installed Tailwind v4 palette and its contrast against `#ffffff` by WCAG 2.2's
+    relative-luminance formula, computed by a script quoted with its output, ≥ 3:1.
+21. **The lows.** LG-1972 has one line per low (F4, F5, F6, L4 to L12): **fixed**, with its hunk (one
+    line per site, FD-1959's Remedy rule) and its test or grep, or **carried**, with the reason it is
+    not one line and its owner and date as R10-DP2 rules; FD-1959's essay gets the dated carry line.
+22. `git diff --name-only origin/main...<slice branch>` lists only `frontend/src/**/*.vue`,
+    `frontend/src/**/__tests__/*.test.ts` and docs records (LG-1972, SL-1971's row in `docs/roadmap.md`,
+    the FD-1959 essay, `docs/findings/register.md`, `docs/INDEX.md`): no `frontend/package.json` or
+    `pnpm-lock.yaml` change (no new dependency; OQ-1960 stays open), no spec, no contract.
+23. **The GREEN set is derived by import closure** (seat brief item 29) from
+    `git diff --name-only origin/main...HEAD -- frontend/src`; the commands and the list in LG-1972;
+    each file green at head.
+24. **The gate as R10-DP3 rules**, rc table all 0 at the slice head, its END row in LG-1972; the frontend
+    half's `Test Files  N passed` line quoted.
+25. **`accessibility-tester`** re-reads the changed components at the head (static, as FD-1959's
+    Method); its report is quoted in LG-1972 (item 5's form) and shows F1, F3, M3, M4 and the in-scope
+    F2 sites as PASS.
+26. **FD-1959's record in the same PR:** the register row (`docs/findings/register.md:426` at
+    `aad4fd58`, found by its title) and the essay each get a dated line naming the PR, in the form
+    R10-DP4 rules.
+27. The slice's squash merge on `main` is dated on or before 2026-10-30 (`git log -1 --format=%cI
+    <squash sha>`).
+
 ## Global Constraints
 
 `PL-1286`'s Global Constraints apply unchanged: Vue 3 `<script setup lang="ts">` only; no hand-written
@@ -204,6 +252,27 @@ schedules, LG 8271 names the slot and the window); Lane backend API (files disjo
 Size ½; Ladder no (a close blocker, not a ladder rung). Acceptance items 9 to 16. The SL row is
 cut under WK-675 in `docs/roadmap.md` §6 in the slice's own PR, with LG 8271. Rows 1 to 8 and the
 plan body are unchanged.)*
+
+*(Delta, row 10 (FD-1959), dated 2026-10-29 from 22:09 GMT, by the planner (seat plan-a11y), on the
+maintainer's entry "2026-10-29 22:06:20 GMT — Maintainer: merge 40 READ-BACK CONFIRMED by me …" in
+`~/gi-pricing-plan.local/channel/to-lead.md`, item (2) ("a PLANNER for FD-1959 (NFR-463 a11y,
+DecimalCellInput.vue :34/:50/:51/:58 — the last WK-675 acceptance blocker, dated Tue 3 Nov) seated
+TONIGHT: a dated delta row in the WK-675 plan that owns the a11y work (name it by path), reds = vitest
+on the component (DB-free), fix + frontend gate Fri 30, merge Fri — pulling Tue 3 Nov forward"), and
+on the entry "2026-10-29 22:07:37 GMT" ("working ids SL 8281 / LG 8282, next 8283", a verbatim quote, kept; minted as SL-1971 / LG-1972); Lean P2 as the
+entry "2026-10-29 17:14:18 GMT" binds it (a dated row in the delta that owns the topic, no new `PL-`):
+**a new row 10 — FD-1959: NFR-463's static limbs on the WK-675 surfaces.** This file owns it because
+FD-1959 `relates:` `PL-1546`, row 1 (S5, the editor that renders `DecimalCellInput`) and row 2 (S6,
+the sandbox) carry NFR-463, and row 9 set the form for a WK-675 close blocker. Its slice is **SL-1971**
+(minted from working id 8281); its ledger **LG-1972** (minted from working id 8282). Work **WK-675**; due **Fri 30 Oct 2026** (`date -d 2026-10-30 +%A` prints
+Friday), pulling FD-1959's Tue 3 Nov 2026 forward. The row, in the table's columns: Order 10; Slice
+SL-1971 — FD-1959: NFR-463's static limbs; Scope (what the `LG-` quotes) the section "Row 10 —
+FD-1959" below (F1, F3, M3, M4 and F2 as R10-DP1 rules, the lows under FD-1959's own one-line rule, T0
+to T5); Requirements `00`: NFR-463 (no spec change: FD-1959's Remedy needs none); Depends on the
+maintainer's acceptance of this row (reds start on it), R10-DP1 ruled before T2, R10-DP3 before T4 (the
+gate), R10-DP2 and R10-DP4 before T5; Lane frontend (DB-free; no DB, no docker); Size 1; Ladder no (a close blocker, not a
+ladder rung). Acceptance items 17 to 27. The SL row is cut under WK-675 in `docs/roadmap.md` §6 in
+the slice's own PR, with LG-1972. Rows 1 to 9 and the plan body are unchanged.)*
 
 ### Changes since `PL-1286`, per slice
 
@@ -330,11 +399,91 @@ register row, `docs/INDEX.md`.
 
 *Acceptance 16's 'merged on or before 2026-10-28' (CR-1952's owed date) was made unmeetable by the user's pause of Mon 26 Oct 16:57 → Thu 29 Oct 10:07 GMT; re-dated by the pause, as every date in the 10:12:41 plan was, to on or before 2026-10-30 (the maintainer, to-lead "2026-10-29 12:20:17 GMT", by delegation; plan of record to-lead "2026-10-29 10:12:41 GMT").*
 
+### Row 10 — FD-1959: NFR-463's static limbs on the WK-675 surfaces
+
+*(Added by row 10's dated line, 2026-10-29.)* Every `file:line` is at base `origin/main`
+`aad4fd58bde87f59fffe646466f4f86bb2373bf8` (#1409, merge 40). FD-1959's tree was `7ed5c398`;
+`git diff --stat 7ed5c398 aad4fd58 -- frontend/` lists five files, none a `.vue` source
+(`package.json`, `pnpm-lock.yaml`, and three test files: `MountInspector.test.ts`,
+`RateTableDiffPanel.test.ts`, `RegressionSuiteView.test.ts`), so the finding's source line numbers
+hold. The spec is the finding (FD-1959's Finding, Evidence and Remedy) and NFR-463
+(`docs/specs/00-overview.md:586`). Executor: `.claude/roles/executor.md`; skills
+`test-driven-development`, `vue-frontend`, `vue-best-practices`, `vue-testing-best-practices`,
+`dev-commands`, `git-hygiene`; `accessibility-tester` verifies (item 25).
+
+**Defect (F1, the serious one), verbatim at `aad4fd58`,
+`frontend/src/components/rating/DecimalCellInput.vue`:**
+- `:34` `const isInvalid = computed(() => syntaxError.value || Boolean(props.invalid));`
+- `:50` `:aria-invalid="isInvalid ? 'true' : 'false'"`
+- `:51` `:aria-describedby="invalid ? errorId : undefined"`
+- `:54` `:class="isInvalid ? 'border-red-600' : 'border-slate-300'"`
+- `:58` `v-if="invalid"`
+
+A malformed value sets `aria-invalid` and the red border (`:50`, `:54`) but no message and no
+description (`:51`, `:58` follow the server's `invalid` prop only): WCAG 3.3.1 and 1.4.1. The existing
+test asserts `aria-invalid` only for a syntax error (`DecimalCellInput.test.ts:19`, `:33`).
+
+**What vitest can and cannot prove** (`@testing-library/vue` on `@vue/test-utils`, with
+`@testing-library/jest-dom` and `happy-dom`, all already in `frontend/package.json`; no new dependency):
+- **Testable, red first:** F1 (accessible description and text); F3, M3, M4 (a region in the DOM before
+  the trigger, or `document.activeElement` after it); the one-line lows that are DOM attributes (F6's
+  `tabindex`, L5's role, L11, L12's `<th scope="row">`, F4's `aria-describedby`).
+- **Not testable in vitest:** F2's rendered contrast, F5's visible underline (a class only), whether a
+  screen reader actually announces a live region, focus order and every other rendering check. F2 and
+  F5 are evidenced by grep and the computed ratio (item 20); the rest is FD-1959's carried limb,
+  OQ-1960's to decide (axe-core and Playwright, at the P2 close). **This row does not need axe-core or
+  Playwright:** its reds are DOM assertions, and adding them would be a tech-dependency change
+  (`docs/skills-map.md`, `CLAUDE.md` §10) that OQ-1960 has not decided.
+
+- [ ] **T0. Base re-read.** At the slice base: `DecimalCellInput.vue` whole, its test, the F3/M3/M4
+  sites and their test files, and FD-1959 whole. Re-locate each low by its description (the report's
+  lines are approximate; e.g. `RegressionSuiteView.vue:173` is a `<th scope="col">` at `aad4fd58`, not
+  L12's first-column `<td>`) and classify it one-line or not. Record `head=` and the classification in
+  LG-1972.
+- [ ] **T1. Reds** (items 17 to 19, and the testable one-line lows), each red by its cause at the base,
+  one vitest file per run.
+- [ ] **T2. The fix.**
+  - F1: one message element tied by `aria-describedby` whenever `isInvalid`: the server's `invalid` text
+    when present, else a syntax message ("Enter a decimal number" / "Enter a whole number" for
+    `integer`); `:51` and `:58` follow `isInvalid`. Nothing else in the component changes (the value
+    stays a string, FR-10, FR-21).
+  - F3: the live region rendered always; only its text is conditional.
+  - M3, M4: the same form (a persistent `role="status"` region), or a focus move to the new section's
+    heading.
+  - F2: the input-boundary class raised to a class ≥ 3:1 on white, at the sites R10-DP1 rules in scope.
+  - The lows that T0 classified one-line.
+- [ ] **T3. Greens.** Items 17 to 19 green at the head; the GREEN set by import closure (item 23).
+- [ ] **T4. The gate** as R10-DP3 rules. Pre-PR: `bash ~/gi-pricing-plan.local/scratch/idsweep.sh
+  origin/<branch>` quoted (seat brief item 26).
+- [ ] **T5. Records.** LG-1972 (scope = this section, the reds and greens, F2's ratio, the lows table,
+  `accessibility-tester`'s report, the gate END row); SL-1971's row under WK-675 in `docs/roadmap.md`;
+  FD-1959's dated line and its register row (item 26, R10-DP4); `docs/INDEX.md` regenerated after the
+  mint (seat brief item 17).
+
+**Write set (row 10).** `frontend/src/components/rating/DecimalCellInput.vue` and its test; the F3, M3
+and M4 components and their existing test files (`RateTableDiffPanel`, `BulkOperationDialog`,
+`RateTableImportExport`, `RateTableEditorView`, `QuoteSandboxView`); the F2 sites R10-DP1 rules in; the
+one-line lows' files; LG-1972, SL-1971's row in `docs/roadmap.md`, the FD-1959 essay and register row,
+`docs/INDEX.md`.
+
+**Gate proposal (R10-DP3).** The change is frontend-only plus docs records. From the path filters at
+`aad4fd58`: `frontend.yml` fires (`frontend/**`); `python.yml` fires on the PR too, from `docs/**`
+alone (no Python file changes); `docs.yml` fires (`docs/**`); `history-policy.yml` is unfiltered. The
+PR's CI set is therefore 4 runs: frontend, python, docs, history-policy. Locally: the frontend half
+(`CLAUDE.md` §11: `pnpm --dir frontend install --frozen-lockfile`, `generate:api`, `lint`,
+`type-check`, `test`, `build`) plus the docs-only set of seat brief item 30 (the gate-2 checks and
+its 8 docs-audit pytest files via run-small). Seat brief item 30's own rule sends any change outside
+`docs/` to the full code gate, so this cover needs the maintainer's ruling (R10-DP3).
+
 ## Decision points
 
 | # | Question | Options | Recommendation | Kind | Blocking | Resolved by |
 |---|---|---|---|---|---|---|
 | DP-3 = OQ-1223 | How does an ordinal categorical input take part in a `monotone` property? (`PL-1286` DP-3) | as the OQ states them: (a) declare ordinality on `InputContractField`; (b) read the order of `domain` | the OQ's own (a), "when the rate-table editor introduces the order" | decision point | **yes, for S5's GO** (was "before S5's leaf plan goes active"; there is no leaf plan under L5) | decision-maker, by `RL-` |
+| R10-DP1 | F2's scope: which input borders does SL-1971 raise? FD-1959 lists 14 sites; a class sweep (`git grep -n 'border-slate-300' aad4fd58 -- frontend/src`) also finds text inputs on WK-675 surfaces it does not list (`dag/DiffOverlay.vue:86`, `views/RatingDesignView.vue:158`, the `field` class constants at `dag/MountInspector.vue:69` and `dag/StepInspector.vue:44`) and many outside WK-675 (`ModelSpecBuilderView.vue`, `FactorWorkbenchView.vue`, `RuleBuilder.vue`, …) | (a) the 14 listed sites only; (b) the listed sites plus every text-input border on the WK-675 surfaces (FD-1959's view table, and the `dag/`, `rating/` and `sandbox/` components), found by the sweep and classified at T0; (c) every text input in the SPA | **(b)**: NFR-463 is the requirement, not the list, and a sweep within WK-675 is cheap; (c) is outside WK-675 — the lead reports it to the auditor as a candidate finding, not this slice's work | decision point | yes, before T2 | decision-maker |
+| R10-DP2 | The lows that are not one line (likely L6, L7, L8, L9, L10, at T0): who owns them, and by when? | (a) carried in FD-1959's essay with owner WK-675 and a date at the P2 close (with OQ-1960), listed in WK-675's close record as carried forward; (b) fix all 12 in this slice (size 1 → about 1½, Fri 30 at risk); (c) a Phase 3 owner | **(a)**: FD-1959's Remedy already permits a carry "with a dated line naming its owner"; (b) puts the Fri 30 date at risk for low-severity items | decision point | no (blocks T5's carry line only) | decision-maker |
+| R10-DP3 | The gate for a frontend-only change with docs records | (a) the full code gate, both halves (seat brief item 30's rule for anything outside `docs/`); (b) the frontend half plus item 30's docs-only set, with the PR's python CI run (it fires from `docs/**`) as the Python evidence | **(b)**: no Python file changes; the 22:06:20 entry names "frontend gate"; Python is still run once, by CI on the PR | decision point | yes, before T4 | the maintainer (item 30 is a standing rule) |
+| R10-DP4 | Does FD-1959 close at the merge? Its Disposition needs "F1 and the four moderates fixed …, the lows fixed or carried with a date, **and OQ-1960 is decided**"; OQ-1960 is decided at the P2 close | (a) the PR discharges the fix limb by a dated line; FD-1959 stays open on its carried limb until OQ-1960 is decided, and WK-675's acceptance reads both; (b) OQ-1960 is ruled now and, if (i), axe-core and Playwright enter this slice (a tech dependency, `skills-map.md` in the same PR; Fri 30 at risk); (c) an `RL-` amends the Disposition: FD-1959 closes at the merge and the browser-pass limb lives only in OQ-1960 (owner WK-675) | **(c)**: one question is held in one record, and the blocker the 22:06:20 entry names clears on Fri 30; (a) is the default if no ruling is made by T5 | decision point | no (blocks T5's FD line only) | decision-maker, by `RL-` |
 
 ## Hand-off (not this plan's writes)
 

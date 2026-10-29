@@ -94,3 +94,21 @@ describe("BulkOperationDialog (FR-233)", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent("above the declared maximum");
   });
 });
+
+// NFR-463 / WCAG 4.1.3 (FD-1959 F3): a status message is announced only if its live region is in
+// the DOM before the message arrives. A region that mounts together with its text (v-if) is not.
+const liveRegions = (root: Element): Element[] =>
+  Array.from(root.querySelectorAll('[role="status"], [aria-live="polite"]'));
+
+describe("BulkOperationDialog: the status region is persistent (NFR-463, FD-1959 F3)", () => {
+  it("holds the created message in a live region that was in the DOM before Apply", async () => {
+    const { container } = render(BulkOperationDialog, { props });
+    const before = liveRegions(container);
+    await userEvent.type(screen.getByLabelText("Percentage"), "5");
+    await userEvent.click(screen.getByRole("button", { name: "Apply" }));
+    await screen.findByText("Created area@4");
+    const holder = liveRegions(container).find((el) => /Created area@4/.test(el.textContent ?? ""));
+    expect(holder).toBeDefined();
+    expect(before).toContain(holder);
+  });
+});

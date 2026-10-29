@@ -66,7 +66,7 @@ function togglePurpose(purpose: (typeof PURPOSES)[number], on: boolean): void {
   emit("update:mount", next);
 }
 
-const field = "w-full rounded-md border border-slate-300 px-2 py-1 text-sm";
+const field = "w-full rounded-md border border-slate-500 px-2 py-1 text-sm";
 </script>
 
 <template>

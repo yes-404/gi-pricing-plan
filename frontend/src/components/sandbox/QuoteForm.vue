@@ -71,7 +71,7 @@ function submit(): void {
       <select
         id="quote-purpose"
         v-model="purpose"
-        class="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+        class="w-full rounded-md border border-slate-500 px-2 py-1.5 text-sm"
       >
         <option
           v-for="option in PURPOSES"
@@ -92,7 +92,7 @@ function submit(): void {
         v-model="effectiveDate"
         type="date"
         required
-        class="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+        class="w-full rounded-md border border-slate-500 px-2 py-1.5 text-sm"
       >
     </FormField>
 
@@ -113,7 +113,7 @@ function submit(): void {
         v-else-if="field.type === 'enum'"
         :id="`quote-input-${field.name}`"
         v-model="raw[field.name]"
-        class="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+        class="w-full rounded-md border border-slate-500 px-2 py-1.5 text-sm"
       >
         <option value="">
           {{ field.nullable ? "(none)" : "Choose…" }}
@@ -133,7 +133,7 @@ function submit(): void {
         :type="field.type === 'date' ? 'date' : 'text'"
         :inputmode="field.type === 'int' ? 'numeric' : field.type === 'decimal' ? 'decimal' : undefined"
         autocomplete="off"
-        class="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+        class="w-full rounded-md border border-slate-500 px-2 py-1.5 text-sm"
         :aria-invalid="problems[field.name] ? 'true' : undefined"
         :aria-describedby="problems[field.name] ? `quote-input-${field.name}-problem` : undefined"
       >

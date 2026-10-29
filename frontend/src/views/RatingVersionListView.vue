@@ -123,7 +123,7 @@ function pinnedTables(version: RatingVersion) {
         <select
           id="status-filter"
           v-model="statusFilter"
-          class="rounded-md border border-slate-300 px-2 py-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-700"
+          class="rounded-md border border-slate-500 px-2 py-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-700"
         >
           <option value="all">
             All

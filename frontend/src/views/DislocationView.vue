@@ -85,7 +85,7 @@ async function cite(): Promise<void> {
       <RouterLink
         v-if="rating"
         :to="`/rating-versions/${rating.id}`"
-        class="hover:underline"
+        class="underline"
       >
         {{ heading }}
       </RouterLink>
@@ -111,7 +111,7 @@ async function cite(): Promise<void> {
           id="dislocation-run-id"
           v-model="runId"
           type="text"
-          class="mt-1 w-96 rounded-md border border-slate-300 px-2 py-1.5 font-mono text-sm"
+          class="mt-1 w-96 rounded-md border border-slate-500 px-2 py-1.5 font-mono text-sm"
         >
       </div>
       <button
