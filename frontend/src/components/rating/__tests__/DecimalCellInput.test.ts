@@ -40,3 +40,24 @@ describe("DecimalCellInput (FR-10, FR-21)", () => {
     expect(input).toHaveAccessibleDescription("below the minimum");
   });
 });
+
+// NFR-463 / WCAG 3.3.1 (FD-1959 F1): a syntax error is said in words and tied to the input, not
+// only coloured and flagged with aria-invalid.
+describe("DecimalCellInput: a syntax error is described (NFR-463, FD-1959 F1)", () => {
+  it("describes a malformed decimal in words, visibly and to assistive technology", async () => {
+    render(DecimalCellInput, { props: { modelValue: "" } });
+    const input = screen.getByRole("textbox");
+    await userEvent.type(input, "1.2.3");
+    expect(input).toHaveAttribute("aria-invalid", "true");
+    expect(input).toHaveAccessibleDescription("Enter a decimal number");
+    expect(screen.getByText("Enter a decimal number")).toBeVisible();
+  });
+
+  it("describes a non-integer in an integer column as a whole-number error", async () => {
+    render(DecimalCellInput, { props: { modelValue: "", integer: true } });
+    const input = screen.getByRole("textbox");
+    await userEvent.type(input, "12.5");
+    expect(input).toHaveAccessibleDescription("Enter a whole number");
+    expect(screen.getByText("Enter a whole number")).toBeVisible();
+  });
+});

@@ -291,3 +291,34 @@ describe("the Regression suite view (FR-1932)", () => {
     );
   });
 });
+
+describe("RegressionSuiteView: semantics of the results (NFR-463, FD-1959 F6, L11, L12)", () => {
+  async function renderFailing(): Promise<void> {
+    stubFetch({ pages: [{ items: LIST, next_cursor: null }], runs: { [NEWEST]: run() } });
+    render(RegressionSuiteView, { props });
+    await screen.findByRole("table", { name: /golden quotes/i });
+  }
+
+  it("L12: the first column of the golden and property tables is a row header", async () => {
+    await renderFailing();
+    const golden = screen.getByRole("table", { name: /golden quotes/i });
+    expect(within(golden).getAllByRole("rowheader").map((h) => h.textContent)).toEqual([
+      "young-driver-london",
+      "old-driver-leeds",
+    ]);
+    const properties = screen.getByRole("table", { name: /property results/i });
+    expect(within(properties).getAllByRole("rowheader")).toHaveLength(2);
+  });
+
+  it("L11: the counterexample's accessible name is on an element that exposes a role", async () => {
+    await renderFailing();
+    const example = await screen.findByLabelText("Counterexample of monotone_in_age");
+    expect(example.tagName === "PRE" && !example.hasAttribute("role")).toBe(false);
+  });
+
+  it("F6: the scrolling counterexample region is focusable", async () => {
+    await renderFailing();
+    const example = await screen.findByLabelText("Counterexample of monotone_in_age");
+    expect(example).toHaveAttribute("tabindex", "0");
+  });
+});
