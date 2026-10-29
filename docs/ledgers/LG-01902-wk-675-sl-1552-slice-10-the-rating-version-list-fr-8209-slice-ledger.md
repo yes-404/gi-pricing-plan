@@ -2,7 +2,7 @@
 id: LG-1902
 family: ledger
 title: WK-675 slice SL-1552 — Slice 10, the Rating version list at /rating (FR-1903) (slice ledger)
-status: active                 # active → closed (§1.2a)
+status: closed                 # active → closed (§1.2a)
 created: 2026-10-25   # drafted 2026-10-23 under working id 8208; minted 2026-10-25 as LG-1902
 owner: executor
 tree: 4e399fd01e8de2fe55d2f128b0e09ee2b2735c6a
@@ -87,3 +87,7 @@ None yet.
 - **The named exception** was ruled for this run only, in the to-lead entry "2026-10-25 18:59:00 GMT" (the 14th failure is outside the slice's change set and the cross-gate collision is proven).
 - **The scratch-DB check** was granted in the to-lead entry "2026-10-25 19:00:55 GMT" and ran in the no-gate gap at head `6975e2be`, porcelain 0, load1 3.00: `createdb` rc 0; `alembic upgrade head` rc 0; `pytest backend/tests/test_tenant_binding.py` rc 0, `14 passed, 6 warnings in 19.78s`; `dropdb` rc 0; zeros: DB count 0, redis db 11 dbsize 0, db0 dbsize 56.
 - **Accepted** in the to-lead entry "2026-10-25 19:28:31 GMT": the gate STANDS under 1(f) plus the named exception, final; the gate of record is `6975e2be`.
+
+## Closed
+
+**Closed 2026-10-27** at slice close: PR #1388 merged as squash `85eac5b29bef93d90d3107abc72adf5126d013c8` (tree `8da3c76ee0740752b75e07e30b09016fa8f2e689`) on the maintainer's (by delegation) merge entry, `to-lead.md` entry "2026-10-25 22:27:45 GMT — Maintainer: #1388 (SL-1552, WK-675 S10) ACK VERIFIED LIVE; MERGE 15 VERIFIED on origin = 85eac5b2; removals owed". The roadmap row `SL-1552` is `closed` in the same commit.

@@ -2,7 +2,7 @@
 id: LG-1933
 family: ledger
 title: WK-675 slice SL-1553 — Slice 11, the Regression suite view at /rating/:slug/v/:version/tests (FR-1932) (slice ledger)
-status: active                 # active → closed (§1.2a)
+status: closed                 # active → closed (§1.2a)
 created: 2026-10-26               # drafted 2026-10-25 under working id 8212
 owner: executor
 tree: 951af0719d155ac58afce69c46e485dbb7a7a49c
@@ -122,3 +122,7 @@ Not yet opened.
 **Disclosure (2026-10-25, FD 1919 form; the maintainer's 22:55:13 GMT ruling relayed by the lead).** A `sed` over this ledger and `docs/specs/03-rating-engine.md`, re-pointing FR 8209, RL 8163 and LG 8208 to FR-1903, RL-1900 and LG-1902, ran in commit `d3b35fae` (pushed). It rewrote three spans inside verbatim `to-lead.md` quotes in this ledger: the "2026-10-23 11:14:56 BST" heading (RL 8163, `to-lead.md` :30182) and, twice, item (B) of the "2026-10-25 11:22:13 GMT" entry (FR 8209 and RL 8163, `to-lead.md` :30429). The forward fix `aab3e3ef` restored the three spans character for character from `to-lead.md`; no history was rewritten. `e64c4568` and the re-merge `c124e6d9` are unaffected, and no frozen record was touched. This is the quote-alteration class of FD 1919; the line is its accepted disclosure form.
 
 **Disclosure addendum (2026-10-25 23:40 GMT, FD 1919 form; RS-1935 F1, adopted by the lead; the maintainer's 22:57:25 GMT ruling).** The disclosure above counts three spans; the count is four. The fourth is line 44 of this ledger, inside the "RL-1934 What it obliges, verbatim" block (`origin/draft/rl-8217` @2f205360): `d3b35fae` re-pointed its quoted "FR 8209 item (4)" to "FR-1903 item (4)", and `aab3e3ef` did not restore it. This commit restores that span to its source text, character for character; a `diff` of the whole 23-line verbatim block against the RL-1934 file prints nothing. No history was rewritten and the `93bd427b` line is not edited. Found by RS-1935 F1.
+
+## Closed
+
+**Closed 2026-10-27** at slice close: PR #1396 merged as squash `866cec47e446eec7f9ccba7cc9e318d6c831ef11` (tree `959dd405c573addf93b03ab6eec93f2a4e812267`) on the maintainer's (by delegation) merge entry, `to-lead.md` entry "2026-10-26 04:43:13 GMT — Maintainer: MERGE 24 (#1396, SL-1553 — WK-675 S11, FR-1932) VERIFIED on origin = 866cec47e446; lane C's last slice is on main; PL 8205's turn is open". The roadmap row `SL-1553` is `closed` in the same commit.

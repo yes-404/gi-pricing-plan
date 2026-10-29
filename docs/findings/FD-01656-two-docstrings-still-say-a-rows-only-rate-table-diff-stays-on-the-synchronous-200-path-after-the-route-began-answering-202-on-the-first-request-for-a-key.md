@@ -2,7 +2,7 @@
 id: FD-1656
 family: finding
 title: Two docstrings still say a rows-only rate-table diff stays on the synchronous 200 path, after the route began answering 202 on the first request for a key
-status: active
+status: closed
 created: 2026-10-12
 owner: auditor
 tree: 4af5997e14861bafda4685730180233db54dc243

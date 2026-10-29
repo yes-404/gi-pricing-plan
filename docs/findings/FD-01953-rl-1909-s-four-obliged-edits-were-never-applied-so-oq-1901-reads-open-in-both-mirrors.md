@@ -2,7 +2,7 @@
 id: FD-1953
 family: finding
 title: RL-1909's four obliged edits were never applied, so OQ-1901 reads open in both mirrors
-status: active
+status: closed
 created: 2026-10-26   # drafted 2026-10-26 under working id 8262
 owner: auditor
 tree: 1e0a8abbc90723ae9c887a901f700b72f6f94cc1
