@@ -3025,6 +3025,26 @@ FD-1729's first part: the application connects as the `gip_app_login` role, a me
 
 (Minted 2026-10-26 from working id 8246, on the maintainer's (by delegation) entry "2026-10-26 02:07:55 GMT" (`to-lead.md`) (S1a mints as a new `SL-` row; SL-1771 is retired) and the mint map of "2026-10-26 02:26:20 GMT"; ledger LG-1941, audit RS-1946; executed on branch `draft/s1a-fd1729`.)
 
+#### SL-1962 — WK-1178 fix slice (S1c) — FD-1951: the CREATEROLE route and the five same-class mediums, red first (PL-1927's S1c)
+
+```yaml
+id: SL-1962
+family: slice
+title: WK-1178 fix slice (S1c) — FD-1951: the CREATEROLE route and the five same-class mediums, red first (PL-1927's S1c)
+status: active                    # draft → active → closed | retired (§1.2a)
+created: 2026-10-29
+owner: lead
+tree: eb64354f72876db075b3edbc3dfee2d02308d864
+phase: P2
+work: WK-1178
+corrected_by: []
+relates: [FD-1951, LG-1964, FD-1963, FD-1965, PL-1927]
+```
+
+FD-1951's fix: the application refuses to start on a login role that reaches the owner by CREATEROLE or ADMIN OPTION, with the five same-class mediums closed, each red first, and the red table in the slice ledger. Slice S1c of PL-1927; the carried membership strip is FD-1963 and the seed-fixture defect the gate met is FD-1965.
+
+(Minted 2026-10-29 from working id 8266, on the lead's brief (lead 29) under the grant "2026-10-29 14:30:58 GMT" (S1c's gate stands) and the mint tool of record `mint-repoint.py` (sha256 `4d83681a`); ledger LG-1964, findings FD-1963 and FD-1965; executed on branch `draft/s1c-fd1951`.)
+
 #### SL-1948 — WK-1178 fix slice (S1b) — FD-1729 part 2: the startup refusal, the tamper proof and the exact grant map (PL-1927's S1b)
 
 ```yaml

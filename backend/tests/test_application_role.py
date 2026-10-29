@@ -48,6 +48,7 @@ from app.config import Settings
 from app.db.immutability import (
     P_OWN,
     PINNED_GUARD_FUNCTION_MD5,
+    PREDEFINED_ROLES,
     LeastPrivilegeError,
     _declared,
     assert_least_privilege,
@@ -57,6 +58,7 @@ from app.main import create_app
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 _APP_ROLE = "gip_app"
+_LOGIN_ROLE = "gip_app_login"
 _UNREACHABLE = "http://127.0.0.1:1"
 _DEFINITION = "def " + "_declared("  # not a literal: this file would otherwise match itself
 
@@ -147,6 +149,90 @@ async def test_an_inherit_false_membership_of_the_owner_is_refused(
             rows = (await connection.execute(P_OWN)).all()
             assert rows, "P-own must flag the scratch role"
             with pytest.raises(LeastPrivilegeError):
+                await assert_least_privilege(connection)
+        finally:
+            await transaction.rollback()
+
+
+# --------------------------------------------------------------------------- S1c (FD-1951)
+# Every route to the owner is refused at startup. Each case plants ONE route as the owner, in a
+# rolled-back transaction, and acts as the login role: `assert_least_privilege` must raise,
+# naming the route. A control before the plant proves the same call passes on the provisioned
+# state, so the raise is the plant's (SL-1962).
+
+#: `{case id: ([statements the owner plants], the route the refusal names)}`.
+_ROUTES: dict[str, tuple[list[str], str]] = {
+    "a1_gip_app_createrole": (["ALTER ROLE gip_app CREATEROLE"], r"gip_app \(createrole\)"),
+    "a2_login_createrole": (
+        ["ALTER ROLE gip_app_login CREATEROLE"],
+        r"gip_app_login \(createrole\)",
+    ),
+    **{
+        f"m1_{role}": ([f"GRANT {role} TO gip_app_login"], rf"{role} \(predefined role\)")
+        for role in PREDEFINED_ROLES
+    },
+    "m2_session_replication_role": (
+        ["GRANT SET ON PARAMETER session_replication_role TO gip_app_login"],
+        "session_replication_role",
+    ),
+    "m3a_guard_function_owner": (
+        ["ALTER FUNCTION artifact_append_only() OWNER TO gip_app"],
+        r"owns artifact_append_only\(\)",
+    ),
+    "m3b_schema_owner": (["ALTER SCHEMA public OWNER TO gip_app"], r"owns schema public"),
+}
+
+
+async def _as_login_role(connection: AsyncConnection) -> None:
+    await connection.execute(text(f"SET LOCAL ROLE {_LOGIN_ROLE}"))
+
+
+@pytest.mark.req("FR-44")
+@pytest.mark.parametrize("case", list(_ROUTES))
+async def test_a_route_to_the_owner_is_refused_at_startup(
+    owner_database: Database, case: str
+) -> None:
+    """S1c (FD-1951): CREATEROLE on a reachable role, a predefined role, the SET privilege on
+    `session_replication_role`, ownership of a pinned guard function or of schema `public`."""
+    statements, route = _ROUTES[case]
+    async with owner_database.engine.connect() as connection:
+        transaction = await connection.begin()
+        try:
+            await _as_login_role(connection)
+            await assert_least_privilege(connection)  # control: the provisioned state passes
+            await connection.execute(text("RESET ROLE"))
+            for statement in statements:
+                await connection.execute(text(statement))
+            await _as_login_role(connection)
+            with pytest.raises(LeastPrivilegeError, match=route) as refused:
+                await assert_least_privilege(connection)
+            assert "provision-app-role.py" in str(refused.value)
+        finally:
+            await transaction.rollback()
+
+
+@pytest.mark.req("FR-44")
+@pytest.mark.parametrize(
+    "grant",
+    [
+        'GRANT "{owner}" TO gip_app_login WITH ADMIN OPTION',
+        'GRANT "{owner}" TO gip_app_login WITH ADMIN TRUE, INHERIT FALSE, SET FALSE',
+    ],
+    ids=["plain_admin_option", "admin_only"],
+)
+async def test_an_admin_option_on_the_owner_is_refused(
+    owner_database: Database, grant: str
+) -> None:
+    """S1c control (acceptance 21, not a red): on PostgreSQL 16 any `pg_auth_members` row counts
+    as `'MEMBER'`, the admin-only form included, so `P_OWN` refuses both at the base and at the
+    head. Present so that a change to `P_OWN` cannot lose it unseen."""
+    async with owner_database.engine.connect() as connection:
+        transaction = await connection.begin()
+        try:
+            owner = (await connection.execute(text("SELECT current_user"))).scalar_one()
+            await connection.execute(text(grant.format(owner=owner)))
+            await _as_login_role(connection)
+            with pytest.raises(LeastPrivilegeError, match=r"provision-app-role\.py"):
                 await assert_least_privilege(connection)
         finally:
             await transaction.rollback()
@@ -371,7 +457,19 @@ async def _grant_differences(connection: AsyncConnection) -> list[str]:
         if privilege not in table_level[table]:  # a table-level grant is expanded to its columns
             column_level[table].setdefault(column, set()).add(privilege)
 
+    # PUBLIC (grantee 0) must hold nothing: it reaches every role, `gip_app_login` included.
+    public: dict[str, set[str]] = {}
+    for table, privilege in await connection.execute(
+        text(
+            "SELECT c.relname, a.privilege_type FROM pg_class c, aclexplode(c.relacl) a "
+            "WHERE a.grantee = 0 AND c.relnamespace = 'public'::regnamespace "
+            "AND c.relkind IN ('r', 'p')"
+        )
+    ):
+        public.setdefault(table, set()).add(privilege)
+
     differences = [f"{t}: no expected row" for t in sorted(tables - EXPECTED_GRANTS.keys())]
+    differences += [f"{t}: PUBLIC holds {sorted(p)}" for t, p in sorted(public.items())]
     differences += [f"{t}: expected table absent" for t in sorted(EXPECTED_GRANTS.keys() - tables)]
     for table in sorted(tables & EXPECTED_GRANTS.keys()):
         want_table, want_columns = EXPECTED_GRANTS[table]
@@ -404,8 +502,9 @@ async def test_every_table_grants_the_application_exactly_its_declared_privilege
         (f"GRANT DELETE ON jobs TO {_APP_ROLE}", "jobs"),
         (f"REVOKE UPDATE (status) ON outbox FROM {_APP_ROLE}", "outbox"),
         (f"GRANT UPDATE (kind) ON sources TO {_APP_ROLE}", "sources"),
+        ("GRANT UPDATE ON jobs TO PUBLIC", "jobs"),
     ],
-    ids=["extra_table_grant", "missing_column_grant", "extra_column_grant"],
+    ids=["extra_table_grant", "missing_column_grant", "extra_column_grant", "public_table_grant"],
 )
 async def test_the_grant_comparison_sees_a_drift_in_both_directions(
     owner_database: Database, drift: str, table: str
