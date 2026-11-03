@@ -476,11 +476,17 @@ delta row in PL-1688, WK-674's plan …), and **start it after #1414 lands** wit
 executor, red first; its merge is subject to the user's freeze word"), and on the lead's from-lead
 "2026-11-03 15:36:05 GMT" item (a) (the code cites, re-read below at `c807a59d`). The row carries
 three decision points (DP-R1 to DP-R3 below). The maintainer's GO on this row comes before the seat
-is briefed.)*
+is briefed. **The freeze clause of 15:36:59 is superseded** by the user's order relayed in the
+maintainer's entry "2026-11-03 15:38:58 GMT" ("move freeze to 10th of Nov and defer the later
+dates": code freeze Tue 10 Nov 2026, docs freeze Wed 11 Nov 2026, P2 exit demo Wed 18 Nov 2026;
+"the FD-1823 reconcile … [is] ordinary P2 code before Tue 10 Nov, merged on the normal ACK
+path"), and by the maintainer's entry "2026-11-03 15:40:02 GMT" item (3) ("FD-1823 merge target
+Fri 6, hard stop Mon 9, accepted").)*
 **A new row 3: SL 8286 — FD-1823's reconcile: the deployment switch loads the latest committed
 Deployment at each (re)subscribe and periodically, and discovers Environments created after
 start.** Ledger **LG 8287**. Both are working ids, written in space form until the mint. Work
-**WK-674**; merged before the **Thu 12 Nov 2026** exit demo. The row, in the table's columns:
+**WK-674**; merged by **Fri 6 Nov 2026**, hard stop **Mon 9 Nov 2026**, before the code freeze on
+**Tue 10 Nov 2026**. The row, in the table's columns:
 Order 3; Slice SL 8286; Scope (what the `LG-` quotes) items R0 to R3, G and A1 to A10 below;
 Requirements `03` §3: FR-268 (its dated note "The deployment switch, dated 2026-10-18" at `03`
 :213, which says the remedy "is not built in Slice 5") and FR-269 (a rollback writes a new
@@ -631,11 +637,13 @@ unchanged.
     LG close by the same path as every slice (the `LG-`'s last line is the merge sha and PR).
     `docs/INDEX.md` is regenerated and `doc-index.py --check` exits 0.
   - **A10** The executor starts only after #1414 has landed and the maintainer's GO on this row.
-    The slice merges before the exit demo on **Thu 12 Nov 2026** (`date -d 2026-11-12 +%A` =
-    Thursday). **Its merge is subject to the user's code-freeze word:** the freeze is **Wed 4 Nov
-    2026** (`date -d 2026-11-04 +%A` = Wednesday) unless the user re-dates it. The merge waits
-    for that word or for a dated ruling accepting the code past the freeze. No window of the
-    slice overlaps the nfr-bench-1 session; the lead names its dates at GO.
+    The reds start once #1414 has landed. The slice merges on the normal ACK path, with no
+    freeze exception: the target is **Fri 6 Nov 2026** (`date -d 2026-11-06 +%A` = Friday), and
+    the hard stop is **Mon 9 Nov 2026** (`date -d 2026-11-09 +%A` = Monday). Both are before
+    the code freeze on **Tue 10 Nov 2026** (`date -d 2026-11-10 +%A` = Tuesday), and so before
+    the P2 exit demo on **Wed 18 Nov 2026** (`date -d 2026-11-18 +%A` = Wednesday). No window of
+    the slice overlaps the nfr-bench-1 session, **Thu 5 – Fri 6 Nov 2026** (the 15:38:58 entry:
+    "nfr-bench-1 Thu 5–Fri 6 Nov stands").
 - **Write set:**
   - `backend/src/app/platform/deployment_switch.py` (the reconcile, `SwitchSubscription`'s
     add-and-restart, and the docstrings) and `backend/src/app/main.py` (the lifespan wiring and
