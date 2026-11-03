@@ -826,3 +826,144 @@ separate commit, dropped only on a base reading rc 0 (S1d-0, S1d-6, d2). The dat
 One departure from the brief's wording, named: the red's "other at-head database" is a disposable one,
 not the template, because of E-d3. The open choices are DP-S1d-1 and DP-S1d-2, never a silent pick;
 S1d-3 and S1d-4 follow DP-S1d-1 (a) and change with the ruling.
+
+## Delta, row 7 (S5) — FD-1974: the ten carried a11y lows (NFR-463) on the WK-675 surfaces (frontend, red-first)
+
+*(Delta, row 7 (S5), dated 2026-11-03 from 15:43 GMT, by the planner (seat plan-wk1178, Opus 5.5,
+effort medium), on the maintainer's entries "2026-11-03 15:40:02 GMT" ruling (1) (*"the ten lows (and
+any P2-surface rows FD 8285 files) become one WK-1178 code slice, sonnet executor, Wed 4 – Fri 6,
+merge by Mon 9; plan it now as a dated delta row in the WK-1178 plan, GO request to me with the row.
+The row says the owner is WK-1178 "on the user's WK-675 acceptance line"; if the user names another
+owner the row is re-pointed by a dated line, the slice is unaffected."*), "2026-11-03 15:36:59 GMT"
+item 2 (FD-1974's new owner WK-1178) and "2026-11-03 15:38:58 GMT" (the user's order: code freeze
+Tue 10 Nov 2026; FD-1974's due date → Wed 18 Nov), all in `~/gi-pricing-plan.local/channel/to-lead.md`:
+**a new row 7, S5 — SL 8288 — FD-1974's ten carried a11y lows (NFR-463) on the WK-675 surfaces.**
+Its ledger is **LG 8289** (working ids; minted in merge order at the slice's turn). Work
+**WK-1178**, owner WK-1178 **"on the user's WK-675 acceptance line"**; if the user names another
+owner, this row is re-pointed by a dated line and the slice is unaffected (ruling (1)). **Why
+PL-1927:** WK-1178 has no Work plan; PL-1927 is its open map-kind delta that already takes appended
+dated rows (rows 5 and 6, the latter on the maintainer's "2026-10-29 17:14:18 GMT": *"a dated delta
+row in PL-1927 … no new PL"*), so ruling (1)'s "a dated delta row in the WK-1178 plan" lands here and
+no new `PL-` is minted. **Scope growth:** the P2-surface rows that FD 8285 files (in flight on
+`docs/batch6-2026-11-03`, unread here) join this row only by a dated amendment naming each row; none is
+guessed now. The finding `FD-1974` (`docs/findings/FD-01974-*.md`; register row
+`docs/findings/register.md:430` at `c807a59d`) is the specification: its Evidence table, rows 1 to 10.
+**Tree read:** `origin/main` `c807a59d1a26d12e63d88bc395ac3dcc373aa919`. `git diff --stat 265a552e
+c807a59d --` over the eleven files below prints nothing, so every FD-1974 site resolves unchanged at
+main; each was re-read (E-s1). The row, in the table's columns: Order 7; Scope (what the `LG-`
+quotes) Tasks S5-0 to S5-6 below, the ten lows L-1 to L-10; Requirements `00` §9: NFR-463 (no spec
+change); Depends on nothing unmerged, DP-S5-1 to DP-S5-4 ruled, the lead's GO; Lane frontend
+(`frontend/src/components/`, `frontend/src/views/`); DB **no**; Size 2½ days, one sonnet executor,
+**Wed 4 – Fri 6 Nov 2026**, **merged by Mon 9 Nov 2026**, before the Tue 10 Nov code freeze (weekdays
+from `date -d`). The SL row mints at S5's turn, in S5's own PR, under WK-1178 in `docs/roadmap.md` §6.
+Rows 1 to 6, their dated lines and the plan body are unchanged.)*
+
+**Evidence at `c807a59d` (E-s1; paths under `frontend/src/`).** Every FD-1974 row re-resolves; the
+two cite corrections FD-1974 already records in-row stand (row 2: FD-1959's `StepNode.vue:239` and
+`MountNode.vue:333` did not resolve, the `role="group"` lines do; row 10: the tester's `:207-212` and
+`:257-261` are one line off the `<p>` bounds). Two facts FD-1974 left open, settled by reading:
+- **L-7 (row 7).** `components/sandbox/quoteForm.ts:60-63`: a `bool` field `continue`s before any
+  problem is set, so `buildInputs` **never** raises a problem for a bool; a non-nullable `enum` left
+  at `""` reaches `:65-67` and gets `"Required"`, and `QuoteForm.vue:140-147` renders it, but the
+  `<select>` (`:112-116`) has no `aria-invalid` or `aria-describedby`. The enum half is testable; the
+  bool half has no failing case.
+- **L-10 (row 10).** `views/QuoteSandboxView.vue:78` sets `result.value = null` before the `await`, so
+  the status region goes empty between two scores; `views/RateTableEditorView.vue:162-169` (`review()`)
+  does **not** clear `diff` before `await previewEdit(…)`, so a second review with no edit between
+  (`:135` clears it only on a cell edit) leaves the string unchanged. The editor half is testable;
+  the sandbox half is a rendered question only.
+
+| L | FD-1974 row | Site at `c807a59d` | Change | Evidence |
+|---|---|---|---|---|
+| L-1 | 1, F4 | `components/FormField.vue:35-40`, slot `:33`; five caller files | DP-S5-1 | vitest red-first, `components/__tests__/FormField.test.ts` |
+| L-2 | 2, L4 | `components/dag/DagDesigner.vue:226-231`; `StepNode.vue:22,25`; `MountNode.vue:46,52` | `:nodes-focusable="false"` on `<VueFlow>` (the step list is the keyboard path) | vitest red-first, `components/dag/__tests__/DagDesigner.test.ts`: the `VueFlow` component's `nodesFocusable` prop, and, if jsdom renders node wrappers, no wrapper with `tabindex="0"`; the duplicate `role="group"` is static, the `LG-` quotes the rendered wrapper's attributes; focus order is OQ-1960's |
+| L-3 | 3, L5 | `components/rating/BulkOperationDialog.vue:63` | drop `role="dialog"`; the labelled `<section>` is a region | vitest red-first, `components/rating/__tests__/BulkOperationDialog.test.ts`; DP-S5-2 for `views/__tests__/RateTableEditorView.test.ts:213` |
+| L-4 | 4, L6 | `views/RateTableEditorView.vue:321-327`, `canReview` `:67-69` | DP-S5-3 | vitest red-first, `views/__tests__/RateTableEditorView.test.ts`: one case per failing condition |
+| L-5 | 5, L7 | `components/rating/RateTableDiffPanel.vue:179-184`, table `:206`, pager `:301-316` | a `role="status"` summary with the shown count, and the page in the pager | vitest red-first, `components/rating/__tests__/RateTableDiffPanel.test.ts`; the announcement itself is OQ-1960's |
+| L-6 | 6, L8 | `components/rating/RateTableDiffPanel.vue:304`, `:312` | when the clicked pager button becomes disabled, focus moves to the other one | vitest red-first, same file, mounted with `attachTo: document.body`, `document.activeElement` read |
+| L-7 | 7, L9 | `components/sandbox/QuoteForm.vue:112-116` (enum), `:106-111` (bool) | the enum `<select>` gets the `:137-138` pair; the bool: no change | enum: vitest red-first, new `components/sandbox/__tests__/QuoteForm.test.ts`; bool: **static**, accepted in the `LG-` by a dated line citing `quoteForm.ts:60-63` |
+| L-8 | 8, L10 | `views/RatingVersionListView.vue:118-139` | a `role="status"` region with the shown count | vitest red-first, `views/__tests__/RatingVersionListView.test.ts` |
+| L-9 | 9 | `views/RateTableEditorView.vue:276-279`; `components/rating/RateTableDiffPanel.vue:201-205` | DP-S5-4 | vitest red-first, `getByRole("region", { name })` in the two files above |
+| L-10 | 10 | `views/RateTableEditorView.vue:162-169`; `views/QuoteSandboxView.vue:78`, `:208-213` | editor: `diff.value = null` before the `await` in `review()`; sandbox: no change | editor: vitest red-first (a deferred `previewEdit`; the region reads `""` while pending on the second review); sandbox: **static**, the `LG-` quotes `:78`; re-announcement is OQ-1960's |
+
+**Decision points (S5).** S5 stays unstarted while any is open.
+
+| # | Question | Options | Recommendation | Kind | Blocking | Resolved by |
+|---|---|---|---|---|---|---|
+| DP-S5-1 | How does `FormField` tie its help text to a control it receives as a slot (L-1)? | (a) the `<p>` gets `:id="\`${fieldId}-help\`"` and the default slot a prop `describedby` (the help id, `undefined` without help); every caller that passes `help` binds it (QuoteForm joins it with its problem id) · (b) `FormField` sets `aria-describedby` on `#fieldId` from `onMounted` by DOM query; no caller changes · (c) the id contract only, callers compute the id | **(a)**: the template binds it, `vue-tsc` checks the slot prop, no DOM reach-in; `fieldId` is already required (`FormField.vue:19`), so the id is deterministic | decision point | yes (S5-2) | |
+| DP-S5-2 | L-3's fix makes `views/__tests__/RateTableEditorView.test.ts:213` (`getByRole("dialog", …)`) fail. Edit it? | (a) yes: `dialog` → `region`, same name, by the lead's OK (seat brief item 13), one named commit · (b) no: L-3 accepted by a dated line, no fix | **(a)**: the assertion keeps its strength and names the corrected role; (b) leaves a known WCAG 4.1.2 fail | decision point | yes (S5-3) | |
+| DP-S5-3 | How does "Review changes" say why it is disabled (L-4)? | (a) keep native `disabled`; a visible line beside it names the first failing condition (no edit / blank change note / busy), referenced by `aria-describedby` · (b) `aria-disabled="true"` with a click guard, so it stays focusable, plus (a)'s text | **(a)**: visible to everyone, no change to what a click does; (b) changes focus behaviour that only OQ-1960's browser pass can verify | decision point | yes (S5-3) | |
+| DP-S5-4 | The two unnamed `tabindex="0"` scrollers (L-9)? | (a) both get `role="region"` and an `aria-label`, `tabindex` kept · (b) the editor grid loses `tabindex` (its inputs are focusable), the diff table is named as (a) | **(a)**: keyboard scrolling stays where it is today; (b) is FD-1974's open design question and is reversible later | decision point | yes (S5-3) | |
+| DP-S5-5 | Which gate? (seat brief item 30: anything outside `docs/` → the full code gate) | (G1) the full code gate, both halves · (G2) the frontend half + item 30's docs-only checks | **(G2)**, the narrow cover below; (G1) if G2 is not granted | decision point | yes (S5-5) | |
+
+**DP-S5-5 (G2), the narrow cover, proposed.** The slice's diff is `frontend/src/**` and `docs/**`
+only. `python.yml`'s paths name no `frontend/` glob; it fires here on `docs/**` alone, and the docs
+half below is item 30's cover for that. `frontend.yml` fires on `frontend/**`. So: (i) the frontend
+half, `pnpm --dir frontend install --frozen-lockfile`, `generate:api`, `lint`, `type-check`, `test
+--maxWorkers=2`, `build`, each rc quoted; a single-file vitest does **not** type-check, so the
+`type-check` step is the check for DP-S5-1's slot prop; (ii) item 30's docs-only gate (the gate-2
+checks and the eight docs-audit pytest files via `run-small.sh`); (iii) PR CI: frontend, python, docs,
+history-policy. G2 lapses to G1 if `git diff --name-only origin/main...<slice branch>` lists a file
+outside `frontend/src/` and `docs/`.
+
+**Write set (S5).** `components/FormField.vue` and the caller files DP-S5-1 (a) touches;
+`components/dag/DagDesigner.vue`; `components/rating/BulkOperationDialog.vue`;
+`components/rating/RateTableDiffPanel.vue`; `components/sandbox/QuoteForm.vue`;
+`views/RateTableEditorView.vue`; `views/RatingVersionListView.vue`; their `__tests__/` files and the new
+`components/sandbox/__tests__/QuoteForm.test.ts`; `LG 8289`; the SL row; FD-1974's close and its
+register row. No spec, contract, backend or `pricing-core` file; no new dependency (an axe or
+Playwright dependency is OQ-1960's).
+
+- [ ] **S5-0. Base.** Branch from `origin/main` at or after `c807a59d`. Quote `git diff --name-only
+  c807a59d..<base> -- frontend/src/` (non-empty → re-read E-s1's sites and report before S5-1).
+- [ ] **S5-1. Reds.** For each testable L (L-1 to L-6, L-7 enum, L-8, L-9, L-10 editor), the new test
+  first, run single-file under item 28's guard (`test -f`, `Test Files  1`, load1 < 6 quoted), red by
+  its cause, the FAILED line verbatim in `LG 8289` with `head=` first and `rc=` last (item 37), before
+  its fix.
+- [ ] **S5-2. L-1** on DP-S5-1. **S5-3. L-2 to L-10**, one commit per L, on DP-S5-2 to DP-S5-4; the
+  `:213` edit in its own commit, `test(frontend): RateTableEditorView finds the bulk operation as a
+  region (FD-1974 L-3)`.
+- [ ] **S5-4. Greens.** Each red's file green at the head, single-file, the line in the `LG-`; then
+  the GREEN set by import closure (item 29), the commands and the list in the `LG-`.
+- [ ] **S5-5. The gate** DP-S5-5 rules; END rows and rc files in the `LG-`.
+- [ ] **S5-6. Records.** `LG 8289` (`docs/_templates/LG.md`; scope = this row; L-2's and L-10's
+  static halves and L-7's bool line each as a dated line); the SL row; the mint at S5's turn (items 17,
+  19, 26). **FD-1974's closing act is the auditor's:** it sets FD-1974 `closed` in place and in its
+  register row, citing the PR and squash sha, after the merge; a row left unfixed by a ruling stays as
+  a dated acceptance in the `LG-` and the auditor cites it.
+
+**Acceptance (S5)** — the plan's Acceptance Standard rules apply (the range `origin/main...<slice
+branch>` named, red by the stated cause at the base, its line in `LG 8289` before the fix):
+
+1. `git diff --name-only origin/main...<slice branch>` lists only files under `frontend/src/` and
+   `docs/`.
+2. `LG 8289` carries, for each testable L (L-1 to L-6, L-7 enum, L-8, L-9, L-10 editor), one red line
+   at the base and one green line at the head, each with its test name and file.
+3. `LG 8289` carries the static evidence, each as a dated line: L-2's rendered-wrapper attributes,
+   L-7's bool (`quoteForm.ts:60-63`), L-10's sandbox (`QuoteSandboxView.vue:78`), and that rendered
+   focus order and announcements stay OQ-1960's.
+4. `grep -n 'role="dialog"' frontend/src/components/rating/BulkOperationDialog.vue` prints nothing;
+   `git log --format=%s origin/main..<slice branch> -- frontend/src/views/__tests__/RateTableEditorView.test.ts`
+   includes exactly one subject naming L-3 (under DP-S5-2 (a)).
+5. `grep -n 'nodes-focusable' frontend/src/components/dag/DagDesigner.vue` prints one line binding it
+   `false`.
+6. `grep -n -B3 -A3 'tabindex="0"' frontend/src/views/RateTableEditorView.vue
+   frontend/src/components/rating/RateTableDiffPanel.vue`: every element printed carries
+   `role="region"` and an `aria-label` (under DP-S5-4 (a); under (b), the editor's prints none).
+7. The gate DP-S5-5 rules: `pnpm --dir frontend type-check` rc 0 and `pnpm --dir frontend test
+   --maxWorkers=2` rc 0 with its `Test Files N passed` line quoted; after the mint, audit-docs,
+   doc-index `--check` and register-lint exit 0; PR CI frontend, python, docs and history-policy green.
+8. The squash merge on `main` is dated on or before 2026-11-09 (`git log -1 --format=%cI <squash sha>`).
+9. FD-1974 reads `closed` in its front matter and in `docs/findings/register.md`, citing the PR and the
+   slice's minted `SL-` id.
+
+**Constraints (S5).** Never hand-write an API type (`CLAUDE.md` §3); Composition API `<script setup
+lang="ts">` only. No existing test is removed or weakened (item 13); DP-S5-2 is the one edit, by OK.
+vitest + `@vue/test-utils`, DB-free; no DB window, no docker. Single-file runs under item 28's guard;
+the full frontend suite only inside the gate.
+
+**Self-review (S5).** Ruling (1)'s clauses: one WK-1178 code slice, sonnet, Wed 4 – Fri 6, merge by
+Mon 9 (the row; Acceptance 8); the owner phrase and its re-point (the row's dated line); FD 8285's rows
+by amendment only (the row). Each of FD-1974's ten rows has an L with a change or a dated static line,
+and a red where testable (the table; Acceptance 2, 3). The open choices are DP-S5-1 to DP-S5-5, never a
+silent pick; S5-2 and S5-3 follow the recommendations and change with the rulings.
