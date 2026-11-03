@@ -502,7 +502,6 @@ from backend.tests.test_model_jobs import (  # noqa: E402
     _split,
     _validated_version,
 )
-from sqlalchemy import update  # noqa: E402
 
 import app.platform.rating_algorithms as algorithms_module  # noqa: E402
 from app.db.models import ModelRow  # noqa: E402
@@ -593,14 +592,19 @@ async def test_a_feature_map_over_a_model_whose_fit_result_lacks_the_fields_is_r
     fit result carries and refuses a model that yields none, rather than accepting an empty
     map's worth of inputs from an empty default."""
     await grant("analyst")
-    ref = await fitted_glm_with_distinct_slug(database, blob_store, workspace_id)
-    slug, version = ref.removeprefix("model:").rsplit("@", 1)
+    # A fitted Model is immutable (02 R2, a trigger), so the model is reserved and never fitted:
+    # its `fit_result` is NULL, which carries no field to derive a consumed Factor from.
+    actor = await _actuary(database, workspace_id)
+    dataset_id = await _dataset(database, blob_store, workspace_id, actor)
+    version_id = await _validated_version(database, blob_store, workspace_id, actor, dataset_id)
+    factor = await _factor(database, workspace_id, actor, dataset_id, FACTOR_SLUG, SOURCE_COLUMN)
+    split = await _split(database, blob_store, workspace_id, actor, version_id)
     async with database.unit_of_work() as session:
-        await session.execute(
-            update(ModelRow)
-            .where(ModelRow.model_family_slug == slug, ModelRow.version == int(version))
-            .values(fit_result={"model_type": "glm"})
+        row, _ = await model_service.reserve_model(
+            session, workspace_id=workspace_id, actor=actor,
+            spec=_spec(version_id, (factor,), split_ref=split),
         )
+        ref = f"model:{row.model_family_slug}@{row.version}"
     headers = _headers(principal, workspace_id)
     refused = api_client.post(
         "/api/v1/rating-algorithms",
