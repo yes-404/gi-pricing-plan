@@ -216,6 +216,10 @@ rc=0
 ```
 END zeros: redis db 12 dbsize=0; `select count(*) from pg_database where datname='gipricing_sl8303_fd1495'` = 0 (datnames: gipricing postgres template0 template1); bucket removed via `mc rb --force`, `mc ls g/` has no 8303.
 
+**Gate evidence, verdict (2026-11-03, by stamp; written at the mint by the executor from the lead's entries, which are the record):** gate 1 on `1e77bd04`, window 18:39:53 to 20:33:59 UTC (to-lead entry "2026-11-03 20:36 GMT"): ruff 0, mypy 0, import-linter 0, req-coverage 0, generate-contracts 0, audit-docs 1 (check 31 only, the slice's own unminted ids, the item-31 class), pytest 1 ("13 failed, 7032 passed, 22 skipped, 5 xfailed, 146 warnings in 5010.66s (1:23:30)", the 13 all docs-audit tests, skipped 22 = baseline), frontend all 0 (vitest 137 files, 905 tests passed). Its demo stage was cap-stopped at 1500 s (rc 124) on this box's environment; the demo-only re-gate on the same head `1e77bd04` (window 21:21:42 to 21:47:32 UTC, cap 2400 s) PASSED: "designed stop at 2026-11-03T21:47:20+00:00 (both lines seen)", demo.py rc 0, 1529 s, dislocation #1 540 s. The three limbs together stand as the gate under common-brief item 31; the item-31 conditions (the mint, audit-docs rc 0, the docs-audit tests re-run via run-small at the minted head, CI including python) are in the PR.
+
+**The gate predates main's `uv.lock` and `python.yml` changes (#1414, #1417).** The re-merge of `origin/main` (`55bddaf2`) moved two non-docs files that are main's own, `.github/workflows/python.yml` and `uv.lock`. Lead ruling (a), upheld by the maintainer: `git diff --name-only origin/main HEAD -- . ':!docs'` at `f322e1a6` lists only the slice's twelve files (`backend/src/app/platform/rating_algorithms.py`, `backend/tests/test_rating_algorithms.py`, `backend/tests/test_rating_gbm_banded_save.py`, `pricing_core/modelling/factors.py`, `pricing_core/rating/compile.py`, `pricing_core/rating/runtime.py`, and the six pricing-core test files), and `git diff 1e77bd04 HEAD` over those files was empty. The PR's own python CI on the merged head (the full suite) is the evidence for the combination.
+
 ### Audit
 
 (the auditor's)

@@ -2,7 +2,7 @@
 id: FD-1495
 family: finding
 title: A model_call scores a fitted model with every feature it was fitted on, so a control-intent factor reaches the price and nothing reads intent at scoring
-status: active
+status: closed
 created: 2026-10-08            # original date 2026-10-05, set at the draft; minted 2026-10-08
 owner: auditor
 tree: 83ea509023d6d705d6f78fe74b7124fdf1375739
@@ -109,3 +109,5 @@ Either (a) refuse at compile a `model_call` whose pinned model's feature set con
 (`CONTROL_FACTOR_IN_RATEABLE_PATH`, as decision 37 does for rate tables), which needs the model's factor intents
 at compile, which `GbmFitResult` does not carry; or (b) record intent on the fit result and neutralise at scoring.
 The choice is open and is the lead's to put in `open-questions.md`; the audit does not pick.
+
+***Resolved 2026-11-03*** — closed in place 2026-11-03 by the executor at the mint, on the maintainer's GO in to-lead "2026-11-03 16:28:44 GMT" (DP-2 (a)) and the lead's instruction: fixed by WK-673 SL-1985 (LG-1986, plan PL-1984), this PR (its number is written at the merge's date of record). A pinned model's consumed Factors are now derived from the fields each arm carries (`consumed_features` in `packages/pricing-core/src/pricing_core/modelling/factors.py`: a GBM's required `feature_order`, a GLM's coefficient keys), an empty derived set is refused, `CONTROL_FACTOR_IN_RATEABLE_PATH` is raised on a model, a peril component and an offset model (`rating/compile.py`), and the save check at `backend/src/app/platform/rating_algorithms.py:142` derives its Factors the same way. **Remaining limb, carried per DP-2 (a):** `RL-1470` Ruled 9's declared-reference scoring is not built; it carries to P3 with owner WK-1178, discharged by the P3 plan review (to-lead "2026-11-03 16:28:44 GMT").
