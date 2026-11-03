@@ -1716,7 +1716,7 @@ A mount never maps a port to a blank parent name: `graph_invariant_issues` refus
 id: SL-1956
 family: slice
 title: WK-675 slice FD-1585 — the diff routes answer NOT_FOUND
-status: active                    # draft → active → closed | retired (§1.2a)
+status: closed                    # draft → active → closed (§1.2a)
 created: 2026-10-29
 owner: lead
 tree: d666a4051c036ae588a5c96dec4be88b8c5bdfb9
@@ -1729,6 +1729,8 @@ relates: [FD-1585, LG-1957, PL-1546]
 The diff routes answer NOT_FOUND: the fix slice of FD-1585 under PL-1546, executed on branch `fix/fd1585-diff-not-found`.
 
 (Minted 2026-10-29 from working id 8270, on the lead's brief (lead 29) under the grant "2026-10-29 12:16:21 GMT"; finding FD-1585, ledger LG-1957.)
+
+(Closed 2026-11-03 as a Slice, by the auditor's closing acts on the lead's instruction (the maintainer's ruling, to-lead "2026-11-03 15:36:59 GMT" item 3), on the audit recorded in LG-1957 and the lead's merge: #1403, squash commit 18728e68fe687f74ea886e8c25fa54b04db43c04, committer date 2026-10-29T13:38:33Z; ledger LG-1957.)
 
 #### SL-1971 — WK-675 slice — FD-1959's NFR-463 static limbs on the WK-675 surfaces, red first (PL-1546 row 10)
 

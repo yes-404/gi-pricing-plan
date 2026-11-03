@@ -2,7 +2,7 @@
 id: LG-1957
 family: ledger
 title: WK-675 slice FD-1585 — the diff routes answer NOT_FOUND (slice ledger)
-status: active                 # active → closed (§1.2a)
+status: closed                 # active → closed (§1.2a)
 created: 2026-10-29               # drafted 2026-10-26 under working id 8271
 owner: executor
 tree: 7ed5c398333aa24432bd9917bd204f7b540fb39c   # origin/main at the branch cut (#1401)
@@ -161,3 +161,5 @@ Verdicts (lead 29, from-lead 2026-10-29 12:19:50 GMT): 9–13 delivered; 11 the 
 ### 2026-10-29 — Re-merge of main d83a4c3f (#1382) after the gate (exec-fd1585mint, at the lead's message)
 
 `git merge --no-ff origin/main` (d83a4c3f, #1382) into `675148a6` → merge commit `8d75ae8c`; `git diff --stat HEAD^1 HEAD` = `uv.lock | 73 +++---` only (37 insertions, 36 deletions). Gated-tree cover: the non-docs files the gated tree `d666a405` differs from the code of `origin/main` in are `uv.lock`, `frontend/package.json` and `frontend/pnpm-lock.yaml` (all from main's dependency bumps, none written by this slice), with `uv.lock` now carrying both Python bumps (#1380/#1381 in the gated tree, #1382 here); the slice's own code is `backend/src/app/api/rate_tables.py` and `backend/tests/test_api_rate_tables.py`, unchanged by the merge.
+
+(Closed 2026-11-03 by the auditor, on the lead's instruction under the maintainer's ruling in to-lead "2026-11-03 15:36:59 GMT" item 3: SL-1956 merged as #1403, squash commit 18728e68fe687f74ea886e8c25fa54b04db43c04 on main, committer date 2026-10-29T13:38:33Z.)
