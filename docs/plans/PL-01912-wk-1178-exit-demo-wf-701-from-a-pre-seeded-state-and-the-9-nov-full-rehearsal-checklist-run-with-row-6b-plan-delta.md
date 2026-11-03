@@ -220,3 +220,31 @@ Each item is checked by a command a fresh reviewer can run from the repository r
    space form for the unminted SL-1913, LG 8226 and CR-1907.
 4. *Not decided here.* The exit tree's sha and the GO are the lead's; the 12 Nov presenter's
    script is not this plan's.
+
+*(Delta line, dated 2026-11-03 from 15:45 GMT, by the planner (seat plan-wk1178, Opus 5.5, effort
+medium): **the dates this plan carries, re-dated on the user's calendar move.** Authority, in
+`~/gi-pricing-plan.local/channel/to-lead.md`: "2026-11-03 15:38:58 GMT" (the user's order of 15:38,
+*"move freeze to 10th of Nov and defer the later dates"*: code freeze Tue 10 Nov 2026, docs freeze Wed
+11 Nov, P2 exit demo Wed 18 Nov, a 6-day shift; *"SL-1913's activation date in PL-1912 moves by the
+same 6 days unless the lead proposes otherwise"*) and "2026-11-03 15:40:02 GMT" ruling (2) (*"SL-1913
+rehearsal Mon 16 Nov accepted (PL-1912 +6 lands on Sun 15 → Mon 16, a dated delta in PL-1912). §14
+pre-demo plan review Mon 16 – Tue 17 by a planner (opus); its acceptance line is the maintainer's by
+delegation (CLAUDE.md §12) — mine, Tue 17 — and the P2 close itself is the USER's (§12, §13)."*).
+Weekdays read with `date -d`: 2026-11-09 Monday, 2026-11-12 Thursday, 2026-11-15 Sunday, 2026-11-16
+Monday, 2026-11-18 Wednesday. Old → new, each place in this file:
+- **SL-1913's full rehearsal run** (E2, Task 1): ~~Mon 9 Nov 2026~~ → **Mon 16 Nov 2026** (+6 days is
+  Sun 15 Nov, so the next weekday, ruling (2)). It is the date in the title (:5), the heading (:18),
+  §"E2" (:117, :122), the drafted SL-1913 row (:142, :147, :158), Task 1 (:168) and Acceptance 4's
+  ~~dated 2026-11-09~~ → **dated 2026-11-16** (:197).
+- **The exit demo** (Goal, Task 2, Self-review 4): ~~Thu 12 Nov 2026~~ → **Wed 18 Nov 2026** (+6
+  days), at :47, :177 and :221.
+- **Added, not shifted:** the `CLAUDE.md` §14 pre-demo plan review runs **Mon 16 – Tue 17 Nov 2026**,
+  by an opus planner; its acceptance line is the maintainer's (by delegation), **Tue 17 Nov**; the P2
+  close is the user's. SL-1913's run on Mon 16 is the review's input, so the review reads the
+  rehearsal's `LG-` row by row before its acceptance line.
+- **Not edited:** the two quoted rulings (:58, "Mon 9 Nov 2026"; :79, "the 12 Nov") and Self-review
+  1's quote (:214) keep their words as dated quotes; the filename's `9-nov` slug and the front-matter
+  `title:` are not changed; this line
+  governs them. SL-1913's own row in `docs/roadmap.md` (:3327, :3343 at `c807a59d`) still reads
+  Mon 9 Nov; its dated line is the lead's, in docs batch 6 or later. The rest of this plan is
+  unchanged.)*
