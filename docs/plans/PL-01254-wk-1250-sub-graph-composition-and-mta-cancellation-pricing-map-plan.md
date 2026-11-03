@@ -370,3 +370,132 @@ WK-1250 on that map plan"), the activation commit:
    each names its resolver. There are no code steps; this is a map plan.
 5. **Consistency.** The slice numbers in the coverage table, the carried obligations, the DP
    `Blocking` cells, the Sequencing and the Tasks agree (grep "Slice N" across the file).
+
+---
+
+*(Delta, row 4 (FD-1768's fix), added 2026-11-03 by the planner (seat plan-fd1768, lead 30),
+on the maintainer's entry "2026-11-03 15:36:59 GMT" item (5) in
+`~/gi-pricing-plan.local/channel/to-lead.md` (the G1 close schedule: "WK-1250 Wed 4 Nov"), on
+the entry "2026-11-03 15:46:13 GMT" ("earlier is never blocked"), and on the calendar of the
+entry "2026-11-03 15:38:58 GMT" (code freeze Tue 10 Nov 2026, docs freeze Wed 11 Nov 2026, P2
+exit demo Wed 18 Nov 2026). The owed fix is the register row `docs/findings/register.md:392`
+(FD-1768, MEDIUM, owner WK-1250, "**fix before close with an owner: WK-1250**, a follow-up slice
+after SL-1341 merges"). SL-1341 is `closed` (`docs/roadmap.md`, its row). This plan cut
+Slices 1 to 3 as Tasks 1 to 3. This row is the Work's fourth slice, in the Lean P2 form
+(`.claude/roles/planner.md` "Lean P2"): one dated row in the Work's one plan. Tasks 1 to 3, the
+Decision points and the rest of the plan body are unchanged.)*
+
+**A new row 4: SL 8296 — FD-1768's fix: a sub-graph mount whose `purposes` alone changed is
+worded "mount ports re-mapped" in the declared changes.** Ledger **LG 8297**. Both are working
+ids, in space form until the mint. Work **WK-1250**. Order 4. It depends on SL-1341 (closed)
+and on DP-5 to DP-7 below being ruled. Size 1: one `sonnet` executor. It merges by **Fri 6 Nov
+2026** at the latest, and on **Wed 4 Nov 2026** if it can, so that WK-1250's close audit sees
+FD-1768 discharged. The hard stop is **Mon 9 Nov 2026**, before the code freeze on Tue 10 Nov
+2026 (weekdays read from `date -d <d> +%A`).
+
+*(Added by row 4's dated line, 2026-11-03.)* Every `file:line` below is at `origin/main`
+`a8ef6f19c0be1142b0ac9dea88086f1ce6f95cbe` and was read, not run.
+
+- **R0 — the base, read.**
+  - **The diff is correct.** `packages/model-schema/src/model_schema/rating.py:1093-1095`
+    (`_diff_mounts`) keeps a mount whose `ref` is the same on both sides when `ports_changed` or
+    `purposes_changed` is true. So a `purposes`-only change is one `AlgorithmSubGraphChange` with
+    `before == after`, `ports_changed=False` and `purposes_changed=True` (the model, `:950-965`).
+    This is `RL-1344` acceptance 5 ("A change to a mount's `purposes` alone appears in FR-219's
+    structural diff", `RL-1344` :197-198). **`model-schema` is not changed by this slice.**
+  - **The wording is wrong.** `packages/pricing-core/src/pricing_core/rating/analysis.py:662-664`
+    reads `elif mount.before == mount.after:` and then
+    `text = f"{point}: mount ports re-mapped ({mount.after})"`, without reading `ports_changed`
+    or `purposes_changed`. A `purposes`-only change thus gets a description that names ports.
+    The re-point branch (`:665-669`) adds `; ports re-mapped` when `ports_changed` is true, but
+    says nothing when `purposes_changed` is true (DP-6).
+  - **The strings are ruled.** `RL-1686` "Descriptions" (`:261-267`) fixes the exact forms:
+    added, removed, the re-point `<mount_point>: mount <before> → <after>`, the re-map suffix
+    `; ports re-mapped`, and `<mount_point>: mount ports re-mapped (<ref>)` alone. It gives no
+    form for a `purposes` change, so a new form needs a ruling (DP-5).
+    `packages/pricing-core/tests/test_rating_attribution.py:1356-1384`
+    (`test_mount_ports_re_mapped_forms`, `req("FR-1399")`) asserts the two ported forms. No test
+    changes `purposes`. The backend's change summary already words both flags
+    (`backend/src/app/platform/change_summary.py:144-145`: `(ports changed)`, `(purposes
+    changed)`).
+  - **FR-1399 lists the mount changes** (`docs/specs/03-rating-engine.md:198`, the clause
+    *(Amended 2026-10-14, WK-673, RL-1686, `FD-1660`.)*): "Each mount the structural diff
+    (FR-219) reports as added, removed, re-pointed or re-mapped is exactly one derived change".
+    A `purposes`-only change is none of those four words (DP-7).
+- **R1 — red first, on main, DB-free.** Add `test_mount_purposes_changed_forms`, marked
+  `req("FR-1399")`, to `packages/pricing-core/tests/test_rating_attribution.py`. It uses the
+  file's own helpers (`_e_mounted`, `_mounted_base`, `_mounted_version`, `_candidate_version`,
+  `_resolver`, `_mount_changes`). The candidate changes only the `m_ncd` mount's `purposes`
+  (for example, from absent to `["mid_term_adjustment"]`; `MountPurpose`,
+  `packages/model-schema/src/model_schema/scoring.py:57`). The test asserts exactly one derived
+  mount change, of kind `step_changed`, whose description is DP-5's ruled form. If DP-6 is
+  ruled in, a second case changes `ref` and `purposes` together and asserts the re-point form
+  with DP-5's suffix. Neither the test nor its helpers need a database (no DB fixture, no
+  `conftest_db`, no `DATABASE_URL` in the file or in `test_rating_dislocation.py` /
+  `test_rating_score.py`, which it imports). Run it through `run-small.sh` as one file with
+  `-k test_mount_purposes_changed_forms`. **Red by its cause:** an `AssertionError` on the
+  description, which reads `m_ncd: mount ports re-mapped (sub_graph:ncd-ladder@4)`. A fixture or
+  compile error is not the red. The `LG-` quotes the failing assert line and the actual string.
+- **R2 — green.** In `analysis.py`'s mount loop, the `before == after` branch words each changed
+  flag in DP-5's ruled form. Ports alone keeps today's string exactly. If DP-6 is ruled in, the
+  re-point branch adds the purposes suffix after `; ports re-mapped`. Nothing else in
+  `analysis.py` changes, and `test_mount_ports_re_mapped_forms` passes unedited. If DP-7 rules
+  (a), FR-1399's mount sentence gets a dated amendment in the same commit as the code
+  (`.claude/skills/spec-change`). No requirement id is added.
+- **G — the gate.** The diff leaves `docs/` (`packages/pricing-core/**`), so the full code gate
+  runs with both halves (`CLAUDE.md` §11; the common seat brief item 30). The slice runs it in a
+  gate slot. The CI that fires, from the path filters: `python.yml` (`packages/**`), `docs.yml`
+  (`docs/**`, the `LG-`) and `history-policy.yml`. `frontend.yml` does not fire: its filters are
+  `frontend/**`, `docs/contracts/openapi/**` and `packages/pricing-core/src/pricing_core/
+  modelling/**`, and `analysis.py` is under `pricing_core/rating/`. **No contract
+  regeneration:** `model-schema` is not edited, so `docs/contracts/` does not move.
+  `generate-contracts.py --check` is rc 0 in the gate, and any change under
+  `packages/model-schema/` or `docs/contracts/` stops the slice. **When it runs:** after the
+  rulings, on Tue 3 Nov 2026 overnight or Wed 4 Nov 2026. It does not run during nfr-bench-1
+  (Thu 5 – Fri 6 Nov 2026): no gate and no DB window beside it. If Wed 4 is missed, the gate
+  runs after the bench ends and before Mon 9 Nov 2026. The merge is not a gate, so it can go
+  on any day up to the hard stop.
+- **Acceptance (row 4, items A1 to A8).** Each is checkable on the slice's merge tree.
+  1. A1. `git diff --name-only origin/main...HEAD` lists only
+     `packages/pricing-core/src/pricing_core/rating/analysis.py`,
+     `packages/pricing-core/tests/test_rating_attribution.py`, the `LG-`, `docs/INDEX.md`,
+     `docs/roadmap.md` (the SL row), and `docs/specs/03-rating-engine.md` if DP-7 is (a).
+     Nothing under `packages/model-schema/`, `docs/contracts/`, `backend/` or `frontend/`.
+  2. A2. The `LG-` holds R1's red line, run at the base, with the failing assert and the actual
+     `mount ports re-mapped` string.
+  3. A3. `test_mount_purposes_changed_forms` passes at the head, and its description assert is
+     DP-5's ruled string, character for character.
+  4. A4. `test_mount_ports_re_mapped_forms` passes unedited:
+     `git diff origin/main...HEAD -- packages/pricing-core/tests/test_rating_attribution.py`
+     shows only added lines.
+  5. A5. `git grep -n "mount ports re-mapped" -- packages` shows the one f-string in
+     `analysis.py`, reached only when `ports_changed` is true, and the existing test lines.
+  6. A6. The GREEN set is found by import closure (the common seat brief item 29), and the
+     commands and the list are quoted in the `LG-`.
+  7. A7. The full code gate, both halves, is green at the re-merged head. Every rc is quoted,
+     and `generate-contracts.py --check` is rc 0. If DP-7 is (a), `req-coverage.py` is rc 0.
+  8. A8. **FD-1768's closing act.** The auditor sets FD-1768 `status: closed` and the register
+     row :392 resolved, citing the PR number and the merge commit by sha. This is the event the
+     register row names ("the merge of that slice"). The act rides with the slice's mint and
+     closing acts, and `docs/INDEX.md` is regenerated after it (the common seat brief item 17).
+- **Decision points (the decision-maker's; each is resolved by a ruling before activation).**
+
+  | DP | Question | Options | Recommendation |
+  |---|---|---|---|
+  | DP-5 | The exact description of a mount change whose `ref` did not move | (a) Keep `RL-1686`'s forms and add the same suffix form for purposes. Ports alone: `<mp>: mount ports re-mapped (<ref>)`, unchanged. Purposes alone: `<mp>: mount purposes changed (<ref>)`. Both: `<mp>: mount ports re-mapped (<ref>); purposes changed`. (b) Name the selectors: `<mp>: mount purposes <old> → <new> (<ref>)`, with a word for an absent selector (all purposes). (c) One neutral form, `<mp>: mount changed (<ref>)`, plus the suffixes. | **(a).** Every ruled string and test stays as it is. It uses the backend change summary's vocabulary ("purposes changed", `change_summary.py:145`). It needs no rendering rule for an absent selector. (b) gives more detail but needs its own rule for `None`. (c) changes the ruled ports-only string that `test_mount_ports_re_mapped_forms` asserts. |
+  | DP-6 | Is the re-point branch in scope? `ref` moves and `purposes` changes too, and the description says nothing about purposes (`analysis.py:665-669`). FD-1768's disposition names only the `before == after` branch. | (a) In scope: add `; purposes changed` after `; ports re-mapped`, with one test case. (b) Out of scope: file it as a separate finding. | **(a).** It is the same loop and the same test. The description leaves out a change but does not misstate one. (b) adds a record for about 2 lines of code. |
+  | DP-7 | FR-1399's mount sentence lists "added, removed, re-pointed or re-mapped" (`03`:198). A `purposes`-only change is a derived change in the code but is not named there. | (a) A dated amendment to FR-1399 in this slice, in the same commit as the code: "… re-pointed, re-mapped, or with its `purposes` selector changed …". (b) No spec edit: `RL-1344` acceptance 5 already rules that the diff carries it. | **(a).** The spec is the contract the code is written against (`CLAUDE.md` §2). Without (a), FR-1399 is silent on a change that the code derives and that A3 asserts. The cost is one sentence and a `req-coverage` run. |
+
+- **Write set.** `packages/pricing-core/src/pricing_core/rating/analysis.py` (the mount loop,
+  `:650-676`, only); `packages/pricing-core/tests/test_rating_attribution.py` (one added test);
+  LG 8297 under `docs/ledgers/`; `docs/specs/03-rating-engine.md` FR-1399 (only if DP-7 is
+  (a)); at the mint, the SL 8296 row under `### WK-1250` in `docs/roadmap.md`, `docs/INDEX.md`
+  and the FD-1768 closing act (A8).
+- **Hand-off (not this row's writes).** The rulings on DP-5 to DP-7 are the decision-maker's.
+  The maintainer's GO on this row comes before the executor is briefed. The SL 8296 roadmap row
+  and the mint are the lead's. The `LG-` is the executor's. FD-1768's closing act is the
+  auditor's.
+- **Self-review (row 4).** (1) Every cite above was read at `a8ef6f19`. (2) Every requirement
+  is named by id: FR-1399, and no range is used. (3) There are no placeholders except DP-5's
+  ruled string, which A3 reads from the ruling. (4) Rows 1 to 3 (Tasks 1 to 3) and the
+  plan body are unchanged. This row only appends.
