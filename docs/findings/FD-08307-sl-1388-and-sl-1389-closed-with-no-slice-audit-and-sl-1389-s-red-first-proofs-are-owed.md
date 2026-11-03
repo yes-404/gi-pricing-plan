@@ -31,6 +31,10 @@ accepted … FD candidates 1–3 filed"), in `to-lead.md`, a local channel file.
    environment-variable test (LG-1582 item 6, "broken variant (reads `load_settings()`) OWED") is
    therefore not shown red.
 
+## Evidence
+
+The two facts above are the evidence, each with its command and file:line: the empty `### Gate` table and placeholder in `LG-1570` and `LG-1582` (`:38-44`, `:36-44`); the `git grep -l` result at `55bddaf2`; the OWED red-first cells of `LG-1582:69-87`. Source: `docs/closures/CR-01981-wk-673-close-audit.md` § Findings, candidate 1.
+
 ## Disposition
 
 Open, owner WK-673, `fix before close with an owner`. **Discharged by SL 8305** (S-b of PL 8302,
