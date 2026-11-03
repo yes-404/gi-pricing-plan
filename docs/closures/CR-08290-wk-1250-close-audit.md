@@ -268,18 +268,38 @@ amendments, at `c807a59d`:
 | WF-701 | `:29`, A6 | FR-239, FR-258 | still say it |
 | WF-702 | C7, `:207` | FR-20 | still says it |
 
-No step cites FR-218: no journey prices an MTA or a cancellation. The disagreement at C1 and
-FR-237 is an FD candidate, reported to the lead (no id written here). Which of the step, the
-requirement and the code is wrong is `CLAUDE.md` §0's question.
+No step cites FR-218: no journey prices an MTA or a cancellation.
+
+**The C1 / FR-237 omission, resolved by the maintainer's entry "2026-11-03 15:58:45 GMT" item
+(3)**: "if compile REFUSES an unpinned sub-graph on main (the auditor cites the test), it is a
+spec/workflow omission → a dated clause in 03 FR-237 and a WF-699 C1 line in the CR's PR, no
+FD". **Compile on `main` refuses it**, at two levels:
+
+- `backend/tests/test_rating_version_compile.py:1066-1077`
+  (`test_a_mount_whose_sub_graph_is_not_pinned_fails_the_compile_job`, markers FR-217 and
+  FR-237): the version mounts a stored sub-graph with `pinned=False`; after the compile job,
+  `assert job_row.status is JobStatus.FAILED` and
+  `assert job_row.error["code"] == "RATING_VERSION_UNPINNED"`.
+- `packages/pricing-core/tests/test_rating_compile_bundle.py:379-384`
+  (`test_g1_a_mount_whose_version_is_not_pinned_is_refused_with_no_steps`):
+  `with pytest.raises(ValueError, match="RATING_VERSION_UNPINNED")` around
+  `compile_bundle(_mounted_version(pinned=()), …)`, and `assert "m_ncd" in str(raised.value)`;
+  `:387-394` refuses a mount pinned at another version the same way.
+
+So the code is right and the text was short. **This record's branch appends a dated clause to
+`03` FR-237** (`docs/specs/03-rating-engine.md:137`, append-only, the row's earlier text
+unchanged) **and a dated line to WF-699 C1** (`docs/workflows/WF-00699-…:70`, which now also
+cites FR-217). **No FD.**
 
 ## Findings
 
 - **FD-1768** (open, owner WK-1250): fix before close; the code fix is owed (§5b).
-- **FD-1326** (open in the register, discharged in code by #1034): the register close act is owed (§5b).
+- **FD-1326** (open in the register, discharged in code by #1034, squash `9b0fb97c`): the
+  register close act is owed. **It lands in docs batch 6, not in this record's PR** (the lead's
+  verdict on the maintainer's entry "2026-11-03 15:58:45 GMT" item (2)).
 - **FD-1241** and **FD-1317**: resolved 2026-10-25; listed by the script through its mid-cell defect.
 - **FD-1297**: resolved 2026-09-30; correctly excluded.
-- **FD candidate** (no id; the lead's to file): FR-237's pin enumeration (`03:137`) and WF-699 C1
-  name no Sub-graph Version pin, which the code requires for a mount since SL-1340 (§5c).
+- **FR-237 and WF-699 C1**: a spec and workflow omission, not a finding; amended in this branch (§5c).
 - **Observations, not findings:** the roadmap's WK-1250 scope line is narrower than the work
   `PL-1254` took, and `PL-1254:157`'s promised alignment PR has not landed; the SL-1341 row
   (`docs/roadmap.md:3429`) still says "MERGE-ACK: pending" although #1340 merged 2026-10-18 with
@@ -297,8 +317,9 @@ requirement and the code is wrong is `CLAUDE.md` §0's question.
 3. **Skills and research — yes.** `register-owed.py` counts a row whose Decision cell carries
    "Resolved …" mid-text as owed (FD-1241, FD-1317 here). Already known (to-lead "2026-11-03
    15:36:59 GMT"). It moves nothing.
-4. **Drift — yes.** FR-237's enumeration and WF-699 C1 omit the sub-graph pin the code requires
-   (§5c), and the roadmap's scope and SL-1341 lines are stale. None moves a slice or a phase.
+4. **Drift — yes.** FR-237's enumeration and WF-699 C1 omitted the sub-graph pin the code
+   requires (§5c; amended in this branch), and the roadmap's scope and SL-1341 lines are stale.
+   None moves a slice or a phase.
 5. **Shape — no.** No phase boundary or Work scope moved since CR-1907 (2026-10-25).
 
 `register-owed.py review` at `c807a59d`: **29 owed rows** (11 excluded as opening with a
@@ -319,22 +340,33 @@ resolution marker); rc 0.
 the P2 exit demo, on one condition: the lead names an owner and a date before Tue 10 Nov for
 FD-1768's fix slice. **The verdict is the lead's.**
 
+**Replan check, RULED** (the maintainer's entry "2026-11-03 15:58:45 GMT" item (4), and the
+lead's verdict on it): **the trigger FIRED** — "an exit criterion at risk": G1 needs WK-1250
+closed by the user's line, and FD-1768's "fix before close" had no slice. **No full §14 review
+now**: the pre-demo review, Mon 16 – Tue 17 Nov 2026, absorbs it. The owner and date are item
+(1) of the same entry: FD-1768's fix is SL 8296 / LG 8297 (working ids), planned by
+plan-fd1768, red-first, merge target Fri 6 Nov 2026.
+
 ## Verdict
 
-**PROPOSED: WK-1250 is not yet ready for acceptance.** Every deliverable of `PL-1254`'s
-acceptance standard is evidenced by assertion (§1), each slice closed on its own audit with
-green CI (§2), and every binding plan-review condition is met (§5a). Three things are owed
-before the user's acceptance line:
+**NOT CLOSE-READY.** *(The maintainer's entry "2026-11-03 15:58:45 GMT" item (5): "CR 8290
+files as the audit of record with verdict NOT CLOSE-READY and the owed list"; the auditor
+proposed "not yet ready for acceptance".)* Every deliverable of `PL-1254`'s acceptance standard
+is evidenced by assertion (§1), each slice closed on its own audit with green CI (§2), and every
+binding plan-review condition is met (§5a). **The owed list**, before the user's acceptance line:
 
-1. **FD-1768's code fix**, a gated code slice: the `before == after` branch at
-   `analysis.py:662-664` words ports and purposes separately, with a test that changes
-   `purposes` alone. Owner WK-1250; the date is the lead's (before code freeze, Tue 10 Nov 2026).
-2. **FD-1326's register close act** (docs only), citing #1034, `9b0fb97c`.
-3. **The fresh full gate**, both halves, on the head that carries item 1: OWED, the lead
-   schedules it.
+1. **SL 8296** (working id; ledger LG 8297): FD-1768's code fix, a gated code slice planned by
+   plan-fd1768 as a dated WK-1250 delta row. Red first on `rating.py:1093-1095` (a
+   purposes-only change gives `before == after`) and the `analysis.py:662-664` wording, with a
+   test that changes `purposes` alone. Merge target Fri 6 Nov 2026 (before code freeze, Tue 10 Nov).
+2. **FD-1326's register close act** (docs only), citing #1034, `9b0fb97c`: in **docs batch 6**.
+3. **The fresh full gate**, both halves, at the head after SL 8296 merges: OWED, the lead schedules it.
 
-Proposed, with no effect on acceptance: NFR-489 on a mounted bundle at nfr-bench-1 (§4); the FD
-candidate of §5c; the roadmap's scope-line and SL-1341 line alignment.
+**WK-1250's close verdict and the user's line come after SL 8296 merges and that gate runs**
+(target Fri 6 / Mon 9 Nov 2026, the lead's to state).
+
+Proposed, with no effect on acceptance: NFR-489 on a mounted bundle at nfr-bench-1 (§4); the
+roadmap's scope-line and SL-1341 line alignment.
 
 Every §13 verdict above is PROPOSED and is the lead's. **The close is the user's dated
 acceptance line.**

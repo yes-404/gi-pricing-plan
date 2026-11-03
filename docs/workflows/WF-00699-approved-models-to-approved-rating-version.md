@@ -67,7 +67,7 @@ committee and is normally the one nobody can answer.
 
 | # | Actor | Action | Refs |
 |---|---|---|---|
-| C1 | Pricing Actuary | `POST /rating-versions` — declares the algorithm version and every pin: rate tables, peril structure, reference tables. | `03` FR-237 |
+| C1 | Pricing Actuary | `POST /rating-versions` — declares the algorithm version and every pin: rate tables, peril structure, reference tables. *(Amended 2026-11-03, on the maintainer's entry "2026-11-03 15:58:45 GMT" item (3), at the WK-1250 close audit (working id CR 8290): and the `sub_graph:ncd-ladder@4` that B7 mounts; a mount whose Sub-graph Version is not pinned fails the compile with `RATING_VERSION_UNPINNED`.)* | `03` FR-237, FR-217 |
 | C2 | Pricing Actuary | `POST /rating-versions/{id}/compile` → `202` + Job (`rating.compile`). | `07` FR-399 |
 | C3 | Worker → pricing-core | `compile_bundle()` validates everything at once: DAG structure, reference resolvability, artifact maturity, type compatibility, no `control`-intent factor in a rateable path, no unapproved custom objective transitively reachable. | `03` FR-240 |
 | C4 | Worker | First attempt fails: `PIN_NOT_APPROVED` — the windscreen burning-cost model is still `review`. | `03` FR-240, FR-20 |
