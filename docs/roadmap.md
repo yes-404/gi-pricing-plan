@@ -1738,7 +1738,7 @@ The diff routes answer NOT_FOUND: the fix slice of FD-1585 under PL-1546, execut
 id: SL-1971
 family: slice
 title: WK-675 slice — FD-1959's NFR-463 static limbs on the WK-675 surfaces, red first (PL-1546 row 10)
-status: active                    # draft → active → closed (§1.2a)
+status: closed                    # draft → active → closed (§1.2a)
 created: 2026-10-29
 owner: lead
 tree: 265a552ef3584eef22f506b9ffb001e8f3d27948
@@ -1751,6 +1751,8 @@ relates: [FD-1959, FD-1974, RL-1973, LG-1972, PL-1546]
 PL-1546 row 10: the fix slice of FD-1959 (NFR-463 static limbs: F1, F2, F3, M3, M4 and the fixed lows), with the red tests and their red table in the slice ledger; FD-1959 closes at the merge on its static limbs (RL-1973), its browser-verification limb lives in OQ-1960, and the ten carried lows are FD-1974 (owner WK-675, due Thu 12 Nov 2026).
 
 (Minted 2026-10-29 from working id 8281, on the lead's brief (lead 29) under the grant "2026-10-29 22:34:57 GMT" and the mint tool of record `mint-repoint.py` (sha256 `4d83681a`); ledger LG-1972, ruling RL-1973, finding FD-1974; executed on branch `draft/sl-8281`.)
+
+(Closed 2026-11-03 as a Slice, by the auditor's closing acts on the lead's instruction (the maintainer's ruling, to-lead "2026-11-03 15:36:59 GMT" item 3), on the audit recorded in LG-1972 and the lead's merge: #1411, squash commit d549b8d2d823801d705fdfd1cf58f1e7b28df95c, committer date 2026-10-29T23:57:56Z; ledger LG-1972.)
 
 ### WK-690 — **`expression` custom objectives** — SymPy derivation, the gradient/hessian compilation target, the authoring UI, and lifting `expression_objectives_enabled` **plus `custom_objective:author` and its check, which `06` FR-367 requires the `expression` kind to arrive with**
 
