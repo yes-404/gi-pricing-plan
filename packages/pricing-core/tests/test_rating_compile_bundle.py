@@ -579,6 +579,9 @@ async def _compile_with_decimal_bound() -> Bundle:
         "model:motor-ad-frequency@7": {
             "model_type": "gbm", "status": "approved",
             "feature_map": {"driver_age": "driver_age", "rating_area": "rating_area"},
+            "fit_result": {
+                "model_type": "xgboost", "feature_order": ["driver_age", "rating_area"],
+            },
         },
         "reference_table:ons-postcode-directory@7": {"rows": []},
     })
