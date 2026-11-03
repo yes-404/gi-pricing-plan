@@ -598,6 +598,8 @@ resources (server and usage)", and "the dates never block a work can start earli
 are therefore a forecast for reference, not targets. No Work, slice, plan, ruling or merge waits for
 a date. The freeze gates limit only what may **enter** P2, never when a start happens.)*
 
+*(Re-dated 2026-11-03, written by the auditor on the lead's instruction — this milestone section is the lead's — quoting the maintainer's entry "2026-11-03 15:38:58 GMT" (`to-lead.md`), which relays the user's order of 15:38 GMT: "move freeze to 10th of Nov and defer the later dates". The interval is 6 days. **Code freeze: Tue 2026-11-10** (~~Wed 2026-11-04~~); **docs freeze: Wed 2026-11-11** (~~Thu 2026-11-05~~); **P2 exit demo: Wed 2026-11-18** (~~Thu 2026-11-12~~). Weekdays read with `date -d`: Tuesday, Wednesday, Wednesday. The superseded dates are struck here, and the list above, a verbatim quotation of the 2026-09-29 entry, stays unedited (`quote-parity.py` refuses an edit inside a blockquote); the scope freeze (Sat 2026-10-03) is untouched, and the Work-close schedule and nfr-bench-1 dates of the entry stand. The `target:` line of the P2 section's front matter (2026-11-12) is not edited here.)*
+
 #### Phase 2 status
 
 *(Added 2026-09-29 on `CR-1247`, and the maintainer's entry "2026-09-29 17:27:28 BST · maintainer (acting on the maintainer's behalf) · ACCEPTANCES: the WK-672 Work close (#906) and plan review 16 (#905), per proposal", §2 row 12: "Accepted: (a). An 'Exit demo' row under P2, owned by the lead, discharging FD-1209." The form is Phase 1b's status table.)*
@@ -1288,7 +1290,7 @@ E4.8 as PL 8061 specifies it: `test_a_dataset_ingest_job_succeeds_through_the_co
 id: SL-1968
 family: slice
 title: WK-674 slice — the scheduler service and the demo's `--no-compose` switch, red first (PL-1688 row 2; FD-1661's scheduler limb)
-status: active                    # draft → active → closed | retired (§1.2a)
+status: closed                    # draft → active → closed (§1.2a)
 created: 2026-10-29
 owner: lead
 tree: 67284ea12daab613b67353e3eb8b728a35ca5023
@@ -1302,6 +1304,8 @@ PL-1688 row 2: the compose `beat` scheduler service that moves a Job out of the 
 
 (Minted 2026-10-29 from working id 8275, on the lead's brief (lead 29) under the grant "2026-10-29 21:05:13 GMT" (the gate stands under 1(f)) and the mint tool of record `mint-repoint.py` (sha256 `4d83681a`); ledger LG-1969, finding FD-1970; executed on branch `draft/sl-8275`.)
 
+(Closed 2026-11-03 as a Slice, by the auditor's closing acts on the lead's instruction (the maintainer's ruling, to-lead "2026-11-03 15:36:59 GMT" item 3), on the audit recorded in LG-1969 and the lead's merge: #1409, squash commit aad4fd58bde87f59fffe646466f4f86bb2373bf8, committer date 2026-10-29T22:04:48Z; ledger LG-1969.)
+
 
 ### WK-675 — Frontend: **DAG designer (Vue Flow)**, rate table editor, quote sandbox + ladder waterfall, dislocation views
 
@@ -1309,13 +1313,13 @@ PL-1688 row 2: the compose `beat` scheduler service that moves a Job out of the 
 id: WK-675
 family: work
 title: Frontend: **DAG designer (Vue Flow)**, rate table editor, quote sandbox + ladder waterfall, dislocation views
-status: active
+status: closed
 created: 2026-08-14
 owner: maintainer
 phase: P2
 ```
 
-From “Workstreams” (line 385): Frontend: **DAG designer (Vue Flow)**, rate table editor, quote sandbox + ladder waterfall, dislocation views | The DAG designer is the single largest frontend effort in the project — **close audit filed (CR-1952), acceptance owed** *(dated 2026-10-26 by the auditor, on the maintainer's entry "2026-10-26 10:33:40 GMT" in `to-lead.md`; audited at `1e0a8abb`; the record proposes, the lead gives the §13 verdicts, and the close is the user's dated line)*
+From “Workstreams” (line 385): Frontend: **DAG designer (Vue Flow)**, rate table editor, quote sandbox + ladder waterfall, dislocation views | The DAG designer is the single largest frontend effort in the project — **close audit filed (CR-1952), ~~acceptance owed~~** *(dated 2026-10-26 by the auditor, on the maintainer's entry "2026-10-26 10:33:40 GMT" in `to-lead.md`; audited at `1e0a8abb`; the record proposes, the lead gives the §13 verdicts, and the close is the user's dated line)* *(Dated line, 2026-11-03, written by the auditor on the lead's instruction, from the maintainer's entry "2026-11-03 15:51:08 GMT" in `to-lead.md`, verbatim:)* **WK-675 accepted closed on 2026-11-03, by the user, on CR-1952** (Work close audit, audited at 1e0a8abb, filed #1404 447bcfd6), its acceptance blockers all on main: lane-C docs PR #1404 (447bcfd6, FD-1652 closed there); FD-1585 #1403 (18728e68, SL-1956); FD-1959 #1411 (d549b8d2, SL-1971 / RL-1973). Carried: FD-1974 (LOW, ten a11y lows, due Wed 18 Nov 2026 — re-dated with the exit demo, entry 2026-11-03 15:38:58 GMT), owner WK-1178. Acceptance given by the user at 15:51 GMT, to-lead entry "2026-11-03 15:51:08 GMT".
 
 *(Dated line, 2026-10-12, the lead's hand-off from planner-wk1250-s3 (branch `pl-9866-9867-lanec-s5-unblock-2026-10-12`), under the maintainer's (by delegation) entry "2026-10-12 02:58:33 BST" (`to-lead.md`; RL-1670): `PL-1668` is a Work-plan delta to `PL-1546` row 1 (`SL-1547`, Slice 5) for `RL-1613`'s contract-changing scope and the bulk-operation typing dependency. `SL-1547`'s activation need "the FD-1366 bulk-operation typing slice merged" names `SL-1669` (dated 2026-10-12, at the D13 mint).)*
 
@@ -1716,7 +1720,7 @@ A mount never maps a port to a blank parent name: `graph_invariant_issues` refus
 id: SL-1956
 family: slice
 title: WK-675 slice FD-1585 — the diff routes answer NOT_FOUND
-status: active                    # draft → active → closed | retired (§1.2a)
+status: closed                    # draft → active → closed (§1.2a)
 created: 2026-10-29
 owner: lead
 tree: d666a4051c036ae588a5c96dec4be88b8c5bdfb9
@@ -1730,13 +1734,15 @@ The diff routes answer NOT_FOUND: the fix slice of FD-1585 under PL-1546, execut
 
 (Minted 2026-10-29 from working id 8270, on the lead's brief (lead 29) under the grant "2026-10-29 12:16:21 GMT"; finding FD-1585, ledger LG-1957.)
 
+(Closed 2026-11-03 as a Slice, by the auditor's closing acts on the lead's instruction (the maintainer's ruling, to-lead "2026-11-03 15:36:59 GMT" item 3), on the audit recorded in LG-1957 and the lead's merge: #1403, squash commit 18728e68fe687f74ea886e8c25fa54b04db43c04, committer date 2026-10-29T13:38:33Z; ledger LG-1957.)
+
 #### SL-1971 — WK-675 slice — FD-1959's NFR-463 static limbs on the WK-675 surfaces, red first (PL-1546 row 10)
 
 ```yaml
 id: SL-1971
 family: slice
 title: WK-675 slice — FD-1959's NFR-463 static limbs on the WK-675 surfaces, red first (PL-1546 row 10)
-status: active                    # draft → active → closed (§1.2a)
+status: closed                    # draft → active → closed (§1.2a)
 created: 2026-10-29
 owner: lead
 tree: 265a552ef3584eef22f506b9ffb001e8f3d27948
@@ -1749,6 +1755,8 @@ relates: [FD-1959, FD-1974, RL-1973, LG-1972, PL-1546]
 PL-1546 row 10: the fix slice of FD-1959 (NFR-463 static limbs: F1, F2, F3, M3, M4 and the fixed lows), with the red tests and their red table in the slice ledger; FD-1959 closes at the merge on its static limbs (RL-1973), its browser-verification limb lives in OQ-1960, and the ten carried lows are FD-1974 (owner WK-675, due Thu 12 Nov 2026).
 
 (Minted 2026-10-29 from working id 8281, on the lead's brief (lead 29) under the grant "2026-10-29 22:34:57 GMT" and the mint tool of record `mint-repoint.py` (sha256 `4d83681a`); ledger LG-1972, ruling RL-1973, finding FD-1974; executed on branch `draft/sl-8281`.)
+
+(Closed 2026-11-03 as a Slice, by the auditor's closing acts on the lead's instruction (the maintainer's ruling, to-lead "2026-11-03 15:36:59 GMT" item 3), on the audit recorded in LG-1972 and the lead's merge: #1411, squash commit d549b8d2d823801d705fdfd1cf58f1e7b28df95c, committer date 2026-10-29T23:57:56Z; ledger LG-1972.)
 
 ### WK-690 — **`expression` custom objectives** — SymPy derivation, the gradient/hessian compilation target, the authoring UI, and lifting `expression_objectives_enabled` **plus `custom_objective:author` and its check, which `06` FR-367 requires the `expression` kind to arrive with**
 
@@ -3071,7 +3079,7 @@ FD-1729's first part: the application connects as the `gip_app_login` role, a me
 id: SL-1966
 family: slice
 title: WK-1178 fix slice (S1d) — FD-1965: the seed fixture migrates its own scratch database, red first (PL-1927's S1d)
-status: active                    # draft → active → closed | retired (§1.2a)
+status: closed                    # draft → active → closed (§1.2a)
 created: 2026-10-29
 owner: lead
 tree: 2cf61612e0aeb79640f4dbef5263784d1fb7da46
@@ -3085,13 +3093,15 @@ FD-1965's fix: the seed fixture migrates its own scratch database instead of the
 
 (Minted 2026-10-29 from working id 8278, on the lead's brief (lead 29) under the grant "2026-10-29 19:18:41 GMT" (S1d's FINAL accepted pre-mint at 2cf61612) and the mint tool of record `mint-repoint.py` (sha256 `4d83681a`); ledger LG-1967; executed on branch `draft/sl-8278`.)
 
+(Closed 2026-11-03 as a Slice, by the auditor's closing acts on the lead's instruction (the maintainer's ruling, to-lead "2026-11-03 15:36:59 GMT" item 3), on the audit recorded in LG-1967 and the lead's merge: #1408, squash commit 5707373e9cd9304a9ce78c737ed92bc0e8aec5c2, committer date 2026-10-29T20:33:42Z; ledger LG-1967.)
+
 #### SL-1962 — WK-1178 fix slice (S1c) — FD-1951: the CREATEROLE route and the five same-class mediums, red first (PL-1927's S1c)
 
 ```yaml
 id: SL-1962
 family: slice
 title: WK-1178 fix slice (S1c) — FD-1951: the CREATEROLE route and the five same-class mediums, red first (PL-1927's S1c)
-status: active                    # draft → active → closed | retired (§1.2a)
+status: closed                    # draft → active → closed (§1.2a)
 created: 2026-10-29
 owner: lead
 tree: eb64354f72876db075b3edbc3dfee2d02308d864
@@ -3104,6 +3114,8 @@ relates: [FD-1951, LG-1964, FD-1963, FD-1965, PL-1927]
 FD-1951's fix: the application refuses to start on a login role that reaches the owner by CREATEROLE or ADMIN OPTION, with the five same-class mediums closed, each red first, and the red table in the slice ledger. Slice S1c of PL-1927; the carried membership strip is FD-1963 and the seed-fixture defect the gate met is FD-1965.
 
 (Minted 2026-10-29 from working id 8266, on the lead's brief (lead 29) under the grant "2026-10-29 14:30:58 GMT" (S1c's gate stands) and the mint tool of record `mint-repoint.py` (sha256 `4d83681a`); ledger LG-1964, findings FD-1963 and FD-1965; executed on branch `draft/s1c-fd1951`.)
+
+(Closed 2026-11-03 as a Slice, by the auditor's closing acts on the lead's instruction (the maintainer's ruling, to-lead "2026-11-03 15:36:59 GMT" item 3), on the audit recorded in LG-1964 and the lead's merge: #1405, squash commit 7ceff4a16829c63f20f0cdbb56fafae22657c1ab, committer date 2026-10-29T17:14:58Z; ledger LG-1964.)
 
 #### SL-1948 — WK-1178 fix slice (S1b) — FD-1729 part 2: the startup refusal, the tamper proof and the exact grant map (PL-1927's S1b)
 

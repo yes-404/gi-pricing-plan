@@ -2,7 +2,7 @@
 id: LG-1972
 family: ledger
 title: WK-675 slice SL-1971 — FD-1959's NFR-463 static limbs on the WK-675 surfaces, red first (slice ledger)
-status: active                 # active → closed (§1.2a)
+status: closed                 # active → closed (§1.2a)
 created: 2026-10-29               # drafted 2026-10-29 under working id 8282
 owner: executor
 tree: aad4fd58bde87f59fffe646466f4f86bb2373bf8   # origin/main at the branch cut
@@ -204,3 +204,5 @@ Quote parity `265a552e..729e58e5`: `quote-parity: 29 changed line(s), 0 violatio
 ## PRs
 
 (None yet.)
+
+(Closed 2026-11-03 by the auditor, on the lead's instruction under the maintainer's ruling in to-lead "2026-11-03 15:36:59 GMT" item 3: SL-1971 merged as #1411, squash commit d549b8d2d823801d705fdfd1cf58f1e7b28df95c on main, committer date 2026-10-29T23:57:56Z. The item the ledger left open until the merge (item 27) is discharged by this merge.)
