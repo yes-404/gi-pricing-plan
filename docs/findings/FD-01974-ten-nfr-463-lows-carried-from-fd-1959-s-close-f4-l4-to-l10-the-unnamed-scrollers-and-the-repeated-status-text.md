@@ -2,12 +2,12 @@
 id: FD-1974
 family: finding
 title: ten NFR-463 lows carried from FD-1959's close — F4, L4 to L10, the unnamed scrollers and the repeated status text
-status: active
+status: closed
 created: 2026-10-29               # drafted 2026-10-29 under working id 8284
 owner: auditor
 tree: 265a552ef3584eef22f506b9ffb001e8f3d27948   # origin/draft/sl-8281 as read by the executor, 2026-10-29
 corrected_by: []
-relates: [FD-1959, OQ-1960, RL-1973, PL-1546, SL-1971]
+relates: [FD-1959, OQ-1960, RL-1973, PL-1546, SL-1971, SL-1987, LG-1988]
 ---
 
 # FD-1974 — ten NFR-463 lows carried from FD-1959's close — F4, L4 to L10, the unnamed scrollers and the repeated status text
@@ -73,3 +73,5 @@ Open, owner ~~WK-675~~ WK-1178, LOW, due ~~Thu 12 Nov 2026~~ Wed 18 Nov 2026. Fi
 *(Re-dated 2026-11-03 by the auditor, on the lead's instruction, quoting the maintainer's entry "2026-11-03 15:38:58 GMT" (`to-lead.md`), which relays the user's order of 15:38 GMT: "move freeze to 10th of Nov and defer the later dates". The P2 exit demo moves from Thu 12 Nov 2026 to Wed 18 Nov 2026 (`date -d 2026-11-18 +%A` prints Wednesday); the due date Thu 12 Nov 2026 is struck and reads Wed 18 Nov 2026. The old text stays, struck.)*
 
 *(Owner re-pointed 2026-11-03 by the auditor, on the lead's instruction, citing the maintainer's entry "2026-11-03 15:51:08 GMT" (`to-lead.md`): the user accepted WK-675 closed at 15:51 GMT, and its carried finding FD-1974 is owned by WK-1178. The due date reads Wed 18 Nov 2026 (re-dated by the line above). The old owner is struck, not deleted.)*
+
+***Resolved 2026-11-03*** — closed in place 2026-11-03 by the executor, as the closing act of the mint of SL-1987 (WK-1178, LG-1988; this PR, its number and squash written at the merge's date-of-record), on the lead's brief under the GO "2026-11-03 15:52:04 GMT" (`to-lead.md`, a local channel file). Disposition of the ten lows (PL-1927 row 7, S5): each testable low is fixed red-first in vitest (reds at 70b22c5e, run singly; greens per file at the final head); L-2 (`nodesFocusable`), L-7's bool branch and L-10's sandbox status text are static-only, their evidence is the source read recorded in LG-1988; the rendered claims (focus order, announcements, the unchanged-string re-announce case) stay with OQ-1960's browser-verification limb. The one assertion change, `StepInspector.test.ts` test "3.3.1", is the maintainer's acceptance "2026-11-03 18:06:07 GMT" (a), quoted in LG-1988. Gate evidence is in LG-1988: gate 1 at `211e1d4b` and the quiet frontend and demo re-run at `5c9c6dc2` (the python half stood under the common seat brief's item 31).

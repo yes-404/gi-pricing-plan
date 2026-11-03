@@ -90,6 +90,10 @@ expect((field.getAttribute("aria-describedby") ?? "").split(/\s+/)).toEqual(
 
 Run (tree d0dc6466): `vitest run src/components/dag/__tests__/StepInspector.test.ts` rc 0, `Test Files  1 passed (1)`, `Tests  11 passed (11)`; `pnpm type-check` rc 0; `pnpm lint` rc 0.
 
+## 2026-11-03 — the verdict at the mint
+
+Verdict from the gate evidence: the gate of record at `211e1d4b` (16:11:49 to 18:19:37 GMT; python half the item-31 class, skipped 22 = baseline; its one frontend failure the `StepInspector.test.ts` change above) and the quiet re-run at `5c9c6dc2` (finished 22:50:42 GMT: frontend lint, type-check, vitest `Test Files 138 passed`, `Tests 919 passed (919)`, build all rc 0; demo stopped by design, dislocation #1 579 s; the diff `211e1d4b..5c9c6dc2` is `StepInspector.test.ts` and this ledger only). Mint 2026-11-03: SL-1987 and LG-1988; FD-1974 closed in place.
+
 ## PRs
 
 (None yet; the lead opens it.)
