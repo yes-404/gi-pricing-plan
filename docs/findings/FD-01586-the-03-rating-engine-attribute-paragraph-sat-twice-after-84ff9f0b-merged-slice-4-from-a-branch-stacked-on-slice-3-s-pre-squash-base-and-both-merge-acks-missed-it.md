@@ -2,7 +2,7 @@
 id: FD-1586
 family: finding
 title: The 03 rating-engine attribute paragraph sat twice after 84ff9f0b merged Slice 4 from a branch stacked on Slice 3's pre-squash base, and both MERGE-ACKs missed it
-status: active
+status: closed
 created: 2026-10-10            # original date 2026-10-10, set at the mint; minted 2026-10-10 (no earlier draft)
 owner: lead
 tree: db0642c4b4f87e71dceff36d1ebd7c7ba4ef68f9
@@ -33,3 +33,6 @@ The defect is content-neutral (no requirement, number or shape changed), so it i
 **Severity LOW (proposed by the minter from the lead's ruling; the lead decides). Owner: the lead's process.** The duplicate is fixed in this batch (the entry's item 1). What remains is the gap that let it through, closed by the ACK standard of the entry "2026-10-10 07:09:25 BST", item 3, which applies from then on to every PR whose branch was built on a pre-squash base or merged main more than once: the ACK request includes (a) `git merge-tree --write-tree <true base> main head` equal to the PR's tree, or the diff between them explained; and (b) a duplicate-long-line scan over every changed docs file (lines over 120 characters, `sort | uniq -d`), with the result. The lead runs (b) at each ACK.
 
 **Decision: fix before close with an owner: the lead's process.** The fix is merged with this record; the standard is the disposition. Event that next confirms or discharges it: the first ACK request after 2026-10-10 07:09:25 BST that carries (a) and (b), or a duplicate-long-line scan over the docs suite at a later tree that prints nothing.
+
+
+***Resolved 2026-10-10*** — closed in place 2026-11-03 by the auditor, on CR-1981 §5b (`docs/closures/CR-01981-wk-673-close-audit.md`) and the maintainer's ruling (C) in `to-lead.md` "2026-11-03 16:03:37 GMT" (a local channel file): fixed by batch D6, PR #1261, squash `42e5d67f0e36264d7f7db0aa2d14476ddb4fb72c`, which removed the second `attribute` paragraph from `docs/specs/03-rating-engine.md` (one line deleted). At `55bddaf2`: `awk 'length>300' docs/specs/03-rating-engine.md | sort | uniq -d | wc -l` prints 0. The ACK standard of the 2026-10-10 07:09:25 BST entry is the process disposition. *Date of record: 2026-10-10 — #1261, squash 42e5d67f.*

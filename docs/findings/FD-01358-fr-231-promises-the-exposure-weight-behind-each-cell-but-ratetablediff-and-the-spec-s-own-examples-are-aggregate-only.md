@@ -2,7 +2,7 @@
 id: FD-1358
 family: finding
 title: FR-231 promises the exposure weight behind each cell, but RateTableDiff and the spec's own examples are aggregate-only
-status: active
+status: closed
 created: 2026-10-01
 owner: auditor
 tree: 0e2c6a1d7d1539b0f97447c8be43c5931d80cf68
@@ -68,3 +68,6 @@ Evidence would be a test that the diff of a two-cell change returns each cell's 
 weight (red on the current tree), or the amendment line. The lead gives the verdict.
 
 Filed 2026-10-01 as working id 9785; minted 2026-10-01 as FD-1358.
+
+
+***Resolved 2026-10-06*** — closed in place 2026-11-03 by the auditor, on CR-1981 §5b (`docs/closures/CR-01981-wk-673-close-audit.md`) and the maintainer's ruling (C) in `to-lead.md` "2026-11-03 16:03:37 GMT" (a local channel file): delivered by SL-1391 (WK-673 Slice 7), PR #1206, squash `a9ef677747a98a156c1d4e8b8ae9d2b43c4e3ee5`, with RL-1418: `RateTableDiffCell.weight` (`packages/model-schema/src/model_schema/rating.py:1319`) carries each cell's Σ exposure, served by the `…/diff/cells` route (`test_diff_cells_gives_each_cells_change_and_weight_through_the_route`, `backend/tests/test_rate_table_diff_portfolio.py`); the requirement's purpose, to see which edits matter, is met. *Date of record: 2026-10-06 — #1206, squash a9ef6777.*
