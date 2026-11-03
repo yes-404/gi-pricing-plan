@@ -76,13 +76,12 @@ and `status:` lines. That is the auditor's reading, not a record.
 |---|---|---|---|
 | `w6a` | **WK-663**, closed, P1a (WK-662 retired, successors WK-663 and WK-664) | `AcknowledgeDialog` 1, `DatasetDetailView` 2, `ProfileView` 2, `ReferenceView` 2, `RuleBuilder` 10, `RuleSetView` 1 | 18 |
 | `w6b`, `w5` | **WK-664**, closed, P1b | `FactorCreateForm` 5, `ModelSelector` 1, `WorkspaceSelector` 1, `FactorWorkbenchView` 8, `ModelSpecBuilderView` 18, `PredictionView` 1 | 34 |
-| `w6b`, later edited by WK-690 | **WK-664**, closed; WK-690 (`expression` custom objectives, "the authoring UI"), **active, P2**, edited it in SL-1273 | `ObjectivePicker` 1 | 1 |
+| `w6b` | **WK-664**, closed; carried by WK-1178 with the rest (lead ruling, 2026-11-03: one owner per row; WK-690 edited the file in SL-1273, which is provenance only) | `ObjectivePicker` 1 | 1 |
 
 Every Work that built a surface is closed or retired, so none can own a fix. **The open Work that carries them is WK-1178** (P2 standing
 maintenance, `status: active`), which already edited `RuleBuilder`, `RuleSetView` (SL-1409, FD-1356 fix) and `ModelSpecBuilderView`
 (SL-1860) in P2. **No surface is a P2 surface** in the sense of FD-1959's: none is in WK-675's scope and none is in the rating path. The
-one open P2 Work that has edited any of them, WK-690 (`ObjectivePicker`), is the lead's to rule on: the proposal is that its single hit
-rides WK-1178 with the rest, because the border is the picker's old Phase 1 markup, not the expression kind WK-690 added.
+one open P2 Work that has edited any of them, WK-690 (`ObjectivePicker`, SL-1273), does not own it: **the lead ruled on 2026-11-03 that `ObjectivePicker` stays under WK-1178 with the other 52** (one owner per row; WK-690 was in its close audit that day), and WK-690's edit is a provenance note only. The lead also ruled that this finding has no due date: a P3 deferral, disposed under G3 at the P2 close.
 
 ## Severity
 
