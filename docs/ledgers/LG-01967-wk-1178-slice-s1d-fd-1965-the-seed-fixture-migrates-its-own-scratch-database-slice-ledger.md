@@ -2,7 +2,7 @@
 id: LG-1967
 family: ledger
 title: WK-1178 slice S1d — FD-1965, the seed fixture migrates its own scratch database, red first (slice ledger)
-status: active                 # active → closed (§1.2a)
+status: closed                 # active → closed (§1.2a)
 created: 2026-10-29   # drafted 2026-10-29 under working id 8279
 owner: executor
 tree: 1e17ec6382de5919b6e3011242b584a59bb880e7   # origin/main at S1d's branch cut (#1407)
@@ -187,3 +187,5 @@ Auditor seat aud-s1d (Sonnet 5.5, effort medium), read-only. Range: `origin/main
 **Proposed overall verdict:** S1d delivers FD-1965 (both limbs) with evidence; d9 and d10 are owed to the mint/PR (reassigned to the lead / mint seat), nothing delivered-but-untested; the audit is clean on the code, with the conditions above for the docs half. Audit is by `origin/main...origin/draft/sl-8278`, head `2cf61612`; no tests, DB or git writes were run.
 
 Verdicts (lead 29, 2026-10-29): d1–d8 delivered (d7's repo-wide ruff check . re-run at the mint head, quoted below; d8 by the window record, accepted by the maintainer 2026-10-29 19:03:34 GMT); d9 delivered by this mint's post-mint checks (quoted below); d10 open until the merge; O1 delivered with the stderr gap accepted 2026-10-29 19:03:34 GMT; the 13 docs-audit failures pre-mint explained by the unminted ids and the stale INDEX, 0 failed post-mint.
+
+(Closed 2026-11-03 by the auditor, on the lead's instruction under the maintainer's ruling in to-lead "2026-11-03 15:36:59 GMT" item 3: SL-1966 merged as #1408, squash commit 5707373e9cd9304a9ce78c737ed92bc0e8aec5c2 on main, committer date 2026-10-29T20:33:42Z. The item the ledger left open until the merge (item d10) is discharged by this merge.)

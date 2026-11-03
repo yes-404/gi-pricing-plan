@@ -2,7 +2,7 @@
 id: LG-1964
 family: ledger
 title: WK-1178 slice S1c — FD-1951, the CREATEROLE route and the five same-class mediums, red first (slice ledger)
-status: active                 # active → closed (§1.2a)
+status: closed                 # active → closed (§1.2a)
 created: 2026-10-29               # drafted 2026-10-26 under working id 8269
 owner: executor
 tree: 7ed5c398333aa24432bd9917bd204f7b540fb39c   # origin/main at S1c's branch cut (#1401)
@@ -505,3 +505,5 @@ Executor exec-s1cpy, on the lead's ruling "2026-10-29 15:35:53 GMT" (a) and the 
 **Frontend half and demo: covered, not run.** (a) S1c's own diff (`origin/main...HEAD`, above) has no `frontend/` path and under `deploy/` only `deploy/postgres/app-login-role.sql`; (b) the PR's own CI set is derived from the workflows' `on:` blocks at step 8 of the mint brief.
 
 (Noted 2026-10-29 by the lead, on to-lead "2026-10-29 17:24:25 GMT": S1c's python half (15:38, a createdb -T gipricing copy) ran with the template polluted by the 14:28 proof (FD-1965's widening) and was green; #1405's CI python run 40914536522, on a fresh database, is the clean evidence and is green, so no re-gate.)
+
+(Closed 2026-11-03 by the auditor, on the lead's instruction under the maintainer's ruling in to-lead "2026-11-03 15:36:59 GMT" item 3: SL-1962 merged as #1405, squash commit 7ceff4a16829c63f20f0cdbb56fafae22657c1ab on main, committer date 2026-10-29T17:14:58Z. The item the ledger left open until the merge (item 26) is discharged by this merge.)
