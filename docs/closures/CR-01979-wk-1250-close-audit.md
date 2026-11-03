@@ -1,5 +1,5 @@
 ---
-id: CR-8290
+id: CR-1979
 family: closure
 kind: work                     # work | phase | review — no other value (§1.2)
 title: WK-1250 Work close audit — sub-graph composition and MTA/cancellation pricing, FR-217's three limbs and FR-218's authoring half
@@ -13,9 +13,9 @@ corrected_by: []
 relates: [PL-1254, PL-1325, PL-1572, PL-1629, RL-1242, RL-1309, RL-1344, RL-1571, RL-1628, CR-1247, CR-1907, CR-838, FD-1241, FD-1317, FD-1326, FD-1768, FD-1297]
 ---
 
-# CR-8290 — WK-1250 Work close audit
+# CR-1979 — WK-1250 Work close audit
 
-*Working id CR 8290, reserved by the lead; it mints at the lead's id turn. The auditor seat
+*Working id CR 8290, reserved by the lead; minted as CR-1979 at the lead's id turn. The auditor seat
 aud-wk1250 (`opus`, Claude Opus 5.5) wrote this record on 2026-11-03 from 15:40 GMT, on the
 lead's brief `~/gi-pricing-plan.local/handover/brief-aud-g1close-2026-11-03.md`, under the
 maintainer's entry "2026-11-03 15:36:59 GMT" item (5) and the entry "2026-11-03 15:46:13 GMT"

@@ -1,5 +1,5 @@
 ---
-id: CR-8291
+id: CR-1980
 family: closure
 kind: work                     # work | phase | review — no other value (§1.2)
 title: WK-690 Work close audit — expression custom objectives, SymPy derivation, the compilation target, expression Factors and the authoring view
@@ -13,9 +13,9 @@ corrected_by: []
 relates: [PL-1268, PL-1621, PL-1665, RL-1265, RL-1362, RL-1305, CR-1247, CR-1907, FD-1704, FD-1751, FD-1842]
 ---
 
-# CR-8291 — WK-690 Work close audit
+# CR-1980 — WK-690 Work close audit
 
-*Working id CR 8291, reserved by the lead; it mints at the lead's id turn. The auditor seat
+*Working id CR 8291, reserved by the lead; minted as CR-1980 at the lead's id turn. The auditor seat
 aud-wk690 wrote this record on 2026-11-03, on the brief
 `~/gi-pricing-plan.local/handover/brief-aud-g1close-2026-11-03.md` and its authority, the
 maintainer's entries "2026-11-03 15:36:59 GMT" item 5 (the G1 close schedule) and
@@ -354,7 +354,7 @@ record stands with its MERGE-ACK (§2). The close is blocked by:
 3. the fresh full gate (OWED).
 
 The §5 verdicts are proposals. **The close itself is the user's dated line.** The WK-690 row
-reads "close audit filed (CR 8291), acceptance owed" until then.
+reads "close audit filed (CR-1980), acceptance owed" until then.
 
 **Disclosure: the INDEX regeneration shows PL-1295, PL-1327 and PL-1382 as `closed`.** Their
 derived column read `executed` at `c807a59d` and reads `closed` once this record exists, because

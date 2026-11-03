@@ -1,10 +1,10 @@
 ---
-id: CR-8292
+id: CR-1981
 family: closure
 kind: work                     # work | phase | review — no other value (§1.2)
 title: WK-673 Work close audit — Dislocation with attribution
 status: active                  # write-once; this is the only value this family ever takes
-created: 2026-11-03
+created: 2026-11-03   # drafted 2026-11-03 under working id 8292
 owner: auditor                  # work/phase kind; lead for `kind: review`
 tree: c807a59d1a26d12e63d88bc395ac3dcc373aa919
 phase: P2
@@ -13,9 +13,9 @@ corrected_by: []
 relates: [PL-1267, RL-1264, RL-1504, CR-1212, CR-1907, FD-1358, FD-1481, FD-1490, FD-1491, FD-1495, FD-1576, FD-1578, FD-1586, FD-1651, FD-1757]
 ---
 
-# CR-8292 — WK-673 Work close audit
+# CR-1981 — WK-673 Work close audit
 
-*Working id CR 8292, reserved by the lead. It mints at the lead's id turn. The auditor seat
+*Working id CR 8292, reserved by the lead; minted as CR-1981 at the lead's id turn. The auditor seat
 aud-wk673 wrote this record on 2026-11-03 from 15:47 GMT. The instruction is the lead's brief
 `brief-aud-g1close-2026-11-03.md`, on the maintainer's entry "2026-11-03 15:36:59 GMT" item (5)
 (the G1 close schedule) and the user's order in the entry "2026-11-03 15:46:13 GMT" (both in
