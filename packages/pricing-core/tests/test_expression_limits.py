@@ -125,7 +125,7 @@ def test_an_over_depth_chain_is_refused_by_its_bound_not_by_the_stack(
 @pytest.mark.req("FR-145")
 @pytest.mark.parametrize("profile", _STRICT_PROFILES)
 def test_a_2000_character_unary_chain_is_refused_by_its_bound(profile: GrammarProfile) -> None:
-    with pytest.raises(ExpressionError, match=r"depth 2000; the limit is 20"):
+    with pytest.raises(ExpressionError, match="2000 nodes; the limit is 200"):
         parse_expression("-" * 1999 + "x", profile, symbols=_SYMBOLS)
 
 
