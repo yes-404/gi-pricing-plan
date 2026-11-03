@@ -42,7 +42,11 @@ from model_schema.rating import (
     diff_algorithms,
     graph_invariant_issues,
 )
-from pricing_core.modelling.factors import gbm_transformed_factors, required_model_inputs
+from pricing_core.modelling.factors import (
+    consumed_features,
+    gbm_transformed_factors,
+    required_model_inputs,
+)
 from pricing_core.rating.compile import validate_algorithm
 
 __all__ = [
@@ -139,7 +143,17 @@ async def _accepted_feature_map_values(
         return None
     spec = MODEL_SPEC_ADAPTER.validate_python(row.spec)
     factors = await load_factors(session, workspace_id=workspace_id, factor_ids=list(spec.factors))
-    feature_order = (row.fit_result or {}).get("feature_order", ())
+    try:
+        feature_order = consumed_features(row.fit_result)
+    except ValueError as error:
+        raise PlatformError(
+            "CONTROL_FACTOR_IN_RATEABLE_PATH",
+            "A model_call's model has no derivable consumed Factors",
+            422,
+            f"{ref} cannot be mapped: the Factors it consumes cannot be derived "
+            f"({error}), so it cannot be shown not to price on a `control`-intent "
+            "Factor (FR-88, FR-240).",
+        ) from None
     accepted = set(required_model_inputs(factors, feature_order))
     offset = spec.offset
     if offset.kind in ("log_column", "column") and offset.column is not None:

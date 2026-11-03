@@ -93,6 +93,7 @@ __all__ = [
     "FactorColumns",
     "FactorMatrix",
     "FactorResolutionError",
+    "consumed_features",
     "gbm_transformed_factors",
     "rateable",
     "required_model_inputs",
@@ -500,6 +501,44 @@ def rateable(factors: Sequence[Factor]) -> tuple[Factor, ...]:
     case. Selecting them here rather than in `03` keeps the intent with the definition.
     """
     return tuple(f for f in factors if f.intent is FactorIntent.RISK)
+
+
+def consumed_features(fit_result: object) -> tuple[str, ...]:
+    """The feature names a fitted model consumes, read from the fields its arm carries.
+
+    FD-1495 (SL 8303, ruled 2026-11-03 16:19:35 (2)): a GBM's required `feature_order`, a GLM's
+    `coefficients[*].term` with the intercept dropped and a dummy term `<slug>[<level>]`
+    reduced to its Factor slug (the grammar `predict._DUMMY` reads). Never an optional key with
+    an empty default: a `fit_result` that is not a mapping, any other `model_type`, a missing
+    or mistyped field, or an EMPTY derived set raises `ValueError` (fail closed). The message
+    names no model; the caller, which has the ref, wraps it. Each entry appears once, in order.
+    """
+    if not isinstance(fit_result, Mapping):
+        raise ValueError("the fit result is not a mapping")
+    model_type = fit_result.get("model_type")
+    names: list[str]
+    if model_type in GBM_MODEL_TYPES:
+        order = fit_result.get("feature_order")
+        if not isinstance(order, (list, tuple)) or not all(isinstance(n, str) for n in order):
+            raise ValueError("the GBM fit result carries no `feature_order` list of names")
+        names = list(order)
+    elif model_type == "glm":
+        coefficients = fit_result.get("coefficients")
+        if not isinstance(coefficients, (list, tuple)):
+            raise ValueError("the GLM fit result carries no `coefficients` list")
+        names = []
+        for coefficient in coefficients:
+            term = coefficient.get("term") if isinstance(coefficient, Mapping) else None
+            if not isinstance(term, str):
+                raise ValueError("a GLM coefficient carries no `term` name")
+            if term != "intercept":
+                names.append(term.partition("[")[0])
+    else:
+        raise ValueError(f"the fit result's model_type {model_type!r} has no derivation")
+    unique = tuple(dict.fromkeys(names))
+    if not unique:
+        raise ValueError("the fit result consumes no feature")
+    return unique
 
 
 def required_model_inputs(

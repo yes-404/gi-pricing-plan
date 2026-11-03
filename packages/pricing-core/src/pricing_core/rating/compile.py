@@ -58,6 +58,7 @@ from model_schema.refs import ArtifactRef
 from model_schema.sub_graphs import SubGraph, SubGraphInputPort
 from pricing_core.modelling.factors import (
     GBM_MODEL_TYPES,
+    consumed_features,
     gbm_transformed_factors,
     required_model_inputs,
 )
@@ -822,8 +823,9 @@ def _refuse_control_factor_model_calls(
     """FD 9639 (DP-7): a `model_call` over a model fitted on a `control`-intent Factor.
 
     Scoring applies every fitted feature's effect and `02` FR-88 lets Rating Versions use
-    only `risk` factors, so a pinned model whose `feature_order` holds a `control` Factor's
-    slug is refused. A payload with no `fit_result` or `feature_order` binds no factor. A
+    only `risk` factors, so a pinned model that consumes a `control` Factor's slug is refused:
+    a GBM's `feature_order`, a GLM's coefficient terms and the model a GLM's offset reads. A
+    `fit_result` that yields no consumed feature is refused too (FD-1495, SL 8303). A
     `peril_structure_ref` step is checked on each of its component models (`RL-1459`
     DP-A3-3 (a)), which `resolved_pins` holds beside the pins once compile has resolved them.
     """
@@ -839,19 +841,37 @@ def _refuse_control_factor_model_calls(
             )
             models = peril_component_refs(structure)
         for model_ref in models:
-            pin = resolved_pins[str(model_ref)]
-            fit_result = pin.payload.get("fit_result")
-            features = fit_result.get("feature_order", ()) if isinstance(fit_result, dict) else ()
-            by_slug = {factor.slug: factor for factor in pin.factors}
-            for feature in features:
-                factor = by_slug.get(feature)
-                if factor is not None and factor.intent is FactorIntent.CONTROL:
-                    _raise_named(
-                        "CONTROL_FACTOR_IN_RATEABLE_PATH",
-                        f"{model_ref} was fitted on feature {feature!r}, the "
-                        f"`control`-intent Factor {factor.slug}@{factor.version}, which "
-                        "cannot be rated on (FR-88, FR-240)",
-                    )
+            _refuse_control_factor_features(str(model_ref), resolved_pins[str(model_ref)])
+
+
+def _consumed_features(model_ref: str, resolved: ResolvedArtifact) -> tuple[str, ...]:
+    """`consumed_features` of a pinned model, its failure named as the refusal (fail closed)."""
+    try:
+        return consumed_features(resolved.payload.get("fit_result"))
+    except ValueError as error:
+        _raise_named(
+            "CONTROL_FACTOR_IN_RATEABLE_PATH",
+            f"{model_ref}: the Factors it consumes cannot be derived ({error}), so it cannot "
+            "be shown not to price on a `control`-intent Factor (FR-88, FR-240)",
+        )
+
+
+def _refuse_control_factor_features(model_ref: str, resolved: ResolvedArtifact) -> None:
+    """Refuse a pinned model, and the model its GLM offset reads, fitted on a `control` Factor."""
+    by_slug = {factor.slug: factor for factor in resolved.factors}
+    for feature in _consumed_features(model_ref, resolved):
+        factor = by_slug.get(feature)
+        if factor is not None and factor.intent is FactorIntent.CONTROL:
+            _raise_named(
+                "CONTROL_FACTOR_IN_RATEABLE_PATH",
+                f"{model_ref} was fitted on feature {feature!r}, the "
+                f"`control`-intent Factor {factor.slug}@{factor.version}, which "
+                "cannot be rated on (FR-88, FR-240)",
+            )
+    source = resolved.offset_source
+    if source is not None:
+        offset = (resolved.payload.get("spec") or {}).get("offset") or {}
+        _refuse_control_factor_features(str(offset.get("offset_model_ref")), source)
 
 
 def _carry_glm_inputs(payloads: dict[str, Any], resolved: ResolvedArtifact) -> None:
@@ -988,9 +1008,7 @@ def check_model_call_coverage(
                         targets.append((component, where))
         for model_ref, where in targets:
             pin = resolved_pins[str(model_ref)]
-            fit_result = pin.payload.get("fit_result")
-            order = fit_result.get("feature_order", ()) if isinstance(fit_result, dict) else ()
-            required = required_model_inputs(pin.factors, order)
+            required = required_model_inputs(pin.factors, _consumed_features(str(model_ref), pin))
             missing = [feature for feature in required if feature not in mapped]
             if missing:
                 _raise_named(
@@ -1053,13 +1071,13 @@ def _model_factors(resolved: ResolvedArtifact) -> tuple[Factor, ...]:
     return factors
 
 
-def _model_slugs(resolved: ResolvedArtifact) -> set[str]:
+def _model_slugs(model_ref: str, resolved: ResolvedArtifact) -> set[str]:
     """The feature slugs a pinned model reads: required inputs, offset model's, offset column."""
-    fit_result = resolved.payload.get("fit_result")
-    order = fit_result.get("feature_order", ()) if isinstance(fit_result, dict) else ()
+    order = _consumed_features(str(model_ref), resolved)
     slugs = set(required_model_inputs(resolved.factors, order))
     if resolved.offset_source is not None:
-        slugs |= _model_slugs(resolved.offset_source)
+        offset_ref = (resolved.payload.get("spec") or {}).get("offset", {}).get("offset_model_ref")
+        slugs |= _model_slugs(str(offset_ref), resolved.offset_source)
     column = (resolved.payload.get("spec") or {}).get("offset", {}).get("column")
     if column:
         slugs.add(column)
@@ -1106,7 +1124,7 @@ def check_model_call_columns(
                 for factor in _model_factors(pin)
                 if len(factor.source_columns) == 1
             }
-            takes = _model_slugs(pin)
+            takes = _model_slugs(str(model_ref), pin)
             reached: dict[str, tuple[set[str], set[str]]] = {}
             for name, slug in step.feature_map.items():
                 if restrict and slug not in takes:
