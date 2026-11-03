@@ -170,7 +170,51 @@ Closure sweep (37 importers of the changed modules, `closure.txt`, batches of 3)
 
 (c), the GBM arm: the scratch-broken base (`compile.py:844` read as `()`) turns the unedited GBM test red, but the later coverage check answers first, so it fails with MODEL_CALL_FEATURE_MAP_INVALID, not DID NOT RAISE (log `red-c.log` above). The scratch edit was reverted (clean worktree).
 
-OWED (DB window): the save-check red `test_a_feature_map_over_a_model_whose_fit_result_lacks_the_fields_is_refused_at_save`, red at base and green at head, and the rest of `backend/tests/test_rating_algorithms.py`.
+DB window (own start 18:32:04 UTC, load1 2.87, avail 25G; `createdb -T gipricing` copy `gipricing_sl8303_fd1495`, redis db 12, bucket `gip-test-blobs-8303`; env `GIP_TEST_DATABASE_URL`, `GIP_REDIS_URL`, `GIP_TEST_BUCKET`; `run-small.sh`, each file singly; base src restored after each red with `git diff --quiet HEAD` rc=0). First red run: the save-check test's UPDATE of a fitted Model was rejected by the 02 R2 trigger ("a fitted Model is immutable"), a fixture defect, fixed in 6df5b95a by reserving the model and never fitting it (fit_result NULL); expectation unchanged. The red is then 201 != 422 at base (the empty-default read saved the algorithm), green at head. `test_rating_gbm_banded_save.py` went red at head (2 failed: its rows carried `{"feature_order": ...}` with no `model_type`, and a GLM row with `feature_order`), fixed in c336efdb (own commit, assertions unchanged), 10 passed.
+```text
+== db-red.log
+head=a2679afe src + tests cef08e9d db=gipricing_sl8303_fd1495
+E   asyncpg.exceptions.InsufficientPrivilegeError: a fitted Model is immutable (02 R2): UPDATE rejected
+E   HINT:  Refitting produces a new version with parent_model_id set. A Rating Version pins a model version; rewriting one changes what every quote priced on it was priced with.
+E                   sqlalchemy.dialects.postgresql.asyncpg.AsyncAdapt_asyncpg_dbapi.ProgrammingError: <class 'asyncpg.exceptions.InsufficientPrivilegeError'>: a fitted Model is immutable (02 R2): UPDATE rejected
+E                   HINT:  Refitting produces a new version with parent_model_id set. A Rating Version pins a model version; rewriting one changes what every quote priced on it was priced with.
+E                   sqlalchemy.exc.ProgrammingError: (sqlalchemy.dialects.postgresql.asyncpg.ProgrammingError) <class 'asyncpg.exceptions.InsufficientPrivilegeError'>: a fitted Model is immutable (02 R2): UPDATE rejected
+E                   HINT:  Refitting produces a new version with parent_model_id set. A Rating Version pins a model version; rewriting one changes what every quote priced on it was priced with.
+E                   [SQL: UPDATE models SET fit_result=$1::JSONB WHERE models.model_family_slug = $2::VARCHAR AND models.version = $3::INTEGER]
+E                   [SQL parameters hidden due to hide_parameters=True]
+E                   (Background on this error at: https://sqlalche.me/e/20/f405)
+backend/tests/test_rating_algorithms.py::test_an_unknown_field_named_cycle_note_is_validation_failed
+FAILED backend/tests/test_rating_algorithms.py::test_a_feature_map_over_a_model_whose_fit_result_lacks_the_fields_is_refused_at_save
+1 failed, 33 passed, 10 warnings in 44.35s
+rc=1
+== db-red2.log
+head=a2679afe src + tests 6df5b95a db=gipricing_sl8303_fd1495
+E       AssertionError: {"id":"01a1a2b0-eb4c-72a6-bdb4-ca3fbf1eeb82","slug":"motor-gb","version":1}
+E       assert 201 == 422
+E        +  where 201 = <Response [201 Created]>.status_code
+backend/tests/test_rating_algorithms.py::test_an_unknown_field_named_cycle_note_is_validation_failed
+FAILED backend/tests/test_rating_algorithms.py::test_a_feature_map_over_a_model_whose_fit_result_lacks_the_fields_is_refused_at_save
+1 failed, 33 passed, 10 warnings in 40.99s
+rc=1
+== db-green.log
+head=6df5b95a5d03660313c9ba444adc8a92229928bb (fix) db=gipricing_sl8303_fd1495
+backend/tests/test_rating_algorithms.py::test_an_unknown_field_named_cycle_note_is_validation_failed
+34 passed, 10 warnings in 44.06s
+rc=0
+== db-gbm.log
+head=6df5b95a5d03660313c9ba444adc8a92229928bb db=gipricing_sl8303_fd1495
+E           app.errors.PlatformError: model:banded-gbm@1 cannot be mapped: the Factors it consumes cannot be derived (the fit result's model_type None has no derivation), so it cannot be shown not to price on a `control`-intent Factor (FR-88, FR-240).
+E           app.errors.PlatformError: model:banded-gbm@1 cannot be mapped: the Factors it consumes cannot be derived (the fit result's model_type None has no derivation), so it cannot be shown not to price on a `control`-intent Factor (FR-88, FR-240).
+FAILED backend/tests/test_rating_gbm_banded_save.py::test_a_gbm_on_identity_factors_saves
+FAILED backend/tests/test_rating_gbm_banded_save.py::test_a_glm_on_a_banded_factor_saves
+2 failed, 8 passed, 1 warning in 2.42s
+rc=1
+== db-gbm2.log
+head=c336efdb4850baf5a788ab4c8d3253fd08aa8d41 db=gipricing_sl8303_fd1495
+10 passed, 1 warning in 2.23s
+rc=0
+```
+END zeros: redis db 12 dbsize=0; `select count(*) from pg_database where datname='gipricing_sl8303_fd1495'` = 0 (datnames: gipricing postgres template0 template1); bucket removed via `mc rb --force`, `mc ls g/` has no 8303.
 
 ### Audit
 
