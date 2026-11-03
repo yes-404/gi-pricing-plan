@@ -354,6 +354,7 @@ def _planted_in_a_sub_graph(objective_status: str) -> tuple[RatingVersion, FakeR
     resolver = _mounted_resolver(fragments={NCD: _fragment_payload(steps=[step])})
     resolver._payloads[PLANTED] = {
         "model_type": "gbm", "status": "approved", "feature_map": {"ncd_years": "ncd_years"},
+        "fit_result": {"model_type": "xgboost", "feature_order": ["ncd_years"]},
         "spec": {"model_type": "gbm", "objective": {"kind": "custom", "ref": OBJ}},
     }
     resolver._payloads[OBJ] = {"slug": "asym-loss", "version": 1}
