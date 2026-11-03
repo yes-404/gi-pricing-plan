@@ -3366,6 +3366,8 @@ Set `active` 2026-09-30 on the maintainer's entry "2026-09-30 22:33:30 BST — D
 
 *Dated 2026-09-30, on the maintainer's entry "2026-09-30 22:33:30 BST", Decision 2: `PL-1254` goes `active` (a status flip), because every blocking decision point now has a resolver. DP-1, DP-3 and DP-4 are resolved by `RL-1309`. DP-2 is resolved by `RL-1344`, minted in mint batch 12 (#1022, 36b2a121). The frozen plan's resolver column is not edited; this line records the resolvers (`PL-1254` Activation step 1). `PL-1325` goes `active` in the same PR, because its prerequisite 2 ("PL-1254 `active`, and WK-1250's `SL-` rows cut") holds at merge.*
 
+**Close audit filed (CR 8290), acceptance owed.** *(Dated line, 2026-11-03, the auditor aud-wk1250, on the lead's brief for the G1 close schedule, to-lead "2026-11-03 15:36:59 GMT" item (5).)* The Work stays `active`; the close is the user's dated acceptance line.
+
 #### SL-1339 — Slice 1: the sub-graph as a stored, versioned artifact (FR-217's artifact limb)
 
 ```yaml
