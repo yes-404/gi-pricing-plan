@@ -521,3 +521,136 @@ async def test_certify_runs_a_derived_expression_as_the_existing_job(
     convexity = next(check for check in result.checks if check.name == "convexity")
     assert convexity.status is CheckStatus.VIOLATED
     assert result.library_versions["sympy"]
+
+
+# --- FD-1842: the FR-145 bound is checked before the recursive structure walk (SL 8299) -------
+#
+# `grammar_refusal` (objectives.py, behind `POST /custom-objectives` and the preview) and
+# `_require_a_creatable_expression` (modelling.py, behind `POST /factors`) both call
+# `parse_expression`. Each is tested at its own seam, DB-free where the seam allows.
+
+_OVER_BOUND = {
+    "depth 21": "abs(" * 20 + "f" + ")" * 20,
+    "201 nodes": "min(" + ", ".join(["f"] * 200) + ")",
+}
+
+
+@pytest.fixture
+def lowered_recursion_limit() -> Any:
+    """70 frames of headroom above this frame, restored after (see `test_expression_limits`)."""
+    import sys
+
+    saved = sys.getrecursionlimit()
+    frame, depth = sys._getframe(), 0
+    while frame is not None:
+        frame, depth = frame.f_back, depth + 1
+    sys.setrecursionlimit(depth + 70)
+    try:
+        yield
+    finally:
+        sys.setrecursionlimit(saved)
+
+
+@pytest.mark.req("FR-145")
+@pytest.mark.parametrize("loss", list(_OVER_BOUND.values()), ids=list(_OVER_BOUND))
+def test_grammar_refusal_names_the_bound_for_an_over_bound_loss(loss: str) -> None:
+    from app.platform.objectives import grammar_refusal
+
+    refusal = grammar_refusal(loss, symbols=frozenset({"y", "f", "w"}))
+    assert refusal is not None
+    assert "FR-145" in refusal[2], refusal
+
+
+@pytest.mark.req("FR-145")
+def test_grammar_refusal_does_not_raise_recursion_error_on_a_deep_loss(
+    lowered_recursion_limit: None,
+) -> None:
+    from app.platform.objectives import grammar_refusal
+
+    refusal = grammar_refusal("-" * 99 + "f", symbols=frozenset({"y", "f", "w"}))
+    assert refusal is not None
+    assert "depth 100; the limit is 20" in refusal[2], refusal
+
+
+def _factor_over(expression: str) -> Any:
+    from uuid import uuid4
+
+    from model_schema import Factor, FactorType
+
+    return Factor(
+        id=uuid4(),
+        slug="expr-bound",
+        dataset_id=uuid4(),
+        version=1,
+        type=FactorType.EXPRESSION,
+        source_columns=("f",),
+        expression=expression,
+    )
+
+
+async def _factor_refusal(expression: str) -> Any:
+    from uuid import uuid4
+
+    from app.errors import PlatformError
+    from app.platform.modelling import _require_a_creatable_expression
+
+    with pytest.raises(PlatformError) as refused:
+        await _require_a_creatable_expression(
+            None,
+            workspace_id=uuid4(),
+            factor=_factor_over(expression),  # type: ignore[arg-type]
+        )
+    return refused.value
+
+
+@pytest.mark.req("FR-145")
+@pytest.mark.parametrize("expression", list(_OVER_BOUND.values()), ids=list(_OVER_BOUND))
+async def test_an_over_bound_factor_expression_is_422_at_the_factor_caller(
+    expression: str,
+) -> None:
+    refused = await _factor_refusal(expression)
+    assert refused.status_code == 422
+    assert refused.code == "VALIDATION_FAILED"
+    (error,) = refused.errors
+    assert error.field == "expression"
+    assert "FR-145" in error.message, error
+
+
+@pytest.mark.req("FR-145")
+async def test_a_deep_factor_expression_is_422_not_recursion_error(
+    lowered_recursion_limit: None,
+) -> None:
+    refused = await _factor_refusal("-" * 99 + "f")
+    assert refused.status_code == 422
+    (error,) = refused.errors
+    assert "depth 100; the limit is 20" in error.message, error
+
+
+@pytest.mark.req("FR-145")
+@pytest.mark.parametrize(
+    "loss",
+    [*_OVER_BOUND.values(), "-" * 1999 + "f"],
+    ids=[*_OVER_BOUND, "2000-character unary chain"],
+)
+async def test_an_over_bound_loss_is_422_grammar_violation_on_create(
+    api_client: Any, author: Any, database: Database, workspace_id: Any, loss: str
+) -> None:
+    await _set_flag(database, workspace_id, True)
+    response = api_client.post(
+        "/api/v1/custom-objectives",
+        json=_expression_body(loss=loss, parameters=[]),
+        headers=author,
+    )
+    assert response.status_code == 422, response.text
+    body = response.json()
+    assert body["code"] == "OBJECTIVE_GRAMMAR_VIOLATION"
+    assert [e["field"] for e in body["errors"]] == ["loss"]
+    assert "FR-145" in body["errors"][0]["message"]
+    async with database.unit_of_work() as session:
+        rows = (
+            await session.execute(
+                text("select count(*) from custom_objectives where workspace_id = :w"),
+                {"w": workspace_id},
+            )
+        ).scalar_one()
+    assert rows == 0
