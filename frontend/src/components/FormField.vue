@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { computed } from "vue";
+
 /**
  * A label bound to one control, with optional help text.
  *
@@ -14,13 +16,19 @@
  * renders extra interactive elements beside it — and the id is required rather than
  * generated, so a caller cannot accidentally produce two fields sharing one.
  */
-defineProps<{
+const props = defineProps<{
   /** The control's `id`. Required: it is what `for` points at. */
   fieldId: string;
   label: string;
   /** Shown under the control. For guidance, never for errors — those are problems. */
   help?: string;
 }>();
+
+/**
+ * The help text's id. The control arrives as a slot, so the field cannot set its
+ * `aria-describedby`; it hands the caller the id (`describedby`, undefined without help) to bind.
+ */
+const helpId = computed(() => `${props.fieldId}-help`);
 </script>
 
 <template>
@@ -30,10 +38,11 @@ defineProps<{
       class="mb-1 block text-sm font-medium text-slate-700"
     >{{ label }}</label>
 
-    <slot />
+    <slot :describedby="help ? helpId : undefined" />
 
     <p
       v-if="help"
+      :id="helpId"
       class="mt-1 text-xs text-slate-500"
     >
       {{ help }}

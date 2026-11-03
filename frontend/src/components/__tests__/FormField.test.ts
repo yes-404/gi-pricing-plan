@@ -44,3 +44,21 @@ describe("a labelled form field", () => {
     expect(screen.getByLabelText("Family")).toBe(screen.getByRole("combobox"));
   });
 });
+
+// NFR-463 / WCAG 1.3.1, 3.3.2 (FD-1974 L-1): help text is only a description if the control
+// points at it. The control arrives as a slot, so the field hands the caller the id to bind.
+describe("a field's help text is the control's description (FD-1974 L-1)", () => {
+  const described = '<template #default="{ describedby }"><input id="response" :aria-describedby="describedby" /></template>';
+
+  it("gives the slot the help id, so the control's accessible description is the help", () => {
+    field({ fieldId: "response", label: "Response", help: "Pick the column being modelled" }, described);
+
+    expect(screen.getByLabelText("Response")).toHaveAccessibleDescription("Pick the column being modelled");
+  });
+
+  it("hands the slot nothing when there is no help, so no dangling reference is bound", () => {
+    field({ fieldId: "response", label: "Response" }, described);
+
+    expect(screen.getByLabelText("Response")).not.toHaveAttribute("aria-describedby");
+  });
+});

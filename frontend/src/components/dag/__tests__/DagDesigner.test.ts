@@ -93,3 +93,16 @@ describe("the DAG designer on the real Vue Flow", () => {
     expect(api.validateRatingAlgorithm).not.toHaveBeenCalled();
   });
 });
+
+// NFR-463 / WCAG 2.4.3 (FD-1974 L-2): the step list is the keyboard path through the graph, so
+// the drawn nodes are not tab stops of their own (they would repeat every step, out of order).
+describe("the drawn graph adds no tab stops (FD-1974 L-2)", () => {
+  it("renders no node wrapper that is focusable", async () => {
+    const { container } = render(DagDesigner, { props });
+    await screen.findByLabelText(`${valid.steps[0]!.type} step ${valid.steps[0]!.label} (${valid.steps[0]!.step_id})`);
+
+    const wrappers = container.querySelectorAll(".vue-flow__node");
+    expect(wrappers.length).toBe(valid.steps.length);
+    expect(container.querySelectorAll('.vue-flow__node[tabindex="0"]')).toHaveLength(0);
+  });
+});

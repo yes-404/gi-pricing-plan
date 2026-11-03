@@ -61,6 +61,7 @@ onMounted(async () => {
 <template>
   <div>
     <FormField
+      v-slot="{ describedby }"
       field-id="workbench-model"
       label="Model"
       help="Interaction candidates come from a model's transparency artifact, so they are a
@@ -69,6 +70,7 @@ onMounted(async () => {
       <select
         id="workbench-model"
         v-model="chosen"
+        :aria-describedby="describedby"
         class="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm"
       >
         <option value="">
