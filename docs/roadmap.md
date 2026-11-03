@@ -1898,6 +1898,24 @@ The fix row of DP-W-1 (a), adopted by the lead (from-lead "2026-10-11 11:20:43 B
 (Activated 2026-10-12 on the lead's GO, the `from-lead` entry "2026-10-12 05:31:21 BST", on the maintainer's (by delegation) entries "2026-10-11 11:21:02 BST" item 2 (DP-W-1 (a)) and "2026-10-12 02:53:52 BST" item 3 (`PL-1665` approved). `PL-1665` set `active` in this activation commit, its status line only; it replaces F.1 with F.1′. The slice's one ledger is `LG-1680` (opened under working id 9880, minted at the merge turn).)
 (Closed 2026-10-12 on a clean slice audit (audited in LG-1680's Audit section (auditor-sl1622); verdicts in the lead's from-lead entry 2026-10-12 06:56:37 BST) and the lead's merge, per `CLAUDE.md` §13 (a Slice, not a Work: no maintainer acceptance). Ledger `LG-1680`. FD-1349 is proved red on BOGUS input against the guard already on main; FD-1492 and FD-1512 are fixed red-first. The register rows and FD-1294's dated line are the auditor's writes at the close. The F.3 fix sits in `pricing-core`, not `model_schema` (the write-set deviation, in the ledger). `PL-1621` and `PL-1665` stay `active`: they close with their other slices.)
 
+#### SL-8299 — WK-690 fix row: FD-1751 and FD-1842 fixed before close
+
+```yaml
+id: SL-8299
+family: slice
+title: WK-690 fix row — FD-1751 and FD-1842 fixed before close
+status: draft                  # draft → active → closed | retired (§1.2a)
+created: 2026-11-03
+owner: planner                   # cut by the planner (draft); lead dispatches (active)
+tree: a8ef6f19c0be1142b0ac9dea88086f1ce6f95cbe
+phase: P2
+work: WK-690
+corrected_by: []
+relates: [PL-8301, PL-1268, PL-1621, PL-1665, FD-1751, FD-1842]
+```
+
+The fix row of the maintainer's (by delegation) entry "2026-11-03 16:02:43 GMT" (`to-lead.md`), item (1), on WK-690's close audit CR 8291 §5b. One PR, two limbs, each red first. **Limb 1 (FD-1751):** an `expression` Factor's permutation importance and partial dependence are measured on its resolved levels through a joint operation over all its source columns (FR-174, FR-175, FR-177's mechanism), S4's `expression_factor` omission is lifted from both blocks and kept as a reserved reason, and S4's two omission tests are inverted. **Limb 2 (FD-1842):** FR-145's iterative bound check runs before the recursive structure walk, so a 2000-character unary-chain loss on `POST /custom-objectives` answers 422 `OBJECTIVE_GRAMMAR_VIOLATION`, never 500. Spec: dated amendments to FR-178 and FR-145 in the same PR. Scope and acceptance are `PL-8301`'s (A1–A10). **Depends on:** nothing open. **Executor:** one, `sonnet`. **Gate:** full SOLO, both halves. **Merge by:** Fri 6 Nov 2026, before the Tue 10 Nov freeze. **Lane:** at GO.
+
 ### WK-693 — Machine-readable process core — RFC-895, adopted remainder (Slices E/F/G)
 
 ```yaml
