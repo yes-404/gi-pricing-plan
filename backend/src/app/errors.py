@@ -320,7 +320,6 @@ RATING_ERROR_CODES: Final[frozenset[str]] = frozenset(
         "RATING_GRAPH_CYCLIC",
         "RATING_GRAPH_UNRESOLVED_REF",
         "RATING_TYPE_MISMATCH",
-        "MONETARY_FLOAT_REFUSED",
         # The four WK-668-confirmed boundary guards, surfaced at save time (W9-2).
         "EXPRESSION_UNGUARDED_DIVISION",
         "EXPRESSION_SCALE_OVERFLOW",
