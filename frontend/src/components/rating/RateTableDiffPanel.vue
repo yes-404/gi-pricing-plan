@@ -327,9 +327,9 @@ function shadeClass(rel: string | null): string {
       </div>
       <div class="mt-3 flex items-center gap-3">
         <button
+          ref="previousButton"
           type="button"
           class="rounded border border-slate-300 px-3 py-1 text-sm disabled:opacity-50"
-          ref="previousButton"
           :disabled="history.length === 0"
           @click="previous"
         >

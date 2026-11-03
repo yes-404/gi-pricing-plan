@@ -109,14 +109,15 @@ function featureMap(text: string): Record<string, string> {
     :aria-label="`Inspector for ${step.step_id}`"
     @submit.prevent
   >
-    <FormField v-slot="{ describedby }"
+    <FormField
+      v-slot="{ describedby }"
       field-id="si-step-id"
       label="Step id"
       v-bind="isNew ? {} : { help: 'Fixed once the step exists (FR-215).' }"
     >
       <input
-        :aria-describedby="describedby"
         id="si-step-id"
+        :aria-describedby="describedby"
         :class="control"
         :value="step.step_id"
         :readonly="!isNew"
@@ -134,27 +135,29 @@ function featureMap(text: string): Record<string, string> {
         @input="patch({ label: value($event) })"
       >
     </FormField>
-    <FormField v-slot="{ describedby }"
+    <FormField
+      v-slot="{ describedby }"
       field-id="si-consumes"
       label="Consumes"
       help="Names this step reads, comma separated. Edges are drawn from these."
     >
       <input
-        :aria-describedby="describedby"
         id="si-consumes"
+        :aria-describedby="describedby"
         :class="control"
         :value="names(step.consumes).join(', ')"
         @input="patch({ consumes: list(value($event)) })"
       >
     </FormField>
-    <FormField v-slot="{ describedby }"
+    <FormField
+      v-slot="{ describedby }"
       field-id="si-produces"
       label="Produces"
       help="Names this step makes, comma separated."
     >
       <input
-        :aria-describedby="describedby"
         id="si-produces"
+        :aria-describedby="describedby"
         :class="control"
         :value="names(step.produces).join(', ')"
         @input="patch({ produces: list(value($event)) })"
@@ -254,14 +257,15 @@ function featureMap(text: string): Record<string, string> {
             @input="patchEntry({ max: value($event) === '' ? null : value($event) })"
           >
         </FormField>
-        <FormField v-slot="{ describedby }"
+        <FormField
+          v-slot="{ describedby }"
           field-id="si-ic-domain"
           label="Domain"
           help="Allowed values, comma separated."
         >
           <input
-            :aria-describedby="describedby"
             id="si-ic-domain"
+            :aria-describedby="describedby"
             :class="control"
             :value="(entry.domain ?? []).join(', ')"
             @input="patchEntry({ domain: list(value($event)) })"
@@ -293,20 +297,22 @@ function featureMap(text: string): Record<string, string> {
           @input="patch({ reference_table_ref: value($event) })"
         >
       </FormField>
-      <FormField v-slot="{ describedby }"
+      <FormField
+        v-slot="{ describedby }"
         field-id="si-key-expr"
         label="Key expressions"
         help="One per key column, comma separated."
       >
         <input
-          :aria-describedby="describedby"
           id="si-key-expr"
+          :aria-describedby="describedby"
           :class="control"
           :value="(step.key_expr ?? []).join(', ')"
           @input="patch({ key_expr: list(value($event)) })"
         >
       </FormField>
-      <FormField v-slot="{ describedby }"
+      <FormField
+        v-slot="{ describedby }"
         field-id="si-as-at"
         label="As at (date input)"
         help="Required (FR-221): effective_date or a declared date input, never 'now'."
@@ -362,7 +368,8 @@ function featureMap(text: string): Record<string, string> {
     </template>
 
     <template v-else-if="step.type === 'table'">
-      <FormField v-slot="{ describedby }"
+      <FormField
+        v-slot="{ describedby }"
         field-id="si-rate-table"
         label="Rate table"
         help="Only the tables this Rating Version pins."
@@ -384,14 +391,15 @@ function featureMap(text: string): Record<string, string> {
           </option>
         </select>
       </FormField>
-      <FormField v-slot="{ describedby }"
+      <FormField
+        v-slot="{ describedby }"
         field-id="si-table-keys"
         label="Key expressions"
         help="One per key column, comma separated. A banding reference is text."
       >
         <input
-          :aria-describedby="describedby"
           id="si-table-keys"
+          :aria-describedby="describedby"
           :class="control"
           :value="(step.key_expr ?? []).join(', ')"
           @input="patch({ key_expr: list(value($event)) })"
@@ -419,14 +427,15 @@ function featureMap(text: string): Record<string, string> {
     </template>
 
     <template v-else-if="step.type === 'expression'">
-      <FormField v-slot="{ describedby }"
+      <FormField
+        v-slot="{ describedby }"
         field-id="si-expr"
         label="Expression"
         help="Text. The vocabulary is checked on the server at save."
       >
         <textarea
-          :aria-describedby="describedby"
           id="si-expr"
+          :aria-describedby="describedby"
           :class="control"
           rows="4"
           :value="step.expr"
@@ -469,14 +478,15 @@ function featureMap(text: string): Record<string, string> {
           @input="patch({ peril_structure_ref: value($event) === '' ? null : value($event) })"
         >
       </FormField>
-      <FormField v-slot="{ describedby }"
+      <FormField
+        v-slot="{ describedby }"
         field-id="si-features"
         label="Feature map"
         help="One per line: feature=source name."
       >
         <textarea
-          :aria-describedby="describedby"
           id="si-features"
+          :aria-describedby="describedby"
           :class="control"
           rows="4"
           :value="featureMapText"
@@ -551,7 +561,8 @@ function featureMap(text: string): Record<string, string> {
           @input="patch({ clamp_bounds: { ...step.clamp_bounds, max: value($event) } })"
         >
       </FormField>
-      <FormField v-slot="{ describedby }"
+      <FormField
+        v-slot="{ describedby }"
         field-id="si-reason"
         label="Reason code"
         help="Required (FR-225)."
@@ -579,7 +590,8 @@ function featureMap(text: string): Record<string, string> {
           @input="patch({ output_name: value($event) })"
         >
       </FormField>
-      <FormField v-slot="{ describedby }"
+      <FormField
+        v-slot="{ describedby }"
         field-id="si-round-mode"
         label="Rounding mode"
         help="Required (FR-226)."
@@ -601,7 +613,8 @@ function featureMap(text: string): Record<string, string> {
           </option>
         </select>
       </FormField>
-      <FormField v-slot="{ describedby }"
+      <FormField
+        v-slot="{ describedby }"
         field-id="si-round-dp"
         label="Decimal places (dp)"
         help="Required (FR-226)."
