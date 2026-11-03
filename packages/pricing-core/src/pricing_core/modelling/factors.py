@@ -506,7 +506,7 @@ def rateable(factors: Sequence[Factor]) -> tuple[Factor, ...]:
 def consumed_features(fit_result: object) -> tuple[str, ...]:
     """The feature names a fitted model consumes, read from the fields its arm carries.
 
-    FD-1495 (SL 8303, ruled 2026-11-03 16:19:35 (2)): a GBM's required `feature_order`, a GLM's
+    FD-1495 (SL-1985, ruled 2026-11-03 16:19:35 (2)): a GBM's required `feature_order`, a GLM's
     `coefficients[*].term` with the intercept dropped and a dummy term `<slug>[<level>]`
     reduced to its Factor slug (the grammar `predict._DUMMY` reads). Never an optional key with
     an empty default: a `fit_result` that is not a mapping, any other `model_type`, a missing

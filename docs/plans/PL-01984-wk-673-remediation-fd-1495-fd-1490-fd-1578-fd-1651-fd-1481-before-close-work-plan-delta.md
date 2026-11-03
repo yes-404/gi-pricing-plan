@@ -1,10 +1,10 @@
 ---
-id: PL-8302
+id: PL-1984
 family: plan
 kind: map
 title: WK-673 — remediation before close, FD-1495 first and alone, then FD-1490, FD-1578, FD-1651, the SL-1389 red-first proofs and FD-1481, cut as two slices — Work-plan delta
 status: draft                   # draft → active → superseded | retired (§1.2a)
-created: 2026-11-03
+created: 2026-11-03   # drafted 2026-11-03 under working id 8302; minted as PL-1984
 owner: planner
 tree: a8ef6f19c0be1142b0ac9dea88086f1ce6f95cbe
 phase: P2
@@ -15,7 +15,7 @@ corrected_by: []
 relates: [PL-1267, FD-1495, FD-1490, FD-1578, FD-1651, FD-1481, RL-1470, RL-1958]
 ---
 
-# PL-8302 — WK-673: remediation before close (S-a FD-1495; S-b the rest): Work-plan delta
+# PL-1984 — WK-673: remediation before close (S-a FD-1495; S-b the rest): Work-plan delta
 
 > **For agentic workers:** this is a **Work-plan delta** under Lean P2 L5 and L1 (a')
 > (`.claude/roles/planner.md`, the Lean P2 bullet). It does not replace
@@ -32,7 +32,7 @@ relates: [PL-1267, FD-1495, FD-1490, FD-1578, FD-1651, FD-1481, RL-1470, RL-1958
 > reads [`README.md`](README.md)'s five unchecked conventions and is spawned from
 > `.claude/roles/executor.md`, model `sonnet` (the authority, below).
 
-Filed under **working id PL 8302**, reserved by the lead in the brief
+Filed under **working id PL-1984**, reserved by the lead in the brief
 `brief-plan-wk673fix-2026-11-03.md`. Written 2026-11-03 by the planner (seat plan-wk673fix2).
 Every `file:line` below was read at `origin/main` `a8ef6f19c0be1142b0ac9dea88086f1ce6f95cbe`
 (tree `598c8c3a`) unless it names another tree. Nothing was run: no test and no probe. Every

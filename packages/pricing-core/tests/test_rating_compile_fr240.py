@@ -209,7 +209,7 @@ async def test_a_model_call_over_risk_factors_compiles() -> None:
     await compile_bundle(_version(), res)
 
 
-# -- FD-1495's GLM arm: the consumed Factors come from the fields each arm carries (SL 8303) --
+# -- FD-1495's GLM arm: the consumed Factors come from the fields each arm carries (SL-1985) --
 
 OFFSET_MODEL = "model:offset-glm@2"
 

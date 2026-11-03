@@ -825,7 +825,7 @@ def _refuse_control_factor_model_calls(
     Scoring applies every fitted feature's effect and `02` FR-88 lets Rating Versions use
     only `risk` factors, so a pinned model that consumes a `control` Factor's slug is refused:
     a GBM's `feature_order`, a GLM's coefficient terms and the model a GLM's offset reads. A
-    `fit_result` that yields no consumed feature is refused too (FD-1495, SL 8303). A
+    `fit_result` that yields no consumed feature is refused too (FD-1495, SL-1985). A
     `peril_structure_ref` step is checked on each of its component models (`RL-1459`
     DP-A3-3 (a)), which `resolved_pins` holds beside the pins once compile has resolved them.
     """

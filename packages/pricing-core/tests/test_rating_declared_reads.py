@@ -118,7 +118,7 @@ class _StubResolver:
             return ResolvedArtifact(status="approved", payload=_structure_payload())
         payload: dict[str, Any] = {"stub_for": str(ref)}
         if ref.type == "model":
-            # FD-1495 (SL 8303): a pinned model carries the fields its consumed Factors are
+            # FD-1495 (SL-1985): a pinned model carries the fields its consumed Factors are
             # derived from; the stub consumes exactly what the example's model_call steps map.
             mapped = {
                 value

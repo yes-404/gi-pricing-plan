@@ -111,7 +111,7 @@ def _resolver() -> ArtifactResolver:
         "model_type": "gbm",
         "status": "approved",
         "feature_map": {"driver_age": "driver_age", "rating_area": "rating_area"},
-        # FD-1495 (SL 8303): a pinned model carries the fields its consumed Factors are derived
+        # FD-1495 (SL-1985): a pinned model carries the fields its consumed Factors are derived
         # from; the fixture's model_call maps exactly these two features.
         "fit_result": {"model_type": "xgboost", "feature_order": ["driver_age", "rating_area"]},
     }

@@ -1,20 +1,20 @@
 ---
-id: LG-8304
+id: LG-1986
 family: ledger
-title: WK-673 Slice SL-8303 — FD-1495, a pinned model's consumed Factors derived per arm and refused when empty (red-first slice ledger)
+title: WK-673 Slice SL-1985 — FD-1495, a pinned model's consumed Factors derived per arm and refused when empty (red-first slice ledger)
 status: active
-created: 2026-11-03
+created: 2026-11-03   # drafted 2026-11-03 under working id 8304; minted as LG-1986
 owner: executor
 tree: cc8fca15556365412a1ec1c972a1c1799bcb559f
 phase: P2
 work: WK-673
-slice: SL-8303
-plans: [PL-8302]
+slice: SL-1985
+plans: [PL-1984]
 corrected_by: []
 relates: [FD-1495]
 ---
 
-# LG-8304 — SL-8303: FD-1495, S-a
+# LG-1986 — SL-1985: FD-1495, S-a
 
 **GO:** to-lead "2026-11-03 16:28:44 GMT", with "2026-11-03 16:19:35 GMT" (2) to (5) (binding remedy shape) and the DB-free single-file grant "2026-11-03 17:19:47 GMT" (load condition tuned to load1 < 4 by "2026-11-03 17:36:02 GMT").
 **MERGE-ACK:** (added at merge)
@@ -23,7 +23,7 @@ relates: [FD-1495]
 
 ### Scope
 
-PL 8302 Row 1, S-a (FD-1495): Acceptance 1 to 6. Requirements: FR-88, FR-240. Base: `origin/draft/pl-wk673fix` a2679afe (`main` a8ef6f19, no merge needed).
+PL-1984 Row 1, S-a (FD-1495): Acceptance 1 to 6. Requirements: FR-88, FR-240. Base: `origin/draft/pl-wk673fix` a2679afe (`main` a8ef6f19, no merge needed).
 
 ### Task list
 

@@ -588,7 +588,7 @@ async def test_a_feature_map_naming_a_raw_column_is_refused_at_save(
 async def test_a_feature_map_over_a_model_whose_fit_result_lacks_the_fields_is_refused_at_save(
     api_client, workspace_id, principal, grant, database, blob_store
 ) -> None:
-    """FD-1495 (SL 8303): the save check derives a model's consumed Factors from the fields its
+    """FD-1495 (SL-1985): the save check derives a model's consumed Factors from the fields its
     fit result carries and refuses a model that yields none, rather than accepting an empty
     map's worth of inputs from an empty default."""
     await grant("analyst")
