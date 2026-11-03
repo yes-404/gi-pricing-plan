@@ -14,7 +14,7 @@ relates: [FD-1959, OQ-1960, RL-1973, PL-1546, SL-1971]
 
 ## Finding
 
-**LOW, owner WK-675, due ~~Thu 12 Nov 2026~~ Wed 18 Nov 2026 (the P2 exit demo; ~~`date -d 2026-11-12 +%A` prints Thursday~~).** Authority: the lead's
+**LOW, owner ~~WK-675~~ WK-1178, due ~~Thu 12 Nov 2026~~ Wed 18 Nov 2026 (the P2 exit demo; ~~`date -d 2026-11-12 +%A` prints Thursday~~).** Authority: the lead's
 "2026-10-29 22:34:57 GMT" ruling (a) (aud-a11y's verdicts accepted; the ten carried lows become one new finding, minted in the
 PR of SL-1971) and R10-DP2 (a) of "2026-10-29 22:13:59 GMT" (the lows that are not one line are carried, owner WK-675). Filed under
 working id 8284.
@@ -51,7 +51,7 @@ FD-1959 rated serious or moderate were fixed in SL-1971.
 
 ## Remedy
 
-The owning Work (WK-675) fixes each row, red first in vitest where a behaviour is testable, or accepts it with a dated line, by the
+The owning Work (~~WK-675~~ WK-1178) fixes each row, red first in vitest where a behaviour is testable, or accepts it with a dated line, by the
 due date above; a rendered claim (focus order, an announcement) is OQ-1960's. WK-675's close
 record lists this finding and OQ-1960 as carried forward (RL-1973, "What it obliges").
 
@@ -68,6 +68,8 @@ above on 2026-10-29. *Filed 2026-10-29 — #1411, squash d549b8d2d823801d705fdfd
 
 ## Disposition
 
-Open, owner WK-675, LOW, due ~~Thu 12 Nov 2026~~ Wed 18 Nov 2026. Filed under working id 8284.
+Open, owner ~~WK-675~~ WK-1178, LOW, due ~~Thu 12 Nov 2026~~ Wed 18 Nov 2026. Filed under working id 8284.
 
 *(Re-dated 2026-11-03 by the auditor, on the lead's instruction, quoting the maintainer's entry "2026-11-03 15:38:58 GMT" (`to-lead.md`), which relays the user's order of 15:38 GMT: "move freeze to 10th of Nov and defer the later dates". The P2 exit demo moves from Thu 12 Nov 2026 to Wed 18 Nov 2026 (`date -d 2026-11-18 +%A` prints Wednesday); the due date Thu 12 Nov 2026 is struck and reads Wed 18 Nov 2026. The old text stays, struck.)*
+
+*(Owner re-pointed 2026-11-03 by the auditor, on the lead's instruction, citing the maintainer's entry "2026-11-03 15:51:08 GMT" (`to-lead.md`): the user accepted WK-675 closed at 15:51 GMT, and its carried finding FD-1974 is owned by WK-1178. The due date reads Wed 18 Nov 2026 (re-dated by the line above). The old owner is struck, not deleted.)*

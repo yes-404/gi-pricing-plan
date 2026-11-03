@@ -1313,13 +1313,13 @@ PL-1688 row 2: the compose `beat` scheduler service that moves a Job out of the 
 id: WK-675
 family: work
 title: Frontend: **DAG designer (Vue Flow)**, rate table editor, quote sandbox + ladder waterfall, dislocation views
-status: active
+status: closed
 created: 2026-08-14
 owner: maintainer
 phase: P2
 ```
 
-From “Workstreams” (line 385): Frontend: **DAG designer (Vue Flow)**, rate table editor, quote sandbox + ladder waterfall, dislocation views | The DAG designer is the single largest frontend effort in the project — **close audit filed (CR-1952), acceptance owed** *(dated 2026-10-26 by the auditor, on the maintainer's entry "2026-10-26 10:33:40 GMT" in `to-lead.md`; audited at `1e0a8abb`; the record proposes, the lead gives the §13 verdicts, and the close is the user's dated line)*
+From “Workstreams” (line 385): Frontend: **DAG designer (Vue Flow)**, rate table editor, quote sandbox + ladder waterfall, dislocation views | The DAG designer is the single largest frontend effort in the project — **close audit filed (CR-1952), ~~acceptance owed~~** *(dated 2026-10-26 by the auditor, on the maintainer's entry "2026-10-26 10:33:40 GMT" in `to-lead.md`; audited at `1e0a8abb`; the record proposes, the lead gives the §13 verdicts, and the close is the user's dated line)* *(Dated line, 2026-11-03, written by the auditor on the lead's instruction, from the maintainer's entry "2026-11-03 15:51:08 GMT" in `to-lead.md`, verbatim:)* **WK-675 accepted closed on 2026-11-03, by the user, on CR-1952** (Work close audit, audited at 1e0a8abb, filed #1404 447bcfd6), its acceptance blockers all on main: lane-C docs PR #1404 (447bcfd6, FD-1652 closed there); FD-1585 #1403 (18728e68, SL-1956); FD-1959 #1411 (d549b8d2, SL-1971 / RL-1973). Carried: FD-1974 (LOW, ten a11y lows, due Wed 18 Nov 2026 — re-dated with the exit demo, entry 2026-11-03 15:38:58 GMT), owner WK-1178. Acceptance given by the user at 15:51 GMT, to-lead entry "2026-11-03 15:51:08 GMT".
 
 *(Dated line, 2026-10-12, the lead's hand-off from planner-wk1250-s3 (branch `pl-9866-9867-lanec-s5-unblock-2026-10-12`), under the maintainer's (by delegation) entry "2026-10-12 02:58:33 BST" (`to-lead.md`; RL-1670): `PL-1668` is a Work-plan delta to `PL-1546` row 1 (`SL-1547`, Slice 5) for `RL-1613`'s contract-changing scope and the bulk-operation typing dependency. `SL-1547`'s activation need "the FD-1366 bulk-operation typing slice merged" names `SL-1669` (dated 2026-10-12, at the D13 mint).)*
 
