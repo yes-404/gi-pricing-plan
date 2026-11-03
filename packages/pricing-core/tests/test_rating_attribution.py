@@ -885,6 +885,75 @@ def test_attribute_fails_naming_a_policy_not_quoted_in_some_subset() -> None:
     assert "c1" in str(exc.value)
 
 
+def _no_premium_refusal() -> AttributionError:
+    """The subset no-premium raise: a policy declined under one mixed subset (DP-S3-7 (a))."""
+
+    def edit_cap(alg: dict[str, Any]) -> None:
+        _step(alg, "s_decl_cap")["condition"] = "office_premium_minor <= sanity_cap_minor - 1000"
+
+    def edit_office(alg: dict[str, Any]) -> None:
+        _step(alg, "s_office")["expr"] = "risk_premium_minor * expense_factor - 600"
+
+    payable = _hand_values(0, _book(4))
+    caps = [round(payable[q] / 1.05) + 500 for q in sorted(payable)]
+    with pytest.raises(AttributionError) as exc:
+        _run(
+            _candidate_payload(edit_cap, edit_office),
+            book=_book(4, sanity_cap_minor=caps),
+        )
+    return exc.value
+
+
+def _reconcile_refusal(
+    monkeypatch: pytest.MonkeyPatch, breakage: str
+) -> tuple[AttributionError, list[int]]:
+    """A per-policy `_reconcile` raise, and the figures its arguments carried."""
+    figures: list[int] = []
+    real_reconcile = analysis._reconcile
+
+    def spy(label: str, parts: Any, total: int, isolated: Any, residual: int) -> None:
+        figures[:] = [total, sum(parts) if parts is not None else 0, sum(isolated) + residual]
+        real_reconcile(label, parts, total, isolated, residual)
+
+    monkeypatch.setattr(analysis, "_reconcile", spy)
+    if breakage == "parts":
+        real_allocate = analysis._allocate
+
+        def perturbed(numerators: list[int], k: int) -> list[int]:
+            parts = real_allocate(numerators, k)
+            return [parts[0] + 1, *parts[1:]]
+
+        monkeypatch.setattr(analysis, "_allocate", perturbed)
+    else:
+        real_residual = analysis._residual
+        monkeypatch.setattr(
+            analysis, "_residual", lambda total, isolated: real_residual(total, isolated) + 1
+        )
+    with pytest.raises(AttributionError) as exc:
+        _run(_candidate_payload(*_THREE), table=True)
+    return exc.value, figures
+
+
+@pytest.mark.req("FR-1397")
+@pytest.mark.parametrize("raise_site", ["no_premium", "parts", "isolated"])
+def test_per_policy_attribution_errors_name_no_policy_and_no_figure(
+    monkeypatch: pytest.MonkeyPatch, raise_site: str
+) -> None:
+    """NFR-499 (persistence, not only logs): a per-policy refusal carries neither the policy's
+    `quote_id` nor its figures, and is a `CodedError` so the allow-list keeps its text."""
+    if raise_site == "no_premium":
+        error, figures = _no_premium_refusal(), []
+    else:
+        error, figures = _reconcile_refusal(monkeypatch, raise_site)
+        assert any(abs(f) >= 100 for f in figures), "no figure large enough to be searched for"
+    assert isinstance(error, CodedError)
+    for text in (str(error), safe_error_text(error)):
+        assert "Q0" not in text, text
+        for figure in figures:
+            if abs(figure) >= 100:
+                assert str(figure) not in text, text
+
+
 @pytest.mark.req("FR-1398")
 def test_attribute_records_rerate_and_no_fallback() -> None:
     summary = _run(_candidate_payload(*_THREE), table=True).attribution_summary
