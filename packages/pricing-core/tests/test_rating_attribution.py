@@ -911,9 +911,11 @@ def _reconcile_refusal(
     figures: list[int] = []
     real_reconcile = analysis._reconcile
 
-    def spy(label: str, parts: Any, total: int, isolated: Any, residual: int) -> None:
+    def spy(
+        label: str, parts: Any, total: int, isolated: Any, residual: int, **kwargs: Any
+    ) -> None:
         figures[:] = [total, sum(parts) if parts is not None else 0, sum(isolated) + residual]
-        real_reconcile(label, parts, total, isolated, residual)
+        real_reconcile(label, parts, total, isolated, residual, **kwargs)
 
     monkeypatch.setattr(analysis, "_reconcile", spy)
     if breakage == "parts":
