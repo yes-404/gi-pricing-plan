@@ -1,16 +1,16 @@
 ---
-id: FD-8285
+id: FD-1978
 family: finding
 title: input, select and textarea borders outside WK-675 still use the 1.48:1 border-slate-300, so NFR-463's WCAG 2.2 1.4.11 non-text contrast is not met on 53 controls in 13 Phase 1 frontend files
 status: active
-created: 2026-11-03
+created: 2026-11-03   # drafted 2026-11-03 under working id 8285
 owner: auditor
 tree: c807a59d1a26d12e63d88bc395ac3dcc373aa919
 corrected_by: []
 relates: [FD-1959, FD-1974, RL-1973, OQ-1960, WK-675, WK-1178, WK-690, WK-663, WK-664, SL-1971]
 ---
 
-# FD-8285 — input, select and textarea borders outside WK-675 still use the 1.48:1 border-slate-300
+# FD-1978 — input, select and textarea borders outside WK-675 still use the 1.48:1 border-slate-300
 
 ## Finding
 
