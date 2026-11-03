@@ -113,10 +113,10 @@ message of one `errors[]` entry on `loss`."* §4.6 includes the depth limit, and
 
 ## Goal
 
-1. **Limb 1 (FD-1751).** An `expression` Factor in a GBM gets a real permutation importance and
+~~1. **Limb 1 (FD-1751).** An `expression` Factor in a GBM gets a real permutation importance and
    a real partial-dependence curve, each measured on the factor's **resolved** value through a
    **joint** operation over all its source columns (FR-177's mechanism for a cross), and the
-   `expression_factor` omission is no longer emitted for either block.
+   `expression_factor` omission is no longer emitted for either block.~~
 2. **Limb 2 (FD-1842).** A loss (or any expression) over §4.6's depth or node bound is refused
    by the iterative bound check **before** the recursive structure walk runs, so no expression
    can raise `RecursionError`; `POST /api/v1/custom-objectives` answers 422
@@ -283,6 +283,8 @@ status line.
 
 SL 8299 is cut in `docs/roadmap.md` under `### WK-690`, after `SL-1622`, as `draft`
 (`document-ids.md` §1.6 SL row).
+
+(Amended 2026-11-03 on the maintainer's (by delegation) entry "2026-11-03 16:13:51 GMT" (`to-lead.md`), option (ii): limb 1 (FD-1751) struck: FD-1751 is guarded at main (`diagnostics.py:1081-1088` / `:1510-1520`); the expression-Factor diagnostic (FR-174 / FR-175 / FR-177) is carried to P3, owner WK-1178; SL 8299 is FD-1842 alone. Struck with it: Goal item 1, Acceptance A1–A4, Task 1, Task 3's FR-178 and `model-schema` bullets, and DP-8301-3, -4, -5, each left in place as written. Rulings of the same entry: DP-8301-1 (a) with a red test at each caller (`objectives.py:295-318`, `modelling.py:295`); DP-8301-2 (a); the reds are a depth-21 and a 201-node expression, each 422 `OBJECTIVE_GRAMMAR_VIOLATION` at both callers, and the recursion case under a lowered recursion limit.)
 
 ## Hand-off (not this plan's writes)
 
