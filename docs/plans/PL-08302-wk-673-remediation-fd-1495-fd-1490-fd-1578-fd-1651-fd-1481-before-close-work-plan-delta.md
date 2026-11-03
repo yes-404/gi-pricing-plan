@@ -55,6 +55,29 @@ All entries are in `~/gi-pricing-plan.local/channel/to-lead.md`.
   cites the CR line either way. Up to two sonnet executors after my GO on the rows; every limb
   red first; merges by Mon 9, before the Tue 10 freeze; the FD-1495 limb merges first and
   alone if the rest slip. Working ids at the GO."*
+- **S-a's remedy shape, binding.** "2026-11-03 16:19:35 GMT", rulings (2) to (5), verbatim:
+  *"(2) S-a's remedy shape, binding on the row: the refusal derives the model's consumed
+  Factors from fields the schema actually carries on EACH arm (the GLM's coefficient/term
+  names; the GBM's feature list), never from an optional key with an empty default — and an
+  EMPTY derived feature set on a fitted model is itself a refusal (fail closed), with a red
+  test per arm (GLM and GBM) proving CONTROL_FACTOR_IN_RATEABLE_PATH fires, plus a red test
+  that a model whose fit_result lacks the fields refuses rather than compiles. The same
+  empty-default read at rating_algorithms.py:142 (`required_model_inputs`) is in S-a's scope —
+  same class, same fix. (3) S-a merges first and alone: target Wed 4, hard stop Thu 5; one
+  sonnet executor at the GO; full SOLO gate; its DB window takes the next place in the queue
+  after the FD-1823 reds (ahead of SL 8296 and SL 8299 — a mispricing fix outranks them). (4)
+  FD-1490's remedy is RL-1958 (c) — drop errors.py:323 by Fri 6 — accepted as the planner's
+  DP-3 reading; it rides S-b unless S-b slips past Fri 6, then it is its own one-line slice.
+  (5) A whole-tree grep for every `fit_result.get(` / `.get("feature_order"` read, quoted in
+  the LG, so no third site survives."* *(Amended 2026-11-03 by the planner, before the GO, on
+  this entry: S-a's Acceptance 1–6, DP-1, Task 1–2, the row, Acceptance 17 and DP-3. The
+  first draft's DP-1 (a), `_model_factors(pin)`, is withdrawn: it read the spec's Factors,
+  not the fit's consumed set.)*
+  **One premise in that entry differs from the source.** It says the schema defines no
+  `feature_order` on `GlmFitResult` *"(or GbmFitResult)"*. `GbmFitResult` does carry it, as a
+  required field: `feature_order: tuple[str, ...]` (`model_schema/modelling.py:1768`, class at
+  `:1741`). The ruling's shape is unaffected. The GBM arm reads that required field through the
+  validated class, not through `dict.get` with a default.
 - **The calendar.** "2026-11-03 15:38:58 GMT": code freeze **Tue 2026-11-10**, docs freeze
   **Wed 2026-11-11**, P2 exit demo **Wed 2026-11-18**. The same entry keeps WK-673's close
   audit on its schedule. 16:03:37 accepts WK-673's close target as **Mon 9**. The weekdays
@@ -102,7 +125,8 @@ differ from the primary source.
    ruled spec.
 3. **FD-1490's ruled date is earlier than S-b's merge target.** `RL-1958` dates item 1 **Fri
    2026-11-06**, and 16:03:37 sets S-b's merge by **Mon 2026-11-09**. A channel order does not
-   amend a ruling's date. DP-3 resolves this.
+   amend a ruling's date. DP-3 resolves this. *(Ruled 2026-11-03 16:19:35 (4): FD-1490 rides
+   S-b unless S-b slips past Fri 6, and then it is its own one-line slice. Row 2 says so.)*
 
 ## FR-364's `rate_table_diffs` limb: not on the exit-demo path, no slice
 
@@ -143,29 +167,79 @@ different cause is a plan defect: stop and report.
 
 **S-a (FD-1495), SL &lt;a&gt;**
 
-1. `packages/pricing-core/tests/test_rating_compile_fr240.py` has
-   `test_a_model_call_over_a_glm_fitted_on_a_control_factor_is_refused`
-   (`@pytest.mark.req("FR-88")`, `@pytest.mark.req("FR-240")`). It is red at base with
-   `Failed: DID NOT RAISE <class 'ValueError'>` (compile succeeds), and green after. Its
-   message asserts name the model ref, the Factor's slug and `slug@version`.
-2. The same file has `test_a_model_call_over_a_glm_whose_offset_model_is_fitted_on_a_control_factor_is_refused`.
-   Its pinned GLM is risk-only, and its `offset.kind == "model"` source model is fitted on a
-   `control` Factor. It is red at base by the same cause, and green after.
-3. The same file has `test_a_model_call_over_a_glm_fitted_on_risk_factors_compiles`. It is
-   green at base and after. It is the control that shows items 1 and 2 are not refusing every
-   GLM.
-4. `test_a_model_call_over_a_gbm_fitted_on_a_control_factor_is_refused` (`:188-197`) and its
-   risk twin `test_a_model_call_over_risk_factors_compiles` (`:201`) stay green, unedited.
-5. The refusal in `_refuse_control_factor_model_calls` (`compile.py:819-855`) reads the
-   model's Factors by intent through `_model_factors(pin)` (`compile.py:1048-1052`: the pin's
-   Factors plus its offset model's). It keeps the same code, `CONTROL_FACTOR_IN_RATEABLE_PATH`,
-   through `_raise_named` (DP-1 (a)). `git -C <wt> diff origin/main...HEAD --stat` names no
-   file under `docs/specs/`.
-6. Small runs through `run-small.sh`, each with summary line and rc quoted:
+1. **One derivation, per arm, from carried fields (16:19:35 (2)).** One `pricing-core`
+   function returns a pinned model's **consumed feature names**. It lives beside
+   `required_model_inputs` (`pricing_core/modelling/factors.py:505`). It validates the stored
+   `fit_result` with `FIT_RESULT_ADAPTER` (`model_schema/modelling.py:2072`) and reads only
+   fields the class carries:
+   - **GBM** (`GbmFitResult`, `:1741`): the required `feature_order` (`:1768`).
+   - **GLM** (`GlmFitResult`, `:1670`): the names of `coefficients[*].term` (`Coefficient.term`,
+     `:1648`). The term `"intercept"` is excluded (`glm.py:824`, `:873`). A term is either
+     `<slug>` or `<slug>[<level>]` (`glm.py:257`, `:1032`), and its Factor slug is the text
+     before `[`.
+   - **Any other arm, or an unparseable `fit_result`:** a refusal, never an empty set.
+
+   **An empty consumed set on a fitted model is a refusal** (fail closed): an intercept-only
+   GLM, or a GBM with `feature_order == ()`. Both use the code
+   `CONTROL_FACTOR_IN_RATEABLE_PATH`, raised through `_raise_named`, and the message names the
+   model and says that its consumed Factors cannot be derived. No `dict.get("feature_order",
+   ())`, and no other optional key with an empty default, remains on any path that feeds a
+   refusal or a required-input set.
+2. **The refusal uses it.** `_refuse_control_factor_model_calls` (`compile.py:819-855`)
+   refuses a `model_call` when any consumed name maps, by slug, to a pinned Factor with
+   `intent is FactorIntent.CONTROL`. That covers the pin, each peril component, and a GLM's
+   `offset.kind == "model"` source model (`resolved.offset_source`, `compile.py:555-557`). The
+   message names the model ref, the feature and the Factor's `slug@version`, as today.
+3. **Red tests in `packages/pricing-core/tests/test_rating_compile_fr240.py`** (`@pytest.mark.req("FR-88")`,
+   `@pytest.mark.req("FR-240")`). Each is red at base by the stated cause and green after:
+   - (a) `test_a_model_call_over_a_glm_fitted_on_a_control_factor_is_refused`: a GLM whose
+     coefficients include `<control slug>[<level>]`. Red: `Failed: DID NOT RAISE <class
+     'ValueError'>`.
+   - (b) `test_a_model_call_over_a_glm_whose_offset_model_is_fitted_on_a_control_factor_is_refused`.
+     Red: the same cause.
+   - (c) the GBM arm, `test_a_model_call_over_a_gbm_fitted_on_a_control_factor_is_refused`
+     (`:188-197`). It is already green at base, so its red is shown on the base with the GBM
+     read scratch-broken (`feature_order` read as `()`), then reverted and quoted in LG
+     &lt;a&gt;. The test is unedited.
+   - (d) `test_a_model_call_over_a_model_whose_fit_result_lacks_the_fields_is_refused`,
+     parametrised over a GLM with no `coefficients` (or intercept only) and a GBM-typed dict
+     with no `feature_order`. Red: *DID NOT RAISE* (compile succeeds today).
+
+   Controls, green at base and after: `test_a_model_call_over_a_glm_fitted_on_risk_factors_compiles`
+   (new) and `test_a_model_call_over_risk_factors_compiles` (`:201`, unedited). They show the
+   refusal is not refusing every model.
+4. **`required_model_inputs`'s callers, the same class (16:19:35 (2) and (5)).** Every read
+   that feeds `required_model_inputs` a `feature_order` through an empty default uses the
+   function of item 1 instead:
+   - `backend/src/app/platform/rating_algorithms.py:142`, `_accepted_feature_map_values`, the
+     save check;
+   - `compile.py:992` (`check_model_call_coverage`) and `compile.py:1059` (`_model_slugs`);
+   - `runtime.py:621` (`_required_slugs`).
+
+   `compile.py:844` is item 2's site. A red for `rating_algorithms.py:142` is written beside
+   its save-check tests (the executor names the file in LG &lt;a&gt; from its Task 0 grep). A
+   `feature_map` on a model whose `fit_result` lacks the fields is refused at save, not
+   accepted as an empty map: red at base, green after.
+5. **The whole-tree grep (16:19:35 (5)).** LG &lt;a&gt; quotes it at the base and at the head:
+
+   ```bash
+   git -C <wt> grep -n -E 'fit_result\.get\(|\.get\("feature_order"|fit_result or \{\}\)\.get\(' -- '*.py'
+   ```
+
+   At `a8ef6f19` it prints these non-test sites, read by this plan: `compile.py:844`, `:992`,
+   `:1033`, `:1059`; `runtime.py:621`, `:641`, `:1008`; and `rating_algorithms.py:142` (the
+   last through the `(row.fit_result or {}).get(` form). At the head, the only remaining
+   matches are the `model_type` reads (`compile.py:1033`, `runtime.py:641`, `:1008`). Each of
+   those dispatches on a required discriminator and feeds no refusal, and the LG states that
+   for each one. `git -C <wt> diff origin/main...HEAD --stat` names no file under
+   `docs/specs/`: `03` FR-240 (`03-rating-engine.md:140`) already says it.
+6. **Small runs** through `run-small.sh`, each with summary line and rc quoted:
    `test_rating_compile_fr240.py`, `test_rating_peril_scoring.py`,
    `test_rating_glm_model_call.py`, and `test_quote_input_raise_sites.py` (common item 11: a
-   `_raise_named` site changes). The GREEN set is extended by import closure (common item 29),
-   with the commands and the list quoted in LG &lt;a&gt;.
+   `_raise_named` site changes). The DB-backed save-check test of item 4 runs in S-a's DB
+   window: **next in the queue after the FD-1823 reds, ahead of SL 8296 and SL 8299**
+   (16:19:35 (3)). The GREEN set is extended by import closure (common item 29), with the
+   commands and the list quoted in LG &lt;a&gt;.
 
 **S-b (the rest), SL &lt;b&gt;**
 
@@ -241,8 +315,10 @@ different cause is a plan defect: stop and report.
     skipped count at or below the baseline the lead states.
 16. `flock -w 900 /tmp/slots/gate-2 env -C <wt> python3 scripts/audit-docs.py` and
     `scripts/doc-index.py --check` are rc 0 at each minted head. `req-coverage.py` is rc 0.
-17. S-a's squash is on `main` by **Thu 2026-11-05**, and S-b's by **Mon 2026-11-09** (DP-3).
-    Both are before the Tue 2026-11-10 freeze. If S-b slips, S-a merges alone.
+17. S-a's squash is on `main` first and alone: target **Wed 2026-11-04**, hard stop **Thu
+    2026-11-05** (16:19:35 (3)). S-b's squash is on `main` by **Mon 2026-11-09**, and its
+    FD-1490 limb by **Fri 2026-11-06** (DP-3, as ruled). Both are before the Tue 2026-11-10
+    freeze.
 
 ## Global Constraints
 
@@ -262,17 +338,30 @@ different cause is a plan defect: stop and report.
 
 ## The rows, cut
 
-**Row 1 — S-a (FD-1495): SL &lt;a&gt; / LG &lt;a&gt;.** *A GLM `model_call` over a model or
-offset model fitted on a `control`-intent Factor is refused at compile with
-`CONTROL_FACTOR_IN_RATEABLE_PATH`, closing FD-1495's live GLM arm (FR-88, FR-240).*
+**Row 1 — S-a (FD-1495): SL &lt;a&gt; / LG &lt;a&gt;.** *A pinned model's consumed Factors
+are derived from fields its fit-result class carries on each arm: a GBM's `feature_order`,
+and a GLM's coefficient terms. They are never derived from an optional key with an empty
+default, and an empty derived set on a fitted model is refused (fail closed). A `model_call`
+over a model, peril component or offset model that consumes a `control`-intent Factor is
+refused at compile with `CONTROL_FACTOR_IN_RATEABLE_PATH`. The same derivation replaces the
+empty-default `feature_order` reads that feed `required_model_inputs`, including the save
+check at `rating_algorithms.py:142`. This closes FD-1495's live GLM arm (FR-88, FR-240; the
+binding shape of to-lead "2026-11-03 16:19:35 GMT" (2)–(5)).*
 - **Scope:** Acceptance 1–6, 15–17.
-- **Write set:** `packages/pricing-core/src/pricing_core/rating/compile.py` (the one
-  function) and `packages/pricing-core/tests/test_rating_compile_fr240.py`.
+- **Write set:**
+  - `packages/pricing-core/src/pricing_core/modelling/factors.py` (the one derivation);
+  - `packages/pricing-core/src/pricing_core/rating/compile.py` (`:844`, `:992`, `:1059` and
+    the refusal);
+  - `packages/pricing-core/src/pricing_core/rating/runtime.py` (`:621` only);
+  - `backend/src/app/platform/rating_algorithms.py` (`:142` only);
+  - `packages/pricing-core/tests/test_rating_compile_fr240.py`;
+  - the save-check test file for `:142`, named in LG &lt;a&gt; from Task 0's grep.
 - **Depends on:** nothing open.
-- **Executor:** one, `sonnet`.
-- **Reds:** DB-free, through `run-small.sh`.
+- **Executor:** one, `sonnet`, at the GO.
+- **Reds:** DB-free through `run-small.sh`. The save-check red runs in S-a's DB window, next
+  in the queue after the FD-1823 reds and ahead of SL 8296 and SL 8299.
 - **Gate:** full SOLO, both halves.
-- **Merge by:** Thu 2026-11-05, first and alone.
+- **Merge by:** target Wed 2026-11-04, hard stop Thu 2026-11-05. It merges first and alone.
 - **FD closing act:** the auditor closes FD-1495 citing S-a's PR and squash, **only once
   DP-2 is ruled**. Until then the row stays open on the declared-reference limb alone, with a
   dated line.
@@ -297,7 +386,10 @@ five owed red-first proofs are recorded (FD candidate 1). FD-1481's 15-digit ech
 - **Reds:** DB-free first. Then one granted single-tenant DB window for Acceptance 10's
   backend runs, 11 and 12.
 - **Gate:** full SOLO, both halves.
-- **Merge by:** Mon 2026-11-09 (DP-3).
+- **Merge by:** Mon 2026-11-09. **FD-1490 is due Fri 2026-11-06** (`RL-1958` item 1; 16:19:35
+  (4)). It rides S-b unless S-b slips past Fri 6. If it does, FD-1490 becomes its own one-line
+  slice (Acceptance 7, `errors.py:323` and `test_errors.py`), merged by Fri 6, and S-b loses
+  those two files.
 - **FD closing acts (the auditor's, each citing S-b's PR and squash):** FD-1490 closed
   (`RL-1958` item 1: *"Its merge closes FD-1490"*); FD-1578 closed; FD-1651 closed, its
   resolution quoting LG &lt;b&gt;'s proofs; FD candidate 1, once batch 7 has filed it, closed
@@ -310,28 +402,32 @@ only.
 
 ### S-a, Task 0 — re-read at the base
 
-Re-read every `file:line` above at the row's base (README convention 4). Then run
-`gh pr list --state open` and read any open PR that touches `compile.py` or
-`test_rating_compile_fr240.py`. Quote both in LG &lt;a&gt;.
+Re-read every `file:line` above at the row's base (README convention 4). Run Acceptance 5's
+grep, and `git -C <wt> grep -n '_accepted_feature_map_values\|required_model_inputs' --
+backend/tests` to find `:142`'s test file. Then run `gh pr list --state open` and read any
+open PR that touches S-a's write set. Quote all three in LG &lt;a&gt;.
 
-### S-a, Task 1 — the reds (Acceptance 1–3)
+### S-a, Task 1 — the reds (Acceptance 3, 4)
 
-Write the three tests beside `:188-205`. Build the resolver as `_model_fitted_on` (`:178-185`)
-does, using the existing `_FactorsResolver`, with a `glm` fit result and GLM spec. Mirror
-`_glm_model` (`test_rate_table_operations.py`, imported at `:13`) rather than writing a new
-payload. For item 2, set the offset source on the `ResolvedArtifact` the way compile sets it
-(`offset_source`, `compile.py:555-557`). Run the file through `run-small.sh`. Items 1 and 2
-must fail with *DID NOT RAISE*. Any other failure is a fixture defect: fix the fixture, never
-the expectation.
+Write tests (a), (b) and (d) and the GLM control beside `:188-205`. Build the resolver as
+`_model_fitted_on` (`:178-185`) does, using the existing `_FactorsResolver`, with a `glm` fit
+result whose `coefficients` name `<slug>[<level>]` terms. Mirror `_glm_model`
+(`test_rate_table_operations.py`, imported at `:13`) rather than writing a new payload. For
+(b), set the offset source on the `ResolvedArtifact` the way compile sets it (`offset_source`,
+`compile.py:555-557`). Show (c) red on the scratch-broken GBM read, then revert. Write the
+`:142` save-check red. Run the file through `run-small.sh`, and the save-check red in the DB
+window. (a), (b), (d) and the `:142` red must fail by the causes stated. Any other failure is
+a fixture defect: fix the fixture, never the expectation.
 
-### S-a, Task 2 — the green (Acceptance 4–6)
+### S-a, Task 2 — the green (Acceptance 1, 2, 4–6)
 
-In `_refuse_control_factor_model_calls`, iterate `_model_factors(pin)` for each model ref
-(direct, or each peril component, as today). Refuse the first Factor whose
-`intent is FactorIntent.CONTROL`. The message names the model ref, the Factor slug and
-`slug@version`, and ends *"which cannot be rated on (FR-88, FR-240)"* as today. Update the
-docstring's first paragraph to say the check is model-type blind. Then run Acceptance 6's
-runs, then the gate.
+Write Acceptance 1's derivation in `modelling/factors.py`. Then point the refusal (Acceptance
+2) and each `required_model_inputs` caller (Acceptance 4) at it. The refusal message names the
+model ref, the feature and the Factor's `slug@version`, and ends *"which cannot be rated on
+(FR-88, FR-240)"* as today. The empty-set refusal names the model and the arm. Update the
+refusal's docstring: it no longer says that a payload with no `feature_order` binds no factor
+(`compile.py:826`). Then run Acceptance 5's grep at the head and Acceptance 6's runs, then
+the gate.
 
 ### S-b, Task 0 — re-read at the base
 
@@ -364,9 +460,9 @@ and revert each before the next. Then edit the three docstrings.
 
 | DP | Question | Options | Recommendation |
 |---|---|---|---|
-| DP-1 | What does the S-a refusal read? | (a) every Factor `_model_factors(pin)` returns (the pin's plus its offset model's), by intent, whatever the model type; (b) a per-type fitted set: `feature_order` for a GBM, `spec.factors` for a GLM | **(a).** It reuses the helper the other model_call checks already use (`compile.py:1106`). It reads what the GLM scorer reads (`runtime.py:929`) and covers the offset model, which (b) misses. It does not go stale when a third scorer (EBM) lands. For a GBM it refuses the same set, because the fit refuses only `offset` and `diagnostic` intents (FD-1495 §What the code does, item 1). |
+| DP-1 | What does the S-a refusal read? | **RULED 2026-11-03 16:19:35 (2), binding:** the consumed Factors per arm from carried fields (GBM `feature_order`; GLM coefficient terms), with an empty derived set refused. Acceptance 1–5 carry it. | The first draft's (a), `_model_factors(pin)` (the spec's Factors), is withdrawn by that ruling. |
 | DP-2 | FD-1495's remaining limb, `RL-1470` Ruled 9's declared-reference scoring (a `control` Factor held at a declared value) | (a) carried to P3 by a dated register line, owner named by the maintainer: Ruled 8's refusal stays the default and no price can depend on a `control` Factor after S-a; (b) built in P2: a spec change first (`02` FR-88, `03` FR-240, the transparency clause `02` FR-132), then a code slice | **(a).** `RL-1470` Ruled 9 calls it *"NOT a G2 blocker"* and a new capability. Building it means a spec change, a versioned artifact and a transparency change before Mon 9, against a freeze on Tue 10. It is the maintainer's to rule, and FD-1495 cannot close until it is ruled. |
-| DP-3 | FD-1490's date: `RL-1958` says Fri 2026-11-06, and S-b merges by Mon 2026-11-09 | (a) FD-1490 rides S-a (one line and one DB-free test), which meets Fri 6; (b) it stays in S-b, and the maintainer re-dates `RL-1958` item 1 to Mon 2026-11-09 by a dated line | **(b).** 16:03:37 put FD-1495 alone in its own slice, and FD-1490 misprices nothing (LOW). A dated line is cheaper than widening S-a's write set into `backend/`. If the maintainer prefers the ruled date, choose (a): S-a then adds Acceptance 7 and `backend/src/app/errors.py` and `backend/tests/test_errors.py`. |
+| DP-3 | FD-1490's date: `RL-1958` says Fri 2026-11-06, and S-b merges by Mon 2026-11-09 | **RULED 2026-11-03 16:19:35 (4):** FD-1490 stays due Fri 6 and rides S-b. If S-b slips past Fri 6, it becomes its own one-line slice. Row 2 carries it. | No re-dating line is needed. |
 | DP-4 | How does a per-policy `AttributionError` message point at the failing policy without naming it? (FD-1578 §Disposition step 1 leaves it to the remedy) | (a) it names no policy: it gives the change ids (derived names) and says one policy of the book failed; (b) it gives the policy's ordinal in the sorted compared set; (c) it gives a hash of the `quote_id` | **(a).** The change ids already locate the failing subset, and an operator can re-run locally. (b) is meaningless outside the run, and (c) can be linked back to the policy, which is the leak NFR-499 forbids. If the maintainer wants (b) or (c), it is an `open-questions.md` row first, never a silent pick. |
 
 ## Hand-off (not this plan's writes)
@@ -386,16 +482,17 @@ and revert each before the next. Then edit the three docstrings.
 
 ## Self-review
 
-- **Every limb red first:** S-a items 1 and 2 are reds by cause. Item 3 is the control.
+- **Every limb red first:** S-a's Acceptance 3 (a), (b) and (d) and the `:142` save-check red
+  are reds by cause. 3 (c) is red on a scratch break, and the two controls stay green.
   S-b items 7, 8, 11, 12 and 13 each name a red, and items 11–13 are proofs against a scratch
   variant, because nothing in them is code.
 - **Every id listed individually:** FR-88, FR-240, FR-227, FR-1397, FR-212, NFR-499, and
   `02` FR-132 in DP-2 only. No range is written.
 - **The brief's own premises checked against the source:** three corrections, above. FR-364
   was decided by the 16:03:37 rule, with the CR lines cited.
-- **The four site classes (README convention 5) checked for each DP's subject:** DP-1 appears
-  in the narrative, Acceptance 5, Task 2 and the row. DP-3 appears in Acceptance 17, the row
-  and the DP. DP-4 appears in Acceptance 10, Task 2 and the DP.
+- **The four site classes (README convention 5) checked for each ruling's subject:** the
+  16:19:35 S-a shape appears in Authority, Acceptance 1–6, Tasks 0–2 and Row 1. DP-3's ruling
+  appears in correction 3, Acceptance 17, Row 2 and the DP table. DP-4 appears in Acceptance 10, Task 2 and the DP.
 - **Not verified:** nothing was run. The GLM gap is shown by reading three files at
-  `a8ef6f19`, and S-a's item 1 is its proof. FD-1481's echoed value is the SL-1436 ledger's
+  `a8ef6f19`, and S-a's Acceptance 3 (a) is its proof. FD-1481's echoed value is the SL-1436 ledger's
   measurement, not re-run here.
