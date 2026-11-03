@@ -282,3 +282,49 @@ describe("RateTableEditorView: the scrolling grid is keyboard reachable (NFR-463
     expect(grid).toHaveAttribute("tabindex", "0");
   });
 });
+
+describe("RateTableEditorView: NFR-463 a11y lows (FD-1974 L-4, L-9, L-10)", () => {
+  it("L-4: names, in text tied to the disabled button, the first condition that blocks the review", async () => {
+    let release: (value: unknown) => void = () => undefined;
+    previewEdit.mockImplementation(() => new Promise((resolve) => { release = resolve; }));
+    render(RateTableEditorView, { props, ...mounted });
+    await screen.findAllByRole("textbox");
+    const review = screen.getByRole("button", { name: "Review changes" });
+
+    expect(review).toHaveAccessibleDescription(/edit at least one cell/i); // nothing edited
+
+    await typeInto(/relativity for area A/, "1.0500");
+    expect(review).toHaveAccessibleDescription(/change note/i); // edited, no note
+
+    await userEvent.type(screen.getByLabelText("Change note"), "area A +5%");
+    expect(review).toBeEnabled();
+    expect(review).not.toHaveAccessibleDescription(); // nothing blocks it, nothing is said
+
+    await userEvent.click(review);
+    expect(review).toBeDisabled();
+    expect(review).toHaveAccessibleDescription(/working/i); // busy
+    release({ changed_cells: 1, max_abs_change_pct: "5" });
+  });
+
+  it("L-9: names the scrolling cell grid as a region", async () => {
+    render(RateTableEditorView, { props, ...mounted });
+    await screen.findAllByRole("textbox");
+    expect(screen.getByRole("region", { name: "Rate table cells" })).toHaveAttribute("tabindex", "0");
+  });
+
+  it("L-10: empties the review-ready announcement while a second review is pending", async () => {
+    previewEdit.mockResolvedValueOnce({ changed_cells: 1, max_abs_change_pct: "5" });
+    render(RateTableEditorView, { props, ...mounted });
+    await screen.findAllByRole("textbox");
+    await typeInto(/relativity for area A/, "1.0500");
+    await userEvent.type(screen.getByLabelText("Change note"), "area A +5%");
+    await userEvent.click(screen.getByRole("button", { name: "Review changes" }));
+    expect(await screen.findByText(/Review ready: 1 cell changed/)).toBeInTheDocument();
+
+    // A second review with no edit between: the first answer must not stand while it is asked.
+    previewEdit.mockImplementationOnce(() => new Promise(() => undefined));
+    await userEvent.click(screen.getByRole("button", { name: "Review changes" }));
+    await waitFor(() => expect(previewEdit).toHaveBeenCalledTimes(2));
+    expect(screen.queryByText(/Review ready/)).toBeNull();
+  });
+});
