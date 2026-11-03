@@ -1288,7 +1288,7 @@ E4.8 as PL 8061 specifies it: `test_a_dataset_ingest_job_succeeds_through_the_co
 id: SL-1968
 family: slice
 title: WK-674 slice — the scheduler service and the demo's `--no-compose` switch, red first (PL-1688 row 2; FD-1661's scheduler limb)
-status: active                    # draft → active → closed | retired (§1.2a)
+status: closed                    # draft → active → closed (§1.2a)
 created: 2026-10-29
 owner: lead
 tree: 67284ea12daab613b67353e3eb8b728a35ca5023
@@ -1301,6 +1301,8 @@ relates: [FD-1661, FD-1970, LG-1969, PL-1688]
 PL-1688 row 2: the compose `beat` scheduler service that moves a Job out of the outbox, and the demo's `--no-compose` switch, with the red tests and their red table in the slice ledger; FD-1970 (the compose runtime tests could not provision the application login role) is found and fixed in the same slice.
 
 (Minted 2026-10-29 from working id 8275, on the lead's brief (lead 29) under the grant "2026-10-29 21:05:13 GMT" (the gate stands under 1(f)) and the mint tool of record `mint-repoint.py` (sha256 `4d83681a`); ledger LG-1969, finding FD-1970; executed on branch `draft/sl-8275`.)
+
+(Closed 2026-11-03 as a Slice, by the auditor's closing acts on the lead's instruction (the maintainer's ruling, to-lead "2026-11-03 15:36:59 GMT" item 3), on the audit recorded in LG-1969 and the lead's merge: #1409, squash commit aad4fd58bde87f59fffe646466f4f86bb2373bf8, committer date 2026-10-29T22:04:48Z; ledger LG-1969.)
 
 
 ### WK-675 — Frontend: **DAG designer (Vue Flow)**, rate table editor, quote sandbox + ladder waterfall, dislocation views
