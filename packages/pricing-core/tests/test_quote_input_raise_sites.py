@@ -109,7 +109,10 @@ _INPUT_FREE = {
     # rate table ref, key name and Factor ref
     ("rating/compile.py", "_refuse_control_factor_keys"): 1,
     # model ref, a fitted feature name and the Factor's slug@version
-    ("rating/compile.py", "_refuse_control_factor_model_calls"): 1,
+    ("rating/compile.py", "_refuse_control_factor_features"): 1,
+    # FD-1495 (SL-1985): model ref and the fit-result field that could not be read: authored
+    # identifiers at compile time, never a quote
+    ("rating/compile.py", "_consumed_features"): 1,
     # WK-1178 SL-1541 (FR-240): step id, refs, peril, role, feature slugs: authored identifiers
     # at compile time, never a quote
     ("rating/compile.py", "check_model_call_coverage"): 1,

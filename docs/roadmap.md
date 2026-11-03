@@ -1022,6 +1022,26 @@ The fix RL-1707 (minted from working id 9996; `PL-1677`'s DP-P1, ruled (a′)) o
 
 *(Closed 2026-10-14 as a Slice, closing acts in the slice PR, on the lead's merge; ledger `LG-1731`, minted from working id 8048; plan `PL-1701`. Audit: written 2026-10-14 by `auditor-sl1702` at `ce26e05a`, in `LG-1731`'s Audit section, proposed CLEAN and adopted conditionally by the lead. Gate at `3e087672`: audit-docs check 31 only after the docs fixes; one pytest failure outside the docs-audit tests (the FD-1747 rate-limit flake) and one FE failure (RatingDesignView FR-1530, classified main's flake), both in the ledger's Gate section.)*
 
+#### SL-1985 — WK-673 fix slice — FD-1495: a pinned model's consumed Factors are derived from the fields each arm carries, an empty derived set is refused, and a control-intent factor is refused in the rateable path
+
+```yaml
+id: SL-1985
+family: slice
+title: WK-673 fix slice — FD-1495, a pinned model's consumed Factors derived per arm and refused when empty, CONTROL_FACTOR_IN_RATEABLE_PATH on a model, a peril component and an offset model
+status: active                    # draft → active → closed (§1.2a)
+created: 2026-11-03   # drafted 2026-11-03 under working id 8303; minted as SL-1985
+owner: lead
+tree: 9a61d908755c5b2ebc1077cd81f8cc1d6ccc1520
+phase: P2
+work: WK-673
+corrected_by: []
+relates: [FD-1495, LG-1986, PL-1984]
+```
+
+Row 1 (S-a) of `PL-1984`: FD-1495, the GLM arm of the FR-240 control-factor check. A pinned model's consumed Factors come from the fields each arm carries (`feature_order` for a GBM, the coefficient keys for a GLM), an empty derived set is refused, `CONTROL_FACTOR_IN_RATEABLE_PATH` is raised on a model, a peril component and an offset model, and the save check at `backend/src/app/platform/rating_algorithms.py` derives its Factors the same way. Red first; the red tests and the gate are recorded in `LG-1986`.
+
+(Minted 2026-11-03 from working id 8303, on the maintainer's GO "2026-11-03 16:28:44 GMT" and the lead's mint order, with the mint tool of record `mint-repoint.py` (sha256 `4d83681a`); plan `PL-1984` (working id 8302), ledger `LG-1986` (working id 8304); executed on branch `sl-8303-wk673-fd1495-control-factor`. Closed at the slice's merge by the closing acts, not here.)
+
 ### WK-674 — Deployment: environments, atomic switchover, rollback, shadow — **and the tenancy mechanics ADR-710 requires**
 
 ```yaml
