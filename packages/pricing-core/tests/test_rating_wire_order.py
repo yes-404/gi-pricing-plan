@@ -10,6 +10,7 @@ from typing import Any
 from uuid import uuid4
 
 import pytest
+from test_rating_glm_model_call import compiled_bundle, glm_world
 from test_rating_score import _FakeResolver, _version
 
 from model_schema.rating import RatingVersion
@@ -233,3 +234,23 @@ async def test_no_ladder_side_branch_never_carries_the_pre_clamp_value(
         _order_version(), _OneAlgorithm(_no_ladder(_NL_SIDE[kind], side_first))))
     out = await compiled.decision.async_evaluate({"x": 3, "floor": 5000})
     assert out["result"]["base"] == 5000
+
+
+#: FD-1481's reproduction value (the SL-1436 ledger's measurement, `register.md` FD-1481 row).
+_FLOAT_IN = 0.08487199515892163
+_FLOAT_ECHOED = 0.0848719951589216
+
+
+@pytest.mark.req("FR-212")
+async def test_a_float_read_after_a_model_call_is_cut_to_15_significant_digits() -> None:
+    """FD-1481 characterisation (a pin, green at base): the `model_call` handler returns the
+    context, and the engine cuts a float that passes through it to 15 significant digits.
+    Accepted and disclosed (the 2026-10-06 disposition); if the engine or the handler changes
+    this, the pin goes red and the disclosure is re-read, not the pin edited to match."""
+    compiled = load_bundle(await compiled_bundle(glm_world()))
+    out = await compiled.decision.async_evaluate(
+        {"driver_age": 25, "region": "N1", "exposure_years": _FLOAT_IN}
+    )
+    echoed = out["result"]["exposure_years"]
+    assert echoed == _FLOAT_ECHOED
+    assert echoed != _FLOAT_IN
