@@ -220,6 +220,8 @@ END zeros: redis db 12 dbsize=0; `select count(*) from pg_database where datname
 
 **The gate predates main's `uv.lock` and `python.yml` changes (#1414, #1417).** The re-merge of `origin/main` (`55bddaf2`) moved two non-docs files that are main's own, `.github/workflows/python.yml` and `uv.lock`. Lead ruling (a), upheld by the maintainer: `git diff --name-only origin/main HEAD -- . ':!docs'` at `f322e1a6` lists only the slice's twelve files (`backend/src/app/platform/rating_algorithms.py`, `backend/tests/test_rating_algorithms.py`, `backend/tests/test_rating_gbm_banded_save.py`, `pricing_core/modelling/factors.py`, `pricing_core/rating/compile.py`, `pricing_core/rating/runtime.py`, and the six pricing-core test files), and `git diff 1e77bd04 HEAD` over those files was empty. The PR's own python CI on the merged head (the full suite) is the evidence for the combination.
 
+Second re-merge, `origin/main` `4df71cd7` (#1420, docs batch 7; `docs/` only, its `INDEX.md` conflict taken from main and regenerated): the non-docs diff to `origin/main` is still the slice's twelve files and their diff to `1e77bd04` is the mint's comment re-points only (`SL 8303` to `SL-1985`, seven lines in seven files). `uv sync --directory <wt> --all-packages --frozen` on the merged head: rc 0 (it installed main's #1414 lock, `fastapi==0.162.0`). Batch 7's records FD-1982 and FD-1983 and the register row cited `PL 8302` as a working id; re-pointed to `PL-1984` in this PR (their `SL 8305` citations stay for S-b's mint).
+
 ### Audit
 
 (the auditor's)

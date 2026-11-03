@@ -37,7 +37,7 @@ The two facts above are the evidence, each with its command and file:line: the e
 
 ## Disposition
 
-Open, owner WK-673, `fix before close with an owner`. **Discharged by SL 8305** (S-b of PL 8302,
+Open, owner WK-673, `fix before close with an owner`. **Discharged by SL 8305** (S-b of PL-1984,
 row 2, which carries the five owed proofs: the plan's "SL-1389's five owed red-first proofs are
 recorded (FD candidate 1)"); the finding closes when that slice's ledger quotes the red-first of
 each proof and the auditor's slice audit is filed for SL-1388 and SL-1389 or the gap is accepted
