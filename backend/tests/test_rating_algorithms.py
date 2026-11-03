@@ -502,10 +502,9 @@ from backend.tests.test_model_jobs import (  # noqa: E402
     _split,
     _validated_version,
 )
-
-import app.platform.rating_algorithms as algorithms_module  # noqa: E402
 from sqlalchemy import update  # noqa: E402
 
+import app.platform.rating_algorithms as algorithms_module  # noqa: E402
 from app.db.models import ModelRow  # noqa: E402
 from app.platform import jobs as job_service  # noqa: E402
 from app.platform import modelling as model_service  # noqa: E402
