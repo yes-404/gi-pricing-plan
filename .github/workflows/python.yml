@@ -252,18 +252,32 @@ jobs:
         run: |
           gh release download ci-images-2026-09-26 \
             --repo "${{ github.repository }}" -p 'minio-*.tar.gz' -O minio-image.tar.gz
+          # Integrity pin (2026-11-03, FD 8293): the sha256 of the release asset itself.
+          # It is store-independent, unlike the image Id `docker` reports after the load.
+          want_sha="f68ed783300026c322889f4de2300647ab4056544798574f97a0390e35560476"
+          got_sha="$(sha256sum minio-image.tar.gz | cut -d' ' -f1)"
+          if [ "$got_sha" != "$want_sha" ]; then
+            echo "::error::minio-image.tar.gz has sha256 $got_sha, expected $want_sha" >&2
+            exit 1
+          fi
           docker load -i minio-image.tar.gz
           # `docker save`/`load` carries no registry, so a runner that has never pulled
           # this image gets only the RepoTag baked into the tar (`minio/minio:latest`) —
           # `docker run …minio/minio@sha256:14cea493…` then finds nothing local and tries
           # (and fails) to pull that digest from the registry the vendor withdrew it
-          # from. The content-addressed guarantee that survives `save`/`load` is the
-          # image *config* Id, not the registry manifest digest, so that is what is
-          # verified here before the pinned tag is trusted.
+          # from. What `docker image inspect` calls `.Id` depends on the image store:
+          # the classic store reports the image *config* digest (69b2ec20…), the
+          # containerd store (the ubuntu-26.04 runner image 20261025.179.1 and later)
+          # reports the *manifest* digest (a16cad48…). Both are derived from the tar's
+          # OCI layout: `index.json` names manifest a16cad48…, whose `config` is
+          # 69b2ec20…, and each blob hashes to its own name. Either is accepted; the tar
+          # sha256 above is the pin. Evidence: main run 41664932828 (2026-11-03) failed
+          # here with the manifest digest. See FD 8293.
           loaded_id="$(docker image inspect minio/minio:latest --format '{{.Id}}')"
-          want_id="sha256:69b2ec208575b69597784255eec6fa6a2985ee9e1a47f4411a51f7f5fdd193a9"
-          if [ "$loaded_id" != "$want_id" ]; then
-            echo "::error::loaded minio/minio:latest has Id $loaded_id, expected $want_id" >&2
+          want_config="sha256:69b2ec208575b69597784255eec6fa6a2985ee9e1a47f4411a51f7f5fdd193a9"
+          want_manifest="sha256:a16cad481969d7ddb6fcd2f1c58284af3d1266190b9bedc3ef0801aeb05a93a9"
+          if [ "$loaded_id" != "$want_config" ] && [ "$loaded_id" != "$want_manifest" ]; then
+            echo "::error::loaded minio/minio:latest has Id $loaded_id, expected $want_config (config) or $want_manifest (manifest)" >&2
             exit 1
           fi
           docker run -d --name minio -p 9000:9000 \
