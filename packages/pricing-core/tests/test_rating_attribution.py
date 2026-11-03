@@ -948,12 +948,12 @@ def test_per_policy_attribution_errors_name_no_policy_and_no_figure(
     else:
         error, figures = _reconcile_refusal(monkeypatch, raise_site)
         assert any(abs(f) >= 100 for f in figures), "no figure large enough to be searched for"
-    assert isinstance(error, CodedError)
     for text in (str(error), safe_error_text(error)):
         assert "Q0" not in text, text
         for figure in figures:
             if abs(figure) >= 100:
                 assert str(figure) not in text, text
+    assert isinstance(error, CodedError)
 
 
 @pytest.mark.req("FR-1398")
