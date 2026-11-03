@@ -111,25 +111,27 @@ async function submit(): Promise<void> {
       </select>
     </FormField>
 
-    <FormField
+    <FormField v-slot="{ describedby }"
       field-id="factor-slug"
       label="Slug"
       help="A slug that already exists creates the next version of that factor, rather than
             changing it."
     >
       <input
+        :aria-describedby="describedby"
         id="factor-slug"
         v-model="slug"
         class="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm"
       >
     </FormField>
 
-    <FormField
+    <FormField v-slot="{ describedby }"
       field-id="factor-intent"
       label="Intent"
       help="Set once. A factor's intent cannot be changed afterwards."
     >
       <select
+        :aria-describedby="describedby"
         id="factor-intent"
         v-model="intent"
         class="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm"
@@ -163,7 +165,7 @@ async function submit(): Promise<void> {
       </select>
     </FormField>
 
-    <FormField
+    <FormField v-slot="{ describedby }"
       v-if="rationaleRequired"
       field-id="factor-rationale"
       label="Why this direction"
@@ -171,6 +173,7 @@ async function submit(): Promise<void> {
             know whose and why."
     >
       <textarea
+        :aria-describedby="describedby"
         id="factor-rationale"
         v-model="rationale"
         rows="2"

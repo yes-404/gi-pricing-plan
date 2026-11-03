@@ -37,6 +37,8 @@ const props = defineProps<{
   response: ResponseKind | "";
   /** `xgboost` or `lightgbm` — the spec's `model_type`, an applicability axis too. */
   backend: string;
+  /** The id of the field's help text, which the select is described by (FormField's slot prop). */
+  describedby?: string;
 }>();
 
 const emit = defineEmits<{ "update:modelValue": [GbmFunctionRef] }>();
@@ -128,6 +130,7 @@ onMounted(async () => {
     <select
       id="gbm-objective"
       v-model="selection"
+      :aria-describedby="describedby"
       class="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm"
     >
       <optgroup label="Built in">

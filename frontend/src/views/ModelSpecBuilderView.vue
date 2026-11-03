@@ -278,12 +278,13 @@ onMounted(async () => {
       </select>
     </FormField>
 
-    <FormField
+    <FormField v-slot="{ describedby }"
       field-id="version"
       label="Dataset version"
       help="Modelling references a Dataset Version, never a Dataset."
     >
       <select
+        :aria-describedby="describedby"
         id="version"
         v-model="versionId"
         class="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm"
@@ -302,12 +303,13 @@ onMounted(async () => {
       </select>
     </FormField>
 
-    <FormField
+    <FormField v-slot="{ describedby }"
       field-id="split"
       label="Split"
       help="Optional. A version with no split is one whose models have no holdout."
     >
       <select
+        :aria-describedby="describedby"
         id="split"
         v-model="splitId"
         class="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm"
@@ -336,13 +338,14 @@ onMounted(async () => {
       >
     </FormField>
 
-    <FormField
+    <FormField v-slot="{ describedby }"
       field-id="response"
       label="Response"
       help="What is being modelled. Required here: the actuarial defaults for it are not
             available to this form, so it is recorded rather than applied."
     >
       <select
+        :aria-describedby="describedby"
         id="response"
         v-model="response"
         class="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm"
@@ -512,13 +515,14 @@ onMounted(async () => {
         </select>
       </FormField>
 
-      <FormField
+      <FormField v-slot="{ describedby }"
         v-if="family === 'tweedie'"
         field-id="tweedie-power"
         label="Tweedie power"
         help="Strictly between 1 and 2. At 1 it is Poisson and at 2 it is Gamma."
       >
         <input
+          :aria-describedby="describedby"
           id="tweedie-power"
           v-model.number="tweediePower"
           type="number"
@@ -527,13 +531,14 @@ onMounted(async () => {
         >
       </FormField>
 
-      <FormField
+      <FormField v-slot="{ describedby }"
         v-if="family === 'negative_binomial'"
         field-id="nb-theta"
         label="Theta (R/MASS glm.nb form)"
         help="Required, greater than 0. Variance is mean + mean² / theta, as R's glm.nb reports it; larger is closer to Poisson."
       >
         <input
+          :aria-describedby="describedby"
           id="nb-theta"
           v-model.number="nbTheta"
           type="number"
@@ -563,24 +568,26 @@ onMounted(async () => {
         </select>
       </FormField>
 
-      <FormField
+      <FormField v-slot="{ describedby }"
         field-id="gbm-objective"
         label="Objective"
         help="A built-in loss, or a Custom Objective this workspace has certified."
       >
         <ObjectivePicker
+          :describedby="describedby"
           v-model="gbmObjective"
           :response="response"
           :backend="gbmBackend"
         />
       </FormField>
 
-      <FormField
+      <FormField v-slot="{ describedby }"
         field-id="gbm-categorical-handling"
         label="Categorical handling"
         help="FR-131: native uses the backend's categorical support; factor_encoding takes the mapping from the Factor's grouping. No default, so the form must name it."
       >
         <select
+          :aria-describedby="describedby"
           id="gbm-categorical-handling"
           v-model="gbmCategoricalHandling"
           class="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm"
