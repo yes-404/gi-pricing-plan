@@ -33,7 +33,7 @@ SL-1575, per CR-1981 §5); PL 8302 names neither limb.
 
 ## Evidence
 
-`LG-1545:361-364` (the two verdicts, quoted above); `git log e40ab532..HEAD -- scripts/measure-attribution-cost.py` as CR-1981 §5 reports it; `PL-8302` names neither limb. Source: `docs/closures/CR-01981-wk-673-close-audit.md` § Findings, candidate 3.
+`LG-1545:361-364` (the two verdicts, quoted above); `git log e40ab532..HEAD -- scripts/measure-attribution-cost.py` as CR-1981 §5 reports it; `PL 8302` names neither limb. Source: `docs/closures/CR-01981-wk-673-close-audit.md` § Findings, candidate 3.
 
 ## Disposition
 
