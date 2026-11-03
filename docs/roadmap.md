@@ -3394,6 +3394,26 @@ The `.github/workflows/python.yml` Start MinIO step checks the release asset's s
 
 (Minted 2026-11-03 from working id 8294, on the maintainer's GO "2026-11-03 15:56:18 GMT" and the lead's mint order, with the mint tool of record `mint-repoint.py` (sha256 `4d83681a`); ledger LG-1977 (working id 8295), finding FD-1975 (working id 8293); executed on branch `sl-8294-ci-minio-guard`.)
 
+#### SL-1987 — WK-1178 slice — FD-1974's ten carried a11y lows (NFR-463) on the WK-675 surfaces, red first
+
+```yaml
+id: SL-1987
+family: slice
+title: WK-1178 slice — FD-1974's ten carried a11y lows (NFR-463) on the WK-675 surfaces, red first
+status: active                    # draft → active → closed | retired (§1.2a)
+created: 2026-11-03
+owner: lead
+tree: a966ed45933831ec1706678b63d8fa19141c8e2b
+phase: P2
+work: WK-1178
+corrected_by: []
+relates: [FD-1974, LG-1988, PL-1927]
+```
+
+The frontend fixes for the ten carried NFR-463 lows of FD-1974 on the WK-675 surfaces (PL-1927 row 7, S5): each testable low is fixed red-first; L-2, L-7 (bool) and L-10 (sandbox) are static-only and evidenced in LG-1988; rendered focus and announcements go with OQ-1960. Frontend only; no spec change.
+
+(Minted 2026-11-03 from working id 8288, on the maintainer's GO "2026-11-03 15:52:04 GMT" and the lead's mint order, with the mint tool of record `mint-repoint.py` (sha256 `4d83681a`); ledger LG-1988 (working id 8289), finding FD-1974; executed on branch `sl-8288-fd1974-a11y-lows`.)
+
 ### WK-1250 — Sub-graph composition and MTA/cancellation pricing — FR-217's inlining and FR-218's authoring half
 
 ```yaml

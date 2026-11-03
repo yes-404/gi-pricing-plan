@@ -837,8 +837,8 @@ The row says the owner is WK-1178 "on the user's WK-675 acceptance line"; if the
 owner the row is re-pointed by a dated line, the slice is unaffected."*), "2026-11-03 15:36:59 GMT"
 item 2 (FD-1974's new owner WK-1178) and "2026-11-03 15:38:58 GMT" (the user's order: code freeze
 Tue 10 Nov 2026; FD-1974's due date → Wed 18 Nov), all in `~/gi-pricing-plan.local/channel/to-lead.md`:
-**a new row 7, S5 — SL 8288 — FD-1974's ten carried a11y lows (NFR-463) on the WK-675 surfaces.**
-Its ledger is **LG 8289** (working ids; minted in merge order at the slice's turn). Work
+**a new row 7, S5 — SL-1987 (minted from working id 8288) — FD-1974's ten carried a11y lows (NFR-463) on the WK-675 surfaces.**
+Its ledger is **LG-1988** (minted from working id 8289, in merge order at the slice's turn). Work
 **WK-1178**, owner WK-1178 **"on the user's WK-675 acceptance line"**; if the user names another
 owner, this row is re-pointed by a dated line and the slice is unaffected (ruling (1)). **Why
 PL-1927:** WK-1178 has no Work plan; PL-1927 is its open map-kind delta that already takes appended
@@ -910,7 +910,7 @@ outside `frontend/src/` and `docs/`.
 `components/dag/DagDesigner.vue`; `components/rating/BulkOperationDialog.vue`;
 `components/rating/RateTableDiffPanel.vue`; `components/sandbox/QuoteForm.vue`;
 `views/RateTableEditorView.vue`; `views/RatingVersionListView.vue`; their `__tests__/` files and the new
-`components/sandbox/__tests__/QuoteForm.test.ts`; `LG 8289`; the SL row; FD-1974's close and its
+`components/sandbox/__tests__/QuoteForm.test.ts`; `LG-1988`; the SL row; FD-1974's close and its
 register row. No spec, contract, backend or `pricing-core` file; no new dependency (an axe or
 Playwright dependency is OQ-1960's).
 
@@ -918,7 +918,7 @@ Playwright dependency is OQ-1960's).
   c807a59d..<base> -- frontend/src/` (non-empty → re-read E-s1's sites and report before S5-1).
 - [ ] **S5-1. Reds.** For each testable L (L-1 to L-6, L-7 enum, L-8, L-9, L-10 editor), the new test
   first, run single-file under item 28's guard (`test -f`, `Test Files  1`, load1 < 6 quoted), red by
-  its cause, the FAILED line verbatim in `LG 8289` with `head=` first and `rc=` last (item 37), before
+  its cause, the FAILED line verbatim in `LG-1988` with `head=` first and `rc=` last (item 37), before
   its fix.
 - [ ] **S5-2. L-1** on DP-S5-1. **S5-3. L-2 to L-10**, one commit per L, on DP-S5-2 to DP-S5-4; the
   `:213` edit in its own commit, `test(frontend): RateTableEditorView finds the bulk operation as a
@@ -926,20 +926,20 @@ Playwright dependency is OQ-1960's).
 - [ ] **S5-4. Greens.** Each red's file green at the head, single-file, the line in the `LG-`; then
   the GREEN set by import closure (item 29), the commands and the list in the `LG-`.
 - [ ] **S5-5. The gate** DP-S5-5 rules; END rows and rc files in the `LG-`.
-- [ ] **S5-6. Records.** `LG 8289` (`docs/_templates/LG.md`; scope = this row; L-2's and L-10's
+- [ ] **S5-6. Records.** `LG-1988` (`docs/_templates/LG.md`; scope = this row; L-2's and L-10's
   static halves and L-7's bool line each as a dated line); the SL row; the mint at S5's turn (items 17,
   19, 26). **FD-1974's closing act is the auditor's:** it sets FD-1974 `closed` in place and in its
   register row, citing the PR and squash sha, after the merge; a row left unfixed by a ruling stays as
   a dated acceptance in the `LG-` and the auditor cites it.
 
 **Acceptance (S5)** — the plan's Acceptance Standard rules apply (the range `origin/main...<slice
-branch>` named, red by the stated cause at the base, its line in `LG 8289` before the fix):
+branch>` named, red by the stated cause at the base, its line in `LG-1988` before the fix):
 
 1. `git diff --name-only origin/main...<slice branch>` lists only files under `frontend/src/` and
    `docs/`.
-2. `LG 8289` carries, for each testable L (L-1 to L-6, L-7 enum, L-8, L-9, L-10 editor), one red line
+2. `LG-1988` carries, for each testable L (L-1 to L-6, L-7 enum, L-8, L-9, L-10 editor), one red line
    at the base and one green line at the head, each with its test name and file.
-3. `LG 8289` carries the static evidence, each as a dated line: L-2's rendered-wrapper attributes,
+3. `LG-1988` carries the static evidence, each as a dated line: L-2's rendered-wrapper attributes,
    L-7's bool (`quoteForm.ts:60-63`), L-10's sandbox (`QuoteSandboxView.vue:78`), and that rendered
    focus order and announcements stay OQ-1960's.
 4. `grep -n 'role="dialog"' frontend/src/components/rating/BulkOperationDialog.vue` prints nothing;

@@ -1,12 +1,12 @@
 ---
-id: LG-8289
+id: LG-1988
 family: ledger
-title: WK-1178 slice SL-8288 — FD-1974's ten carried a11y lows (NFR-463) on the WK-675 surfaces, red first (slice ledger)
+title: WK-1178 slice SL-1987 — FD-1974's ten carried a11y lows (NFR-463) on the WK-675 surfaces, red first (slice ledger)
 status: active                 # active → closed (§1.2a)
 created: 2026-11-03
 owner: executor
 tree: a8ef6f19c0be1142b0ac9dea88086f1ce6f95cbe   # origin/main at the branch cut
-slice: SL-8288
+slice: SL-1987
 phase: P2
 work: WK-1178
 plans: [PL-1927]
@@ -14,7 +14,9 @@ corrected_by: []
 relates: [FD-1974, PL-1927]
 ---
 
-# LG-8289 — WK-1178 slice SL-8288: FD-1974's ten carried a11y lows, red first
+(Minted 2026-11-03 from working id 8289, with SL-1987 from working id 8288, on the lead's mint order and the mint tool of record `mint-repoint.py` (sha256 `4d83681a`); finding FD-1974; executed on branch `sl-8288-fd1974-a11y-lows`.)
+
+# LG-1988 — WK-1178 slice SL-1987: FD-1974's ten carried a11y lows, red first
 
 **GO:** to-lead "2026-11-03 15:52:04 GMT": the GO on PL-1927 row 7 (S5); DP-S5-1 (a), DP-S5-2 (a), DP-S5-3 (a), DP-S5-4 (a), DP-S5-5 (G1, the full code gate); owner WK-1178; and "2026-11-03 15:46:13 GMT" (full speed).
 **MERGE-ACK:** (added at merge.)
