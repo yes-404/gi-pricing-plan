@@ -323,7 +323,7 @@ def _gbm_fit(**fields: object) -> dict[str, object]:
 async def test_a_model_call_over_a_model_whose_fit_result_lacks_the_fields_is_refused(
     fit_result: dict[str, object],
 ) -> None:
-    res = _model_fitted_on(FactorIntent.RISK)
+    res = _glm_fitted_on(FactorIntent.RISK, "intercept", "driver_age")
     res._payloads[MODEL]["fit_result"] = fit_result
     with pytest.raises(ValueError, match="CONTROL_FACTOR_IN_RATEABLE_PATH") as refused:
         await compile_bundle(_version(), res)
