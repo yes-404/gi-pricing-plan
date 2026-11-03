@@ -134,7 +134,7 @@ should land here** — which is why the template catalogue is 12 entries, not 3.
 | C2 | Backend | Spec validation checks applicability: response `burning_cost` is declared, backend `xgboost` is declared, `y ≥ 0` holds. A `claim_count` response would fail `OBJECTIVE_NOT_APPLICABLE` **before any compute is spent**. | `02` FR-153 |
 | C3 | Worker → pricing-core | `compile_objective()` builds vectorised NumPy gradient/hessian functions from the stored expression tree. **The user's text is never executed** — only the platform's compiled tree. | `02` FR-144, NFR-483 |
 | C4 | Worker | Fits. Each round: computes gradient and hessian, checks finiteness, applies `clip_to_min`. | `02` FR-165 |
-| C5 | Worker | On a later fit with different data, a NaN gradient appears at round 412; the fit aborts with `OBJECTIVE_NONFINITE_DERIVATIVE`, naming the round and the offending input range. It does not silently produce a degenerate model. | `02` FR-165 |
+| C5 | Worker | On a later fit with different data, a NaN gradient appears at round 412; the fit aborts with `OBJECTIVE_NONFINITE_DERIVATIVE`, naming the round and the offending input range. It does not silently produce a degenerate model. *(Wording corrected 2026-11-03, the maintainer's ruling in `to-lead.md` "2026-11-03 19:25:11 GMT" (a local channel file), on CR-1980 §5c (WK-690 close audit): the error's text names the round, the row count and the fields `y` and `f`, and no value; the offending input range is a structured attribute of the error, not part of its text (`02` FR-165, amended 2026-09-30, `RL-1328` DP-S2-3/4). Wording only: FR-165 already says it, so no spec change.)* | `02` FR-165 |
 | C6 | Analyst | Traces it to a single row with `y = 0` and an extreme offset; fixes the data issue, refits. | — |
 | C7 | Analyst | Model reaches `approved`, which is only possible because the objective is itself `approved`. | `02` R4, FR-20 |
 
@@ -178,7 +178,7 @@ should land here** — which is why the template catalogue is 12 entries, not 3.
 | Submitted with one approver when two are required | No error. The request stays `review` until `approvers_required` is met — an incomplete approval is the normal in-progress state, not a failure | `06` FR-354 |
 | Objective used with an inapplicable response | `OBJECTIVE_NOT_APPLICABLE` at spec validation, before compute | `02` FR-153 |
 | Model with an unapproved objective submitted for approval | `OBJECTIVE_NOT_APPROVED` | `02` R4 |
-| NaN/inf gradient during fitting | Fit aborts with the round and input range named | `02` FR-165 |
+| NaN/inf gradient during fitting | Fit aborts with the round and input range named *(Wording corrected 2026-11-03, the maintainer's ruling in `to-lead.md` "2026-11-03 19:25:11 GMT" (a local channel file), on CR-1980 §5c (WK-690 close audit): the text names the round, the row count and the fields `y` and `f`; the input range is a structured attribute of the error; see C5)* | `02` FR-165 |
 | Objective exceeds its per-round time budget | Fit aborts with a typed error | `02` FR-165 |
 
 ---
@@ -216,5 +216,5 @@ should land here** — which is why the template catalogue is 12 entries, not 3.
 | B1–B2 authoring + derivation | hours |
 | B3 certification | < 3 min compute (NFR-480) |
 | B4 approval | 1–5 days |
-| C first fit | as any GBM fit, +≤ 25 % for a custom objective (NFR-476) |
+| C first fit | as any GBM fit, +≤ 25 % for a custom objective (NFR-476) *(Wording corrected 2026-11-03, the maintainer's ruling in `to-lead.md` "2026-11-03 19:25:11 GMT" (a local channel file), on CR-1980 §5c (WK-690 close audit): the +≤ 25 % bound is for a custom `expression` objective, against the equivalent builtin (`02` NFR-476); a `template` objective is not bound by it. Wording only: NFR-476 already says it, so no spec change.)* |
 | E defect response | hours to rollback, days to corrected version |
