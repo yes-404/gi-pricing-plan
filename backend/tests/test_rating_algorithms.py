@@ -504,6 +504,8 @@ from backend.tests.test_model_jobs import (  # noqa: E402
 )
 
 import app.platform.rating_algorithms as algorithms_module  # noqa: E402
+from sqlalchemy import update  # noqa: E402
+
 from app.db.models import ModelRow  # noqa: E402
 from app.platform import jobs as job_service  # noqa: E402
 from app.platform import modelling as model_service  # noqa: E402
@@ -581,6 +583,35 @@ async def test_a_feature_map_naming_a_raw_column_is_refused_at_save(
         json=glm_algorithm(ref, {"driver_age": FACTOR_SLUG}), headers=headers,
     )
     assert saved.status_code == 201, saved.text
+
+
+@pytest.mark.req("FR-88")
+@pytest.mark.req("FR-240")
+async def test_a_feature_map_over_a_model_whose_fit_result_lacks_the_fields_is_refused_at_save(
+    api_client, workspace_id, principal, grant, database, blob_store
+) -> None:
+    """FD-1495 (SL 8303): the save check derives a model's consumed Factors from the fields its
+    fit result carries and refuses a model that yields none, rather than accepting an empty
+    map's worth of inputs from an empty default."""
+    await grant("analyst")
+    ref = await fitted_glm_with_distinct_slug(database, blob_store, workspace_id)
+    slug, version = ref.removeprefix("model:").rsplit("@", 1)
+    async with database.unit_of_work() as session:
+        await session.execute(
+            update(ModelRow)
+            .where(ModelRow.model_family_slug == slug, ModelRow.version == int(version))
+            .values(fit_result={"model_type": "glm"})
+        )
+    headers = _headers(principal, workspace_id)
+    refused = api_client.post(
+        "/api/v1/rating-algorithms",
+        json=glm_algorithm(ref, {"driver_age": FACTOR_SLUG}), headers=headers,
+    )
+    assert refused.status_code == 422, refused.text
+    assert refused.json()["code"] == "CONTROL_FACTOR_IN_RATEABLE_PATH"
+    assert ref in refused.json()["detail"]
+    absent = api_client.get("/api/v1/rating-algorithms/motor-gb@1", headers=headers)
+    assert absent.status_code == 404
 
 
 @pytest.mark.req("FR-227")
