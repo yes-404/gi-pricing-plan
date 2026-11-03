@@ -241,3 +241,6 @@ Two read-only checks are owed to whoever delivers the remedy: (a) whether `model
 **Not in this finding.** S4's omission itself (SL-1274, the lead's adoption of DP-1274-DIAG), the
 `is_certainly_numeric` question (DP-1274-NUMERIC), and the interaction-diagnostics work that FR-176
 to FR-178 moved to WK-1178.
+
+
+***Dated line, 2026-11-03: re-dispositioned.*** Appended to the essay (status unchanged, `active`; owner WK-1178 for the carried limb). Recorded by the auditor on the maintainer's ruling in `to-lead.md` "2026-11-03 16:13:51 GMT" (a local channel file), decision (ii): **guarded at main** (`packages/pricing-core/src/pricing_core/modelling/diagnostics.py:1081-1088` and `:1510-1520` omit an expression Factor before the first-column reads at `:1095` and `:1351`, at `a8ef6f19`; the same lines at `55bddaf2`), so the wrong number cannot be produced and the "fix before close" clause is discharged by the guard; **the expression-Factor diagnostic itself (FR-174 / FR-175 / FR-177, FR-178 amended) is carried to P3, owner WK-1178**, as new capability rather than a defect fix. The owner ~~WK-690~~ is struck. The monotonicity omission for an expression Factor (`diagnostics.py:672-674`, DP-8301-3) is named beside it.

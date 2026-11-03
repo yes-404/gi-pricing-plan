@@ -362,3 +362,5 @@ derived column read `executed` at `c807a59d` and reads `closed` once this record
 exists (the same effect CR-1952 disclosed for WK-675). **That is not an acceptance of WK-690**,
 and the INDEX is generated, not hand-edited. The `status:` field of each plan is unchanged
 (`active`).
+
+**Deferral (appended 2026-11-03 by the auditor, on the maintainer's entry "2026-11-03 16:13:51 GMT" (`to-lead.md`), decision (ii); the record above is unchanged and its `status` stays write-once).** FR-174/175/177's expression-Factor limb: **deferred with an owner: WK-1178 (P3)** (`CLAUDE.md` §13's verdict). FD-1751 is guarded at main (`diagnostics.py:1081-1088` / `:1510-1520` at `a8ef6f19`) and re-dispositioned in `register.md`. DP-8301-3's monotonicity omission for an expression Factor (`diagnostics.py:672-674`) is named beside it, for the re-audit.
