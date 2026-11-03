@@ -15,6 +15,7 @@ the seeded Rating Versions carry a hash and no blob (the PREPARE-hydration check
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import threading
 import time
 from collections.abc import Awaitable, Callable, Iterator
@@ -258,9 +259,18 @@ async def test_a_deploy_is_not_acknowledged_by_a_process_serving_only_another_en
 
 @contextmanager
 def _app(settings: Settings, seconds: int) -> Iterator[TestClient]:
+    """The app inside its lifespan. A failing test body is reported as itself: at the base a
+    dropped pub/sub connection also fails the lifespan's shutdown, which would mask it."""
     tuned = settings.model_copy(update={"deployment_reconcile_seconds": seconds})
-    with TestClient(create_app(tuned), raise_server_exceptions=False) as c:
-        yield c
+    app_client = TestClient(create_app(tuned), raise_server_exceptions=False)
+    app_client.__enter__()
+    try:
+        yield app_client
+    except BaseException:
+        with contextlib.suppress(Exception):
+            app_client.__exit__(None, None, None)
+        raise
+    app_client.__exit__(None, None, None)
 
 
 class _DeafWhenSet(SwitchMember):
@@ -339,7 +349,6 @@ async def _two_deploys_the_second_missed(
     stale = [p for p, s in two.json()["switch"]["processes"].items() if s == "possibly_stale"]
     assert len(stale) == 1, two.json()["switch"]
     assert stale[0] != "acking-peer:6:1", two.json()["switch"]
-    assert _live_id(client, workspace_id, "dev") == one.json()["id"], "the app missed the COMMIT"
     return one.json()["id"], two.json()["id"]
 
 
@@ -379,9 +388,10 @@ async def test_r1c_a_resubscribe_runs_a_pass_at_once_not_at_the_next_tick(
     connection is dropped in-process: `CLIENT KILL` acts on the whole Redis server and would drop
     every other slot's subscribers."""
     with _app(api_settings, 30) as client:
-        _, newest = await _two_deploys_the_second_missed(
+        previous, newest = await _two_deploys_the_second_missed(
             client, switchable_app_member, api_settings, database, workspace_id, seat
         )
+        assert _live_id(client, workspace_id, "dev") == previous, "B is 30 s: no tick has run"
         (subscription,) = subscriptions
         pubsub = subscription._pubsub
         assert pubsub.connection is not None
