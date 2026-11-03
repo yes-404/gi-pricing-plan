@@ -205,17 +205,16 @@ _SITES: dict[_Key, tuple[frozenset[str], str]] = {
     ("backend/src/app/platform/dislocation_runs.py", "estimate_for_spec", _DYNAMIC): (
         frozenset({"exc.code.replace('_', ' ').title()", "safe_error_text(exc)"}),
         "an `AttributionError` from `derive_changes` (WK-673 Slice 4, 03 §5.1): the title is its "
-        "code, one of three fixed names, and the detail is `safe_error_text(exc)`, built at "
-        "dislocation_runs.py:253, which keeps the type name and no message text for a non-coded "
-        "error (NFR-499)",
+        "code, one of three fixed names, and the detail is `safe_error_text(exc)`. "
+        "`AttributionError` is a `CodedError` (FD-1578), so the detail keeps its message, which "
+        "names the derived change ids and no quote id or policy figure (NFR-499)",
     ),
     ("backend/src/app/worker/dislocation_handlers.py", "_dislocation_run", _DYNAMIC): (
         frozenset({"exc.code.replace('_', ' ').title()", "safe_error_text(exc)"}),
         "an `AttributionError` from `attribute` (WK-673 Slice 4, 03 §5.1): the title is its code, "
-        "one of three fixed names, and the detail is `safe_error_text(exc)`, built at "
-        "dislocation_handlers.py:236; `attribute`'s own message can name a quote id "
-        "(analysis.py `no premium under the subset bundle`), which is why the raw text is not kept "
-        "(NFR-499)",
+        "one of three fixed names, and the detail is `safe_error_text(exc)`. `AttributionError` "
+        "is a `CodedError` (FD-1578), so the detail keeps its message; `attribute`'s per-policy "
+        "messages name the derived change ids and no quote id or policy figure (NFR-499)",
     ),
 }
 
