@@ -1,29 +1,29 @@
 ---
-id: LG-8295
+id: LG-1977
 family: ledger
-title: WK-1178 slice SL-8294 — the CI MinIO image guard pins the tarball sha256 and accepts the config or the manifest Id (hotfix ledger)
+title: WK-1178 slice SL-1976 — the CI MinIO image guard pins the tarball sha256 and accepts the config or the manifest Id (hotfix ledger)
 status: active                 # active → closed (§1.2a)
-created: 2026-11-03
+created: 2026-11-03               # drafted 2026-11-03 under working id 8295
 owner: executor
 tree: a8ef6f19c0be1142b0ac9dea88086f1ce6f95cbe   # origin/main at the branch cut
 phase: P2
 work: WK-1178
-slice: SL-8294
+slice: SL-1976
 plans: []
 corrected_by: []
-relates: [FD-8293, WK-1178]
+relates: [FD-1975, WK-1178]
 ---
 
-# LG-8295 — WK-1178 slice SL-8294: the CI MinIO image guard (hotfix)
+# LG-1977 — WK-1178 slice SL-1976: the CI MinIO image guard (hotfix)
 
-**GO:** to-lead "2026-11-03 15:56:18 GMT" — "Maintainer: MAIN RED on python.yml — GO for the hotfix, option (a) (FD 8293, SL 8294 / LG 8295, WK-1178)": (1) sha256 of the downloaded tarball checked against the release digest f68ed783… BEFORE `docker load`; (2) after load, the Id accepted if it equals EITHER the config Id 69b2ec20… OR the manifest digest a16cad48…, both derived in the comment, dated today, run 41664932828 named; (3) nothing else in python.yml changes; (4) enforcement proven on broken input locally, no throwaway commit; (5) green = the PR's own python run by id, minio stage plus the full suite. Option (b) refused.
+**GO:** to-lead "2026-11-03 15:56:18 GMT" — "Maintainer: MAIN RED on python.yml — GO for the hotfix, option (a) (FD 8293, SL 8294 / LG 8295, WK-1178)" (minted as FD-1975, SL-1976, LG-1977): (1) sha256 of the downloaded tarball checked against the release digest f68ed783… BEFORE `docker load`; (2) after load, the Id accepted if it equals EITHER the config Id 69b2ec20… OR the manifest digest a16cad48…, both derived in the comment, dated today, run 41664932828 named; (3) nothing else in python.yml changes; (4) enforcement proven on broken input locally, no throwaway commit; (5) green = the PR's own python run by id, minio stage plus the full suite. Option (b) refused.
 **MERGE-ACK:** (added at merge.)
 
 ## Tasks
 
 ### Scope
 
-A hotfix with no plan row (`plans: []`). Fixes FD-8293 in `.github/workflows/python.yml`, step `Start MinIO`, only. No requirement id is covered. No roadmap row until the mint.
+A hotfix with no plan row (`plans: []`). Fixes FD-1975 in `.github/workflows/python.yml`, step `Start MinIO`, only. No requirement id is covered. No roadmap row until the mint.
 
 ### Task list
 
@@ -73,7 +73,7 @@ Fresh `gh release download ci-images-2026-09-26 -p 'minio-*.tar.gz'` into an emp
 
 #### 2026-11-03 T5 — records
 
-FD-8293 (draft for the auditor's sign-off, `owner: auditor`) and its register row. At the pre-commit tree on `8ecc9617`: `doc-index.py --check` rc 0 (`OK (byte-stable)`); `audit-docs.py` via `run-heavy.sh --light` rc 1 with exactly one failure, `check 31: gap in the full allocation between 1974 and 8293` (the working ids' own lint, expected until the mint); `register-lint` not run (not named in the brief).
+FD-1975 (draft for the auditor's sign-off, `owner: auditor`) and its register row. At the pre-commit tree on `8ecc9617`: `doc-index.py --check` rc 0 (`OK (byte-stable)`); `audit-docs.py` via `run-heavy.sh --light` rc 1 with exactly one failure, `check 31: gap in the full allocation between 1974 and 8293` (the working ids' own lint, expected until the mint); `register-lint` not run (not named in the brief).
 
 ## PRs
 

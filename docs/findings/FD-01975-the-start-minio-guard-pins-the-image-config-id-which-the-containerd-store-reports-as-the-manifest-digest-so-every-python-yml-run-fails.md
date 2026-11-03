@@ -1,16 +1,16 @@
 ---
-id: FD-8293
+id: FD-1975
 family: finding
 title: the Start MinIO guard pins the image config Id, which the containerd store reports as the manifest digest, so every python.yml run fails
 status: active
-created: 2026-11-03
+created: 2026-11-03               # drafted 2026-11-03 under working id 8293
 owner: auditor                  # DRAFT by the executor for the auditor's sign-off at the slice audit (document-ids §1.6)
 tree: a8ef6f19c0be1142b0ac9dea88086f1ce6f95cbe   # origin/main when read
 corrected_by: []
-relates: [WK-1178, SL-8294, LG-8295]
+relates: [WK-1178, SL-1976, LG-1977]
 ---
 
-# FD-8293 — the Start MinIO guard pins the image config Id, which the containerd store reports as the manifest digest, so every python.yml run fails
+# FD-1975 — the Start MinIO guard pins the image config Id, which the containerd store reports as the manifest digest, so every python.yml run fails
 
 ## Finding
 
@@ -36,15 +36,15 @@ pinned to a store-dependent identifier.
   `sha256sum` = `f68ed783300026c322889f4de2300647ab4056544798574f97a0390e35560476`; its `index.json`
   names manifest `sha256:a16cad48…`; that manifest's `config.digest` is `sha256:69b2ec20…`; each blob's
   sha256 equals its file name (`python3 -I`, `hashlib`).
-- Local red with the step's script under a stub `docker`/`gh` (LG-8295 Gate section): the old guard prints
+- Local red with the step's script under a stub `docker`/`gh` (LG-1977 Gate section): the old guard prints
   `::error::loaded minio/minio:latest has Id sha256:a16cad48…, expected sha256:69b2ec20…` and exits 1.
 
 ## Disposition
 
-Open, owner WK-1178, HIGH, `fix before close with an owner`: SL-8294 discharges it (see Fix). Filed under working id 8293.
+Open, owner WK-1178, HIGH, `fix before close with an owner`: SL-1976 discharges it (see Fix). Filed under working id 8293.
 
 ## Fix
 
-SL-8294, `python.yml` only: check the tarball sha256 before `docker load`; accept the loaded Id if it equals
+SL-1976, `python.yml` only: check the tarball sha256 before `docker load`; accept the loaded Id if it equals
 either derived digest; otherwise fail naming all three. Discharged when that slice merges and its own
 `python.yml` run is green on the minio stage and the full suite.
