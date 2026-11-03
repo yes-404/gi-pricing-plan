@@ -71,6 +71,23 @@ Not run by the executor (DP-S5-5 G1: the lead grants the slot). Executor's own c
 - L-10 sandbox: `views/QuoteSandboxView.vue:78` `result.value = null;` before the await, so the status region empties between two scores; no change; re-announcement is OQ-1960's.
 - Acceptance 4: `grep -n 'role="dialog"' frontend/src/components/rating/BulkOperationDialog.vue` prints nothing. Acceptance 5: `DagDesigner.vue:232: :nodes-focusable="false"`. Acceptance 6: the editor grid (`RateTableEditorView.vue:284-286`) and the diff scroller (`RateTableDiffPanel.vue:230-232`) carry `role="region"`, an `aria-label` and `tabindex="0"`.
 
+## 2026-11-03 — the gate of record (rc 124) and the StepInspector 3.3.1 assertion change
+
+**Gate of record** (head=211e1d4b184aa2134dc3b6ff9aaf4ee458e9d5a0; logs `scratch/sl8288-gate/gate/`, 16:11:49 → 18:19:37 GMT): END `rc=124` (the demo stage hit its time cap). Rc parts: ruff 0, mypy 0, import_linter 0, req_coverage 0, contracts 0; audit_docs 1 and pytest 1 (`13 failed, 7024 passed, 22 skipped, 5 xfailed`: the 1(f) docs-audit set, cleared at the mint); frontend `Test Files 1 failed | 137 passed (138)`, `Tests 1 failed | 918 passed (919)` (the one failure is `StepInspector.test.ts`, below); demo=124 (dislocation #1 669 s against 422 / 387 / 383 s on the 29 Oct passes, at load1 up to 4.98 with seats running beside it: contention, not the slice). Template guard exact at END; zeros clean. Rulings: the maintainer, to-lead "2026-11-03 18:21:40 GMT" (1)–(4): the known classes cleared at the mint, skipped 22 = baseline, the frontend half and the demo stage re-run SOLO on a quiet box, the python half standing on `git diff --stat 211e1d4b <new head>` showing `frontend/src` and this LG only.
+
+**The test change** (the lead's item-13 OK; the maintainer's acceptance, to-lead "2026-11-03 18:06:07 GMT" (a)). `frontend/src/components/dag/__tests__/StepInspector.test.ts`, test "3.3.1: a field with a required-field problem is marked invalid and points at the problem list". The "Reason code" `FormField` has `help="Required (FR-225)."`, so its slot `describedby` is the help id `${fieldId}-help` = `si-reason-help` (`FormField.vue:31`), and `StepInspector.vue:574` binds `` `${describedby ?? ''} si-problems`.trim() ``: the attribute is the token list `si-reason-help si-problems`, which the exact assertion refused. Only the assertion line changes; it gets stricter on tokens (both required) and no looser on the problem list.
+
+Before: `expect(field).toHaveAttribute("aria-describedby", "si-problems");`
+
+After:
+```
+expect((field.getAttribute("aria-describedby") ?? "").split(/\s+/)).toEqual(
+  expect.arrayContaining(["si-reason-help", "si-problems"]),
+);
+```
+
+Run (tree d0dc6466): `vitest run src/components/dag/__tests__/StepInspector.test.ts` rc 0, `Test Files  1 passed (1)`, `Tests  11 passed (11)`; `pnpm type-check` rc 0; `pnpm lint` rc 0.
+
 ## PRs
 
 (None yet; the lead opens it.)
