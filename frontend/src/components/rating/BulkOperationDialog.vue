@@ -60,7 +60,6 @@ async function apply(): Promise<void> {
 
 <template>
   <section
-    role="dialog"
     aria-labelledby="bulk-title"
     class="rounded-md border border-slate-300 p-4"
   >
