@@ -287,7 +287,7 @@ NFR-483), C4 (FR-165), §7 rows at `:174` (FR-145), `:176` (FR-146), `:177` (FR-
 | §10 C first fit (`:219`) | NFR-476 | "+≤ 25 % for a custom objective" | NFR-476: a custom **`expression`** objective, against the equivalent builtin |
 
 Which side is wrong is `CLAUDE.md` §0's question. Each is an FD candidate for the lead (this
-record mints no id). Not checked: the `FR-MODEL-40..44` forms at `WF-702:203-205`, which the
+record mints no id). Not checked: the legacy module-scoped id forms at `WF-702:202-208` (audit-docs check 36 lists them), which the
 predicate does not match.
 
 ## Findings
