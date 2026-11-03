@@ -468,11 +468,12 @@ async def test_a_run_that_does_not_reconcile_fails_with_attribution_reconciliati
 ) -> None:
     async def refuse(*_: Any, **__: Any) -> Any:
         # the text `attribute` raises when a compared policy has no premium under a subset
-        # bundle (`pricing_core.rating.analysis`): it names the policy's quote id
+        # bundle (`pricing_core.rating.analysis`): input-free since FD-1578, it names the
+        # derived change ids and no quote id
         raise AttributionError(
             "ATTRIBUTION_RECONCILIATION_FAILED",
-            "policy Q000 is quoted in the baseline and the candidate but has no premium "
-            "under the subset bundle for changes [c1]",
+            "one policy of the book is quoted in the baseline and the candidate but has no "
+            "premium under the subset bundle for changes [c1]",
         )
 
     monkeypatch.setattr(dislocation_handlers, "attribute", refuse)
