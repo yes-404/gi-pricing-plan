@@ -660,13 +660,23 @@ async def _derive(
             kind = "step_removed"
             text = f"{point}: mount removed ({mount.before})"
         elif mount.before == mount.after:
+            # The ref did not move, so the diff kept this mount for ports, purposes or both
+            # (FR-219); each is worded once, ports first (FR-1399, FD-1768).
             kind = "step_changed"
-            text = f"{point}: mount ports re-mapped ({mount.after})"
+            text = (
+                f"{point}: mount ports re-mapped ({mount.after})"
+                if mount.ports_changed
+                else f"{point}: mount purposes changed ({mount.after})"
+            )
+            if mount.ports_changed and mount.purposes_changed:
+                text += "; purposes changed"
         else:
             kind = "step_changed"
             text = f"{point}: mount {mount.before} → {mount.after}"
             if mount.ports_changed:
                 text += "; ports re-mapped"
+            if mount.purposes_changed:
+                text += "; purposes changed"
         drafts.append(
             _Change(
                 BundleDelta(id="", kind=kind, description=text),
