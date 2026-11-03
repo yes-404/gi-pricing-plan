@@ -3095,7 +3095,7 @@ FD-1965's fix: the seed fixture migrates its own scratch database instead of the
 id: SL-1962
 family: slice
 title: WK-1178 fix slice (S1c) — FD-1951: the CREATEROLE route and the five same-class mediums, red first (PL-1927's S1c)
-status: active                    # draft → active → closed | retired (§1.2a)
+status: closed                    # draft → active → closed (§1.2a)
 created: 2026-10-29
 owner: lead
 tree: eb64354f72876db075b3edbc3dfee2d02308d864
@@ -3108,6 +3108,8 @@ relates: [FD-1951, LG-1964, FD-1963, FD-1965, PL-1927]
 FD-1951's fix: the application refuses to start on a login role that reaches the owner by CREATEROLE or ADMIN OPTION, with the five same-class mediums closed, each red first, and the red table in the slice ledger. Slice S1c of PL-1927; the carried membership strip is FD-1963 and the seed-fixture defect the gate met is FD-1965.
 
 (Minted 2026-10-29 from working id 8266, on the lead's brief (lead 29) under the grant "2026-10-29 14:30:58 GMT" (S1c's gate stands) and the mint tool of record `mint-repoint.py` (sha256 `4d83681a`); ledger LG-1964, findings FD-1963 and FD-1965; executed on branch `draft/s1c-fd1951`.)
+
+(Closed 2026-11-03 as a Slice, by the auditor's closing acts on the lead's instruction (the maintainer's ruling, to-lead "2026-11-03 15:36:59 GMT" item 3), on the audit recorded in LG-1964 and the lead's merge: #1405, squash commit 7ceff4a16829c63f20f0cdbb56fafae22657c1ab, committer date 2026-10-29T17:14:58Z; ledger LG-1964.)
 
 #### SL-1948 — WK-1178 fix slice (S1b) — FD-1729 part 2: the startup refusal, the tamper proof and the exact grant map (PL-1927's S1b)
 
