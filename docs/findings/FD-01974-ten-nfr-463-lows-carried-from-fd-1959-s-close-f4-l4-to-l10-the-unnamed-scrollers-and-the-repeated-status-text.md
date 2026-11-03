@@ -14,7 +14,7 @@ relates: [FD-1959, OQ-1960, RL-1973, PL-1546, SL-1971]
 
 ## Finding
 
-**LOW, owner WK-675, due Thu 12 Nov 2026 (the P2 exit demo; `date -d 2026-11-12 +%A` prints Thursday).** Authority: the lead's
+**LOW, owner WK-675, due ~~Thu 12 Nov 2026~~ Wed 18 Nov 2026 (the P2 exit demo; ~~`date -d 2026-11-12 +%A` prints Thursday~~).** Authority: the lead's
 "2026-10-29 22:34:57 GMT" ruling (a) (aud-a11y's verdicts accepted; the ten carried lows become one new finding, minted in the
 PR of SL-1971) and R10-DP2 (a) of "2026-10-29 22:13:59 GMT" (the lows that are not one line are carried, owner WK-675). Filed under
 working id 8284.
@@ -68,4 +68,6 @@ above on 2026-10-29.
 
 ## Disposition
 
-Open, owner WK-675, LOW, due Thu 12 Nov 2026. Filed under working id 8284.
+Open, owner WK-675, LOW, due ~~Thu 12 Nov 2026~~ Wed 18 Nov 2026. Filed under working id 8284.
+
+*(Re-dated 2026-11-03 by the auditor, on the lead's instruction, quoting the maintainer's entry "2026-11-03 15:38:58 GMT" (`to-lead.md`), which relays the user's order of 15:38 GMT: "move freeze to 10th of Nov and defer the later dates". The P2 exit demo moves from Thu 12 Nov 2026 to Wed 18 Nov 2026 (`date -d 2026-11-18 +%A` prints Wednesday); the due date Thu 12 Nov 2026 is struck and reads Wed 18 Nov 2026. The old text stays, struck.)*

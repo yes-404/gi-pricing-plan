@@ -585,9 +585,9 @@ works: WK-668, WK-669, WK-670, WK-671, WK-672, WK-673, WK-674, WK-675, WK-690, W
 
 > **P2 freeze dates and target** (accepted 2026-09-29 by the maintainer; sized by the planner's "Inputs to the maintainer's §5a" at main 5638f691: 20 best / 37 likely / 87 worst working days from WK-674 S1 going active, at the measured 2 code slices per day):
 > - **Scope freeze: Sat 2026-10-03.** No new Work enters P2 after this date. WK-1250 is the last addition, and WK-675's map plan is drafted by then.
-> - **Code freeze: Wed 2026-11-04.** G1: the seven P2 Works delivered.
-> - **Docs freeze: Thu 2026-11-05.**
-> - **Target: the P2 exit demo, Thu 2026-11-12** (the likely band plus about 20%).
+> - **Code freeze: ~~Wed 2026-11-04~~ Tue 2026-11-10.** G1: the seven P2 Works delivered.
+> - **Docs freeze: ~~Thu 2026-11-05~~ Wed 2026-11-11.**
+> - **Target: the P2 exit demo, ~~Thu 2026-11-12~~ Wed 2026-11-18** (the likely band plus about 20%).
 > - **Re-baseline after WK-674 Slices 1–2:** re-measure the throughput and restate these dates if the band moves. The dates assume work every day, as practised; on a weekdays-only rhythm they slip about two weeks.
 
 *(Added 2026-09-29 by the lead, quoting the user (the maintainer), relayed in the maintainer's
@@ -597,6 +597,8 @@ the dates are for reference purpose. we need to complete the works without delay
 resources (server and usage)", and "the dates never block a work can start earlier". The dates above
 are therefore a forecast for reference, not targets. No Work, slice, plan, ruling or merge waits for
 a date. The freeze gates limit only what may **enter** P2, never when a start happens.)*
+
+*(Re-dated 2026-11-03, written by the auditor on the lead's instruction — this milestone section is the lead's — quoting the maintainer's entry "2026-11-03 15:38:58 GMT" (`to-lead.md`), which relays the user's order of 15:38 GMT: "move freeze to 10th of Nov and defer the later dates". The interval is 6 days. **Code freeze: Tue 2026-11-10** (~~Wed 2026-11-04~~); **docs freeze: Wed 2026-11-11** (~~Thu 2026-11-05~~); **P2 exit demo: Wed 2026-11-18** (~~Thu 2026-11-12~~). Weekdays read with `date -d`: Tuesday, Wednesday, Wednesday. The superseded dates are struck in the list above and stay; the scope freeze (Sat 2026-10-03) is untouched, and the Work-close schedule and nfr-bench-1 dates of the entry stand. The `target:` line of the P2 section's front matter (2026-11-12) is not edited here.)*
 
 #### Phase 2 status
 
