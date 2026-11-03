@@ -3342,6 +3342,26 @@ relates: [PL-1912, PL-1544, LG-1841, SL-1711]
 
 One full run of `PL-1544` §"Rehearsal checklist", rows 0 to 9 as written there (row 6, the browser path `SL-1711` waived, included), plus row 6b, the WF-701 browser check that PL-1912 adds, on `main` at the exit tree on Monday 9 November 2026; order 0–6, 6b, 7–9. Cut as one WK-1178 slice by the maintainer's entry "2026-10-25 11:32:17 GMT — Maintainer: §14 note r5 — the six owed rulings, decided now (dated lines for the review's rows)", line 6 (E2), in the CLAUDE.md §14 plan review before the 12 Nov exit demo. Its ledger LG 8226 records each row's command, output and tree; WF-701's timing lines are an observation with no budget (PL-1912 E1 item 3). No code, spec or plan file changes. **Activation needs:** PL-1912 minted; the exit tree named by the lead; no gate slot held and no other run on the box (row 1); the lead's GO. *(Row cut 2026-10-25 by the planner in PL-1912; working ids SL-1913 and LG 8226 reserved by the lead in `eta.md`.)*
 
+#### SL-1976 — WK-1178 hotfix slice — the CI MinIO image guard pins the tarball sha256 and accepts the config or the manifest Id (FD-1975)
+
+```yaml
+id: SL-1976
+family: slice
+title: WK-1178 hotfix slice — the CI MinIO image guard pins the tarball sha256 and accepts the config or the manifest Id (FD-1975)
+status: active                    # draft → active → closed | retired (§1.2a)
+created: 2026-11-03
+owner: lead
+tree: fae34e127753ad5c43b4381c49a1136bd422479a
+phase: P2
+work: WK-1178
+corrected_by: []
+relates: [FD-1975, LG-1977]
+```
+
+The `.github/workflows/python.yml` Start MinIO step checks the release asset's sha256 before `docker load` and accepts the loaded image Id if it equals the config digest or the manifest digest, because the containerd image store reports the manifest digest; FD-1975 (every `python.yml` run failed at the minio stage) is found and fixed in this slice. One workflow file, no code.
+
+(Minted 2026-11-03 from working id 8294, on the maintainer's GO "2026-11-03 15:56:18 GMT" and the lead's mint order, with the mint tool of record `mint-repoint.py` (sha256 `4d83681a`); ledger LG-1977 (working id 8295), finding FD-1975 (working id 8293); executed on branch `sl-8294-ci-minio-guard`.)
+
 ### WK-1250 — Sub-graph composition and MTA/cancellation pricing — FR-217's inlining and FR-218's authoring half
 
 ```yaml
