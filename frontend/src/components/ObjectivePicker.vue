@@ -38,7 +38,7 @@ const props = defineProps<{
   /** `xgboost` or `lightgbm` — the spec's `model_type`, an applicability axis too. */
   backend: string;
   /** The id of the field's help text, which the select is described by (FormField's slot prop). */
-  describedby?: string;
+  describedby?: string | undefined;
 }>();
 
 const emit = defineEmits<{ "update:modelValue": [GbmFunctionRef] }>();
