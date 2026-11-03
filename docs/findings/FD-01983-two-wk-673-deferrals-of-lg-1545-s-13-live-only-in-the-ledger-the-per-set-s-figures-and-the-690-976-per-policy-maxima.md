@@ -1,16 +1,16 @@
 ---
-id: FD-8308
+id: FD-1983
 family: finding
 title: Two WK-673 deferrals of LG-1545 §13 live only in the ledger, the per-set S figures and the 690/976 per-policy maxima
 status: active
-created: 2026-11-03               # drafted 2026-11-03 under working id 8308
+created: 2026-11-03   # drafted 2026-11-03 under working id 8308
 owner: auditor
 tree: 55bddaf279fc73fd9b52f523fdea908d6c4aada3   # origin/main when read
 corrected_by: []
 relates: [WK-673, LG-1545, CR-1981, FD-1576, PL-1267]
 ---
 
-# FD-8308 — Two WK-673 deferrals of LG-1545 §13 live only in the ledger
+# FD-1983 — Two WK-673 deferrals of LG-1545 §13 live only in the ledger
 
 ## Finding
 

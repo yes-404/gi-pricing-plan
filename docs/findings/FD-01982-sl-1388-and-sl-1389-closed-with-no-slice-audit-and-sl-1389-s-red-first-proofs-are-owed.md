@@ -1,16 +1,16 @@
 ---
-id: FD-8307
+id: FD-1982
 family: finding
 title: SL-1388 and SL-1389 closed with no slice audit, and SL-1389's red-first proofs are owed
 status: active
-created: 2026-11-03               # drafted 2026-11-03 under working id 8307
+created: 2026-11-03   # drafted 2026-11-03 under working id 8307
 owner: auditor
 tree: 55bddaf279fc73fd9b52f523fdea908d6c4aada3   # origin/main when read
 corrected_by: []
 relates: [WK-673, SL-1388, SL-1389, LG-1570, LG-1582, PL-1267, CR-1981, FD-1651]
 ---
 
-# FD-8307 — SL-1388 and SL-1389 closed with no slice audit, and SL-1389's red-first proofs are owed
+# FD-1982 — SL-1388 and SL-1389 closed with no slice audit, and SL-1389's red-first proofs are owed
 
 ## Finding
 
