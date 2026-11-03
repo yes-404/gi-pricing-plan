@@ -210,7 +210,7 @@ describe("RateTableEditorView: Editor II (FR-231, FR-233, FR-235)", () => {
     render(RateTableEditorView, { props, ...mounted });
     await screen.findAllByRole("textbox");
     expect(screen.getByRole("region", { name: "Changes against another version" })).toBeInTheDocument();
-    expect(screen.getByRole("dialog", { name: "Bulk operation" })).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Bulk operation" })).toBeInTheDocument();
     expect(screen.getByRole("region", { name: "CSV import and export" })).toBeInTheDocument();
   });
 
