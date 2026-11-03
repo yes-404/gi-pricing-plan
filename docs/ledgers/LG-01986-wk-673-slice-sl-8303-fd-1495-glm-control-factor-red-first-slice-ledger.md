@@ -222,6 +222,25 @@ END zeros: redis db 12 dbsize=0; `select count(*) from pg_database where datname
 
 Second re-merge, `origin/main` `4df71cd7` (#1420, docs batch 7; `docs/` only, its `INDEX.md` conflict taken from main and regenerated): the non-docs diff to `origin/main` is still the slice's twelve files and their diff to `1e77bd04` is the mint's comment re-points only (`SL 8303` to `SL-1985`, seven lines in seven files). `uv sync --directory <wt> --all-packages --frozen` on the merged head: rc 0 (it installed main's #1414 lock, `fastapi==0.162.0`). Batch 7's records FD-1982 and FD-1983 and the register row cited `PL 8302` as a working id; re-pointed to `PL-1984` in this PR (their `SL 8305` citations stay for S-b's mint).
 
+**Comment-only working-id re-point, proof (lead approval, to-lead 2026-11-03 21:5x GMT; the DP-T27-6 form).** The mint re-pointed seven `SL 8303` tokens in seven `.py` files (`SL-1985`); three sit in docstrings and four in comments. `python3 -I` over `git show 1e77bd04:<path>` and `git show HEAD:<path>`, parsed, docstrings stripped, `ast.dump` compared: EQUAL for all seven (`backend/tests/test_rating_algorithms.py`, `pricing_core/modelling/factors.py`, `pricing_core/rating/compile.py`, and the four pricing-core tests `test_quote_input_raise_sites`, `test_rating_compile_bundle`, `test_rating_compile_fr240`, `test_rating_declared_reads`). `uv run --directory <wt> ruff check .` rc 0. `ruff format --check` on the seven files reports 6 would reformat at HEAD and the same 6 at `1e77bd04` (pre-existing, unchanged by the re-point). The whole `git diff -U0 1e77bd04 HEAD -- '*.py'`, `-`/`+` pairs identical apart from `SL 8303` to `SL-1985`:
+
+```text
+-    """FD-1495 (SL 8303): the save check derives a model's consumed Factors from the fields its
++    """FD-1495 (SL-1985): the save check derives a model's consumed Factors from the fields its
+-    FD-1495 (SL 8303, ruled 2026-11-03 16:19:35 (2)): a GBM's required `feature_order`, a GLM's
++    FD-1495 (SL-1985, ruled 2026-11-03 16:19:35 (2)): a GBM's required `feature_order`, a GLM's
+-    `fit_result` that yields no consumed feature is refused too (FD-1495, SL 8303). A
++    `fit_result` that yields no consumed feature is refused too (FD-1495, SL-1985). A
+-    # FD-1495 (SL 8303): model ref and the fit-result field that could not be read: authored
++    # FD-1495 (SL-1985): model ref and the fit-result field that could not be read: authored
+-        # FD-1495 (SL 8303): a pinned model carries the fields its consumed Factors are derived
++        # FD-1495 (SL-1985): a pinned model carries the fields its consumed Factors are derived
+-# -- FD-1495's GLM arm: the consumed Factors come from the fields each arm carries (SL 8303) --
++# -- FD-1495's GLM arm: the consumed Factors come from the fields each arm carries (SL-1985) --
+-            # FD-1495 (SL 8303): a pinned model carries the fields its consumed Factors are
++            # FD-1495 (SL-1985): a pinned model carries the fields its consumed Factors are
+```
+
 ### Audit
 
 (the auditor's)
