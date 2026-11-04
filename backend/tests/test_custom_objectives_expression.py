@@ -523,7 +523,7 @@ async def test_certify_runs_a_derived_expression_as_the_existing_job(
     assert result.library_versions["sympy"]
 
 
-# --- FD-1842: the FR-145 bound is checked before the recursive structure walk (SL 8299) -------
+# --- FD-1842: the FR-145 bound is checked before the recursive structure walk (SL-1994) -------
 #
 # `grammar_refusal` (objectives.py, behind `POST /custom-objectives` and the preview) and
 # `_require_a_creatable_expression` (modelling.py, behind `POST /factors`) both call

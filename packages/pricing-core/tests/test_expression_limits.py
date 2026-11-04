@@ -88,7 +88,7 @@ def test_the_limits_are_configurable() -> None:
         _parse("x + x + x", GrammarProfile.RECIPE, limits=small)
 
 
-# --- FD-1842: the bound runs before the recursive structure walk (SL 8299) ---------------
+# --- FD-1842: the bound runs before the recursive structure walk (SL-1994) ---------------
 
 _STRICT_PROFILES = [GrammarProfile.OBJECTIVE, GrammarProfile.FACTOR]
 _SYMBOLS = frozenset({"x"})

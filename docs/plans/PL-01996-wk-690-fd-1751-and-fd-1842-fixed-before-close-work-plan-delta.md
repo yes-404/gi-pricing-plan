@@ -1,10 +1,10 @@
 ---
-id: PL-8301
+id: PL-1996
 family: plan
 kind: map
-title: WK-690 — FD-1751 and FD-1842 fixed before close, one slice with two limbs (SL-8299) — Work-plan delta
+title: WK-690 — FD-1751 and FD-1842 fixed before close, one slice with two limbs (SL-1994) — Work-plan delta
 status: draft                   # draft → active → superseded | retired (§1.2a)
-created: 2026-11-03
+created: 2026-11-03               # drafted 2026-11-03 under working id 8301
 owner: planner
 tree: a8ef6f19c0be1142b0ac9dea88086f1ce6f95cbe
 phase: P2
@@ -12,10 +12,10 @@ work: WK-690
 supersedes: []
 superseded_by: ~
 corrected_by: []
-relates: [PL-1268, PL-1621, PL-1665, SL-8299, FD-1751, FD-1842]
+relates: [PL-1268, PL-1621, PL-1665, SL-1994, FD-1751, FD-1842]
 ---
 
-# PL-8301 — WK-690: FD-1751 and FD-1842 fixed before close (SL-8299): Work-plan delta
+# PL-1996 — WK-690: FD-1751 and FD-1842 fixed before close (SL-1994): Work-plan delta
 
 > **For agentic workers:** this is a **Work-plan delta** under Lean P2 L5 and L1 (a')
 > (`.claude/roles/planner.md`, the Lean P2 bullet). It does not replace
@@ -24,7 +24,7 @@ relates: [PL-1268, PL-1621, PL-1665, SL-8299, FD-1751, FD-1842]
 > and [`PL-1665`](PL-01665-wk-690-slices-4-and-5-acceptance-brought-to-rl-1615-and-rl-1616-work-plan-delta.md),
 > and it leaves all three unedited. It `relates:` them and adds **one row**, cut here as
 > SL 8299 (working id): FD-1751 and FD-1842, the two findings WK-690's close audit
-> (CR 8291) lists as owed, fixed in one PR with two limbs, each red first. The slice's one
+> (CR-1980) lists as owed, fixed in one PR with two limbs, each red first. The slice's one
 > ledger is LG 8300 (working id), which quotes this file as its scope. REQUIRED SUB-SKILL for
 > the executor: subagent-driven-development (recommended) or executing-plans, task by task.
 > The executor also binds `test-driven-development` (every red seen red **by its cause** on
@@ -42,12 +42,13 @@ from older trees (`a2f77b2d`) and have moved; this plan cites main's.
 ## Authority
 
 - **The GO**, the maintainer's (by delegation) entry "2026-11-03 16:02:43 GMT — Maintainer:
-  WK-690 close audit CR 8291 @59a2cfe0 — NOT READY adopted; the two decisions" in `to-lead.md`,
+  WK-690 close audit CR 8291 @59a2cfe0 — NOT READY adopted; the two decisions" in `to-lead.md` (the quoted heading
+  keeps the working id 8291; minted as CR-1980),
   item (1): *"GO — FD-1751 + FD-1842 FIX BEFORE CLOSE, one WK-690 slice with two limbs, red
   first, sonnet, merged by Fri 6 … the remedy is a depth bound with a typed 422, never a bare
-  500 … working ids SL 8299 / LG 8300 / PL 8301; GO request to me with the row; full SOLO gate;
+  500 … working ids SL-1994 / LG-1995 / PL-1996; GO request to me with the row; full SOLO gate;
   the slice's PR carries the row."*
-- **The evidence**, CR 8291 (`docs/closures/CR-08291-wk-690-close-audit.md` at
+- **The evidence**, CR-1980 (`docs/closures/CR-01980-wk-690-close-audit.md` at
   `origin/docs/wk690-close-audit-2026-11-03` `59a2cfe0`) §5b: *"Corrected owed list: FD-1751,
   FD-1842."*
 - **The calendar**, the user's order of 15:38, entry "2026-11-03 15:38:58 GMT" in `to-lead.md`:
@@ -57,7 +58,7 @@ from older trees (`a2f77b2d`) and have moved; this plan cites main's.
 ## What is live at main (read, not run)
 
 **FD-1751 is not a live wrong number at main; it is an undelivered requirement.** S4's
-omission (DP-1274-DIAG (a), `to-lead.md` "2026-10-16 10:27:41 BST") guards both sites, as CR 8291
+omission (DP-1274-DIAG (a), `to-lead.md` "2026-10-16 10:27:41 BST") guards both sites, as CR-1980
 §5b also reads:
 
 - permutation importance: `packages/pricing-core/src/pricing_core/modelling/diagnostics.py:1081-1088`
@@ -124,7 +125,7 @@ message of one `errors[]` entry on `loss`."* §4.6 includes the depth limit, and
 
 ## Acceptance Standard
 
-Each item is checkable by a command at the slice's head; "red" items are recorded in LG 8300
+Each item is checkable by a command at the slice's head; "red" items are recorded in LG-1995
 with the commit they were seen red on and the line that shows the cause.
 
 1. **A1 red (FD-1751, permutation).** A new test over a GBM with an `expression` Factor reading
@@ -145,7 +146,7 @@ with the commit they were seen red on and the line that shows the cause.
 4. **A3 (banded / non-banded).** A banded two-column expression is covered by A1–A2. A
    non-banded case is added only if `pricing-core` resolves one (FR-210 refuses an expression
    that is certainly numeric and pins no Banding); the executor quotes the line that decides,
-   and LG 8300 records whether this item collapsed into A2.
+   and LG-1995 records whether this item collapsed into A2.
 5. **A4 (inversion).** `test_permutation_importance_omits_an_expression_factor_by_name` and
    `test_partial_dependence_omits_an_expression_factor_by_name`
    (`test_expression_factors.py:423-445`) are **inverted in the same commit series**, not
@@ -202,7 +203,7 @@ with the commit they were seen red on and the line that shows the cause.
 ### Task 0 — premises re-read at the row's base
 
 - [ ] Re-read every literal in "What is live at main" at the base the branch is cut from; a moved
-  line is re-cited in LG 8300, a changed behaviour stops the task and is reported.
+  line is re-cited in LG-1995, a changed behaviour stops the task and is reported.
 
 ### Task 1 — Limb 1, FD-1751 (pricing-core, DB-free)
 
@@ -231,7 +232,7 @@ with the commit they were seen red on and the line that shows the cause.
 
 ### Task 3 — spec (same PR)
 
-- [ ] `02-modelling.md` FR-178: a dated amendment (`2026-11-0x, SL-8299 (WK-690), FD-1751`):
+- [ ] `02-modelling.md` FR-178: a dated amendment (`2026-11-0x, SL-1994 (WK-690), FD-1751`):
   an `expression` Factor is measured by both per-factor GBM blocks through a joint operation
   over all its source columns, on its resolved levels; `expression_factor` is kept as a
   **reserved** reason, no longer emitted by those two blocks, because artifacts written from
@@ -252,7 +253,7 @@ with the commit they were seen red on and the line that shows the cause.
 `packages/pricing-core/tests/test_expression_limits.py`;
 `backend/tests/test_custom_objectives_expression.py`; `docs/specs/02-modelling.md`;
 `docs/contracts/` only if regenerated; `docs/roadmap.md` (the row's status lines);
-`docs/ledgers/` (LG 8300). Anything else is a write-set deviation, reported before it is made.
+`docs/ledgers/` (LG-1995). Anything else is a write-set deviation, reported before it is made.
 
 ## The gate
 
@@ -263,7 +264,7 @@ with the commit they were seen red on and the line that shows the cause.
 - **DB or no DB per test:** A1–A5 are DB-free (`run-small.sh`); A6 is DB-backed and runs only in
   a DB window the lead grants in writing (common brief items 12 and 32); the full gate covers it
   regardless.
-- The green set is derived by import closure (common brief item 29), quoted in LG 8300.
+- The green set is derived by import closure (common brief item 29), quoted in LG-1995.
 
 ## Decision points
 
@@ -281,19 +282,19 @@ status line.
 
 ## The row, cut
 
-SL 8299 is cut in `docs/roadmap.md` under `### WK-690`, after `SL-1622`, as `draft`
+SL-1994 is cut in `docs/roadmap.md` under `### WK-690`, after `SL-1622`, as `draft`
 (`document-ids.md` §1.6 SL row).
 
-(Amended 2026-11-03 on the maintainer's (by delegation) entry "2026-11-03 16:13:51 GMT" (`to-lead.md`), option (ii): limb 1 (FD-1751) struck: FD-1751 is guarded at main (`diagnostics.py:1081-1088` / `:1510-1520`); the expression-Factor diagnostic (FR-174 / FR-175 / FR-177) is carried to P3, owner WK-1178; SL 8299 is FD-1842 alone. Struck with it: Goal item 1, Acceptance A1–A4, Task 1, Task 3's FR-178 and `model-schema` bullets, and DP-8301-3, -4, -5, each left in place as written. Rulings of the same entry: DP-8301-1 (a) with a red test at each caller (`objectives.py:295-318`, `modelling.py:295`); DP-8301-2 (a); the reds are a depth-21 and a 201-node expression, each 422 `OBJECTIVE_GRAMMAR_VIOLATION` at both callers, and the recursion case under a lowered recursion limit.)
+(Amended 2026-11-03 on the maintainer's (by delegation) entry "2026-11-03 16:13:51 GMT" (`to-lead.md`), option (ii): limb 1 (FD-1751) struck: FD-1751 is guarded at main (`diagnostics.py:1081-1088` / `:1510-1520`); the expression-Factor diagnostic (FR-174 / FR-175 / FR-177) is carried to P3, owner WK-1178; SL-1994 is FD-1842 alone. Struck with it: Goal item 1, Acceptance A1–A4, Task 1, Task 3's FR-178 and `model-schema` bullets, and DP-8301-3, -4, -5, each left in place as written. Rulings of the same entry: DP-8301-1 (a) with a red test at each caller (`objectives.py:295-318`, `modelling.py:295`); DP-8301-2 (a); the reds are a depth-21 and a 201-node expression, each 422 `OBJECTIVE_GRAMMAR_VIOLATION` at both callers, and the recursion case under a lowered recursion limit.)
 
 ## Hand-off (not this plan's writes)
 
 - **The lead:** the GO request with the row; list this delta on WK-690's roadmap row (L5); DP-8301-3.
 - **The decision-maker:** DP-8301-1, -2, -4, -5.
-- **The executor (sonnet):** Tasks 0–3, LG 8300, the gate.
+- **The executor (sonnet):** Tasks 0–3, LG-1995, the gate.
 - **The auditor:** the slice audit; FD-1751's and FD-1842's closing register lines citing the PR
   and merge commit (A10).
-- **The minter:** PL 8301, SL 8299, LG 8300 at the slice's mint turn.
+- **The minter:** PL-1996, SL-1994, LG-1995 at the slice's mint turn.
 
 ## Self-review
 
@@ -306,7 +307,7 @@ SL 8299 is cut in `docs/roadmap.md` under `### WK-690`, after `SL-1622`, as `dra
   `objectives.py:240`, `:295-335`; `objective_preview.py:57-82`; `custom_objectives.py:337`;
   `modelling.py:280-310`; `test_expression_factors.py:395-445`;
   `test_custom_objectives_expression.py:385`; `02-modelling.md:306`, `:309`, `:310`, `:1039`,
-  `:1920`, `:2192`; RL-1410 R2 `:93-125`; CR 8291 §5b at `59a2cfe0`.
+  `:1920`, `:2192`; RL-1410 R2 `:93-125`; CR-1980 §5b at `59a2cfe0`.
 - **Not run.** Every behavioural statement is read from code; the reds are the measurement.
 - **Placeholders.** `2026-11-0x` (the amendment date) and the PR number are values the
   executor reads when it writes them.

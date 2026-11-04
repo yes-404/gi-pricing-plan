@@ -1,33 +1,33 @@
 ---
-id: LG-8300
+id: LG-1995
 family: ledger
-title: WK-690 slice SL-8299 — FD-1842, the FR-145 bound before the recursive structure walk, red first (slice ledger)
+title: WK-690 slice SL-1994 — FD-1842, the FR-145 bound before the recursive structure walk, red first (slice ledger)
 status: active                 # active → closed (§1.2a)
-created: 2026-11-03
+created: 2026-11-03               # drafted 2026-11-03 under working id 8300
 owner: executor
 tree: a8ef6f19c0be1142b0ac9dea88086f1ce6f95cbe   # origin/main at the branch cut (base 7db485bf)
-slice: SL-8299
+slice: SL-1994
 phase: P2
 work: WK-690
-plans: [PL-8301]
+plans: [PL-1996]
 corrected_by: []
-relates: [FD-1842, PL-8301]
+relates: [FD-1842, PL-1996]
 ---
 
-# LG-8300 — WK-690 slice SL-8299: FD-1842, the bound before the structure walk
+# LG-1995 — WK-690 slice SL-1994: FD-1842, the bound before the structure walk
 
-**GO:** to-lead "2026-11-03 16:13:51 GMT": option (ii), SL 8299 = FD-1842 alone; DP-8301-1 (a); DP-8301-2 (a); full SOLO gate; merge by Fri 6 Nov 2026.
+**GO:** to-lead "2026-11-03 16:13:51 GMT": option (ii), SL-1994 = FD-1842 alone; DP-8301-1 (a); DP-8301-2 (a); full SOLO gate; merge by Fri 6 Nov 2026.
 **MERGE-ACK:** (added at merge.)
 
 ## Tasks
 
 ### Scope
 
-PL-8301 as amended by the 16:13:51 entry (limb 1, FD-1751, struck). Requirements: FR-145, §4.6 (FR-150 and FR-95 for the two callers' codes).
+PL-1996 as amended by the 16:13:51 entry (limb 1, FD-1751, struck). Requirements: FR-145, §4.6 (FR-150 and FR-95 for the two callers' codes).
 
 ### Task list
 
-- **T-1** (`9e1c4288`): limb 1 struck in PL-8301 and the roadmap SL-8299 row.
+- **T-1** (`9e1c4288`): limb 1 struck in PL-1996 and the roadmap SL-1994 row.
 - **T0**, re-read at base 7db485bf; no line moved: `expressions.py`: `parse_expression` :288-304 (`_check` :299, `_check_structure` :300, `_check_limits` :303), `_measure` iterative; `objectives.py` `grammar_refusal` :295-318, `_require_the_grammar` :321, call :240; `modelling.py` :295 (`_require_a_creatable_expression` :276); `02-modelling.md` §4.6 depth ≤ 20, ≤ 200 nodes; `ExpressionLimits` 200 / 20.
   **Correction to the lead's relay:** the relay said both callers answer `OBJECTIVE_GRAMMAR_VIOLATION`. The factor caller (`POST /factors`, `modelling.py`) answers 422 `VALIDATION_FAILED` on `expression`; only create answers `OBJECTIVE_GRAMMAR_VIOLATION`. Accepted by the lead; `modelling.py` is unchanged.
 - **T1** reds (`84e9ad34`): pricing-core `test_expression_limits.py` (4 tests × 2 profiles) and `backend/tests/test_custom_objectives_expression.py` (objectives and factor callers by direct call, DB-free; create route, DB-backed).
