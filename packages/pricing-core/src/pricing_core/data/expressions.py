@@ -297,10 +297,12 @@ def parse_expression(
         raise ValueError("the objective and factor profiles need their bound symbols")
     tree = ast.parse(expression, mode="eval")
     _check(tree, profile)
+    # FR-145's bound first: it measures iteratively, and the structure walk below recurses, so an
+    # over-bound expression must be refused by its bound before it can exhaust the stack.
+    _check_limits(tree.body, limits)
     _check_structure(tree.body, profile)
     if symbols is not None:
         _check_symbols(tree, symbols)
-    _check_limits(tree.body, limits)
     return tree
 
 

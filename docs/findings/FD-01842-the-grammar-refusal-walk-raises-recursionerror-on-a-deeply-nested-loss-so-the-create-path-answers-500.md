@@ -2,12 +2,12 @@
 id: FD-1842
 family: finding
 title: The grammar refusal's structure walk raises RecursionError on a deeply nested loss, so the create path answers 500
-status: active
+status: closed
 created: 2026-10-22
 owner: auditor
 tree: 96354f9cddf968aabbc817570c2b0b3f6ea55a5a
 corrected_by: []
-relates: [WK-690]
+relates: [WK-690, SL-1994, LG-1995, PL-1996]
 ---
 
 # FD-1842 — The grammar refusal's structure walk raises RecursionError on a deeply nested loss, so the create path answers 500
@@ -58,3 +58,5 @@ slice's: (1) `create_objective` calls the same iterative bound check the preview
 (`refuse_over_bound`'s `measure_expression` test) before `_require_the_grammar`, so an over-bound loss is 422
 `VALIDATION_FAILED` on both paths; or (2) `_check_structure` is made iterative. The fix **starts red-first**: a test that first reproduces the 500 (a create request with a
 2000-character unary chain), then asserts 422. The register row names the event that next discharges it.
+
+***Resolved 2026-11-04*** — closed in place 2026-11-04 by the executor, as the closing act of the mint of SL-1994 (WK-690, LG-1995, PL-1996; this PR, its number and squash written at the merge's date-of-record), on the lead's brief under the GO "2026-11-03 16:13:51 GMT" (`to-lead.md`, a local channel file), option (ii): SL-1994 is FD-1842 alone. Delivered remedy: a depth bound before the structure walk. `parse_expression` (`pricing_core/data/expressions.py`) now runs `_check_limits`, the iterative FR-145 bound (depth 20, 200 nodes), before the recursive `_check_structure`, so one change covers both callers: a deep or over-bound expression is a 422 and never a 500 `RecursionError` (create answers `OBJECTIVE_GRAMMAR_VIOLATION`; the factor caller answers `VALIDATION_FAILED` on `expression`); `modelling.py` is unchanged. Red first, by the 3 real reds in LG-1995: the create route answered 500 `INTERNAL_ERROR` on a 2000-character unary chain, and the objectives and factor callers each raised `RecursionError` on a deep loss, at base `84e9ad34`; `02-modelling.md` carries a dated clarification of FR-145 / §4.6. Gate evidence is in LG-1995: the SOLO gate at `8a913212` (pytest "13 failed, 7041 passed, 22 skipped" = the 13 item-31 docs-audit failures only; frontend all rc 0, vitest 905 of 905; demo designed stop 1718 s, dislocation #1 555 s), accepted under item 31 by "2026-11-04 05:13:46 GMT". FD-1751 is not closed by this slice: PL-1996 struck limb 1 ("FD-1751 is guarded at main"; the expression-Factor diagnostic itself carried to P3, owner WK-1178).
