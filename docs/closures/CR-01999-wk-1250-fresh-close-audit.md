@@ -341,3 +341,16 @@ the user's line without a further audit.
 
 Every §13 verdict above is PROPOSED and is the lead's. **The close is the user's dated
 acceptance line.**
+
+## 2026-11-04 — delta: condition (1) met
+
+*(Dated line 2026-11-04 11:28 GMT, by the auditor, read at `origin/main` e3c150c4827a2f2f29e5314bb264c24125d714a7. No verdict is changed.)*
+
+- **Batch 8 is on main.** The docs batch merged as #1427, squash commit `e3c150c4827a2f2f29e5314bb264c24125d714a7`, at 2026-11-04 11:25:06 GMT (from-lead "2026-11-04 11:25:06 GMT").
+- **What it carries on main**, each read at that squash:
+  - SL-1989's closing act: `docs/roadmap.md:3575` (`status: closed` in the SL-1989 block that opens at `:3569`).
+  - D's pre-registration: driver sha256 `df6e7c9c3216895d175434cf92bd5d26c0335fe7f48621dfee5c2919997513d3` in this record's NFR-489 rows, `:46`, `:194`, `:200` and `:208`.
+  - LG-1990 closed: `docs/ledgers/LG-01990-wk-1250-slice-sl-8296-a-purposes-only-mount-change-is-worded-mount-purposes-changed.md:5` (`status: closed`), with the closing line at `:117` (SL-1989 merged as #1423, squash `7b8a00cf356f258cef764a5af576b28b01195186`).
+  - FD-1768's PR citation: `docs/findings/register.md:392` and `docs/findings/FD-01768-attribution-words-a-purposes-only-change-to-a-sub-graph-mount-as-mount-ports-re-mapped.md:46` (PR #1423, squash `7b8a00cf`), with `status: closed` at `:5` of the essay.
+- **Condition (2), S1 item D's reading on Thu 5 Nov 2026, is OWED.** Its owner is WK-1250 (§4; NFR-489 on a mounted bundle). The reading lands as a further dated delta line here; if it reads unmet, an FD owned by WK-1250 follows.
+- **Status of the proposal:** the verdict stays PROPOSED, as adopted at "2026-11-04 09:57:14 GMT". Condition (1) of 09:57:14 is met; (2) is owed. **The close is still the user's dated line.**
