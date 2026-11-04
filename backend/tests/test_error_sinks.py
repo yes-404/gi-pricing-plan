@@ -73,6 +73,18 @@ _SINKS: dict[tuple[str, str, str], tuple[int, str]] = {
         "PREPARE hydration of an approved deployment's artifacts (`hydrate_for_switch` reads "
         "only the Rating Version row, the blob row and the blob store), not request input "
         "(maintainer's ruling, 2026-10-19 02:45:42 BST, item 1 (b))"),
+    ("backend/src/app/platform/deployment_switch.py", "_run", "exception"): (
+        1, "logs the traceback of the reconcile loop, which runs on Redis deploy-time ids and "
+        "never sees quote input; the _listen row's reasoning (2026-10-19 02:45:42 BST item 1 "
+        "(a)/(b)) extended (maintainer's ruling, 2026-11-04 03:09:02 GMT (a))"),
+    ("backend/src/app/platform/deployment_switch.py", "ensure", "exc_info"): (
+        1, "logs the traceback of the listener restart, which runs on Redis deploy-time ids and "
+        "never sees quote input; the _listen row's reasoning (2026-10-19 02:45:42 BST item 1 "
+        "(a)/(b)) extended (maintainer's ruling, 2026-11-04 03:09:02 GMT (a))"),
+    ("backend/src/app/platform/deployment_switch.py", "ensure", "exception"): (
+        1, "not a log sink: asyncio Task.exception() on the listener task, counted by the "
+        "census's name walker (maintainer's ruling, 2026-11-04 03:09:02 GMT (a); the walker "
+        "fix is a process-backlog row, WK-1178 tooling after the freeze)"),
     ("backend/src/app/platform/deployments.py", "complete_switch", "exception"): (
         1, "`.exception(` writes the traceback to the log and echoes nothing into a response; "
         "the deploy route's COMMIT round, not a quote input "
