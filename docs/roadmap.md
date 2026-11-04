@@ -3500,6 +3500,8 @@ Set `active` 2026-09-30 on the maintainer's entry "2026-09-30 22:33:30 BST — D
 
 **Close audit filed (CR-1979), acceptance owed.** *(Dated line, 2026-11-03, the auditor aud-wk1250, on the lead's brief for the G1 close schedule, to-lead "2026-11-03 15:36:59 GMT" item (5).)* The Work stays `active`; the close is the user's dated acceptance line.
 
+**Fresh close audit filed (CR 8309), acceptance owed.** *(Dated line, 2026-11-04, the auditor aud-wk1250b, on the maintainer's ruling in to-lead "2026-11-04 08:46:25 GMT"; it re-tests CR-1979.)* The Work stays `active`; the close is the user's dated acceptance line.
+
 #### SL-1339 — Slice 1: the sub-graph as a stored, versioned artifact (FR-217's artifact limb)
 
 ```yaml
