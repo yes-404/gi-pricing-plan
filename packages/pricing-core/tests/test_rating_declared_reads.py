@@ -116,7 +116,18 @@ class _StubResolver:
         if ref.type == "peril_structure":
             # A-3's compile parses the structure (RL-1459), so it needs a real one, not a stub.
             return ResolvedArtifact(status="approved", payload=_structure_payload())
-        return ResolvedArtifact(status="approved", payload={"stub_for": str(ref)})
+        payload: dict[str, Any] = {"stub_for": str(ref)}
+        if ref.type == "model":
+            # FD-1495 (SL-1985): a pinned model carries the fields its consumed Factors are
+            # derived from; the stub consumes exactly what the example's model_call steps map.
+            mapped = {
+                value
+                for step in self._algorithm["steps"]
+                if step["type"] == "model_call"
+                for value in step["feature_map"].values()
+            }
+            payload["fit_result"] = {"model_type": "xgboost", "feature_order": sorted(mapped)}
+        return ResolvedArtifact(status="approved", payload=payload)
 
 
 def _example_version(example: dict[str, Any]) -> RatingVersion:

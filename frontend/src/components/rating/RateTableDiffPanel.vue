@@ -7,7 +7,7 @@
  * and then read as a page. Shade follows the size of the relative change and the direction is
  * written out beside it, so colour is never the only signal (`03` §5.3).
  */
-import { computed, ref } from "vue";
+import { computed, nextTick, ref } from "vue";
 
 import { waitForJob } from "@/api/jobs";
 import { ProblemError } from "@/api/problem";
@@ -39,6 +39,15 @@ const history = ref<(string | undefined)[]>([]);
 const currentCursor = ref<string | undefined>(undefined);
 /** Whether the page on show was asked for with a portfolio, so the weight column matches it. */
 const weighted = ref(false);
+
+/** The page on show, counted from 1: the pages before it are the history. */
+const page = computed(() => history.value.length + 1);
+/** What the always-present summary region says once a page is on show (NFR-463, 4.1.3). */
+const summary = computed(() => {
+  if (stage.value !== "ready" || items.value.length === 0) return "";
+  const count = items.value.length;
+  return `Showing ${count} changed cell${count === 1 ? "" : "s"}, page ${page.value}.`;
+});
 
 const keyNames = computed(() => Object.keys(items.value[0]?.key ?? {}));
 
@@ -96,13 +105,24 @@ async function show(): Promise<void> {
   await load(undefined);
 }
 
+const previousButton = ref<HTMLButtonElement | null>(null);
+const nextButton = ref<HTMLButtonElement | null>(null);
+
+/** A button that was just clicked and is now disabled drops focus to the page; hand it to its twin. */
+async function keepFocus(clicked: HTMLButtonElement | null, other: HTMLButtonElement | null): Promise<void> {
+  await nextTick();
+  if (clicked?.disabled) other?.focus();
+}
+
 async function next(): Promise<void> {
   const here = currentCursor.value;
   if (await load(nextCursor.value ?? undefined)) history.value = [...history.value, here];
+  await keepFocus(nextButton.value, previousButton.value);
 }
 
 async function previous(): Promise<void> {
   if (await load(history.value.at(-1))) history.value = history.value.slice(0, -1);
+  await keepFocus(previousButton.value, nextButton.value);
 }
 
 const SHADES = [
@@ -184,6 +204,12 @@ function shadeClass(rel: string | null): string {
       {{ progress }}
     </p>
     <p
+      role="status"
+      class="sr-only"
+    >
+      {{ summary }}
+    </p>
+    <p
       v-if="stage === 'failed'"
       role="alert"
       class="mt-3 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-800"
@@ -201,6 +227,8 @@ function shadeClass(rel: string | null): string {
       <div
         v-else
         class="mt-3 overflow-x-auto"
+        role="region"
+        aria-label="Changed cells"
         tabindex="0"
       >
         <table class="min-w-full border-collapse text-sm">
@@ -299,6 +327,7 @@ function shadeClass(rel: string | null): string {
       </div>
       <div class="mt-3 flex items-center gap-3">
         <button
+          ref="previousButton"
           type="button"
           class="rounded border border-slate-300 px-3 py-1 text-sm disabled:opacity-50"
           :disabled="history.length === 0"
@@ -307,6 +336,7 @@ function shadeClass(rel: string | null): string {
           Previous page
         </button>
         <button
+          ref="nextButton"
           type="button"
           class="rounded border border-slate-300 px-3 py-1 text-sm disabled:opacity-50"
           :disabled="nextCursor === null"
@@ -314,6 +344,7 @@ function shadeClass(rel: string | null): string {
         >
           Next page
         </button>
+        <span class="text-xs text-slate-500">Page {{ page }}</span>
       </div>
     </template>
   </section>

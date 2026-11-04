@@ -65,6 +65,12 @@ const groups = computed(() => {
   });
 });
 
+/** What the always-present status region says: how many versions the filter leaves (NFR-463, 4.1.3). */
+const shownCount = computed(() => {
+  const count = groups.value.reduce((sum, group) => sum + group.rows.length, 0);
+  return `Showing ${count} rating version${count === 1 ? "" : "s"}.`;
+});
+
 /** The environments whose live set holds this version's `slug@version`: no join on `id`. */
 function liveIn(version: RatingVersion): string[] {
   const ref_ = ratingVersionRef(version.slug, version.version);
@@ -115,6 +121,12 @@ function pinnedTables(version: RatingVersion) {
     </div>
 
     <template v-else>
+      <p
+        role="status"
+        class="sr-only"
+      >
+        {{ shownCount }}
+      </p>
       <div class="mt-4 flex items-center gap-2 text-sm">
         <label
           for="status-filter"

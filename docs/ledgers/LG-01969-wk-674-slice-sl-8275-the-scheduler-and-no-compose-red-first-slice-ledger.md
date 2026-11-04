@@ -2,7 +2,7 @@
 id: LG-1969
 family: ledger
 title: WK-674 slice SL-1968 — the scheduler service and the demo's --no-compose switch, red first (slice ledger)
-status: active                 # active → closed (§1.2a)
+status: closed                 # active → closed (§1.2a)
 created: 2026-10-29               # drafted 2026-10-29 under working id 8276
 owner: executor
 tree: 7ceff4a16829c63f20f0cdbb56fafae22657c1ab   # origin/main at the branch cut
@@ -288,3 +288,5 @@ A1–A8 DELIVERED: A1 and A7 (G) by the full gate at `67284ea1` (END 21:02:28Z; 
 Skip baseline 22 from this slice (lead 29, on to-lead 2026-10-29 21:05:13 GMT): the 22nd skip is backend/tests/test_deploy_stack_runtime.py:369 test_the_scheduler_service_is_what_moves_a_job_out_of_the_outbox (A3's runtime test, deploy-gated; GIP_DEPLOY_TESTS unset in the gate); -rs over the four deploy files: 9 at 67284ea1 vs 8 at main 5707373e.
 
 (Recorded 2026-10-29 by the lead, on to-lead "2026-10-29 22:05:53 GMT": merge 40's squash commit aad4fd58bde87f59fffe646466f4f86bb2373bf8 carries the title only — `git log -1 --format=%B aad4fd58` is one line. The Range line (origin/main 5707373e...draft/sl-8275 @56b38867, squash tree f0535e299943d8e28a4487022fc57af6f9269515) and the 🤖 line are in PR #1409's body. Cause: the body fetch in the merge command timed out (TLS handshake) and wrote a 0-byte file passed to --body-file unchecked; main is not rewritten.)
+
+(Closed 2026-11-03 by the auditor, on the lead's instruction under the maintainer's ruling in to-lead "2026-11-03 15:36:59 GMT" item 3: SL-1968 merged as #1409, squash commit aad4fd58bde87f59fffe646466f4f86bb2373bf8 on main, committer date 2026-10-29T22:04:48Z.)

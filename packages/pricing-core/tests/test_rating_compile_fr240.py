@@ -209,6 +209,129 @@ async def test_a_model_call_over_risk_factors_compiles() -> None:
     await compile_bundle(_version(), res)
 
 
+# -- FD-1495's GLM arm: the consumed Factors come from the fields each arm carries (SL-1985) --
+
+OFFSET_MODEL = "model:offset-glm@2"
+
+
+def _coefficient(term: str) -> dict[str, object]:
+    return {
+        "term": term, "estimate": 0.1, "std_error": 0.01, "z": 10.0, "p_value": 0.0,
+        "ci_95": [0.08, 0.12],
+    }
+
+
+def _glm_fit(*terms: str) -> dict[str, object]:
+    return {"model_type": "glm", "coefficients": [_coefficient(t) for t in terms]}
+
+
+class _GlmOffsetResolver(_FactorsResolver):
+    """A `_FactorsResolver` that also hands a pinned GLM the model its offset reads."""
+
+    def __init__(
+        self, base: _FactorsResolver, offset_factors: tuple[Factor, ...],
+        offset_fit: dict[str, object],
+    ) -> None:
+        super().__init__(base, base._factors)
+        self._offset_factors = offset_factors
+        self._offset_fit = offset_fit
+
+    async def resolve(self, ref: ArtifactRef) -> ResolvedArtifact:
+        resolved = await super().resolve(ref)
+        if str(ref) != MODEL:
+            return resolved
+        return ResolvedArtifact(
+            status=resolved.status,
+            payload={
+                **resolved.payload,
+                "spec": {"model_type": "glm", "offset": {
+                    "kind": "model", "offset_model_ref": OFFSET_MODEL,
+                }},
+            },
+            factors=resolved.factors,
+            offset_source=ResolvedArtifact(
+                status="approved",
+                payload={"fit_result": self._offset_fit},
+                factors=self._offset_factors,
+            ),
+        )
+
+
+def _glm_fitted_on(year_intent: FactorIntent, *terms: str) -> _FactorsResolver:
+    res = _resolver()
+    res._payloads[MODEL]["fit_result"] = _glm_fit(*terms)
+    year = _factor("year_of_account").model_copy(update={"intent": year_intent})
+    base = _FactorsResolver(res, {MODEL: (_factor("driver_age"), year)})
+    step = next(
+        s for s in res._payloads["rating_algorithm:motor-gb@14"]["steps"] if s["step_id"] == "s_rp"
+    )
+    step["feature_map"] = {"driver_age": "driver_age", "rating_area": "year_of_account"}
+    return base
+
+
+@pytest.mark.req("FR-88")
+@pytest.mark.req("FR-240")
+async def test_a_model_call_over_a_glm_fitted_on_a_control_factor_is_refused() -> None:
+    res = _glm_fitted_on(
+        FactorIntent.CONTROL, "intercept", "driver_age", "year_of_account[2024]"
+    )
+    with pytest.raises(ValueError, match="CONTROL_FACTOR_IN_RATEABLE_PATH") as refused:
+        await compile_bundle(_version(), res)
+    message = str(refused.value)
+    assert MODEL in message
+    assert "year_of_account" in message
+    assert "year_of_account@1" in message
+
+
+@pytest.mark.req("FR-88")
+@pytest.mark.req("FR-240")
+async def test_a_model_call_over_a_glm_fitted_on_risk_factors_compiles() -> None:
+    res = _glm_fitted_on(
+        FactorIntent.RISK, "intercept", "driver_age", "year_of_account[2024]"
+    )
+    await compile_bundle(_version(), res)
+
+
+@pytest.mark.req("FR-88")
+@pytest.mark.req("FR-240")
+async def test_a_model_call_over_a_glm_whose_offset_model_is_fitted_on_a_control_factor_is_refused() -> None:  # noqa: E501
+    pin = _glm_fitted_on(FactorIntent.RISK, "intercept", "driver_age", "year_of_account[2024]")
+    control = _factor("vehicle_age").model_copy(update={"intent": FactorIntent.CONTROL})
+    res = _GlmOffsetResolver(pin, (control,), _glm_fit("intercept", "vehicle_age"))
+    with pytest.raises(ValueError, match="CONTROL_FACTOR_IN_RATEABLE_PATH") as refused:
+        await compile_bundle(_version(), res)
+    message = str(refused.value)
+    assert OFFSET_MODEL in message
+    assert "vehicle_age@1" in message
+
+
+def _gbm_fit(**fields: object) -> dict[str, object]:
+    return {"model_type": "xgboost", **fields}
+
+
+@pytest.mark.req("FR-88")
+@pytest.mark.req("FR-240")
+@pytest.mark.parametrize(
+    "fit_result",
+    [
+        pytest.param({"model_type": "glm"}, id="glm-no-coefficients"),
+        pytest.param(_glm_fit("intercept"), id="glm-intercept-only"),
+        pytest.param(_gbm_fit(), id="gbm-no-feature_order"),
+        pytest.param(_gbm_fit(feature_order=[]), id="gbm-empty-feature_order"),
+    ],
+)
+async def test_a_model_call_over_a_model_whose_fit_result_lacks_the_fields_is_refused(
+    fit_result: dict[str, object],
+) -> None:
+    res = _glm_fitted_on(FactorIntent.RISK, "intercept", "driver_age")
+    res._payloads[MODEL]["fit_result"] = fit_result
+    with pytest.raises(ValueError, match="CONTROL_FACTOR_IN_RATEABLE_PATH") as refused:
+        await compile_bundle(_version(), res)
+    message = str(refused.value)
+    assert MODEL in message
+    assert "cannot be derived" in message
+
+
 # -- G1's objective clause through a pinned sub-graph (WK-1250 Slice 2, RL-1309 G1) ----------
 
 PLANTED = "model:planted@1"
@@ -231,6 +354,7 @@ def _planted_in_a_sub_graph(objective_status: str) -> tuple[RatingVersion, FakeR
     resolver = _mounted_resolver(fragments={NCD: _fragment_payload(steps=[step])})
     resolver._payloads[PLANTED] = {
         "model_type": "gbm", "status": "approved", "feature_map": {"ncd_years": "ncd_years"},
+        "fit_result": {"model_type": "xgboost", "feature_order": ["ncd_years"]},
         "spec": {"model_type": "gbm", "objective": {"kind": "custom", "ref": OBJ}},
     }
     resolver._payloads[OBJ] = {"slug": "asym-loss", "version": 1}
