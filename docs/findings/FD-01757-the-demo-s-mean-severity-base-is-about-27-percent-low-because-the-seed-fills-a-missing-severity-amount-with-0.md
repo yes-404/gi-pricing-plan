@@ -2,7 +2,7 @@
 id: FD-1757
 family: finding
 title: The demo's mean-severity base is about 27% low, because the seed fills a missing freMTPL2sev amount with 0
-status: active
+status: closed
 created: 2026-10-17
 owner: auditor
 tree: 055b5e6b74f9d4b10f6df54570e33ed2805ae9a8
@@ -36,3 +36,6 @@ re-read by the auditor at that tree (`seed.py:149-150` is `.join(totals, … how
 Fix with an owner: WK-673, in SL-1543 (seed writes null for an unknown amount; the base is
 computed over known amounts; FR-111 declares the severity population). The event that next
 discharges it: the merge of SL-1543 with the re-derived base recorded in its ledger.
+
+
+***Resolved 2026-10-18*** — closed in place 2026-11-03 by the auditor, on CR-1981 §5b (`docs/closures/CR-01981-wk-673-close-audit.md`) and the maintainer's ruling (C) in `to-lead.md` "2026-11-03 16:03:37 GMT" (a local channel file): fixed by SL-1543, PR #1335, squash `4a53f19492ad73ebfb699cabcab19765c68a5a76`: `examples/fremtpl2/seed.py:150-157` keeps an unknown claimant amount null (`ClaimNb > 0` with no severity row) and fills 0 only for a policy with no claim, so the mean severity base is taken over known amounts (FR-111). *Date of record: 2026-10-18 — #1335, squash 4a53f194.*

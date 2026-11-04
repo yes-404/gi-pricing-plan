@@ -8,7 +8,7 @@ deploy transaction and the Redis transport are proved where they run.
 from __future__ import annotations
 
 import asyncio
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Iterable
 from uuid import UUID, uuid4
 
 import pytest
@@ -215,3 +215,95 @@ def test_a_process_id_names_the_container_the_pid_and_the_start() -> None:
     assert pid.isdigit()
     assert started.isdigit()
     assert process_id() == process_id(), "stable for one incarnation"
+
+
+# --- the reconcile (SL-1992, FD-1823; FR-268, FR-269) ------------------------------------------
+#
+# Written red first. The new names are imported inside each test so that, at the base, each test
+# fails for its own reason (no reconcile exists) and the file's other tests still run.
+
+
+def _row(entry: LiveEntry, environment: str = "uat") -> tuple[UUID, str, UUID, str, str]:
+    return (WS, environment, entry.deployment_id, entry.rating_version_ref, entry.bundle_hash)
+
+
+@pytest.mark.req("FR-268")
+async def test_r1a_a_process_that_missed_a_commit_converges_on_one_reconcile_pass() -> None:
+    from app.platform.deployment_switch import LatestState
+
+    live = LiveRefs()
+    live.set(WS, "uat", OLD)  # the COMMIT of NEW was never received
+
+    async def read() -> LatestState:
+        return LatestState(environments=("uat",), deployments=(_row(NEW),))
+
+    await live.reconcile(read)
+    assert live.get(WS, "uat") == NEW
+
+
+@pytest.mark.req("FR-268")
+async def test_r3a_a_commit_landing_during_a_pass_read_is_not_overwritten_by_the_older_read() -> (
+    None
+):
+    """The pass read OLD (before the commit); NEW's COMMIT lands while that read is in flight."""
+    from app.platform.deployment_switch import LatestState
+
+    live = LiveRefs()
+    live.set(WS, "uat", OLD)
+    read_started, release_read = asyncio.Event(), asyncio.Event()
+
+    async def read() -> LatestState:
+        stale = LatestState(environments=("uat",), deployments=(_row(OLD),))
+        read_started.set()
+        await release_read.wait()
+        return stale
+
+    async def hydrate(_: SwitchMessage) -> None:
+        return None
+
+    member = SwitchMember("api-1:1", live, hydrate)
+    pass_ = asyncio.create_task(live.reconcile(read))
+    await read_started.wait()
+    assert await member.handle(_message("prepare"))
+    assert await member.handle(_message("commit"))
+    assert live.get(WS, "uat") == NEW
+    release_read.set()
+    await pass_
+    assert live.get(WS, "uat") == NEW, "a pass must never move a reference backwards"
+
+
+@pytest.mark.req("FR-268")
+async def test_r3b_a_failing_pass_is_logged_and_the_loop_converges_on_the_next_one(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    from app.platform.deployment_switch import LatestState, SwitchReconciler
+
+    live = LiveRefs()
+    live.set(WS, "uat", OLD)
+    reads = 0
+    ensured: list[tuple[str, ...]] = []
+
+    async def read() -> LatestState:
+        nonlocal reads
+        reads += 1
+        if reads == 1:
+            raise RuntimeError("database unreachable")
+        return LatestState(environments=("uat",), deployments=(_row(NEW),))
+
+    async def ensure(environments: Iterable[str]) -> None:
+        ensured.append(tuple(environments))
+
+    reconciler = SwitchReconciler(live, read, ensure, interval=0.01)
+    reconciler.start()
+    try:
+        for _ in range(200):
+            if live.get(WS, "uat") == NEW:
+                break
+            await asyncio.sleep(0.01)
+        assert live.get(WS, "uat") == NEW
+        assert "database unreachable" in caplog.text
+        assert ensured
+        assert set(ensured) == {("uat",)}
+    finally:
+        await reconciler.stop()
+    assert reconciler.task is None or reconciler.task.done()

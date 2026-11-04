@@ -25,7 +25,7 @@ from test_rating_dislocation import _Spy, _with_secret_step
 from test_rating_score import _algorithm_payload, _FakeResolver, _version
 
 from model_schema.dislocation import ChangeGroup, DislocationSpec
-from model_schema.rating import Pins
+from model_schema.rating import Pins, RatingAlgorithm, diff_algorithms
 from model_schema.refs import ArtifactRef
 from pricing_core.rating import analysis
 from pricing_core.rating.analysis import (
@@ -1453,6 +1453,76 @@ def test_mount_ports_re_mapped_forms() -> None:
     both = derived(_e_repoint, remap, sub_graphs=(_NCD5,))
     assert both.kind == "step_changed"
     assert both.description == f"{_M_NCD_REPOINT}; ports re-mapped"
+
+
+def _e_mount_unconsumed(
+    *, ref: str = _NCD4, purposes: list[str] | None = None, outputs: dict[str, str] | None = None
+) -> Callable[[dict[str, Any]], None]:
+    """`_e_mounted` with nothing consuming the mount's output (`s_office` keeps its own `expr`), so
+    a `purposes` selector is a valid draft: a purpose-only mount that `s_office` consumed would be
+    refused by FR-218. The three arguments are the mount's own selectors."""
+
+    def edit(alg: dict[str, Any]) -> None:
+        _e_mounted(alg)
+        alg["steps"] = [
+            copy.deepcopy(_step(_algorithm_payload(), "s_office"))
+            if s["step_id"] == "s_office"
+            else s
+            for s in alg["steps"]
+        ]
+        mount = alg["sub_graphs"][0]
+        mount["ref"] = ref
+        mount["outputs"] = outputs or {}
+        if purposes is not None:
+            mount["purposes"] = purposes
+
+    return edit
+
+
+@pytest.mark.req("FR-219")
+def test_mount_purposes_alone_is_one_structural_mount_change_with_before_equal_after() -> None:
+    """The structural diff (`rating.py`, `_diff_mounts`) keeps a mount whose `ref` did not move when
+    only `purposes` changed: one change, `before == after`, `purposes_changed` and not
+    `ports_changed` (`RL-1344` acceptance 5). The wording (FR-1399) is the next test's."""
+    before = RatingAlgorithm.model_validate(_candidate_payload(_e_mount_unconsumed()))
+    after = RatingAlgorithm.model_validate(
+        _candidate_payload(_e_mount_unconsumed(purposes=["mid_term_adjustment"]))
+    )
+    (mount,) = diff_algorithms(before, after).sub_graph_mounts
+    assert mount.mount_point == "m_ncd"
+    assert str(mount.before) == str(mount.after) == _NCD4
+    assert (mount.ports_changed, mount.purposes_changed) == (False, True)
+
+
+@pytest.mark.req("FR-1399")
+def test_mount_purposes_changed_forms() -> None:
+    """FD-1768 (DP-5, DP-6): a change to `purposes` is worded as one, never as `ports re-mapped`.
+    Purposes alone: `<mp>: mount purposes changed (<ref>)`; with a re-map: the re-map form plus
+    `; purposes changed`; with a re-point: the re-point form plus `; purposes changed`. Each is
+    one `step_changed`."""
+    selector = ["mid_term_adjustment"]
+
+    def derived(*, to: Callable[[dict[str, Any]], None], sub_graphs: tuple[str, ...]) -> Any:
+        base = _candidate_payload(_e_mount_unconsumed())
+        cand = _candidate_payload(to)
+        changes = asyncio.run(
+            derive_changes(
+                _mounted_version(_NCD4),
+                _candidate_version(sub_graphs=sub_graphs),
+                _resolver(cand, base=base),
+            )
+        )
+        (mount,) = _mount_changes(changes)
+        assert mount.kind == "step_changed"
+        return mount
+
+    alone = derived(to=_e_mount_unconsumed(purposes=selector), sub_graphs=(_NCD4,))
+    assert alone.description == f"m_ncd: mount purposes changed ({_NCD4})"
+    remap = {"ncd_factor": "ncd_f2"}
+    both = derived(to=_e_mount_unconsumed(purposes=selector, outputs=remap), sub_graphs=(_NCD4,))
+    assert both.description == f"m_ncd: mount ports re-mapped ({_NCD4}); purposes changed"
+    repoint = derived(to=_e_mount_unconsumed(ref=_NCD5, purposes=selector), sub_graphs=(_NCD5,))
+    assert repoint.description == f"{_M_NCD_REPOINT}; purposes changed"
 
 
 @pytest.mark.req("FR-1398")

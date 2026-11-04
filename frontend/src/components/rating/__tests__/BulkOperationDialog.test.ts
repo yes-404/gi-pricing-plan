@@ -112,3 +112,13 @@ describe("BulkOperationDialog: the status region is persistent (NFR-463, FD-1959
     expect(before).toContain(holder);
   });
 });
+
+// NFR-463 / WCAG 4.1.2 (FD-1974 L-3): the panel is inline on the page, not a modal, so it must
+// not claim `role="dialog"` (which promises focus containment it does not provide).
+describe("BulkOperationDialog is a labelled region, not a dialog (FD-1974 L-3)", () => {
+  it("is found by its heading as a region", () => {
+    render(BulkOperationDialog, { props });
+    expect(screen.getByRole("region", { name: "Bulk operation" })).toBeInTheDocument();
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+});

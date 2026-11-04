@@ -583,6 +583,40 @@ async def test_a_feature_map_naming_a_raw_column_is_refused_at_save(
     assert saved.status_code == 201, saved.text
 
 
+@pytest.mark.req("FR-88")
+@pytest.mark.req("FR-240")
+async def test_a_feature_map_over_a_model_whose_fit_result_lacks_the_fields_is_refused_at_save(
+    api_client, workspace_id, principal, grant, database, blob_store
+) -> None:
+    """FD-1495 (SL-1985): the save check derives a model's consumed Factors from the fields its
+    fit result carries and refuses a model that yields none, rather than accepting an empty
+    map's worth of inputs from an empty default."""
+    await grant("analyst")
+    # A fitted Model is immutable (02 R2, a trigger), so the model is reserved and never fitted:
+    # its `fit_result` is NULL, which carries no field to derive a consumed Factor from.
+    actor = await _actuary(database, workspace_id)
+    dataset_id = await _dataset(database, blob_store, workspace_id, actor)
+    version_id = await _validated_version(database, blob_store, workspace_id, actor, dataset_id)
+    factor = await _factor(database, workspace_id, actor, dataset_id, FACTOR_SLUG, SOURCE_COLUMN)
+    split = await _split(database, blob_store, workspace_id, actor, version_id)
+    async with database.unit_of_work() as session:
+        row, _ = await model_service.reserve_model(
+            session, workspace_id=workspace_id, actor=actor,
+            spec=_spec(version_id, (factor,), split_ref=split),
+        )
+        ref = f"model:{row.model_family_slug}@{row.version}"
+    headers = _headers(principal, workspace_id)
+    refused = api_client.post(
+        "/api/v1/rating-algorithms",
+        json=glm_algorithm(ref, {"driver_age": FACTOR_SLUG}), headers=headers,
+    )
+    assert refused.status_code == 422, refused.text
+    assert refused.json()["code"] == "CONTROL_FACTOR_IN_RATEABLE_PATH"
+    assert ref in refused.json()["detail"]
+    absent = api_client.get("/api/v1/rating-algorithms/motor-gb@1", headers=headers)
+    assert absent.status_code == 404
+
+
 @pytest.mark.req("FR-227")
 async def test_a_stored_model_call_without_result_type_reads_back_as_the_legacy_default(
     api_client, workspace_id, principal, grant
