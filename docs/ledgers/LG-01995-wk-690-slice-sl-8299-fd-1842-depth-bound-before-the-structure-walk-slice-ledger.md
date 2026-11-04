@@ -68,6 +68,7 @@ DB-free check for the `test_expression_limits.py` run, quoted: `grep -n -i "post
 
 - 2026-11-03: T-1, T0, T1, T2, T3 as above.
 - 2026-11-04: DB window 03:07:49Z to 03:09:12Z; the backend red and green lines are in the Gate section above. The full SOLO gate is a separate seat.
+- 2026-11-04 05:17:50Z (verdict line, added at the mint): the SOLO gate at `8a913212` (from-lead "2026-11-04 05:12:15 GMT": pytest "13 failed, 7041 passed, 22 skipped" = the eight item-31 docs-audit files, skipped = baseline 22; frontend all rc 0, vitest 905 of 905; demo designed stop 1718 s, dislocation #1 555 s; window 03:15:41 to 05:10:56Z) STANDS under common-brief item 31, accepted by to-lead "2026-11-04 05:13:46 GMT", which also rules audit-docs check 32 (PL cite of CR 8291, minted as CR-1980) the same class; the mint re-pointed it.
 
 ## PRs
 
