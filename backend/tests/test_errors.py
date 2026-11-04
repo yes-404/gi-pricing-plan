@@ -166,6 +166,18 @@ def test_golden_quote_mismatch_is_registered() -> None:
     assert error.code == "GOLDEN_QUOTE_MISMATCH"
 
 
+@pytest.mark.req("FR-227")
+def test_monetary_float_refused_is_withdrawn() -> None:
+    """`RL-1958` item 1 withdrew the code; `03` keeps it only as a tombstone.
+
+    Asserted by literal name, never by iterating `RATING_ERROR_CODES`. A raise of the
+    withdrawn code fails the same way as any other unknown code.
+    """
+    assert "MONETARY_FLOAT_REFUSED" not in RATING_ERROR_CODES
+    with pytest.raises(ValueError, match="unknown error code"):
+        PlatformError("MONETARY_FLOAT_REFUSED", "Monetary float refused", 422)
+
+
 _SENTINEL = "SENTINEL-422-input-5e0c2b91"
 
 

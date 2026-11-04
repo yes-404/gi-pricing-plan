@@ -1042,6 +1042,26 @@ Row 1 (S-a) of `PL-1984`: FD-1495, the GLM arm of the FR-240 control-factor chec
 
 (Minted 2026-11-03 from working id 8303, on the maintainer's GO "2026-11-03 16:28:44 GMT" and the lead's mint order, with the mint tool of record `mint-repoint.py` (sha256 `4d83681a`); plan `PL-1984` (working id 8302), ledger `LG-1986` (working id 8304); executed on branch `sl-8303-wk673-fd1495-control-factor`. Closed at the slice's merge by the closing acts, not here.)
 
+#### SL-1997 — WK-673 fix slice — FD-1490, FD-1578, FD-1651, FD-1481 and SL-1389's five owed red-first proofs: the rest of the remediation, S-b
+
+```yaml
+id: SL-1997
+family: slice
+title: WK-673 fix slice — FD-1490 (registry entry dropped), FD-1578 (input-free AttributionError, a CodedError), FD-1651's two broken-loop proofs, FD-1481's 15-digit echo, and SL-1389's five owed red-first proofs
+status: active                    # draft → active → closed (§1.2a)
+created: 2026-11-04   # drafted 2026-11-04 under working id 8305; minted as SL-1997
+owner: lead
+tree: 012ec9fbfb42313a7df8df601e7d8abda0989a16
+phase: P2
+work: WK-673
+corrected_by: []
+relates: [FD-1490, FD-1578, FD-1651, FD-1481, FD-1982, LG-1998, PL-1984]
+```
+
+Row 2 (S-b) of `PL-1984`: FD-1490's registry entry is dropped (FR-227, `RL-1958` item 1); `AttributionError` messages become input-free and the class becomes a `CodedError` (FD-1578, NFR-499); the two FD-1651 broken-loop proofs and SL-1389's five owed red-first proofs are recorded (`FD-1982`); FD-1481's 15-digit echo is pinned. Red first; the red tests and the gate are recorded in `LG-1998`.
+
+(Minted 2026-11-04 from working id 8305, on the maintainer's GO "2026-11-03 16:28:44 GMT" and the lead's mint order, with the mint tool of record `mint-repoint.py` (sha256 `4d83681a`); ledger `LG-1998` (working id 8306); plan `PL-1984` (filed as working id 8302; its duplicate `PL 8302` removed at this mint, ruling (a) of to-lead "2026-11-04 07:39:25 GMT"); executed on branch `sl-8305-wk673-remediation`. Closed at the slice's merge by the closing acts, not here.)
+
 ### WK-674 — Deployment: environments, atomic switchover, rollback, shadow — **and the tenancy mechanics ADR-710 requires**
 
 ```yaml

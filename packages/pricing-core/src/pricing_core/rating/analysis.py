@@ -56,7 +56,7 @@ from pricing_core.rating.compile import ArtifactResolver, ResolvedArtifact, comp
 from pricing_core.rating.ladder import RUNG_ORDER
 from pricing_core.rating.runtime import CompiledBundle, load_bundle
 from pricing_core.rating.score import score_batch
-from pricing_core.safe_error import safe_error_text
+from pricing_core.safe_error import CodedError, safe_error_text
 
 __all__ = [
     "AttributionError",
@@ -518,9 +518,12 @@ _PIN_KINDS: Final[tuple[str, ...]] = (
 _ATTRIBUTION_FAILED: Final = "ATTRIBUTION_RECONCILIATION_FAILED"
 
 
-class AttributionError(ValueError):
+class AttributionError(CodedError):
     """A refusal of `derive_changes` or `attribute`, carrying the code the platform maps:
-    `VALIDATION_FAILED`, `BUNDLE_COMPILE_FAILED` or `ATTRIBUTION_RECONCILIATION_FAILED`."""
+    `VALIDATION_FAILED`, `BUNDLE_COMPILE_FAILED` or `ATTRIBUTION_RECONCILIATION_FAILED`.
+
+    A `CodedError` (NFR-499): its message is stored and logged by the allow-list, so a per-policy
+    refusal names no `quote_id` and no policy figure, only the derived change ids."""
 
     def __init__(self, code: str, message: str) -> None:
         super().__init__(message)
@@ -1006,20 +1009,39 @@ def _residual(total: int, isolated: Sequence[int]) -> int:
 
 
 def _reconcile(
-    label: str, parts: Sequence[int] | None, total: int, isolated: Sequence[int], residual: int
+    label: str,
+    parts: Sequence[int] | None,
+    total: int,
+    isolated: Sequence[int],
+    residual: int,
+    *,
+    figures: bool = True,
 ) -> None:
-    """FR-1397: the parts sum to the total, and the isolated figures plus the residual do too."""
+    """FR-1397: the parts sum to the total, and the isolated figures plus the residual do too.
+
+    `figures=False` is the per-policy call: its message names no policy figure (NFR-499, DP-4 (a));
+    the portfolio's aggregate figures name no policy and stay.
+    """
     if parts is not None and sum(parts) != total:
+        detail = (
+            f"sum to {sum(parts)} minor units, not the total change {total}"
+            if figures
+            else "do not sum to the total change"
+        )
         raise AttributionError(
             _ATTRIBUTION_FAILED,
-            f"attribution does not reconcile for {label}: the Shapley parts sum to "
-            f"{sum(parts)} minor units, not the total change {total}",
+            f"attribution does not reconcile for {label}: the Shapley parts {detail}",
         )
     if sum(isolated) + residual != total:
+        detail = (
+            f"sum to {sum(isolated) + residual} minor units, not the total change {total}"
+            if figures
+            else "do not sum to the total change"
+        )
         raise AttributionError(
             _ATTRIBUTION_FAILED,
             f"attribution does not reconcile for {label}: the isolated figures plus the "
-            f"residual sum to {sum(isolated) + residual} minor units, not the total change {total}",
+            f"residual {detail}",
         )
 
 
@@ -1138,8 +1160,8 @@ async def attribute(
                 ids = ", ".join(c.id for c in _members(groups, mask)) or "no changes"
                 raise AttributionError(
                     _ATTRIBUTION_FAILED,
-                    f"policy {q} is quoted in the baseline and the candidate but has no premium "
-                    f"under the subset bundle for changes [{ids}]",
+                    "one policy of the book is quoted in the baseline and the candidate but has "
+                    f"no premium under the subset bundle for changes [{ids}]",
                 )
 
     isolated_sum = [0] * k
@@ -1148,13 +1170,16 @@ async def attribute(
     part_sum = [0] * k
     baseline_total = total_change = 0
     reverse_masks = [full ^ ((1 << i) - 1) for i in range(k + 1)]  # the last k-i groups
+    per_policy = (
+        "one policy of the book (changes [" + ", ".join(c.id for c in _members(groups, full)) + "])"
+    )
     for q in compared:
         v = {mask: int(values[mask][q]["minor"]) for mask in masks}
         total = v[full] - v[0]
         isolated = [v[1 << i] - v[0] for i in range(k)]
         cumulative = [v[(1 << (i + 1)) - 1] - v[(1 << i) - 1] for i in range(k)]
         parts = _allocate(_shapley_numerators(v, k), k) if shapley else None
-        _reconcile(q, parts, total, isolated, _residual(total, isolated))
+        _reconcile(per_policy, parts, total, isolated, _residual(total, isolated), figures=False)
         baseline_total += v[0]
         total_change += total
         for i in range(k):
