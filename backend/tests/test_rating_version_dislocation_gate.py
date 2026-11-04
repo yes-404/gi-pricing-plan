@@ -654,7 +654,7 @@ async def test_fr224_threshold_ignores_environment_variables(
     """`RL-1264` DP-3 (b): the threshold is never read from Settings. With every `GIP_` variable
     a Settings field could map to set permissively, a version above the policy's threshold is
     still refused. Shown red on a gate that reads the threshold from the environment
-    (LG 8306, scratch-reverted)."""
+    (LG-1998, scratch-reverted)."""
     for name in (
         "GIP_APPROVAL_DEVIATION_THRESHOLD", "GIP_APPROXIMATION_DEVIATION",
         "GIP_APPROXIMATION_MAX_ABS_CHANGE_PCT", "GIP_MAX_ABS_CHANGE_PCT",
@@ -694,7 +694,7 @@ async def test_fr224_an_unset_threshold_is_governed_by_the_default(
     """RL-1504 item 7: an entry that leaves `approximation_deviation` unset is governed by
     {0.99, 10}, not refused and not ungated: 10.5 % is refused, 9.9 % accepted; a workspace
     entry of {0.99, 5} refuses 9.9 % too. Shown red on a gate reading an unset entry as 'no
-    gate' (LG 8306, scratch-reverted)."""
+    gate' (LG-1998, scratch-reverted)."""
     gate = await _gate(database, workspace_id)
     await _set_deviation(database, workspace_id, None)
     refused_id = await _approximation_candidate(gate)
@@ -730,7 +730,7 @@ async def test_an_empty_banded_set_has_null_quantiles_and_fr224_refuses(
 ) -> None:
     """Choice (3), gate half: a twin run whose banded set was empty carries six nulls; the gate
     refuses it, naming the quantile and that the run has no figure, and opens no request. Shown
-    red on a gate that reads null as 0 (LG 8306, scratch-reverted)."""
+    red on a gate that reads null as 0 (LG-1998, scratch-reverted)."""
     gate = await _gate(database, workspace_id)
     rv_id = await _approximation_candidate(gate)
     await _twin_run(gate, rv_id, _figure(None))

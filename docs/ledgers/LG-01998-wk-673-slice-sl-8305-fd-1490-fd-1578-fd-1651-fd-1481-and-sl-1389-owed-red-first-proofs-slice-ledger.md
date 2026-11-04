@@ -1,30 +1,30 @@
 ---
-id: LG-8306
+id: LG-1998
 family: ledger
-title: WK-673 slice SL-8305 — FD-1490, FD-1578, FD-1651's two proofs, FD-1481 and SL-1389's five owed red-first proofs (slice ledger)
+title: WK-673 slice SL-1997 — FD-1490, FD-1578, FD-1651's two proofs, FD-1481 and SL-1389's five owed red-first proofs (slice ledger)
 status: active                 # active → closed (§1.2a)
-created: 2026-11-04
+created: 2026-11-04   # drafted 2026-11-04 under working id 8306; minted as LG-1998
 owner: executor
 tree: a2679afe9e835d6c4d8027e60ed9a2420baeb5ed   # origin/draft/pl-wk673fix at the branch cut (origin/main a8ef6f19 an ancestor)
-slice: SL-8305
+slice: SL-1997
 phase: P2
 work: WK-673
-plans: [PL-8302]
+plans: [PL-1984]
 corrected_by: []
-relates: [FD-1490, FD-1578, FD-1651, FD-1481, PL-8302]
+relates: [FD-1490, FD-1578, FD-1651, FD-1481, PL-1984]
 ---
 
-# LG-8306 — WK-673 slice SL-8305: the S-b remediation row
+# LG-1998 — WK-673 slice SL-1997: the S-b remediation row
 
-**GO:** to-lead "2026-11-03 16:28:44 GMT" (Maintainer: GO for PL-8302): *"S-b = SL 8305 / LG 8306: FD-1490 (drop errors.py:323), FD-1578 (input-free AttributionError + CodedError), FD-1651's two proofs, candidate 1 (SL-1389's five proofs), FD-1481; full SOLO gate; merge by Mon 9."*
-**Correction recorded (lead, 2026-11-03):** PL-8302 Acceptance 9 and 10 say the item-13 OK for the assert changes was *given at the GO*. The 16:28:44 entry does not name it. The lead gave it afterwards, under seat-brief item 13: Acceptance 9's leak asserts and Acceptance 10's raise text, each asserting the NFR-499 defect it now stops asserting. It was then extended to all four leak asserts (below).
+**GO:** to-lead "2026-11-03 16:28:44 GMT" (Maintainer: GO for PL-8302, minted as PL-1984): *"S-b = SL-1997 / LG-1998: FD-1490 (drop errors.py:323), FD-1578 (input-free AttributionError + CodedError), FD-1651's two proofs, candidate 1 (SL-1389's five proofs), FD-1481; full SOLO gate; merge by Mon 9."*
+**Correction recorded (lead, 2026-11-03):** PL-1984 Acceptance 9 and 10 say the item-13 OK for the assert changes was *given at the GO*. The 16:28:44 entry does not name it. The lead gave it afterwards, under seat-brief item 13: Acceptance 9's leak asserts and Acceptance 10's raise text, each asserting the NFR-499 defect it now stops asserting. It was then extended to all four leak asserts (below).
 **MERGE-ACK:** (added at merge.)
 
 ## Tasks
 
 ### Scope
 
-PL-8302 "Row 2 — S-b (the rest)", Acceptance 7–13 (14–17 are gates). Write set as the row names it; no other file besides this ledger and the regenerated `docs/INDEX.md`. Requirements touched: FR-227 (item 7), FR-1397 and NFR-499 (items 8–10), FR-212 (item 13), FR-224 and FR-257 (the proofs, no code).
+PL-1984 "Row 2 — S-b (the rest)", Acceptance 7–13 (14–17 are gates). Write set as the row names it; no other file besides this ledger and the regenerated `docs/INDEX.md`. Requirements touched: FR-227 (item 7), FR-1397 and NFR-499 (items 8–10), FR-212 (item 13), FR-224 and FR-257 (the proofs, no code).
 
 **Plan defect found:** Acceptance 9 names two leak asserts "at `:631` and `:648`". The tree has **four**, at `test_rating_attribution.py:632`, `:649`, `:662` and `:884` (the plan's two are off by one line). The lead extended the OK to all four.
 
