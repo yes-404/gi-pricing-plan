@@ -42,7 +42,9 @@ PL-1984 "Row 2 — S-b (the rest)", Acceptance 7–13 (14–17 are gates). Write
 
 Owed: the full SOLO gate, both halves, in the slot the lead grants for the final head. Local: `ruff check` rc=0 and `mypy` rc=0 ("Success: no issues found in 251 source files", at `0cb69a0c`); `ruff check` rc=0 on each later touched file.
 
-### Audit
+#**Verdict line, 2026-11-04 07:45:28 GMT (executor, at the mint; the audit is the auditor's):** the SOLO gate at `07e62951` (on `bb9781a9`, the item-21 merge re-test) STANDS under item 31 — from-lead "2026-11-04 07:38:28 GMT" (pytest "13 failed, 7047 passed, 22 skipped, 5 xfailed" = the 13 FAILED lines in exactly the eight item-31 files; frontend all rc 0, vitest 919 of 919; demo designed stop 1587 s, dislocation #1 592 s) and to-lead "2026-11-04 07:39:25 GMT", which accepts it and rules (a) on PL-08302: it duplicated main's PL-1984 (8 lines, id tokens and the created line), so this mint `git rm`s it and re-points its citations. Merge 54 (`824a891d`, `data/expressions.py` and its two tests) does not overlap the slice's eight non-docs files, so the gate evidence carries. Minted as SL-1997 and LG-1998.
+
+## Audit
 
 (The auditor's.)
 

@@ -2,12 +2,12 @@
 id: FD-1982
 family: finding
 title: SL-1388 and SL-1389 closed with no slice audit, and SL-1389's red-first proofs are owed
-status: active
+status: closed
 created: 2026-11-03   # drafted 2026-11-03 under working id 8307
 owner: auditor
 tree: 55bddaf279fc73fd9b52f523fdea908d6c4aada3   # origin/main when read
 corrected_by: []
-relates: [WK-673, SL-1388, SL-1389, LG-1570, LG-1582, PL-1267, CR-1981, FD-1651]
+relates: [WK-673, SL-1388, SL-1389, LG-1570, LG-1582, PL-1267, CR-1981, FD-1651, SL-1997, LG-1998, PL-1984]
 ---
 
 # FD-1982 — SL-1388 and SL-1389 closed with no slice audit, and SL-1389's red-first proofs are owed
@@ -42,3 +42,5 @@ row 2, which carries the five owed proofs: the plan's "SL-1389's five owed red-f
 recorded (FD candidate 1)"); the finding closes when that slice's ledger quotes the red-first of
 each proof and the auditor's slice audit is filed for SL-1388 and SL-1389 or the gap is accepted
 by a dated line. Filed under working id 8307.
+
+***Resolved 2026-11-04*** — closed in place 2026-11-04 by the executor, as the closing act of the mint of SL-1997 (WK-673, LG-1998, PL-1984; this PR, its number and squash written at the merge's date-of-record), on the lead's brief under the GO "2026-11-03 16:28:44 GMT" (`to-lead.md`, a local channel file), row 2 of PL-1984 (S-b). Delivered remedy: the five owed red-first proofs of SL-1389 (`PL-1984` row 2) are recorded in LG-1998 and the "(OWED: scratch-reverted)" docstrings in `test_rating_version_dislocation_gate.py` are re-pointed to it. Against a baseline of 25 passed, each scratch-reverted proof fails: FR-257 limb (2) not called, 5 failed (`DID NOT RAISE PlatformError`, `KeyError: 'dislocation_run_id'`); `_approximation_gate` not called, 7 failed; the threshold read from `GIP_APPROXIMATION_MAX_ABS_CHANGE_PCT`, `test_fr224_threshold_ignores_environment_variables` red; an unset entry returning `None`, `test_fr224_an_unset_threshold_is_governed_by_the_default` red; a null observed read as 0, `test_an_empty_banded_set_has_null_quantiles_and_fr224_refuses` red. This discharges limb 2 of the finding as `PL-1984` row 2 names it. Limb 1, the missing slice audit for SL-1388 and SL-1389, is not delivered by this slice: it stays for the auditor's filing or a dated acceptance of the gap, and the lead gives the verdict on that. Gate evidence is in LG-1998: the SOLO gate at `07e62951` (pytest "13 failed, 7047 passed, 22 skipped, 5 xfailed" = the 13 item-31 docs-audit failures only; frontend all rc 0, vitest 919 of 919; demo designed stop 1587 s, dislocation #1 592 s), from-lead "2026-11-04 07:38:28 GMT", accepted under item 31 by to-lead "2026-11-04 07:39:25 GMT".

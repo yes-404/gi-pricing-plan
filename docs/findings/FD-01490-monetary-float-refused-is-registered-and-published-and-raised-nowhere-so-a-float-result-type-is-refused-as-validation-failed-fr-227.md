@@ -2,12 +2,12 @@
 id: FD-1490
 family: finding
 title: MONETARY_FLOAT_REFUSED is registered and published and raised nowhere, so a float result type is refused as VALIDATION_FAILED (FR-227, FR-245)
-status: active
+status: closed
 created: 2026-10-08            # original date 2026-10-05, set at the draft; minted 2026-10-08
 owner: auditor
 tree: caa4e411a9c07a389cf47092a923c7761b2b92dc
 corrected_by: []
-relates: [WK-673, FR-227, FR-245, FR-212]
+relates: [WK-673, FR-227, FR-245, FR-212, SL-1997, LG-1998, PL-1984]
 ---
 
 # FD-1490 — the code `03` §5.1 publishes for a float is never produced
@@ -87,3 +87,5 @@ Two ways to close it, and choosing one is the spec's: raise the code (a typed si
 `graph_validation_error`, with a red-first test), or remove it from `RATING_ERROR_CODES` and `03:929` and say
 `VALIDATION_FAILED` is the answer. Doing neither leaves a published code no client can receive. The FR-245
 expression clause needs its own check: a reproduction of a money-times-float expression is the first step.
+
+***Resolved 2026-11-04*** — closed in place 2026-11-04 by the executor, as the closing act of the mint of SL-1997 (WK-673, LG-1998, PL-1984; this PR, its number and squash written at the merge's date-of-record), on the lead's brief under the GO "2026-11-03 16:28:44 GMT" (`to-lead.md`, a local channel file), row 2 of PL-1984 (S-b). Delivered remedy: the second way the finding names, the registry entry is dropped. `MONETARY_FLOAT_REFUSED` is removed from `RATING_ERROR_CODES` (`backend/src/app/errors.py`, one line; FR-227, `RL-1958` item 1), so a float result type is answered `VALIDATION_FAILED` and no published code is left that no client can receive. Red first, in LG-1998: `test_errors.py` with `errors.py` at base `a2679afe` failed 1 of 16 (`assert 'MONETARY_FLOAT_REFUSED' not in frozenset({…})`), and with the fix passed 16 of 16; `git grep -n MONETARY_FLOAT_REFUSED -- ':!docs'` then finds only the guard test. Gate evidence is in LG-1998: the SOLO gate at `07e62951` (pytest "13 failed, 7047 passed, 22 skipped, 5 xfailed" = the 13 item-31 docs-audit failures only; frontend all rc 0, vitest 919 of 919; demo designed stop 1587 s, dislocation #1 592 s), from-lead "2026-11-04 07:38:28 GMT", accepted under item 31 by to-lead "2026-11-04 07:39:25 GMT".
