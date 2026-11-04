@@ -2,12 +2,12 @@
 id: FD-1768
 family: finding
 title: Attribution words a purposes-only change to a sub-graph mount as "mount ports re-mapped"
-status: active
+status: closed
 created: 2026-10-17
 owner: auditor
 tree: cf509df89dbebff329bb6b319bcc9bcd2a2c2352
 corrected_by: []
-relates: [WK-1250, SL-1341, SL-1696, FD-1660]
+relates: [WK-1250, SL-1341, SL-1696, FD-1660, SL-1989, LG-1990, PL-1991]
 ---
 
 # FD-1768 — Attribution words a purposes-only change to a sub-graph mount as "mount ports re-mapped"
@@ -42,3 +42,5 @@ platform/change_summary.py:145` reads it), so the defect is live when SL-1341 me
 Fix with an owner: WK-1250, in a follow-up slice after SL-1341 merges: the `before == after`
 branch words ports and purposes separately by `ports_changed` / `purposes_changed`, with a test
 that changes `purposes` alone. The event that next discharges it: the merge of that slice.
+
+***Resolved 2026-11-04*** — closed in place 2026-11-04 by the executor, as the closing act of the mint of SL-1989 (WK-1250, LG-1990, PL-1991; this PR, its number and squash written at the merge's date-of-record), on the lead's brief under the GO "2026-11-03 17:30:53 GMT" (`to-lead.md`, a local channel file). Delivered remedy: the mount loop of `packages/pricing-core/src/pricing_core/rating/analysis.py` words the `before == after` branch by its flags, "mount ports re-mapped" when `ports_changed`, otherwise "mount purposes changed", with "; purposes changed" appended when both changed, and the re-point branch appends "; purposes changed" when purposes also changed (FR-1399, DP-5, DP-6; the spec sentence carries a dated amendment, DP-7 (a)). Red first: `test_mount_purposes_changed_forms` failed on the description (actual "mount ports re-mapped", expected "mount purposes changed") before the fix; `test_mount_purposes_alone_is_one_structural_mount_change_with_before_equal_after` verifies at base that `rating.py` already reports a purposes-only change as one mount change, so `rating.py` is not edited. Gate evidence is in LG-1990: the full gate at `322b20ec` (python half: 13 failed, exactly the eight docs-audit files of the common seat brief's item 31, 22 skipped = baseline; frontend lint, type-check, test and build all rc 0, vitest 905 of 905; demo designed stop, dislocation #1 586 s).

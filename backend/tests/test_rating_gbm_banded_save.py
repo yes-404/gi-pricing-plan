@@ -57,7 +57,10 @@ def _gbm_row(factors: tuple[Factor, ...]) -> Any:
     )
     return SimpleNamespace(
         spec=spec.model_dump(mode="json"),
-        fit_result={"feature_order": [factor.slug for factor in factors]},
+        fit_result={
+            "model_type": "xgboost",
+            "feature_order": [factor.slug for factor in factors],
+        },
     )
 
 
@@ -69,7 +72,13 @@ def _glm_row(factors: tuple[Factor, ...]) -> Any:
     )
     return SimpleNamespace(
         spec=spec.model_dump(mode="json"),
-        fit_result={"feature_order": [factor.slug for factor in factors]},
+        fit_result={
+            "model_type": "glm",
+            "coefficients": [
+                {"term": "intercept"},
+                *({"term": factor.slug} for factor in factors),
+            ],
+        },
     )
 
 

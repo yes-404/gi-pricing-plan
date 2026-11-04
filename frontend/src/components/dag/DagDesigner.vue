@@ -229,6 +229,7 @@ function replaceContract(contract: RatingAlgorithmDraft["input_contract"]): void
           :nodes-connectable="false"
           :elements-selectable="false"
           :nodes-draggable="false"
+          :nodes-focusable="false"
         >
           <template #node-step="nodeProps">
             <StepNode :data="nodeProps.data" />

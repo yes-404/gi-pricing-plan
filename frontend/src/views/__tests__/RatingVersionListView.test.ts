@@ -332,3 +332,15 @@ describe("the rating version list view (FR-1903)", () => {
     expect(screen.queryByRole("row")).not.toBeInTheDocument();
   });
 });
+
+describe("the rating version list view: the shown count is announced (FD-1974 L-8)", () => {
+  it("keeps a status region with the number of versions shown, and updates it on filtering", async () => {
+    stubFetch({});
+    render(RatingVersionListView, mounted);
+    await screen.findAllByRole("heading", { level: 2 });
+    expect(screen.getByText("Showing 3 rating versions.").closest('[role="status"]')).not.toBeNull();
+
+    await fireEvent.update(screen.getByLabelText("Status"), "draft");
+    expect(screen.getByText("Showing 1 rating version.").closest('[role="status"]')).not.toBeNull();
+  });
+});

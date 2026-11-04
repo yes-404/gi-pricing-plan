@@ -219,7 +219,13 @@ def _factor(slug: str) -> Factor:
 
 def _pin(*slugs: str) -> ResolvedArtifact:
     return ResolvedArtifact(
-        status="approved", payload={"fit_result": {"feature_order": []}},
+        status="approved",
+        payload={
+            "fit_result": {
+                "model_type": "glm",
+                "coefficients": [{"term": "intercept"}, *({"term": slug} for slug in slugs)],
+            }
+        },
         factors=tuple(_factor(slug) for slug in slugs),
     )
 

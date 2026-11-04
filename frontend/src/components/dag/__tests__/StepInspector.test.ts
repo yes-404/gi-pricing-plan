@@ -169,7 +169,9 @@ describe("the step inspector, one section per step type", () => {
     render(StepInspector, { props: { ...base, step: constraint } });
     const field = screen.getByLabelText("Reason code");
     expect(field).toHaveAttribute("aria-invalid", "true");
-    expect(field).toHaveAttribute("aria-describedby", "si-problems");
+    expect((field.getAttribute("aria-describedby") ?? "").split(/\s+/)).toEqual(
+      expect.arrayContaining(["si-reason-help", "si-problems"]),
+    );
     expect(screen.getByLabelText("Condition")).not.toHaveAttribute("aria-invalid");
   });
 });

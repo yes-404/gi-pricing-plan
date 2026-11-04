@@ -2,7 +2,7 @@
 id: FD-1975
 family: finding
 title: the Start MinIO guard pins the image config Id, which the containerd store reports as the manifest digest, so every python.yml run fails
-status: active
+status: closed
 created: 2026-11-03               # drafted 2026-11-03 under working id 8293
 owner: auditor                  # DRAFT by the executor for the auditor's sign-off at the slice audit (document-ids §1.6)
 tree: a8ef6f19c0be1142b0ac9dea88086f1ce6f95cbe   # origin/main when read
@@ -48,3 +48,6 @@ Open, owner WK-1178, HIGH, `fix before close with an owner`: SL-1976 discharges 
 SL-1976, `python.yml` only: check the tarball sha256 before `docker load`; accept the loaded Id if it equals
 either derived digest; otherwise fail naming all three. Discharged when that slice merges and its own
 `python.yml` run is green on the minio stage and the full suite.
+
+
+***Resolved 2026-11-03*** — closed in place 2026-11-03 by the auditor, on the maintainer's entry "2026-11-03 17:29:18 GMT" (`to-lead.md`, a local channel file): fixed by SL-1976 (WK-1178, LG-1977), PR #1417, squash `5a9e47c5d72bb9e7e03438b93fbf269c8015322c` (merge 45). Close evidence: main's push `python` run **41679694232** at `5a9e47c5` completed `success` (job `ruff · mypy · import-linter · pytest` success; re-read by the auditor with `gh run view 41679694232 --json conclusion,headSha`: `success`, `5a9e47c5d72bb9e7e03438b93fbf269c8015322c`), the first green on `main` since 15:32 GMT; the red window ran 15:32 to 17:29 GMT (merge 43 to merge 45). The fix at `55bddaf2`: `.github/workflows/python.yml` `Start MinIO` checks the tarball sha256 `f68ed783…` (:257-258) before `docker load` and accepts the loaded Id if it equals either the config digest `69b2ec20…` or the manifest digest `a16cad48…` (:277-278). *Auditor's sign-off (front matter `owner: auditor`): the essay's finding, evidence and fix are confirmed against `python.yml` at `55bddaf2` and the run above; the asset's digests were re-derived by the executor and are not re-derived here. Date of record: 2026-11-03 — #1417, squash 5a9e47c5.*

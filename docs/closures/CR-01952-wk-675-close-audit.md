@@ -602,3 +602,7 @@ Appended in the lane-C docs PR by the auditor (`aud-tue27`), on the lead's adden
 | (5) | A fresh full gate at this record's head | **discharged by the END row in §5e** (gate-1b, `ffca3a45`, `rc=1`, STANDS under 1(f), to-lead "2026-10-26 12:45:15 GMT"). Not a gate of the lane-C branch, which has its own cover under DP-T27-6 | §5e |
 
 The Verdict above is unchanged by this addendum: the close is the maintainer's dated line, and WK-675's row stays "close audit filed (CR-1952), acceptance owed". The user's acceptance of WK-675 reads FD-1959 and OQ-1960.
+
+**Acceptance (appended 2026-11-03 by the auditor, on the lead's instruction; the record above is unchanged).** The user accepted WK-675 at 15:51 GMT ("accept WK-675"); the maintainer's entry "2026-11-03 15:51:08 GMT" (`to-lead.md`) gives the dated line, verbatim:
+
+> **WK-675 accepted closed on 2026-11-03, by the user, on CR-1952** (Work close audit, audited at 1e0a8abb, filed #1404 447bcfd6), its acceptance blockers all on main: lane-C docs PR #1404 (447bcfd6, FD-1652 closed there); FD-1585 #1403 (18728e68, SL-1956); FD-1959 #1411 (d549b8d2, SL-1971 / RL-1973). Carried: FD-1974 (LOW, ten a11y lows, due Wed 18 Nov 2026 — re-dated with the exit demo, entry 2026-11-03 15:38:58 GMT), owner WK-1178. Acceptance given by the user at 15:51 GMT, to-lead entry "2026-11-03 15:51:08 GMT".

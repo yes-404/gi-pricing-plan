@@ -61,7 +61,7 @@ from model_schema.modelling import (
 from model_schema.perils import LargeLossKind, PerilMethod, PerilStructure
 from model_schema.rating import RatingAlgorithm, RatingModelCallStep
 from pricing_core.modelling.errors import ModellingError
-from pricing_core.modelling.factors import required_model_inputs
+from pricing_core.modelling.factors import consumed_features, required_model_inputs
 from pricing_core.modelling.gbm import GbmFitError, load_gbm_booster, predict_gbm
 from pricing_core.modelling.predict import (
     PredictionError,
@@ -615,10 +615,10 @@ def _required_slugs(
     for ref in _step_model_refs(step, payloads):
         if ref not in payloads:
             continue
-        fit_result = payloads[ref].get("fit_result") or {}
         scorer = glm_scorers.get(ref)
         factors = scorer.factors if scorer is not None else ()
-        required.update(required_model_inputs(factors, fit_result.get("feature_order", ())))
+        order = consumed_features(payloads[ref].get("fit_result"))
+        required.update(required_model_inputs(factors, order))
     return frozenset(required)
 
 

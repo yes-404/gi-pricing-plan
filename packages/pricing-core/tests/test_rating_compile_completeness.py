@@ -54,7 +54,18 @@ def _glm_world(feature_map: dict[str, str]) -> FakeResolver:
     payloads: dict[str, Any] = {
         "rating_algorithm:motor-gb@14": _algorithm(feature_map),
         "rate_table:motor-expense@3": {"rateable": True, "rows": []},
-        "model:motor-ad-frequency@7": {"model_type": "glm", "status": "approved"},
+        "model:motor-ad-frequency@7": {
+            "model_type": "glm",
+            "status": "approved",
+            "fit_result": {
+                "model_type": "glm",
+                "coefficients": [
+                    {"term": "intercept"},
+                    {"term": "driver_age_band[a]"},
+                    {"term": "area_group[b]"},
+                ],
+            },
+        },
         "reference_table:ons-postcode-directory@7": {"rows": []},
     }
     return _FactorsResolver(
