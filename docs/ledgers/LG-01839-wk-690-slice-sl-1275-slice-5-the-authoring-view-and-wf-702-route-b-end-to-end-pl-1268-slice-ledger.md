@@ -79,3 +79,7 @@ Reviewed `ObjectiveEditorView.vue` and `ObjectiveLossCurve.vue`; no screen reade
 ## PRs
 
 None opened (the lead opens the PR after the gate).
+
+## Pre-registration (dated line 2026-11-04, batch 8)
+
+*(2026-11-04, on to-lead "2026-11-04 09:51:05 GMT" (hashes of record) and "2026-11-04 10:00:29 GMT" (the pre-registration rides the docs PR), driver scope per "2026-11-04 09:04:20 GMT" Q4 and Q5.)* Driver B, `~/gi-pricing-plan.local/scratch/nfr-bench-1/bench-b-pl1665-57.py`, sha256 `c68de47cb777b79c6ee3be7265cdd0674ca9aa5b554284ca518ab3b524eb6cd1`, for PL-1665 5.7 / FR-1840 3c-3d, to run at nfr-bench-1 S1 Thu 5 Nov 2026. The 3c verdict takes the DP-A2 stop-rule form (09:04:20 Q4: "moderate rate" = 25 rps; "unaffected" = the with-previews p99 within the alone run's own range across N = 3 runs). NFR-476's reading also lands here Thursday as an addendum (09:04:20 Q5). **Reading owed.**

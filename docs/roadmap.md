@@ -697,7 +697,7 @@ owner: maintainer
 phase: P2
 ```
 
-From “Workstreams” (line 383): Dislocation with attribution | FR-263, FR-264, FR-265, FR-266, FR-224, FR-257 limb (2), `06` FR-364, FR-231 (F-W10-2), NFR-495, NFR-496 (applied to this Work's artifacts) — **close audit filed (CR-1981), acceptance owed** *(dated 2026-11-03 by the auditor, on the maintainer's entry "2026-11-03 15:36:59 GMT" item (5) in `to-lead.md`; audited at `c807a59d`.)*
+From “Workstreams” (line 383): Dislocation with attribution | FR-263, FR-264, FR-265, FR-266, FR-224, FR-257 limb (2), `06` FR-364, FR-231 (F-W10-2), NFR-495, NFR-496 (applied to this Work's artifacts) — **close audit filed (CR-1981), acceptance owed** *(dated 2026-11-03 by the auditor, on the maintainer's entry "2026-11-03 15:36:59 GMT" item (5) in `to-lead.md`; audited at `c807a59d`.)* — **fresh close audit filed (CR-2000, re-testing CR-1981), acceptance owed** *(dated 2026-11-04 by the auditor, on the maintainer's entry "2026-11-04 08:46:25 GMT" in `to-lead.md`; audited at `db92a7bc`.)*
 
 *(Amended 2026-09-30 by the lead, on `PL-1267` §Activation item 2 and the maintainer's entry "2026-09-30 02:33:58 BST — MERGE-ACK #844 and ACCEPTANCE of PL-1267 (WK-673 map plan)", whose carry-forward reads "the lead's next roadmap PR adds the plan's ids to `### WK-673`'s "From Workstreams" line".)* FR-224, FR-257 limb (2), `06` FR-364 and FR-231 (finding F-W10-2, the exposure-weight limb only) are added to WK-673's scope, as `PL-1267` proposes. NFR-495 and NFR-496, applied to this Work's artifacts, are added from the same entry's acceptance line, whose Scope clause reads "takes FR-224, FR-257 limb (2), `06` FR-364, FR-231 (the F-W10-2 weight limb) and NFR-495/NFR-496 (applied to this Work's artifacts) from RL-1264 and CR-1212". The line named FR-263 to FR-266 only.
 
@@ -1028,7 +1028,7 @@ The fix RL-1707 (minted from working id 9996; `PL-1677`'s DP-P1, ruled (a′)) o
 id: SL-1985
 family: slice
 title: WK-673 fix slice — FD-1495, a pinned model's consumed Factors derived per arm and refused when empty, CONTROL_FACTOR_IN_RATEABLE_PATH on a model, a peril component and an offset model
-status: active                    # draft → active → closed (§1.2a)
+status: closed                    # draft → active → closed (§1.2a)
 created: 2026-11-03   # drafted 2026-11-03 under working id 8303; minted as SL-1985
 owner: lead
 tree: 9a61d908755c5b2ebc1077cd81f8cc1d6ccc1520
@@ -1048,7 +1048,7 @@ Row 1 (S-a) of `PL-1984`: FD-1495, the GLM arm of the FR-240 control-factor chec
 id: SL-1997
 family: slice
 title: WK-673 fix slice — FD-1490 (registry entry dropped), FD-1578 (input-free AttributionError, a CodedError), FD-1651's two broken-loop proofs, FD-1481's 15-digit echo, and SL-1389's five owed red-first proofs
-status: active                    # draft → active → closed (§1.2a)
+status: closed                    # draft → active → closed (§1.2a)
 created: 2026-11-04   # drafted 2026-11-04 under working id 8305; minted as SL-1997
 owner: lead
 tree: 012ec9fbfb42313a7df8df601e7d8abda0989a16
@@ -1353,7 +1353,7 @@ PL-1688 row 2: the compose `beat` scheduler service that moves a Job out of the 
 id: SL-1992
 family: slice
 title: WK-674 slice — FD-1823's reconcile: the deployment switch loads the latest committed Deployment periodically and on reconnect, and discovers Environments created after start (PL-1688 row 3), red first
-status: active                    # draft → active → closed (§1.2a)
+status: closed                    # draft → active → closed (§1.2a)
 created: 2026-11-03
 owner: lead
 tree: 92327cd03c4b370c0cc1126bc26f358f3b940538
@@ -1972,7 +1972,7 @@ The fix row of DP-W-1 (a), adopted by the lead (from-lead "2026-10-11 11:20:43 B
 id: SL-1994
 family: slice
 title: WK-690 fix row — FD-1751 and FD-1842 fixed before close
-status: active                    # draft → active → closed | retired (§1.2a)
+status: closed                    # draft → active → closed (§1.2a)
 created: 2026-11-03               # drafted 2026-11-03 under working id 8299
 owner: planner                   # cut by the planner (draft); lead dispatches (active)
 tree: 0493e5e1ffe7593088a150d9ba63fcebcc8d6a98
@@ -3460,7 +3460,7 @@ The `.github/workflows/python.yml` Start MinIO step checks the release asset's s
 id: SL-1987
 family: slice
 title: WK-1178 slice — FD-1974's ten carried a11y lows (NFR-463) on the WK-675 surfaces, red first
-status: active                    # draft → active → closed | retired (§1.2a)
+status: closed                    # draft → active → closed (§1.2a)
 created: 2026-11-03
 owner: lead
 tree: a966ed45933831ec1706678b63d8fa19141c8e2b
@@ -3499,6 +3499,8 @@ Set `active` 2026-09-30 on the maintainer's entry "2026-09-30 22:33:30 BST — D
 *Dated 2026-09-30, on the maintainer's entry "2026-09-30 22:33:30 BST", Decision 2: `PL-1254` goes `active` (a status flip), because every blocking decision point now has a resolver. DP-1, DP-3 and DP-4 are resolved by `RL-1309`. DP-2 is resolved by `RL-1344`, minted in mint batch 12 (#1022, 36b2a121). The frozen plan's resolver column is not edited; this line records the resolvers (`PL-1254` Activation step 1). `PL-1325` goes `active` in the same PR, because its prerequisite 2 ("PL-1254 `active`, and WK-1250's `SL-` rows cut") holds at merge.*
 
 **Close audit filed (CR-1979), acceptance owed.** *(Dated line, 2026-11-03, the auditor aud-wk1250, on the lead's brief for the G1 close schedule, to-lead "2026-11-03 15:36:59 GMT" item (5).)* The Work stays `active`; the close is the user's dated acceptance line.
+
+**Fresh close audit filed (CR-1999), acceptance owed.** *(Dated line, 2026-11-04, the auditor aud-wk1250b, on the maintainer's ruling in to-lead "2026-11-04 08:46:25 GMT"; it re-tests CR-1979.)* The Work stays `active`; the close is the user's dated acceptance line.
 
 #### SL-1339 — Slice 1: the sub-graph as a stored, versioned artifact (FR-217's artifact limb)
 
@@ -3570,7 +3572,7 @@ relates: [PL-1254]
 id: SL-1989
 family: slice
 title: WK-1250 slice — FD-1768's fix: a purposes-only mount change is worded "mount purposes changed" (FR-1399)
-status: active                    # draft → active → closed | retired (§1.2a)
+status: closed                    # draft → active → closed (§1.2a)
 created: 2026-11-04
 owner: lead
 tree: 503c620f19660c20e34307d268178822cdce379a

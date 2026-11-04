@@ -2,7 +2,7 @@
 id: LG-1995
 family: ledger
 title: WK-690 slice SL-1994 — FD-1842, the FR-145 bound before the recursive structure walk, red first (slice ledger)
-status: active                 # active → closed (§1.2a)
+status: closed                 # active → closed (§1.2a)
 created: 2026-11-03               # drafted 2026-11-03 under working id 8300
 owner: executor
 tree: a8ef6f19c0be1142b0ac9dea88086f1ce6f95cbe   # origin/main at the branch cut (base 7db485bf)
@@ -17,7 +17,7 @@ relates: [FD-1842, PL-1996]
 # LG-1995 — WK-690 slice SL-1994: FD-1842, the bound before the structure walk
 
 **GO:** to-lead "2026-11-03 16:13:51 GMT": option (ii), SL-1994 = FD-1842 alone; DP-8301-1 (a); DP-8301-2 (a); full SOLO gate; merge by Fri 6 Nov 2026.
-**MERGE-ACK:** (added at merge.)
+**MERGE-ACK:** ~~(added at merge.)~~ *(filled 2026-11-04, docs batch 8, by the auditor, on to-lead "2026-11-04 09:57:14 GMT" and "10:00:29 GMT" closing acts)* to-lead "2026-11-04 06:20:47 GMT" — Maintainer: MERGE-ACK #1425 (SL-1994; head 7966fe1c1f36e4330d3282226db83a8305e22300, expected squash tree 5282fbda133a7fad2212c8cd46ccb8bd9bef69c7). CI by id on that head: python 41781425247, docs 41781425195, history-policy 41781425185 (all success).
 
 ## Tasks
 
@@ -62,7 +62,9 @@ DB-free check for the `test_expression_limits.py` run, quoted: `grep -n -i "post
 
 ### Audit
 
-(The auditor's.)
+~~(The auditor's.)~~
+
+*(Dated line 2026-11-04, docs batch 8, by the auditor.)* The slice audit is WK-690's fresh close audit (Fri 6 Nov 2026), which names this slice, by route (a) of to-lead "2026-11-04 09:57:14 GMT" — the gap is accepted by that dated line, the audit not yet written. The gap is accepted by that dated line; this record stands in the slice audit's place for the two-way ledger check, the build log and the gate of record above being the executor's record.
 
 ### Build log
 
@@ -72,4 +74,8 @@ DB-free check for the `test_expression_limits.py` run, quoted: `grep -n -i "post
 
 ## PRs
 
-(Added at the PR.)
+~~(Added at the PR.)~~
+
+#1425, squash commit 824a891da8b421d8a0fbe9430934aff8ecd4d574 (tree 5282fbda133a7fad2212c8cd46ccb8bd9bef69c7), merged 2026-11-04T06:21:10Z; on main. Filled 2026-11-04 in docs batch 8.
+
+(Closed 2026-11-04 by the auditor in docs batch 8, on to-lead "2026-11-04 09:57:14 GMT" and "2026-11-04 10:00:29 GMT" (the six-slice closing acts): SL-1994 merged as #1425, squash commit 824a891da8b421d8a0fbe9430934aff8ecd4d574 on main, tree 5282fbda133a7fad2212c8cd46ccb8bd9bef69c7.)
