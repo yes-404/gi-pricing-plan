@@ -96,6 +96,8 @@ FR-294 was not run (a Phase 4 id, named only to exclude it).
 
 *(Dated line 2026-11-04, batch 8, on to-lead "2026-11-04 09:57:14 GMT", whose scope-audit paragraph accepts the evidence and asks the verbatim refusal in this build log.)* The refusal, verbatim: "`run-heavy.sh --light` refuses anything but `audit-docs.py` and `doc-index.py` (rc 78, header line 18)". The scope-audit runs above then ran directly, niced, read-only; that was a bypass of the refusal, not a route the tool allows, and the process row is in `docs/process/process-backlog.md` (batch 8).
 
+*(Dated line 2026-11-04, batch 8 build-log note, on to-lead "2026-11-04 10:16:30 GMT" ruling (a).)* Unasked edit, kept: in the docs-batch-8 WF-699 E2 correction (commit `ec4c8db2`) the auditor also added `364` to the row's spec-citation cell (`06` FR-352/363/364); the brief asked for the dated correction line only. The maintainer's 10:16:30 ruling keeps it.
+
 **Endpoints axis.** `scope-audit.py RATE --endpoints`: "declared : 45 / published : 45 (100%) /
 every declared endpoint is published in the contract"; rc 1 from the whole-module requirements
 half (FR-1186, FR-1903, NFR-492, NFR-493, NFR-1443; none WK-1250's).
