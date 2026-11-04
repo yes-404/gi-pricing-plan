@@ -3,7 +3,7 @@ id: PL-1735
 family: plan
 kind: map
 title: WK-1178 — the P2 NFR measurement sweep (NFR-467, NFR-468, NFR-470, NFR-485, NFR-1443 measured DIAGNOSTIC on the shared VM with pre-registered reading rules; NFR-472's red-first test): a dated Work-plan delta
-status: draft                   # draft → active → superseded | retired (§1.2a)
+status: active                  # draft → active → superseded | retired (§1.2a)
 created: 2026-10-16 # original date 2026-10-14, set at the draft; minted 2026-10-16
 owner: planner
 tree: 8eaf6d5f9cd4204e1e077b44069d4afd395f1461
