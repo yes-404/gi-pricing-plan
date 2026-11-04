@@ -81,6 +81,8 @@ At the first red attempt (head 139899bd tests) R1.c was reported only as the lif
 
 (the auditor's)
 
+**Gate verdict (the executor's record, 2026-11-04; the audit is the auditor's):** the gate STANDS under the common seat brief's item 31 (the lead's "2026-11-04 03:14:50 GMT"), on two evidence entries: from-lead "2026-11-04 03:07:04 GMT" (the SOLO gate at `d290abc9`: pytest 14 failed, 7031 passed, 22 skipped = the 13 item-31 docs-audit failures plus the NFR-499 census red; frontend all rc 0, vitest 905 of 905; demo designed stop 1688 s, dislocation #1 609 s; window 01:10:27 to 03:06:15 UTC) and from-lead "2026-11-04 03:14:22 GMT" (the fix `30de1864` with this ledger at `29264dcf`: window 03:11:26 to 03:12:58 UTC, run-small 28 plus 13 passed, 0 failed). The census rows are ruling (a) of to-lead "2026-11-04 03:09:02 GMT": three `_SINKS` rows in `backend/tests/test_error_sinks.py` for the reconcile loop's own sinks, test file only, `deployment_switch.py` untouched.
+
 ### Build log
 
 - 2026-11-03 f83dffd3 — reds only (T1).
