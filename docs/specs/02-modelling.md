@@ -1037,6 +1037,7 @@ Rules enforced by the parser (FR-145):
   loops, or assignment. Parsing is a Python `ast` walk against an allow-list of node types;
   `eval` is never called on user input.
 - AST node count ≤ 200 (configurable); nesting depth ≤ 20.
+  *(Clarified 2026-11-03, SL-1994 (WK-690), FD-1842, on the maintainer's (by delegation) entry "2026-11-03 16:13:51 GMT": both limits are checked **before** the recursive structure walk, by an iterative count, so an expression over either bound is refused by its bound in every profile and can never exhaust the stack. On `POST /custom-objectives` it answers 422 `OBJECTIVE_GRAMMAR_VIOLATION` (FR-150), on `POST /factors` 422 `VALIDATION_FAILED` on `expression` (FR-95); no new error code.)*
 - Division by a sub-expression that can be zero over the declared domain of `y`/`f` is a
   certification failure, not a runtime surprise.
 

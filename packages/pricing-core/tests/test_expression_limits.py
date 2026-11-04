@@ -8,6 +8,9 @@ figures below are premise h's, from the spike at fb90d381.
 
 from __future__ import annotations
 
+import sys
+from collections.abc import Iterator
+
 import pytest
 
 from pricing_core.data.expressions import (
@@ -83,3 +86,68 @@ def test_the_limits_are_configurable() -> None:
     _parse("x + x", GrammarProfile.RECIPE, limits=small)  # 3 nodes, depth 2
     with pytest.raises(ExpressionError, match="5 nodes; the limit is 3"):
         _parse("x + x + x", GrammarProfile.RECIPE, limits=small)
+
+
+# --- FD-1842: the bound runs before the recursive structure walk (SL-1994) ---------------
+
+_STRICT_PROFILES = [GrammarProfile.OBJECTIVE, GrammarProfile.FACTOR]
+_SYMBOLS = frozenset({"x"})
+
+
+@pytest.fixture
+def lowered_recursion_limit() -> Iterator[None]:
+    """Leave 70 frames of headroom above the frame this test runs in, then restore.
+
+    A 99-deep unary chain parses (`ast.parse` is not what this limit stops) but a recursive
+    walk needs 100 frames: the same `RecursionError` a 2000-character loss raises at the default
+    limit, made deterministic and cheap.
+    """
+    saved = sys.getrecursionlimit()
+    frame, depth = sys._getframe(), 0
+    while frame is not None:
+        frame, depth = frame.f_back, depth + 1
+    sys.setrecursionlimit(depth + 70)
+    try:
+        yield
+    finally:
+        sys.setrecursionlimit(saved)
+
+
+@pytest.mark.req("FR-145")
+@pytest.mark.parametrize("profile", _STRICT_PROFILES)
+def test_an_over_depth_chain_is_refused_by_its_bound_not_by_the_stack(
+    profile: GrammarProfile, lowered_recursion_limit: None
+) -> None:
+    with pytest.raises(ExpressionError, match="depth 100; the limit is 20"):
+        parse_expression("-" * 99 + "x", profile, symbols=_SYMBOLS)
+
+
+@pytest.mark.req("FR-145")
+@pytest.mark.parametrize("profile", _STRICT_PROFILES)
+def test_a_2000_character_unary_chain_is_refused_by_its_bound(profile: GrammarProfile) -> None:
+    with pytest.raises(ExpressionError, match="2000 nodes; the limit is 200"):
+        parse_expression("-" * 1999 + "x", profile, symbols=_SYMBOLS)
+
+
+@pytest.mark.req("FR-145")
+@pytest.mark.parametrize("profile", _STRICT_PROFILES)
+def test_a_long_left_nested_sum_is_refused_by_its_node_bound(profile: GrammarProfile) -> None:
+    with pytest.raises(ExpressionError, match="1999 nodes; the limit is 200"):
+        parse_expression("x+" * 999 + "x", profile, symbols=_SYMBOLS)
+
+
+@pytest.mark.req("FR-145")
+@pytest.mark.parametrize("profile", _STRICT_PROFILES)
+def test_the_structure_walk_is_not_entered_for_an_over_bound_expression(
+    profile: GrammarProfile, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from pricing_core.data import expressions
+
+    def entered(*args: object, **kwargs: object) -> None:
+        raise AssertionError("_check_structure ran before the FR-145 bound refused")
+
+    monkeypatch.setattr(expressions, "_check_structure", entered)
+    with pytest.raises(ExpressionError, match="depth 21; the limit is 20"):
+        parse_expression(_nested_abs(20), profile, symbols=_SYMBOLS)
+    with pytest.raises(ExpressionError, match="201 nodes; the limit is 200"):
+        parse_expression(_min_of(199), profile, symbols=_SYMBOLS)
