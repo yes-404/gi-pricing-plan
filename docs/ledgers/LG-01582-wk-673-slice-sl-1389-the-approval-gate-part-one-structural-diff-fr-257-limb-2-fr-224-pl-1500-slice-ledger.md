@@ -109,3 +109,9 @@ The first DB-backed run of S5's tests (gate-1, 06:06:13–06:08:15 UTC, load1 0.
 ## PRs
 
 None yet. The PR is not opened during the authoring phase.
+
+## Addendum, 2026-11-04 (docs batch 8) — row 16's OWED discharged
+
+*(By the auditor, appended; the earlier text, including the row 16 OWED line at `:84`, is not edited.)* Row 16: the observed `abs_change_pct_quantiles` of a freMTPL2 Dislocation Run (RL-1504 DP-S5-2 condition (ii)), read in the single-tenant window of 2026-11-04 10:03:17 to 10:33:12Z by exec-quant (guards exact at START and END; the template untouched), from the stored `dislocation_runs.run->'abs_change_pct_quantiles'` of the WF-699 journey via `demo.py` (the absolute % change per policy, nearest-rank): `{"0.5": "200.000000", "0.9": "200.032521", "0.95": "200.161813", "0.99": "260.007594", "0.999": "260.105541", "1": "350.190115"}`. Two runs with identical quantiles: run `01a1a60f-59bd-731b-97a1-7636281319be` (10:16:26Z, the whole fork, 18 derived changes) and run `01a1a61d-ba01-72b4-a75f-631b75307226` (10:32:08Z, the D7 run). Baseline `rating_version:fremtpl2-demo@1` against candidate `fremtpl2-wf699@3`; `new_business`; as_at 2026-10-01; `mover_threshold_pct` 10; segments `[area]`. Sample: 20,000 policies of the freMTPL2 book (`policy_count` 19985). Tree: `main` db92a7bc, tree `ede3bf38`. Source: from-lead-2026-10-09.md "2026-11-04 10:34:10 GMT" (a local channel file), under the maintainer's ruling in to-lead "2026-11-04 10:00:29 GMT" (BLOCKER (2)).
+
+**Re-read of FR-224's default `{0.99, 10}`: STANDS, not falsified and not tested.** This run is a deliberate rate-change fork (p99 = 260 %), not an approximation-against-exact surrogate pair, so it neither confirms nor refutes the surrogate assumptions of `RL-1504` item 3; DP-S5-2 (ii) asks only that the quantiles be reported. The maintainer decides whether more is wanted (an OQ, not a change).
