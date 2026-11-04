@@ -43,7 +43,7 @@ named three owed items. Each, re-tested at `db92a7bc`:
 | 1a | *(new, from re-testing 1)* SL-1989's slice audit and closing acts | — | `LG-1990` (`docs/ledgers/LG-01990-…md`): `status: active` (`:5`); "## Audit" holds only "Written by the auditor." (`:92-94`); "**MERGE-ACK:** not yet given." (`:22`) although the ACK is the entry "2026-11-04 01:56:03 GMT"; "## PRs" reads "None yet." (`:101-103`). Roadmap SL-1989 `status: active` (`docs/roadmap.md:3573`). FD-1768's register row (`docs/findings/register.md:392`) is "***Resolved 2026-11-04***" but says "this PR, its number and squash written at the merge's date-of-record", and `grep -cE '#1423\|7b8a00cf'` over that row, `FD-01768-…md`, `LG-01990-…md` and `PL-01991-…md` prints 0 for each | **owed (docs only)**: §5, §Verdict |
 | 2 | FD-1326's register close act, in docs batch 6 | **#1418, `cd45739773f495cc9ceece9819868a63b57c8133`** (docs batch 6) | `register.md:224`: "***Resolved 2026-10-01*** — closed in place 2026-11-03 by the auditor … PR #1034 (`9b0fb97c`)"; essay `FD-01326-…md:5` `status: closed` | **discharged** |
 | 3 | The fresh full gate, both halves, after SL 8296 merges | exec-gate1250 at `824a891da8b421d8a0fbe9430934aff8ecd4d574` (contains `7b8a00cf`: `git merge-base --is-ancestor 7b8a00cf 824a891d` rc 0); plus #1426's CI | §2: END rc 0; accepted by the maintainer, entry "2026-11-04 09:44:40 GMT" | **discharged** |
-| — | Proposed with no effect on acceptance: NFR-489 on a mounted bundle | ruled "2026-11-03 16:13:02 GMT" item (2): "joins nfr-bench-1, owner WK-1250" | `~/gi-pricing-plan.local/handover/nfr-bench-1-plan-2026-11-04.md:37` (item D, OWED, owner WK-1250), S1 Thu 5 Nov 2026; plan accepted "2026-11-04 09:04:20 GMT". Driver `~/gi-pricing-plan.local/scratch/nfr-bench-1/bench-d-nfr489-mount.py`, sha256 read here `8337aa70c5df13d8c223ebdc3d7c3dc599849100fd505e3485e8b088efe86502` at 09:46 GMT (read, **not** the pre-registration the 09:04:20 GO assigns; exec-benchdrv's smoke was still writing `logs-d/`) | **deferred with an owner** (§4) |
+| — | Proposed with no effect on acceptance: NFR-489 on a mounted bundle | ruled "2026-11-03 16:13:02 GMT" item (2): "joins nfr-bench-1, owner WK-1250" | `~/gi-pricing-plan.local/handover/nfr-bench-1-plan-2026-11-04.md:37` (item D, OWED, owner WK-1250), S1 Thu 5 Nov 2026; plan accepted "2026-11-04 09:04:20 GMT". Driver `~/gi-pricing-plan.local/scratch/nfr-bench-1/bench-d-nfr489-mount.py`, sha256 of record `df6e7c9c3216895d175434cf92bd5d26c0335fe7f48621dfee5c2919997513d3` (the entry "2026-11-04 09:51:05 GMT"; it replaces `8337aa70…86502` of "2026-11-04 09:45:54 GMT" after the `--serve-dsn` fix; read here at 09:53 GMT, file mtime 09:47:24 GMT, same value). Pre-registered in §4 | **deferred with an owner** (§4) |
 | — | Observations: the roadmap scope line narrower than `PL-1254`; SL-1341's "MERGE-ACK: pending" | none | `docs/roadmap.md` WK-1250 scope line unchanged; SL-1341 row still "MERGE-ACK: pending (the lead's merge, then the maintainer's line)" | unchanged; observations only |
 
 ## Scope
@@ -189,13 +189,19 @@ No NFR id is in the derived scope. **NFR-489 on a mounted bundle: PROPOSED defer
 item (2); plan accepted "2026-11-04 09:04:20 GMT"). If S1 reads it unmet, it is a P2 finding owned
 by WK-1250, "fixed or carried with a resolution at the close" (16:13:02 (2)).
 
+**Pre-registration of nfr-bench-1 item D** (the maintainer's ruling "2026-11-04 09:45:54 GMT": "the WK-1250 record that carries D's hash is CR 8309"; the hash of record from "2026-11-04 09:51:05 GMT"):
+
+| Id | Configuration and driver | Reading |
+|---|---|---|
+| NFR-489 | mounted bundle (an NCD sub-graph mount + a cancellation purpose mount, pins.sub_graphs set): measured Thu 5 on nfr-bench-1 by driver sha256 df6e7c9c3216895d175434cf92bd5d26c0335fe7f48621dfee5c2919997513d3, reading owed | owed: Thursday's reading lands as a dated delta line in this record; unmet → an FD owned by WK-1250 ("2026-11-03 16:13:02 GMT" (2)) |
+
 ### §5. Not delivered: every requirement without evidence, with a PROPOSED verdict
 
 | Id / item | PROPOSED verdict | Evidence |
 |---|---|---|
 | FR-1186 | **PROPOSED: reassigned — not WK-1250's** (WK-675; adopted 15:58:45 (2)) | CR-1979 §5 |
 | FR-294 | **PROPOSED: reassigned — WK-685, Phase 4** | `PL-1629:252` |
-| NFR-489, mounted bundle | **PROPOSED: deferred with an owner — WK-1250, nfr-bench-1 S1 Thu 5 Nov** | §4 |
+| NFR-489, mounted bundle (an NCD sub-graph mount + a cancellation purpose mount, pins.sub_graphs set): measured Thu 5 on nfr-bench-1 by driver sha256 df6e7c9c3216895d175434cf92bd5d26c0335fe7f48621dfee5c2919997513d3, reading owed | **PROPOSED: deferred with an owner — WK-1250, nfr-bench-1 S1 Thu 5 Nov** | §4 |
 | SL-1989's slice audit (`PL-1254` item 7) | **PROPOSED: delivered but untested at slice level** — the code is evidenced by assertion here (§1, §3) and gated (§2), but no slice audit was written. Two routes, the lead's to choose: (a) this record stands for it, as the maintainer accepted for SL-1388 / SL-1389 in the entry "2026-11-04 08:05:12 GMT" (FD-1982 ruling (a): "a slice audit filed now for two merged slices would evidence what WK-673's close audit evidences at requirement level"), by a dated line; or (b) an auditor writes `LG-1990`'s "## Audit" | §R item 1a |
 | SL-1989's closing acts | **owed, docs only**: `LG-1990` and roadmap SL-1989 `status: closed`; `LG-1990`'s MERGE-ACK line quoting "2026-11-04 01:56:03 GMT" and its "## PRs" naming #1423, `7b8a00cf`; FD-1768's register row and essay citing #1423, `7b8a00cf` | §R item 1a |
 
