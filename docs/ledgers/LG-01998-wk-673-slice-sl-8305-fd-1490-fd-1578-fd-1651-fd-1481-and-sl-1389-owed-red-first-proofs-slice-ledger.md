@@ -2,7 +2,7 @@
 id: LG-1998
 family: ledger
 title: WK-673 slice SL-1997 — FD-1490, FD-1578, FD-1651's two proofs, FD-1481 and SL-1389's five owed red-first proofs (slice ledger)
-status: active                 # active → closed (§1.2a)
+status: closed                 # active → closed (§1.2a)
 created: 2026-11-04   # drafted 2026-11-04 under working id 8306; minted as LG-1998
 owner: executor
 tree: a2679afe9e835d6c4d8027e60ed9a2420baeb5ed   # origin/draft/pl-wk673fix at the branch cut (origin/main a8ef6f19 an ancestor)
@@ -18,7 +18,7 @@ relates: [FD-1490, FD-1578, FD-1651, FD-1481, PL-1984]
 
 **GO:** to-lead "2026-11-03 16:28:44 GMT" (Maintainer: GO for PL 8302, minted as PL-1984): *"S-b = SL-1997 / LG-1998: FD-1490 (drop errors.py:323), FD-1578 (input-free AttributionError + CodedError), FD-1651's two proofs, candidate 1 (SL-1389's five proofs), FD-1481; full SOLO gate; merge by Mon 9."*
 **Correction recorded (lead, 2026-11-03):** PL-1984 Acceptance 9 and 10 say the item-13 OK for the assert changes was *given at the GO*. The 16:28:44 entry does not name it. The lead gave it afterwards, under seat-brief item 13: Acceptance 9's leak asserts and Acceptance 10's raise text, each asserting the NFR-499 defect it now stops asserting. It was then extended to all four leak asserts (below).
-**MERGE-ACK:** (added at merge.)
+**MERGE-ACK:** ~~(added at merge.)~~ *(filled 2026-11-04, docs batch 8, by the auditor, on to-lead "2026-11-04 09:57:14 GMT" and "10:00:29 GMT" closing acts)* to-lead "2026-11-04 08:44:39 GMT" — Maintainer: MERGE-ACK #1426 (SL-1997; head 84b1d859eb8acdbcc1a9711c86c53476aa199079, expected squash tree ede3bf38bf33b0e9dfdc54e4c7b6590809ceb7fd). CI by id on that head: python 41797547929, docs 41797547981, history-policy 41797548020 (all success).
 
 ## Tasks
 
@@ -46,7 +46,9 @@ Owed: the full SOLO gate, both halves, in the slot the lead grants for the final
 
 ## Audit
 
-(The auditor's.)
+~~(The auditor's.)~~
+
+*(Dated line 2026-11-04, docs batch 8, by the auditor.)* The slice audit is CR 8310 §1b (SL-1985 and SL-1997, per-requirement evidence), by route (a) of to-lead "2026-11-04 09:57:14 GMT", adopted for these two slices in "2026-11-04 10:00:29 GMT" (closing acts 1–4). The gap is accepted by that dated line; this record stands in the slice audit's place for the two-way ledger check, the build log and the gate of record above being the executor's record.
 
 ### Build log
 
@@ -84,4 +86,8 @@ All results: tree `sl-8305` worktree. Red = the base file restored with `git sho
 
 ## PRs
 
-(None yet; the lead opens the PR after the gate.)
+~~(None yet; the lead opens the PR after the gate.)~~
+
+#1426, squash commit db92a7bc0424059ed0aff4e5cebf445661c3be81 (tree ede3bf38bf33b0e9dfdc54e4c7b6590809ceb7fd), merged 2026-11-04T08:45:16Z; on main. Filled 2026-11-04 in docs batch 8.
+
+(Closed 2026-11-04 by the auditor in docs batch 8, on to-lead "2026-11-04 09:57:14 GMT" and "2026-11-04 10:00:29 GMT" (the six-slice closing acts): SL-1997 merged as #1426, squash commit db92a7bc0424059ed0aff4e5cebf445661c3be81 on main, tree ede3bf38bf33b0e9dfdc54e4c7b6590809ceb7fd.)

@@ -2,7 +2,7 @@
 id: LG-1986
 family: ledger
 title: WK-673 Slice SL-1985 — FD-1495, a pinned model's consumed Factors derived per arm and refused when empty (red-first slice ledger)
-status: active
+status: closed                 # active → closed (§1.2a)
 created: 2026-11-03   # drafted 2026-11-03 under working id 8304; minted as LG-1986
 owner: executor
 tree: cc8fca15556365412a1ec1c972a1c1799bcb559f
@@ -17,7 +17,7 @@ relates: [FD-1495]
 # LG-1986 — SL-1985: FD-1495, S-a
 
 **GO:** to-lead "2026-11-03 16:28:44 GMT", with "2026-11-03 16:19:35 GMT" (2) to (5) (binding remedy shape) and the DB-free single-file grant "2026-11-03 17:19:47 GMT" (load condition tuned to load1 < 4 by "2026-11-03 17:36:02 GMT").
-**MERGE-ACK:** (added at merge)
+**MERGE-ACK:** ~~(added at merge)~~ *(filled 2026-11-04, docs batch 8, by the auditor, on to-lead "2026-11-04 09:57:14 GMT" and "10:00:29 GMT" closing acts)* to-lead "2026-11-03 22:46:58 GMT" — Maintainer: MERGE-ACK #1421 (SL-1985; head 13a94a07ffe5e13a7e034303de4ae65ab5a8cd94, expected squash tree 32f7ffc213c30d0f61478fe13ea1f5a06a8e711f). CI by id on that head: python 41730072490, docs 41730072225, history-policy 41730072007, frontend 41730072243 (all success).
 
 ## Tasks
 
@@ -243,7 +243,9 @@ Second re-merge, `origin/main` `4df71cd7` (#1420, docs batch 7; `docs/` only, it
 
 ### Audit
 
-(the auditor's)
+~~(the auditor's)~~
+
+*(Dated line 2026-11-04, docs batch 8, by the auditor.)* The slice audit is CR 8310 §1b (SL-1985 and SL-1997, per-requirement evidence), by route (a) of to-lead "2026-11-04 09:57:14 GMT", adopted for these two slices in "2026-11-04 10:00:29 GMT" (closing acts 1–4). The gap is accepted by that dated line; this record stands in the slice audit's place for the two-way ledger check, the build log and the gate of record above being the executor's record.
 
 ### Build log
 
@@ -254,4 +256,8 @@ Second re-merge, `origin/main` `4df71cd7` (#1420, docs batch 7; `docs/` only, it
 
 ## PRs
 
-(none yet)
+~~(none yet)~~
+
+#1421, squash commit dfbce89be6370f69c12eb4bd4f6fb5414c28d21f (tree 32f7ffc213c30d0f61478fe13ea1f5a06a8e711f), merged 2026-11-03T22:47:47Z; on main. Filled 2026-11-04 in docs batch 8.
+
+(Closed 2026-11-04 by the auditor in docs batch 8, on to-lead "2026-11-04 09:57:14 GMT" and "2026-11-04 10:00:29 GMT" (the six-slice closing acts): SL-1985 merged as #1421, squash commit dfbce89be6370f69c12eb4bd4f6fb5414c28d21f on main, tree 32f7ffc213c30d0f61478fe13ea1f5a06a8e711f.)

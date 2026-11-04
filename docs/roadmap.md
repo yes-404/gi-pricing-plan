@@ -1028,7 +1028,7 @@ The fix RL-1707 (minted from working id 9996; `PL-1677`'s DP-P1, ruled (a′)) o
 id: SL-1985
 family: slice
 title: WK-673 fix slice — FD-1495, a pinned model's consumed Factors derived per arm and refused when empty, CONTROL_FACTOR_IN_RATEABLE_PATH on a model, a peril component and an offset model
-status: active                    # draft → active → closed (§1.2a)
+status: closed                    # draft → active → closed (§1.2a)
 created: 2026-11-03   # drafted 2026-11-03 under working id 8303; minted as SL-1985
 owner: lead
 tree: 9a61d908755c5b2ebc1077cd81f8cc1d6ccc1520
@@ -1048,7 +1048,7 @@ Row 1 (S-a) of `PL-1984`: FD-1495, the GLM arm of the FR-240 control-factor chec
 id: SL-1997
 family: slice
 title: WK-673 fix slice — FD-1490 (registry entry dropped), FD-1578 (input-free AttributionError, a CodedError), FD-1651's two broken-loop proofs, FD-1481's 15-digit echo, and SL-1389's five owed red-first proofs
-status: active                    # draft → active → closed (§1.2a)
+status: closed                    # draft → active → closed (§1.2a)
 created: 2026-11-04   # drafted 2026-11-04 under working id 8305; minted as SL-1997
 owner: lead
 tree: 012ec9fbfb42313a7df8df601e7d8abda0989a16
@@ -1353,7 +1353,7 @@ PL-1688 row 2: the compose `beat` scheduler service that moves a Job out of the 
 id: SL-1992
 family: slice
 title: WK-674 slice — FD-1823's reconcile: the deployment switch loads the latest committed Deployment periodically and on reconnect, and discovers Environments created after start (PL-1688 row 3), red first
-status: active                    # draft → active → closed (§1.2a)
+status: closed                    # draft → active → closed (§1.2a)
 created: 2026-11-03
 owner: lead
 tree: 92327cd03c4b370c0cc1126bc26f358f3b940538
@@ -1972,7 +1972,7 @@ The fix row of DP-W-1 (a), adopted by the lead (from-lead "2026-10-11 11:20:43 B
 id: SL-1994
 family: slice
 title: WK-690 fix row — FD-1751 and FD-1842 fixed before close
-status: active                    # draft → active → closed | retired (§1.2a)
+status: closed                    # draft → active → closed (§1.2a)
 created: 2026-11-03               # drafted 2026-11-03 under working id 8299
 owner: planner                   # cut by the planner (draft); lead dispatches (active)
 tree: 0493e5e1ffe7593088a150d9ba63fcebcc8d6a98
@@ -3460,7 +3460,7 @@ The `.github/workflows/python.yml` Start MinIO step checks the release asset's s
 id: SL-1987
 family: slice
 title: WK-1178 slice — FD-1974's ten carried a11y lows (NFR-463) on the WK-675 surfaces, red first
-status: active                    # draft → active → closed | retired (§1.2a)
+status: closed                    # draft → active → closed (§1.2a)
 created: 2026-11-03
 owner: lead
 tree: a966ed45933831ec1706678b63d8fa19141c8e2b
