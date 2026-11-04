@@ -2935,7 +2935,7 @@ On the maintainer's (by delegation) entry "2026-10-14 11:06:52 BST — D-list li
 
 *(Amended 2026-10-14 by the planner, planner-p1fix, before the mint, on the maintainer's (by delegation) entry "2026-10-14 12:42:55 BST", item (2): NFR-467 is added, measured at 10 M rows (not extrapolated) on the shared VM with its own instrument and the threshold from its row and 2026-08-14 amendment, `PL-1735` Task 5a; nfr-bench-1 session 2 is the fallback. Session 2's planned total is restated in the plan: 3.9 h committed, at most 5.15 h.)*
 
-(Activated 2026-10-22 as WK-1178's P2 NFR measurement sweep, on the maintainer's GO, `to-lead.md` "2026-10-22 11:53:15 BST — Maintainer: SL-1569 and SL-1736 slice GO; D1–D4 and the two orders ruled"; ledger LG-8155 (working id), which carries the draft→active flip of `PL-1735` as the slice PR's L1 path. Dispatched by lead 26 to seat exec-1736. The 4 ALONE measurement grants run after SL-1275 and SL-1711 merge.)
+(Activated 2026-10-22 as WK-1178's P2 NFR measurement sweep, on the maintainer's GO, `to-lead.md` "2026-10-22 11:53:15 BST — Maintainer: SL-1569 and SL-1736 slice GO; D1–D4 and the two orders ruled"; ledger LG-2003 (minted 2026-11-04 from working id 8155), which carries the draft→active flip of `PL-1735` as the slice PR's L1 path. Dispatched by lead 26 to seat exec-1736. The 4 ALONE measurement grants run after SL-1275 and SL-1711 merge.)
 
 #### SL-1738 — WK-1178 fix slice — FD-1744: a recipe cell that does not parse is never silently nulled, and validation gives it a verdict (FR-32, VR-STR-2)
 

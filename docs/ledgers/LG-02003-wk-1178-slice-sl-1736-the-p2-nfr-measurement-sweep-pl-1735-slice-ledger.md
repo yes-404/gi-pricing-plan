@@ -1,9 +1,9 @@
 ---
-id: LG-8155
+id: LG-2003
 family: ledger
 title: WK-1178 slice SL-1736 — the P2 NFR measurement sweep (NFR-467, 468, 470, 485, 1443 DIAGNOSTIC; NFR-472 red-first) (slice ledger)
 status: active                 # active → closed (§1.2a)
-created: 2026-10-22
+created: 2026-11-04   # drafted 2026-10-22 under working id 8155; minted as LG-2003
 owner: executor
 tree: f3462d8fc1336dc4583fe8a7af92fed399993a55
 phase: P2
@@ -14,7 +14,9 @@ corrected_by: []
 relates: [PL-1735, SL-1736, SL-1259, RL-1441, LG-1444, RL-1614, FD-1745, FD-1746]
 ---
 
-# LG-8155 — WK-1178 slice SL-1736: the P2 NFR measurement sweep
+(Minted 2026-11-04 from working id 8155 (lead-reserved 2026-10-22), on the lead's mint order and the maintainer's GO "2026-10-22 11:53:15 BST", with the mint tool of record `mint-repoint.py` (sha256 `4d83681a`); slice SL-1736 and plan PL-1735 were already minted; executed on branch `sl-1736-wk1178-nfr-sweep`.)
+
+# LG-2003 — WK-1178 slice SL-1736: the P2 NFR measurement sweep
 
 Filed 2026-10-22 under working id 8155 (lead-reserved); executed by seat `exec-1736`, base
 `origin/main` `f3462d8fc1336dc4583fe8a7af92fed399993a55`.
@@ -445,7 +447,7 @@ packages/pricing-core/src/pricing_core/safe_error.py
 **The close check, verbatim (to be run at the exit tree, `<exit>` the exit-tree commit):**
 
 ```
-git -C <worktree> diff --stat d235c8a6 <exit> -- $(sed -n '/^```nfr1443-paths$/,/^```$/p' docs/ledgers/LG-08155-wk-1178-slice-sl-1736-the-p2-nfr-measurement-sweep-pl-1735-slice-ledger.md | sed '1d;$d') backend/migrations/versions/
+git -C <worktree> diff --stat d235c8a6 <exit> -- $(sed -n '/^```nfr1443-paths$/,/^```$/p' docs/ledgers/LG-02003-wk-1178-slice-sl-1736-the-p2-nfr-measurement-sweep-pl-1735-slice-ledger.md | sed '1d;$d') backend/migrations/versions/
 ```
 
 Empty output: the reading stands, recorded under roadmap G4 as "measured on `d235c8a6`, path-identical to the exit tree (diff quoted)". Non-empty: option (i), re-measure in one ALONE window.

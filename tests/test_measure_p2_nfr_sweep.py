@@ -7,7 +7,7 @@ memory rule and NFR-485's cap. A band that is wrong silently turns an OVER into 
 boundary has a case on both sides of it.
 
 No `@pytest.mark.req` marker: this is the correctness of a measurement tool, not evidence for
-a numbered requirement (the readings are the evidence, in LG-8155).
+a numbered requirement (the readings are the evidence, in LG-2003).
 
 The file name has a hyphen, so the module is loaded through `importlib`, as
 `test_rating_attribution.py` loads `measure-attribution-cost.py`.
