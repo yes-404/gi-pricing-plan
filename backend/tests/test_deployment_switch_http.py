@@ -250,7 +250,7 @@ async def test_a_deploy_is_not_acknowledged_by_a_process_serving_only_another_en
     assert switch["receivers"] == 1
 
 
-# --- the reconcile (SL 8286, FD-1823; FR-268, FR-269) ------------------------------------------
+# --- the reconcile (SL-1992, FD-1823; FR-268, FR-269) ------------------------------------------
 #
 # Written red first. B is `Settings.deployment_reconcile_seconds`; a test sets it through
 # `model_copy(update=...)`, which at the base (no such field) is silently ignored, so the base

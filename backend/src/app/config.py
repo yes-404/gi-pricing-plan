@@ -182,7 +182,7 @@ class Settings(BaseSettings):
     # NFR-528 treats a running job with no progress for this long as stalled.
     job_stall_seconds: Annotated[int, Field(gt=0, le=3600)] = 30
 
-    # B, the interval of the deployment switch's reconcile pass (FR-268, FD-1823, SL 8286): how
+    # B, the interval of the deployment switch's reconcile pass (FR-268, FD-1823, SL-1992): how
     # long a process that missed a COMMIT, or an Environment created after start, can go
     # unconverged. `le=30` is NFR-494's "within 30 s of the deploy command", so no value the type
     # accepts breaks it. Also set by tests, through `Settings(...)`, to a second.

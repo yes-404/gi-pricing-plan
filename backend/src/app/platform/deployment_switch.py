@@ -15,7 +15,7 @@ behind what a process serves.
 
 **What is given up, and how it converges.** `/score` used to read the latest committed
 Deployment on every request (`api/score.py`), so convergence was immediate. A process that is
-alive but missed COMMIT serves the previous version until the next **reconcile pass** (SL 8286,
+alive but missed COMMIT serves the previous version until the next **reconcile pass** (SL-1992,
 FD-1823): `SwitchReconciler` reloads the latest committed Deployment of every Environment each
 `Settings.deployment_reconcile_seconds` (B, at most NFR-494's 30 s) and at once when the
 subscription reconnects, subscribes to an Environment created after start, and restarts a dead
@@ -485,7 +485,7 @@ class SwitchSubscription:
     roster, so a PREPARE published after `start` returns is received (and counted) here. A
     process serving several Environments appears in each roster.
 
-    `ensure` is what a reconcile pass asks of it (SL 8286, FD-1823): subscribe and join an
+    `ensure` is what a reconcile pass asks of it (SL-1992, FD-1823): subscribe and join an
     Environment created since the last pass, and, if the listener task has ended (its connection
     retries ran out), start it again and re-subscribe and re-join every channel. A Redis
     reconnect re-subscribes by itself and tells nobody (redis-py's `PubSub.on_connect`); this
@@ -589,7 +589,7 @@ class SwitchSubscription:
 
 
 class SwitchReconciler:
-    """The periodic reconcile (SL 8286, FD-1823): the DB is the truth a missed message is
+    """The periodic reconcile (SL-1992, FD-1823): the DB is the truth a missed message is
     repaired from.
 
     Each pass reads the latest committed Deployment of every Environment and the unretired

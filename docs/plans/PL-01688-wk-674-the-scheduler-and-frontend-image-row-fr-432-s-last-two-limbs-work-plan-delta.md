@@ -482,12 +482,12 @@ dates": code freeze Tue 10 Nov 2026, docs freeze Wed 11 Nov 2026, P2 exit demo W
 "the FD-1823 reconcile … [is] ordinary P2 code before Tue 10 Nov, merged on the normal ACK
 path"), and by the maintainer's entry "2026-11-03 15:40:02 GMT" item (3) ("FD-1823 merge target
 Fri 6, hard stop Mon 9, accepted").)*
-**A new row 3: SL 8286 — FD-1823's reconcile: the deployment switch loads the latest committed
+**A new row 3: SL-1992 — FD-1823's reconcile: the deployment switch loads the latest committed
 Deployment at each (re)subscribe and periodically, and discovers Environments created after
-start.** Ledger **LG 8287**. Both are working ids, written in space form until the mint. Work
+start.** Ledger **LG-1993**. Both were working ids (SL 8286, LG 8287), minted 2026-11-04 as SL-1992 and LG-1993. Work
 **WK-674**; merged by **Fri 6 Nov 2026**, hard stop **Mon 9 Nov 2026**, before the code freeze on
 **Tue 10 Nov 2026**. The row, in the table's columns:
-Order 3; Slice SL 8286; Scope (what the `LG-` quotes) items R0 to R3, G and A1 to A10 below;
+Order 3; Slice SL-1992; Scope (what the `LG-` quotes) items R0 to R3, G and A1 to A10 below;
 Requirements `03` §3: FR-268 (its dated note "The deployment switch, dated 2026-10-18" at `03`
 :213, which says the remedy "is not built in Slice 5") and FR-269 (a rollback writes a new
 `DeploymentRow`, `backend/src/app/platform/deployments.py:775`, so the reconcile converges a
@@ -584,7 +584,7 @@ unchanged.
   - **Every text that says the remedy is unbuilt is re-pointed, not removed.** That is the four
     `FD-1823` code cites above, the `LiveRefs` and `load_latest` docstrings, and `main.py:128-141`
     (the lifespan comments). Each is rewritten to say that the reconcile converges within B and
-    discovers new Environments, and it names SL 8286 (re-pointed to the minted id at the mint).
+    discovers new Environments, and it names SL-1992 (the minted id of SL 8286).
   - **The spec gets dated notes, with no new requirement id.** The brief allocates none, and FR-268
     already owns the behaviour. Under `.claude/skills/spec-change`, the executor appends a dated
     note after `03` :213's note: the reconcile, its bound B under DP-R1, and its two triggers. It

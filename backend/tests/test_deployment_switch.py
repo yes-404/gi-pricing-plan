@@ -217,7 +217,7 @@ def test_a_process_id_names_the_container_the_pid_and_the_start() -> None:
     assert process_id() == process_id(), "stable for one incarnation"
 
 
-# --- the reconcile (SL 8286, FD-1823; FR-268, FR-269) ------------------------------------------
+# --- the reconcile (SL-1992, FD-1823; FR-268, FR-269) ------------------------------------------
 #
 # Written red first. The new names are imported inside each test so that, at the base, each test
 # fails for its own reason (no reconcile exists) and the file's other tests still run.

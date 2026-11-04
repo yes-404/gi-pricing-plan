@@ -230,7 +230,7 @@ def _serving_ref(
     **The trade-off that ruling states:** this used to read the latest committed Deployment
     from Postgres on every request, so a deployment converged at once. A process that is alive
     but missed the COMMIT serves the previous version until the next reconcile pass reloads the
-    latest committed Deployment, within `Settings.deployment_reconcile_seconds` (SL 8286,
+    latest committed Deployment, within `Settings.deployment_reconcile_seconds` (SL-1992,
     FD-1823). The deploy response and `deployment.switched` still name such a process.
 
     Deliberately **not** inside `_fetch_bundle` or `_compiled_for`: the governance gate and

@@ -139,7 +139,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             switch_client, switch_stack(settings.environment.value, settings.tenant_id)
         )
         # One channel per platform Environment (`dev`, `uat`, `prod`, ...). An Environment
-        # created after this process started is subscribed by the reconcile pass below (SL 8286,
+        # created after this process started is subscribed by the reconcile pass below (SL-1992,
         # FD-1823), within `deployment_reconcile_seconds`; until then a deploy into it names no
         # such process.
         async with database.session() as session:
@@ -160,7 +160,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         async with database.session() as session:
             await running.state.live_refs.load_latest(session)
 
-        # FD-1823 (SL 8286): the DB is the truth a missed COMMIT is repaired from. Every
+        # FD-1823 (SL-1992): the DB is the truth a missed COMMIT is repaired from. Every
         # `deployment_reconcile_seconds`, and at once when the pub/sub connection reconnects, a
         # pass reloads the latest committed Deployment of every Environment into `live`,
         # subscribes to Environments created since, and restarts a dead listener. A restart's

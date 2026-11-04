@@ -1,22 +1,22 @@
 ---
-id: LG-8287
+id: LG-1993
 family: ledger
-title: WK-674 slice SL-8286 — FD-1823's reconcile: the deployment switch loads the latest committed Deployment periodically and on reconnect, and discovers Environments created after start (red first)
+title: WK-674 slice SL-1992 — FD-1823's reconcile: the deployment switch loads the latest committed Deployment periodically and on reconnect, and discovers Environments created after start (red first)
 status: active                 # active → closed (§1.2a)
-created: 2026-11-03
+created: 2026-11-03               # drafted 2026-11-03 under working id 8287
 owner: executor
 tree: 03d98c2170d7f7cbe283e1b91d91c9f2057f0480   # the branch head the runs below were made on (before this file)
 phase: P2
 work: WK-674
-slice: SL-8286
+slice: SL-1992
 plans: [PL-1688]
 corrected_by: []
 relates: [FD-1823, WK-674]
 ---
 
-# LG-8287 — WK-674 SL 8286: FD-1823's reconcile
+# LG-1993 — WK-674 SL-1992: FD-1823's reconcile
 
-Working ids (SL 8286, LG 8287) are in space form in prose until the mint.
+Minted 2026-11-04 from working ids SL 8286 and LG 8287 (as SL-1992 and LG-1993), with the mint tool of record `mint-repoint.py` (sha256 `4d83681a`).
 
 **GO:** to-lead "2026-11-03 15:50:00 GMT — Maintainer: MERGE-ACK #1413 (Dependabot frontend dev group, merge 44) + GO for SL 8286 (FD-1823's reconcile, PL-1688 row 3)", as relayed in the lead's brief: DP-R1 (b) a Settings field `deployment_reconcile_seconds` Field(ge=1, le=30) = 10 (`GIP_DEPLOYMENT_RECONCILE_SECONDS`), DP-R2 (a) restart-equivalent hydration, DP-R3 (a) no compose runtime run; condition: the 03 dated note names the field, its bounds and the NFR-494 derivation; reds in one single-tenant DB window; green + SOLO full gate Wed 4 Nov; hard stop Mon 9 Nov.
 **MERGE-ACK:** (added at merge)
@@ -25,7 +25,7 @@ Working ids (SL 8286, LG 8287) are in space form in prose until the mint.
 
 ### Scope
 
-PL-1688 row 3 ("A new row 3: SL 8286 — FD-1823's reconcile …") at `origin/draft/pl-fd1823` 67900242, items R0–R3, G, A1–A10, DP-R1..R3. Requirements: `03` FR-268 (dated note at :213), FR-269 (a rollback writes a new `DeploymentRow`, so the same read converges a missed rollback COMMIT); NFR-494 is the bound for B, not re-measured. Register FD-1823 closes at merge (the auditor's, A9).
+PL-1688 row 3 ("A new row 3: SL-1992 — FD-1823's reconcile …") at `origin/draft/pl-fd1823` 67900242, items R0–R3, G, A1–A10, DP-R1..R3. Requirements: `03` FR-268 (dated note at :213), FR-269 (a rollback writes a new `DeploymentRow`, so the same read converges a missed rollback COMMIT); NFR-494 is the bound for B, not re-measured. Register FD-1823 closes at merge (the auditor's, A9).
 
 **Not applicable, moot (A10):** "no window beside nfr-bench-1" — nfr-bench-1 is a dedicated VM and reserves no shared-box slot (the maintainer's entry after 15:58:45 GMT, relayed by the lead).
 
