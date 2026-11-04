@@ -2,12 +2,12 @@
 id: FD-2001
 family: finding
 title: scripts/bench-rating.py --http refuses main's least-privilege DSN, so it cannot drive the platform as shipped
-status: active
+status: closed
 created: 2026-11-04   # drafted 2026-11-04 under working id 8312
 owner: auditor
 tree: db92a7bc0424059ed0aff4e5cebf445661c3be81   # origin/main when read
 corrected_by: []
-relates: [WK-1178, FD-1729, LG-1760, PL-1454]
+relates: [WK-1178, FD-1729, LG-1760, PL-1454, SL-2005, LG-2006, PL-2004]
 ---
 
 # FD-2001 — scripts/bench-rating.py --http refuses main's least-privilege DSN, so it cannot drive the platform as shipped
@@ -41,3 +41,5 @@ Open, owner WK-1178, **fix before close with an owner**. Fixed before P2 close i
 before Tue 10 Nov 2026, else carried to P3 with the C' driver as the interim harness (the maintainer's
 "2026-11-04 09:51:05 GMT"). The event that next discharges it: the merge of the harness fix, or the
 P3 plan review if carried. Filed under working id 8312 (minted as FD-2001).
+
+***Resolved 2026-11-04*** — closed in place 2026-11-04 by the auditor, as the closing act of the audit of SL-2005 (WK-1178, LG-2006, PL-2004; this PR, its number and squash written at the merge's date-of-record), on the lead's brief under the maintainer's "2026-11-04 17:42:08 GMT" ruling (A8 (a), the FD-1842 form) and the GO "2026-11-04 16:42:29 GMT" (`to-lead.md`, a local channel file). Delivered remedy: `scripts/bench-rating.py` gains `--serve-dsn`, the application's least-privilege login DSN, defaulting to `$GIP_TEST_APP_DATABASE_URL`; `--http` without one is refused at parse time (`parser.error` naming `--serve-dsn` and FD-1729); `_run_http_sweep` passes it to `_serve`, and the owner DSN (`--dsn`) only seeds and times `_fetch_bundle` in-process (DP-1 (b), DP-2 (a)). No platform code changed. Red first, by cause, in LG-2006: at base `181403d9` the new test file gave `4 failed, 1 passed`, T1 failing with the OWNER DSN reaching `_serve` and T2 with `unrecognized arguments: --serve-dsn` (exit 2); green `5 passed`, with `test_bench_rating_calls.py` and `test_bench_rating_header.py` unedited and passing. Gate evidence is in LG-2006: the SOLO gate at `c726f68a` (pytest "13 failed, 7133 passed, 22 skipped" = the 13 item-31 docs-audit failures only; frontend all rc 0; demo designed stop 2037 s, dislocation #1 579 s), accepted under item 31.
