@@ -628,6 +628,8 @@ then into the `CR- kind: phase`, by command and tree, never pasted from memory.
 | 8 | NFR-489's verdict on the exit tree: read `SL-1259`'s ledger and PL-1454's result (not re-run here) | recorded with its tree |
 | 9 | Ctrl-C the demo; `pgrep -af 'uvicorn\|vite'` | nothing left running |
 
+*(Dated correction, 2026-11-04, docs batch 9, by the auditor, on to-lead "2026-11-04 16:22:41 GMT" (batch 9 item 13): row 5 (`demo.py --journey wf-699`, :625) — run on a `createdb -T gipricing` copy with BOTH `GIP_DATABASE_URL` and `GIP_MIGRATION_DATABASE_URL` set to it (`scripts/demo.py:205–212` defaults both to the template); never the template; `--no-compose` with the stack from tools-main; the 2400 s cap and the quiet window (load1 < 2.0) apply. The row text stays as written; this line governs.)*
+
 ## Hand-off
 
 1. The lead mints PL-1544 after RL-1521 has minted, and after #1161 (SL-1527, SL-1526, PL-1525)

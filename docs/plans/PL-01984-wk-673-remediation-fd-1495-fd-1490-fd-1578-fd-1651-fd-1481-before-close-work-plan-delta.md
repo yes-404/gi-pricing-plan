@@ -37,8 +37,8 @@ Filed under ~~**working id PL-1984**~~ **working id PL 8302, minted as PL-1984**
 Every `file:line` below was read at `origin/main` `a8ef6f19c0be1142b0ac9dea88086f1ce6f95cbe`
 (tree `598c8c3a`) unless it names another tree. Nothing was run: no test and no probe. Every
 "live at main" claim is **by reading** and names the line that shows it. The close audit is
-**CR 8292** (working id), at `origin/docs/wk673-close-audit-2026-11-03` `ad7c93f4`. It audited
-`c807a59d`, and its line numbers are cited as `CR 8292:<n>` at `ad7c93f4`.
+**~~CR 8292~~ CR-1981** (working id), at `origin/docs/wk673-close-audit-2026-11-03` `ad7c93f4`. It audited
+`c807a59d`, and its line numbers are cited as `~~CR 8292~~ CR-1981:<n>` at `ad7c93f4`.
 
 ## Authority
 
@@ -65,7 +65,7 @@ All entries are in `~/gi-pricing-plan.local/channel/to-lead.md`.
   empty-default read at rating_algorithms.py:142 (`required_model_inputs`) is in S-a's scope —
   same class, same fix. (3) S-a merges first and alone: target Wed 4, hard stop Thu 5; one
   sonnet executor at the GO; full SOLO gate; its DB window takes the next place in the queue
-  after the FD-1823 reds (ahead of SL 8296 and ~~SL 8299~~ SL-1994 — a mispricing fix outranks them). (4)
+  after the FD-1823 reds (ahead of ~~SL 8296~~ SL-1989 and ~~SL 8299~~ SL-1994 — a mispricing fix outranks them). (4)
   FD-1490's remedy is RL-1958 (c) — drop errors.py:323 by Fri 6 — accepted as the planner's
   DP-3 reading; it rides S-b unless S-b slips past Fri 6, then it is its own one-line slice.
   (5) A whole-tree grep for every `fit_result.get(` / `.get("feature_order"` read, quoted in
@@ -134,11 +134,11 @@ differ from the primary source.
 WF-701 exit-demo path. So it is **"re-owned to P3 by the maintainer's dated line (to-lead
 16:03:37)"**, and this plan cuts no slice for it. Cites:
 
-- **CR 8292:209** (§5): the limb is *"PROPOSED: not started — owner WK-673 by the spec; the
+- **~~CR 8292~~ CR-1981:209** (§5): the limb is *"PROPOSED: not started — owner WK-673 by the spec; the
   slice row is owed or the obligation is re-owned by a dated line"*.
-- **CR 8292:306-310** (FD candidate 2): *"Proposed MEDIUM: off the G2 path (the default
+- **~~CR 8292~~ CR-1981:306-310** (FD candidate 2): *"Proposed MEDIUM: off the G2 path (the default
   policy does not name the kind), but the journey states a check the platform does not make."*
-- **CR 8292:290** (§5c, WF-699 E2 `:96`): the step's wording *"rate diffs"* **disagrees** with
+- **~~CR 8292~~ CR-1981:290** (§5c, WF-699 E2 `:96`): the step's wording *"rate diffs"* **disagrees** with
   the code. That is a wording defect in the journey. It does not put the limb on the path.
 - **The code on the path, read at main:** `EVIDENCE_FLOOR["rating_version"]` is
   `("structural_diff", "regression_run", "dislocation_run")` (`model_schema/approvals.py:131`),
@@ -154,7 +154,7 @@ WF-701 exit-demo path. So it is **"re-owned to P3 by the maintainer's dated line
 
 ## Goal
 
-Before WK-673's close on Mon 2026-11-09, fix the defects CR 8292 §5b lists as owed code
+Before WK-673's close on Mon 2026-11-09, fix the defects ~~CR 8292~~ CR-1981 §5b lists as owed code
 (FD-1495's GLM arm, FD-1490, FD-1578) and record the proofs it lists as owed (FD-1651, FD
 candidate 1, FD-1481's pin). Each limb is red first. FD-1495 is its own slice, so it can merge
 first and alone.
@@ -237,7 +237,7 @@ different cause is a plan defect: stop and report.
    `test_rating_compile_fr240.py`, `test_rating_peril_scoring.py`,
    `test_rating_glm_model_call.py`, and `test_quote_input_raise_sites.py` (common item 11: a
    `_raise_named` site changes). The DB-backed save-check test of item 4 runs in S-a's DB
-   window: **next in the queue after the FD-1823 reds, ahead of SL 8296 and ~~SL 8299~~ SL-1994**
+   window: **next in the queue after the FD-1823 reds, ahead of ~~SL 8296~~ SL-1989 and ~~SL 8299~~ SL-1994**
    (16:19:35 (3)). The GREEN set is extended by import closure (common item 29), with the
    commands and the list quoted in LG &lt;a&gt;.
 
@@ -359,7 +359,7 @@ binding shape of to-lead "2026-11-03 16:19:35 GMT" (2)–(5)).*
 - **Depends on:** nothing open.
 - **Executor:** one, `sonnet`, at the GO.
 - **Reds:** DB-free through `run-small.sh`. The save-check red runs in S-a's DB window, next
-  in the queue after the FD-1823 reds and ahead of SL 8296 and ~~SL 8299~~ SL-1994.
+  in the queue after the FD-1823 reds and ahead of ~~SL 8296~~ SL-1989 and ~~SL 8299~~ SL-1994.
 - **Gate:** full SOLO, both halves.
 - **Merge by:** target Wed 2026-11-04, hard stop Thu 2026-11-05. It merges first and alone.
 - **FD closing act:** the auditor closes FD-1495 citing S-a's PR and squash, **only once
@@ -502,3 +502,9 @@ and revert each before the next. Then edit the three docstrings.
 - **status `draft` → `active`.** On to-lead "2026-11-04 01:30:18 GMT" (PL-1991 ruling (a)): the plan's activation rides the slice's PR; PL-1984 merged as `draft` in #1421, "a mint defect, not a rule". The flip is made by this dated line; SL-1985 and SL-1997 are its two rows, both merged and closed (docs batch 8).
 - **"Filed under" line.** The line "Filed under **working id PL-1984**" is read "working id PL 8302, minted as PL-1984" (to-lead "2026-11-04 07:39:25 GMT", noted for the next docs batch).
 - **Three "SL 8299" tokens** (the queue prose at the steps (3) of the FD-1823 reds, `ahead of SL 8296 and SL 8299`) are SL-1994, the id SL 8299 was minted as (to-lead "2026-11-04 05:47:09 GMT", "re-point in the next docs batch, noted"). The original tokens are struck in place, not deleted; the plan is otherwise frozen at its date.
+
+## Dated lines, 2026-11-04 (docs batch 9, by the auditor)
+
+- **Three "SL 8296" tokens** (the same queue prose at the steps (3) of the FD-1823 reds, now `ahead of SL 8296 and SL-1994`) are SL-1989, the id SL 8296 was minted as in #1423. The original tokens are struck in place, not deleted, in the batch-8 form above; the plan is otherwise frozen at its date. Authority: the batch-8 rule (to-lead "2026-11-04 05:47:09 GMT", "re-point in the next docs batch") applied to the second working id, and the maintainer's to-lead "2026-11-04 16:14:54 GMT" acceptance of batch 9 item 5. `git grep -n -E '\b(SL|LG|PL|FD|CR)[ -]8[0-9]{3}\b'` over this file after the edit found `CR 8292` ×6 and no other SL/LG 82xx; see the next line.
+
+- **Six "CR 8292" tokens** (lines `:40`, `:41`, `:137`, `:139`, `:141`, `:157`) are CR-1981, the id CR 8292 was minted as (`docs/closures/CR-01981-wk-673-close-audit.md:7` "drafted 2026-11-03 under working id 8292", `:18` "minted as CR-1981"); the lead's ruling in the same batch (batch 9 item 5c, the lead's message after the FINAL; authority to-lead "2026-11-04 16:14:54 GMT" item 5). The original tokens are struck in place, not deleted. A quoted `:<n>` keeps its number: those are line numbers at the draft `ad7c93f4` and are not re-measured against the minted file. The plan is otherwise frozen at its date.
