@@ -34,6 +34,8 @@ relates: [PL-1268, PL-1621, PL-1665, SL-1994, FD-1751, FD-1842]
 > `git-hygiene`. It reads [`README.md`](README.md)'s five unchecked conventions and is
 > spawned from `.claude/roles/executor.md`, model `sonnet` (ruled, below).
 
+*(CR 8291 in the quote above was minted as CR-1980 — to-lead 2026-11-04 05:13:46 GMT.)*
+
 Written 2026-11-03 by the planner (plan-wk690fix). Every literal below was read at
 `origin/main` `a8ef6f19c0be1142b0ac9dea88086f1ce6f95cbe` (tree `598c8c3a`) unless marked
 otherwise. The line numbers the findings cite (`diagnostics.py:957`, `:1213`, `:1056`) are
