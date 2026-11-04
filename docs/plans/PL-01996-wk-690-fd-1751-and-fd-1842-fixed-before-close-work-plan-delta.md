@@ -24,7 +24,7 @@ relates: [PL-1268, PL-1621, PL-1665, SL-1994, FD-1751, FD-1842]
 > and [`PL-1665`](PL-01665-wk-690-slices-4-and-5-acceptance-brought-to-rl-1615-and-rl-1616-work-plan-delta.md),
 > and it leaves all three unedited. It `relates:` them and adds **one row**, cut here as
 > SL 8299 (working id): FD-1751 and FD-1842, the two findings WK-690's close audit
-> (CR-1980) lists as owed, fixed in one PR with two limbs, each red first. The slice's one
+> (CR 8291) lists as owed, fixed in one PR with two limbs, each red first. The slice's one
 > ledger is LG 8300 (working id), which quotes this file as its scope. REQUIRED SUB-SKILL for
 > the executor: subagent-driven-development (recommended) or executing-plans, task by task.
 > The executor also binds `test-driven-development` (every red seen red **by its cause** on
