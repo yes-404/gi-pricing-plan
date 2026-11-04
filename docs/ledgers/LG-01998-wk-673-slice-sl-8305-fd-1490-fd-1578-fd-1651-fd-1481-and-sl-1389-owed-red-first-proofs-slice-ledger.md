@@ -16,7 +16,7 @@ relates: [FD-1490, FD-1578, FD-1651, FD-1481, PL-1984]
 
 # LG-1998 — WK-673 slice SL-1997: the S-b remediation row
 
-**GO:** to-lead "2026-11-03 16:28:44 GMT" (Maintainer: GO for PL-8302, minted as PL-1984): *"S-b = SL-1997 / LG-1998: FD-1490 (drop errors.py:323), FD-1578 (input-free AttributionError + CodedError), FD-1651's two proofs, candidate 1 (SL-1389's five proofs), FD-1481; full SOLO gate; merge by Mon 9."*
+**GO:** to-lead "2026-11-03 16:28:44 GMT" (Maintainer: GO for PL 8302, minted as PL-1984): *"S-b = SL-1997 / LG-1998: FD-1490 (drop errors.py:323), FD-1578 (input-free AttributionError + CodedError), FD-1651's two proofs, candidate 1 (SL-1389's five proofs), FD-1481; full SOLO gate; merge by Mon 9."*
 **Correction recorded (lead, 2026-11-03):** PL-1984 Acceptance 9 and 10 say the item-13 OK for the assert changes was *given at the GO*. The 16:28:44 entry does not name it. The lead gave it afterwards, under seat-brief item 13: Acceptance 9's leak asserts and Acceptance 10's raise text, each asserting the NFR-499 defect it now stops asserting. It was then extended to all four leak asserts (below).
 **MERGE-ACK:** (added at merge.)
 
@@ -42,7 +42,7 @@ PL-1984 "Row 2 — S-b (the rest)", Acceptance 7–13 (14–17 are gates). Write
 
 Owed: the full SOLO gate, both halves, in the slot the lead grants for the final head. Local: `ruff check` rc=0 and `mypy` rc=0 ("Success: no issues found in 251 source files", at `0cb69a0c`); `ruff check` rc=0 on each later touched file.
 
-#**Verdict line, 2026-11-04 07:45:28 GMT (executor, at the mint; the audit is the auditor's):** the SOLO gate at `07e62951` (on `bb9781a9`, the item-21 merge re-test) STANDS under item 31 — from-lead "2026-11-04 07:38:28 GMT" (pytest "13 failed, 7047 passed, 22 skipped, 5 xfailed" = the 13 FAILED lines in exactly the eight item-31 files; frontend all rc 0, vitest 919 of 919; demo designed stop 1587 s, dislocation #1 592 s) and to-lead "2026-11-04 07:39:25 GMT", which accepts it and rules (a) on PL-08302: it duplicated main's PL-1984 (8 lines, id tokens and the created line), so this mint `git rm`s it and re-points its citations. Merge 54 (`824a891d`, `data/expressions.py` and its two tests) does not overlap the slice's eight non-docs files, so the gate evidence carries. Minted as SL-1997 and LG-1998.
+#**Verdict line, 2026-11-04 07:45:28 GMT (executor, at the mint; the audit is the auditor's):** the SOLO gate at `07e62951` (on `bb9781a9`, the item-21 merge re-test) STANDS under item 31 — from-lead "2026-11-04 07:38:28 GMT" (pytest "13 failed, 7047 passed, 22 skipped, 5 xfailed" = the 13 FAILED lines in exactly the eight item-31 files; frontend all rc 0, vitest 919 of 919; demo designed stop 1587 s, dislocation #1 592 s) and to-lead "2026-11-04 07:39:25 GMT", which accepts it and rules (a) on PL 8302: it duplicated main's PL-1984 (8 lines, id tokens and the created line), so this mint `git rm`s it and re-points its citations. Merge 54 (`824a891d`, `data/expressions.py` and its two tests) does not overlap the slice's eight non-docs files, so the gate evidence carries. Minted as SL-1997 and LG-1998.
 
 ## Audit
 
