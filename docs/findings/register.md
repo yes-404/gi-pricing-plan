@@ -40,6 +40,8 @@ leaves is loud — but the row itself is still not parsed: no `Row` is produced,
 its five fields is read. A row loses its leading `|` only by mistake; nothing but this
 sentence keeps one from being written that way.
 
+**Id form: a row cites its essay by file name, not by integer id** *(dated note 2026-11-04, docs batch 9, on the lead's read-in entry "2026-11-04 11:39:47 GMT" in `from-lead-2026-10-09.md` and the maintainer's to-lead "2026-11-04 11:40:33 GMT" ruling (a))*. A row links its essay by the essay's file name (the row for FD-2002 at `:436` links its essay by the zero-padded file name and carries no bare `FD-2002` token), so `grep -c 'FD-2002' docs/findings/register.md` reads 0 over a row that exists. Search the register by the zero-padded file-name form or by the row's title; a zero from an integer-id grep is not absence. The case that found it: CR-2000's delta wrote "the register carries no row for it", and the lead's dated correction at `docs/closures/CR-02000-…:440` (#1428, `4daac158`) says so.
+
 | Finding id | Concerns | Work item | Phase | Decision |
 |---|---|---|---|---|
 | FR-59 (F6) | `unrun_layers` projection — Phase 2 validation-report successor | W7-4 | 2 | carry forward with an owner (Phase 2 validation-report workstream) |
