@@ -3572,7 +3572,7 @@ relates: [PL-1254]
 id: SL-1989
 family: slice
 title: WK-1250 slice — FD-1768's fix: a purposes-only mount change is worded "mount purposes changed" (FR-1399)
-status: active                    # draft → active → closed | retired (§1.2a)
+status: closed                    # draft → active → closed (§1.2a)
 created: 2026-11-04
 owner: lead
 tree: 503c620f19660c20e34307d268178822cdce379a

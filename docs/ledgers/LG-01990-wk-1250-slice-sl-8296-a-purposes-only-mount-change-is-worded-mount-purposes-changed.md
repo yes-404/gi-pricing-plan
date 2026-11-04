@@ -2,7 +2,7 @@
 id: LG-1990
 family: ledger
 title: WK-1250 Slice SL-1989 — FD-1768's fix, a purposes-only mount change is worded "mount purposes changed" (FR-1399)
-status: active                 # active → closed (§1.2a)
+status: closed                 # active → closed (§1.2a)
 created: 2026-11-03
 owner: executor
 tree: 5a9e47c5d72bb9e7e03438b93fbf269c8015322c   # origin/main at the re-merge
@@ -19,7 +19,7 @@ relates: [FD-1768, FR-1399, RL-1686, RL-1344]
 # LG-1990 — WK-1250 Slice SL-1989: a purposes-only mount change is worded "mount purposes changed"
 
 **GO:** the maintainer's entry "2026-11-03 17:30:53 GMT — Maintainer: GO for PL 8298 / SL 8296 / LG 8297 (WK-1250, FD-1768) at origin/draft/pl-fd1768 5a48fa9e" in `to-lead.md`; DP-5 (a), DP-6 (a) and DP-7 (a) accepted in the entry "2026-11-03 16:13:02 GMT".
-**MERGE-ACK:** not yet given.
+**MERGE-ACK:** ~~not yet given.~~ *(filled 2026-11-04, docs batch 8, by the auditor, on to-lead "2026-11-04 09:57:14 GMT" and "10:00:29 GMT" closing acts)* to-lead "2026-11-04 01:56:03 GMT" — Maintainer: MERGE-ACK #1423 (SL-1989; head 3d95a65e07be25ffebd1fe2bdfbfd5de549758fb, expected squash tree b37e1dfc3aeb6435952d2d9cf4c679815a128e2d). CI by id on that head: python 41754948183, docs 41754948240, history-policy 41754948192 (all success).
 
 ## Tasks
 
@@ -91,7 +91,9 @@ and `packages/pricing-core/tests/conftest.py`, neither loads `backend/tests/conf
 
 ### Audit
 
-Written by the auditor.
+~~Written by the auditor.~~
+
+*(Dated line 2026-11-04, docs batch 8, by the auditor.)* The slice audit is CR 8309 (WK-1250 fresh close audit; §1 and §3 evidence SL-1989's requirements with the red commit 7e2fdfa2 and the gate of record 322b20ec), by route (a) of to-lead "2026-11-04 09:57:14 GMT". The gap is accepted by that dated line; this record stands in the slice audit's place for the two-way ledger check, the build log and the gate of record above being the executor's record.
 
 ### Build log
 
@@ -100,7 +102,9 @@ Written by the auditor.
 
 ## PRs
 
-None yet.
+~~None yet.~~
+
+#1423, squash commit 7b8a00cf356f258cef764a5af576b28b01195186 (tree b37e1dfc3aeb6435952d2d9cf4c679815a128e2d), merged 2026-11-04T01:56:32Z; on main. Filled 2026-11-04 in docs batch 8.
 
 ## 2026-11-04 — the verdict at the mint
 
@@ -109,3 +113,5 @@ Verdict from the gate evidence: the full gate at `322b20ec` (window 2026-11-03 2
 ## 2026-11-04 — process line: the push before the push grant
 
 The branch was pushed at 01:28:19 GMT (origin reflog) to `38d19a47`, before the maintainer's push grant. Cause: the lead's mint brief, step 6, over-granted against the 01:10:01 grant, which reserved the push. Effect: the branch only moved; no CI ran, no PR was opened, main was untouched. The INDEX regeneration at load1 4.6, outside the gate-2 flock, was the mint seat's breach of the 01:10:01 grant. The lead's rule is adopted: a mint brief ends unpushed when a grant reserves the push. No FD (nothing wrong got through). Source: to-lead 2026-11-04 01:30:18 GMT.
+
+(Closed 2026-11-04 by the auditor in docs batch 8, on to-lead "2026-11-04 09:57:14 GMT" and "2026-11-04 10:00:29 GMT" (the six-slice closing acts): SL-1989 merged as #1423, squash commit 7b8a00cf356f258cef764a5af576b28b01195186 on main, tree b37e1dfc3aeb6435952d2d9cf4c679815a128e2d.)
