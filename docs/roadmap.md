@@ -3434,6 +3434,8 @@ relates: [PL-1912, PL-1544, LG-1841, SL-1711]
 
 One full run of `PL-1544` §"Rehearsal checklist", rows 0 to 9 as written there (row 6, the browser path `SL-1711` waived, included), plus row 6b, the WF-701 browser check that PL-1912 adds, on `main` at the exit tree on Monday 9 November 2026; order 0–6, 6b, 7–9. Cut as one WK-1178 slice by the maintainer's entry "2026-10-25 11:32:17 GMT — Maintainer: §14 note r5 — the six owed rulings, decided now (dated lines for the review's rows)", line 6 (E2), in the CLAUDE.md §14 plan review before the 12 Nov exit demo. Its ledger LG 8226 records each row's command, output and tree; WF-701's timing lines are an observation with no budget (PL-1912 E1 item 3). No code, spec or plan file changes. **Activation needs:** PL-1912 minted; the exit tree named by the lead; no gate slot held and no other run on the box (row 1); the lead's GO. *(Row cut 2026-10-25 by the planner in PL-1912; working ids SL-1913 and LG 8226 reserved by the lead in `eta.md`.)*
 
+*(Dated correction, 2026-11-04, docs batch 9, by the auditor, on to-lead "2026-11-03 15:40:02 GMT" ruling (2), "SL-1913 rehearsal Mon 16 Nov accepted", found by plan-sl1913 and verified by the lead: SL-1913's rehearsal is **Mon 16 Nov 2026**, not Mon 9 Nov, by PL-1912's dated delta of 2026-11-03 (`docs/plans/PL-01912-…`, the delta line at `:224-247`) following the user's calendar move of "2026-11-03 15:38:58 GMT" (code freeze Tue 10 Nov, P2 exit demo Wed 18 Nov). The heading at `:3419`, the `title:` and this paragraph stay as written; this line governs.)*
+
 #### SL-1976 — WK-1178 hotfix slice — the CI MinIO image guard pins the tarball sha256 and accepts the config or the manifest Id (FD-1975)
 
 ```yaml
