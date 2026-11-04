@@ -3504,6 +3504,26 @@ relates: [PL-1254]
 
 
 
+#### SL-1989 — WK-1250 slice — FD-1768's fix: a purposes-only mount change is worded "mount purposes changed" (FR-1399)
+
+```yaml
+id: SL-1989
+family: slice
+title: WK-1250 slice — FD-1768's fix: a purposes-only mount change is worded "mount purposes changed" (FR-1399)
+status: active                    # draft → active → closed | retired (§1.2a)
+created: 2026-11-04
+owner: lead
+tree: 503c620f19660c20e34307d268178822cdce379a
+phase: P2
+work: WK-1250
+corrected_by: []
+relates: [FD-1768, LG-1990, PL-1991]
+```
+
+`analysis.py`'s mount loop words a sub-graph mount whose purposes alone changed as "mount purposes changed", not "mount ports re-mapped" (FR-1399); red first, no database. One source file, one test file, FR-1399's dated amendment.
+
+(Minted 2026-11-04 from working id 8296, on the maintainer's GO "2026-11-03 17:30:53 GMT" and the lead's mint order, with the mint tool of record `mint-repoint.py` (sha256 `4d83681a`); ledger LG-1990 (working id 8297), plan PL-1991 (working id 8298), finding FD-1768; executed on branch `sl-8296-wk1250-fd1768-purposes-wording`.)
+
 ### RFC-895 … RFC-898 — the four notes, reconciled 2026-09-01
 
 **A note decides nothing** (`docs/rfcs/README.md`). Four working notes are filed and

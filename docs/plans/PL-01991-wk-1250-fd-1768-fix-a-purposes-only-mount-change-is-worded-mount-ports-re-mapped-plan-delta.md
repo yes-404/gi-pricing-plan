@@ -1,8 +1,8 @@
 ---
-id: PL-8298
+id: PL-1991
 family: plan
 kind: map
-title: WK-1250 — FD-1768's fix, a sub-graph mount whose purposes alone changed is worded "mount ports re-mapped" in the declared changes (FR-1399), SL 8296 — a dated Work-plan delta
+title: WK-1250 — FD-1768's fix, a sub-graph mount whose purposes alone changed is worded "mount ports re-mapped" in the declared changes (FR-1399), SL-1989 — a dated Work-plan delta
 status: draft                   # draft → active → superseded | retired (§1.2a) — L1: draft→active rides the slice's PR
 created: 2026-11-03             # filed under working id 8298
 owner: planner
@@ -15,7 +15,9 @@ corrected_by: []
 relates: [PL-1254, FD-1768, RL-1686, RL-1344, FR-1399]
 ---
 
-# PL 8298 — WK-1250: FD-1768's fix. A purposes-only mount change is worded "mount ports re-mapped" (SL 8296, a dated Work-plan delta)
+(Minted 2026-11-04 from working id 8298, with SL-1989 from working id 8296 and LG-1990 from working id 8297, on the lead's mint order and the maintainer's GO "2026-11-03 17:30:53 GMT", with the mint tool of record `mint-repoint.py` (sha256 `4d83681a`); finding FD-1768; executed on branch `sl-8296-wk1250-fd1768-purposes-wording`.) The blockquote below is the plan's draft-time wording and keeps the working ids.)
+
+# PL-1991 — WK-1250: FD-1768's fix. A purposes-only mount change is worded "mount ports re-mapped" (SL-1989, a dated Work-plan delta)
 
 > **For agentic workers:** this is a **dated Work-plan delta** under Lean P2 L1 (a')
 > (`.claude/roles/planner.md`, "Lean P2"): a new `PL-` that `relates:` the Work's plan, `PL-1254`,
@@ -32,7 +34,7 @@ relates: [PL-1254, FD-1768, RL-1686, RL-1344, FR-1399]
   changing `purposes` alone). The event that next discharges it: the merge of that slice."
   SL-1341 is `closed` (`docs/roadmap.md`, its row under `### WK-1250`).
 - **The seating.** The maintainer's entry "2026-11-03 15:58:45 GMT" item (1) in
-  `~/gi-pricing-plan.local/channel/to-lead.md`: "a dated WK-1250 delta row, SL 8296 / LG 8297,
+  `~/gi-pricing-plan.local/channel/to-lead.md`: "a dated WK-1250 delta row, SL-1989 / LG-1990,
   red-first …, merge target Fri 6, GO request to me with the row".
 - **The form.** The lead ruled option (a) on 2026-11-03: a new delta PL under working id 8298,
   as `PL-1667` and `PL-1737` are, with `PL-1254` unedited.
@@ -41,14 +43,14 @@ relates: [PL-1254, FD-1768, RL-1686, RL-1344, FR-1399]
   which stands on `.claude/roles/planner.md` "Lean P2" L1 (a'). This plan replaces the "row 4"
   that was appended to `PL-1254` on `draft/pl-fd1768` at `03085614`. That append is reverted by
   `28ef6c4f` on the same branch, so `PL-1254` is unedited. Its content is carried here unchanged
-  in substance: SL 8296 / LG 8297, R0 (as Evidence), R1, R2, G, A1 to A8, and DP-5 to DP-7 with
+  in substance: SL-1989 / LG-1990, R0 (as Evidence), R1, R2, G, A1 to A8, and DP-5 to DP-7 with
   their recommendations. The DP numbers are the row's.)*
 - **The calendar.**
   - The entry "2026-11-03 15:38:58 GMT" sets the code freeze on Tue 10 Nov 2026, the docs freeze
     on Wed 11 Nov 2026 and the P2 exit demo on Wed 18 Nov 2026.
   - The entry "2026-11-03 15:59:27 GMT" says nfr-bench-1 runs on a dedicated VM and "do[es] not
     reserve the shared box's gate slots". The same entry says "The fresh full gate at the
-    post-FD-1768 head runs on the shared box as soon as SL 8296 merges — Fri 6 evening …; Mon 9
+    post-FD-1768 head runs on the shared box as soon as SL-1989 merges — Fri 6 evening …; Mon 9
     is the fallback, not the plan".
   - Weekdays were read with `date -d <d> +%A`.
 
@@ -132,7 +134,7 @@ slice's merge tree. Items 1 and 2 apply to this plan. Items A1 to A8 apply to th
 2. **No requirement range.** `grep -nE '(N?FR)-[0-9]+ *(-|to|–) *(N?FR-)?[0-9]+' <this file>`
    prints no line that stands for a set of ids.
 
-The slice, SL 8296:
+The slice, SL-1989:
 
 - **A1.** `git diff --name-only origin/main...HEAD` lists only these paths:
   `packages/pricing-core/src/pricing_core/rating/analysis.py`,
@@ -174,10 +176,10 @@ The slice, SL 8296:
 
 ## Tasks
 
-### SL 8296 — FD-1768's fix: a purposes-only mount change is worded "mount ports re-mapped"
+### SL-1989 — FD-1768's fix: a purposes-only mount change is worded "mount ports re-mapped"
 
 **The row.** Order 1 in this delta, and the fourth slice of WK-1250 after `PL-1254`'s Slices 1
-to 3. Ledger LG 8297.
+to 3. Ledger LG-1990.
 
 - **Scope:** R1, R2 and G below.
 - **Requirement:** FR-1399 (`03` §3).
@@ -232,16 +234,16 @@ the actual string.
 - `packages/pricing-core/src/pricing_core/rating/analysis.py`: the mount loop only
   (`:650-676`).
 - `packages/pricing-core/tests/test_rating_attribution.py`: one added test.
-- LG 8297 under `docs/ledgers/`.
+- LG-1990 under `docs/ledgers/`.
 - `docs/specs/03-rating-engine.md`: FR-1399, only if DP-7 is (a).
-- At the mint: the SL 8296 row under `### WK-1250` in `docs/roadmap.md`, `docs/INDEX.md`, the
+- At the mint: the SL-1989 row under `### WK-1250` in `docs/roadmap.md`, `docs/INDEX.md`, the
   `status:` of this plan, and the FD-1768 closing act (A8).
 
 ## Hand-off (not this plan's writes)
 
 - The rulings on DP-5 to DP-7 belong to the decision-maker.
 - The maintainer's GO on the row comes before the executor is briefed.
-- The SL 8296 roadmap row and the mint belong to the lead.
+- The SL-1989 roadmap row and the mint belong to the lead.
 - The `LG-` belongs to the executor.
 - FD-1768's closing act belongs to the auditor.
 - The post-merge WK-1250 full gate belongs to the lead.

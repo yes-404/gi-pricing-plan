@@ -1,20 +1,22 @@
 ---
-id: LG-8297
+id: LG-1990
 family: ledger
-title: WK-1250 Slice SL-8296 — FD-1768's fix, a purposes-only mount change is worded "mount purposes changed" (FR-1399)
+title: WK-1250 Slice SL-1989 — FD-1768's fix, a purposes-only mount change is worded "mount purposes changed" (FR-1399)
 status: active                 # active → closed (§1.2a)
 created: 2026-11-03
 owner: executor
 tree: 5a9e47c5d72bb9e7e03438b93fbf269c8015322c   # origin/main at the re-merge
 phase: P2
 work: WK-1250
-slice: SL-8296
-plans: [PL-8298]
+slice: SL-1989
+plans: [PL-1991]
 corrected_by: []
 relates: [FD-1768, FR-1399, RL-1686, RL-1344]
 ---
 
-# LG-8297 — WK-1250 Slice SL-8296: a purposes-only mount change is worded "mount purposes changed"
+(Minted 2026-11-04 from working id 8297, with SL-1989 from working id 8296 and PL-1991 from working id 8298, on the lead's mint order and the maintainer's GO "2026-11-03 17:30:53 GMT", with the mint tool of record `mint-repoint.py` (sha256 `4d83681a`); finding FD-1768; executed on branch `sl-8296-wk1250-fd1768-purposes-wording`.)
+
+# LG-1990 — WK-1250 Slice SL-1989: a purposes-only mount change is worded "mount purposes changed"
 
 **GO:** the maintainer's entry "2026-11-03 17:30:53 GMT — Maintainer: GO for PL 8298 / SL 8296 / LG 8297 (WK-1250, FD-1768) at origin/draft/pl-fd1768 5a48fa9e" in `to-lead.md`; DP-5 (a), DP-6 (a) and DP-7 (a) accepted in the entry "2026-11-03 16:13:02 GMT".
 **MERGE-ACK:** not yet given.
@@ -23,7 +25,7 @@ relates: [FD-1768, FR-1399, RL-1686, RL-1344]
 
 ### Scope
 
-`PL-8298`, "SL 8296 — FD-1768's fix: a purposes-only mount change is worded "mount ports
+`PL-1991`, "SL-1989 — FD-1768's fix: a purposes-only mount change is worded "mount ports
 re-mapped"": R1 (red first, no database), R2 (green) and G (the gate). Requirement: FR-1399.
 Write set: `analysis.py` mount loop, one test file, this ledger, FR-1399's dated amendment.
 Open point of the brief: whether `rating.py:1093-1095` is in scope. Settled below by a test.
@@ -32,7 +34,7 @@ Open point of the brief: whether `rating.py:1093-1095` is in scope. Settled belo
 
 - **T0 — re-read, no line moved.** At `origin/draft/pl-fd1768` 5a48fa9e merged with `origin/main`
   5a9e47c5 (merge commit 0fc28ace; only `docs/INDEX.md` conflicted, main's taken and regenerated,
-  `doc-index.py --check` rc 0): `analysis.py:662-669` and `rating.py:1093-1095` read as `PL-8298`
+  `doc-index.py --check` rc 0): `analysis.py:662-669` and `rating.py:1093-1095` read as `PL-1991`
   cites them; `RL-1686` descriptions and FR-1399's mount sentence as cited.
 - **The `rating.py` verdict: `rating.py:1093-1095` verified correct at base by
   `test_mount_purposes_alone_is_one_structural_mount_change_with_before_equal_after`
