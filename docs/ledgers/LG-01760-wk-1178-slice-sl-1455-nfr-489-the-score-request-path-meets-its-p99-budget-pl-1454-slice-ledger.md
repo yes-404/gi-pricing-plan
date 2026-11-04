@@ -520,3 +520,7 @@ Recorded by executor-1455b on 2026-10-16, from the primary files under `~/gi-pri
 ## PRs
 
 (none yet; Task 0 is not a PR on its own — the slice's one PR carries this ledger at the slice's end.)
+
+## Pre-registration (dated line 2026-11-04, batch 8)
+
+*(2026-11-04, on to-lead "2026-11-04 09:57:14 GMT" (driver C' accepted, hash of record) and "2026-11-04 10:00:29 GMT" (the pre-registration rides the docs PR).)* Driver C', `~/gi-pricing-plan.local/scratch/nfr-bench-1/bench-c-nfr489-ladder.py`, sha256 `130dfb174ac3ca0ce09c8ae3e1b4a3f3d829faec463badbd68f61b6e991f97ab`, the NFR-489 ladder (Thursday's invocation `--rates 25,50,100,200 --runs 4 --workers 4 --serve-dsn …`, nfr-bench-1 S1 Thu 5 Nov 2026). Driver D (`bench-d-nfr489-mount.py`, sha256 `df6e7c9c3216895d175434cf92bd5d26c0335fe7f48621dfee5c2919997513d3`) is carried by CR-8309's NFR-489 row, not here (09:45:54). **Reading owed.**
