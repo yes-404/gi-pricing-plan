@@ -424,3 +424,17 @@ close is blocked by:
 
 FD candidate B and closing acts 2–4 are docs hygiene that need not block. The §5 verdicts are
 proposals. **The close itself is the user's dated line.**
+
+## 2026-11-04 — delta: batch 8 landed
+
+*(Dated line 2026-11-04 11:28 GMT, by the auditor, read at `origin/main` e3c150c4827a2f2f29e5314bb264c24125d714a7. No verdict is rewritten.)*
+
+- **Batch 8 merged as #1427**, squash commit `e3c150c4827a2f2f29e5314bb264c24125d714a7`, at 2026-11-04 11:25:06 GMT (from-lead "2026-11-04 11:25:06 GMT").
+- **What it carries on main**, each read at that squash:
+  - SL-1985 and SL-1997 closed: `docs/roadmap.md:1031` and `:1051` (`status: closed`); their ledgers `LG-1986` and `LG-1998` carry `status: closed` at `:5`. Route (a) of "2026-11-04 09:57:14 GMT", adopted in "2026-11-04 10:00:29 GMT", is written at `docs/ledgers/LG-01986-wk-673-slice-sl-8303-fd-1495-glm-control-factor-red-first-slice-ledger.md:248`.
+  - The register rows annotated with the PR number: `docs/findings/register.md:60` and `:85` (LG-1998, SL-1997, #1426 `db92a7bc`).
+  - PL-1984 active: `docs/plans/PL-01984-wk-673-remediation-fd-1495-fd-1490-fd-1578-fd-1651-fd-1481-before-close-work-plan-delta.md:6`.
+  - FD-1983's carry: `docs/findings/register.md:434` (the FD stays open, carried to P3; the owner and phase struck and re-set); essay `docs/findings/FD-01983-two-wk-673-deferrals-of-lg-1545-s-13-live-only-in-the-ledger-the-per-set-s-figures-and-the-690-976-per-policy-maxima.md:5` (`status: active`).
+  - FD-2002 closed: `docs/findings/FD-02002-rl-1504-dp-s5-2-ii-s-observed-abs-change-pct-quantiles-of-a-fremtpl2-dislocation-run-are-recorded-nowhere.md:5` (`status: closed`), with its Resolved line at `:50`. The register carries no row for it (`grep -c 'FD-2002' docs/findings/register.md` reads 0 at this tree); the essay is its record.
+- **The 10:00:29 condition for CLOSE-READY (batch 8 on main) is met; the user's dated line is the close.** The §5 verdicts above stay PROPOSED and the lead's.
+- *Correction (dated line 2026-11-04 11:40:56 GMT, by the lead, on the maintainer's ruling (a), to-lead "2026-11-04 11:40:33 GMT"; the auditor seat that wrote this delta ended with the lead's 11:29:42 outage):* `docs/findings/register.md:436` IS FD-2002's row — it links FD-2002's essay by its file name and carries its Resolved line, with no bare `FD-2002` token. The "the register carries no row for it" sentence above is wrong: `grep -c 'FD-2002'` misses a row that cites its record by file name (the working-id grep trap). The sentence stays as written; this line governs.
