@@ -18,6 +18,15 @@ verbatim (RL-872,
 
     uv run python scripts/bench-rating.py
 
+`--http` drives the whole application, so it needs two DSNs (FD-2001): `--dsn` is the owner,
+used only to seed and to time `_fetch_bundle` in-process, and `--serve-dsn` is the
+least-privilege login role the server under test connects as, because `app.main` refuses to
+start as an owner or a superuser (FR-44, FD-1729):
+
+    uv run python scripts/bench-rating.py --http --serve-dsn "$APP_LOGIN_DSN"
+
+`--serve-dsn` defaults to `$GIP_TEST_APP_DATABASE_URL`, the suite's own name for it.
+
 **Stdlib-only tooling, per RL-872's disposition.** `time.perf_counter` for timing, one
 `asyncio` event loop driving a sequential await loop (no concurrency measurement here —
 Task 1.4's own `docs/research/w11-task-1-4-model-call-concurrency.md` already covers
@@ -907,6 +916,9 @@ def _serve(
     *replica*, and an in-process server would have the load generator's own work competing
     for the same event loop and counting inside the latency it is trying to measure.
     `scripts/demo.py:237` launches it exactly this way.
+
+    `dsn` is the application's login DSN, never the owner's: `app.main` refuses to start as an
+    owner or a superuser (FR-44, FD-1729).
     """
     import subprocess
 
@@ -1099,6 +1111,14 @@ def main() -> int:
             "GIP_TEST_DATABASE_URL",
             "postgresql+asyncpg://gipricing:gipricing@localhost:5432/gipricing",
         ),
+        help="The OWNER DSN: used to seed and to time `_fetch_bundle` in-process, never to "
+             "serve (FD-2001).",
+    )
+    parser.add_argument(
+        "--serve-dsn",
+        default=os.environ.get("GIP_TEST_APP_DATABASE_URL"),
+        help="The app login DSN uvicorn connects as (FD-1729: the server refuses an "
+             "owner/superuser). Required with --http; defaults to $GIP_TEST_APP_DATABASE_URL.",
     )
     parser.add_argument(
         "--bucket", default=os.environ.get("GIP_TEST_BUCKET", "gip-test-blobs")
@@ -1109,6 +1129,12 @@ def main() -> int:
              "is per replica at this N; it is printed in the header of every run.",
     )
     args = parser.parse_args()
+    if args.http and not args.serve_dsn:
+        parser.error(
+            "--http needs --serve-dsn (or $GIP_TEST_APP_DATABASE_URL): the app login DSN the "
+            "server connects as; --dsn is the owner, which the server refuses to start as "
+            "(FD-1729)"
+        )
 
     print(f"machine: {machine()}")
     print(
@@ -1314,7 +1340,7 @@ def _run_http_sweep(args: Any) -> None:
 
         log_path = logs / f"server-{'gbm' if with_gbm else 'nogbm'}.log"
         proc = _serve(
-            dsn=args.dsn, bucket=args.bucket, log_path=log_path, port=args.port,
+            dsn=args.serve_dsn, bucket=args.bucket, log_path=log_path, port=args.port,
             workers=args.workers,
         )
         base = f"http://127.0.0.1:{args.port}"

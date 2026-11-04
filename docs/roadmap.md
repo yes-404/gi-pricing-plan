@@ -3484,6 +3484,26 @@ The frontend fixes for the ten carried NFR-463 lows of FD-1974 on the WK-675 sur
 
 (Minted 2026-11-03 from working id 8288, on the maintainer's GO "2026-11-03 15:52:04 GMT" and the lead's mint order, with the mint tool of record `mint-repoint.py` (sha256 `4d83681a`); ledger LG-1988 (working id 8289), finding FD-1974; executed on branch `sl-8288-fd1974-a11y-lows`.)
 
+#### SL-2005 — WK-1178 slice — FD-2001's fix: `scripts/bench-rating.py --http` serves the application a least-privilege DSN and seeds with the owner DSN (`--serve-dsn`)
+
+```yaml
+id: SL-2005
+family: slice
+title: WK-1178 slice — FD-2001's fix, scripts/bench-rating.py --http serves the application a least-privilege DSN (--serve-dsn)
+status: active                    # draft → active → closed (§1.2a)
+created: 2026-11-04
+owner: lead
+tree: da219505e1a5bde19256d66dad5c0a04dbd4d4c2
+phase: P2
+work: WK-1178
+corrected_by: []
+relates: [FD-2001, FD-1729, PL-2004, LG-2006, NFR-489, FR-44]
+```
+
+`scripts/bench-rating.py --http` serves the application a least-privilege DSN (`--serve-dsn`, default `GIP_TEST_APP_DATABASE_URL`) and keeps the owner DSN for `_seed` and `_measure_fetch`, so the harness drives the platform as shipped (FD-2001, planned in PL-2004 row SL-2005); NFR-489 is the requirement the harness measures, FR-44 the refusal it now honours. FD-2001 closes at the merge (the auditor's closing act, A8).
+
+(Minted 2026-11-04 from working id 8317, on the maintainer's GO "2026-11-04 16:42:29 GMT" and the lead's mint order, with the mint tool of record `mint-repoint.py` (sha256 `4d83681a`); plan PL-2004 (working id 8316), ledger LG-2006 (working id 8318); executed on branch `sl-8317-fd2001-serve-dsn`.)
+
 ### WK-1250 — Sub-graph composition and MTA/cancellation pricing — FR-217's inlining and FR-218's authoring half
 
 ```yaml
