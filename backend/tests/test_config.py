@@ -169,3 +169,14 @@ def test_a_strict_environment_refuses_a_missing_or_default_tenant_id(
 @pytest.mark.req("FR-436")
 def test_local_starts_with_the_local_tenant_id() -> None:
     assert load_settings(environment=Environment.LOCAL).tenant_id == "local"
+
+
+@pytest.mark.req("FR-268")
+def test_deployment_reconcile_seconds_defaults_to_ten_and_stays_inside_nfr_494() -> None:
+    """`le=30` is NFR-494's 30 s: no value the type accepts breaks the bound."""
+    assert Settings().deployment_reconcile_seconds == 10
+    assert Settings(deployment_reconcile_seconds=30).deployment_reconcile_seconds == 30
+    for refused in (0, 31):
+        with pytest.raises(ConfigInvalidError) as exc:
+            load_settings(deployment_reconcile_seconds=refused)
+        assert "GIP_DEPLOYMENT_RECONCILE_SECONDS" in str(exc.value)

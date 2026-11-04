@@ -1327,6 +1327,26 @@ PL-1688 row 2: the compose `beat` scheduler service that moves a Job out of the 
 (Closed 2026-11-03 as a Slice, by the auditor's closing acts on the lead's instruction (the maintainer's ruling, to-lead "2026-11-03 15:36:59 GMT" item 3), on the audit recorded in LG-1969 and the lead's merge: #1409, squash commit aad4fd58bde87f59fffe646466f4f86bb2373bf8, committer date 2026-10-29T22:04:48Z; ledger LG-1969.)
 
 
+#### SL-1992 — WK-674 slice — FD-1823's reconcile: the deployment switch loads the latest committed Deployment periodically and on reconnect, and discovers Environments created after start (PL-1688 row 3), red first
+
+```yaml
+id: SL-1992
+family: slice
+title: WK-674 slice — FD-1823's reconcile: the deployment switch loads the latest committed Deployment periodically and on reconnect, and discovers Environments created after start (PL-1688 row 3), red first
+status: active                    # draft → active → closed (§1.2a)
+created: 2026-11-03
+owner: lead
+tree: 92327cd03c4b370c0cc1126bc26f358f3b940538
+phase: P2
+work: WK-674
+corrected_by: []
+relates: [FD-1823, LG-1993, PL-1688]
+```
+
+PL-1688 row 3: the deployment switch reconciles against the database, so a missed COMMIT message is repaired and an Environment created after start is subscribed, within `Settings.deployment_reconcile_seconds` (DP-R1, default 10 s, 1 to 30) and on every reconnect (DP-R2, restart-equivalent hydration); FD-1823 is the remedy's finding. Red tests first, with the red table in LG-1993.
+
+(Minted 2026-11-04 from working id 8286, on the maintainer's GO "2026-11-03 15:50:00 GMT" (2) and the lead's mint order (the gate stands under 1(f), "2026-11-04 03:14:50 GMT"), with the mint tool of record `mint-repoint.py` (sha256 `4d83681a`); ledger LG-1993 (working id 8287), finding FD-1823; executed on branch `sl-8286-wk674-fd1823-reconcile`.)
+
 ### WK-675 — Frontend: **DAG designer (Vue Flow)**, rate table editor, quote sandbox + ladder waterfall, dislocation views
 
 ```yaml
