@@ -555,7 +555,7 @@ surface sits in Phase 1.**
 ## P2 — Rating Engine
 status: active
 opened: 2026-08-14
-target: 2026-11-12
+target: 2026-11-18
 gates: ~
 exit criteria: G1–G6 of [`CR-1212`](closures/CR-01212-plan-review-15-p2-exit-criteria-budget-sequencing-and-the-open-finding-set.md), as accepted by the maintainer 2026-09-28, listed below
 works: WK-668, WK-669, WK-670, WK-671, WK-672, WK-673, WK-674, WK-675, WK-690, WK-693, WK-694, WK-695, WK-696, WK-697, WK-1169, WK-1170, WK-1178, WK-1250
@@ -599,6 +599,8 @@ are therefore a forecast for reference, not targets. No Work, slice, plan, rulin
 a date. The freeze gates limit only what may **enter** P2, never when a start happens.)*
 
 *(Re-dated 2026-11-03, written by the auditor on the lead's instruction — this milestone section is the lead's — quoting the maintainer's entry "2026-11-03 15:38:58 GMT" (`to-lead.md`), which relays the user's order of 15:38 GMT: "move freeze to 10th of Nov and defer the later dates". The interval is 6 days. **Code freeze: Tue 2026-11-10** (~~Wed 2026-11-04~~); **docs freeze: Wed 2026-11-11** (~~Thu 2026-11-05~~); **P2 exit demo: Wed 2026-11-18** (~~Thu 2026-11-12~~). Weekdays read with `date -d`: Tuesday, Wednesday, Wednesday. The superseded dates are struck here, and the list above, a verbatim quotation of the 2026-09-29 entry, stays unedited (`quote-parity.py` refuses an edit inside a blockquote); the scope freeze (Sat 2026-10-03) is untouched, and the Work-close schedule and nfr-bench-1 dates of the entry stand. The `target:` line of the P2 section's front matter (2026-11-12) is not edited here.)*
+
+*(Dated correction, 2026-11-04, docs batch 9, by the auditor, on to-lead "2026-11-04 16:19:01 GMT" (the maintainer's ruling on the P2 plan-review skeleton, batch 9 item 12): P2's front-matter field `target:` at `:558` read `2026-11-12`, stale against the user's order relayed in to-lead "2026-11-03 15:38:58 GMT" (code freeze Tue 10 Nov, docs freeze Wed 11 Nov, exit demo Wed 18 Nov); it is set to `2026-11-18` in place and its previous value, `2026-11-12`, is recorded here. The re-dated line above stays as written.)*
 
 #### Phase 2 status
 
