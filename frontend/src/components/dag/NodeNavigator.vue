@@ -7,28 +7,45 @@
 import { computed, nextTick, onBeforeUnmount, ref, watch } from "vue";
 
 import type { RatingStep } from "@/api/ratingAlgorithms";
+import type { SubGraphRef } from "@/api/subGraphs";
 
 import { graphOrder } from "./graph";
 
 const props = withDefaults(
-  defineProps<{ steps: RatingStep[]; selected: string | null; issueCounts?: ReadonlyMap<string, number> }>(),
-  { issueCounts: () => new Map<string, number>() },
+  defineProps<{
+    steps: RatingStep[];
+    mounts?: SubGraphRef[];
+    selected: string | null;
+    issueCounts?: ReadonlyMap<string, number>;
+  }>(),
+  { mounts: () => [], issueCounts: () => new Map<string, number>() },
 );
 
-function optionName(step: RatingStep): string {
-  const n = props.issueCounts.get(step.step_id) ?? 0;
-  const base = `${step.step_id} ${step.label}`;
+/** A step or a sub-graph mount (RL-1835 (i) 6: the keyboard path covers mounts). */
+interface Entry {
+  id: string;
+  label: string;
+  mount: boolean;
+}
+
+function optionName(entry: Entry): string {
+  const n = props.issueCounts.get(entry.id) ?? 0;
+  const base = `${entry.id} ${entry.label}`;
   return n === 0 ? base : `${base}, ${n} ${n === 1 ? "issue" : "issues"}`;
 }
 const emit = defineEmits<{ select: [stepId: string]; remove: [stepId: string] }>();
 
 const TYPEAHEAD_MS = 500;
 
-const order = computed(() => graphOrder(props.steps));
-const steps = computed(() => {
-  const byId = new Map(props.steps.map((s) => [s.step_id, s]));
-  return order.value.map((id) => byId.get(id) as RatingStep);
+const order = computed(() => graphOrder(props.steps, props.mounts));
+const entries = computed(() => {
+  const byId = new Map<string, Entry>([
+    ...props.steps.map((s) => [s.step_id, { id: s.step_id, label: s.label, mount: false }] as const),
+    ...props.mounts.map((m) => [m.mount_point, { id: m.mount_point, label: `sub-graph ${m.ref}`, mount: true }] as const),
+  ]);
+  return order.value.map((id) => byId.get(id) as Entry);
 });
+const confirmingMount = computed(() => props.mounts.some((m) => m.mount_point === confirming.value));
 
 const active = ref<string | null>(props.selected ?? order.value[0] ?? null);
 watch(
@@ -91,7 +108,7 @@ async function close(): Promise<void> {
 
 function confirmRemove(): void {
   if (confirming.value !== null) {
-    removed.value = `Removed step ${confirming.value}`;
+    removed.value = `Removed ${confirmingMount.value ? "mount" : "step"} ${confirming.value}`;
     emit("remove", confirming.value);
   }
   void close();
@@ -147,21 +164,21 @@ function onKeydown(event: KeyboardEvent): void {
       @keydown="onKeydown"
     >
       <li
-        v-for="step in steps"
-        :id="`nav-${step.step_id}`"
-        :key="step.step_id"
+        v-for="entry in entries"
+        :id="`nav-${entry.id}`"
+        :key="entry.id"
         role="option"
-        :aria-label="optionName(step)"
-        :aria-selected="step.step_id === selected"
+        :aria-label="optionName(entry)"
+        :aria-selected="entry.id === selected"
         class="cursor-pointer rounded border-l-4 px-2 py-1"
         :class="[
-          step.step_id === active ? 'bg-sky-100 text-sky-900 outline outline-2 outline-sky-700' : '',
-          step.step_id === selected ? 'border-sky-700 font-semibold' : 'border-transparent',
+          entry.id === active ? 'bg-sky-100 text-sky-900 outline outline-2 outline-sky-700' : '',
+          entry.id === selected ? 'border-sky-700 font-semibold' : 'border-transparent',
         ]"
-        @click="active = step.step_id; emit('select', step.step_id)"
+        @click="active = entry.id; emit('select', entry.id)"
       >
-        <span class="font-mono text-xs">{{ step.step_id }}</span>
-        <span class="ml-2 text-slate-600">{{ step.label }}</span>
+        <span class="font-mono text-xs">{{ entry.id }}</span>
+        <span class="ml-2 text-slate-600">{{ entry.label }}</span>
       </li>
     </ul>
     <div
@@ -176,7 +193,7 @@ function onKeydown(event: KeyboardEvent): void {
         id="nav-confirm-title"
         class="text-sm text-red-800"
       >
-        Remove step {{ confirming }}? Steps that consume what it produces are left unresolved.
+        Remove {{ confirmingMount ? "mount" : "step" }} {{ confirming }}? Steps that consume what it produces are left unresolved.
       </p>
       <div class="mt-2 flex gap-2">
         <button
@@ -192,7 +209,7 @@ function onKeydown(event: KeyboardEvent): void {
           class="rounded-md bg-red-700 px-3 py-1 text-sm text-white"
           @click="confirmRemove"
         >
-          Remove step
+          {{ confirmingMount ? "Remove mount" : "Remove step" }}
         </button>
       </div>
     </div>

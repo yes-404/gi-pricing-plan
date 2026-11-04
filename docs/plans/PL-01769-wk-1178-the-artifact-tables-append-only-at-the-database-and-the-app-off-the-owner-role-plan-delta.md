@@ -1265,6 +1265,15 @@ GRANT gip_app TO gip_app_login;
     *"reachable only from inside the VPC (10.128.0.0/9)"*, and *"S-b's Step 1.5 (compose binds
     every port to 127.0.0.1, red first) STAYS as defence in depth … together with the
     non-default GIP_APP_DB_PASSWORD gate (R8)"*. No running container is recreated.)*
+  - *(Dated 2026-10-25, on the maintainer's (by delegation) entry "2026-10-25 11:53:23 GMT",
+    which rules the loopback change delivered early: **Step 1.5 is delivered by the PR on
+    `fix/compose-loopback-2026-10-25`**, not by S-b, with `backend/tests/test_compose_binds.py`
+    red first. The scope there is six entries, `lb`'s `${GIP_LB_PORT:-8000}:8000` included.
+    **The `ports:` line cites in this plan, `deploy/docker-compose.yml:16`, `:27`, `:42` and `:68`
+    (Step 1.5, the files table, the literals check), were read at `a3fc2e8d` and are stale;
+    at `ff976406` they are `:39` (postgres), `:50` (redis), `:65` (minio, two entries), `:91`
+    (keycloak) and `:187` (`lb`).** Step 1.5's "five" is six entries on five lines. S-b keeps
+    what remains of Step 1.5: Task 6's `docker port` check on a running stack.)*
 
 #### Task 2: the two DSNs (DP-16 (a))
 

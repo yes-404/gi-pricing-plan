@@ -15,6 +15,7 @@ from uuid import UUID
 
 import pytest
 import pytest_asyncio
+from backend.tests.conftest_db import seed_as_owner
 from fastapi.testclient import TestClient
 from sqlalchemy import delete
 
@@ -63,10 +64,13 @@ async def set_limit(database: Database, workspace_id: UUID) -> Any:
             await svc.set_workspace_setting(session, workspace_id, LIMIT_KEY, value)
 
     yield _set
-    async with database.unit_of_work() as session:
+
+    async def _remove(session: Any) -> None:
         await session.execute(
             delete(WorkspaceSettingRow).where(WorkspaceSettingRow.workspace_id == workspace_id)
         )
+
+    await seed_as_owner(_remove)
 
 
 def _account(
@@ -445,7 +449,11 @@ async def test_an_identity_route_is_counted_once_for_a_bearer_caller(
     async with database.unit_of_work() as session:
         identity = await authenticate_bearer(session, verifier, "t")
         await workspaces.ensure_workspace(session, workspace_id=member_of)
+
+    async def _seed_membership(session: Any) -> None:
         session.add(WorkspaceMemberRow(user_id=identity.principal.id, workspace_id=member_of))
+
+    await seed_as_owner(_seed_membership)
     client.app.state.oidc_verifier = verifier  # type: ignore[attr-defined]
     headers = {"Authorization": "Bearer t"}
     calls = _spy_management_count(client, monkeypatch)

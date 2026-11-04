@@ -1,7 +1,8 @@
 """Alembic environment.
 
-The URL comes from `Settings`, never from `alembic.ini` — a committed connection string is
-both a secret-handling problem (R3) and a way to migrate the wrong database.
+The URL (`migration_database_url`, the owner's) comes from `Settings`, never from
+`alembic.ini` — a committed connection string is both a secret-handling problem (R3) and a
+way to migrate the wrong database.
 
 FR-435: migrations run as an explicit pre-deploy step, never automatically on
 application start. Nothing here is invoked by `create_app`.
@@ -28,7 +29,15 @@ if config.config_file_name is not None:
     fileConfig(config.config_file_name, disable_existing_loggers=False)
 
 target_metadata = Base.metadata
-config.set_main_option("sqlalchemy.url", load_settings().database_url.get_secret_value())
+_migration_url = load_settings().migration_database_url
+if _migration_url is None:
+    # Migrations run as the owner, never as the application's login role (FD-1729): falling
+    # back to `GIP_DATABASE_URL` would run DDL as a role that cannot, or worse, as one that can.
+    raise RuntimeError(
+        "GIP_MIGRATION_DATABASE_URL is not set: migrations run as the schema owner and never "
+        "fall back to GIP_DATABASE_URL (the application's login role)"
+    )
+config.set_main_option("sqlalchemy.url", _migration_url.get_secret_value())
 
 
 def run_migrations_offline() -> None:

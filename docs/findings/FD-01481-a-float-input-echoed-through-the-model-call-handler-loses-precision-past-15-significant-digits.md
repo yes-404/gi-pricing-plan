@@ -2,12 +2,12 @@
 id: FD-1481
 family: finding
 title: A float input echoed through the model_call handler loses precision past 15 significant digits
-status: active
+status: closed
 created: 2026-10-08            # original date 2026-10-06, set at the draft; minted 2026-10-08
 owner: auditor
 tree: 23af6997161789887d26f2868a6022a0738e44e6
 corrected_by: []
-relates: [WK-673, SL-1436, FD-1425, RL-1423, LG-1467]
+relates: [WK-673, SL-1436, FD-1425, RL-1423, LG-1467, SL-1997, LG-1998, PL-1984]
 ---
 
 # A float input echoed through the model_call handler loses precision past 15 significant digits
@@ -120,3 +120,5 @@ Decided by the maintainer (by delegation) in `to-lead.md` (a local channel file,
 **Carrier of the test:** the next WK-673 slice that touches `packages/pricing-core/src/pricing_core/rating/runtime.py`, or a WK-1178 maintenance slice, whichever comes first.
 
 **Forward check at A-4.** The downstream-reader check (no committed step reads a float input after a `model_call`) is repeated for the G2 demo algorithm when A-4's plan is folded. A float input read after a `model_call` in the demo's frequency × severity path (for example exposure) is a STOP to the maintainer at A-4's planning, not at its gate.
+
+***Resolved 2026-11-04*** — closed in place 2026-11-04 by the executor, as the closing act of the mint of SL-1997 (WK-673, LG-1998, PL-1984; this PR, its number and squash written at the merge's date-of-record), on the lead's brief under the GO "2026-11-03 16:28:44 GMT" (`to-lead.md`, a local channel file), row 2 of PL-1984 (S-b). Delivered remedy: the 15-digit echo is pinned by a characterisation test, with no `runtime.py` change (the disposition of 2026-10-06 00:51:59 BST). `test_rating_wire_order.py` passes 15 of 15; the scratch that expects the 17-digit input back fails on `assert 0.0848719951589216 == 0.08487199515892163` (1 failed), recorded in LG-1998. The forward check at A-4 stays the plan's: a float input read after a `model_call` in the G2 demo path is a STOP to the maintainer at A-4's planning. Gate evidence is in LG-1998: the SOLO gate at `07e62951` (pytest "13 failed, 7047 passed, 22 skipped, 5 xfailed" = the 13 item-31 docs-audit failures only; frontend all rc 0, vitest 919 of 919; demo designed stop 1587 s, dislocation #1 592 s), from-lead "2026-11-04 07:38:28 GMT", accepted under item 31 by to-lead "2026-11-04 07:39:25 GMT".

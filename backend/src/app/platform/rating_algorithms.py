@@ -42,7 +42,11 @@ from model_schema.rating import (
     diff_algorithms,
     graph_invariant_issues,
 )
-from pricing_core.modelling.factors import gbm_transformed_factors, required_model_inputs
+from pricing_core.modelling.factors import (
+    consumed_features,
+    gbm_transformed_factors,
+    required_model_inputs,
+)
 from pricing_core.rating.compile import validate_algorithm
 
 __all__ = [
@@ -139,7 +143,17 @@ async def _accepted_feature_map_values(
         return None
     spec = MODEL_SPEC_ADAPTER.validate_python(row.spec)
     factors = await load_factors(session, workspace_id=workspace_id, factor_ids=list(spec.factors))
-    feature_order = (row.fit_result or {}).get("feature_order", ())
+    try:
+        feature_order = consumed_features(row.fit_result)
+    except ValueError as error:
+        raise PlatformError(
+            "CONTROL_FACTOR_IN_RATEABLE_PATH",
+            "A model_call's model has no derivable consumed Factors",
+            422,
+            f"{ref} cannot be mapped: the Factors it consumes cannot be derived "
+            f"({error}), so it cannot be shown not to price on a `control`-intent "
+            "Factor (FR-88, FR-240).",
+        ) from None
     accepted = set(required_model_inputs(factors, feature_order))
     offset = spec.offset
     if offset.kind in ("log_column", "column") and offset.column is not None:
@@ -196,7 +210,7 @@ async def _accepted_by_a_component(
 async def _gbm_transformed_factor_slugs(
     session: AsyncSession, workspace_id: UUID, ref: ArtifactRef
 ) -> list[str]:
-    """The `slug (type)` of each banded or grouped Factor of `ref`, when `ref` is a GBM.
+    """The `slug (type)` of each transformed (non-IDENTITY) Factor of `ref`, when `ref` is a GBM.
 
     Empty for a GLM or an EBM, for a GBM with only plain Factors, and for a Model that does
     not exist yet (R1: an algorithm saves before its models do; compile refuses it).
@@ -220,9 +234,10 @@ async def _gbm_transformed_factor_slugs(
 async def _refuse_gbm_transformed_factors(
     session: AsyncSession, workspace_id: UUID, step: RatingModelCallStep
 ) -> None:
-    """FR-222 as amended 2026-10-16: a `model_call` may not pin a GBM with a banded or grouped
-    Factor (`MODEL_CALL_GBM_TRANSFORMED_FACTOR`, 422). A Peril Structure is checked on each
-    component model; one that does not exist yet saves, and compile refuses it."""
+    """FR-222 as amended 2026-10-16: a `model_call` may not pin a GBM with a transformed
+    (non-IDENTITY) Factor (`MODEL_CALL_GBM_TRANSFORMED_FACTOR`, 422). A Peril Structure is
+    checked on each component model; one that does not exist yet saves, and compile refuses
+    it."""
     if step.model_ref is not None:
         models: list[ArtifactRef] = [step.model_ref]
     else:
@@ -233,11 +248,12 @@ async def _refuse_gbm_transformed_factors(
         if named:
             raise PlatformError(
                 "MODEL_CALL_GBM_TRANSFORMED_FACTOR",
-                "A model_call cannot score a GBM fitted on banded or grouped Factors",
+                "A model_call cannot score a GBM fitted on transformed Factors",
                 422,
-                f"Step {step.step_id!r} pins {model_ref}, a GBM fitted on {', '.join(named)}. "
-                "The Bundle carries no Bandings or Groupings for a GBM, so a raw value would "
-                "be read as a band label and could price the wrong band (FR-222).",
+                f"Step {step.step_id!r} pins {model_ref}, a GBM fitted on transformed Factors "
+                f"[{', '.join(named)}], which a model_call cannot score: a GBM is fitted on the "
+                "Factors' transformed values and the Bundle carries only the raw inputs "
+                "(FR-222, FR-240).",
             )
 
 
@@ -253,7 +269,7 @@ async def check_model_call_feature_maps(
 
     **Membership only, not completeness**: an unmapped Factor is compile's to refuse (PL 9494).
 
-    The same pass refuses a pinned GBM with a banded or grouped Factor, with
+    The same pass refuses a pinned GBM with a transformed (non-IDENTITY) Factor, with
     `MODEL_CALL_GBM_TRANSFORMED_FACTOR` (FR-222 as amended 2026-10-16), whatever the map says.
     """
     for step in steps:

@@ -114,7 +114,7 @@ async function score(form: QuoteFormSubmit): Promise<void> {
       <RouterLink
         v-if="rating"
         :to="`/rating-versions/${rating.id}`"
-        class="hover:underline"
+        class="underline"
       >
         {{ rating.slug }}@{{ rating.version }}
       </RouterLink>
@@ -171,7 +171,7 @@ async function score(form: QuoteFormSubmit): Promise<void> {
             <select
               id="compare-against"
               v-model="comparisonRef"
-              class="mt-1 w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+              class="mt-1 w-full rounded-md border border-slate-500 px-2 py-1.5 text-sm"
             >
               <option value="">
                 No comparison
@@ -205,6 +205,12 @@ async function score(form: QuoteFormSubmit): Promise<void> {
             v-if="scoreProblem"
             :error="scoreProblem"
           />
+          <p
+            role="status"
+            class="sr-only"
+          >
+            {{ result ? `Score result: ${result.outcome}.` : "" }}
+          </p>
           <template v-if="result">
             <QuoteOutcome :result="result" />
             <LadderWaterfall :rungs="result.premium_ladder" />

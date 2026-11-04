@@ -179,9 +179,13 @@ async def _banded_factor(session, workspace_id, analyst, slug: str) -> object:  
     return row.id
 
 
-async def _approved_model(database: Database, workspace_id) -> object:
+async def _approved_model(database: Database, workspace_id, analyst=None) -> object:  # type: ignore[no-untyped-def]
+    """`analyst`: a caller that already holds one (the seed's, created on the owner
+    connection) passes it; otherwise one is built here, which writes `role_assignments`
+    and so needs the owner (FD-1729: the application role holds no such grant)."""
     family = f"fremtpl2-glm-{uuid4().hex[:6]}"
-    analyst = await _principal(database, workspace_id, "analyst")
+    if analyst is None:
+        analyst = await _principal(database, workspace_id, "analyst")
     async with database.unit_of_work() as session:
         pinned = [
             await _banded_factor(session, workspace_id, analyst, slug)

@@ -116,6 +116,38 @@ def test_the_dictionary_covers_every_column_the_seed_produces() -> None:
 
 ARFF_DIR = Path(__file__).parent / "data"
 
+#: The server's maintenance database, reached as the schema owner `gipricing` (the role that
+#: runs migrations, FD-1729) -- the one place the fixture takes its credentials from.
+SCRATCH_ADMIN_URL = "postgresql+asyncpg://gipricing:gipricing@localhost:5432/postgres"
+
+
+def _scratch_owner_url(admin: str, name: str) -> str:
+    """The owner-role URL of the scratch database `name` on the server `admin` names.
+
+    FD-1965: `alembic` and the seed's `grant_demo_principals` both read
+    `GIP_MIGRATION_DATABASE_URL`, so the fixture must set it to its own scratch database; an
+    inherited value would migrate, and seed demo principals into, whatever database it names.
+    Refuses, naming what is missing, when `admin` cannot form that URL."""
+    from sqlalchemy.engine import make_url
+
+    parsed = make_url(admin)
+    missing = [
+        part
+        for part, value in (
+            ("user", parsed.username),
+            ("password", parsed.password),
+            ("host", parsed.host),
+        )
+        if not value
+    ]
+    if missing:
+        raise RuntimeError(
+            f"scratch_seed cannot form the owner URL for {name}: the admin URL has no "
+            f"{', '.join(missing)}; it refuses rather than migrate an inherited "
+            "GIP_MIGRATION_DATABASE_URL"
+        )
+    return parsed.set(database=name).render_as_string(hide_password=False)
+
 
 @pytest.fixture
 def scratch_seed(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[Path]:
@@ -136,7 +168,8 @@ def scratch_seed(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[Pa
         pytest.skip("run examples/fremtpl2/fetch.py first")
 
     name = f"scratch_sl1409c_{uuid4().hex[:8]}"
-    admin = "postgresql+asyncpg://gipricing:gipricing@localhost:5432/postgres"
+    admin = SCRATCH_ADMIN_URL
+    url = _scratch_owner_url(admin, name)
 
     async def admin_sql(statement: str) -> None:
         engine = create_async_engine(admin, isolation_level="AUTOCOMMIT")
@@ -148,8 +181,8 @@ def scratch_seed(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[Pa
 
     asyncio.run(admin_sql(f'CREATE DATABASE "{name}"'))
     try:
-        url = f"postgresql+asyncpg://gipricing:gipricing@localhost:5432/{name}"
         monkeypatch.setenv("GIP_DATABASE_URL", url)
+        monkeypatch.setenv("GIP_MIGRATION_DATABASE_URL", url)
         subprocess.run(
             ["uv", "run", "alembic", "upgrade", "head"],
             cwd=Path(__file__).resolve().parents[2],
@@ -163,6 +196,21 @@ def scratch_seed(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[Pa
         yield tmp_path
     finally:
         asyncio.run(admin_sql(f'DROP DATABASE IF EXISTS "{name}" WITH (FORCE)'))
+
+
+@pytest.mark.req("FR-439")
+def test_the_scratch_fixture_refuses_when_no_owner_url_can_be_formed(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """FD-1965 control C1 (DB-free, data-free, so CI runs it): an admin URL with no user,
+    password or host cannot name the scratch database's owner, and the fixture refuses by
+    name rather than let `alembic` and the seed fall through to an inherited
+    `GIP_MIGRATION_DATABASE_URL` (which wrote demo principals into a foreign database)."""
+    monkeypatch.delenv("GIP_MIGRATION_DATABASE_URL", raising=False)
+    with pytest.raises(RuntimeError, match=r"cannot form the owner URL") as refused:
+        _scratch_owner_url("postgresql+asyncpg:///postgres", "scratch_x")
+    assert "user, password, host" in str(refused.value)
+    assert _scratch_owner_url(SCRATCH_ADMIN_URL, "scratch_x").endswith("localhost:5432/scratch_x")
 
 
 def test_the_seed_reruns_against_a_seeded_database(scratch_seed: Path) -> None:
@@ -247,10 +295,18 @@ def test_a_small_seed_is_refused_for_its_degenerate_fit(scratch_seed: Path) -> N
 
 def _write_book(directory: Path, policies: int) -> None:
     """A synthetic freMTPL2 pair ordered by claim count, as the real file is."""
-    freq = ["@relation freMTPL2freq", "@attribute IDpol numeric", "@attribute ClaimNb numeric",
-            "@data"]
-    sev = ["@relation freMTPL2sev", "@attribute IDpol numeric", "@attribute ClaimAmount numeric",
-           "@data"]
+    freq = [
+        "@relation freMTPL2freq",
+        "@attribute IDpol numeric",
+        "@attribute ClaimNb numeric",
+        "@data",
+    ]
+    sev = [
+        "@relation freMTPL2sev",
+        "@attribute IDpol numeric",
+        "@attribute ClaimAmount numeric",
+        "@data",
+    ]
     claiming = policies // 20
     for index in range(policies):
         claims = 1 if index >= policies - claiming else 0
@@ -274,10 +330,24 @@ def test_claim_severity_is_the_mean_cost_per_claim_and_null_without_a_claim(
     import polars as pl
     import seed
 
-    freq = ["@relation freMTPL2freq", "@attribute IDpol numeric", "@attribute ClaimNb numeric",
-            "@data", "1,2", "2,0", "3,1"]
-    sev = ["@relation freMTPL2sev", "@attribute IDpol numeric", "@attribute ClaimAmount numeric",
-           "@data", "1,100.01", "1,50.00", "3,33.33"]
+    freq = [
+        "@relation freMTPL2freq",
+        "@attribute IDpol numeric",
+        "@attribute ClaimNb numeric",
+        "@data",
+        "1,2",
+        "2,0",
+        "3,1",
+    ]
+    sev = [
+        "@relation freMTPL2sev",
+        "@attribute IDpol numeric",
+        "@attribute ClaimAmount numeric",
+        "@data",
+        "1,100.01",
+        "1,50.00",
+        "3,33.33",
+    ]
     (tmp_path / "freMTPL2freq.arff").write_text("\n".join(freq) + "\n", encoding="utf-8")
     (tmp_path / "freMTPL2sev.arff").write_text("\n".join(sev) + "\n", encoding="utf-8")
     monkeypatch.setattr(seed, "DATA_DIR", tmp_path)
@@ -307,10 +377,27 @@ def test_a_claimant_with_no_severity_record_has_an_unknown_amount_not_zero(
     import polars as pl
     import seed
 
-    freq = ["@relation freMTPL2freq", "@attribute IDpol numeric", "@attribute ClaimNb numeric",
-            "@data", "1,2", "2,0", "3,1", "4,1", "5,2"]
-    sev = ["@relation freMTPL2sev", "@attribute IDpol numeric", "@attribute ClaimAmount numeric",
-           "@data", "1,100.01", "1,50.00", "3,33.33", "5,40.00"]
+    freq = [
+        "@relation freMTPL2freq",
+        "@attribute IDpol numeric",
+        "@attribute ClaimNb numeric",
+        "@data",
+        "1,2",
+        "2,0",
+        "3,1",
+        "4,1",
+        "5,2",
+    ]
+    sev = [
+        "@relation freMTPL2sev",
+        "@attribute IDpol numeric",
+        "@attribute ClaimAmount numeric",
+        "@data",
+        "1,100.01",
+        "1,50.00",
+        "3,33.33",
+        "5,40.00",
+    ]
     (tmp_path / "freMTPL2freq.arff").write_text("\n".join(freq) + "\n", encoding="utf-8")
     (tmp_path / "freMTPL2sev.arff").write_text("\n".join(sev) + "\n", encoding="utf-8")
     monkeypatch.setattr(seed, "DATA_DIR", tmp_path)
@@ -383,27 +470,39 @@ def test_the_seeded_portfolio_satisfies_the_dislocation_frame(
     monkeypatch.setattr(seed, "DATA_DIR", tmp_path)
     monkeypatch.setattr(seed, "PORTFOLIO_ROWS", 500)
     # the synthetic book has only IDpol and ClaimNb; the recipe also renames and casts the rest
-    raw = pl.read_csv(io.BytesIO(seed.build_portfolio_csv()),
-                      infer_schema=False)
+    raw = pl.read_csv(io.BytesIO(seed.build_portfolio_csv()), infer_schema=False)
     # ingestion snake-cases the headers before the recipe runs (`IDpol` -> `i_dpol`)
     raw = raw.rename({"IDpol": "i_dpol", "ClaimNb": "claim_nb"}).with_columns(
         pl.lit("0.5").alias("exposure")
     )
-    stored = apply_recipe({"policy_exposure": raw}, [
-        step if step["step"] != "cast" else {
-            **step, "params": {"columns": {c: t for c, t in step["params"]["columns"].items()
-                                           if c in {"exposure_years", "claim_count",
-                                                    "claim_amount_minor"}}}}
-        for step in recipe(drop_implausible_exposure=True)
-    ]).tables["policy_exposure"]
+    stored = apply_recipe(
+        {"policy_exposure": raw},
+        [
+            step
+            if step["step"] != "cast"
+            else {
+                **step,
+                "params": {
+                    "columns": {
+                        c: t
+                        for c, t in step["params"]["columns"].items()
+                        if c in {"exposure_years", "claim_count", "claim_amount_minor"}
+                    }
+                },
+            }
+            for step in recipe(drop_implausible_exposure=True)
+        ],
+    ).tables["policy_exposure"]
 
     book = pl.read_csv(io.BytesIO(build_csv(500)), infer_schema=False)
     assert "quote_id" not in book.columns
     # the only change to the sample is the added column: every other column and row is the book's
     assert raw.drop("quote_id").height == book.height
-    assert pl.read_csv(io.BytesIO(seed.build_portfolio_csv()), infer_schema=False).drop(
-        "quote_id"
-    ).equals(book)
+    assert (
+        pl.read_csv(io.BytesIO(seed.build_portfolio_csv()), infer_schema=False)
+        .drop("quote_id")
+        .equals(book)
+    )
     frame = read_portfolio(stored.lazy(), segments=()).collect()
     assert frame["quote_id"].null_count() == 0
     assert frame["quote_id"].n_unique() == frame.height
@@ -450,7 +549,13 @@ def test_the_demo_principals_use_existing_roles_and_cover_the_journey() -> None:
     from model_schema.permissions import BUILTIN_ROLES
 
     assert set(DEMO_PRINCIPALS) == {
-        "analyst", "actuary", "approver", "second_approver", "admin", "deployer", "prod_approver",
+        "analyst",
+        "actuary",
+        "approver",
+        "second_approver",
+        "admin",
+        "deployer",
+        "prod_approver",
     }
     for roles in DEMO_PRINCIPALS.values():
         assert set(roles) <= set(BUILTIN_ROLES)

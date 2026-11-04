@@ -8,7 +8,7 @@ version can be approved against and the demo can display.
 
 from __future__ import annotations
 
-from collections.abc import Mapping, Sequence
+from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import datetime
 from enum import StrEnum
@@ -664,8 +664,10 @@ def graph_invariant_issues(draft: RatingAlgorithmDraft) -> list[ValidationIssue]
 
     The one definition of FR-212/214/215's graph rules: `RatingAlgorithm` raises on the
     first issue returned, and the validate route (RL-1474) reports all of them. A
-    duplicated `step_id` ends the check (the graph cannot be indexed); an ambiguous
-    producer is only reported when there is no cycle (no topological order exists).
+    duplicated `step_id` ends the check (the graph cannot be indexed); a mount port mapped to
+    a blank parent name is reported on the mount, naming the port, and counts as neither
+    consumed nor produced (FR-217, `RL-1876`); an ambiguous producer is only reported when
+    there is no cycle (no topological order exists).
 
     FR-212 holds for each purpose's graph (`RL-1344` section 3): the steps with the mounts
     selected for that purpose, once per purpose some mount selects, and then the steps with the
@@ -704,16 +706,47 @@ def graph_invariant_issues(draft: RatingAlgorithmDraft) -> list[ValidationIssue]
     if issues:
         return issues
 
+    # A mapped parent name is never blank (RL-1876): refuse it on the mount, naming the port, and
+    # leave blank names out of the graph below so they are neither consumed nor produced.
+    for m in draft.sub_graphs:
+        for port, name in m.inputs.items():
+            if not name.strip():
+                issues.append(
+                    ValidationIssue(
+                        code="RATING_GRAPH_UNRESOLVED_REF",
+                        message=(
+                            f"mount '{m.mount_point}' leaves input port '{port}' unmapped: "
+                            "its parent name is blank (FR-217)"
+                        ),
+                        step_id=m.mount_point,
+                    )
+                )
+        for port, name in m.outputs.items():
+            if not name.strip():
+                issues.append(
+                    ValidationIssue(
+                        code="VALIDATION_FAILED",
+                        message=(
+                            f"mount '{m.mount_point}' maps output port '{port}' to a blank "
+                            "name; omit the port to leave it unmapped (FR-217)"
+                        ),
+                        step_id=m.mount_point,
+                    )
+                )
+
+    def _named(names: Iterable[str]) -> list[str]:
+        return [n for n in names if n.strip()]
+
     selected = sorted({p for m in draft.sub_graphs for p in m.purposes or []})
     purpose_only: dict[str, list[str]] = {}
     for m in draft.sub_graphs:
-        for name in m.outputs.values():
+        for name in _named(m.outputs.values()):
             purpose_only.setdefault(name, []).extend(m.purposes or [])
 
     found: dict[tuple[str, str, str | None], ValidationIssue] = {}
     for purpose in [*selected, None]:
         mounts = [
-            _MountNode(m.mount_point, list(m.inputs.values()), list(m.outputs.values()))
+            _MountNode(m.mount_point, _named(m.inputs.values()), _named(m.outputs.values()))
             for m in draft.sub_graphs
             if m.purposes is None or (purpose is not None and purpose in m.purposes)
         ]
@@ -722,7 +755,7 @@ def graph_invariant_issues(draft: RatingAlgorithmDraft) -> list[ValidationIssue]
         }
         for issue in _graph_pass_issues(draft, mounts, purpose_mounts, purpose_only):
             found.setdefault((issue.code, issue.message, issue.step_id), issue)
-    return list(found.values())
+    return [*issues, *found.values()]
 
 
 def _graph_pass_issues(

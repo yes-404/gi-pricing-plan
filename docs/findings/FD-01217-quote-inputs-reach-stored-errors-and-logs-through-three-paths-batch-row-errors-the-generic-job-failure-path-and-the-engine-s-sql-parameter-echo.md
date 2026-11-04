@@ -2,7 +2,7 @@
 id: FD-1217
 family: finding
 title: Quote inputs reach stored errors and logs through three paths: batch row errors, the generic Job failure path and the engine's SQL parameter echo
-status: active
+status: closed
 created: 2026-09-28
 owner: auditor
 tree: 9fa2b833e00281a36109183a12efc9d7152225e9

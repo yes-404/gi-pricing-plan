@@ -17,8 +17,10 @@ from uuid import UUID, uuid4
 import pytest
 import pytest_asyncio
 from backend.tests.approved_rows import add_approved
+from backend.tests.conftest_db import seed_as_owner
 from fastapi.testclient import TestClient
 from sqlalchemy import delete, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import DEV_PRINCIPAL_HEADER
 from app.config import Environment as RuntimeEnvironment
@@ -211,9 +213,9 @@ async def test_a_deployment_request_with_no_creation_event_is_refused_fail_close
     established is never allowed (`06` FR-353). `audit_events` refuses `DELETE`, so the fixture
     lifts the guard for its own transaction only."""
     submitter, _, request = await _request_for_prod(client, database, workspace_id, seat)
-    async with database.unit_of_work() as session:
-        from sqlalchemy import text
+    from sqlalchemy import text
 
+    async def _strip_creation_event(session: AsyncSession) -> None:
         await session.execute(text("ALTER TABLE audit_events DISABLE TRIGGER USER"))
         await session.execute(
             delete(AuditEventRow).where(
@@ -223,6 +225,8 @@ async def test_a_deployment_request_with_no_creation_event_is_refused_fail_close
             )
         )
         await session.execute(text("ALTER TABLE audit_events ENABLE TRIGGER USER"))
+
+    await seed_as_owner(_strip_creation_event)
     decider = await seat("approver", "deployer")
     refused = decide(client, decider, _approval_id(client, submitter, request["ref"]))
     assert refused.status_code == 403
@@ -402,7 +406,8 @@ async def _scoped_deployer(database: Database, workspace_id: UUID, env_slug: str
     from model_schema import ScopeType
 
     made = await seat("analyst")  # a member with the roles table seeded
-    async with database.unit_of_work() as session:
+
+    async def _seed(session):
         env = (
             await session.execute(select(EnvironmentRow).where(EnvironmentRow.slug == env_slug))
         ).scalar_one()
@@ -423,6 +428,10 @@ async def _scoped_deployer(database: Database, workspace_id: UUID, env_slug: str
                 scope_id=env.id,
             )
         )
+
+    await seed_as_owner(_seed)
+    # The read and the assert are about app-visible behaviour: they run on the app connection.
+    async with database.unit_of_work() as session:
         assert (
             await session.execute(
                 select(WorkspaceMemberRow).where(WorkspaceMemberRow.user_id == made.id)
@@ -968,7 +977,8 @@ async def test_a_decision_on_a_request_stripped_of_a_floor_item_is_refused(
     from sqlalchemy import text
 
     submitter, _, request = await _request_for_prod(client, database, workspace_id, seat)
-    async with database.unit_of_work() as session:
+
+    async def _strip(session: AsyncSession) -> None:
         await session.execute(
             text(
                 "UPDATE deployment_requests SET evidence = evidence - 'uat_deployment' "
@@ -976,6 +986,8 @@ async def test_a_decision_on_a_request_stripped_of_a_floor_item_is_refused(
             ),
             {"w": workspace_id},
         )
+
+    await seed_as_owner(_strip)
     decider = await seat("approver", "deployer")
     refused = decide(client, decider, _approval_id(client, submitter, request["ref"]))
     assert refused.status_code == 422
@@ -1032,7 +1044,8 @@ async def test_the_generic_route_cannot_create_an_approvable_deployment_request(
 
     # Stripped of a floor item: a second, fresh request, then a fixture removes one item.
     request2 = request_into(client, submitter, "prod", ref).json()
-    async with database.unit_of_work() as session:
+
+    async def _strip_approval(session: AsyncSession) -> None:
         await session.execute(
             text(
                 "UPDATE deployment_requests SET evidence = evidence - 'rating_version_approval' "
@@ -1040,6 +1053,8 @@ async def test_the_generic_route_cannot_create_an_approvable_deployment_request(
             ),
             {"w": workspace_id},
         )
+
+    await seed_as_owner(_strip_approval)
     stripped = generic(request2["ref"])
     assert stripped.status_code == 422
     assert stripped.json()["code"] == "EVIDENCE_INCOMPLETE"

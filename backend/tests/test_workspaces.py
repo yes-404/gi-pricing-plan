@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import pytest
+from backend.tests.conftest_db import seed_as_owner
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models import WorkspaceMemberRow, WorkspaceRow
 from app.db.session import Database
@@ -15,8 +17,11 @@ async def test_a_workspace_row_carries_a_name_and_a_slug(database: Database) -> 
     """Every surface that would show a workspace shows a UUID until this row exists."""
     workspace_id = new_uuid7()
     slug = f"ws-{workspace_id.hex[-10:]}"
-    async with database.unit_of_work() as session:
+
+    async def seed(session: AsyncSession) -> None:
         session.add(WorkspaceRow(id=workspace_id, slug=slug, name="Motor Pricing"))
+
+    await seed_as_owner(seed)
 
     async with database.session() as session:
         row = await session.get(WorkspaceRow, workspace_id)
@@ -36,6 +41,11 @@ async def test_a_membership_cannot_name_a_workspace_that_does_not_exist(
     referenced. Without it a membership row can name an id nothing describes, which is the
     state the whole schema was in before this slice.
     """
+
+    async def seed(session: AsyncSession) -> None:
+        session.add(WorkspaceMemberRow(user_id=new_uuid7(), workspace_id=new_uuid7()))
+
+    # Owner session on purpose: the subject is the FK constraint, not the role. On the app
+    # role this would fail earlier with "permission denied" and test the wrong thing.
     with pytest.raises(IntegrityError):
-        async with database.unit_of_work() as session:
-            session.add(WorkspaceMemberRow(user_id=new_uuid7(), workspace_id=new_uuid7()))
+        await seed_as_owner(seed)

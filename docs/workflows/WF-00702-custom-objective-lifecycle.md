@@ -83,8 +83,8 @@ should land here** — which is why the template catalogue is 12 entries, not 3.
 | B1.1 | Pricing Actuary | Needs an asymmetric burning-cost loss: under-pricing penalised twice as hard as over-pricing. No template fits. | `02` FR-144 |
 | B1.2 | Pricing Actuary | Writes the **loss** only: `w * where(exp(f) < y, w_under, w_over) * (y - exp(f)) ** 2`. They never write a gradient, a hessian, or any code. | `02` FR-144, §4.6 |
 | B1.3 | Pricing Actuary | Declares parameters with types, defaults, and valid ranges: `w_under ∈ [1, 10]` default 2.0; `w_over ∈ [0.1, 10]` default 1.0. | `02` §4.6 |
-| B1.4 | Frontend → Backend | Parses on every keystroke via a restricted AST walk against an allow-list. `eval` is never called. | `02` FR-145, NFR-483 |
-| B1.5 | Backend | An earlier attempt using `numpy.where(...)` is rejected with `OBJECTIVE_GRAMMAR_VIOLATION` and a position-accurate error: attribute access is not in the grammar. | `02` FR-145 |
+| B1.4 | Frontend → Backend | Parses on every keystroke via a restricted AST walk against an allow-list. `eval` is never called. *(Citation added 2026-10-21, WK-690 Slice 5, `RL-1616`: the frontend parses nothing itself. It sends the text, once its typing settles, to `POST /api/v1/custom-objectives/preview`, which walks the same allow-list and answers 200 with `ok: false` and a position for a loss that does not parse.)* *(Wording corrected 2026-11-03, the maintainer's ruling in `to-lead.md` "2026-11-03 16:03:37 GMT" (a local channel file), on CR-1980 §5c (WK-690 close audit): “on every keystroke” is read as “on every settled edit”, and the parse is the backend's, served by the preview route (`02` FR-1840); the first sentence's “restricted AST walk” is the backend's, and the step states no frontend parser. Wording only: no requirement changes.)* | `02` FR-145, FR-1840, NFR-483 |
+| B1.5 | Backend | An earlier attempt using `numpy.where(...)` is rejected with `OBJECTIVE_GRAMMAR_VIOLATION` and a position-accurate error: attribute access is not in the grammar. *(Wording corrected 2026-11-03, the maintainer's ruling in `to-lead.md` "2026-11-03 16:03:37 GMT" (a local channel file), on CR-1980 §5c (WK-690 close audit): the surface decides the answer. In the authoring editor, through `POST /api/v1/custom-objectives/preview`, the rejection is 200 with `ok: false` and the position (`02` FR-1840); on `POST /custom-objectives` it is 422 `OBJECTIVE_GRAMMAR_VIOLATION` (`02` FR-150). Wording only: both requirements already say it.)* | `02` FR-145 |
 | B1.6 | Pricing Actuary | Declares applicability: responses `burning_cost` and `claim_severity`, backends `xgboost`/`lightgbm`, `y ≥ 0`, offset not required. | `02` FR-153 |
 
 ### Phase B2 — Derivation
@@ -118,7 +118,7 @@ should land here** — which is why the template catalogue is 12 entries, not 3.
 | # | Actor | Action | Refs |
 |---|---|---|---|
 | B4.1 | Pricing Actuary | Submits with the certificate attached — required evidence for this artifact type. | `06` §3.3 |
-| B4.2 | Backend | Escalates: convexity `violated` triggers the two-approver rule from the Approval Policy. | `02` FR-152, `06` §4.2 |
+| B4.2 | Backend | Escalates: convexity `violated` triggers the two-approver rule from the Approval Policy. *(Wording corrected 2026-11-03, the maintainer's ruling in `to-lead.md` "2026-11-03 16:03:37 GMT" (a local channel file), on CR-1980 §5c (WK-690 close audit): the rule is relative, the policy's Approvers plus one, and two only at the default policy (`02` FR-163, amended 2026-10-04, `RL-1362` DP-S3-4); no policy key sets the increment (`06` §4.2). Wording only: FR-163 already says it, so no spec change.)* | `02` FR-152, `06` §4.2 |
 | B4.3 | Approver #1 | Reviews the loss, the derived gradient and hessian, the certificate, and the convexity heat map over the sampled domain. Approves. | `06` FR-358 |
 | B4.4 | Approver #2 | Asks why `w_under = 2.0` rather than 1.5 — a question about *judgement*, which is exactly where an approver's time should go, because the platform has already answered every question about correctness. | `06` FR-355 |
 | B4.5 | Pricing Actuary | Adds the rationale (a claims-cost-of-under-pricing analysis) as a Commentary Block; resubmits. | `06` FR-377 |
@@ -134,7 +134,7 @@ should land here** — which is why the template catalogue is 12 entries, not 3.
 | C2 | Backend | Spec validation checks applicability: response `burning_cost` is declared, backend `xgboost` is declared, `y ≥ 0` holds. A `claim_count` response would fail `OBJECTIVE_NOT_APPLICABLE` **before any compute is spent**. | `02` FR-153 |
 | C3 | Worker → pricing-core | `compile_objective()` builds vectorised NumPy gradient/hessian functions from the stored expression tree. **The user's text is never executed** — only the platform's compiled tree. | `02` FR-144, NFR-483 |
 | C4 | Worker | Fits. Each round: computes gradient and hessian, checks finiteness, applies `clip_to_min`. | `02` FR-165 |
-| C5 | Worker | On a later fit with different data, a NaN gradient appears at round 412; the fit aborts with `OBJECTIVE_NONFINITE_DERIVATIVE`, naming the round and the offending input range. It does not silently produce a degenerate model. | `02` FR-165 |
+| C5 | Worker | On a later fit with different data, a NaN gradient appears at round 412; the fit aborts with `OBJECTIVE_NONFINITE_DERIVATIVE`, naming the round and the offending input range. It does not silently produce a degenerate model. *(Wording corrected 2026-11-03, the maintainer's ruling in `to-lead.md` "2026-11-03 19:25:11 GMT" (a local channel file), on CR-1980 §5c (WK-690 close audit): the error's text names the round, the row count and the fields `y` and `f`, and no value; the offending input range is a structured attribute of the error, not part of its text (`02` FR-165, amended 2026-09-30, `RL-1328` DP-S2-3/4). Wording only: FR-165 already says it, so no spec change.)* | `02` FR-165 |
 | C6 | Analyst | Traces it to a single row with `y = 0` and an extreme offset; fixes the data issue, refits. | — |
 | C7 | Analyst | Model reaches `approved`, which is only possible because the objective is itself `approved`. | `02` R4, FR-20 |
 
@@ -170,7 +170,7 @@ should land here** — which is why the template catalogue is 12 entries, not 3.
 
 | Situation | Behaviour | Refs |
 |---|---|---|
-| Out-of-grammar expression | `OBJECTIVE_GRAMMAR_VIOLATION` with a position-accurate error; never `eval`ed | `02` FR-145 |
+| Out-of-grammar expression | `OBJECTIVE_GRAMMAR_VIOLATION` with a position-accurate error; never `eval`ed *(Wording corrected 2026-11-03, the maintainer's ruling in `to-lead.md` "2026-11-03 16:03:37 GMT" (a local channel file), on CR-1980 §5c (WK-690 close audit): 422 on create (`02` FR-150); in the editor's preview, 200 with `ok: false` and the same position (`02` FR-1840); see B1.5)* | `02` FR-145 |
 | AST exceeds node/depth limits | Rejected at parse | `02` FR-145 |
 | Division by a sub-expression that can be zero over the declared domain | Certification failure, not a runtime surprise | `02` §4.6 |
 | Certificate `failed` | Submission blocked entirely | `02` FR-146 |
@@ -178,7 +178,7 @@ should land here** — which is why the template catalogue is 12 entries, not 3.
 | Submitted with one approver when two are required | No error. The request stays `review` until `approvers_required` is met — an incomplete approval is the normal in-progress state, not a failure | `06` FR-354 |
 | Objective used with an inapplicable response | `OBJECTIVE_NOT_APPLICABLE` at spec validation, before compute | `02` FR-153 |
 | Model with an unapproved objective submitted for approval | `OBJECTIVE_NOT_APPROVED` | `02` R4 |
-| NaN/inf gradient during fitting | Fit aborts with the round and input range named | `02` FR-165 |
+| NaN/inf gradient during fitting | Fit aborts with the round and input range named *(Wording corrected 2026-11-03, the maintainer's ruling in `to-lead.md` "2026-11-03 19:25:11 GMT" (a local channel file), on CR-1980 §5c (WK-690 close audit): the text names the round, the row count and the fields `y` and `f`; the input range is a structured attribute of the error; see C5)* | `02` FR-165 |
 | Objective exceeds its per-round time budget | Fit aborts with a typed error | `02` FR-165 |
 
 ---
@@ -216,5 +216,5 @@ should land here** — which is why the template catalogue is 12 entries, not 3.
 | B1–B2 authoring + derivation | hours |
 | B3 certification | < 3 min compute (NFR-480) |
 | B4 approval | 1–5 days |
-| C first fit | as any GBM fit, +≤ 25 % for a custom objective (NFR-476) |
+| C first fit | as any GBM fit, +≤ 25 % for a custom objective (NFR-476) *(Wording corrected 2026-11-03, the maintainer's ruling in `to-lead.md` "2026-11-03 19:25:11 GMT" (a local channel file), on CR-1980 §5c (WK-690 close audit): the +≤ 25 % bound is for a custom `expression` objective, against the equivalent builtin (`02` NFR-476); a `template` objective is not bound by it. Wording only: NFR-476 already says it, so no spec change.)* |
 | E defect response | hours to rollback, days to corrected version |

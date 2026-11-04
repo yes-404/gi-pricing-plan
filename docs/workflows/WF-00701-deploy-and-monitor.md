@@ -29,6 +29,7 @@ was: docs/workflows/wf-04-deploy-and-monitor.md
 | A compiled bundle with a content hash | `03` FR-239 |
 | The actor holds `rating_version:deploy_uat` / `deploy_prod` | `06` FR-345, FR-428 |
 | Service Accounts exist for the Consumer Systems, scoped per environment | `07` FR-389/430 |
+| A successful deployment to every predecessor the workspace's environment configuration names for `uat` (the default seed: `dev`). *(Added 2026-10-21 in SL-1711's commit, on the maintainer's (by delegation) ruling, to-lead "2026-10-14 11:14:40 BST" item (2).)* | `07` FR-428, FR-429, `07` §4 |
 
 ---
 
@@ -60,6 +61,7 @@ was: docs/workflows/wf-04-deploy-and-monitor.md
 |---|---|---|---|
 | C1 | Deployer | `POST /environments/prod/deployments`. | `03` FR-267 |
 | C2 | Backend | Checks promotion order: a prior successful `uat` deployment is required, else `PROMOTION_ORDER_VIOLATION` — unless the workspace policy permits skipping with a recorded reason. | `07` FR-429 |
+| | | *Dated 2026-10-21 (SL-1711's commit, on the maintainer's (by delegation) ruling, to-lead "2026-10-14 11:14:40 BST" item (1)): the two codes of `07` FR-429 as amended 2026-09-28 (RL-1232 DP-7, "both checks, one predicate"). The submission of a prod Deployment Request refuses prod-without-uat with `EVIDENCE_INCOMPLETE` (HTTP 422), the first act a gated prod deploy needs; the deploy route refuses with `PROMOTION_ORDER_VIOLATION` (HTTP 409), which for a gated target is only the re-check of the pinned evidence.* | `07` FR-429 |
 | C3 | Backend | Checks **the Rating Version's** approval record is complete, including both required approvers. | `06` §3.3 for the evidence, FR-354 for the count |
 | C4 | Backend | Pre-warms, switches atomically, emits the Audit Event and notification. Total elapsed under 30 s. | `03` NFR-494 |
 | C5 | Backend | **Auto-creates the template Monitors** for the new deployment, so the structure is never live and unmonitored. | `05` FR-310 |

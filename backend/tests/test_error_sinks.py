@@ -26,6 +26,7 @@ from pydantic import BaseModel, ValidationError, field_validator
 
 from model_schema import BandingMethod, BandingProposal
 from model_schema.input_free import InputFreeError
+from pricing_core.data.expressions import ExpressionError
 from pricing_core.modelling import BandingError, propose_banding
 from pricing_core.safe_error import CodedError, safe_error_detail
 
@@ -59,6 +60,10 @@ _SINKS: dict[tuple[str, str, str], tuple[int, str]] = {
         "and test_score.py::test_a_422_for_a_bad_input_names_the_field_and_carries_no_value"),
     ("backend/src/app/api/score.py", "_maybe_sample_trace", "exc_info"): (
         1, "test_score.py::test_a_trace_sampling_failure_logs_no_quote_input"),
+    ("backend/src/app/api/score.py", "_shadow_task", "exc_info"): (
+        1, "test_shadow_log_sanitised.py::test_a_shadow_decision_failure_logs_no_quote_input"),
+    ("backend/src/app/api/score.py", "_shadow_score", "exc_info"): (
+        1, "test_shadow_log_sanitised.py::test_a_shadow_scoring_failure_logs_no_quote_input"),
     ("backend/src/app/platform/deployment_switch.py", "_listen", "exception"): (
         1, "`.exception(` writes the traceback to the log and echoes nothing into a response; "
         "the Redis SwitchMessage consumer, whose payload is deploy-time ids, not quote input "
@@ -68,6 +73,18 @@ _SINKS: dict[tuple[str, str, str], tuple[int, str]] = {
         "PREPARE hydration of an approved deployment's artifacts (`hydrate_for_switch` reads "
         "only the Rating Version row, the blob row and the blob store), not request input "
         "(maintainer's ruling, 2026-10-19 02:45:42 BST, item 1 (b))"),
+    ("backend/src/app/platform/deployment_switch.py", "_run", "exception"): (
+        1, "logs the traceback of the reconcile loop, which runs on Redis deploy-time ids and "
+        "never sees quote input; the _listen row's reasoning (2026-10-19 02:45:42 BST item 1 "
+        "(a)/(b)) extended (maintainer's ruling, 2026-11-04 03:09:02 GMT (a))"),
+    ("backend/src/app/platform/deployment_switch.py", "ensure", "exc_info"): (
+        1, "logs the traceback of the listener restart, which runs on Redis deploy-time ids and "
+        "never sees quote input; the _listen row's reasoning (2026-10-19 02:45:42 BST item 1 "
+        "(a)/(b)) extended (maintainer's ruling, 2026-11-04 03:09:02 GMT (a))"),
+    ("backend/src/app/platform/deployment_switch.py", "ensure", "exception"): (
+        1, "not a log sink: asyncio Task.exception() on the listener task, counted by the "
+        "census's name walker (maintainer's ruling, 2026-11-04 03:09:02 GMT (a); the walker "
+        "fix is a process-backlog row, WK-1178 tooling after the freeze)"),
     ("backend/src/app/platform/deployments.py", "complete_switch", "exception"): (
         1, "`.exception(` writes the traceback to the log and echoes nothing into a response; "
         "the deploy route's COMMIT round, not a quote input "
@@ -99,9 +116,6 @@ _SINKS: dict[tuple[str, str, str], tuple[int, str]] = {
         1, "`FactorResolutionError`: names a factor and a dataset version; model path"),
     ("backend/src/app/platform/objectives.py", "_validated", "{exc}"): (
         1, "a custom objective's own declaration error; no Quote Context"),
-    ("backend/src/app/platform/objectives.py", "_require_the_grammar", "str(exc)"): (
-        1, "`ExpressionError`: the grammar refusal of an author's own loss text, positioned by "
-        "line and column; a custom objective's declaration error (FR-145), no Quote Context"),
     ("backend/src/app/platform/objectives.py", "derive_objective", "str(exc)"): (
         2, "`ExpressionError` on an author's own loss text, as the problem detail and its "
         "`loss` field error; a custom objective's declaration error (FR-145), no Quote Context"),
@@ -542,3 +556,50 @@ def test_a_coded_validator_message_gets_the_fixed_text(api_client: TestClient) -
     this test asserted its text survived; PL-1599 Task 5 changes that on purpose."""
     body = _post(api_client, "/__nfr499_coded", _CODED)
     assert body["errors"][0]["message"] == "The value is not valid (VALUE_ERROR)."  # type: ignore[index]
+
+
+def _positioned_refusal() -> ExpressionError:
+    refusal = ExpressionError("refused", node=ast.parse("a + b", mode="eval").body)
+    refusal.__cause__ = ValueError(_SENTINEL)
+    return refusal
+
+
+@pytest.mark.req("NFR-499")
+def test_the_objective_grammar_refusal_is_the_allow_lists_text(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """`objectives.grammar_refusal` (create and preview share it) reads `safe_error_detail`."""
+    from app.platform import objectives
+
+    def refuse(*_: object, **__: object) -> None:
+        raise _positioned_refusal()
+
+    monkeypatch.setattr(objectives, "parse_expression", refuse)
+    refusal = objectives.grammar_refusal("a + b", symbols=frozenset({"a", "b"}))
+    assert refusal == (1, 1, "line 1, column 1: refused"), "control: the author's own text"
+    assert _SENTINEL not in str(refusal)
+
+
+@pytest.mark.req("NFR-499")
+def test_the_objective_preview_derive_refusal_is_the_allow_lists_text(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """`objective_preview._run`'s `derive` arm answers `safe_error_detail`, not `str(exc)`."""
+    from app.platform import objective_preview
+    from model_schema import ObjectivePreviewRequest
+
+    def refuse(*_: object, **__: object) -> None:
+        raise _positioned_refusal()
+
+    monkeypatch.setattr(objective_preview, "derive", refuse)
+    request = ObjectivePreviewRequest.model_validate(
+        {
+            "loss": "w * (y - f) ** 2",
+            "parameters": [],
+            "grid": {"y": 1.0, "w": 1.0, "f_range": [0.0, 1.0], "n_points": 3},
+        }
+    )
+    answer = objective_preview._run(request)
+    assert answer.error is not None
+    assert answer.error.message == "line 1, column 1: refused", "control: the author's own text"
+    assert _SENTINEL not in answer.error.message

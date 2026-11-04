@@ -75,6 +75,7 @@ from model_schema import (
 )
 from pricing_core.data.expressions import ExpressionError, GrammarProfile, parse_expression
 from pricing_core.modelling.expression_objective import derive
+from pricing_core.safe_error import safe_error_detail
 
 __all__ = [
     "apply_approval_decision",
@@ -107,9 +108,7 @@ _PROBABILITY_RESPONSES = frozenset({ResponseKind.CONVERSION, ResponseKind.RETENT
 _COUNT_RESPONSES = frozenset({ResponseKind.CLAIM_COUNT})
 
 
-def to_objective(
-    row: CustomObjectiveRow, *, usage_count: int | None = None
-) -> CustomObjective:
+def to_objective(row: CustomObjectiveRow, *, usage_count: int | None = None) -> CustomObjective:
     """The stored artifact, re-validated on the way out.
 
     Re-validated rather than trusted, for `to_structure`'s reason: the definition columns
@@ -272,8 +271,7 @@ async def create_objective(
             "VALIDATION_FAILED",
             "That objective version already exists",
             409,
-            f"{slug}@{version} was created by another request. Retry to take the next "
-            "version.",
+            f"{slug}@{version} was created by another request. Retry to take the next version.",
         ) from None
 
     await audit.record(
@@ -294,24 +292,42 @@ async def create_objective(
     return row
 
 
-def _require_the_grammar(loss: str, *, symbols: frozenset[str]) -> None:
-    """FR-145: `loss` parses in the `objective` profile, or 422 with the position in `errors[0]`.
+def grammar_refusal(
+    loss: str, *, symbols: frozenset[str]
+) -> tuple[int | None, int | None, str] | None:
+    """FR-145: why `loss` is outside the `objective` profile as `(line, column, reason)`, or `None`.
 
-    RL-1362 DP-S3-3: one `FieldError` on `loss`, its message beginning `line <L>, column <C>:`
-    with `ExpressionError.lineno` and `col_offset` (1-based column). No problem extension:
-    `ProblemDetail` is `extra="forbid"`. A text that does not parse as Python at all is the
-    same refusal, positioned by `SyntaxError`, whose `offset` is already 1-based.
+    `ExpressionError.lineno` and `col_offset` give the position (the column made 1-based). A
+    text that does not parse as Python at all is positioned by `SyntaxError`, whose `offset`
+    is already 1-based. The one place the position is worked out: create refuses with it
+    (`_require_the_grammar`) and the preview route (FR-1840) answers with it. The reason of an
+    `ExpressionError` is `safe_error_detail`'s (NFR-499): the allow-list's text, already
+    positioned as `line N, column M: message`.
     """
     try:
         parse_expression(loss, GrammarProfile.OBJECTIVE, symbols=symbols)
     except ExpressionError as exc:
-        line, column = exc.lineno, None if exc.col_offset is None else exc.col_offset + 1
-        reason = str(exc)
+        return (
+            exc.lineno,
+            None if exc.col_offset is None else exc.col_offset + 1,
+            safe_error_detail(exc),
+        )
     except SyntaxError as exc:
-        line, column, reason = exc.lineno, exc.offset, exc.msg
-    else:
+        where = "" if exc.lineno is None else f"line {exc.lineno}, column {exc.offset}: "
+        return exc.lineno, exc.offset, where + exc.msg
+    return None
+
+
+def _require_the_grammar(loss: str, *, symbols: frozenset[str]) -> None:
+    """FR-145: `loss` parses in the `objective` profile, or 422 with the position in `errors[0]`.
+
+    RL-1362 DP-S3-3: one `FieldError` on `loss`, its message beginning `line <L>, column <C>:`.
+    No problem extension: `ProblemDetail` is `extra="forbid"`.
+    """
+    refusal = grammar_refusal(loss, symbols=symbols)
+    if refusal is None:
         return
-    message = reason if line is None else f"line {line}, column {column}: {reason}"
+    _, _, message = refusal
     raise PlatformError(
         "OBJECTIVE_GRAMMAR_VIOLATION",
         "The loss is outside the objective grammar",
@@ -513,9 +529,7 @@ async def load_certificate(
     return to_certificate(row)
 
 
-async def resolve_ref(
-    session: AsyncSession, *, workspace_id: UUID, ref: str
-) -> CustomObjective:
+async def resolve_ref(session: AsyncSession, *, workspace_id: UUID, ref: str) -> CustomObjective:
     """`custom_objective:<slug>@<version>` → the artifact, for the fit path.
 
     This is the resolution ADR-703 keeps out of `pricing-core`: `fit_gbm` takes the
@@ -765,9 +779,7 @@ async def submit_for_review(
         session,
         workspace_id=workspace_id,
         submitter=actor,
-        artifact_ref=ArtifactRef(
-            type="custom_objective", slug=row.slug, version=row.version
-        ),
+        artifact_ref=ArtifactRef(type="custom_objective", slug=row.slug, version=row.version),
         change_summary=change_summary,
         additional_approvers=1 if non_convex else 0,
     )

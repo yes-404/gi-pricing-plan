@@ -11,9 +11,11 @@ Slice 6 declares (`PL-1537` R6.1).
 from __future__ import annotations
 
 import logging
+from typing import Any
 
 import pytest
 import pytest_asyncio
+from backend.tests.conftest_db import seed_as_owner
 from fastapi.testclient import TestClient
 from sqlalchemy import delete, select
 
@@ -55,7 +57,7 @@ def test_scope_defaults_to_workspace_only_and_three_keys_are_declared_environmen
         key="x", type=SettingType.INT, default=1, description="d"
     ).scope is SettingScope.WORKSPACE
     environment_capable = {
-        k for k, d in svc.REGISTRY.items() if d.scope is not SettingScope.WORKSPACE
+        k for k, d in svc.REGISTRY.items() if d.scope is SettingScope.WORKSPACE_OR_ENVIRONMENT
     }
     # The third key is `platform.default_management_rate_limit_rps`: FR-448 declares it
     # workspace- or environment-capable (docs/specs/07-platform.md:174).
@@ -66,6 +68,21 @@ def test_scope_defaults_to_workspace_only_and_three_keys_are_declared_environmen
     }
     for key in environment_capable:
         assert svc.REGISTRY[key].scope is SettingScope.WORKSPACE_OR_ENVIRONMENT
+
+
+@pytest.mark.req("FR-446", "FR-270", "FR-271")
+def test_the_routing_and_shadow_flags_are_environment_only() -> None:
+    """WK-674 Slice 6 (`RL-1311` item 3, `03` §4.13): the two flags are declared `ENVIRONMENT`
+    scope, so no workspace value can enable routing or shadow scoring for an Environment. They
+    are the only Environment-only keys, so together with the three workspace-or-environment keys
+    above they are every key that is not workspace-only."""
+    environment_only = {
+        k for k, d in svc.REGISTRY.items() if d.scope is SettingScope.ENVIRONMENT
+    }
+    assert environment_only == {
+        "features.date_routing_enabled",
+        "features.shadow_scoring_enabled",
+    }
 
 
 # --- FR-447 / FD-1320: the override check -------------------------------------------------
@@ -169,8 +186,11 @@ PSI = "validation.psi_warn_threshold"
 async def clean_environment_settings(database: Database):
     """Environments are deployment-wide, so rows written here would outlive the test."""
     yield
-    async with database.unit_of_work() as session:
+
+    async def _remove(session: Any) -> None:
         await session.execute(delete(EnvironmentSettingRow))
+
+    await seed_as_owner(_remove)
 
 
 async def _set(database: Database, environment: str, key: str, value) -> None:

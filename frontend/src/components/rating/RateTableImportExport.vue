@@ -135,9 +135,8 @@ async function confirm(): Promise<void> {
       {{ problem }}
     </p>
     <p
-      v-if="created"
-      aria-live="polite"
-      class="mt-3 rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800"
+      role="status"
+      :class="created ? 'mt-3 rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800' : ''"
     >
       {{ created }}
     </p>

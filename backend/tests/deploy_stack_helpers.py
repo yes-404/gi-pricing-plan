@@ -27,7 +27,52 @@ LB_PORT = os.environ.get("GIP_LB_PORT", "18000")
 PROJECT = "gip-s4-runtime"
 
 
+SHARED_POSTGRES_PORT = 5432
+
+
+def own_postgres_owner_url(port: int) -> str:
+    """The owner URL of THIS project's postgres, from its mapped host port.
+
+    Refuses the shared stack's published port: the caller runs DDL against the URL (F2).
+    """
+    if port == SHARED_POSTGRES_PORT:
+        raise ValueError(f"port {port} is the shared stack's postgres, not this project's own")
+    return f"postgresql+asyncpg://gipricing:gipricing@127.0.0.1:{port}/gipricing"
+
+
+#: Projects whose own postgres has been migrated and had the application login role provisioned.
+_provisioned: set[str] = set()
+
+
+def _provision_once(sha: str) -> None:
+    """On a project's first `up`: its OWN postgres, `migrate`, then `provision-app-role.py`.
+
+    The `api` and the beat relay connect as `gip_app_login`, which exists on a fresh volume with
+    no password until `scripts/provision-app-role.py` runs (F2): without it `api` exits 3
+    ("password authentication failed for user gip_app_login", seen at origin/main 1e17ec63).
+    The owner URL is built from the project's mapped port and refused if it is the shared 5432,
+    BEFORE any DDL. The same URL becomes `GIP_TEST_DATABASE_URL` for the seed's owner
+    connection, reset by `down`.
+    """
+    _provisioned.add(PROJECT)
+    compose(sha, "up", "-d", "--wait", "postgres")
+    url = own_postgres_owner_url(int(mapped("postgres", 5432)))
+    compose(sha, "run", "--rm", "migrate")
+    subprocess.run(
+        ["uv", "run", "--directory", str(ROOT), "python", "scripts/provision-app-role.py",
+         "--allow-default-password"],
+        cwd=ROOT, env={**os.environ, "GIP_MIGRATION_DATABASE_URL": url},
+        check=True, capture_output=True,
+    )
+    os.environ["GIP_TEST_DATABASE_URL"] = url
+
+
 def compose(sha: str, *args: str, check: bool = True) -> subprocess.CompletedProcess[str]:
+    if args[:1] == ("up",) and PROJECT not in _provisioned:
+        _provision_once(sha)
+    if args[:1] == ("down",):
+        _provisioned.discard(PROJECT)
+        os.environ.pop("GIP_TEST_DATABASE_URL", None)
     env = {**os.environ, "GIP_BUILD": sha, "GIP_LB_PORT": LB_PORT}
     return subprocess.run(
         [
@@ -266,19 +311,38 @@ def built_n() -> str:
     return n
 
 
+def one_beat_problems(ps: list[dict[str, str]]) -> list[str]:
+    """FR-413: exactly one beat runs. `ps` is `docker compose ps --format json` rows.
+
+    A beat is any running container whose command runs `celery ... beat`, whatever its service:
+    that catches a second `scheduler` and a one-off `run` of another service alike (two beats
+    relay the outbox twice).
+    """
+    beats = [
+        row for row in ps
+        if row.get("State") == "running" and " beat" in f" {row.get('Command', '')}"
+    ]
+    if len(beats) != 1:
+        return [f"{len(beats)} beat containers running, not exactly 1"]
+    if beats[0].get("Service") != "scheduler":
+        return [f"the one beat is service {beats[0].get('Service')!r}, not scheduler"]
+    return []
+
+
 @pytest.fixture
 def beat_fixture(built_n: str) -> Iterator[None]:
-    """Beat as a one-off TEST FIXTURE from the slice's image, not a compose service (SL-1689's).
+    """Starts the compose `scheduler` service (SL-1689; FR-432) and proves it is the only beat.
 
     The outbox relay is a beat schedule entry (`app.worker.entrypoint`), so without a beat
-    process no Job ever leaves the outbox. It is stopped in teardown.
+    process no Job ever leaves the outbox. The fixture starts no beat of its own: it brings up
+    the stack's own `scheduler` and asserts, from `compose ps -a`, that exactly one beat
+    container runs (`one_beat_problems`). It is stopped in teardown.
     """
-    started = _compose(
-        built_n, "run", "--rm", "-d", "worker-default",
-        "celery", "-A", "app.worker.entrypoint", "beat", "--schedule", "/tmp/celerybeat-schedule",
-    )
-    container = started.stdout.strip().splitlines()[-1]
+    _compose(built_n, "up", "-d", "--wait", "scheduler")
+    listing = _compose(built_n, "ps", "-a", "--no-trunc", "--format", "json").stdout
+    rows = [json.loads(line) for line in listing.splitlines() if line.strip()]
+    assert one_beat_problems(rows) == [], rows
     try:
         yield
     finally:
-        subprocess.run(["docker", "rm", "-f", container], check=False, capture_output=True)
+        _compose(built_n, "stop", "scheduler", check=False)

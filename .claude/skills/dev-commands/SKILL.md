@@ -254,6 +254,10 @@ lock the same file from unrelated open file descriptions — the child's `flock(
 forever on a lock its own parent holds and never releases until the child exits. Never
 compose the gate command without this export; it is not optional decoration.
 
+The same variable names the deployment switch's Redis channels (FD-1838): `switch_stack` in
+`app.platform.deployment_switch` appends the slot's basename, so two slots do not share a
+PREPARE quorum. A process with no slot (production) is unchanged.
+
 **Why every worktree needs its own database.** `backend/tests/conftest_db.py`'s
 session-scoped teardown `TRUNCATE`s the whole test database at every `pytest` session's
 end. Two executors running full suites concurrently against the same DSN are two sessions
@@ -911,6 +915,15 @@ uv run python scripts/demo.py                # then open http://localhost:5173/d
 uv run python scripts/demo.py --rows 60000   # a sample; the full seed is 678 013 rows
 ```
 
+```bash
+uv run python scripts/demo.py --no-compose   # the four infrastructure services are already up
+```
+
+`--no-compose` skips the `docker compose up` and refuses, naming the service, when postgres,
+redis, minio or keycloak is not running. Use it from any worktree but tools-main: `name:
+gi-pricing` makes a plain `docker compose up` act on the shared stack from any worktree, and
+recreates keycloak onto that worktree's bind mount (SL-1968, FD-1661).
+
 One command from a clean checkout to a browser: compose, migrations, freMTPL2 seeded
 through the **real Job path**, the API and the frontend, with a development identity for the
 seeded workspace. Ctrl-C stops everything it started.
@@ -936,15 +949,24 @@ than a dev loop.
 ## Migrations — the bare command does not work against the compose stack
 
 ```bash
-GIP_DATABASE_URL=postgresql+asyncpg://gipricing:gipricing@localhost:5432/gipricing \
+GIP_MIGRATION_DATABASE_URL=postgresql+asyncpg://gipricing:gipricing@localhost:5432/gipricing \
     uv run alembic upgrade head
 ```
 
-`CLAUDE.md` §11 claimed the bare `alembic upgrade head` worked until 2026-08-22. It does
-not: `backend/src/app/config.py`'s `database_url` defaults to `gip:gip@localhost:5432/gip`
+**Run it from the worktree root**, where `alembic.ini` is: `uv run --directory <worktree> alembic …`. `uv run --directory <worktree>/backend alembic …` fails with `No 'script_location' key found in configuration` (exec-seedproof, 2026-10-29, while proving the seed fixture's defect).
+
+**Two DSNs (FD-1729).** `GIP_MIGRATION_DATABASE_URL` is the owner's and only Alembic (and
+`scripts/provision-app-role.py`) reads it; `migrations/env.py` raises a `RuntimeError` naming it when
+unset and never falls back. `GIP_DATABASE_URL` is the application's, default
+`gip_app_login:gip_app_login@localhost:5432/gipricing`. Create the login role once per database
+cluster: `GIP_MIGRATION_DATABASE_URL=… GIP_APP_DB_PASSWORD=… uv run python scripts/provision-app-role.py`
+(`--allow-default-password` for a fresh local volume or CI only).
+
+`CLAUDE.md` §11 claimed the bare `alembic upgrade head` worked until 2026-08-22. It did
+not (then, `backend/src/app/config.py`'s `database_url` defaulted to `gip:gip@localhost:5432/gip`
 while `deploy/docker-compose.yml` provisions `gipricing:gipricing@…/gipricing`, and Alembic
 reads `Settings`, so it dies with
-`InvalidPasswordError: password authentication failed for user "gip"`.
+`InvalidPasswordError: password authentication failed for user "gip"`).
 
 **Why it survived every green suite:** `backend/tests/conftest_db.py`'s `DEFAULT_TEST_DSN`
 carries the compose credentials itself, so the tests never touch the default.
@@ -1192,7 +1214,7 @@ build log showing no actual build (wrong cwd), one tmpdir ls -i showing identica
 (collision). This section drafted by executor-h; verified by deputy as measured. Reference: 
 to-lead.md entries 10:55:17, 11:02:41, 11:48:50, 14:33:28 (maintainer instruction).
 
-Verified: 2026-10-18 against main 8ac6290b (the tree of merge 96260086 on docs-d21-2026-10-17) (new line in the two-code-gate-slots section: vitest `--maxWorkers=2` and the FR-1530 re-run-once rule, both from the rulings it cites, not re-run here); previously 2026-10-17 against main 9469721d (the tree of merge 40bb4694 on docs-d20-2026-10-17) (new section: two code-gate slots, per-slot isolation, LOKY_MAX_CPU_COUNT, run-to-run hash noise; the rulings are cited in it, not re-run here); previously 2026-10-14 against main 8eaf6d5f (new section: scripts/run-small.sh, RL-1626; its test passes at this tree); previously 2026-10-10 against the PL 9617 slice branch (based on main fe0b0627; gate wrapper and bare-pytest lock take gate-1 only, RL-1445); previously 2026-10-10 against main db0642c4 (new paragraph: the gate-2 standing rule, one docs check beside one code gate); previously 2026-10-08 against main d85cf854 (new rule: no background process inside a held slot, `fuser` check); previously 2026-10-06 against main a9ef6777 (new section: a slot probe that gates a check); previously 2026-09-29 against main 4819ec88 (gate slot budget 3 → 2 for the 8-vCPU box, WK-1178; the wrapper loop and `conftest.py` `_SLOT_COUNT` re-read together)
+Verified: 2026-10-29 against the gated head 67284ea12daab613b67353e3eb8b728a35ca5023 of draft/sl-8275 (a committed tree: the demo `--no-compose` paragraph was in the full gate's tree, whose END is 21:02:28Z, rc_infra 0 and demo 0; the earlier line read "the tree of sl-8275 at 90ef474d plus its uncommitted edits"); previously 2026-10-29 against the tree 45ac1d6730e0a8c34d0dd99e22447a19f4cfefd0 (docs/tue27-lanec-2026-10-27 at c427e92e, before this commit; new paragraph in the Migrations section: alembic runs from the worktree root, from exec-seedproof's report, not re-run here); previously 2026-10-18 against main 8ac6290b (the tree of merge 96260086 on docs-d21-2026-10-17) (new line in the two-code-gate-slots section: vitest `--maxWorkers=2` and the FR-1530 re-run-once rule, both from the rulings it cites, not re-run here); previously 2026-10-17 against main 9469721d (the tree of merge 40bb4694 on docs-d20-2026-10-17) (new section: two code-gate slots, per-slot isolation, LOKY_MAX_CPU_COUNT, run-to-run hash noise; the rulings are cited in it, not re-run here); previously 2026-10-14 against main 8eaf6d5f (new section: scripts/run-small.sh, RL-1626; its test passes at this tree); previously 2026-10-10 against the PL 9617 slice branch (based on main fe0b0627; gate wrapper and bare-pytest lock take gate-1 only, RL-1445); previously 2026-10-10 against main db0642c4 (new paragraph: the gate-2 standing rule, one docs check beside one code gate); previously 2026-10-08 against main d85cf854 (new rule: no background process inside a held slot, `fuser` check); previously 2026-10-06 against main a9ef6777 (new section: a slot probe that gates a check); previously 2026-09-29 against main 4819ec88 (gate slot budget 3 → 2 for the 8-vCPU box, WK-1178; the wrapper loop and `conftest.py` `_SLOT_COUNT` re-read together)
 Prior: 2026-09-17 against main 71f5a2208c7a92bad486ae128775a4a42c7ebc63
 
 2026-09-06 — the gate body's seven stages now run in parallel inside one slot, each

@@ -488,8 +488,9 @@ async def test_import_confirmed_obeys_the_threshold(
 async def test_diff_needs_job_flags_a_diff_touching_parquet(
     database: Database, workspace_id, principal, blob_store: BlobStore
 ) -> None:
-    """03 §5.1: the diff answers 202 with a Job where either version is `storage:
-    parquet`; a rows-only pair stays on the synchronous 200 path."""
+    """`diff_needs_job` is True where either version is `storage: parquet` and False for a
+    rows-only pair; the drafted change summary (FR-242) is its caller. The diff route
+    answers 202 on the first request for a key whatever the storage (FR-232)."""
     family = f"mf-{uuid4().hex[:8]}"
     slug = _table_slug()
     await _seed(database, workspace_id, principal, family, slug, blob_store)

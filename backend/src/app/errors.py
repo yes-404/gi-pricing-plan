@@ -320,7 +320,6 @@ RATING_ERROR_CODES: Final[frozenset[str]] = frozenset(
         "RATING_GRAPH_CYCLIC",
         "RATING_GRAPH_UNRESOLVED_REF",
         "RATING_TYPE_MISMATCH",
-        "MONETARY_FLOAT_REFUSED",
         # The four WK-668-confirmed boundary guards, surfaced at save time (W9-2).
         "EXPRESSION_UNGUARDED_DIVISION",
         "EXPRESSION_SCALE_OVERFLOW",
@@ -334,6 +333,8 @@ RATING_ERROR_CODES: Final[frozenset[str]] = frozenset(
         "DEPLOY_REQUIRES_APPROVAL",
         # FR-268 (WK-674 Slice 5, PL-1766 D5.9): PREPARE was short, so no Deployment was written.
         "DEPLOY_SWITCH_INCOMPLETE",
+        # FR-270 (WK-674 Slice 6, RL-1834 D1): two ranges of a routing rule overlap.
+        "DEPLOY_DATE_RANGE_OVERLAP",
         # FR-239 (RL-1379): a compile of a Rating Version that has left `draft`.
         "RATING_VERSION_IMMUTABLE",
         # Rate tables (W10-2), enumerated in 03 §5.1.
@@ -356,7 +357,7 @@ RATING_ERROR_CODES: Final[frozenset[str]] = frozenset(
         # something other than its Model's Factor slugs or offset column, refused at save.
         "MODEL_CALL_FEATURE_MAP_INVALID",
         # FR-222 as amended 2026-10-16 (SL 8071): a `model_call` pinning a GBM fitted on a
-        # banded or grouped Factor, refused at save and at compile.
+        # transformed (non-IDENTITY) Factor, refused at save and at compile.
         "MODEL_CALL_GBM_TRANSFORMED_FACTOR",
         # W10-3C: the save-time seed-lineage equality proof (03 §4.2, FR-234) and
         # the named refusals of the bulk-operation and import operations (03 §5.1).

@@ -2,7 +2,7 @@
 id: FD-1728
 family: finding
 title: Ten artifact tables declared immutable can be updated, deleted and truncated in place by the owner, with no row or TRUNCATE trigger, so an approved Rating Version's cells and algorithm change with no new version
-status: active
+status: closed
 created: 2026-10-14
 owner: auditor
 tree: 8eaf6d5f9cd4204e1e077b44069d4afd395f1461

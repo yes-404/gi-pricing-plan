@@ -140,7 +140,7 @@ async def test_verify_reports_an_intact_chain(
 
 @pytest.mark.req("FR-372")
 async def test_verify_reports_a_break_rather_than_failing(
-    client: TestClient, database: Database, workspace_id, principal, auditor_headers
+    client: TestClient, owner_database: Database, workspace_id, principal, auditor_headers
 ) -> None:
     """A broken chain is a finding, not a server error.
 
@@ -148,8 +148,8 @@ async def test_verify_reports_a_break_rather_than_failing(
     append-only triggers — the privileged path the chain exists to detect, since privileges
     and triggers cannot prevent it.
     """
-    await _events(database, workspace_id, principal)
-    async with database.unit_of_work() as session:
+    await _events(owner_database, workspace_id, principal)
+    async with owner_database.unit_of_work() as session:
         await session.execute(text("SET LOCAL session_replication_role = replica"))
         await session.execute(
             text(

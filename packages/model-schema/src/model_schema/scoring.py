@@ -21,7 +21,15 @@ from __future__ import annotations
 from datetime import date, datetime
 from typing import Literal, Self
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    StrictBool,
+    StrictInt,
+    StrictStr,
+    model_validator,
+)
 
 from model_schema.input_free import InputFreeError
 from model_schema.money import MoneyMinor, PositionalDecimalStr
@@ -175,6 +183,11 @@ class TraceStep(BaseModel):
     `consumed`/`produced` are the engine's own `trace[node_id].input`/`.output` dicts,
     passed through rather than re-derived — `03` does not specify a narrower shape than
     "consumed values, produced value" and the engine's own record already satisfies it.
+
+    `dropped_inputs` is set only on a `model_call` step (FR-222, the maintainer's (by
+    delegation) entries "2026-10-25 11:40:12 GMT" and "2026-10-25 11:53:23 GMT"): the sorted
+    graph names of its `feature_map` that the scoring context did not hold, so the runtime
+    dropped them. `None` when nothing was dropped. Not compared (`03` §4.10).
     """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
@@ -187,6 +200,7 @@ class TraceStep(BaseModel):
     matched: dict[str, object] | None = None
     violation: dict[str, object] | None = None
     elapsed_us: int = Field(ge=0, default=0)
+    dropped_inputs: list[str] | None = None
 
 
 class Trace(BaseModel):
@@ -206,6 +220,14 @@ class Trace(BaseModel):
     ladder_check_version: int | None = Field(default=None, ge=1)
 
 
+type OutputValue = (
+    StrictInt | StrictStr | StrictBool | dict[str, OutputValue] | list[OutputValue] | None
+)
+"""One served output value (`RL-1343` rule 4): an integer, a string, a bool, null, or a map or
+list of those. Never a number with a fractional part, and never a whole-valued `float`:
+every scalar is strict, so a `float` at any depth is a `ValidationError`."""
+
+
 class ScoringResult(BaseModel):
     """`ScoringResult` (`scoring.schema.json:46-63`, `03` §4.4).
 
@@ -213,6 +235,12 @@ class ScoringResult(BaseModel):
     re-validated here): applying every rung's recorded operation to `risk_premium`
     reproduces `payable_premium` exactly (FR-248); a traced and an untraced call on the
     same bundle and context return an identical premium (`03` R3).
+
+    `outputs` is the one construction-time check on served output values (`RL-1343` rule 4):
+    a `float` anywhere in it is refused, so a decimal-family value is a positional string
+    (`_build_outputs`). The model does not know declared types, so it cannot tell a whole
+    `27` under a declared `decimal` from a valid integer; the producer and batch's check
+    close that.
     """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
@@ -221,7 +249,7 @@ class ScoringResult(BaseModel):
     rating_version_ref: ArtifactRef
     bundle_hash: str = Field(pattern=r"^sha256:[a-f0-9]{64}$")
     premium_ladder: list[LadderRung]
-    outputs: dict[str, object] = Field(default_factory=dict)
+    outputs: dict[str, OutputValue] = Field(default_factory=dict)
     decline_reasons: list[str] = Field(default_factory=list)
     trace: Trace | None = None
     timing_ms: dict[str, float] = Field(default_factory=dict)

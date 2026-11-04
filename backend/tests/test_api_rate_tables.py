@@ -503,7 +503,7 @@ def test_diff_404s_for_unknown_table_and_version(
         headers=actuary,
     )
     assert missing_table.status_code == 404, missing_table.text
-    assert missing_table.json()["code"] == "RATE_TABLE_MISS"
+    assert missing_table.json()["code"] == "NOT_FOUND"
 
     missing_version = _diff_ready(
 
@@ -511,6 +511,7 @@ def test_diff_404s_for_unknown_table_and_version(
 
     )
     assert missing_version.status_code == 404, missing_version.text
+    assert missing_version.json()["code"] == "NOT_FOUND"
 
     no_previous = _diff_ready(
 
@@ -518,6 +519,44 @@ def test_diff_404s_for_unknown_table_and_version(
 
     )
     assert no_previous.status_code == 404, no_previous.text
+    assert no_previous.json()["code"] == "NOT_FOUND"
+
+    unknown_against = _diff_ready(
+        api_client, f"/api/v1/rate-tables/{slug}@1/diff", {"against": "7"}, actuary
+    )
+    assert unknown_against.status_code == 404, unknown_against.text
+    assert unknown_against.json()["code"] == "NOT_FOUND"
+
+
+@pytest.mark.req("FR-231")
+@pytest.mark.req("FR-232")
+def test_diff_cells_404s_not_found_for_unknown_table_version_and_against(
+    api_client: TestClient, workspace_id, actuary
+) -> None:
+    """`…/diff/cells` answers the same typed 404 `NOT_FOUND` as `…/diff` (03 §5.1):
+    an unknown table, an unknown version and an unknown explicit `against`."""
+    slug, _ = _seeded_table(api_client, workspace_id, actuary)
+
+    missing_table = _diff_ready(
+        api_client,
+        f"/api/v1/rate-tables/{_table_slug()}@1/diff/cells",
+        {"against": "previous"},
+        actuary,
+    )
+    assert missing_table.status_code == 404, missing_table.text
+    assert missing_table.json()["code"] == "NOT_FOUND"
+
+    missing_version = _diff_ready(
+        api_client, f"/api/v1/rate-tables/{slug}@9/diff/cells", {"against": "previous"}, actuary
+    )
+    assert missing_version.status_code == 404, missing_version.text
+    assert missing_version.json()["code"] == "NOT_FOUND"
+
+    unknown_against = _diff_ready(
+        api_client, f"/api/v1/rate-tables/{slug}@1/diff/cells", {"against": "7"}, actuary
+    )
+    assert unknown_against.status_code == 404, unknown_against.text
+    assert unknown_against.json()["code"] == "NOT_FOUND"
 
 
 @pytest.mark.req("FR-231")
@@ -549,7 +588,7 @@ def test_diff_seed_without_a_seed_origin_404s(
 ) -> None:
     """`against=seed` resolves the baseline from the `seeded_from` trail; a version
     carrying no trail (direct inserts — the only creation path in this slice always
-    pins a seed origin) answers 404 RATE_TABLE_MISS."""
+    pins a seed origin) answers 404 NOT_FOUND."""
     slug = _table_slug()
     table_row = RateTableRow(
         workspace_id=workspace_id,
@@ -598,7 +637,7 @@ def test_diff_seed_without_a_seed_origin_404s(
 
     )
     assert response.status_code == 404, response.text
-    assert response.json()["code"] == "RATE_TABLE_MISS"
+    assert response.json()["code"] == "NOT_FOUND"
 
 
 @pytest.mark.req("FR-232")
@@ -1118,7 +1157,7 @@ def test_import_preview_creates_nothing(
 
     )
     assert missing.status_code == 404
-    assert missing.json()["code"] == "RATE_TABLE_MISS"
+    assert missing.json()["code"] == "NOT_FOUND"
 
 
 @pytest.mark.req("FR-235")
@@ -1181,7 +1220,7 @@ def test_import_confirm_cannot_override_the_verdict(
         api_client, f"/api/v1/rate-tables/{slug}@2/diff", {"against": "previous"}, actuary
     )
     assert missing.status_code == 404
-    assert missing.json()["code"] == "RATE_TABLE_MISS"
+    assert missing.json()["code"] == "NOT_FOUND"
 
 
 @pytest.mark.req("FR-232")

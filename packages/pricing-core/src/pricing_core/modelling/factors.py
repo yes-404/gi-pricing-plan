@@ -93,6 +93,7 @@ __all__ = [
     "FactorColumns",
     "FactorMatrix",
     "FactorResolutionError",
+    "consumed_features",
     "gbm_transformed_factors",
     "rateable",
     "required_model_inputs",
@@ -502,6 +503,44 @@ def rateable(factors: Sequence[Factor]) -> tuple[Factor, ...]:
     return tuple(f for f in factors if f.intent is FactorIntent.RISK)
 
 
+def consumed_features(fit_result: object) -> tuple[str, ...]:
+    """The feature names a fitted model consumes, read from the fields its arm carries.
+
+    FD-1495 (SL-1985, ruled 2026-11-03 16:19:35 (2)): a GBM's required `feature_order`, a GLM's
+    `coefficients[*].term` with the intercept dropped and a dummy term `<slug>[<level>]`
+    reduced to its Factor slug (the grammar `predict._DUMMY` reads). Never an optional key with
+    an empty default: a `fit_result` that is not a mapping, any other `model_type`, a missing
+    or mistyped field, or an EMPTY derived set raises `ValueError` (fail closed). The message
+    names no model; the caller, which has the ref, wraps it. Each entry appears once, in order.
+    """
+    if not isinstance(fit_result, Mapping):
+        raise ValueError("the fit result is not a mapping")
+    model_type = fit_result.get("model_type")
+    names: list[str]
+    if model_type in GBM_MODEL_TYPES:
+        order = fit_result.get("feature_order")
+        if not isinstance(order, (list, tuple)) or not all(isinstance(n, str) for n in order):
+            raise ValueError("the GBM fit result carries no `feature_order` list of names")
+        names = list(order)
+    elif model_type == "glm":
+        coefficients = fit_result.get("coefficients")
+        if not isinstance(coefficients, (list, tuple)):
+            raise ValueError("the GLM fit result carries no `coefficients` list")
+        names = []
+        for coefficient in coefficients:
+            term = coefficient.get("term") if isinstance(coefficient, Mapping) else None
+            if not isinstance(term, str):
+                raise ValueError("a GLM coefficient carries no `term` name")
+            if term != "intercept":
+                names.append(term.partition("[")[0])
+    else:
+        raise ValueError(f"the fit result's model_type {model_type!r} has no derivation")
+    unique = tuple(dict.fromkeys(names))
+    if not unique:
+        raise ValueError("the fit result consumes no feature")
+    return unique
+
+
 def required_model_inputs(
     factors: Sequence[Factor], feature_order: Sequence[str]
 ) -> tuple[str, ...]:
@@ -531,7 +570,7 @@ GBM_MODEL_TYPES = ("xgboost", "lightgbm")
 
 
 def gbm_transformed_factors(factors: Sequence[Factor]) -> tuple[Factor, ...]:
-    """The Factors of a GBM that a `model_call` cannot score: the banded and the grouped.
+    """The Factors of a GBM that a `model_call` cannot score: every type other than IDENTITY.
 
     `fit_gbm` bands or groups the raw column and encodes the resulting label ordinally, but a
     `model_call` scores a GBM with `factors=()` and a Bundle that carries no Bandings or
@@ -539,9 +578,11 @@ def gbm_transformed_factors(factors: Sequence[Factor]) -> tuple[Factor, ...]:
     the label, so it either raises or, when a label spells another band's number, prices the
     wrong band without an error. The one definition: the save check and the compile check
     both refuse a pinned GBM for which this is non-empty (`MODEL_CALL_GBM_TRANSFORMED_FACTOR`).
+
+    Amended 2026-10-25 (the maintainer's S4 decision (1) of "2026-10-25 13:07:06 GMT", option (b)):
+    the filter was the banded and the grouped only, so an EXPRESSION Factor (its slug is its source
+    column) and an INTERACTION Factor (the cross is taken as supplied) reached the runtime's
+    `factors=()` scoring silently. Only an IDENTITY Factor is read as its raw value, so every other
+    type is refused, and a Factor type added later is refused until it is shown scoreable.
     """
-    return tuple(
-        factor
-        for factor in factors
-        if factor.type in (FactorType.BANDING, FactorType.GROUPING)
-    )
+    return tuple(factor for factor in factors if factor.type is not FactorType.IDENTITY)

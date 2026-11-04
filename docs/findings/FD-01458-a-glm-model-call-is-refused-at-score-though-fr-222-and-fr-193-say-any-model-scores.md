@@ -2,7 +2,7 @@
 id: FD-1458
 family: finding
 title: A GLM model_call is refused at score, though FR-222 and FR-193 say any persisted Model scores
-status: active
+status: closed
 created: 2026-10-06            # original date 2026-10-05, set at the draft; minted 2026-10-06
 owner: auditor
 tree: cdaaa57345cb765f96034ce1ec2733c338f1c3cd

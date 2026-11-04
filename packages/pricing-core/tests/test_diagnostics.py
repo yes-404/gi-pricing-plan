@@ -27,6 +27,7 @@ from model_schema import (
     GbmFunctionRef,
     GbmSpec,
     GlmSpec,
+    MonotonicDirection,
     OffsetSpec,
     Weighting,
     WeightSpec,
@@ -738,3 +739,165 @@ def test_a_backtest_excludes_weight_zero_rows_and_reports_the_count() -> None:
         with_zero, without,
         partitions={".partition": holdout.height - _drop_zero(holdout).height},
     )
+
+
+@pytest.mark.req("FR-110")
+def test_the_negative_binomial_unit_deviance_uses_the_declared_theta() -> None:
+    """PL-1856 A-R3. θ is R/MASS `glm.nb`'s (variance μ + μ²/θ), and the unit deviance is
+    2[y·ln(y/μ) - (y+θ)·ln((y+θ)/(μ+θ))] with the `y = 0` limit taken.
+
+    Pinned against values worked by hand for μ = 1, θ = 2:
+      y = 0:  2·[0 - 2·ln(2/3)]            = 4·ln(3/2)            = 1.6218604324326575
+      y = 2:  2·[2·ln 2 - 4·ln(4/3)]       = 4·ln 2 - 8·ln(4/3)   = 0.4711321426255344
+    The Poisson deviance of the same rows is 2·(0 - (0-1)) = 2 and 2·(2·ln 2 - 1), so a NB
+    value equal to it means θ was ignored — the defect this test exists for.
+    """
+    y = np.array([0.0, 2.0])
+    mu = np.array([1.0, 1.0])
+    got = unit_deviance(y, mu, family="negative_binomial", theta=2.0)
+    assert got == pytest.approx([1.6218604324326575, 0.4711321426255344], abs=1e-12)
+    assert not np.allclose(got, unit_deviance(y, mu, family="poisson"))
+    # θ → ∞ is the Poisson limit: the declared θ is what separates the two.
+    big = unit_deviance(y, mu, family="negative_binomial", theta=1e9)
+    assert big == pytest.approx(unit_deviance(y, mu, family="poisson"), abs=1e-6)
+
+
+@pytest.mark.req("FR-110")
+def test_a_negative_binomial_deviance_without_theta_is_refused_not_defaulted() -> None:
+    """PL-1856 DP-T: no θ is supplied by omission, glum's 1.0 included."""
+    y = np.array([0.0, 2.0])
+    mu = np.array([1.0, 1.0])
+    with pytest.raises(ValueError, match="theta"):
+        unit_deviance(y, mu, family="negative_binomial")
+    with pytest.raises(ValueError, match="theta"):
+        deviance(y, mu, family="negative_binomial")
+    with pytest.raises(ValueError, match="theta"):
+        unit_deviance(y, mu, family="negative_binomial", theta=0.0)
+
+
+# --------------------------------------------------------------------------------------
+# PL-1856 A-R4 / FR-89 — a GLM factor fitted against its declared direction is reported
+# --------------------------------------------------------------------------------------
+
+
+def _age_book(slope: float, n: int = 6000, seed: int = 20261022) -> pl.DataFrame:
+    """Frequency with log-rate `slope` per year of age, so the fitted direction is known."""
+    rng = np.random.default_rng(seed)
+    age = rng.integers(18, 80, size=n).astype(float)
+    exposure = rng.uniform(0.5, 1.5, size=n)
+    lam = 0.1 * np.exp(slope * (age - 40.0)) * exposure
+    return pl.DataFrame(
+        {
+            "age": age,
+            "area": rng.choice(["a", "b", "c"], size=n),
+            "zone": rng.choice(["x", "y"], size=n),
+            "exposure_years": exposure,
+            "claim_count": rng.poisson(lam).astype(float),
+        }
+    )
+
+
+def _directed(slug: str, direction: MonotonicDirection, **over: object) -> Factor:
+    return _factor(
+        slug, monotonic_direction=direction,
+        monotonic_rationale="Declared by the actuary for this test (FR-89).", **over,
+    )
+
+
+@pytest.mark.req("FR-89")
+def test_a_glm_factor_fitted_against_its_declared_direction_is_reported() -> None:
+    """FR-89: the direction is *checked (not enforced) for GLMs, where a violation is
+    reported as a diagnostic*. Declared `increasing`, simulated to fall: one entry, not
+    held, with a positive violation on the mean scale."""
+    frame = _age_book(slope=-0.02)
+    factors = [_directed("age", MonotonicDirection.INCREASING)]
+    fit, spec = _fitted(frame[:4500], factors)
+    result = compute_diagnostics(fit, spec, factors, train=frame[:4500], holdout=frame[4500:])
+    assert result.glm is not None
+    (check,) = result.glm.monotonicity
+    assert (check.factor, check.declared) == ("age", "increasing")
+    assert check.holds is False
+    assert check.worst_violation > 0.0
+
+
+@pytest.mark.req("FR-89")
+def test_a_glm_factor_fitted_along_its_declared_direction_holds() -> None:
+    frame = _age_book(slope=0.02)
+    factors = [_directed("age", MonotonicDirection.INCREASING)]
+    fit, spec = _fitted(frame[:4500], factors)
+    result = compute_diagnostics(fit, spec, factors, train=frame[:4500], holdout=frame[4500:])
+    assert result.glm is not None
+    (check,) = result.glm.monotonicity
+    assert check.holds is True
+    assert check.worst_violation == 0.0
+    assert result.glm.monotonicity_omitted == ()
+
+
+@pytest.mark.req("FR-89")
+def test_a_glm_without_a_declared_direction_reports_no_check_and_no_omission() -> None:
+    frame = _age_book(slope=0.02)
+    factors = [_factor("age")]
+    fit, spec = _fitted(frame[:4500], factors)
+    result = compute_diagnostics(fit, spec, factors, train=frame[:4500], holdout=frame[4500:])
+    assert result.glm is not None
+    assert result.glm.monotonicity == ()
+    assert result.glm.monotonicity_omitted == ()
+
+
+@pytest.mark.req("FR-89")
+@pytest.mark.req("FR-178")
+def test_a_declared_direction_that_cannot_be_swept_is_omitted_with_its_reason() -> None:
+    """PL-1856 DP-M (b), FR-178's own pattern: a declared direction always yields a check
+    or an omission naming why not, never nothing. An operand of a cross is not swept alone
+    (it would recombine into cells the fit never saw); a text column has no order to sweep."""
+    frame = _age_book(slope=0.02)
+    area = _directed("area", MonotonicDirection.INCREASING)
+    other = _factor("zone")
+    cross = _factor(
+        "area_x_zone", "area", type=FactorType.INTERACTION, source_columns=(),
+        operand_factor_ids=(area.id, other.id),
+    )
+    factors = [area, other, cross]
+    fit, spec = _fitted(frame[:4500], factors)
+    result = compute_diagnostics(fit, spec, factors, train=frame[:4500], holdout=frame[4500:])
+    assert result.glm is not None
+    assert result.glm.monotonicity == ()
+    assert {(o.factor, o.reason.value) for o in result.glm.monotonicity_omitted} == {
+        ("area", "operand_of_interaction"),
+    }
+
+    alone = [_directed("area", MonotonicDirection.INCREASING)]
+    fit, spec = _fitted(frame[:4500], alone)
+    result = compute_diagnostics(fit, spec, alone, train=frame[:4500], holdout=frame[4500:])
+    assert result.glm is not None
+    assert result.glm.monotonicity == ()
+    assert {(o.factor, o.reason.value) for o in result.glm.monotonicity_omitted} == {
+        ("area", "unordered_levels"),
+    }
+
+
+@pytest.mark.req("FR-89")
+def test_a_banded_glm_factor_is_swept_in_band_order_not_label_order() -> None:
+    """The bands are ordered by the banding's own `labels`, not alphabetically: these labels
+    sort in the reverse of the band order, so a lexical sweep would call an increasing
+    effect decreasing (and the converse)."""
+    banding = Banding(
+        id=uuid4(), slug="age-band-rev", dataset_id=uuid4(), version=1,
+        column="age", method=BandingMethod.MANUAL,
+        boundaries=(16.0, 30.0, 45.0, 60.0, 90.0),
+        labels=("d-youngest", "c-young", "b-older", "a-oldest"),
+    )
+    band = _directed(
+        "age_band", MonotonicDirection.INCREASING, type=FactorType.BANDING,
+        banding_id=banding.id, source_columns=("age",),
+    )
+    for slope, expected in ((0.03, True), (-0.03, False)):
+        frame = _age_book(slope=slope)
+        fit = fit_glm(frame[:4500], _spec([band]), [band], bandings={banding.id: banding}).result
+        result = compute_diagnostics(
+            fit, _spec([band]), [band], train=frame[:4500], holdout=frame[4500:],
+            bandings={banding.id: banding},
+        )
+        assert result.glm is not None
+        (check,) = result.glm.monotonicity
+        assert check.holds is expected

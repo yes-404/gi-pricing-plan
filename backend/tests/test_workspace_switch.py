@@ -7,8 +7,10 @@ readable before a selection exists, and the switch is an explicit, audited act.
 from __future__ import annotations
 
 import pytest
+from backend.tests.conftest_db import seed_as_owner
 from fastapi.testclient import TestClient
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import DEV_PRINCIPAL_HEADER
 from app.config import Settings
@@ -50,7 +52,11 @@ async def _add_membership(
     """
     async with database.unit_of_work() as session:
         await workspaces.ensure_workspace(session, workspace_id=workspace_id, name=name)
+
+    async def seed(session: AsyncSession) -> None:
         session.add(WorkspaceMemberRow(user_id=user_id, workspace_id=workspace_id))
+
+    await seed_as_owner(seed)
 
 
 async def test_the_list_is_readable_without_a_selection(

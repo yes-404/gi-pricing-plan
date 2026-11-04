@@ -383,7 +383,7 @@ async def test_a_reconciled_composition_cannot_be_rewritten(
 
 @pytest.mark.req("FR-190")
 async def test_a_reconciled_structure_cannot_be_deleted(
-    database, blob_store, workspace_id
+    database, owner_database, blob_store, workspace_id
 ) -> None:
     actor, version_id, area, split = await _book(database, blob_store, workspace_id)
     peril = await _burning_cost_peril(
@@ -399,8 +399,10 @@ async def test_a_reconciled_structure_cannot_be_deleted(
             ),
             {"id": structure_id},
         )
+    # Trigger probe: the trigger is what is asserted, so the statement runs as the owner (on the
+    # login role the privilege check refuses first).
     with pytest.raises(Exception) as blocked:  # noqa: PT011 - the driver's error type
-        async with database.unit_of_work() as session:
+        async with owner_database.unit_of_work() as session:
             await session.execute(
                 text("DELETE FROM peril_structures WHERE id = :id"), {"id": structure_id}
             )

@@ -446,13 +446,26 @@ async def run(rows: int | None) -> int:
 
     register_data_handlers()
     settings = load_settings()
+    # FD-1729 (PL-1769 Task 0, the `seed.py` split): `grant_demo_principals` writes what no
+    # public route creates (workspace, built-in roles, members), which the application's login
+    # role may not, so it alone runs on the owner connection; every governed step below stays
+    # on the application's.
+    if settings.migration_database_url is None:
+        raise SystemExit(
+            "GIP_MIGRATION_DATABASE_URL is not set: the seed creates the demo workspace and "
+            "its members as the schema owner (the application's login role cannot)"
+        )
+    owner_database = Database(settings.model_copy(
+        update={"database_url": settings.migration_database_url}
+    ))
     database, blob_store = Database(settings), BlobStore(settings)
     await blob_store.ensure_bucket()
 
     workspace_id = new_uuid7()
     # FD 9717: `(issuer, subject)` is unique in `users`; `grant_demo_principals` looks a user up
     # by it first, so a re-run reuses the realm user the last run left behind.
-    principals = await grant_demo_principals(database, workspace_id)
+    principals = await grant_demo_principals(owner_database, workspace_id)
+    await owner_database.dispose()
     analyst, actuary = principals["analyst"], principals["actuary"]
     approver, second_approver = principals["approver"], principals["second_approver"]
     # Principal.id is UUID | None at the type level -- "null only for `system`" (jobs.py) --

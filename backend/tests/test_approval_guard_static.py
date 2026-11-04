@@ -124,9 +124,21 @@ def _session_level_flag_sets(sources: dict[str, str]) -> list[str]:
     return bad
 
 
+_SETS_REPLICATION_ROLE = re.compile(
+    r"\bSET\s+(LOCAL\s+|SESSION\s+)?session_replication_role\s*(=|\bTO\b)"
+    r"|set_config\(\s*'session_replication_role'"
+    r"|\bALTER\s+(ROLE|DATABASE|SYSTEM)\b[^;]*\bSET\s+session_replication_role\s*(=|\bTO\b)",
+    re.IGNORECASE,
+)
+
+
 def _replication_role_sql(sources: dict[str, str]) -> list[str]:
-    """`session_replication_role` in a string that is not a docstring: SQL that suspends
-    every user trigger, the guard included."""
+    """SQL that suspends every user trigger, the guard included, in a string that is not a
+    docstring. Three shapes write the parameter: `SET [LOCAL|SESSION] session_replication_role
+    = | TO`, `set_config('session_replication_role', …)`, and the persistent `ALTER
+    ROLE|DATABASE|SYSTEM … SET session_replication_role = | TO`. A read
+    (`has_parameter_privilege`, `current_setting`, `pg_settings`) or a message that merely
+    names the parameter is not refused."""
     bad = []
     for path, source in sources.items():
         tree = ast.parse(source)
@@ -142,7 +154,7 @@ def _replication_role_sql(sources: dict[str, str]) -> list[str]:
             if (
                 isinstance(node, ast.Constant)
                 and isinstance(node.value, str)
-                and "session_replication_role" in node.value
+                and _SETS_REPLICATION_ROLE.search(node.value)
                 and id(node) not in docstrings
             ):
                 bad.append(f"{path}:{node.lineno}")
@@ -279,6 +291,35 @@ def test_a_planted_replication_role_statement_is_refused_and_a_docstring_is_not(
         "backend/src/app/y.py", 'def f():\n    """Mentions session_replication_role in prose."""\n'
     )
     assert _replication_role_sql(prose) == []
+
+
+@pytest.mark.req("FR-351")
+@pytest.mark.parametrize(
+    "sql",
+    [
+        "SET session_replication_role = replica",
+        "set local session_replication_role to replica",
+        "SELECT set_config('session_replication_role', 'replica', false)",
+        "ALTER ROLE gip_app_login SET session_replication_role = replica",
+        "ALTER DATABASE gip SET session_replication_role = replica",
+    ],
+)
+def test_every_statement_that_sets_the_replication_role_is_refused(sql: str) -> None:
+    planted = {"backend/src/app/x.py": f"Q = {sql!r}\n"}
+    assert _replication_role_sql(planted) == ["backend/src/app/x.py:1"]
+
+
+@pytest.mark.req("FR-351")
+@pytest.mark.parametrize(
+    "text",
+    [
+        "SELECT has_parameter_privilege(current_user, 'session_replication_role', 'SET')",
+        "the connection may set session_replication_role, which switches the triggers off",
+    ],
+)
+def test_a_read_or_a_message_naming_the_replication_role_is_not_refused(text: str) -> None:
+    planted = {"backend/src/app/x.py": f"Q = {text!r}\n"}
+    assert _replication_role_sql(planted) == []
 
 
 @pytest.mark.req("FR-351")

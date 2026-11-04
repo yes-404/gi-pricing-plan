@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import pytest
+from backend.tests.conftest_db import seed_as_owner
 from sqlalchemy import select, text
 from sqlalchemy.exc import IntegrityError
 
@@ -27,7 +28,7 @@ def _user() -> Principal:
 
 async def _analyst(database: Database, workspace_id) -> Principal:
     user = _user()
-    async with database.unit_of_work() as session:
+    async def _seed(session):
         await rbac.seed_builtin_roles(session, workspace_id)
         role = (
             await session.execute(
@@ -45,6 +46,7 @@ async def _analyst(database: Database, workspace_id) -> Principal:
                 scope_type=ScopeType.WORKSPACE.value,
             )
         )
+    await seed_as_owner(_seed)
     return user
 
 

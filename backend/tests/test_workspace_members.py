@@ -46,7 +46,9 @@ def _claims(subject: str) -> TokenClaims:
 
 
 @pytest.mark.req("FR-398")
-async def test_a_realm_login_resolves_to_the_seeded_principal(database: Database) -> None:
+async def test_a_realm_login_resolves_to_the_seeded_principal(
+    database: Database, owner_database: Database
+) -> None:
     """The seeded user's id IS the principal id, not a fresh one.
 
     Membership alone is not enough. `authenticate_bearer` returns `UserRow.id` as the
@@ -58,7 +60,9 @@ async def test_a_realm_login_resolves_to_the_seeded_principal(database: Database
     workspace_id, principal_id = new_uuid7(), new_uuid7()
     subject = f"sub-{new_uuid7().hex[-12:]}"
 
-    async with database.unit_of_work() as session:
+    # `ensure_workspace` / `ensure_member` have no application caller: the seed runs as the
+    # owner. The login resolution below (`authenticate_bearer`) stays on the application.
+    async with owner_database.unit_of_work() as session:
         await workspaces.ensure_workspace(
             session, workspace_id=workspace_id, name="freMTPL2 demo"
         )
@@ -81,7 +85,9 @@ async def test_a_realm_login_resolves_to_the_seeded_principal(database: Database
 
 
 @pytest.mark.req("FR-398")
-async def test_ensuring_a_member_twice_does_not_raise(database: Database) -> None:
+async def test_ensuring_a_member_twice_does_not_raise(
+    database: Database, owner_database: Database
+) -> None:
     """The seed is re-run against an existing database more often than not.
 
     `workspace_members` carries `uq_workspace_members_user_workspace`
@@ -91,8 +97,10 @@ async def test_ensuring_a_member_twice_does_not_raise(database: Database) -> Non
     workspace_id, principal_id = new_uuid7(), new_uuid7()
     subject = f"sub-{new_uuid7().hex[-12:]}"
 
+    # `ensure_member` has no application caller: it runs as the owner; the row count below
+    # is read on the application's login role.
     for _ in range(2):
-        async with database.unit_of_work() as session:
+        async with owner_database.unit_of_work() as session:
             await workspaces.ensure_workspace(session, workspace_id=workspace_id)
             await workspaces.ensure_member(
                 session,
@@ -115,7 +123,7 @@ async def test_ensuring_a_member_twice_does_not_raise(database: Database) -> Non
 
 @pytest.mark.req("FR-398")
 async def test_an_id_that_contradicts_the_stored_identity_is_refused_where_it_arises(
-    database: Database,
+    owner_database: Database,
 ) -> None:
     """FD-1494 limb 3 (PL-1544 Acceptance 12). `(issuer, subject)` is unique in `users`, and the
     old lookup was by id alone, so a second call with the same pair and another `user_id` failed
@@ -126,14 +134,16 @@ async def test_an_id_that_contradicts_the_stored_identity_is_refused_where_it_ar
     workspace_id = new_uuid7()
     first_id, other_id = new_uuid7(), new_uuid7()
     subject = f"sub-{new_uuid7().hex[-12:]}"
-    async with database.unit_of_work() as session:
+    # `ensure_member` has no application caller: both calls run as the owner (nothing here
+    # reads through the application).
+    async with owner_database.unit_of_work() as session:
         await workspaces.ensure_workspace(session, workspace_id=workspace_id)
         await workspaces.ensure_member(
             session, workspace_id=workspace_id, user_id=first_id, issuer=ISSUER, subject=subject
         )
 
     with pytest.raises(PlatformError) as refused:
-        async with database.unit_of_work() as session:
+        async with owner_database.unit_of_work() as session:
             await workspaces.ensure_member(
                 session, workspace_id=workspace_id, user_id=other_id, issuer=ISSUER, subject=subject
             )

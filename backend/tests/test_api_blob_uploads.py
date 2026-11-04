@@ -16,9 +16,11 @@ from uuid import UUID
 import httpx
 import pytest
 import pytest_asyncio
+from backend.tests.conftest_db import seed_as_owner
 from botocore.exceptions import ClientError
 from fastapi.testclient import TestClient
 from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import DEV_PRINCIPAL_HEADER
 from app.db.session import Database
@@ -111,7 +113,7 @@ async def test_completing_another_workspaces_upload_is_the_missing_404(
     assert owner.status_code == 202, owner.text  # the control: its own workspace may complete
 
     other = new_uuid7()
-    async with database.unit_of_work() as session:
+    async def _seed(session):
         await workspaces.ensure_workspace(session, workspace_id=other)
         await rbac.seed_builtin_roles(session, other)
         role = (
@@ -129,6 +131,7 @@ async def test_completing_another_workspaces_upload_is_the_missing_404(
             )
         )
         session.add(WorkspaceMemberRow(user_id=principal.id, workspace_id=other))
+    await seed_as_owner(_seed)
     foreign = {DEV_PRINCIPAL_HEADER: str(principal.id), "Workspace-Id": str(other)}
 
     second, _ = _upload(api_client, writer, [_payload()])
@@ -155,11 +158,14 @@ async def test_a_completion_past_the_deadline_is_refused(
     """Breaker: drop the `complete_by` check -> 202."""
     upload_id, body = _upload(api_client, writer, [_payload()])
     assert "id" in body, "no Blob Upload was recorded, so there is no deadline to pass"
-    async with database.unit_of_work() as session:
+
+    async def _expire(session: AsyncSession) -> None:
         await session.execute(
             text("update blob_uploads set complete_by = now() - interval '1 hour' where id = :id"),
             {"id": upload_id},
         )
+
+    await seed_as_owner(_expire)
     response = _complete(api_client, writer, upload_id)
     assert response.status_code == 409, response.text
     assert response.json()["code"] == "VALIDATION_FAILED"

@@ -55,6 +55,7 @@ from model_schema import (
 from pricing_core.modelling.diagnostics import (
     _bin_index,
     _gini,
+    _theta_of,
     _weighting,
     _weights,
     deviance,
@@ -273,7 +274,9 @@ def _metrics(
             "ae_overall": (float(np.sum(actual)) / expected) if expected > 0 else None,
             "gini": gini,
             "gini_normalised": gini_normalised,
-            "holdout_deviance": deviance(actual, mu, family=family, power=power),
+            "holdout_deviance": deviance(
+                actual, mu, family=family, power=power, theta=_theta_of(candidate.spec)
+            ),
             "rows": float(actual.size),
         }
 

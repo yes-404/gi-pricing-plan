@@ -44,15 +44,26 @@ JobRunner = Callable[[str], None]
 class JourneyStepFailed(RuntimeError):  # noqa: N818 - the plan's name (PL-1544 Task 1)
     """A step did not do what the journey asserts. The message is `<step>: <code>`: the step id,
     the problem's `code` and the HTTP status. It never carries the problem's `detail`, which may
-    echo a submitted value; the detail is kept on the exception for the one reader that asks."""
+    echo a submitted value or server text; the detail is kept on the exception for the one reader
+    that asks. `names` and `extra` are the journey's own: values the journey computed (a missing
+    replica, an expected hash) and a count of the unexpected server-reported ones. They are set
+    only by the checks that compute them, and the failure line prints them, never `detail`."""
 
     def __init__(
-        self, step: str, code: str | None, status: int | None = None, detail: str = ""
+        self,
+        step: str,
+        code: str | None,
+        status: int | None = None,
+        detail: str = "",
+        names: tuple[str, ...] = (),
+        extra: int = 0,
     ) -> None:
         self.step = step
         self.code = code
         self.status = status
         self.detail = detail
+        self.names = names
+        self.extra = extra
         suffix = f" (HTTP {status})" if status is not None else ""
         super().__init__(f"{step}: {code or 'NO_CODE'}{suffix}")
 

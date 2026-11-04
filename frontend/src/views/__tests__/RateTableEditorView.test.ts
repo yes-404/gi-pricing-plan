@@ -210,7 +210,7 @@ describe("RateTableEditorView: Editor II (FR-231, FR-233, FR-235)", () => {
     render(RateTableEditorView, { props, ...mounted });
     await screen.findAllByRole("textbox");
     expect(screen.getByRole("region", { name: "Changes against another version" })).toBeInTheDocument();
-    expect(screen.getByRole("dialog", { name: "Bulk operation" })).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Bulk operation" })).toBeInTheDocument();
     expect(screen.getByRole("region", { name: "CSV import and export" })).toBeInTheDocument();
   });
 
@@ -230,5 +230,101 @@ describe("RateTableEditorView: Editor II (FR-231, FR-233, FR-235)", () => {
     });
     expect(await screen.findAllByText("Created area@4")).not.toHaveLength(0);
     expect(getCellPage).toHaveBeenLastCalledWith("area@4", undefined);
+  });
+});
+
+// NFR-463 / WCAG 4.1.3 (FD-1959 F3 and M3): a status message is announced only if its live region is in
+// the DOM before the message arrives. A region that mounts together with its text (v-if) is not.
+const liveRegions = (root: Element): Element[] =>
+  Array.from(root.querySelectorAll('[role="status"], [aria-live="polite"]'));
+
+describe("RateTableEditorView: persistent status regions (NFR-463, FD-1959 F3, M3)", () => {
+  async function editAndReview(): Promise<void> {
+    previewEdit.mockResolvedValue({ changed_cells: 1, max_abs_change_pct: "5" });
+    await typeInto(/relativity for area A/, "1.0500");
+    await userEvent.type(screen.getByLabelText("Change note"), "area A +5%");
+    await userEvent.click(screen.getByRole("button", { name: "Review changes" }));
+  }
+
+  it("F3: holds the created message in a live region that was in the DOM before the confirm", async () => {
+    confirmEdit.mockResolvedValue({ ...TABLE, version: 4 });
+    getRateTable.mockResolvedValueOnce(TABLE).mockResolvedValue({ ...TABLE, version: 4 });
+    const { container } = render(RateTableEditorView, { props, ...mounted });
+    await screen.findAllByRole("textbox");
+    const before = liveRegions(container);
+    await editAndReview();
+    await userEvent.click(await screen.findByRole("button", { name: "Confirm and create version" }));
+    await screen.findByText(/created area@4/i);
+    const holder = liveRegions(container).find((el) => /created area@4/i.test(el.textContent ?? ""));
+    expect(holder).toBeDefined();
+    expect(before).toContain(holder);
+  });
+
+  it("M3: announces the Changes to confirm section, in a region that was already there or by moving focus to its heading", async () => {
+    const { container } = render(RateTableEditorView, { props, ...mounted });
+    await screen.findAllByRole("textbox");
+    const before = liveRegions(container);
+    await editAndReview();
+    const diff = await screen.findByRole("region", { name: "Changes to confirm" });
+    const holder = liveRegions(container).find((el) => /1 cell changed/i.test(el.textContent ?? ""));
+    const focusOnHeading = diff.contains(document.activeElement) && document.activeElement?.tagName === "H2";
+    const announced = (holder !== undefined && before.includes(holder)) || focusOnHeading;
+    expect(announced).toBe(true);
+  });
+});
+
+describe("RateTableEditorView: the scrolling grid is keyboard reachable (NFR-463, FD-1959 F6)", () => {
+  it("makes the horizontally scrolling cell grid region focusable", async () => {
+    const { container } = render(RateTableEditorView, { props, ...mounted });
+    await screen.findAllByRole("textbox");
+    const grid = container.querySelector("table")!.closest(".overflow-x-auto");
+    expect(grid).not.toBeNull();
+    expect(grid).toHaveAttribute("tabindex", "0");
+  });
+});
+
+describe("RateTableEditorView: NFR-463 a11y lows (FD-1974 L-4, L-9, L-10)", () => {
+  it("L-4: names, in text tied to the disabled button, the first condition that blocks the review", async () => {
+    let release: (value: unknown) => void = () => undefined;
+    previewEdit.mockImplementation(() => new Promise((resolve) => { release = resolve; }));
+    render(RateTableEditorView, { props, ...mounted });
+    await screen.findAllByRole("textbox");
+    const review = screen.getByRole("button", { name: "Review changes" });
+
+    expect(review).toHaveAccessibleDescription(/edit at least one cell/i); // nothing edited
+
+    await typeInto(/relativity for area A/, "1.0500");
+    expect(review).toHaveAccessibleDescription(/change note/i); // edited, no note
+
+    await userEvent.type(screen.getByLabelText("Change note"), "area A +5%");
+    expect(review).toBeEnabled();
+    expect(review).not.toHaveAccessibleDescription(); // nothing blocks it, nothing is said
+
+    await userEvent.click(review);
+    expect(review).toBeDisabled();
+    expect(review).toHaveAccessibleDescription(/working/i); // busy
+    release({ changed_cells: 1, max_abs_change_pct: "5" });
+  });
+
+  it("L-9: names the scrolling cell grid as a region", async () => {
+    render(RateTableEditorView, { props, ...mounted });
+    await screen.findAllByRole("textbox");
+    expect(screen.getByRole("region", { name: "Rate table cells" })).toHaveAttribute("tabindex", "0");
+  });
+
+  it("L-10: empties the review-ready announcement while a second review is pending", async () => {
+    previewEdit.mockResolvedValueOnce({ changed_cells: 1, max_abs_change_pct: "5" });
+    render(RateTableEditorView, { props, ...mounted });
+    await screen.findAllByRole("textbox");
+    await typeInto(/relativity for area A/, "1.0500");
+    await userEvent.type(screen.getByLabelText("Change note"), "area A +5%");
+    await userEvent.click(screen.getByRole("button", { name: "Review changes" }));
+    expect(await screen.findByText(/Review ready: 1 cell changed/)).toBeInTheDocument();
+
+    // A second review with no edit between: the first answer must not stand while it is asked.
+    previewEdit.mockImplementationOnce(() => new Promise(() => undefined));
+    await userEvent.click(screen.getByRole("button", { name: "Review changes" }));
+    await waitFor(() => expect(previewEdit).toHaveBeenCalledTimes(2));
+    expect(screen.queryByText(/Review ready/)).toBeNull();
   });
 });

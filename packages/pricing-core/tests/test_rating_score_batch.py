@@ -194,6 +194,11 @@ async def test_score_batch_and_score_one_produce_byte_identical_ladders() -> Non
         assert isinstance(decimal_value, str)
         driver_age = ctx.inputs["driver_age"]
         assert Decimal(decimal_value) == Decimal(repr(driver_age)) * Decimal("1.5")
+        # RL-1343 rule 3.4, one producer: the very string `/score` serves, at the declared
+        # dp (2, `s_out_age_factor`).
+        served = json.loads(one_result.model_dump_json())["outputs"]["age_factor"]
+        assert decimal_value == served
+        assert len(decimal_value.split(".")[1]) == 2
 
 
 # ---------------------------------------------------------------------------

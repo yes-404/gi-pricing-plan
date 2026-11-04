@@ -69,6 +69,12 @@ describe("route reachability (FR-25)", () => {
     expect(unreachable).toEqual([]);
   });
 
+  it("registers /rating and links it from the shell (FR-1903, 03 §5.3)", () => {
+    expect(ROUTES.map((route) => route.path)).toContain("/rating");
+    expect(extractTargets(SHELL, ROUTES)).toContain("/rating");
+    expect(reachableSet()).toContain("/rating-versions/:id");
+  });
+
   it("finds no literal link to an unregistered route", () => {
     const views = ROUTES.map((route) => (route.view ? viewSource(route.view) : ""));
     const candidates = [SHELL, ...views].flatMap(linkCandidates);

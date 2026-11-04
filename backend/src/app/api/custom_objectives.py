@@ -5,6 +5,7 @@
 | `POST` | `/custom-objectives` | **201** Create or version an objective → `draft` (FR-142) |
 | `GET` | `/custom-objectives` | The library: paginated, filtered, counted (FR-167) |
 | `GET` | `/custom-objectives/{id}` | The objective and its lifecycle (FR-166) |
+| `POST` | `/custom-objectives/preview` | Stateless live parse and loss-curve preview (FR-1840) |
 | `POST` | `/custom-objectives/{id}/derive` | Derive an `expression` draft (FR-144) |
 | `POST` | `/custom-objectives/{id}/certify` | **202** Run §4.7's checks → Job (FR-146) |
 | `GET` | `/custom-objectives/{id}/certificate` | The latest certificate (FR-166) |
@@ -46,8 +47,8 @@ from app.api.responses import problems
 from app.db.session import Database
 from app.errors import PlatformError
 from app.platform import jobs as job_service
+from app.platform import objective_preview, rbac
 from app.platform import objectives as service
-from app.platform import rbac
 from model_schema import (
     Applicability,
     CustomObjective,
@@ -58,6 +59,8 @@ from model_schema import (
     ObjectiveCertificate,
     ObjectiveKind,
     ObjectiveParameter,
+    ObjectivePreview,
+    ObjectivePreviewRequest,
     ObjectiveStatus,
     ObjectiveTemplate,
     ObjectiveUsage,
@@ -303,6 +306,36 @@ async def get_custom_objective(
         return await service.load_objective(
             session, workspace_id=caller.workspace_id, objective_id=objective_id
         )
+
+
+@router.post(
+    "/custom-objectives/preview",
+    summary="Preview an expression loss: live parse errors and a loss curve",
+    responses=problems(401, 403, 409, 422),
+)
+async def preview_custom_objective(
+    body: ObjectivePreviewRequest,
+    caller: FitModels,
+    _author: AuthorObjectives,
+    database: DatabaseDep,
+    settings: SettingsDep,
+) -> ObjectivePreview:
+    """Parse, and with a `grid` derive and evaluate, a loss without storing anything (FR-1840).
+
+    Needs `model:fit` and `custom_objective:author` (FR-367), both checked before the flag;
+    while the flag is off the answer is 409 `OBJECTIVE_KIND_NOT_ENABLED`. **200 with
+    `ok: false`** for a loss that does not parse or that times out (`RL-1616`): the editor is
+    asking whether this text is valid, not submitting it. **422 `VALIDATION_FAILED`** over a
+    FR-145 bound (nodes, depth, the grid), before any derivation (clause 3a).
+    Persists nothing and records no Audit Event, because a preview is not the derivation
+    `/derive` stores.
+    """
+    async with database.session() as session:
+        await service.refuse_expression_kind(
+            session, settings=settings, workspace_id=caller.workspace_id
+        )
+    objective_preview.refuse_over_bound(body)
+    return await objective_preview.preview(body)
 
 
 @router.post(

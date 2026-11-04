@@ -100,7 +100,7 @@ async function save(): Promise<void> {
       <RouterLink
         v-if="rating"
         :to="`/rating-versions/${rating.id}`"
-        class="hover:underline"
+        class="underline"
       >
         {{ rating.slug }}@{{ rating.version }}
       </RouterLink>
@@ -155,7 +155,7 @@ async function save(): Promise<void> {
             type="number"
             min="1"
             step="1"
-            class="w-28 rounded-md border border-slate-300 px-2 py-1 text-sm"
+            class="w-28 rounded-md border border-slate-500 px-2 py-1 text-sm"
           >
         </div>
         <button
@@ -206,6 +206,7 @@ async function save(): Promise<void> {
           v-model:draft="draft"
           :version-mode="rating.model_reference_mode"
           :rate-table-pins="(rating.pins?.rate_tables ?? []).map(String)"
+          :sub-graph-pins="(rating.pins?.sub_graphs ?? []).map(String)"
         />
       </div>
     </template>

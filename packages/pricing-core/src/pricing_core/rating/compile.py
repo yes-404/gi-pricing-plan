@@ -58,6 +58,7 @@ from model_schema.refs import ArtifactRef
 from model_schema.sub_graphs import SubGraph, SubGraphInputPort
 from pricing_core.modelling.factors import (
     GBM_MODEL_TYPES,
+    consumed_features,
     gbm_transformed_factors,
     required_model_inputs,
 )
@@ -822,8 +823,9 @@ def _refuse_control_factor_model_calls(
     """FD 9639 (DP-7): a `model_call` over a model fitted on a `control`-intent Factor.
 
     Scoring applies every fitted feature's effect and `02` FR-88 lets Rating Versions use
-    only `risk` factors, so a pinned model whose `feature_order` holds a `control` Factor's
-    slug is refused. A payload with no `fit_result` or `feature_order` binds no factor. A
+    only `risk` factors, so a pinned model that consumes a `control` Factor's slug is refused:
+    a GBM's `feature_order`, a GLM's coefficient terms and the model a GLM's offset reads. A
+    `fit_result` that yields no consumed feature is refused too (FD-1495, SL-1985). A
     `peril_structure_ref` step is checked on each of its component models (`RL-1459`
     DP-A3-3 (a)), which `resolved_pins` holds beside the pins once compile has resolved them.
     """
@@ -839,19 +841,37 @@ def _refuse_control_factor_model_calls(
             )
             models = peril_component_refs(structure)
         for model_ref in models:
-            pin = resolved_pins[str(model_ref)]
-            fit_result = pin.payload.get("fit_result")
-            features = fit_result.get("feature_order", ()) if isinstance(fit_result, dict) else ()
-            by_slug = {factor.slug: factor for factor in pin.factors}
-            for feature in features:
-                factor = by_slug.get(feature)
-                if factor is not None and factor.intent is FactorIntent.CONTROL:
-                    _raise_named(
-                        "CONTROL_FACTOR_IN_RATEABLE_PATH",
-                        f"{model_ref} was fitted on feature {feature!r}, the "
-                        f"`control`-intent Factor {factor.slug}@{factor.version}, which "
-                        "cannot be rated on (FR-88, FR-240)",
-                    )
+            _refuse_control_factor_features(str(model_ref), resolved_pins[str(model_ref)])
+
+
+def _consumed_features(model_ref: str, resolved: ResolvedArtifact) -> tuple[str, ...]:
+    """`consumed_features` of a pinned model, its failure named as the refusal (fail closed)."""
+    try:
+        return consumed_features(resolved.payload.get("fit_result"))
+    except ValueError as error:
+        _raise_named(
+            "CONTROL_FACTOR_IN_RATEABLE_PATH",
+            f"{model_ref}: the Factors it consumes cannot be derived ({error}), so it cannot "
+            "be shown not to price on a `control`-intent Factor (FR-88, FR-240)",
+        )
+
+
+def _refuse_control_factor_features(model_ref: str, resolved: ResolvedArtifact) -> None:
+    """Refuse a pinned model, and the model its GLM offset reads, fitted on a `control` Factor."""
+    by_slug = {factor.slug: factor for factor in resolved.factors}
+    for feature in _consumed_features(model_ref, resolved):
+        factor = by_slug.get(feature)
+        if factor is not None and factor.intent is FactorIntent.CONTROL:
+            _raise_named(
+                "CONTROL_FACTOR_IN_RATEABLE_PATH",
+                f"{model_ref} was fitted on feature {feature!r}, the "
+                f"`control`-intent Factor {factor.slug}@{factor.version}, which "
+                "cannot be rated on (FR-88, FR-240)",
+            )
+    source = resolved.offset_source
+    if source is not None:
+        offset = (resolved.payload.get("spec") or {}).get("offset") or {}
+        _refuse_control_factor_features(str(offset.get("offset_model_ref")), source)
 
 
 def _carry_glm_inputs(payloads: dict[str, Any], resolved: ResolvedArtifact) -> None:
@@ -988,9 +1008,7 @@ def check_model_call_coverage(
                         targets.append((component, where))
         for model_ref, where in targets:
             pin = resolved_pins[str(model_ref)]
-            fit_result = pin.payload.get("fit_result")
-            order = fit_result.get("feature_order", ()) if isinstance(fit_result, dict) else ()
-            required = required_model_inputs(pin.factors, order)
+            required = required_model_inputs(pin.factors, _consumed_features(str(model_ref), pin))
             missing = [feature for feature in required if feature not in mapped]
             if missing:
                 _raise_named(
@@ -1003,7 +1021,7 @@ def check_model_call_coverage(
 def check_model_call_gbm_factors(
     algorithm: RatingAlgorithm, resolved_pins: Mapping[str, ResolvedArtifact]
 ) -> None:
-    """Refuse a `model_call` whose pinned GBM has a banded or grouped Factor (FR-222, FR-240).
+    """Refuse a `model_call` whose pinned GBM has a non-IDENTITY Factor (FR-222, FR-240).
 
     A GBM pin carries no Bandings or Groupings into the Bundle (`_carry_glm_inputs`), and the
     runtime scores it with `factors=()`: the raw value a quote supplies is looked up as the
@@ -1013,6 +1031,8 @@ def check_model_call_gbm_factors(
     the 2026-10-16 10:59:28 BST entry, item 1). A `peril_structure_ref` step is checked on each
     component model. The message names the step, the model and the Factors, never a quote
     value (NFR-499). A GLM pin is unaffected: it carries its Bandings and Groupings.
+    Amended 2026-10-25 (S4, FD-1754): every Factor type but IDENTITY is refused, not only the
+    banded and the grouped (`gbm_transformed_factors`).
     """
     for step in algorithm.steps:
         if not isinstance(step, RatingModelCallStep):
@@ -1036,9 +1056,10 @@ def check_model_call_gbm_factors(
                 named = ", ".join(f"{factor.slug} ({factor.type.value})" for factor in transformed)
                 _raise_named(
                     "MODEL_CALL_GBM_TRANSFORMED_FACTOR",
-                    f"step {step.step_id!r}: {model_ref} is a GBM fitted on banded or grouped "
-                    f"Factors [{named}], which a model_call cannot score: the Bundle carries "
-                    "no Bandings or Groupings for a GBM (FR-222, FR-240)",
+                    f"step {step.step_id!r}: {model_ref} is a GBM fitted on transformed "
+                    f"Factors [{named}], which a model_call cannot score: a GBM is fitted on "
+                    "the Factors' transformed values and the Bundle carries only the raw "
+                    "inputs (FR-222, FR-240)",
                 )
 
 
@@ -1050,13 +1071,13 @@ def _model_factors(resolved: ResolvedArtifact) -> tuple[Factor, ...]:
     return factors
 
 
-def _model_slugs(resolved: ResolvedArtifact) -> set[str]:
+def _model_slugs(model_ref: str, resolved: ResolvedArtifact) -> set[str]:
     """The feature slugs a pinned model reads: required inputs, offset model's, offset column."""
-    fit_result = resolved.payload.get("fit_result")
-    order = fit_result.get("feature_order", ()) if isinstance(fit_result, dict) else ()
+    order = _consumed_features(str(model_ref), resolved)
     slugs = set(required_model_inputs(resolved.factors, order))
     if resolved.offset_source is not None:
-        slugs |= _model_slugs(resolved.offset_source)
+        offset_ref = (resolved.payload.get("spec") or {}).get("offset", {}).get("offset_model_ref")
+        slugs |= _model_slugs(str(offset_ref), resolved.offset_source)
     column = (resolved.payload.get("spec") or {}).get("offset", {}).get("column")
     if column:
         slugs.add(column)
@@ -1103,7 +1124,7 @@ def check_model_call_columns(
                 for factor in _model_factors(pin)
                 if len(factor.source_columns) == 1
             }
-            takes = _model_slugs(pin)
+            takes = _model_slugs(str(model_ref), pin)
             reached: dict[str, tuple[set[str], set[str]]] = {}
             for name, slug in step.feature_map.items():
                 if restrict and slug not in takes:
@@ -1148,7 +1169,7 @@ async def compile_bundle(version: RatingVersion, resolver: ArtifactResolver) -> 
     Every `table`, `lookup` and `model_call` step's ref is pinned at its exact version
     (FR-237, `check_step_refs_pinned`). Every `model_call` `feature_map` maps each input its
     pinned model requires, per component for a Peril Structure (FR-240,
-    `check_model_call_coverage`), and no pinned GBM has a banded or grouped Factor (FR-222,
+    `check_model_call_coverage`), and no pinned GBM has a non-IDENTITY Factor (FR-222,
     `check_model_call_gbm_factors`).
     Each sub-graph mount is resolved from the version's pins (`RL-1309` G1) and inlined at its
     mount point (FR-217, `inline_mounts`), and every check above runs over the **inlined**

@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import pytest
+from backend.tests.conftest_db import seed_as_owner
 from fastapi.testclient import TestClient
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import _select_workspace
 from app.auth.oidc import TokenClaims
@@ -61,10 +63,15 @@ async def _memberships(database: Database, count: int) -> tuple[AuthenticatedIde
             workspace_id = new_uuid7()
             # A membership names a workspace that exists (FR-395's foreign key).
             await workspaces.ensure_workspace(session, workspace_id=workspace_id)
+            ids.append(workspace_id)
+
+    async def seed(session: AsyncSession) -> None:
+        for workspace_id in ids:
             session.add(
                 WorkspaceMemberRow(user_id=identity.principal.id, workspace_id=workspace_id)
             )
-            ids.append(workspace_id)
+
+    await seed_as_owner(seed)
 
     async with database.unit_of_work() as session:
         identity = await authenticate_bearer(session, StubVerifier(_claims(subject)), "t")

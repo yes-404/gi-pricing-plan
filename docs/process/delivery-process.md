@@ -29,7 +29,7 @@ and every layer that currently waits on a human keeps one.
 
 One role definition is reused across every layer — the layer only changes what "the plan"
 and "drift" mean, not the role's job. Tool scope lives once, in each role's own file, not
-duplicated here.
+duplicated here — except the write boundary, which is stated here once, for every role (below).
 
 | Role | Responsibility | Tool scope |
 |---|---|---|
@@ -40,6 +40,21 @@ duplicated here.
 | **Executor** | Implements via TDD: write a failing test → implement to pass → verify & refactor. Commits, opens PRs. Only at the slice layer. | See `.claude/roles/executor.md` |
 | **Watcher** (support) | Cyclic balance / roster-staleness / hygiene watch; publishes `roster-state.md` each cycle as the single source of team state; signals anomalies to the lead. Report-only. | See `.claude/roles/watcher.md` |
 | **Reporter** (support) | Cyclic summaries + critical relay on the single external channel; nudges the lead when the status line goes stale. Reads the watcher's files — never polls agents. | See `.claude/roles/reporter.md` |
+
+**The write boundary, every role.** A team member writes only inside its own worktree, its
+scratch directory under `~/gi-pricing-plan.local/`, and the targets its charter names. It
+**never writes under `~/.claude/`**: not memory, settings, projects, skills or
+`CLAUDE.md` there. This holds even though the harness offers a memory directory to every
+session: that offer is the user's store, not a team member's. The job tmp directory is
+transient scratch. Anything a record cites goes to `~/gi-pricing-plan.local/`. Each charter
+keeps only its positive write targets. *(Amended 2026-10-25 by the maintainer, dated line by
+delegation, on `FD-1238`, `CR-1247` Proposal 6 (option (b); the first five sentences above
+are its proposed text verbatim, `CR-1247` :467–470, accepted 2026-09-29) and the
+maintainer's entry "2026-10-25 11:47:10 GMT — Maintainer: CR 8219 — item 6 dated lines (T1, T2,
+FR-110 power(k)); §13 verdicts accepted with one owner correction" in `to-lead.md`, item T2;
+the same entry supersedes the 2026-09-29 17:27:28 BST "RFC + RL" route. The §3 sentence above
+"Tool scope lives once" was amended to name this exception; the core extract is re-derived in
+the same commit.)*
 
 ## 4. Hierarchy
 

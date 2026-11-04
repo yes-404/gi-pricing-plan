@@ -1,0 +1,77 @@
+---
+id: FD-1974
+family: finding
+title: ten NFR-463 lows carried from FD-1959's close — F4, L4 to L10, the unnamed scrollers and the repeated status text
+status: closed
+created: 2026-10-29               # drafted 2026-10-29 under working id 8284
+owner: auditor
+tree: 265a552ef3584eef22f506b9ffb001e8f3d27948   # origin/draft/sl-8281 as read by the executor, 2026-10-29
+corrected_by: []
+relates: [FD-1959, OQ-1960, RL-1973, PL-1546, SL-1971, SL-1987, LG-1988]
+---
+
+# FD-1974 — ten NFR-463 lows carried from FD-1959's close — F4, L4 to L10, the unnamed scrollers and the repeated status text
+
+## Finding
+
+**LOW, owner ~~WK-675~~ WK-1178, due ~~Thu 12 Nov 2026~~ Wed 18 Nov 2026 (the P2 exit demo; ~~`date -d 2026-11-12 +%A` prints Thursday~~).** Authority: the lead's
+"2026-10-29 22:34:57 GMT" ruling (a) (aud-a11y's verdicts accepted; the ten carried lows become one new finding, minted in the
+PR of SL-1971) and R10-DP2 (a) of "2026-10-29 22:13:59 GMT" (the lows that are not one line are carried, owner WK-675). Filed under
+working id 8284.
+
+FD-1959 closes at the merge of SL-1971 on its static limbs (RL-1973). Ten of its lows were not fixed in that slice. With FD-1959
+closed they would have no finding, so this record is their home: one row each, with its site **read at the tree
+`265a552ef3584eef22f506b9ffb001e8f3d27948`** (`draft/sl-8281` head; every path under `frontend/src/`) and the reason it was carried. No
+mispricing and no data loss: every item is a name, a description, a focus order or an announcement on an interactive control whose
+accessible name and value path are intact.
+
+## Evidence
+
+| # | Low (FD-1959's label) | WCAG | Site at `265a552e` | Why carried |
+|---|---|---|---|---|
+| 1 | F4: the help `<p>` has no `id` and the control has no `aria-describedby` | 1.3.1, 3.3.2 | `components/FormField.vue:35-40` (the control is the `<slot />` at `:33`) | Not one line: the control is the caller's slot, so `FormField` cannot set `aria-describedby` itself; it needs a slot prop or an id contract. |
+| 2 | L4: `<VueFlow>` leaves `nodesFocusable` true, so each node is an extra tab stop and a second `role="group"` | 2.4.3, 3.3.2 | `components/dag/DagDesigner.vue:226-232` (the `<VueFlow` props); `components/dag/StepNode.vue:22-25` and `components/dag/MountNode.vue:46-52` (`role="group"` with `aria-label`) | Behavioural: node tab stops against the NodeNavigator; no one-line change. FD-1959 cited `StepNode.vue:239` and `MountNode.vue:333`, which do not resolve at this tree (the files are 70 and 103 lines); the `role="group"` lines above are the sites. |
+| 3 | L5: `role="dialog"` on an always-visible inline section; no focus management | 4.1.2 | `components/rating/BulkOperationDialog.vue:63` | One line, but the role fix forces an edit of the existing assertion `views/__tests__/RateTableEditorView.test.ts:213` (`getByRole("dialog", { name: "Bulk operation" })`); existing tests stay unedited in this slice (the lead's ruling). |
+| 4 | L6: "Review changes" is natively `disabled` with no text saying why | 4.1.2, 3.3.2 | `views/RateTableEditorView.vue:321-327` (`:disabled="!canReview"` at `:324`) | Not one line: `canReview` (`:67-69`) is three conditions (an edit, a non-blank change note, not busy), so the text must say which one fails. |
+| 5 | L7: diff results appear on "Show changes", and page changes replace rows, with no announcement | 4.1.3 | `components/rating/RateTableDiffPanel.vue:179-183` (the `role="status"` carries progress text only), the results table from `:206`, the pager `:303-313` | Not one line: the results need a persistent summary region and the pager a count; both are new behaviour. |
+| 6 | L8: the focused pager button becomes `disabled` on the last page and focus drops to `body` | 2.4.3 | `components/rating/RateTableDiffPanel.vue:303-313` (`:disabled="history.length === 0"` and `:disabled="nextCursor === null"`) | Not one line: needs a focus move to the other pager button or `aria-disabled`; a behavioural test. |
+| 7 | L9: only the free-text and date branch gets `aria-invalid` and `aria-describedby`; the bool and enum controls are not linked to a problem | 3.3.1 | `components/sandbox/QuoteForm.vue:106-111` (bool checkbox), `:112-125` (enum select); the linked branch is `:137-138` | Not one line; whether `buildInputs` can raise a problem for an enum or a bool is not established statically. |
+| 8 | L10: changing the status filter re-renders the groups with no result-count announcement | 4.1.3 | `views/RatingVersionListView.vue:118-139` (the `status-filter` select at `:124`) | Not one line: needs a live region with the count, a new element and a test. |
+| 9 | The new F6 scrollers have no role or name: unnamed `tabindex="0"` regions | 4.1.2 | `views/RateTableEditorView.vue:277-278`; `components/rating/RateTableDiffPanel.vue:203-204` | Found at the head by the accessibility-tester (item 25, new issue 3). A code change now would move a non-docs file after the gated `6a0927c0`; the editor grid already holds focusable inputs, so its extra tab stop may also be redundant (a design choice for the owner). |
+| 10 | Repeated identical status text may not re-announce | 4.1.3 | `views/QuoteSandboxView.vue:208-213` (`Score result: {outcome}.`); `views/RateTableEditorView.vue:256-261` (`Review ready: N cell(s) changed.`) | Found at the head by the accessibility-tester (item 25, new issue 4; the tester gave `QuoteSandboxView.vue:207-212` and `RateTableEditorView.vue:257-261`, one line off the `<p>` bounds read here); whether a screen reader re-announces an unchanged string is a rendered check, so it is OQ-1960's limb; same gated-head reason as row 9. |
+
+Source of the first eight rows: FD-1959's low table (its sites at `origin/main` `7ed5c398`, re-read here at the tree above) and LG-1972's
+low-by-low dispositions. Source of rows 9 and 10: the accessibility-tester's report (item 25, static read of `265a552e`), transcribed
+by lead 29.
+
+## Severity
+
+**LOW.** Each is a low by FD-1959's own rating; none blocks a task, and the WK-675 forms, status messages and input borders that
+FD-1959 rated serious or moderate were fixed in SL-1971.
+
+## Remedy
+
+The owning Work (~~WK-675~~ WK-1178) fixes each row, red first in vitest where a behaviour is testable, or accepts it with a dated line, by the
+due date above; a rendered claim (focus order, an announcement) is OQ-1960's. WK-675's close
+record lists this finding and OQ-1960 as carried forward (RL-1973, "What it obliges").
+
+## Relates
+
+OQ-1960's browser-verification limb (axe-core and Playwright) will re-test the same surfaces: rendered focus order, announcements and
+the unchanged-string case belong to it, and a "yes" there is what turns rows 2, 5 to 7 and 9 to 10 from a static reading into a
+measured result. FD-1959's essay and register row name this finding for the carried lows.
+
+## Provenance
+
+Carried from FD-1959's close by SL-1971, on the lead's "2026-10-29 22:34:57 GMT" ruling (a). Sites re-read by the executor at the tree
+above on 2026-10-29. *Filed 2026-10-29 — #1411, squash d549b8d2d823801d705fdfd1cf58f1e7b28df95c (merge 42).*
+
+## Disposition
+
+Open, owner ~~WK-675~~ WK-1178, LOW, due ~~Thu 12 Nov 2026~~ Wed 18 Nov 2026. Filed under working id 8284.
+
+*(Re-dated 2026-11-03 by the auditor, on the lead's instruction, quoting the maintainer's entry "2026-11-03 15:38:58 GMT" (`to-lead.md`), which relays the user's order of 15:38 GMT: "move freeze to 10th of Nov and defer the later dates". The P2 exit demo moves from Thu 12 Nov 2026 to Wed 18 Nov 2026 (`date -d 2026-11-18 +%A` prints Wednesday); the due date Thu 12 Nov 2026 is struck and reads Wed 18 Nov 2026. The old text stays, struck.)*
+
+*(Owner re-pointed 2026-11-03 by the auditor, on the lead's instruction, citing the maintainer's entry "2026-11-03 15:51:08 GMT" (`to-lead.md`): the user accepted WK-675 closed at 15:51 GMT, and its carried finding FD-1974 is owned by WK-1178. The due date reads Wed 18 Nov 2026 (re-dated by the line above). The old owner is struck, not deleted.)*
+
+***Resolved 2026-11-03*** — closed in place 2026-11-03 by the executor, as the closing act of the mint of SL-1987 (WK-1178, LG-1988; this PR, its number and squash written at the merge's date-of-record), on the lead's brief under the GO "2026-11-03 15:52:04 GMT" (`to-lead.md`, a local channel file). Disposition of the ten lows (PL-1927 row 7, S5): each testable low is fixed red-first in vitest (reds at 70b22c5e, run singly; greens per file at the final head); L-2 (`nodesFocusable`), L-7's bool branch and L-10's sandbox status text are static-only, their evidence is the source read recorded in LG-1988; the rendered claims (focus order, announcements, the unchanged-string re-announce case) stay with OQ-1960's browser-verification limb. The one assertion change, `StepInspector.test.ts` test "3.3.1", is the maintainer's acceptance "2026-11-03 18:06:07 GMT" (a), quoted in LG-1988. Gate evidence is in LG-1988: gate 1 at `211e1d4b` and the quiet frontend and demo re-run at `5c9c6dc2` (the python half stood under the common seat brief's item 31).

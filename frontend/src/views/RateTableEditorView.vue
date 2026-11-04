@@ -64,9 +64,14 @@ const gridEdits = computed(() =>
   Object.fromEntries(Object.entries(edited.value).map(([key, entry]) => [key, entry.after])),
 );
 const editedCount = computed(() => Object.keys(edited.value).length);
-const canReview = computed(
-  () => editedCount.value > 0 && changeNote.value.trim() !== "" && !busy.value,
-);
+/** Why "Review changes" is disabled, naming the first failing condition; "" when nothing blocks it. */
+const reviewBlock = computed(() => {
+  if (editedCount.value === 0) return "Edit at least one cell to review changes.";
+  if (changeNote.value.trim() === "") return "Enter a change note to review changes.";
+  if (busy.value) return "Working…";
+  return "";
+});
+const canReview = computed(() => reviewBlock.value === "");
 
 function rowKey(row: RateTableCell): string {
   return keyNames.value.map((name) => row[name]).join(SEPARATOR);
@@ -163,6 +168,7 @@ async function review(): Promise<void> {
   if (!canReview.value) return;
   const { keys, ...payload } = body();
   busy.value = true;
+  diff.value = null; // a second review must not leave the first answer standing while it is asked
   problem.value = null;
   cellErrors.value = {};
   try {
@@ -221,7 +227,7 @@ async function onCreated(made: RateTableVersion): Promise<void> {
       <RouterLink
         v-if="rating"
         :to="`/rating-versions/${rating.id}`"
-        class="hover:underline"
+        class="underline"
       >
         {{ rating.slug }}@{{ rating.version }}
       </RouterLink>
@@ -248,11 +254,16 @@ async function onCreated(made: RateTableVersion): Promise<void> {
       </h1>
 
       <p
-        v-if="created"
-        aria-live="polite"
-        class="mt-3 rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800"
+        role="status"
+        :class="created ? 'mt-3 rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800' : ''"
       >
         {{ created }}
+      </p>
+      <p
+        role="status"
+        class="sr-only"
+      >
+        {{ diff ? `Review ready: ${diff.changed_cells} cell${diff.changed_cells === 1 ? "" : "s"} changed.` : "" }}
       </p>
 
       <div
@@ -268,7 +279,12 @@ async function onCreated(made: RateTableVersion): Promise<void> {
         </p>
       </div>
 
-      <div class="mt-4 overflow-x-auto">
+      <div
+        class="mt-4 overflow-x-auto"
+        role="region"
+        aria-label="Rate table cells"
+        tabindex="0"
+      >
         <RateTableGrid
           :table="table"
           :rows="rows"
@@ -307,17 +323,25 @@ async function onCreated(made: RateTableVersion): Promise<void> {
           id="change-note"
           v-model="changeNote"
           type="text"
-          class="w-full rounded border border-slate-300 px-2 py-1 text-sm"
+          class="w-full rounded border border-slate-500 px-2 py-1 text-sm"
           @input="diff = null"
         >
         <button
           type="button"
           class="mt-3 rounded bg-sky-700 px-3 py-1.5 text-sm text-white disabled:opacity-50"
           :disabled="!canReview"
+          :aria-describedby="canReview ? undefined : 'review-reason'"
           @click="review"
         >
           Review changes
         </button>
+        <p
+          v-if="!canReview"
+          id="review-reason"
+          class="mt-1 text-xs text-slate-600"
+        >
+          {{ reviewBlock }}
+        </p>
       </div>
 
       <section

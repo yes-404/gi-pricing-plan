@@ -11,14 +11,15 @@ import io
 
 import polars as pl
 import pytest
+from backend.tests.conftest_db import grant_roles_as_owner
 from backend.tests.test_ingest_coercion import assert_row_identity
 from sqlalchemy import select
 
 from app.data.ingestion import ingest_upload
-from app.db.models import IngestionRunRow, RoleAssignmentRow, RoleRow
+from app.db.models import IngestionRunRow
 from app.db.session import Database
 from app.errors import PlatformError
-from app.platform import datasets, rbac
+from app.platform import datasets
 from app.platform.blobs import BlobStore
 from model_schema import (
     ActorKind,
@@ -26,7 +27,6 @@ from model_schema import (
     DatasetStatus,
     PiiClass,
     Principal,
-    ScopeType,
     new_uuid7,
 )
 
@@ -35,24 +35,7 @@ CSV = b"Policy ID,Exposure Start,Exposure Years\nP1,2026-01-01,1.0\nP2,2026-02-0
 
 async def _analyst(database: Database, workspace_id) -> Principal:
     user = Principal(kind=ActorKind.USER, id=new_uuid7(), display="a@insurer.example")
-    async with database.unit_of_work() as session:
-        await rbac.seed_builtin_roles(session, workspace_id)
-        role = (
-            await session.execute(
-                select(RoleRow).where(
-                    RoleRow.workspace_id == workspace_id, RoleRow.slug == "analyst"
-                )
-            )
-        ).scalar_one()
-        session.add(
-            RoleAssignmentRow(
-                workspace_id=workspace_id,
-                principal_kind="user",
-                principal_id=user.id,
-                role_id=role.id,
-                scope_type=ScopeType.WORKSPACE.value,
-            )
-        )
+    await grant_roles_as_owner(workspace_id, user.id, "analyst")
     return user
 
 

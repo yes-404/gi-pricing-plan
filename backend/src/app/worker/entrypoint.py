@@ -35,6 +35,9 @@ configure_logging(_settings.log_level)
 async def _require_tenant_binding(settings: Settings) -> None:
     database = Database(settings)
     try:
+        # FR-44 (FD-1729): refuse an owner or a tampered trigger before the tenant marker is
+        # touched, as the API's lifespan does.
+        await database.assert_least_privilege()
         await require_tenant_binding(settings, database, BlobStore(settings))
     finally:
         await database.dispose()

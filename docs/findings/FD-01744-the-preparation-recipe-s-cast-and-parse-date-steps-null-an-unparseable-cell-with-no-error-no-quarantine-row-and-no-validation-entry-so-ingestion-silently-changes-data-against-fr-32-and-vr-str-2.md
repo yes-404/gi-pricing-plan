@@ -2,7 +2,7 @@
 id: FD-1744
 family: finding
 title: The Preparation Recipe's cast and parse_date steps null an unparseable cell with no error, no quarantine row and no validation entry, so ingestion silently changes data against FR-32 and VR-STR-2
-status: active
+status: closed
 created: 2026-10-17 # original date 2026-10-14, set at the filing; minted 2026-10-17
 owner: auditor
 tree: a3fc2e8dd384de6abf909f662f43011b8078fb4e

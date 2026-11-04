@@ -4840,6 +4840,116 @@
         "title": "DislocationEstimate",
         "type": "object"
       },
+      "DislocationMover": {
+        "additionalProperties": false,
+        "description": "One row of `GET /dislocation-runs/{id}/movers` (03 §4.6, §5.1; WK-675 Slice 8, PL-1833).\n\nThe stored columns are `dislocation_frame`'s own (a mover is a banded policy, so both\noutcomes are quoted and the premiums are present); `change_pct` is computed at read and is\na positional decimal string, never a float. `columns` is the one open object: the\nportfolio columns joined at read (NFR-499: none is stored).",
+        "properties": {
+          "baseline_error_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Baseline Error Code"
+          },
+          "baseline_minor": {
+            "description": "Amount in minor units (pence/cents) of the workspace currency.",
+            "title": "Baseline Minor",
+            "type": "integer"
+          },
+          "baseline_outcome": {
+            "title": "Baseline Outcome",
+            "type": "string"
+          },
+          "candidate_error_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Candidate Error Code"
+          },
+          "candidate_minor": {
+            "description": "Amount in minor units (pence/cents) of the workspace currency.",
+            "title": "Candidate Minor",
+            "type": "integer"
+          },
+          "candidate_outcome": {
+            "title": "Candidate Outcome",
+            "type": "string"
+          },
+          "change_minor": {
+            "description": "Amount in minor units (pence/cents) of the workspace currency.",
+            "title": "Change Minor",
+            "type": "integer"
+          },
+          "change_pct": {
+            "description": "Exact decimal as a string; never a binary float (FR-10).",
+            "pattern": "^-?[0-9]+(\\.[0-9]+)?$",
+            "title": "Change Pct",
+            "type": "string"
+          },
+          "columns": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "title": "Columns",
+            "type": "object"
+          },
+          "origin_rung": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Origin Rung"
+          },
+          "quote_id": {
+            "title": "Quote Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "quote_id",
+          "baseline_outcome",
+          "candidate_outcome",
+          "baseline_minor",
+          "candidate_minor",
+          "change_minor",
+          "baseline_error_code",
+          "candidate_error_code",
+          "origin_rung",
+          "change_pct",
+          "columns"
+        ],
+        "title": "DislocationMover",
+        "type": "object"
+      },
       "DislocationOutcomes": {
         "additionalProperties": false,
         "description": "Each policy once by its two outcomes; the first five sum to policy_count (DP-S2-2).",
@@ -7138,6 +7248,22 @@
               }
             ],
             "title": "Leverage Blob"
+          },
+          "monotonicity": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/MonotonicityCheck"
+            },
+            "title": "Monotonicity",
+            "type": "array"
+          },
+          "monotonicity_omitted": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/MonotonicityOmission"
+            },
+            "title": "Monotonicity Omitted",
+            "type": "array"
           },
           "null_deviance": {
             "title": "Null Deviance",
@@ -10353,6 +10479,35 @@
         "title": "MonotonicityCheck",
         "type": "object"
       },
+      "MonotonicityOmission": {
+        "additionalProperties": false,
+        "description": "A declared GLM direction that was not checked, and why (FR-89).\n\nA declared direction therefore always yields a `MonotonicityCheck` or one of these,\nnever nothing — the FR-178 pattern.",
+        "properties": {
+          "factor": {
+            "title": "Factor",
+            "type": "string"
+          },
+          "reason": {
+            "$ref": "#/components/schemas/MonotonicityOmissionReason"
+          }
+        },
+        "required": [
+          "factor",
+          "reason"
+        ],
+        "title": "MonotonicityOmission",
+        "type": "object"
+      },
+      "MonotonicityOmissionReason": {
+        "description": "Why a declared GLM direction was not checked (FR-89, PL-1856 DP-M).",
+        "enum": [
+          "operand_of_interaction",
+          "expression_factor",
+          "unordered_levels"
+        ],
+        "title": "MonotonicityOmissionReason",
+        "type": "string"
+      },
       "NoNullOutput": {
         "additionalProperties": false,
         "properties": {
@@ -10475,6 +10630,270 @@
           "max"
         ],
         "title": "ObjectiveParameter",
+        "type": "object"
+      },
+      "ObjectivePreview": {
+        "additionalProperties": false,
+        "description": "The answer. Nothing here is stored: it is not a `DerivedBlock` and has no `derived_at`.",
+        "properties": {
+          "curve": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ObjectivePreviewCurve"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "derivation_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Derivation Version"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ObjectivePreviewError"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "gradient": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gradient"
+          },
+          "hessian": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hessian"
+          },
+          "ok": {
+            "title": "Ok",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "ok"
+        ],
+        "title": "ObjectivePreview",
+        "type": "object"
+      },
+      "ObjectivePreviewCurve": {
+        "additionalProperties": false,
+        "description": "The loss and its derived derivatives at each grid score. `None` is a non-finite value:\nJSON cannot carry one, and a curve that hid it would hide the objective's blow-up.",
+        "properties": {
+          "f": {
+            "items": {
+              "type": "number"
+            },
+            "title": "F",
+            "type": "array"
+          },
+          "gradient": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "title": "Gradient",
+            "type": "array"
+          },
+          "hessian": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "title": "Hessian",
+            "type": "array"
+          },
+          "loss": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "title": "Loss",
+            "type": "array"
+          }
+        },
+        "required": [
+          "f",
+          "loss",
+          "gradient",
+          "hessian"
+        ],
+        "title": "ObjectivePreviewCurve",
+        "type": "object"
+      },
+      "ObjectivePreviewError": {
+        "additionalProperties": false,
+        "description": "Why a preview is not ok: a grammar refusal with its position (`RL-1362` DP-S3-3), or the\ntime bound of FR-1840 clause 3b, which has none.",
+        "properties": {
+          "column": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Column"
+          },
+          "line": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Line"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "reason": {
+            "enum": [
+              "grammar",
+              "timeout"
+            ],
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason",
+          "message"
+        ],
+        "title": "ObjectivePreviewError",
+        "type": "object"
+      },
+      "ObjectivePreviewGrid": {
+        "additionalProperties": false,
+        "description": "Where the loss-curve preview evaluates (FR-1840): `n_points` raw scores across `f_range`,\nat one observation `y` and weight `w`. One observation, because the editor draws one curve.",
+        "properties": {
+          "f_range": {
+            "maxItems": 2,
+            "minItems": 2,
+            "prefixItems": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "number"
+              }
+            ],
+            "title": "F Range",
+            "type": "array"
+          },
+          "n_points": {
+            "maximum": 500.0,
+            "minimum": 2.0,
+            "title": "N Points",
+            "type": "integer"
+          },
+          "w": {
+            "default": 1.0,
+            "exclusiveMinimum": 0.0,
+            "title": "W",
+            "type": "number"
+          },
+          "y": {
+            "title": "Y",
+            "type": "number"
+          }
+        },
+        "required": [
+          "y",
+          "f_range",
+          "n_points"
+        ],
+        "title": "ObjectivePreviewGrid",
+        "type": "object"
+      },
+      "ObjectivePreviewRequest": {
+        "additionalProperties": false,
+        "description": "`POST /custom-objectives/preview` (FR-1840, `RL-1616`).\n\nWith no `grid` the route parses only; with one it also derives and evaluates. `values` are\nthe chosen parameter values and default to each parameter's `default`.",
+        "properties": {
+          "grid": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ObjectivePreviewGrid"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "loss": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Loss",
+            "type": "string"
+          },
+          "parameters": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/ObjectiveParameter"
+            },
+            "title": "Parameters",
+            "type": "array"
+          },
+          "values": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "title": "Values",
+            "type": "object"
+          }
+        },
+        "required": [
+          "loss"
+        ],
+        "title": "ObjectivePreviewRequest",
         "type": "object"
       },
       "ObjectiveStatus": {
@@ -10806,6 +11225,34 @@
         ],
         "title": "OneWaySummary",
         "type": "object"
+      },
+      "OutputValue": {
+        "anyOf": [
+          {
+            "type": "integer"
+          },
+          {
+            "type": "string"
+          },
+          {
+            "type": "boolean"
+          },
+          {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/OutputValue"
+            },
+            "type": "object"
+          },
+          {
+            "items": {
+              "$ref": "#/components/schemas/OutputValue"
+            },
+            "type": "array"
+          },
+          {
+            "type": "null"
+          }
+        ]
       },
       "OverallOutcome": {
         "enum": [
@@ -11334,6 +11781,42 @@
           "total_estimate"
         ],
         "title": "Page[RateTableDiffCell]",
+        "type": "object"
+      },
+      "Page_RegressionRunSummary_": {
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/RegressionRunSummary"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Opaque; pass back verbatim. Null when this is the last page.",
+            "title": "Next Cursor"
+          },
+          "total_estimate": {
+            "description": "Matching rows, counted up to 10000. An estimate by design.",
+            "minimum": 0.0,
+            "title": "Total Estimate",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total_estimate"
+        ],
+        "title": "Page[RegressionRunSummary]",
         "type": "object"
       },
       "Page_SubGraph_": {
@@ -15104,6 +15587,71 @@
         "title": "RegressionRun",
         "type": "object"
       },
+      "RegressionRunSummary": {
+        "additionalProperties": false,
+        "description": "One row of a Rating Version's Regression Run list (03 §4.9, FR-1932).\n\n`id` is the run's UUID (the `regression_runs` primary key); the persisted\n`RegressionRun` carries none. The summary holds no result lists and no case-log\nreference: those are read per run, behind `rating:read` (FR-1221).",
+        "properties": {
+          "bundle_hash": {
+            "pattern": "^sha256:[a-f0-9]{64}$",
+            "title": "Bundle Hash",
+            "type": "string"
+          },
+          "finished_at": {
+            "format": "date-time",
+            "title": "Finished At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "job_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Job Id"
+          },
+          "overall": {
+            "enum": [
+              "pass",
+              "fail"
+            ],
+            "title": "Overall",
+            "type": "string"
+          },
+          "started_at": {
+            "format": "date-time",
+            "title": "Started At",
+            "type": "string"
+          },
+          "suite_content_hash": {
+            "pattern": "^sha256:[a-f0-9]{64}$",
+            "title": "Suite Content Hash",
+            "type": "string"
+          },
+          "suite_ref": {
+            "$ref": "#/components/schemas/ArtifactRef"
+          }
+        },
+        "required": [
+          "id",
+          "overall",
+          "bundle_hash",
+          "suite_ref",
+          "suite_content_hash",
+          "started_at",
+          "finished_at"
+        ],
+        "title": "RegressionRunSummary",
+        "type": "object"
+      },
       "RegressionSuite": {
         "additionalProperties": false,
         "description": "One version of a Regression Suite (03 §4.7). Versioned, not approvable.",
@@ -15618,6 +16166,130 @@
         "title": "RoundSpec",
         "type": "object"
       },
+      "RoutedRange": {
+        "additionalProperties": false,
+        "description": "A stored range: `deployment_id` is the latest Deployment of that Rating Version in the\nEnvironment at write time, set by the server.",
+        "properties": {
+          "deployment_id": {
+            "format": "uuid",
+            "title": "Deployment Id",
+            "type": "string"
+          },
+          "effective_from": {
+            "format": "date",
+            "title": "Effective From",
+            "type": "string"
+          },
+          "effective_to": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Effective To"
+          },
+          "rating_version_ref": {
+            "$ref": "#/components/schemas/ArtifactRef"
+          }
+        },
+        "required": [
+          "rating_version_ref",
+          "effective_from",
+          "deployment_id"
+        ],
+        "title": "RoutedRange",
+        "type": "object"
+      },
+      "RoutingRange": {
+        "additionalProperties": false,
+        "description": "One date range of a routing rule, naming the Rating Version it selects.",
+        "properties": {
+          "effective_from": {
+            "format": "date",
+            "title": "Effective From",
+            "type": "string"
+          },
+          "effective_to": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Effective To"
+          },
+          "rating_version_ref": {
+            "$ref": "#/components/schemas/ArtifactRef"
+          }
+        },
+        "required": [
+          "rating_version_ref",
+          "effective_from"
+        ],
+        "title": "RoutingRange",
+        "type": "object"
+      },
+      "RoutingRule": {
+        "additionalProperties": false,
+        "description": "An Environment's current routing rule (the 200 body and the Audit Event's `after`).",
+        "properties": {
+          "environment": {
+            "pattern": "^[a-z0-9][a-z0-9-]{1,62}$",
+            "title": "Environment",
+            "type": "string"
+          },
+          "ranges": {
+            "items": {
+              "$ref": "#/components/schemas/RoutedRange"
+            },
+            "title": "Ranges",
+            "type": "array"
+          },
+          "written_at": {
+            "format": "date-time",
+            "title": "Written At",
+            "type": "string"
+          },
+          "written_by": {
+            "format": "uuid",
+            "title": "Written By",
+            "type": "string"
+          }
+        },
+        "required": [
+          "environment",
+          "ranges",
+          "written_by",
+          "written_at"
+        ],
+        "title": "RoutingRule",
+        "type": "object"
+      },
+      "RoutingRuleUpdate": {
+        "additionalProperties": false,
+        "description": "The body of `PUT /api/v1/environments/{env}/routing`. Empty `ranges` clears the rule.",
+        "properties": {
+          "ranges": {
+            "items": {
+              "$ref": "#/components/schemas/RoutingRange"
+            },
+            "title": "Ranges",
+            "type": "array"
+          }
+        },
+        "required": [
+          "ranges"
+        ],
+        "title": "RoutingRuleUpdate",
+        "type": "object"
+      },
       "RuleCreate": {
         "additionalProperties": false,
         "properties": {
@@ -16109,7 +16781,7 @@
       },
       "ScoringResult": {
         "additionalProperties": false,
-        "description": "`ScoringResult` (`scoring.schema.json:46-63`, `03` §4.4).\n\nInvariants (`scoring.schema.json:59-62`, enforced by `pricing_core.rating.score`, not\nre-validated here): applying every rung's recorded operation to `risk_premium`\nreproduces `payable_premium` exactly (FR-248); a traced and an untraced call on the\nsame bundle and context return an identical premium (`03` R3).",
+        "description": "`ScoringResult` (`scoring.schema.json:46-63`, `03` §4.4).\n\nInvariants (`scoring.schema.json:59-62`, enforced by `pricing_core.rating.score`, not\nre-validated here): applying every rung's recorded operation to `risk_premium`\nreproduces `payable_premium` exactly (FR-248); a traced and an untraced call on the\nsame bundle and context return an identical premium (`03` R3).\n\n`outputs` is the one construction-time check on served output values (`RL-1343` rule 4):\na `float` anywhere in it is refused, so a decimal-family value is a positional string\n(`_build_outputs`). The model does not know declared types, so it cannot tell a whole\n`27` under a declared `decimal` from a valid integer; the producer and batch's check\nclose that.",
         "properties": {
           "bundle_hash": {
             "pattern": "^sha256:[a-f0-9]{64}$",
@@ -16133,7 +16805,9 @@
             "type": "string"
           },
           "outputs": {
-            "additionalProperties": true,
+            "additionalProperties": {
+              "$ref": "#/components/schemas/OutputValue"
+            },
             "title": "Outputs",
             "type": "object"
           },
@@ -16455,6 +17129,72 @@
         ],
         "title": "Severity",
         "type": "string"
+      },
+      "ShadowConfig": {
+        "additionalProperties": false,
+        "description": "An Environment's current shadow configuration (the 200 body and the Audit Event's\n`after`). `candidate_bundle_hash` is the candidate's compiled bundle at write time.",
+        "properties": {
+          "candidate_bundle_hash": {
+            "pattern": "^sha256:[a-f0-9]{64}$",
+            "title": "Candidate Bundle Hash",
+            "type": "string"
+          },
+          "candidate_rating_version_ref": {
+            "$ref": "#/components/schemas/ArtifactRef"
+          },
+          "environment": {
+            "pattern": "^[a-z0-9][a-z0-9-]{1,62}$",
+            "title": "Environment",
+            "type": "string"
+          },
+          "fraction": {
+            "exclusiveMinimum": 0.0,
+            "maximum": 1.0,
+            "title": "Fraction",
+            "type": "number"
+          },
+          "written_at": {
+            "format": "date-time",
+            "title": "Written At",
+            "type": "string"
+          },
+          "written_by": {
+            "format": "uuid",
+            "title": "Written By",
+            "type": "string"
+          }
+        },
+        "required": [
+          "environment",
+          "candidate_rating_version_ref",
+          "candidate_bundle_hash",
+          "fraction",
+          "written_by",
+          "written_at"
+        ],
+        "title": "ShadowConfig",
+        "type": "object"
+      },
+      "ShadowConfigUpdate": {
+        "additionalProperties": false,
+        "description": "The body of `PUT /api/v1/environments/{env}/shadow`. `fraction` is a sampling rate.",
+        "properties": {
+          "candidate_rating_version_ref": {
+            "$ref": "#/components/schemas/ArtifactRef"
+          },
+          "fraction": {
+            "exclusiveMinimum": 0.0,
+            "maximum": 1.0,
+            "title": "Fraction",
+            "type": "number"
+          }
+        },
+        "required": [
+          "candidate_rating_version_ref",
+          "fraction"
+        ],
+        "title": "ShadowConfigUpdate",
+        "type": "object"
       },
       "ShapContribution": {
         "additionalProperties": false,
@@ -17335,12 +18075,26 @@
       },
       "TraceStep": {
         "additionalProperties": false,
-        "description": "One node of a `Trace` (FR-258, `scoring.schema.json:71-86`).\n\n`consumed`/`produced` are the engine's own `trace[node_id].input`/`.output` dicts,\npassed through rather than re-derived — `03` does not specify a narrower shape than\n\"consumed values, produced value\" and the engine's own record already satisfies it.",
+        "description": "One node of a `Trace` (FR-258, `scoring.schema.json:71-86`).\n\n`consumed`/`produced` are the engine's own `trace[node_id].input`/`.output` dicts,\npassed through rather than re-derived — `03` does not specify a narrower shape than\n\"consumed values, produced value\" and the engine's own record already satisfies it.\n\n`dropped_inputs` is set only on a `model_call` step (FR-222, the maintainer's (by\ndelegation) entries \"2026-10-25 11:40:12 GMT\" and \"2026-10-25 11:53:23 GMT\"): the sorted\ngraph names of its `feature_map` that the scoring context did not hold, so the runtime\ndropped them. `None` when nothing was dropped. Not compared (`03` §4.10).",
         "properties": {
           "consumed": {
             "additionalProperties": true,
             "title": "Consumed",
             "type": "object"
+          },
+          "dropped_inputs": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dropped Inputs"
           },
           "elapsed_us": {
             "default": 0,
@@ -22421,6 +23175,133 @@
         ]
       }
     },
+    "/api/v1/custom-objectives/preview": {
+      "post": {
+        "description": "Parse, and with a `grid` derive and evaluate, a loss without storing anything (FR-1840).\n\nNeeds `model:fit` and `custom_objective:author` (FR-367), both checked before the flag;\nwhile the flag is off the answer is 409 `OBJECTIVE_KIND_NOT_ENABLED`. **200 with\n`ok: false`** for a loss that does not parse or that times out (`RL-1616`): the editor is\nasking whether this text is valid, not submitting it. **422 `VALIDATION_FAILED`** over a\nFR-145 bound (nodes, depth, the grid), before any derivation (clause 3a).\nPersists nothing and records no Audit Event, because a preview is not the derivation\n`/derive` stores.",
+        "operationId": "preview_custom_objective_api_v1_custom_objectives_preview_post",
+        "parameters": [
+          {
+            "description": "The workspace to act in, as a UUID. Required when the principal is a member of more than one (`07` FR-397); a principal with exactly one, and a Service Account, send nothing. Checked against the principal's own memberships: a workspace it does not belong to yields `403 WORKSPACE_SCOPE_DENIED`, and an absent selection with several memberships yields `403 WORKSPACE_SELECTION_REQUIRED`.",
+            "in": "header",
+            "name": "Workspace-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The workspace to act in, as a UUID. Required when the principal is a member of more than one (`07` FR-397); a principal with exactly one, and a Service Account, send nothing. Checked against the principal's own memberships: a workspace it does not belong to yields `403 WORKSPACE_SCOPE_DENIED`, and an absent selection with several memberships yields `403 WORKSPACE_SELECTION_REQUIRED`.",
+              "title": "Workspace-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ObjectivePreviewRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ObjectivePreview"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
+          }
+        },
+        "summary": "Preview an expression loss: live parse errors and a loss curve",
+        "tags": [
+          "modelling"
+        ]
+      }
+    },
     "/api/v1/custom-objectives/{objective_id}": {
       "get": {
         "description": "**Added to `02` §5.1 with this slice** (FR-166) — see the module docstring.",
@@ -27019,8 +27900,7 @@
               "application/json": {
                 "schema": {
                   "items": {
-                    "additionalProperties": true,
-                    "type": "object"
+                    "$ref": "#/components/schemas/DislocationMover"
                   },
                   "title": "Response Get Dislocation Run Movers Api V1 Dislocation Runs  Run Id  Movers Get",
                   "type": "array"
@@ -27996,6 +28876,308 @@
           }
         },
         "summary": "Roll an environment back to an earlier Rating Version",
+        "tags": [
+          "platform"
+        ]
+      }
+    },
+    "/api/v1/environments/{env}/routing": {
+      "put": {
+        "description": "**200** with the rule as written (`03` FR-270; `RL-1834` D1). Needs `deployment:promote`\non the Environment; handler-guarded like the other writes. **404** for an unknown\nEnvironment; **409** `VALIDATION_FAILED` for a retired Environment or a Rating Version never\ndeployed there, **409** `DEPLOY_DATE_RANGE_OVERLAP`; **422** for a non-Rating-Version\nreference or a range that does not end after it starts. An empty list clears the rule.",
+        "operationId": "write_routing_rule_api_v1_environments__env__routing_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "title": "Env",
+              "type": "string"
+            }
+          },
+          {
+            "description": "The workspace to act in, as a UUID. Required when the principal is a member of more than one (`07` FR-397); a principal with exactly one, and a Service Account, send nothing. Checked against the principal's own memberships: a workspace it does not belong to yields `403 WORKSPACE_SCOPE_DENIED`, and an absent selection with several memberships yields `403 WORKSPACE_SELECTION_REQUIRED`.",
+            "in": "header",
+            "name": "Workspace-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The workspace to act in, as a UUID. Required when the principal is a member of more than one (`07` FR-397); a principal with exactly one, and a Service Account, send nothing. Checked against the principal's own memberships: a workspace it does not belong to yields `403 WORKSPACE_SCOPE_DENIED`, and an absent selection with several memberships yields `403 WORKSPACE_SELECTION_REQUIRED`.",
+              "title": "Workspace-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RoutingRuleUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoutingRule"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
+          }
+        },
+        "summary": "Write an environment's date-routing rule",
+        "tags": [
+          "platform"
+        ]
+      }
+    },
+    "/api/v1/environments/{env}/shadow": {
+      "put": {
+        "description": "**200** with the configuration as written (`03` FR-271; `RL-1834` D2). Needs\n`admin:manage_settings` on the Environment; handler-guarded. **404** for an unknown\nEnvironment; **409** `VALIDATION_FAILED` for a retired one, **409** `BUNDLE_COMPILE_FAILED`\nfor a candidate with no compiled bundle; **422** for a candidate that is not a Rating Version\nof this workspace, or is a `draft`, or a fraction outside `(0, 1]`.",
+        "operationId": "write_shadow_config_api_v1_environments__env__shadow_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "title": "Env",
+              "type": "string"
+            }
+          },
+          {
+            "description": "The workspace to act in, as a UUID. Required when the principal is a member of more than one (`07` FR-397); a principal with exactly one, and a Service Account, send nothing. Checked against the principal's own memberships: a workspace it does not belong to yields `403 WORKSPACE_SCOPE_DENIED`, and an absent selection with several memberships yields `403 WORKSPACE_SELECTION_REQUIRED`.",
+            "in": "header",
+            "name": "Workspace-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The workspace to act in, as a UUID. Required when the principal is a member of more than one (`07` FR-397); a principal with exactly one, and a Service Account, send nothing. Checked against the principal's own memberships: a workspace it does not belong to yields `403 WORKSPACE_SCOPE_DENIED`, and an absent selection with several memberships yields `403 WORKSPACE_SELECTION_REQUIRED`.",
+              "title": "Workspace-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ShadowConfigUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShadowConfig"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
+          }
+        },
+        "summary": "Write an environment's shadow-scoring configuration",
         "tags": [
           "platform"
         ]
@@ -35879,6 +37061,174 @@
       }
     },
     "/api/v1/rating-versions/{rating_version_id}/regression-runs": {
+      "get": {
+        "description": "**200** with a page of run summaries, newest first (`finished_at` desc, `id` desc;\n`03` §5.1, FR-1932). A summary carries no results and no case-log reference — those are\nread per run (FR-1221). **404** for a version outside the caller's workspace; **400**\n`VALIDATION_FAILED` for a cursor that is not a run of this version.",
+        "operationId": "list_regression_runs_api_v1_rating_versions__rating_version_id__regression_runs_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "rating_version_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Rating Version Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "The workspace to act in, as a UUID. Required when the principal is a member of more than one (`07` FR-397); a principal with exactly one, and a Service Account, send nothing. Checked against the principal's own memberships: a workspace it does not belong to yields `403 WORKSPACE_SCOPE_DENIED`, and an absent selection with several memberships yields `403 WORKSPACE_SELECTION_REQUIRED`.",
+            "in": "header",
+            "name": "Workspace-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The workspace to act in, as a UUID. Required when the principal is a member of more than one (`07` FR-397); a principal with exactly one, and a Service Account, send nothing. Checked against the principal's own memberships: a workspace it does not belong to yields `403 WORKSPACE_SCOPE_DENIED`, and an absent selection with several memberships yields `403 WORKSPACE_SELECTION_REQUIRED`.",
+              "title": "Workspace-Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_RegressionRunSummary_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Malformed request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
+          }
+        },
+        "summary": "List a rating version's regression runs",
+        "tags": [
+          "modelling"
+        ]
+      },
       "post": {
         "description": "**202** with a Job (`03` §5.1, FR-260/261, `PL-1205` Task 5).\n\nThe `rating.regression` Job runs the algorithm's current Regression Suite against this\nversion's compiled bundle and persists a `RegressionRun` with its case log. A failing\nrun ends the Job `failed` (`PROPERTY_ASSERTION_FAILED` or `GOLDEN_QUOTE_MISMATCH`) and\nthe run is still recorded; FR-257 limb (1) reads it at submission.",
         "operationId": "start_regression_run_api_v1_rating_versions__rating_version_id__regression_runs_post",

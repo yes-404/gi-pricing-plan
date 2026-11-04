@@ -9,13 +9,13 @@ fails inside another middleware must still produce a problem response carrying a
 
 from __future__ import annotations
 
+import asyncio
 import gc
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from typing import Any
 
 from fastapi import APIRouter, FastAPI
-from sqlalchemy import select
 
 from app.api import (
     approvals,
@@ -50,7 +50,6 @@ from app.api import settings as settings_api
 from app.api.responses import problems, without_fastapi_validation_error
 from app.auth.oidc import OidcVerifier
 from app.config import Settings, load_settings
-from app.db.models import EnvironmentRow
 from app.db.session import Database, database_probe
 from app.errors import install_error_handlers
 from app.observability.logging import configure_logging, get_logger
@@ -58,13 +57,17 @@ from app.observability.middleware import TraceMiddleware
 from app.platform.blobs import BlobStore, blob_probe
 from app.platform.bundle_slot import BundleSlot
 from app.platform.deployment_switch import (
+    LatestState,
     LiveRefs,
     RedisSwitch,
     SwitchMember,
     SwitchMessage,
+    SwitchReconciler,
     SwitchSubscription,
     build_switch_client,
     process_id,
+    read_latest,
+    switch_stack,
 )
 from app.platform.rate_limit import RateLimiter, build_redis_client
 from app.platform.settings import validate_setting_overrides
@@ -105,6 +108,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         # ill-typed, out of range, or for an Environment-only key (`RL-1311` item 3a) —
         # stops the process here, with the variable named, rather than failing at first use.
         validate_setting_overrides(settings)
+        # FR-44 (FD-1729): a process connected as an owner or a superuser, or on a database whose
+        # immutability triggers were tampered with, does not start. Before `require_tenant_binding`
+        # on purpose: a refused process writes no tenant marker and does not touch the blob bucket.
+        await database.assert_least_privilege()
         # FR-436: every store must be bound to this deployment's tenant, or the process
         # does not start. Before the probes and before any write to a store, and the check
         # itself orders the stores so that the read-only database check comes first. It also
@@ -128,31 +135,48 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         # Unlike the rate limiter this does not fail open: a process that cannot subscribe
         # would silently miss every switch, so it does not start.
         switch_client = build_switch_client(settings.redis_url.get_secret_value())
-        switch = RedisSwitch(switch_client, f"{settings.environment.value}:{settings.tenant_id}")
+        switch = RedisSwitch(
+            switch_client, switch_stack(settings.environment.value, settings.tenant_id)
+        )
         # One channel per platform Environment (`dev`, `uat`, `prod`, ...). An Environment
-        # created after this process started is not subscribed until it restarts: a deploy into
-        # it names no such process. That gap is part of FD-1823 (MEDIUM, WK-674).
+        # created after this process started is subscribed by the reconcile pass below (SL-1992,
+        # FD-1823), within `deployment_reconcile_seconds`; until then a deploy into it names no
+        # such process.
         async with database.session() as session:
-            environments = list(
-                (
-                    await session.execute(
-                        select(EnvironmentRow.slug).where(EnvironmentRow.retired_at.is_(None))
-                    )
-                ).scalars()
-            )
+            environments = (await read_latest(session)).environments
 
         async def hydrate(message: SwitchMessage) -> None:
             await score.hydrate_for_switch(database, blob_store, running.state.bundle_slot, message)
 
+        reconnected = asyncio.Event()
         subscription = SwitchSubscription(
             switch,
             switch_client,
             SwitchMember(process_id(), running.state.live_refs, hydrate),
             environments,
+            reconnected=reconnected,
         )
         await subscription.start()
         async with database.session() as session:
             await running.state.live_refs.load_latest(session)
+
+        # FD-1823 (SL-1992): the DB is the truth a missed COMMIT is repaired from. Every
+        # `deployment_reconcile_seconds`, and at once when the pub/sub connection reconnects, a
+        # pass reloads the latest committed Deployment of every Environment into `live`,
+        # subscribes to Environments created since, and restarts a dead listener. A restart's
+        # load, repeated: it converges to what a restart would serve, within that interval.
+        async def read_state() -> LatestState:
+            async with database.session() as session:
+                return await read_latest(session)
+
+        reconciler = SwitchReconciler(
+            running.state.live_refs,
+            read_state,
+            subscription.ensure,
+            interval=settings.deployment_reconcile_seconds,
+            wake=reconnected,
+        )
+        reconciler.start()
         running.state.switch = switch
         # RL-1685 (PL-1454 DP-4): everything built above lives for the process. Moving it
         # into the permanent generation takes it out of every later gen2 collection, whose
@@ -161,6 +185,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         gc.freeze()
         yield
         health.clear_probes()
+        await reconciler.stop()
         await subscription.stop()
         await switch_client.aclose()
         await redis_client.aclose()

@@ -524,3 +524,97 @@ def test_no_outbound_validation_runs_on_compare(
     controlled = client.post("/__nfr502_control")
     assert controlled.status_code == 200, controlled.text
     assert spy.calls >= 1, "the spy saw no response validation on a route that validates"
+
+
+# --------------------------------------------------------------------------------------
+# SL-1569 (PL-1568, RL-1343, RL-1567): the output forms hold on both results of a comparison.
+# --------------------------------------------------------------------------------------
+
+
+def _install_probe_versions(
+    client: TestClient,
+    reader_headers: dict[str, str],
+    database: Any,
+    blob_store: Any,
+    principal: Any,
+    workspace_id: Any,
+    declared_type: str,
+    expr: str,
+) -> None:
+    """Versions 1 and 2 of one algorithm with the same `probe_out` output over `expr`."""
+    from backend.tests.test_score import _probe_algorithm
+
+    register_rating_handlers()
+    for version in (1, 2):
+        algorithm = _probe_algorithm(declared_type, expr)
+        algorithm["version"] = version
+        created = client.post("/api/v1/rating-algorithms", json=algorithm, headers=reader_headers)
+        assert created.status_code in (200, 201), created.text
+        row = asyncio.get_event_loop().run_until_complete(
+            _insert_version(
+                database,
+                workspace_id,
+                principal.id,
+                algorithm_ref=f"rating_algorithm:minimal@{version}",
+                pins=_empty_pins(),
+                version=version,
+            )
+        )
+        job = _run_compile_job(client, reader_headers, database, blob_store, row.id)
+        assert job.status is JobStatus.SUCCEEDED, job.error
+
+
+@pytest.mark.req("FR-214")
+@pytest.mark.parametrize(
+    ("declared_type", "expr", "expected"),
+    [("decimal", "premium_in * 1.5", "27.00"), ("percentage", "premium_in * 1.1", "19.80")],
+)
+def test_both_results_of_a_comparison_carry_the_decimal_string(
+    client: TestClient,
+    reader_headers: dict[str, str],
+    database: Any,
+    blob_store: Any,
+    principal: Any,
+    workspace_id: Any,
+    declared_type: str,
+    expr: str,
+    expected: str,
+) -> None:
+    _install_probe_versions(
+        client, reader_headers, database, blob_store, principal, workspace_id, declared_type, expr
+    )
+    body = _body()
+    body["context"]["inputs"] = {"premium_in": 18}
+    response = client.post(COMPARE_URL, json=body, headers=reader_headers)
+    assert response.status_code == 200, response.text
+    for side in ("base", "comparison"):
+        assert response.json()[side]["outputs"]["probe_out"] == expected, side
+    assert response.text.count(f'"probe_out":"{expected}"') == 2
+
+
+@pytest.mark.req("FR-214")
+@pytest.mark.parametrize("declared_type", ["int", "count"])
+def test_a_near_integer_under_an_integral_type_is_refused_on_compare(
+    client: TestClient,
+    reader_headers: dict[str, str],
+    database: Any,
+    blob_store: Any,
+    principal: Any,
+    workspace_id: Any,
+    declared_type: str,
+) -> None:
+    """RL-1567 item 9: the same 422 `RATING_TYPE_MISMATCH` as `/score`, with no value."""
+    _install_probe_versions(
+        client,
+        reader_headers,
+        database,
+        blob_store,
+        principal,
+        workspace_id,
+        declared_type,
+        "premium_in * 0 + 2.9999999999",
+    )
+    response = client.post(COMPARE_URL, json=_body(), headers=reader_headers)
+    assert response.status_code == 422, response.text
+    assert response.json()["code"] == "RATING_TYPE_MISMATCH"
+    assert "2.9999999999" not in response.text  # NFR-499

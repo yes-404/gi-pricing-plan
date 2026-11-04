@@ -513,6 +513,22 @@
           "default": null,
           "title": "Leverage Blob"
         },
+        "monotonicity": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/MonotonicityCheck"
+          },
+          "title": "Monotonicity",
+          "type": "array"
+        },
+        "monotonicity_omitted": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/MonotonicityOmission"
+          },
+          "title": "Monotonicity Omitted",
+          "type": "array"
+        },
         "null_deviance": {
           "title": "Null Deviance",
           "type": "number"
@@ -638,6 +654,35 @@
       ],
       "title": "MonotonicityCheck",
       "type": "object"
+    },
+    "MonotonicityOmission": {
+      "additionalProperties": false,
+      "description": "A declared GLM direction that was not checked, and why (FR-89).\n\nA declared direction therefore always yields a `MonotonicityCheck` or one of these,\nnever nothing — the FR-178 pattern.",
+      "properties": {
+        "factor": {
+          "title": "Factor",
+          "type": "string"
+        },
+        "reason": {
+          "$ref": "#/$defs/MonotonicityOmissionReason"
+        }
+      },
+      "required": [
+        "factor",
+        "reason"
+      ],
+      "title": "MonotonicityOmission",
+      "type": "object"
+    },
+    "MonotonicityOmissionReason": {
+      "description": "Why a declared GLM direction was not checked (FR-89, PL-1856 DP-M).",
+      "enum": [
+        "operand_of_interaction",
+        "expression_factor",
+        "unordered_levels"
+      ],
+      "title": "MonotonicityOmissionReason",
+      "type": "string"
     },
     "PartialDependence": {
       "additionalProperties": false,

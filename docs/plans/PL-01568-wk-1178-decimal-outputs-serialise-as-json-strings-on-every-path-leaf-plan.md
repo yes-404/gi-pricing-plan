@@ -3,7 +3,7 @@ id: PL-1568
 family: plan
 kind: leaf
 title: WK-1178 — a declared decimal output is served as an exact JSON string on every scoring path, rounded once (FR-214, FR-226, FR-273, NFR-502; RL-1343): leaf plan
-status: draft                  # draft → active → superseded | retired (§1.2a)
+status: active                 # draft → active → superseded | retired (§1.2a)
 created: 2026-10-10  # original date 2026-10-05, set at the draft; minted 2026-10-10
 owner: planner
 tree: fb178c360f6fd5b2fdb7ae60eea924811a65492f
@@ -219,6 +219,8 @@ No plan discharged `RL-1343` at `fb178c36`:
 `draft`. ~~**DP-1 is open, the maintainer's;**~~ *(pre-mint delta 1: DP-1 ruled by `RL-1567`.)* ~~**DP-4 is open, the maintainer's; DP-3 is open, the lead's** (recommendations given);~~ *(pre-mint delta 2: DP-3 and DP-4 ruled (a); no decision point is open)*;
 DP-2 is not blocking. The plan
 moves to `active` only through a separate activation PR, after every activation need below holds.
+
+*(Activated 2026-10-23, under Lean P2 L1 in the SL-1569 slice PR, no activation PR: every activation need holds at `origin/main` `4e399fd0` (SL-1427 `b6dd96fd`, SL-1367 `13a02bba`, SL-1566 `cad75a7e` merged; `RL-1343` and `RL-1567` on main), on the maintainer's (by delegation) GO, `to-lead.md` "2026-10-23 10:15:22 BST — Maintainer: SL-1569 GO (D1 = (b)); the 1(e) docs-only gate covers the lead.md amendment riding the RS docs PR; seats 7/9 noted". D1 = (b) changes Task 6 only: limb 3 is the local structural merge check, limbs 1–2 are local DIAGNOSTIC readings, and the NFR-502 timing verdict is carried to nfr-bench-1, base `4e399fd0`, owner WK-1178.)*
 
 ### Activation needs, in order
 

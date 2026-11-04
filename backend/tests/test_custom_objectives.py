@@ -29,6 +29,7 @@ from __future__ import annotations
 
 import numpy as np
 import pytest
+from backend.tests.conftest_db import seed_as_owner
 from backend.tests.test_api_datasets import _headers
 from backend.tests.test_contracts import OPENAPI, _load
 from backend.tests.test_model_jobs import (
@@ -199,9 +200,12 @@ async def test_an_expression_objective_is_refused_by_name_while_the_flag_is_off(
     assert off.value.code == "OBJECTIVE_KIND_NOT_ENABLED"
     assert off.value.status_code == 409
 
-    async with database.unit_of_work() as session:
+    async def _seed(session):
         # FR-395: the settings row now references a workspace row.
         await workspaces.ensure_workspace(session, workspace_id=workspace_id)
+
+    await seed_as_owner(_seed)
+    async with database.unit_of_work() as session:
         await settings_service.set_workspace_setting(
             session, workspace_id, "features.expression_objectives_enabled", False
         )
@@ -740,7 +744,8 @@ async def _principal_holding(
     from model_schema import ScopeType
 
     who = await _principal_with(database, workspace_id, "auditor")
-    async with database.unit_of_work() as session:
+
+    async def seed(session) -> None:
         role = RoleRow(
             workspace_id=workspace_id,
             slug=f"custom-{who.id}",
@@ -758,6 +763,8 @@ async def _principal_holding(
                 scope_type=ScopeType.WORKSPACE.value,
             )
         )
+
+    await seed_as_owner(seed)
     return _headers(who.id, workspace_id)
 
 

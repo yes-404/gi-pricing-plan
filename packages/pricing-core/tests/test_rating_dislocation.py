@@ -29,6 +29,7 @@ from pricing_core.rating.analysis import (
     PortfolioFrameError,
     dislocate,
     dislocation_frame,
+    mover_change_pct,
     read_portfolio,
     select_movers,
     summarise_dislocation,
@@ -904,6 +905,47 @@ def test_select_movers_breaks_a_pct_tie_by_absolute_minor_change() -> None:
     |change| (300) goes first. Mutation: remove sort step 2, which gives ["M1", "M2"]."""
     frame = _frame([_q("M1", 1000, 1150), _q("M2", 2000, 2300)])
     assert select_movers(frame, _dspec())["quote_id"].to_list() == ["M2", "M1"]
+
+
+@pytest.mark.req("FR-263")
+@pytest.mark.parametrize(
+    ("change", "baseline", "expected"),
+    [
+        (1, 3, "33.333334"),  # 33.3333333… rounds UP; half-even / toward zero give …333
+        (-1, 3, "-33.333334"),  # away from zero, not toward +inf (which gives -33.333333)
+        (2, 3, "66.666667"),
+        (10, 100, "10.000000"),  # exact: six places written, nothing added
+        (0, 100, "0.000000"),
+        (1, 7, "14.285715"),  # 14.2857142857… ; half-even gives …714
+    ],
+)
+def test_mover_change_pct_is_exact_rounded_once_away_from_zero(
+    change: int, baseline: int, expected: str
+) -> None:
+    """DP-S8-2 (a), 03 §4.6: (change ÷ baseline x 100) to 6 places, away from zero, positional.
+    Mutations: half-even rounding; truncation; floor/ceil (the negative case)."""
+    got = mover_change_pct(change, baseline)
+    assert format(got, "f") == expected
+    assert isinstance(got, Decimal)
+
+
+@pytest.mark.req("FR-263")
+def test_a_selected_movers_change_pct_never_reads_below_the_threshold() -> None:
+    """The edge of the threshold (PL-1833 Task 1.5): E sits exactly on 10 %; with a 7-place
+    threshold, T is a third of a minor unit above it in the seventh place, so its exact value
+    (33.33333333…) is selected while its 6-place truncation (33.333333) reads below the
+    threshold. Every selected mover's `change_pct` reads at or above its threshold.
+    Mutation: toward-zero rounding fails the second case."""
+    on_edge = select_movers(_frame([_q("E", 1000, 1100)]), _dspec(threshold="10"))
+    assert on_edge["quote_id"].to_list() == ["E"]
+    row = on_edge.row(0, named=True)
+    assert mover_change_pct(row["change_minor"], row["baseline_minor"]) >= Decimal("10")
+
+    threshold = "33.3333333"
+    above = select_movers(_frame([_q("T", 3, 4)]), _dspec(threshold=threshold))
+    assert above["quote_id"].to_list() == ["T"]
+    row = above.row(0, named=True)
+    assert mover_change_pct(row["change_minor"], row["baseline_minor"]) >= Decimal(threshold)
 
 
 # ---------------------------------------------------------------------------

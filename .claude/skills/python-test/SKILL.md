@@ -879,6 +879,8 @@ exists at `71f5a22` — `pre_migration_root` in `tests/test_doc_id_migrate.py`.
 
 Verified: 2026-09-17 against main 71f5a2208c7a92bad486ae128775a4a42c7ebc63
 Verified: 2026-09-28 against main f91af639 (per-worktree database name now `gipricing_<leaf>_<hash>`, FD-1196; only that line changed).
+2026-10-25 — identity-table seeds in tests go through the owner seam (`seed_as_owner` in `backend/tests/conftest_db.py`, FD-1729/S1a): the login role holds no INSERT there. `app.platform.workspaces.ensure_workspace` and `app.platform.rbac.seed_builtin_roles` are monkeypatched to owner-routed wrappers by the autouse fixture `_seed_through_the_owner_seam`; a test of the production function itself opts out with `@pytest.mark.production_seed`. `set_workspace_setting` / `set_environment_setting` are NOT patched (the app calls them).
+Verified: 2026-10-25 against s1a-fixA on ae9445aa (tree 035a0c72784aa00c84ed3f2791418617f8a59fe9) for that line only.
 
 ## Verified
 

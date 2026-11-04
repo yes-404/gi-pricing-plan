@@ -57,6 +57,7 @@ describe("RateTableDiffPanel (FR-231, FR-232)", () => {
     expect(within(rows[1]!).getByText("+5.0000%")).toBeInTheDocument();
   });
 
+  // FR-230: edits are diffed against the seed on request (the diff-vs-seed limb).
   it("compares against the seed on request", async () => {
     render(RateTableDiffPanel, { props });
     await show("seed");
@@ -143,5 +144,72 @@ describe("RateTableDiffPanel (FR-231, FR-232)", () => {
     render(RateTableDiffPanel, { props });
     await show();
     expect(await screen.findByRole("alert")).toHaveTextContent("The portfolio must be a validated Dataset Version.");
+  });
+});
+
+// NFR-463 / WCAG 4.1.3 (FD-1959 F3): a status message is announced only if its live region is in
+// the DOM before the message arrives. A region that mounts together with its text (v-if) is not.
+const liveRegions = (root: Element): Element[] =>
+  Array.from(root.querySelectorAll('[role="status"], [aria-live="polite"]'));
+
+describe("RateTableDiffPanel: the status region is persistent (NFR-463, FD-1959 F3)", () => {
+  it("holds the loading status in a live region that was in the DOM before Show changes", async () => {
+    let release: (page: typeof PAGE_ONE) => void = () => undefined;
+    getDiffCells.mockImplementationOnce(() => new Promise((resolve) => { release = resolve; }));
+    const { container } = render(RateTableDiffPanel, { props });
+    const before = liveRegions(container);
+    await show();
+    const holder = liveRegions(container).find((el) => /Loading/.test(el.textContent ?? ""));
+    expect(holder).toBeDefined();
+    expect(before).toContain(holder);
+    release(PAGE_ONE);
+    await screen.findAllByRole("row");
+  });
+});
+
+describe("RateTableDiffPanel: the scrolling results are keyboard reachable (NFR-463, FD-1959 F6)", () => {
+  it("makes the horizontally scrolling results region focusable", async () => {
+    const { container } = render(RateTableDiffPanel, { props });
+    await show();
+    await screen.findAllByRole("row");
+    const scroller = container.querySelector(".overflow-x-auto");
+    expect(scroller).not.toBeNull();
+    expect(scroller).toHaveAttribute("tabindex", "0");
+  });
+});
+
+describe("RateTableDiffPanel: NFR-463 a11y lows (FD-1974 L-5, L-6, L-9)", () => {
+  it("L-5: says in a status region how many cells are shown and which page", async () => {
+    render(RateTableDiffPanel, { props });
+    await show();
+    await screen.findAllByRole("row");
+    expect(screen.getByText("Showing 2 changed cells, page 1.").closest('[role="status"]')).not.toBeNull();
+
+    await userEvent.click(screen.getByRole("button", { name: "Next page" }));
+    await screen.findByText("+20%");
+    expect(screen.getByText("Showing 1 changed cell, page 2.").closest('[role="status"]')).not.toBeNull();
+  });
+
+  it("L-6: moves focus to the other pager button when the one clicked becomes disabled", async () => {
+    render(RateTableDiffPanel, { props });
+    await show();
+    await screen.findAllByRole("row");
+
+    await userEvent.click(screen.getByRole("button", { name: "Next page" }));
+    await screen.findByText("+20%"); // the last page: Next is now disabled
+    await waitFor(() => expect(screen.getByRole("button", { name: "Next page" })).toBeDisabled());
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: "Previous page" }));
+
+    await userEvent.click(screen.getByRole("button", { name: "Previous page" }));
+    await screen.findByText("+5.0000%"); // the first page: Previous is now disabled
+    await waitFor(() => expect(screen.getByRole("button", { name: "Previous page" })).toBeDisabled());
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: "Next page" }));
+  });
+
+  it("L-9: names the scrolling results table as a region", async () => {
+    render(RateTableDiffPanel, { props });
+    await show();
+    await screen.findAllByRole("row");
+    expect(screen.getByRole("region", { name: "Changed cells" })).toHaveAttribute("tabindex", "0");
   });
 });

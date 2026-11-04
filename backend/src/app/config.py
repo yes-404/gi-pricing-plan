@@ -63,8 +63,7 @@ class SettingResolution[T]:
 
     def __repr__(self) -> str:
         return (
-            f"SettingResolution(key={self.key!r}, value={self.value!r}, "
-            f"source={self.source.value})"
+            f"SettingResolution(key={self.key!r}, value={self.value!r}, source={self.source.value})"
         )
 
     def __eq__(self, other: object) -> bool:
@@ -117,7 +116,17 @@ class Settings(BaseSettings):
     # SecretStr because a DSN embeds a password. As a plain `str` it appeared verbatim in
     # `model_dump()`, so any structured log line carrying settings would have published the
     # database credentials — which is exactly what NFR-532 forbids.
-    database_url: SecretStr = SecretStr("postgresql+asyncpg://gip:gip@localhost:5432/gip")
+    #
+    # The application connects as the login role `gip_app_login` (FD-1729): a member of
+    # `gip_app`, never an owner or a superuser. Migrations use `migration_database_url`.
+    database_url: SecretStr = SecretStr(
+        "postgresql+asyncpg://gip_app_login:gip_app_login@localhost:5432/gipricing"
+    )
+
+    # The owner's DSN, read only by `migrations/env.py` and the provisioning script
+    # (`GIP_MIGRATION_DATABASE_URL`). Optional: the application never needs it, and
+    # migrations refuse to fall back to `database_url`.
+    migration_database_url: SecretStr | None = None
 
     # Redis is the Celery broker and a cache; nothing durable lives here (FR-422).
     # SecretStr for the same reason as `database_url` — a Redis URL can carry a password.
@@ -173,6 +182,12 @@ class Settings(BaseSettings):
     # NFR-528 treats a running job with no progress for this long as stalled.
     job_stall_seconds: Annotated[int, Field(gt=0, le=3600)] = 30
 
+    # B, the interval of the deployment switch's reconcile pass (FR-268, FD-1823, SL-1992): how
+    # long a process that missed a COMMIT, or an Environment created after start, can go
+    # unconverged. `le=30` is NFR-494's "within 30 s of the deploy command", so no value the type
+    # accepts breaks it. Also set by tests, through `Settings(...)`, to a second.
+    deployment_reconcile_seconds: Annotated[int, Field(ge=1, le=30)] = 10
+
     # How many hydrated bundles one worker holds (`platform.bundle_slot`, RL-882
     # clause 3). A **count**, never a byte budget: NFR-492 permits a bundle of up to
     # 500 MB including boosters and nothing here measures a hydrated `CompiledBundle`'s
@@ -185,19 +200,19 @@ class Settings(BaseSettings):
     # load.
     bundle_slot_capacity: Annotated[int, Field(ge=1, le=64)] = 1
 
-
-    @field_validator("database_url")
+    @field_validator("database_url", "migration_database_url")
     @classmethod
-    def _database_must_be_async(cls, v: SecretStr) -> SecretStr:
+    def _database_must_be_async(cls, v: SecretStr | None) -> SecretStr | None:
         """SQLAlchemy picks its driver from the URL scheme.
 
         A sync driver in an async application does not fail loudly — it blocks the event
         loop, and the symptom is latency under concurrency rather than an error.
         """
-        if not v.get_secret_value().startswith("postgresql+asyncpg://"):
+        if v is not None and not v.get_secret_value().startswith("postgresql+asyncpg://"):
             raise ValueError(
-                "database_url must use the postgresql+asyncpg:// scheme; a sync driver "
-                "blocks the event loop instead of failing"
+                "database_url and migration_database_url must use the "
+                "postgresql+asyncpg:// scheme; a sync driver blocks the event loop instead "
+                "of failing"
             )
         return v
 

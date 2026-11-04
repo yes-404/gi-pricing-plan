@@ -139,16 +139,36 @@ class BlobStore:
     async def ensure_bucket(self) -> None:
         """Create the bucket when absent and set the staging lifecycle rule.
 
-        Idempotent, so startup can always call it. The rule (`RL-1724` DP-U1.2) expires
-        `staging/` objects and aborts incomplete multipart uploads after `STAGING_EXPIRY_DAYS`;
-        it is set here, not by an operator, so it holds under `docker compose up`.
+        Safe to call on every start and from several services at once (FD-1850): a
+        `create_bucket` that loses the race to a peer answers `BucketAlreadyOwnedByYou`, which
+        is success. `BucketAlreadyExists` means another owner in S3, so it is success only if
+        `head_bucket` then succeeds; otherwise the original error is raised (chained to the head
+        error), as is any other create failure.
+
+        The rule (`RL-1724` DP-U1.2) expires `staging/` objects and aborts incomplete multipart
+        uploads after `STAGING_EXPIRY_DAYS`; it is set here, not by an operator, so it holds
+        under `docker compose up`.
         """
 
         def _ensure() -> None:
             try:
                 self._client.head_bucket(Bucket=self._bucket)
             except ClientError:
-                self._client.create_bucket(Bucket=self._bucket)
+                try:
+                    self._client.create_bucket(Bucket=self._bucket)
+                except ClientError as exc:
+                    code = exc.response.get("Error", {}).get("Code")
+                    if code == "BucketAlreadyOwnedByYou":
+                        pass  # a peer created it between our head and create: ours
+                    elif code == "BucketAlreadyExists":
+                        # S3 means ANOTHER owner here. Only a head that now succeeds (our
+                        # access, i.e. the race) is success; otherwise the original error.
+                        try:
+                            self._client.head_bucket(Bucket=self._bucket)
+                        except ClientError as head_exc:
+                            raise exc from head_exc
+                    else:
+                        raise
             # `put_bucket_lifecycle_configuration` replaces every rule on the bucket, so read
             # first and replace only this module's rule, by its ID: an operator's own rules
             # survive a restart.

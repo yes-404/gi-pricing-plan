@@ -2,7 +2,7 @@
 id: FD-1713
 family: finding
 title: A routed job never completes on a real worker — io and scoring have no consumer, and score.trace_produce has no registered handler
-status: active
+status: closed
 created: 2026-10-14
 owner: auditor
 tree: 1e260c1553acf39844939fe12da685ccfb835e54

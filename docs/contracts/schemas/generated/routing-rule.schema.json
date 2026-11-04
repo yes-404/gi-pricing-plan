@@ -1,0 +1,87 @@
+{
+  "$defs": {
+    "ArtifactRef": {
+      "description": "Canonical artifact reference {type}:{slug}@{version} (ID-3).",
+      "examples": [
+        "model:motor-ad-frequency@7",
+        "rating_version:motor-gb@27"
+      ],
+      "pattern": "^((banding|custom_metric|custom_objective|dataset|dataset_version|deployment|dossier|gipp_check|grouping|model|monitor|optimisation_run|peril_structure|rate_table|rating_algorithm|rating_version|reference_table|regression_suite|sub_graph|validation_rule|validation_rule_set):[a-z0-9][a-z0-9-]{1,62}|factor:[a-z0-9][a-z0-9_-]{1,62})@[1-9][0-9]*$",
+      "title": "ArtifactRef",
+      "type": "string"
+    },
+    "RoutedRange": {
+      "additionalProperties": false,
+      "description": "A stored range: `deployment_id` is the latest Deployment of that Rating Version in the\nEnvironment at write time, set by the server.",
+      "properties": {
+        "deployment_id": {
+          "format": "uuid",
+          "title": "Deployment Id",
+          "type": "string"
+        },
+        "effective_from": {
+          "format": "date",
+          "title": "Effective From",
+          "type": "string"
+        },
+        "effective_to": {
+          "anyOf": [
+            {
+              "format": "date",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Effective To"
+        },
+        "rating_version_ref": {
+          "$ref": "#/$defs/ArtifactRef"
+        }
+      },
+      "required": [
+        "rating_version_ref",
+        "effective_from",
+        "deployment_id"
+      ],
+      "title": "RoutedRange",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "An Environment's current routing rule (the 200 body and the Audit Event's `after`).",
+  "properties": {
+    "environment": {
+      "pattern": "^[a-z0-9][a-z0-9-]{1,62}$",
+      "title": "Environment",
+      "type": "string"
+    },
+    "ranges": {
+      "items": {
+        "$ref": "#/$defs/RoutedRange"
+      },
+      "title": "Ranges",
+      "type": "array"
+    },
+    "written_at": {
+      "format": "date-time",
+      "title": "Written At",
+      "type": "string"
+    },
+    "written_by": {
+      "format": "uuid",
+      "title": "Written By",
+      "type": "string"
+    }
+  },
+  "required": [
+    "environment",
+    "ranges",
+    "written_by",
+    "written_at"
+  ],
+  "title": "RoutingRule",
+  "type": "object"
+}

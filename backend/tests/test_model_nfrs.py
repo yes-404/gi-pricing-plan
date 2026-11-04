@@ -31,6 +31,7 @@ from __future__ import annotations
 from uuid import UUID, uuid4
 
 import pytest
+from backend.tests.conftest_db import grant_roles_as_owner
 from backend.tests.test_custom_objectives import COUNT_GRID, _objective
 from backend.tests.test_model_jobs import (
     _dataset,
@@ -41,13 +42,12 @@ from backend.tests.test_model_jobs import (
 )
 from sqlalchemy import select
 
-from app.db.models import AuditEventRow, ModelRow, RoleAssignmentRow, RoleRow
+from app.db.models import AuditEventRow, ModelRow
 from app.db.session import Database
 from app.platform import approvals as approval_service
 from app.platform import jobs as job_service
 from app.platform import modelling as model_service
 from app.platform import objectives as objective_service
-from app.platform import rbac
 from app.platform import transformations as transform_service
 from app.platform.blobs import BlobStore
 from app.worker.data_handlers import register_data_handlers
@@ -65,7 +65,6 @@ from model_schema import (
     ModelStatus,
     ObjectiveStatus,
     Principal,
-    ScopeType,
     UnseenLevelBehaviour,
     new_uuid7,
 )
@@ -83,22 +82,7 @@ async def _principal_with(database: Database, workspace_id: UUID, *roles: str) -
     file nobody trusts.
     """
     user = Principal(kind=ActorKind.USER, id=new_uuid7(), display="nfr@insurer.example")
-    async with database.unit_of_work() as session:
-        await rbac.seed_builtin_roles(session, workspace_id)
-        for slug in roles:
-            role = (
-                await session.execute(
-                    select(RoleRow).where(
-                        RoleRow.workspace_id == workspace_id, RoleRow.slug == slug
-                    )
-                )
-            ).scalar_one()
-            session.add(
-                RoleAssignmentRow(
-                    workspace_id=workspace_id, principal_kind="user", principal_id=user.id,
-                    role_id=role.id, scope_type=ScopeType.WORKSPACE.value,
-                )
-            )
+    await grant_roles_as_owner(workspace_id, user.id, *roles)
     return user
 
 

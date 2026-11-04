@@ -11,6 +11,7 @@ silently (#1314). Two guards, because the two Pydantic modes differ:
   model is checked at the source, in both modes.
 """
 
+import copy
 import importlib
 import json
 import pkgutil
@@ -63,18 +64,67 @@ def _decimal_union_unpatterned(node: Any, path: str = "") -> list[str]:
     return bad
 
 
-@pytest.mark.req("FR-10")
-def test_committed_contracts_keep_the_pattern_on_every_decimal_union():
+#: Number|string unions that are NOT a `Decimal` and so carry no pattern, by EXACT schema path
+#: (`<contract file>/<path inside it>`, no wildcard). `DislocationMover.columns` holds the
+#: portfolio's non-money factor values (a postcode, a vehicle age, a float density): its
+#: `str | int | float | bool | None` is a free JSON scalar, so a Decimal pattern on its string
+#: branch would refuse every non-numeric value. FR-10's scope is money, and a decimal column
+#: arrives as a plain string by `_json_value`. Maintainer 2026-10-22, SL-1551 decimal guard (3).
+_NOT_A_DECIMAL: frozenset[str] = frozenset(
+    {
+        "openapi/generated.json/components/schemas/DislocationMover"
+        "/properties/columns/additionalProperties/anyOf"
+    }
+)
+
+
+def _decimal_union_findings(
+    docs: dict[str, Any], exempt: frozenset[str] = _NOT_A_DECIMAL
+) -> tuple[list[str], list[str]]:
+    """`(patternless unions not exempted, exemptions that no longer match a patternless union)`."""
+    found = {f"{name}{p}" for name, doc in docs.items() for p in _decimal_union_unpatterned(doc)}
+    return sorted(found - exempt), sorted(exempt - found)
+
+
+def _committed_contracts() -> dict[str, Any]:
     files = sorted(CONTRACTS.glob("**/*.json"))
     assert files, "no contracts found: the test would pass vacuously"
-    unions = 0
-    bad: list[str] = []
-    for f in files:
-        doc = json.loads(f.read_text())
-        bad += [f"{f.relative_to(CONTRACTS)}{p}" for p in _decimal_union_unpatterned(doc)]
-        unions += len(json.dumps(doc).split('"type": "number"')) - 1
+    return {str(f.relative_to(CONTRACTS)): json.loads(f.read_text()) for f in files}
+
+
+@pytest.mark.req("FR-10")
+def test_committed_contracts_keep_the_pattern_on_every_decimal_union():
+    docs = _committed_contracts()
+    unions = sum(len(json.dumps(d).split('"type": "number"')) - 1 for d in docs.values())
     assert unions, "no number|string union found: the predicate no longer sees a Decimal"
+    bad, stale = _decimal_union_findings(docs)
     assert not bad, f"Decimal string branch without its pattern: {bad}"
+    assert not stale, f"exempted path no longer a patternless number|string union: {stale}"
+
+
+@pytest.mark.req("FR-10")
+def test_the_exemption_is_exact_a_patternless_decimal_elsewhere_stays_red():
+    docs = copy.deepcopy(_committed_contracts())
+    docs["openapi/generated.json"]["components"]["schemas"]["SomeMoneyShape"] = {
+        "properties": {"amount": {"anyOf": [{"type": "number"}, {"type": "string"}]}}
+    }
+    bad, stale = _decimal_union_findings(docs)
+    assert bad == [
+        "openapi/generated.json/components/schemas/SomeMoneyShape/properties/amount/anyOf"
+    ]
+    assert not stale
+
+
+@pytest.mark.req("FR-10")
+def test_an_exemption_whose_path_vanished_fails_as_stale():
+    docs = copy.deepcopy(_committed_contracts())
+    columns = docs["openapi/generated.json"]["components"]["schemas"]["DislocationMover"][
+        "properties"
+    ]["columns"]
+    columns["additionalProperties"] = {"type": "string"}
+    bad, stale = _decimal_union_findings(docs)
+    assert not bad
+    assert stale == sorted(_NOT_A_DECIMAL)
 
 
 def _models() -> list[type[BaseModel]]:

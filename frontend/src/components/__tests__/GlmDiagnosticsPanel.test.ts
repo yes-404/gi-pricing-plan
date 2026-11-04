@@ -17,6 +17,8 @@ const GLM: GlmDiagnostics = {
     { factor: "region", deviance_delta: 4.1, df: 2, p_value: 0.128 },
   ],
   type_iii_omitted: [],
+  monotonicity: [],
+  monotonicity_omitted: [],
   aliasing: ["region_north:vehicle_age_0_3"],
   vif: { vehicle_age: 1.2, region: 8.7 },
   residual_blob: null,

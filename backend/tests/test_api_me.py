@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import pytest
 import pytest_asyncio
+from backend.tests.conftest_db import seed_as_owner
 from fastapi.testclient import TestClient
 
 from app.api.deps import DEV_PRINCIPAL_HEADER
@@ -94,7 +95,7 @@ async def test_a_principal_with_no_role_reports_no_permissions(
 
 @pytest.mark.req("FR-349")
 async def test_break_glass_is_visible_on_me(
-    client: TestClient, database, workspace_id, principal, grant, membership
+    client: TestClient, owner_database, workspace_id, principal, grant, membership
 ) -> None:
     """FR-349: prominently flagged. A user must be able to see they are elevated."""
     from app.platform import rbac
@@ -105,7 +106,9 @@ async def test_break_glass_is_visible_on_me(
     # The elevated principal has no role rows to seed a membership from (the grant is a
     # temporary break-glass assignment), so the membership is seeded directly (W6b-11).
     await membership()
-    async with database.unit_of_work() as session:
+    # `grant_break_glass` has no application caller, so it runs as the owner; the read
+    # below (`GET /me`) stays on the application.
+    async with owner_database.unit_of_work() as session:
         await rbac.grant_break_glass(
             session,
             workspace_id=workspace_id,
@@ -142,7 +145,7 @@ async def test_me_lists_every_membership_with_its_name(
     from model_schema import new_uuid7
 
     other = new_uuid7()
-    async with database.unit_of_work() as session:
+    async def _seed(session):
         # Named *before* `grant`, deliberately. `grant` calls `ensure_workspace` with no
         # name, and `ensure_workspace` returns an existing row untouched — so naming
         # afterwards would silently do nothing and this assertion would read
@@ -157,6 +160,7 @@ async def test_me_lists_every_membership_with_its_name(
         # the former, which is exactly why it cannot be inferred from the latter.
         session.add(WorkspaceMemberRow(user_id=principal.id, workspace_id=workspace_id))
         session.add(WorkspaceMemberRow(user_id=principal.id, workspace_id=other))
+    await seed_as_owner(_seed)
 
     await grant("pricing_actuary")
 

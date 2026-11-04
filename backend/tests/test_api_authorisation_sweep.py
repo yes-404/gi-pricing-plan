@@ -104,6 +104,14 @@ HANDLER_GUARDED: dict[tuple[str, str], tuple[tuple[str, int, str], ...]] = {
     ("POST", "/api/v1/environments/{env}/deployments/rollback"): (
         ("platform/deployments.py", 131, "require_permission("),
     ),
+    # WK-674 Slice 6, `RL-1834` D1 item 2: the routing write reaches the same check.
+    ("PUT", "/api/v1/environments/{env}/routing"): (
+        ("platform/deployments.py", 131, "require_permission("),
+    ),
+    # `admin:manage_settings` with the Environment as the resource (`RL-1834` D2 item 3).
+    ("PUT", "/api/v1/environments/{env}/shadow"): (
+        ("platform/shadow.py", 67, "require_permission("),
+    ),
 }
 
 _METHODS = ("get", "post", "put", "patch", "delete")
@@ -308,6 +316,11 @@ RESOURCE_BACKED: dict[tuple[str, str], tuple[dict[str, str], dict[str, Any]]] = 
     ("POST", "/api/v1/environments/{env}/deployments/rollback"): (
         {"env": "dev"},
         {"rating_version_ref": "rating_version:sweep-version@1", "reason": "sweep"},
+    ),
+    ("PUT", "/api/v1/environments/{env}/routing"): ({"env": "dev"}, {"ranges": []}),
+    ("PUT", "/api/v1/environments/{env}/shadow"): (
+        {"env": "dev"},
+        {"candidate_rating_version_ref": "rating_version:sweep-version@1", "fraction": 0.5},
     ),
 }
 

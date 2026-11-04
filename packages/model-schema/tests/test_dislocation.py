@@ -11,6 +11,7 @@ from pydantic import ValidationError
 
 from model_schema.dislocation import (
     DeltaKind,
+    DislocationMover,
     DislocationOutcomes,
     DislocationRun,
     DislocationSpec,
@@ -281,3 +282,58 @@ def test_run_quantiles_are_exactly_the_six_keys_or_absent() -> None:
         DislocationRun.model_validate(
             _run_body(abs_change_pct_quantiles={**dict.fromkeys(keys), "0.75": "1.000000"})
         )
+
+
+def _mover_body(**over: Any) -> dict[str, Any]:
+    body: dict[str, Any] = {
+        "quote_id": "Q1",
+        "baseline_outcome": "quoted",
+        "candidate_outcome": "quoted",
+        "baseline_minor": 1000,
+        "candidate_minor": 1100,
+        "change_minor": 100,
+        "baseline_error_code": None,
+        "candidate_error_code": None,
+        "origin_rung": None,
+        "change_pct": "10.000000",
+        "columns": {"channel": "web", "premium_in": 12, "exposure_years": "1.000000"},
+    }
+    body.update(over)
+    return body
+
+
+@pytest.mark.req("FR-263")
+def test_a_mover_row_types_every_stored_column_and_keeps_the_portfolio_columns_apart() -> None:
+    """03 §5.1 (PL-1833 Task 1.2): the stored columns are fields; the joined portfolio columns
+    are the one open object, `columns`, of scalars. `change_pct` is a decimal string."""
+    row = DislocationMover.model_validate(_mover_body())
+    assert (row.baseline_minor, row.change_minor) == (1000, 100)
+    assert row.model_dump(mode="json")["change_pct"] == "10.000000"
+    assert row.columns["channel"] == "web"
+
+
+@pytest.mark.req("FR-263")
+def test_a_mover_row_refuses_a_float_change_pct_and_an_unknown_top_level_key() -> None:
+    """A float `change_pct` is a validation error (money and percentages are never floats on
+    this row); a portfolio column at the top level is refused (`extra="forbid"`)."""
+    with pytest.raises(ValidationError, match="change_pct"):
+        DislocationMover.model_validate(_mover_body(change_pct=10.0))
+    with pytest.raises(ValidationError, match="channel"):
+        DislocationMover.model_validate(_mover_body(channel="web"))
+    with pytest.raises(ValidationError, match="baseline_minor"):
+        DislocationMover.model_validate(_mover_body(baseline_minor=10.5))
+    with pytest.raises(ValidationError, match="columns"):
+        DislocationMover.model_validate(_mover_body(columns={"nested": {"a": 1}}))
+
+
+@pytest.mark.req("FR-263")
+def test_the_mover_schema_has_one_open_property_and_it_is_columns() -> None:
+    """PL-1833 Acceptance 3: no bare open object in the row but `columns`."""
+    schema = DislocationMover.model_json_schema()
+    assert schema.get("additionalProperties") is False
+    open_props = [
+        name
+        for name, prop in schema["properties"].items()
+        if "additionalProperties" in prop and prop["additionalProperties"] is not False
+    ]
+    assert open_props == ["columns"]

@@ -12,7 +12,10 @@ relates: []                      # ids only
 
 - **Model / effort:** `opus` (currently Opus 5.5); medium. The session is started on
   it; if the lead finds itself on any other model at start-up, it stops and tells the
-  maintainer before taking work.
+  maintainer before taking work. *(Amended 2026-10-23 by the maintainer, by delegation,
+  on the user's decision of 10:10 BST: the lead may also run on **Fable 5.1**
+  (`claude-fable-5-1`), the user's default for new sessions from 22 Oct. The stop-and-tell
+  rule stays for any other model. Seats keep their own role files' tiers.)*
 - **Start-up duties** (at every start and restart): check your own model against the
   "Model / effort" line above. Spawn each role with its file's tier alias (`--model
   opus|sonnet|haiku`) and put that role's "Model / effort" line verbatim in the spawn
@@ -147,6 +150,10 @@ relates: []                      # ids only
   as already-checked and gets LESS scrutiny for it, backwards from what its provenance
   deserves. Put "verify against the primary source, do not implement against my relay" in
   every dispatch, and check a fact before defending it.
+- **A CI wait is not idle time** *(added 2026-10-26 by the lead, on the maintainer's entry
+  "2026-10-26 15:30:41 GMT", after three idle CI waits that day: 13:14, 14:14 and 15:09 GMT)*: before
+  ending a turn with a PR in CI, the next prep or proof is seated, or the entry says why no seat is
+  possible. Watch the CI in the background; never let the watch be the only work in flight.
 - **Tools:** full read; git merge authority; write to handover/status files, plus any
   `docs/` content no other role's charter names — `CLAUDE.md` §12: "a question in no
   charter is the lead's." **Which paths those are is read from the generated ownership

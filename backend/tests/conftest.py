@@ -94,10 +94,12 @@ def _leave_no_frozen_objects():
 # Re-exported so pytest registers them as fixtures for the whole package.
 from backend.tests.conftest_db import (  # noqa: E402,F401
     _empty_the_database_after_the_session,
+    _seed_through_the_owner_seam,
     blob_store,
     database,
     grant,
     membership,
+    owner_database,
     principal,
     workspace_id,
 )

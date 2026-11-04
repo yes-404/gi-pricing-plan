@@ -39,6 +39,7 @@ from uuid import UUID, uuid4
 import pydantic
 import pytest
 from backend.tests.approved_rows import add_approved
+from backend.tests.conftest_db import grant_roles_as_owner
 from backend.tests.test_data_jobs import _ingest, _validate
 from sqlalchemy import select
 
@@ -46,8 +47,6 @@ from app.db.models import (
     DatasetVersionRow,
     ModelComparisonRow,
     ModelRow,
-    RoleAssignmentRow,
-    RoleRow,
     ValidationRuleRow,
     ValidationRuleSetRow,
 )
@@ -61,7 +60,6 @@ from app.platform import jobs as job_service
 from app.platform import model_specs as spec_service
 from app.platform import modelling as model_service
 from app.platform import perils as peril_service
-from app.platform import rbac
 from app.platform import transformations as transform_service
 from app.platform import transparency as transparency_service
 from app.platform import validation as validation_service
@@ -96,7 +94,6 @@ from model_schema import (
     Principal,
     ReconciliationStatus,
     RuleOutcome,
-    ScopeType,
     Severity,
     SpecProblemKind,
     SplitRef,
@@ -155,24 +152,7 @@ async def _principal(database: Database, workspace_id: UUID, role: str) -> Princ
     submission, E9's self-approval), and a suite with one identity cannot reach them.
     """
     who = Principal(kind=ActorKind.USER, id=new_uuid7(), display=f"{role}@insurer.example")
-    async with database.unit_of_work() as session:
-        await rbac.seed_builtin_roles(session, workspace_id)
-        role_row = (
-            await session.execute(
-                select(RoleRow).where(
-                    RoleRow.workspace_id == workspace_id, RoleRow.slug == role
-                )
-            )
-        ).scalar_one()
-        session.add(
-            RoleAssignmentRow(
-                workspace_id=workspace_id,
-                principal_kind="user",
-                principal_id=who.id,
-                role_id=role_row.id,
-                scope_type=ScopeType.WORKSPACE.value,
-            )
-        )
+    await grant_roles_as_owner(workspace_id, who.id, role)
     return who
 
 

@@ -16,7 +16,7 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from model_schema.input_free import InputFreeError
-from model_schema.money import DecimalStr, MoneyMinor
+from model_schema.money import DecimalStr, MoneyMinor, PositionalDecimalStr
 from model_schema.refs import ArtifactRef
 from model_schema.scoring import LadderRungName
 
@@ -260,6 +260,34 @@ class DislocationRun(BaseModel):
                 "distribution policies must equal quoted_both - zero_baseline - negative_baseline"
             )
         return self
+
+
+#: A portfolio column's value on the wire: not money (the rating path's money never enters
+#: `DislocationMover.columns`), so a float is a float here and an exact decimal arrives as a string.
+JsonScalar = str | int | float | bool | None
+
+
+class DislocationMover(BaseModel):
+    """One row of `GET /dislocation-runs/{id}/movers` (03 §4.6, §5.1; WK-675 Slice 8, PL-1833).
+
+    The stored columns are `dislocation_frame`'s own (a mover is a banded policy, so both
+    outcomes are quoted and the premiums are present); `change_pct` is computed at read and is
+    a positional decimal string, never a float. `columns` is the one open object: the
+    portfolio columns joined at read (NFR-499: none is stored).
+    """
+
+    model_config = _FROZEN
+    quote_id: str
+    baseline_outcome: str
+    candidate_outcome: str
+    baseline_minor: MoneyMinor
+    candidate_minor: MoneyMinor
+    change_minor: MoneyMinor
+    baseline_error_code: str | None
+    candidate_error_code: str | None
+    origin_rung: str | None
+    change_pct: PositionalDecimalStr
+    columns: dict[str, JsonScalar]
 
 
 class DislocationEstimate(BaseModel):

@@ -138,7 +138,7 @@ async def test_a_slug_and_version_pair_is_unique(database: Database, workspace_i
 
 @pytest.mark.req("FR-162")
 async def test_a_metric_cannot_be_deleted_or_truncated(
-    database: Database, workspace_id: UUID
+    database: Database, owner_database: Database, workspace_id: UUID
 ) -> None:
     """FR-162 asks which models early-stopped under a metric. A deleted row answers
     nothing — and every GbmSpec.eval_metrics ref citing it by slug would keep citing a name
@@ -150,14 +150,14 @@ async def test_a_metric_cannot_be_deleted_or_truncated(
         row_id = row.id
 
     with pytest.raises(DBAPIError) as refused:
-        async with database.unit_of_work() as session:
+        async with owner_database.unit_of_work() as session:
             await session.execute(
                 text("DELETE FROM custom_metrics WHERE id = :id"), {"id": row_id}
             )
     assert "cannot be deleted" in str(refused.value)
 
     with pytest.raises(DBAPIError):
-        async with database.unit_of_work() as session:
+        async with owner_database.unit_of_work() as session:
             await session.execute(text("TRUNCATE custom_metrics"))
 
     async with database.session() as session:

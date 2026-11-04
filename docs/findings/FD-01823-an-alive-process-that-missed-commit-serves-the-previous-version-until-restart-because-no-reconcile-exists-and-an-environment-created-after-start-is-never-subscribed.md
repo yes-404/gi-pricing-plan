@@ -2,19 +2,19 @@
 id: FD-1823
 family: finding
 title: An alive process that missed COMMIT serves the previous version until restart, because no reconcile exists, and an Environment created after a process starts is never subscribed
-status: active
+status: closed
 created: 2026-10-19   # filed 2026-10-19 under working id 8129
 owner: auditor
 tree: a6a31ab69f8e5569ed7687c30e3df69e3c57d87f
 corrected_by: []
-relates: [WK-674, SL-1259, PL-1237, PL-1710, PL-1766, RL-876]
+relates: [WK-674, SL-1259, PL-1237, PL-1710, PL-1766, RL-876, SL-1992, LG-1993]
 ---
 
 # FD-1823 — An alive process that missed COMMIT serves the previous version until restart
 
 ## Finding
 
-**MEDIUM; owner WK-674; due before the 12 Nov exit demo** (the maintainer's entry "2026-10-18 23:03:15
+**MEDIUM; owner WK-674; due before the ~~12 Nov~~ Wed 18 Nov exit demo** (the maintainer's entry "2026-10-18 23:03:15
 BST", `to-lead.md`: "Severity **MEDIUM, due before the 12 Nov exit demo** (not deferred past P2), owner
 WK-674, with the reconcile mechanism as its remedy"). Under the design SL-1259 (S5) is ruled to build,
 an alive process that missed the COMMIT round keeps the previous `live` until it restarts. No mechanism
@@ -102,5 +102,9 @@ can restart them.
 ## Disposition
 
 Deferred with an owner: WK-674. The event that next discharges it: a merged reconcile with the two
-red-first tests above, or a dated ruling accepting the absence. Due before the 12 Nov exit demo. Filed
+red-first tests above, or a dated ruling accepting the absence. Due before the ~~12 Nov~~ Wed 18 Nov exit demo. Filed
 under working id 8129; minted `FD-1823` at its merge turn, 2026-10-19 (`doc-id.py next --ref origin/main` at `7fd0fa73`).
+
+*(Re-dated 2026-11-03 by the auditor, on the lead's instruction, quoting the maintainer's entry "2026-11-03 15:38:58 GMT" (`to-lead.md`), which relays the user's order of 15:38 GMT: "move freeze to 10th of Nov and defer the later dates". The P2 exit demo moves from Thu 12 Nov 2026 to Wed 18 Nov 2026 (`date -d 2026-11-18 +%A` prints Wednesday); the due date "before the 12 Nov exit demo" is struck and reads "before the Wed 18 Nov exit demo". The old text stays, struck.)*
+
+***Resolved 2026-11-04*** — closed in place 2026-11-04 by the executor, as the closing act of the mint of SL-1992 (WK-674, LG-1993; this PR, its number and squash written at the merge's date-of-record), on the lead's brief under the GO "2026-11-03 15:50:00 GMT" (`to-lead.md`, a local channel file) and PL-1688 row 3. Delivered remedy: the deployment switch reconciles against the database. A pass (`LiveRefs.reconcile`, driven by `SwitchReconciler`) loads the latest committed Deployment of every Environment, never moving a ref backwards, and discovers Environments created after start; it runs every `Settings.deployment_reconcile_seconds` (DP-R1, `GIP_DEPLOYMENT_RECONCILE_SECONDS`, 1 to 30, default 10) and on every pub/sub reconnect (DP-R2, restart-equivalent hydration), and a failing pass is logged and the loop goes on. Red first: `test_r1a_a_process_that_missed_a_commit_converges_on_one_reconcile_pass` and `test_r1b_a_process_that_missed_a_commit_converges_without_a_restart` failed at the base, where no reconcile exists (LG-1993 T1, commit f83dffd3); the spec `03` carries dated notes for FR-268 and FR-269. Gate evidence is in LG-1993: the SOLO gate at `d290abc9` (pytest "14 failed, 7031 passed, 22 skipped" = the 13 item-31 docs-audit failures plus one NFR-499 census red, ruled (a) by "2026-11-04 03:09:02 GMT" and repaired test-file-only at `30de1864`, re-run green) and the final head `29264dcf` (frontend all rc 0, vitest 905 of 905; demo designed stop 1688 s, dislocation #1 609 s).

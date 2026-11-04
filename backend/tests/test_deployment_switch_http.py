@@ -15,8 +15,11 @@ the seeded Rating Versions carry a hash and no blob (the PREPARE-hydration check
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import threading
+import time
 from collections.abc import Awaitable, Callable, Iterator
+from contextlib import contextmanager
 from typing import Any
 from uuid import UUID
 
@@ -36,6 +39,7 @@ from app.platform.deployment_switch import (
     SwitchMessage,
     SwitchSubscription,
     build_switch_client,
+    switch_stack,
 )
 
 # The Slice 2 deployment tests' fixtures and helpers, shared rather than copied.
@@ -82,7 +86,9 @@ class _Peer:
         self._thread = threading.Thread(target=self._loop.run_forever, daemon=True)
         self._thread.start()
         self._client = build_switch_client(settings.redis_url.get_secret_value())
-        switch = RedisSwitch(self._client, f"{settings.environment.value}:{settings.tenant_id}")
+        switch = RedisSwitch(
+            self._client, switch_stack(settings.environment.value, settings.tenant_id)
+        )
         kind = _DeafToCommit if deaf_to_commit else SwitchMember
         self.process = process
         self._subscription = SwitchSubscription(
@@ -242,3 +248,227 @@ async def test_a_deploy_is_not_acknowledged_by_a_process_serving_only_another_en
     switch = done.json()["switch"]
     assert "prod-only:7:1" not in switch["processes"]
     assert switch["receivers"] == 1
+
+
+# --- the reconcile (SL-1992, FD-1823; FR-268, FR-269) ------------------------------------------
+#
+# Written red first. B is `Settings.deployment_reconcile_seconds`; a test sets it through
+# `model_copy(update=...)`, which at the base (no such field) is silently ignored, so the base
+# runs on its absence of any reconcile and not on a settings error.
+
+
+@contextmanager
+def _app(settings: Settings, seconds: int) -> Iterator[TestClient]:
+    """The app inside its lifespan. A failing test body is reported as itself: at the base a
+    dropped pub/sub connection also fails the lifespan's shutdown, which would mask it."""
+    tuned = settings.model_copy(update={"deployment_reconcile_seconds": seconds})
+    app_client = TestClient(create_app(tuned), raise_server_exceptions=False)
+    app_client.__enter__()
+    try:
+        yield app_client
+    except BaseException:
+        with contextlib.suppress(Exception):
+            app_client.__exit__(None, None, None)
+        raise
+    app_client.__exit__(None, None, None)
+
+
+class _DeafWhenSet(SwitchMember):
+    """The app's own member: `_DeafToCommit`, but deaf only while `deaf` is set."""
+
+    deaf = False
+
+    async def handle(self, message: SwitchMessage) -> bool:
+        if self.deaf and message.phase == "commit":
+            return False
+        return await super().handle(message)
+
+
+@pytest.fixture
+def switchable_app_member(monkeypatch: pytest.MonkeyPatch) -> Iterator[type[_DeafWhenSet]]:
+    from app import main as main_module
+
+    monkeypatch.setattr(main_module, "SwitchMember", _DeafWhenSet)
+    _DeafWhenSet.deaf = False
+    yield _DeafWhenSet
+    _DeafWhenSet.deaf = False
+
+
+@pytest.fixture
+def subscriptions(monkeypatch: pytest.MonkeyPatch) -> list[SwitchSubscription]:
+    """The app's own `SwitchSubscription`, recorded as the lifespan builds it."""
+    from app import main as main_module
+
+    seen: list[SwitchSubscription] = []
+
+    class _Recorded(SwitchSubscription):
+        def __init__(self, *args: Any, **kwargs: Any) -> None:
+            super().__init__(*args, **kwargs)
+            seen.append(self)
+
+    monkeypatch.setattr(main_module, "SwitchSubscription", _Recorded)
+    return seen
+
+
+async def _until(check: Callable[[], Awaitable[bool]], seconds: float) -> bool:
+    deadline = time.monotonic() + seconds
+    while time.monotonic() < deadline:
+        if await check():
+            return True
+        await asyncio.sleep(0.1)
+    return await check()
+
+
+def _live_id(client: TestClient, workspace_id: UUID, env: str) -> str | None:
+    entry = client.app.state.live_refs.get(workspace_id, env)  # type: ignore[attr-defined]
+    return None if entry is None else str(entry.deployment_id)
+
+
+async def _two_deploys_the_second_missed(
+    client: TestClient,
+    switchable: type[_DeafWhenSet],
+    api_settings: Settings,
+    database: Any,
+    workspace_id: UUID,
+    seat: Any,
+) -> tuple[str, str]:
+    """Deploy 1 is acknowledged by the app; deploy 2 commits in the DB and the app misses it."""
+    deployer = await seat("deployer")
+    first = await approved_version(database, workspace_id, deployer.id)
+    second = await approved_version(database, workspace_id, deployer.id)
+    one = deploy(client, deployer, "dev", first)
+    assert one.status_code == 201, one.text
+    assert _live_id(client, workspace_id, "dev") == one.json()["id"]
+    switchable.deaf = True
+    peer = _Peer(api_settings, "acking-peer:6:1", _hydrates)
+    try:
+        two = deploy(client, deployer, "dev", second)
+    finally:
+        peer.stop()
+    assert two.status_code == 201, two.text
+    stale = [p for p, s in two.json()["switch"]["processes"].items() if s == "possibly_stale"]
+    assert len(stale) == 1, two.json()["switch"]
+    assert stale[0] != "acking-peer:6:1", two.json()["switch"]
+    return one.json()["id"], two.json()["id"]
+
+
+@pytest.mark.req("FR-268")
+@pytest.mark.asyncio
+async def test_r1b_a_process_that_missed_a_commit_converges_without_a_restart(
+    api_settings: Settings,
+    database: Any,
+    workspace_id: UUID,
+    seat: Any,
+    switchable_app_member: type[_DeafWhenSet],
+) -> None:
+    with _app(api_settings, 1) as client:
+        _, newest = await _two_deploys_the_second_missed(
+            client, switchable_app_member, api_settings, database, workspace_id, seat
+        )
+
+        async def converged() -> bool:
+            return _live_id(client, workspace_id, "dev") == newest
+
+        assert await _until(converged, 1 + 5), (
+            f"live still names {_live_id(client, workspace_id, 'dev')}, not {newest}"
+        )
+
+
+@pytest.mark.req("FR-268")
+@pytest.mark.asyncio
+async def test_r1c_a_resubscribe_runs_a_pass_at_once_not_at_the_next_tick(
+    api_settings: Settings,
+    database: Any,
+    workspace_id: UUID,
+    seat: Any,
+    switchable_app_member: type[_DeafWhenSet],
+    subscriptions: list[SwitchSubscription],
+) -> None:
+    """B is 30 s (the ceiling), so only the reconnect can converge inside the margin. The
+    connection is dropped in-process: `CLIENT KILL` acts on the whole Redis server and would drop
+    every other slot's subscribers."""
+    with _app(api_settings, 30) as client:
+        previous, newest = await _two_deploys_the_second_missed(
+            client, switchable_app_member, api_settings, database, workspace_id, seat
+        )
+        assert _live_id(client, workspace_id, "dev") == previous, "B is 30 s: no tick has run"
+        (subscription,) = subscriptions
+        pubsub = subscription._pubsub
+        assert pubsub.connection is not None
+        client.portal.call(pubsub.connection.disconnect)  # type: ignore[union-attr]
+
+        async def converged() -> bool:
+            return _live_id(client, workspace_id, "dev") == newest
+
+        assert await _until(converged, 5), (
+            f"live still names {_live_id(client, workspace_id, 'dev')} after the reconnect"
+        )
+
+
+@pytest.mark.req("FR-268")
+@pytest.mark.asyncio
+async def test_r2_an_environment_created_after_start_is_discovered(
+    api_settings: Settings, database: Any, workspace_id: UUID, seat: Any
+) -> None:
+    from uuid import uuid4
+
+    from app.platform.deployment_switch import process_id
+
+    admin = await seat("admin")
+    deployer = await seat("deployer")
+    ref = await approved_version(database, workspace_id, deployer.id)
+    slug = f"late-{uuid4().hex[:8]}"
+    redis_client = build_switch_client(api_settings.redis_url.get_secret_value())
+    roster_of = RedisSwitch(
+        redis_client, switch_stack(api_settings.environment.value, api_settings.tenant_id)
+    ).for_environment(slug)
+    try:
+        with _app(api_settings, 1) as client:
+            made = client.post(
+                "/api/v1/environments",
+                json={"slug": slug, "name": slug, "promotion_order": 4},
+                headers=admin.headers,
+            )
+            assert made.status_code == 201, made.text
+
+            async def joined() -> bool:
+                return process_id() in await roster_of.roster()
+
+            assert await _until(joined, 1 + 5), "the app's process never joined the new roster"
+            done = deploy(client, deployer, slug, ref)
+            assert done.status_code == 201, done.text
+            assert done.json()["switch"]["processes"][process_id()] == "committed"
+            assert _live_id(client, workspace_id, slug) == done.json()["id"]
+    finally:
+        await roster_of.leave(process_id())
+        await redis_client.aclose()
+
+
+@pytest.mark.req("FR-268")
+@pytest.mark.asyncio
+async def test_r3c_a_dead_listener_is_restarted_by_the_next_pass(
+    api_settings: Settings,
+    database: Any,
+    workspace_id: UUID,
+    seat: Any,
+    subscriptions: list[SwitchSubscription],
+) -> None:
+    deployer = await seat("deployer")
+    ref = await approved_version(database, workspace_id, deployer.id)
+    with _app(api_settings, 1) as client:
+        (subscription,) = subscriptions
+        task = subscription._task
+        assert task is not None
+        assert not task.done()
+        client.portal.call(task.cancel)  # type: ignore[union-attr]
+
+        async def listening() -> bool:
+            current = subscription._task
+            return current is not None and not current.done()
+
+        assert await _until(listening, 1 + 5), "the listener task is still dead"
+        done = deploy(client, deployer, "dev", ref)
+        assert done.status_code == 201, done.text
+        from app.platform.deployment_switch import process_id
+
+        assert done.json()["switch"]["processes"][process_id()] == "committed"

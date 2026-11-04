@@ -24,6 +24,7 @@ from sqlalchemy.ext.asyncio import (
 )
 
 from app.config import Settings
+from app.db.immutability import assert_least_privilege
 from app.observability.logging import get_logger
 
 __all__ = ["Database", "database_probe", "reading"]
@@ -76,6 +77,12 @@ class Database:
         """
         async with self._sessionmaker() as session, session.begin():
             yield session
+
+    async def assert_least_privilege(self) -> None:
+        """Refuse (`LeastPrivilegeError`) unless this connection is the application's, not an
+        owner's, and the immutability triggers are intact (FR-44, FD-1729)."""
+        async with self._engine.connect() as connection:
+            await assert_least_privilege(connection)
 
     async def dispose(self) -> None:
         await self._engine.dispose()

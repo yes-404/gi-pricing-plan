@@ -25,7 +25,7 @@ from test_rating_dislocation import _Spy, _with_secret_step
 from test_rating_score import _algorithm_payload, _FakeResolver, _version
 
 from model_schema.dislocation import ChangeGroup, DislocationSpec
-from model_schema.rating import Pins
+from model_schema.rating import Pins, RatingAlgorithm, diff_algorithms
 from model_schema.refs import ArtifactRef
 from pricing_core.rating import analysis
 from pricing_core.rating.analysis import (
@@ -629,7 +629,7 @@ def test_reconciliation_refuses_plain_rounding_allocation(
     with pytest.raises(AttributionError) as exc:
         _run(_candidate_payload(*_THREE), table=True)
     assert exc.value.code == "ATTRIBUTION_RECONCILIATION_FAILED"
-    assert "Q0" in str(exc.value)
+    assert "Q0" not in str(exc.value)
 
 
 @pytest.mark.req("FR-1397")
@@ -646,7 +646,7 @@ def test_reconciliation_refuses_a_shapley_value_perturbed_by_one_minor_unit(
     with pytest.raises(AttributionError) as exc:
         _run(_candidate_payload(*_THREE), table=True)
     assert exc.value.code == "ATTRIBUTION_RECONCILIATION_FAILED"
-    assert "Q000" in str(exc.value)
+    assert "Q000" not in str(exc.value)
 
 
 @pytest.mark.req("FR-1397")
@@ -659,7 +659,7 @@ def test_reconciliation_refuses_isolated_plus_residual_off_by_one(
     with pytest.raises(AttributionError) as exc:
         _run(_candidate_payload(*_THREE), table=True)
     assert exc.value.code == "ATTRIBUTION_RECONCILIATION_FAILED"
-    assert "Q000" in str(exc.value)
+    assert "Q000" not in str(exc.value)
 
 
 # ---------------------------------------------------------------------------
@@ -881,8 +881,79 @@ def test_attribute_fails_naming_a_policy_not_quoted_in_some_subset() -> None:
     with pytest.raises(AttributionError) as exc:
         _run(cand, book=book)
     assert exc.value.code == "ATTRIBUTION_RECONCILIATION_FAILED"
-    assert "Q000" in str(exc.value)
+    assert "Q000" not in str(exc.value)
     assert "c1" in str(exc.value)
+
+
+def _no_premium_refusal() -> AttributionError:
+    """The subset no-premium raise: a policy declined under one mixed subset (DP-S3-7 (a))."""
+
+    def edit_cap(alg: dict[str, Any]) -> None:
+        _step(alg, "s_decl_cap")["condition"] = "office_premium_minor <= sanity_cap_minor - 1000"
+
+    def edit_office(alg: dict[str, Any]) -> None:
+        _step(alg, "s_office")["expr"] = "risk_premium_minor * expense_factor - 600"
+
+    payable = _hand_values(0, _book(4))
+    caps = [round(payable[q] / 1.05) + 500 for q in sorted(payable)]
+    with pytest.raises(AttributionError) as exc:
+        _run(
+            _candidate_payload(edit_cap, edit_office),
+            book=_book(4, sanity_cap_minor=caps),
+        )
+    return exc.value
+
+
+def _reconcile_refusal(
+    monkeypatch: pytest.MonkeyPatch, breakage: str
+) -> tuple[AttributionError, list[int]]:
+    """A per-policy `_reconcile` raise, and the figures its arguments carried."""
+    figures: list[int] = []
+    real_reconcile = analysis._reconcile
+
+    def spy(
+        label: str, parts: Any, total: int, isolated: Any, residual: int, **kwargs: Any
+    ) -> None:
+        figures[:] = [total, sum(parts) if parts is not None else 0, sum(isolated) + residual]
+        real_reconcile(label, parts, total, isolated, residual, **kwargs)
+
+    monkeypatch.setattr(analysis, "_reconcile", spy)
+    if breakage == "parts":
+        real_allocate = analysis._allocate
+
+        def perturbed(numerators: list[int], k: int) -> list[int]:
+            parts = real_allocate(numerators, k)
+            return [parts[0] + 1, *parts[1:]]
+
+        monkeypatch.setattr(analysis, "_allocate", perturbed)
+    else:
+        real_residual = analysis._residual
+        monkeypatch.setattr(
+            analysis, "_residual", lambda total, isolated: real_residual(total, isolated) + 1
+        )
+    with pytest.raises(AttributionError) as exc:
+        _run(_candidate_payload(*_THREE), table=True)
+    return exc.value, figures
+
+
+@pytest.mark.req("FR-1397")
+@pytest.mark.parametrize("raise_site", ["no_premium", "parts", "isolated"])
+def test_per_policy_attribution_errors_name_no_policy_and_no_figure(
+    monkeypatch: pytest.MonkeyPatch, raise_site: str
+) -> None:
+    """NFR-499 (persistence, not only logs): a per-policy refusal carries neither the policy's
+    `quote_id` nor its figures, and is a `CodedError` so the allow-list keeps its text."""
+    if raise_site == "no_premium":
+        error, figures = _no_premium_refusal(), []
+    else:
+        error, figures = _reconcile_refusal(monkeypatch, raise_site)
+        assert any(abs(f) >= 100 for f in figures), "no figure large enough to be searched for"
+    for text in (str(error), safe_error_text(error)):
+        assert "Q0" not in text, text
+        for figure in figures:
+            if abs(figure) >= 100:
+                assert str(figure) not in text, text
+    assert isinstance(error, CodedError)
 
 
 @pytest.mark.req("FR-1398")
@@ -1382,6 +1453,76 @@ def test_mount_ports_re_mapped_forms() -> None:
     both = derived(_e_repoint, remap, sub_graphs=(_NCD5,))
     assert both.kind == "step_changed"
     assert both.description == f"{_M_NCD_REPOINT}; ports re-mapped"
+
+
+def _e_mount_unconsumed(
+    *, ref: str = _NCD4, purposes: list[str] | None = None, outputs: dict[str, str] | None = None
+) -> Callable[[dict[str, Any]], None]:
+    """`_e_mounted` with nothing consuming the mount's output (`s_office` keeps its own `expr`), so
+    a `purposes` selector is a valid draft: a purpose-only mount that `s_office` consumed would be
+    refused by FR-218. The three arguments are the mount's own selectors."""
+
+    def edit(alg: dict[str, Any]) -> None:
+        _e_mounted(alg)
+        alg["steps"] = [
+            copy.deepcopy(_step(_algorithm_payload(), "s_office"))
+            if s["step_id"] == "s_office"
+            else s
+            for s in alg["steps"]
+        ]
+        mount = alg["sub_graphs"][0]
+        mount["ref"] = ref
+        mount["outputs"] = outputs or {}
+        if purposes is not None:
+            mount["purposes"] = purposes
+
+    return edit
+
+
+@pytest.mark.req("FR-219")
+def test_mount_purposes_alone_is_one_structural_mount_change_with_before_equal_after() -> None:
+    """The structural diff (`rating.py`, `_diff_mounts`) keeps a mount whose `ref` did not move when
+    only `purposes` changed: one change, `before == after`, `purposes_changed` and not
+    `ports_changed` (`RL-1344` acceptance 5). The wording (FR-1399) is the next test's."""
+    before = RatingAlgorithm.model_validate(_candidate_payload(_e_mount_unconsumed()))
+    after = RatingAlgorithm.model_validate(
+        _candidate_payload(_e_mount_unconsumed(purposes=["mid_term_adjustment"]))
+    )
+    (mount,) = diff_algorithms(before, after).sub_graph_mounts
+    assert mount.mount_point == "m_ncd"
+    assert str(mount.before) == str(mount.after) == _NCD4
+    assert (mount.ports_changed, mount.purposes_changed) == (False, True)
+
+
+@pytest.mark.req("FR-1399")
+def test_mount_purposes_changed_forms() -> None:
+    """FD-1768 (DP-5, DP-6): a change to `purposes` is worded as one, never as `ports re-mapped`.
+    Purposes alone: `<mp>: mount purposes changed (<ref>)`; with a re-map: the re-map form plus
+    `; purposes changed`; with a re-point: the re-point form plus `; purposes changed`. Each is
+    one `step_changed`."""
+    selector = ["mid_term_adjustment"]
+
+    def derived(*, to: Callable[[dict[str, Any]], None], sub_graphs: tuple[str, ...]) -> Any:
+        base = _candidate_payload(_e_mount_unconsumed())
+        cand = _candidate_payload(to)
+        changes = asyncio.run(
+            derive_changes(
+                _mounted_version(_NCD4),
+                _candidate_version(sub_graphs=sub_graphs),
+                _resolver(cand, base=base),
+            )
+        )
+        (mount,) = _mount_changes(changes)
+        assert mount.kind == "step_changed"
+        return mount
+
+    alone = derived(to=_e_mount_unconsumed(purposes=selector), sub_graphs=(_NCD4,))
+    assert alone.description == f"m_ncd: mount purposes changed ({_NCD4})"
+    remap = {"ncd_factor": "ncd_f2"}
+    both = derived(to=_e_mount_unconsumed(purposes=selector, outputs=remap), sub_graphs=(_NCD4,))
+    assert both.description == f"m_ncd: mount ports re-mapped ({_NCD4}); purposes changed"
+    repoint = derived(to=_e_mount_unconsumed(ref=_NCD5, purposes=selector), sub_graphs=(_NCD5,))
+    assert repoint.description == f"{_M_NCD_REPOINT}; purposes changed"
 
 
 @pytest.mark.req("FR-1398")

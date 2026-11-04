@@ -56,7 +56,7 @@ from pricing_core.rating.compile import ArtifactResolver, ResolvedArtifact, comp
 from pricing_core.rating.ladder import RUNG_ORDER
 from pricing_core.rating.runtime import CompiledBundle, load_bundle
 from pricing_core.rating.score import score_batch
-from pricing_core.safe_error import safe_error_text
+from pricing_core.safe_error import CodedError, safe_error_text
 
 __all__ = [
     "AttributionError",
@@ -66,6 +66,7 @@ __all__ = [
     "dislocate",
     "dislocation_frame",
     "estimate_attribution_ratings",
+    "mover_change_pct",
     "read_portfolio",
     "select_movers",
     "summarise_dislocation",
@@ -73,6 +74,7 @@ __all__ = [
 
 _STAMPED: Final[tuple[str, ...]] = ("purpose", "effective_date", "rating_version_ref")
 _EXPOSURE_SCALE: Final = 6
+_MOVER_PCT_PLACES: Final = 6
 #: The frame's own columns (RL-1402 S2) but `quote_id`; a portfolio column named as one is refused.
 _FRAME_COLUMNS: Final[tuple[str, ...]] = (
     "baseline_outcome",
@@ -305,6 +307,15 @@ def _banded(frame: pl.DataFrame) -> pl.DataFrame:
     return _compared(frame).filter(pl.col("baseline_minor") > 0)
 
 
+def mover_change_pct(change_minor: int, baseline_minor: int) -> Decimal:
+    """A mover's `change_pct` (03 §4.6): change ÷ baseline x 100, exact on the integers, rounded
+    once to 6 places **away from zero**, so a selected mover never reads below its threshold
+    (the rule of `abs_change_pct_quantiles`). `baseline_minor` is positive: movers are banded."""
+    scaled = change_minor * 100 * 10**_MOVER_PCT_PLACES
+    magnitude = -(-abs(scaled) // baseline_minor)  # ceiling division on the absolute value
+    return Decimal(magnitude if scaled >= 0 else -magnitude).scaleb(-_MOVER_PCT_PLACES)
+
+
 def select_movers(frame: pl.DataFrame, spec: DislocationSpec) -> pl.DataFrame:
     """FR-263's movers: banded policies whose |change %| is at least `mover_threshold_pct`,
     decided on ints; by |pct| descending, |change_minor| descending, then `quote_id`."""
@@ -507,9 +518,12 @@ _PIN_KINDS: Final[tuple[str, ...]] = (
 _ATTRIBUTION_FAILED: Final = "ATTRIBUTION_RECONCILIATION_FAILED"
 
 
-class AttributionError(ValueError):
+class AttributionError(CodedError):
     """A refusal of `derive_changes` or `attribute`, carrying the code the platform maps:
-    `VALIDATION_FAILED`, `BUNDLE_COMPILE_FAILED` or `ATTRIBUTION_RECONCILIATION_FAILED`."""
+    `VALIDATION_FAILED`, `BUNDLE_COMPILE_FAILED` or `ATTRIBUTION_RECONCILIATION_FAILED`.
+
+    A `CodedError` (NFR-499): its message is stored and logged by the allow-list, so a per-policy
+    refusal names no `quote_id` and no policy figure, only the derived change ids."""
 
     def __init__(self, code: str, message: str) -> None:
         super().__init__(message)
@@ -649,13 +663,23 @@ async def _derive(
             kind = "step_removed"
             text = f"{point}: mount removed ({mount.before})"
         elif mount.before == mount.after:
+            # The ref did not move, so the diff kept this mount for ports, purposes or both
+            # (FR-219); each is worded once, ports first (FR-1399, FD-1768).
             kind = "step_changed"
-            text = f"{point}: mount ports re-mapped ({mount.after})"
+            text = (
+                f"{point}: mount ports re-mapped ({mount.after})"
+                if mount.ports_changed
+                else f"{point}: mount purposes changed ({mount.after})"
+            )
+            if mount.ports_changed and mount.purposes_changed:
+                text += "; purposes changed"
         else:
             kind = "step_changed"
             text = f"{point}: mount {mount.before} → {mount.after}"
             if mount.ports_changed:
                 text += "; ports re-mapped"
+            if mount.purposes_changed:
+                text += "; purposes changed"
         drafts.append(
             _Change(
                 BundleDelta(id="", kind=kind, description=text),
@@ -985,20 +1009,39 @@ def _residual(total: int, isolated: Sequence[int]) -> int:
 
 
 def _reconcile(
-    label: str, parts: Sequence[int] | None, total: int, isolated: Sequence[int], residual: int
+    label: str,
+    parts: Sequence[int] | None,
+    total: int,
+    isolated: Sequence[int],
+    residual: int,
+    *,
+    figures: bool = True,
 ) -> None:
-    """FR-1397: the parts sum to the total, and the isolated figures plus the residual do too."""
+    """FR-1397: the parts sum to the total, and the isolated figures plus the residual do too.
+
+    `figures=False` is the per-policy call: its message names no policy figure (NFR-499, DP-4 (a));
+    the portfolio's aggregate figures name no policy and stay.
+    """
     if parts is not None and sum(parts) != total:
+        detail = (
+            f"sum to {sum(parts)} minor units, not the total change {total}"
+            if figures
+            else "do not sum to the total change"
+        )
         raise AttributionError(
             _ATTRIBUTION_FAILED,
-            f"attribution does not reconcile for {label}: the Shapley parts sum to "
-            f"{sum(parts)} minor units, not the total change {total}",
+            f"attribution does not reconcile for {label}: the Shapley parts {detail}",
         )
     if sum(isolated) + residual != total:
+        detail = (
+            f"sum to {sum(isolated) + residual} minor units, not the total change {total}"
+            if figures
+            else "do not sum to the total change"
+        )
         raise AttributionError(
             _ATTRIBUTION_FAILED,
             f"attribution does not reconcile for {label}: the isolated figures plus the "
-            f"residual sum to {sum(isolated) + residual} minor units, not the total change {total}",
+            f"residual {detail}",
         )
 
 
@@ -1117,8 +1160,8 @@ async def attribute(
                 ids = ", ".join(c.id for c in _members(groups, mask)) or "no changes"
                 raise AttributionError(
                     _ATTRIBUTION_FAILED,
-                    f"policy {q} is quoted in the baseline and the candidate but has no premium "
-                    f"under the subset bundle for changes [{ids}]",
+                    "one policy of the book is quoted in the baseline and the candidate but has "
+                    f"no premium under the subset bundle for changes [{ids}]",
                 )
 
     isolated_sum = [0] * k
@@ -1127,13 +1170,16 @@ async def attribute(
     part_sum = [0] * k
     baseline_total = total_change = 0
     reverse_masks = [full ^ ((1 << i) - 1) for i in range(k + 1)]  # the last k-i groups
+    per_policy = (
+        "one policy of the book (changes [" + ", ".join(c.id for c in _members(groups, full)) + "])"
+    )
     for q in compared:
         v = {mask: int(values[mask][q]["minor"]) for mask in masks}
         total = v[full] - v[0]
         isolated = [v[1 << i] - v[0] for i in range(k)]
         cumulative = [v[(1 << (i + 1)) - 1] - v[(1 << i) - 1] for i in range(k)]
         parts = _allocate(_shapley_numerators(v, k), k) if shapley else None
-        _reconcile(q, parts, total, isolated, _residual(total, isolated))
+        _reconcile(per_policy, parts, total, isolated, _residual(total, isolated), figures=False)
         baseline_total += v[0]
         total_change += total
         for i in range(k):
