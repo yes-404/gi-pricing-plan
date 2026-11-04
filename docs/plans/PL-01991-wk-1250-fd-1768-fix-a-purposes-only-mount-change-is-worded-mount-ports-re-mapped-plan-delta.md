@@ -3,7 +3,7 @@ id: PL-1991
 family: plan
 kind: map
 title: WK-1250 — FD-1768's fix, a sub-graph mount whose purposes alone changed is worded "mount ports re-mapped" in the declared changes (FR-1399), SL-1989 — a dated Work-plan delta
-status: draft                   # draft → active → superseded | retired (§1.2a) — L1: draft→active rides the slice's PR
+status: active                  # draft → active → superseded | retired (§1.2a) — L1: draft→active rides the slice's PR
 created: 2026-11-03             # filed under working id 8298
 owner: planner
 tree: a8ef6f19c0be1142b0ac9dea88086f1ce6f95cbe
@@ -16,6 +16,8 @@ relates: [PL-1254, FD-1768, RL-1686, RL-1344, FR-1399]
 ---
 
 (Minted 2026-11-04 from working id 8298, with SL-1989 from working id 8296 and LG-1990 from working id 8297, on the lead's mint order and the maintainer's GO "2026-11-03 17:30:53 GMT", with the mint tool of record `mint-repoint.py` (sha256 `4d83681a`); finding FD-1768; executed on branch `sl-8296-wk1250-fd1768-purposes-wording`.) The blockquote below is the plan's draft-time wording and keeps the working ids.)
+
+2026-11-04 — activated by its slice's PR (L1), to-lead 2026-11-04 01:30:18 GMT ruling (a).
 
 # PL-1991 — WK-1250: FD-1768's fix. A purposes-only mount change is worded "mount ports re-mapped" (SL-1989, a dated Work-plan delta)
 

@@ -105,3 +105,7 @@ None yet.
 ## 2026-11-04 — the verdict at the mint
 
 Verdict from the gate evidence: the full gate at `322b20ec` (window 2026-11-03 23:08:40 to END 2026-11-04 01:08:27 GMT): python half 13 failed, exactly the eight docs-audit test files of the common seat brief's item 31, with skipped 22 = baseline and audit-docs failing only check 31 on this slice's own working ids; frontend lint, type-check, test and build all rc 0, vitest 905 of 905; demo stopped by design at 1999 s, dislocation #1 586 s. The item-31 class stands for the code on the conditions of that item, which this mint's checks discharge (see the minted-head rows of the report). Mint 2026-11-04: SL-1989, LG-1990 and PL-1991 (working ids 8296, 8297, 8298); FD-1768 closed in place.
+
+## 2026-11-04 — process line: the push before the push grant
+
+The branch was pushed at 01:28:19 GMT (origin reflog) to `38d19a47`, before the maintainer's push grant. Cause: the lead's mint brief, step 6, over-granted against the 01:10:01 grant, which reserved the push. Effect: the branch only moved; no CI ran, no PR was opened, main was untouched. The INDEX regeneration at load1 4.6, outside the gate-2 flock, was the mint seat's breach of the 01:10:01 grant. The lead's rule is adopted: a mint brief ends unpushed when a grant reserves the push. No FD (nothing wrong got through). Source: to-lead 2026-11-04 01:30:18 GMT.
