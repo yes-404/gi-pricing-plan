@@ -1,29 +1,29 @@
 ---
-id: LG-8318
+id: LG-2006
 family: ledger
-title: WK-1178 slice SL-8317 — FD-2001, scripts/bench-rating.py --http serves the login DSN (slice ledger)
+title: WK-1178 slice SL-2005 — FD-2001, scripts/bench-rating.py --http serves the login DSN (slice ledger)
 status: active                 # active → closed (§1.2a)
-created: 2026-11-04
+created: 2026-11-04             # filed under working id 8318
 owner: executor
 tree: 484b678730fe84ce827882d79459dcaf9dfb7b50   # sl-8317-fd2001-serve-dsn, the fix commit this was written against (base 181403d923a5ef7c5cde1533890421ebd1762b36)
-slice: SL-8317
+slice: SL-2005
 phase: P2
 work: WK-1178
-plans: [PL-8316]
+plans: [PL-2004]
 corrected_by: []
-relates: [FD-2001, FD-1729, PL-8316, FR-44, NFR-489]
+relates: [FD-2001, FD-1729, PL-2004, FR-44, NFR-489]
 ---
 
-# LG-8318 — WK-1178 slice SL-8317: `bench-rating.py --http` serves the login DSN
+# LG-2006 — WK-1178 slice SL-2005: `bench-rating.py --http` serves the login DSN
 
-**GO:** to-lead "2026-11-04 16:42:29 GMT" (GO on PL 8316 / SL 8317; DP-1 (b), DP-2 (a), DP-3 (a); A1–A8 as proposed), amended by the entry of 2026-11-04 16:44:45 GMT (the seat runs on the evening of Wed 4 Nov; the gate is a separate SOLO seat after the executor's FINAL).
+**GO:** to-lead "2026-11-04 16:42:29 GMT" (GO on PL-2004 / SL-2005; DP-1 (b), DP-2 (a), DP-3 (a); A1–A8 as proposed), amended by the entry of 2026-11-04 16:44:45 GMT (the seat runs on the evening of Wed 4 Nov; the gate is a separate SOLO seat after the executor's FINAL).
 **MERGE-ACK:** (added at merge.)
 
 ## Tasks
 
 ### Scope
 
-`PL-8316` (working id, written `PL 8316` in prose), "SL 8317 — FD-2001's fix: `scripts/bench-rating.py --http` serves the login DSN". Requirements: NFR-489 (the harness measures it; the new test carries its marker), FR-44 (read only — the refusal the harness now honours). Register: FD-2001 closes at the merge (A8, the mint's).
+`PL-2004` (filed under working id 8316), "SL-2005 — FD-2001's fix: `scripts/bench-rating.py --http` serves the login DSN". Requirements: NFR-489 (the harness measures it; the new test carries its marker), FR-44 (read only — the refusal the harness now honours). Register: FD-2001 closes at the merge (A8, the mint's).
 
 Rulings bound: DP-1 (b) `--serve-dsn`, default `os.environ.get("GIP_TEST_APP_DATABASE_URL")`, `parser.error` after parse when `--http` has no serve DSN, naming `--serve-dsn` and FD-1729; non-`--http` runs unchanged. DP-2 (a) `_seed` and `_measure_fetch` keep `--dsn` (the owner). DP-3 (a) the gate is a separate SOLO seat, not this executor's.
 
@@ -68,9 +68,9 @@ Not run by the executor (DP-3 (a)): the full SOLO gate, both halves, runs in a s
   - Summary: `4 failed, 1 passed, 2 warnings in 1.51s`, rc=1.
   - Committed alone as `f8e65afe`.
 - 2026-11-04 17:33 UTC — R2: the fix, `484b6787`. `--serve-dsn` beside `--dsn`; `parser.error` naming `--serve-dsn` and FD-1729 when `--http` has none; `_run_http_sweep`'s one `_serve(` call passes `dsn=args.serve_dsn`; `_serve`'s docstring and the module usage block say the DSN is the login DSN. `_seed` and `_measure_fetch` calls unchanged.
-- **A1, the write set:** `git diff --name-only 181403d9 HEAD` at the head that carries this ledger: `backend/tests/test_bench_rating_serve_dsn.py`, `docs/ledgers/LG-08318-wk-1178-slice-sl-8317-fd-2001-bench-rating-http-serves-the-login-dsn-slice-ledger.md`, `scripts/bench-rating.py`.
+- **A1, the write set:** `git diff --name-only 181403d9 HEAD` at the head that carries this ledger: `backend/tests/test_bench_rating_serve_dsn.py`, `docs/ledgers/LG-02006-wk-1178-slice-sl-8317-fd-2001-bench-rating-http-serves-the-login-dsn-slice-ledger.md`, `scripts/bench-rating.py`.
 
-- **audit-docs** (`run-heavy.sh --light`, tree `sl-8317` at the commit before this ledger's own, log first line `head=484b678730fe84ce827882d79459dcaf9dfb7b50` … `rc=1`): `FAILED (2):` (1) `check 31: gap in the full allocation between 2002 and 8316` — the working ids PL 8316, SL 8317, LG 8318, expected until the mint; (2) `check 39: docs/INDEX.md is stale against a fresh regeneration (2186 governed record(s))` — this ledger is a new governed record and `docs/INDEX.md` is regenerated at the mint, not by the executor (the brief). The check 32 lines naming LG-8318 and SL-8317 (`does not resolve in docs/INDEX.md`) are the same cause. No other failing line.
+- **audit-docs** (`run-heavy.sh --light`, tree `sl-8317` at the commit before this ledger's own, log first line `head=484b678730fe84ce827882d79459dcaf9dfb7b50` … `rc=1`): `FAILED (2):` (1) `check 31: gap in the full allocation between 2002 and 8316` — the working ids PL-2004, SL-2005, LG-2006, expected until the mint; (2) `check 39: docs/INDEX.md is stale against a fresh regeneration (2186 governed record(s))` — this ledger is a new governed record and `docs/INDEX.md` is regenerated at the mint, not by the executor (the brief). The check 32 lines naming LG-2006 and SL-2005 (`does not resolve in docs/INDEX.md`) are the same cause. No other failing line.
 
 ## PRs
 

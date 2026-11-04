@@ -1,9 +1,9 @@
 ---
-id: PL-8316
+id: PL-2004
 family: plan
 kind: map
-title: WK-1178 — FD-2001's fix, scripts/bench-rating.py --http serves the application a least-privilege DSN and seeds with the owner DSN (--serve-dsn), SL 8317 — a dated Work-plan delta
-status: draft                   # draft → active → superseded | retired (§1.2a) — L1: draft→active rides the slice's PR
+title: WK-1178 — FD-2001's fix, scripts/bench-rating.py --http serves the application a least-privilege DSN and seeds with the owner DSN (--serve-dsn), SL-2005 — a dated Work-plan delta
+status: active                  # draft → active → superseded | retired (§1.2a) — L1: draft→active rides the slice's PR
 created: 2026-11-04             # filed under working id 8316
 owner: planner
 tree: 4daac1586df520b3e8ba12d58a88f12e0ad54034
@@ -15,14 +15,14 @@ corrected_by: []
 relates: [PL-1927, FD-2001, FD-1729, SL-1948, LG-1760, FR-44, NFR-489]
 ---
 
-# PL 8316 — WK-1178: FD-2001's fix. `scripts/bench-rating.py --http` serves the login DSN (SL 8317, a dated Work-plan delta)
+# PL-2004 — WK-1178: FD-2001's fix. `scripts/bench-rating.py --http` serves the login DSN (SL-2005, a dated Work-plan delta)
 
 > **For agentic workers:** this is a **dated Work-plan delta** under Lean P2 L1 (a')
 > (`.claude/roles/planner.md`, "Lean P2"): a new `PL-` that `relates:` WK-1178's plan,
-> `PL-1927` (the FD-1729 slices), and leaves it unedited. It holds one slice row, SL 8317. The
+> `PL-1927` (the FD-1729 slices), and leaves it unedited. It holds one slice row, SL-2005. The
 > executor's skills are `superpowers:test-driven-development` and `.claude/skills/python-test`.
-> PL 8316 and SL 8317 are working ids reserved by the lead, written in space form in prose until
-> the mint. The slice's ledger id is allocated by the lead at seating.
+> PL-2004 and SL-2005 were filed under the working ids 8316 and 8317, reserved by the lead, and
+> minted at the SL-2005 mint. The slice's ledger is LG-2006 (filed under working id 8318).
 
 ## Authority
 
@@ -119,12 +119,12 @@ slice's merge tree. Items 1 and 2 apply to this plan. Items A1 to A8 apply to th
 
 1. **This delta passes the docs checks on its own branch.** At the branch head,
    `python3 scripts/audit-docs.py` prints no failing line except check 31's lines for the working
-   ids PL 8316 and SL 8317, expected until the mint. After the mint, `python3
+   ids PL-2004 and SL-2005, expected until the mint. After the mint, `python3
    scripts/audit-docs.py` and `python3 scripts/doc-index.py --check` exit 0.
 2. **No requirement range.** `grep -nE '(N?FR)-[0-9]+ *(-|to|–) *(N?FR-)?[0-9]+' <this file>`
    prints no line that stands for a set of ids.
 
-The slice, SL 8317:
+The slice, SL-2005:
 
 - **A1. The write set.** `git diff --name-only origin/main...HEAD` lists only
   `scripts/bench-rating.py`, the new `backend/tests/test_bench_rating_serve_dsn.py`, the slice's
@@ -173,7 +173,7 @@ The slice, SL 8317:
 
 ## Tasks
 
-### SL 8317 — FD-2001's fix: `scripts/bench-rating.py --http` serves the login DSN
+### SL-2005 — FD-2001's fix: `scripts/bench-rating.py --http` serves the login DSN
 
 **The row.** Order 1 in this delta. A WK-1178 fix slice after `PL-1927`'s FD-1729 slices
 (`SL-1942`, `SL-1948`), whose startup refusal it adapts to.
@@ -264,13 +264,13 @@ pytest.mark.req("NFR-489")`.
   `_run_http_sweep` (`:1316-1319`), `_serve`'s docstring (`:900-910`), and the module docstring.
 - `backend/tests/test_bench_rating_serve_dsn.py`: new.
 - The slice's `LG-` under `docs/ledgers/`.
-- At the mint: the SL 8317 row under `### WK-1178` in `docs/roadmap.md`, `docs/INDEX.md`, the
+- At the mint: the SL-2005 row under `### WK-1178` in `docs/roadmap.md`, `docs/INDEX.md`, the
   `status:` of this plan, and the FD-2001 closing act (A8).
 
 ## Hand-off (not this plan's writes)
 
 - The rulings on DP-1 to DP-3 belong to the decision-maker; the GO on the row to the maintainer.
-- The SL 8317 roadmap row, the `LG-` id and the mint belong to the lead; the `LG-` to the
+- The SL-2005 roadmap row, the `LG-` id and the mint belong to the lead; the `LG-` to the
   executor; FD-2001's closing act to the auditor; a P3 carry line (the fallback) to the lead.
 - `PL-1927` is not edited.
 
