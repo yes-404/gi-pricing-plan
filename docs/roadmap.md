@@ -555,7 +555,7 @@ surface sits in Phase 1.**
 ## P2 — Rating Engine
 status: active
 opened: 2026-08-14
-target: 2026-11-12
+target: 2026-11-18
 gates: ~
 exit criteria: G1–G6 of [`CR-1212`](closures/CR-01212-plan-review-15-p2-exit-criteria-budget-sequencing-and-the-open-finding-set.md), as accepted by the maintainer 2026-09-28, listed below
 works: WK-668, WK-669, WK-670, WK-671, WK-672, WK-673, WK-674, WK-675, WK-690, WK-693, WK-694, WK-695, WK-696, WK-697, WK-1169, WK-1170, WK-1178, WK-1250
@@ -599,6 +599,8 @@ are therefore a forecast for reference, not targets. No Work, slice, plan, rulin
 a date. The freeze gates limit only what may **enter** P2, never when a start happens.)*
 
 *(Re-dated 2026-11-03, written by the auditor on the lead's instruction — this milestone section is the lead's — quoting the maintainer's entry "2026-11-03 15:38:58 GMT" (`to-lead.md`), which relays the user's order of 15:38 GMT: "move freeze to 10th of Nov and defer the later dates". The interval is 6 days. **Code freeze: Tue 2026-11-10** (~~Wed 2026-11-04~~); **docs freeze: Wed 2026-11-11** (~~Thu 2026-11-05~~); **P2 exit demo: Wed 2026-11-18** (~~Thu 2026-11-12~~). Weekdays read with `date -d`: Tuesday, Wednesday, Wednesday. The superseded dates are struck here, and the list above, a verbatim quotation of the 2026-09-29 entry, stays unedited (`quote-parity.py` refuses an edit inside a blockquote); the scope freeze (Sat 2026-10-03) is untouched, and the Work-close schedule and nfr-bench-1 dates of the entry stand. The `target:` line of the P2 section's front matter (2026-11-12) is not edited here.)*
+
+*(Dated correction, 2026-11-04, docs batch 9, by the auditor, on to-lead "2026-11-04 16:19:01 GMT" (the maintainer's ruling on the P2 plan-review skeleton, batch 9 item 12): P2's front-matter field `target:` at `:558` read `2026-11-12`, stale against the user's order relayed in to-lead "2026-11-03 15:38:58 GMT" (code freeze Tue 10 Nov, docs freeze Wed 11 Nov, exit demo Wed 18 Nov); it is set to `2026-11-18` in place and its previous value, `2026-11-12`, is recorded here. The re-dated line above stays as written.)*
 
 #### Phase 2 status
 
@@ -3439,6 +3441,8 @@ relates: [PL-1912, PL-1544, LG-1841, SL-1711]
 ```
 
 One full run of `PL-1544` §"Rehearsal checklist", rows 0 to 9 as written there (row 6, the browser path `SL-1711` waived, included), plus row 6b, the WF-701 browser check that PL-1912 adds, on `main` at the exit tree on Monday 9 November 2026; order 0–6, 6b, 7–9. Cut as one WK-1178 slice by the maintainer's entry "2026-10-25 11:32:17 GMT — Maintainer: §14 note r5 — the six owed rulings, decided now (dated lines for the review's rows)", line 6 (E2), in the CLAUDE.md §14 plan review before the 12 Nov exit demo. Its ledger LG 8226 records each row's command, output and tree; WF-701's timing lines are an observation with no budget (PL-1912 E1 item 3). No code, spec or plan file changes. **Activation needs:** PL-1912 minted; the exit tree named by the lead; no gate slot held and no other run on the box (row 1); the lead's GO. *(Row cut 2026-10-25 by the planner in PL-1912; working ids SL-1913 and LG 8226 reserved by the lead in `eta.md`.)*
+
+*(Dated correction, 2026-11-04, docs batch 9, by the auditor, on to-lead "2026-11-03 15:40:02 GMT" ruling (2), "SL-1913 rehearsal Mon 16 Nov accepted", found by plan-sl1913 and verified by the lead: SL-1913's rehearsal is **Mon 16 Nov 2026**, not Mon 9 Nov, by PL-1912's dated delta of 2026-11-03 (`docs/plans/PL-01912-…`, the delta line at `:224-247`) following the user's calendar move of "2026-11-03 15:38:58 GMT" (code freeze Tue 10 Nov, P2 exit demo Wed 18 Nov). The heading at `:3419`, the `title:` and this paragraph stay as written; this line governs.)*
 
 #### SL-1976 — WK-1178 hotfix slice — the CI MinIO image guard pins the tarball sha256 and accepts the config or the manifest Id (FD-1975)
 

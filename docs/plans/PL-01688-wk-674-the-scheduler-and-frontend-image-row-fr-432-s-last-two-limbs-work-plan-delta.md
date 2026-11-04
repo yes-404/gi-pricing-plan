@@ -644,6 +644,7 @@ unchanged.
     the P2 exit demo on **Wed 18 Nov 2026** (`date -d 2026-11-18 +%A` = Wednesday). No window of
     the slice overlaps the nfr-bench-1 session, **Thu 5 – Fri 6 Nov 2026** (the 15:38:58 entry:
     "nfr-bench-1 Thu 5–Fri 6 Nov stands").
+    *(Dated correction, 2026-11-04, docs batch 9, by the auditor, on from-lead "2026-11-03 15:59:47 GMT" taking the maintainer's to-lead "2026-11-03 15:59:27 GMT" correction: nfr-bench-1 runs on a dedicated VM and reserves no shared-box slot, so this overlap clause was never a constraint. It stays as written; this line governs. The correction was promised "at the slice's mint" and did not land with SL-1992's mint, #1424.)*
 - **Write set:**
   - `backend/src/app/platform/deployment_switch.py` (the reconcile, `SwitchSubscription`'s
     add-and-restart, and the docstrings) and `backend/src/app/main.py` (the lifespan wiring and
