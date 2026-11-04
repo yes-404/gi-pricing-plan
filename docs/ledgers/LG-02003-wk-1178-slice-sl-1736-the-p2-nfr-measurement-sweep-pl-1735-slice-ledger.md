@@ -55,7 +55,7 @@ Requirements: NFR-467, NFR-468, NFR-470, NFR-472 (red-first test + fix), NFR-485
 
 ### Gate
 
-Not yet run.
+**Gate line, 2026-11-04** (from-lead "2026-11-04 15:13:44 GMT", the gate's END read; to-lead "2026-11-04 14:29:29 GMT", the maintainer's ruling, conditions (1) and (2)). The full gate at `daa60dad568a7246a58302ef21deba6c88e00f4e` (tree `00d7a5d7`), solo on gate-1, START 12:38:54 to END 15:12:32Z, END rc 1, **STANDS under item 31** of the common seat brief. pytest: "13 failed, 7136 passed, 14 skipped, 5 xfailed" (the 13 are exactly the eight item-31 files); ruff, mypy, import_linter, req_coverage and contracts rc 0; audit_docs rc 1 = check 31 only, on this ledger's own working id (both limbs, cleared by this mint). The skip guard row `pytest skipped | FAIL: 14 (!= 22 baseline)` is annotated by its cause, not overridden: the 8 fewer skips are freMTPL2-data-gated tests that **RAN AND PASSED** on the gitignored data `examples/fremtpl2/data/*.arff` (mtime 2026-10-22 21:45:45 UTC) that this slice's own sweep needs: `backend/tests/test_wf701_journey.py:327` and `:366`; `examples/fremtpl2/test_seed.py:216`, `:237` and `:283`; `packages/pricing-core/tests/test_glm_scalar_predict.py:398`, `:408` and `:546`. Green extra coverage is not a defect. Frontend six rows rc 0, vitest 919 / 919. Demo 2025 s under the 2400 s cap; dislocation #1 697 s, an environment reading (load from the user's other project plus vitest, load1 1.99 at the demo's start). Template guard exact at START and END; zeros clean.
 
 ### Audit
 
