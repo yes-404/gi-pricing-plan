@@ -177,3 +177,39 @@ describe("RateTableDiffPanel: the scrolling results are keyboard reachable (NFR-
     expect(scroller).toHaveAttribute("tabindex", "0");
   });
 });
+
+describe("RateTableDiffPanel: NFR-463 a11y lows (FD-1974 L-5, L-6, L-9)", () => {
+  it("L-5: says in a status region how many cells are shown and which page", async () => {
+    render(RateTableDiffPanel, { props });
+    await show();
+    await screen.findAllByRole("row");
+    expect(screen.getByText("Showing 2 changed cells, page 1.").closest('[role="status"]')).not.toBeNull();
+
+    await userEvent.click(screen.getByRole("button", { name: "Next page" }));
+    await screen.findByText("+20%");
+    expect(screen.getByText("Showing 1 changed cell, page 2.").closest('[role="status"]')).not.toBeNull();
+  });
+
+  it("L-6: moves focus to the other pager button when the one clicked becomes disabled", async () => {
+    render(RateTableDiffPanel, { props });
+    await show();
+    await screen.findAllByRole("row");
+
+    await userEvent.click(screen.getByRole("button", { name: "Next page" }));
+    await screen.findByText("+20%"); // the last page: Next is now disabled
+    await waitFor(() => expect(screen.getByRole("button", { name: "Next page" })).toBeDisabled());
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: "Previous page" }));
+
+    await userEvent.click(screen.getByRole("button", { name: "Previous page" }));
+    await screen.findByText("+5.0000%"); // the first page: Previous is now disabled
+    await waitFor(() => expect(screen.getByRole("button", { name: "Previous page" })).toBeDisabled());
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: "Next page" }));
+  });
+
+  it("L-9: names the scrolling results table as a region", async () => {
+    render(RateTableDiffPanel, { props });
+    await show();
+    await screen.findAllByRole("row");
+    expect(screen.getByRole("region", { name: "Changed cells" })).toHaveAttribute("tabindex", "0");
+  });
+});

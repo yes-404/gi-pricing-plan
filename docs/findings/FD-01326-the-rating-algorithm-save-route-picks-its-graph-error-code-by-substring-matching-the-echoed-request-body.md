@@ -2,7 +2,7 @@
 id: FD-1326
 family: finding
 title: The rating algorithm save route picks its graph error code by substring-matching the echoed request body
-status: active
+status: closed
 created: 2026-09-30
 owner: auditor
 tree: 11c76b6c83647c512796fedb9c0143927dcd78cb
@@ -148,3 +148,5 @@ input: a real unresolved reference whose consumed name contains "cycle" (case 8,
 correctly, per auditor-933); consumed names and unknown-field names or values do. Case 8 also
 supports the fix: key on the error's type, never on its message. It would
 rise to medium if the designer (WK-675) or an API client maps these codes to user-facing text.
+
+***Resolved 2026-10-01*** — closed in place 2026-11-03 by the auditor, on the maintainer's ruling in to-lead "2026-11-03 15:58:45 GMT" (2) and the lead's instruction: fixed by WK-1250 Slice 1 (SL-1339, LG-1355), PR #1034 (`9b0fb97c`). `graph_validation_error` (`backend/src/app/platform/rating_algorithms.py`) now chooses the code by class in `exc.errors()` (`error["type"] == "value_error"`, then `isinstance` of `GraphCycleError` or `GraphUnresolvedRefError`, `packages/model-schema/src/model_schema/graph_errors.py`, raised by `model_schema/rating.py` in place of `ValueError`), and `_parse_algorithm` calls it; the remedy asked for a typed signal matched on `exc.errors()` and never on `str(exc)`. The substring tests are gone: `git grep -n -E '"cycle" in|"undefined value" in|str\(exc\)\.lower' origin/main -- backend/src packages` prints only two assertions on message text in `packages/model-schema/tests/test_sub_graph.py`. Tests: `test_an_unknown_field_named_cycle_note_is_validation_failed` (the false positive, now a plain passing test; no xfail citing FD-1326 remains in `backend/tests/test_rating_algorithms.py` at main), `test_an_undefined_value_is_refused_with_rating_graph_unresolved_ref`, and the three in `packages/model-schema/tests/test_graph_errors.py`. Not evidenced by name: case 8 (a real unresolved reference whose consumed name contains "cycle", `recycle_rate`); the typed class removes the mechanism, but no test names that case. *Date of record: 2026-10-01 — #1034, squash 9b0fb97c9ed1cea743639897351191bc1a862041.*

@@ -468,3 +468,194 @@ Row 1 and the plan body are unchanged.)*
   Anything else stops the slice. There is no spec edit and no new requirement id.
 
 *(Write-set amendment, 2026-10-29, by the maintainer (by delegation), on to-lead "2026-10-29 19:31:32 GMT": row 2's Write set gains `backend/tests/test_deploy_switch_runtime.py`, for one edit only — the test `test_a_deploy_switches_every_api_process_and_a_default_live_quote_is_served` takes the `down` fixture and starts the stack with the `up -d --wait lb <workers>` line that the other four `beat_fixture` callers use, and its "UNPROVEN" docstring sentence is replaced by a dated one naming the run that proved it. Nothing else in that file changes.)*
+
+*(Delta, row 3 (FD-1823's reconcile), added 2026-11-03 by the planner (seat plan-fd1823, lead 30),
+on the maintainer's entry "2026-11-03 15:36:59 GMT" item (4) in `~/gi-pricing-plan.local/channel/to-lead.md`
+("FD-1823 is code owed inside P2 (reconcile + two red-first tests …) … **plan it today** (a dated
+delta row in PL-1688, WK-674's plan …), and **start it after #1414 lands** with one sonnet
+executor, red first; its merge is subject to the user's freeze word"), and on the lead's from-lead
+"2026-11-03 15:36:05 GMT" item (a) (the code cites, re-read below at `c807a59d`). The row carries
+three decision points (DP-R1 to DP-R3 below). The maintainer's GO on this row comes before the seat
+is briefed. **The freeze clause of 15:36:59 is superseded** by the user's order relayed in the
+maintainer's entry "2026-11-03 15:38:58 GMT" ("move freeze to 10th of Nov and defer the later
+dates": code freeze Tue 10 Nov 2026, docs freeze Wed 11 Nov 2026, P2 exit demo Wed 18 Nov 2026;
+"the FD-1823 reconcile … [is] ordinary P2 code before Tue 10 Nov, merged on the normal ACK
+path"), and by the maintainer's entry "2026-11-03 15:40:02 GMT" item (3) ("FD-1823 merge target
+Fri 6, hard stop Mon 9, accepted").)*
+**A new row 3: SL-1992 — FD-1823's reconcile: the deployment switch loads the latest committed
+Deployment at each (re)subscribe and periodically, and discovers Environments created after
+start.** Ledger **LG-1993**. Both were working ids (SL 8286, LG 8287), minted 2026-11-04 as SL-1992 and LG-1993. Work
+**WK-674**; merged by **Fri 6 Nov 2026**, hard stop **Mon 9 Nov 2026**, before the code freeze on
+**Tue 10 Nov 2026**. The row, in the table's columns:
+Order 3; Slice SL-1992; Scope (what the `LG-` quotes) items R0 to R3, G and A1 to A10 below;
+Requirements `03` §3: FR-268 (its dated note "The deployment switch, dated 2026-10-18" at `03`
+:213, which says the remedy "is not built in Slice 5") and FR-269 (a rollback writes a new
+`DeploymentRow`, `backend/src/app/platform/deployments.py:775`, so the reconcile converges a
+missed rollback COMMIT by the same read); NFR-494 is the bound DP-R1 is read against, not
+re-measured here; register FD-1823 (MEDIUM, owner WK-674) closes at merge; Depends on #1414
+merged (OPEN when this row was written: `gh pr view 1414`, 2026-11-03), the maintainer's GO on
+this row and DP-R1 ruled; Size 1, one `sonnet` executor. Rows 1 and 2 and the plan body are
+unchanged.
+
+*(Added by row 3's dated line, 2026-11-03.)* Every `file:line` below is at `origin/main`
+`c807a59d` unless marked otherwise.
+
+- **R0 — the base.**
+  - **The only read of the DB into `live` after start is the startup load.**
+    `backend/src/app/platform/deployment_switch.py:128` `LiveRefs.load_latest` reads the latest
+    `DeploymentRow` of every Environment (`DISTINCT ON environment_id`, ordered by `deployed_at
+    desc, id desc`). `backend/src/app/main.py:160-162` calls it once, after
+    `subscription.start()`. After that, only a COMMIT this process acknowledged writes `live`
+    (`SwitchMember.handle`, `deployment_switch.py:295`).
+  - **The subscribed set is fixed at construction.** `main.py:142-149` reads the slugs of the
+    unretired Environments once. `SwitchSubscription.__init__` builds `self._transports` from
+    them (`deployment_switch.py:442`); `start` (`:446`) subscribes to those channels and joins
+    those rosters; no method adds a transport.
+  - **A Redis reconnect re-subscribes silently.** `build_switch_client` (`:333`) sets
+    `health_check_interval=30`. redis-py 6.4.0's `PubSub.on_connect`
+    (`.venv/lib/python3.12/site-packages/redis/asyncio/client.py:894`) re-subscribes the
+    channels on reconnect, and the application is not told. A COMMIT published while the
+    connection is down is lost: limb 1 of FD-1823 by another route.
+  - **The code that names FD-1823** (`git grep -n "FD-1823" -- backend packages frontend
+    scripts deploy`, four lines): `deployment_switch.py:19`, `main.py:141`,
+    `backend/src/app/api/score.py:234` and `deployments.py:688`. In `docs/specs`: `03` :213 and
+    :1042. Two more texts state the unbuilt remedy without the id: the `LiveRefs` docstring
+    (`deployment_switch.py:106-107`, "written only by a COMMIT this process acknowledged, and
+    loaded once at startup") and `load_latest`'s "The startup load".
+  - **The interim signal.** `deployments.py:866` reports every unacknowledged prepared process
+    as `possibly_stale`. `backend/tests/test_deployment_switch_http.py:156`
+    `test_a_partial_commit_names_the_unacknowledged_process_possibly_stale` proves it.
+- **R1 — limb 1, a missed COMMIT converges without a restart, red first.** Each test is marked
+  `req("FR-268")`.
+  - R1.a (unit, `backend/tests/test_deployment_switch.py`, in-memory, no DB and no Redis): a
+    process whose `live` holds OLD and that missed the COMMIT of NEW runs one reconcile pass. The
+    pass reads NEW from a stand-in for the DB read, and `live` then holds NEW. At the base it is
+    red because no reconcile exists. The `LG-` quotes that line and says so.
+  - R1.b (HTTP, `backend/tests/test_deployment_switch_http.py`, DB and Redis): the app's own
+    process misses the COMMIT. The test substitutes the file's `_DeafToCommit` (`:63`) for the
+    app's member, for example by monkeypatching `app.main.SwitchMember`, so the app acknowledges
+    PREPARE and drops COMMIT. A `_Peer` acknowledges both. The deploy returns `201`, with the
+    app's process `possibly_stale`. Then, with the same `TestClient` and no restart,
+    `client.app.state.live_refs.get(workspace_id, "dev")` names the new Deployment within B plus
+    a 5 s margin, polled. B is the interval under DP-R1, set to 1 s in the test. **Red at the
+    base, by its cause**: after the same wait, the entry still names the previous Deployment.
+    The `LG-` quotes the assertion line.
+  - R1.c (HTTP, same file): a re-subscribe runs a reconcile pass at once, not only at the next
+    tick. The app's pubsub connection is dropped **in-process** (`await <the subscription's
+    pubsub>.connection.disconnect()`), never by `CLIENT KILL`, which acts on the whole Redis
+    server and would drop every other slot's subscribers. A COMMIT is published while it is
+    down. With B set long (for example 60 s), `live` names the new Deployment within the
+    margin after the reconnect. How the hook is made (for example a connect callback that
+    schedules a pass) is the executor's, and the `LG-` names it. Red at the base: `live` keeps
+    the previous Deployment.
+- **R2 — limb 2, an Environment created after start is discovered, red first.** HTTP, the same
+  file, marked `req("FR-268")`.
+  - After the app has started, the test creates an Environment through the `POST` route of
+    `backend/src/app/api/environments.py` ("Create an environment"), with a fresh slug.
+  - **Green:** within B plus the margin, the app's process is on that Environment's roster
+    (`RedisSwitch.for_environment(<slug>).roster()`). A deploy into it returns `201`, and its
+    `switch.processes` names the app's process `committed`.
+    `client.app.state.live_refs.get(workspace_id, <slug>)` names that Deployment, with no
+    restart.
+  - **Red at the base, by its cause:** the deploy's `switch.processes` does not name the app's
+    process, and `live_refs.get(...)` is `None`.
+- **R3 — what the reconcile must not break.** Unit tests in `test_deployment_switch.py`, except
+  R3.c.
+  - R3.a **Never backwards.** A COMMIT to NEW that lands while a pass's DB read (which returned
+    OLD, read before the commit) is in flight leaves `live` on NEW. The pass replaces an entry
+    only with a Deployment that is not older by (`deployed_at`, `id`), the order `load_latest`
+    already uses. This keeps `load_latest`'s "never moves a reference backwards" true for every
+    pass. The test interleaves the two with an `asyncio.Event` in the stand-in reader.
+  - R3.b **A failing pass does not stop the loop.** A pass whose read raises is logged, and the
+    next pass runs and converges. Shutdown cancels the task, and the lifespan's teardown leaves
+    no pending task.
+  - R3.c (HTTP) **A dead listener is restarted.** If the subscription's listener task has
+    ended, for example because its connection retries ran out, the next pass re-subscribes every
+    channel, re-joins every roster and loads. The test ends the listener in-process (it cancels
+    the task) and then sees a deploy acknowledged by the app's process.
+  - **Not in scope:** an Environment retired after start stays subscribed until the process
+    restarts. FD-1823 does not name it, and a deploy into a retired Environment is not the
+    convergence case. Renaming an Environment is not in scope either.
+- **The interim signal and the comments.**
+  - **`possibly_stale` is KEPT unchanged.** `deployments.py:866` and the test at
+    `test_deployment_switch_http.py:156` do not change. At the switch, a ghost and a process that
+    missed COMMIT still cannot be told apart, because there is still no heartbeat. Only the
+    word's consequence changes: such a process now converges within B.
+  - **Every text that says the remedy is unbuilt is re-pointed, not removed.** That is the four
+    `FD-1823` code cites above, the `LiveRefs` and `load_latest` docstrings, and `main.py:128-141`
+    (the lifespan comments). Each is rewritten to say that the reconcile converges within B and
+    discovers new Environments, and it names SL-1992 (the minted id of SL 8286).
+  - **The spec gets dated notes, with no new requirement id.** The brief allocates none, and FR-268
+    already owns the behaviour. Under `.claude/skills/spec-change`, the executor appends a dated
+    note after `03` :213's note: the reconcile, its bound B under DP-R1, and its two triggers. It
+    also adds a dated parenthetical at `03` :1042's "(FD-1823 is the remedy)".
+  - Proof that nothing stale is left: at head, `git grep -n -i "not built here\|until it
+    restarts" -- backend/src` prints nothing. At the base it prints five lines, all at the sites
+    above (`score.py:232`, `main.py:140`, `deployment_switch.py:18` and `:20`, `deployments.py:688`).
+- **Decision points (row 3).**
+
+| # | Question | Options | Recommendation | Kind | Blocking | Resolved by |
+|---|---|---|---|---|---|---|
+| DP-R1 | What is the reconcile interval B, and where is it set? The spec leaves it open. FR-268's note (`03` :213) names no bound. NFR-494 (`03` :1584) gives a switchover "within 30 s of the deploy command". `deployment_switch.py:316-319` makes the round timeouts constants ("Fixed, not configuration"). | (a) A module constant `RECONCILE_INTERVAL_SECONDS = 10.0` beside the round timeouts. The tests monkeypatch it. (b) A `Settings` field `deployment_reconcile_seconds: Annotated[int, Field(ge=1, le=30)] = 10` (`GIP_DEPLOYMENT_RECONCILE_SECONDS`), in the form of `job_stall_seconds` (`backend/src/app/config.py:184`). The type sets the NFR-494 ceiling, and the tests set it through `Settings(...)`, as `api_settings` already does. A bounds test goes in `backend/tests/test_config.py`. (c) No periodic pass: a reconcile at (re)subscribe only. | **(b), default 10 s.** The R1/R2 tests need a short B. A `Settings` value gives them one with no patch of a production constant, and `le=30` keeps every value inside NFR-494's 30 s. (a) is simpler, but each HTTP test must patch module state across the lifespan. (c) leaves limb 2 and a silently dropped message unconverged, and the finding's remedy (FD-1823 :94) says "periodically". The specs carry no row for the existing setting of this form (`git grep -n "GIP_JOB_STALL_SECONDS\|job_stall_seconds" -- docs/specs` prints nothing), so (b) needs no spec edit beyond the `03` note. | scope / config | yes: the R1/R2 tests depend on it | — |
+| DP-R2 | Does a pass hydrate the bundle before it swaps `live`? | (a) As the startup load does: set `live` from the DB row, and the first quote loads the bundle through `_fetch_bundle` (`score.py:392`). That is exactly what a restart does today. (b) Hydrate through `hydrate_for_switch` (`score.py:462`) before the swap, and skip the swap (log it, retry next pass) when hydration fails or the hash differs. | **(a).** The finding's bar is to converge without a restart, to what a restart would serve (FD-1823 :94-97). (a) adds no failure mode that the startup path lacks. (b) is stronger, but it gives a reconcile a check that startup does not have. If (b) is ruled, R3 gains a test for the skipped swap. | scope | no: (a) is the default | — |
+| DP-R3 | Does the slice need a compose runtime run (`backend/tests/test_deploy_switch_runtime.py` under `GIP_DEPLOY_TESTS=1`, in a build window)? | (a) No: the HTTP tests prove both limbs against a real Postgres and Redis, and no compose file changes. (b) Yes: one granted build window runs the runtime switch test. | **(a).** The write set touches no `deploy/` file, and the runtime test's scenario (every API process switches) is not one this row changes. The SOLO gate covers the rest. | gate | no | — |
+
+- **G — the gate.** The full code gate, both halves of `CLAUDE.md` §11, named against
+  `origin/main...<slice branch>`, on gate-1 **SOLO**. pytest runs with `-rs`. A skipped count
+  above the baseline FAILS the row. The baseline is **22** by the lead's brief; the last END read
+  found in `to-lead.md`, "2026-10-29 16:41:39 GMT", reads "21 skipped", so the lead states the
+  number at GO. The red/green table goes in the `LG-` before the audit.
+  - **DB-backed tests run on the seat's own `createdb -T gipricing` copy, never on the template
+    `gipricing`.** Redis is db 11, 12 or 13, set explicitly. The DB window is single-tenant and
+    is the lead's to grant in writing. It ends with the two quoted zeros (redis `dbsize` 0 and
+    the seat's own database dropped).
+  - **The red runs go first.** R1.b, R1.c, R2 and R3.c need that window. R1.a, R3.a and R3.b run
+    through `run-small.sh` with no DB.
+  - **The GREEN set is derived by import closure** (seat brief item 29). The `LG-` quotes the
+    commands and the list.
+  - Code under `backend/src` changes, so the docs-only gate does not apply.
+- **Acceptance (row 3, items A1 to A10)** — each is checkable on the slice's merge tree:
+  - **A1** `audit-docs.py` and `doc-index.py --check` exit 0 at the slice head, except lines
+    naming its own working ids (SL 8286, LG 8287) before the mint.
+  - **A2** R1.a and R1.b: the `LG-` quotes each red from the base, with its cause, and each
+    green at head. The `LG-` names each R1 test, and a run of those names exits 0 in the window.
+  - **A3** R1.c: its red and green are quoted, and the `LG-` names the hook.
+  - **A4** R2: its red (the app's process not in `switch.processes`, `live` `None`) and its
+    green are quoted.
+  - **A5** R3.a, R3.b and R3.c are green and quoted, R3.a with the interleaving it forces.
+  - **A6** `possibly_stale` is unchanged. `git diff origin/main...HEAD --
+    backend/tests/test_deployment_switch_http.py` shows no removed line, and
+    `test_a_partial_commit_names_the_unacknowledged_process_possibly_stale` passes unchanged.
+  - **A7** The texts are re-pointed. `git grep -n "FD-1823" -- backend` prints only lines that
+    state the reconcile, each quoted in the `LG-`, and `git grep -n -i "not built here\|until
+    it restarts" -- backend/src` prints nothing. `03` carries the dated note after :213 and the
+    parenthetical at :1042. `req-coverage.py` exits 0.
+  - **A8** G is green, with `git diff --name-only origin/main...<slice branch>` quoted first and
+    the skipped count at or below the baseline stated at GO.
+  - **A9** FD-1823's closing act: after the merge, the auditor sets FD-1823 `status: closed`,
+    citing the PR and its merge commit by sha, and resolves its register row. The minted SL and
+    LG close by the same path as every slice (the `LG-`'s last line is the merge sha and PR).
+    `docs/INDEX.md` is regenerated and `doc-index.py --check` exits 0.
+  - **A10** The executor starts only after #1414 has landed and the maintainer's GO on this row.
+    The reds start once #1414 has landed. The slice merges on the normal ACK path, with no
+    freeze exception: the target is **Fri 6 Nov 2026** (`date -d 2026-11-06 +%A` = Friday), and
+    the hard stop is **Mon 9 Nov 2026** (`date -d 2026-11-09 +%A` = Monday). Both are before
+    the code freeze on **Tue 10 Nov 2026** (`date -d 2026-11-10 +%A` = Tuesday), and so before
+    the P2 exit demo on **Wed 18 Nov 2026** (`date -d 2026-11-18 +%A` = Wednesday). No window of
+    the slice overlaps the nfr-bench-1 session, **Thu 5 – Fri 6 Nov 2026** (the 15:38:58 entry:
+    "nfr-bench-1 Thu 5–Fri 6 Nov stands").
+- **Write set:**
+  - `backend/src/app/platform/deployment_switch.py` (the reconcile, `SwitchSubscription`'s
+    add-and-restart, and the docstrings) and `backend/src/app/main.py` (the lifespan wiring and
+    the comments at `:128-141`);
+  - `backend/src/app/api/score.py` and `backend/src/app/platform/deployments.py`, docstrings only
+    (`score.py:229-234`, `deployments.py:686-689`);
+  - `backend/src/app/config.py` and `backend/tests/test_config.py`, only if DP-R1 is ruled (b);
+  - `backend/tests/test_deployment_switch.py`, and `backend/tests/test_deployment_switch_http.py`
+    (additions only);
+  - `docs/specs/03-rating-engine.md` (the dated note after :213 and the parenthetical at :1042);
+  - the slice's `LG-`;
+  - at the mint: the slice row in `docs/roadmap.md`, cut there as `SL-1968`'s was (#1409), and
+    `docs/INDEX.md`. FD-1823's file and its register row are the auditor's (A9).
+
+  Anything else stops the slice. There is no new requirement id.

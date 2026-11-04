@@ -45,6 +45,12 @@ const hints = computed(() =>
   Object.fromEntries(props.fields.map((field) => [field.name, fieldHint(field)])),
 );
 
+/** The ids that describe a control: its hint, then its problem text once it has one. */
+function describedBy(name: string, hint: string | undefined): string | undefined {
+  const ids = [hint, problems.value[name] ? `quote-input-${name}-problem` : undefined];
+  return ids.filter(Boolean).join(" ") || undefined;
+}
+
 function submit(): void {
   const built = buildInputs(props.fields, raw);
   problems.value = { ...built.problems };
@@ -64,6 +70,7 @@ function submit(): void {
     @submit.prevent="submit"
   >
     <FormField
+      v-slot="{ describedby }"
       field-id="quote-purpose"
       label="Purpose"
       help="what_if is a test price, never a quotable one (FR-251)."
@@ -71,6 +78,7 @@ function submit(): void {
       <select
         id="quote-purpose"
         v-model="purpose"
+        :aria-describedby="describedby"
         class="w-full rounded-md border border-slate-500 px-2 py-1.5 text-sm"
       >
         <option
@@ -98,6 +106,7 @@ function submit(): void {
 
     <FormField
       v-for="field in fields"
+      v-slot="{ describedby }"
       :key="field.name"
       :field-id="`quote-input-${field.name}`"
       :label="field.name"
@@ -108,12 +117,15 @@ function submit(): void {
         :id="`quote-input-${field.name}`"
         v-model="raw[field.name]"
         type="checkbox"
+        :aria-describedby="describedby"
       >
       <select
         v-else-if="field.type === 'enum'"
         :id="`quote-input-${field.name}`"
         v-model="raw[field.name]"
         class="w-full rounded-md border border-slate-500 px-2 py-1.5 text-sm"
+        :aria-invalid="problems[field.name] ? 'true' : undefined"
+        :aria-describedby="describedBy(field.name, describedby)"
       >
         <option value="">
           {{ field.nullable ? "(none)" : "Choose…" }}
@@ -135,7 +147,7 @@ function submit(): void {
         autocomplete="off"
         class="w-full rounded-md border border-slate-500 px-2 py-1.5 text-sm"
         :aria-invalid="problems[field.name] ? 'true' : undefined"
-        :aria-describedby="problems[field.name] ? `quote-input-${field.name}-problem` : undefined"
+        :aria-describedby="describedBy(field.name, describedby)"
       >
       <p
         v-if="problems[field.name]"

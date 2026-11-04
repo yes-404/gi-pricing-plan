@@ -2,7 +2,7 @@
 id: FD-1439
 family: finding
 title: The rate-table cells-diff page's p99 exceeds 1 s at 260 000 cells
-status: active
+status: closed
 created: 2026-10-05            # original date 2026-10-05, set at the draft; minted 2026-10-05
 owner: auditor
 tree: a5657fa4520739f182cbea79e0057afeed991ac1
@@ -194,3 +194,6 @@ That is a breach on `main` today, not S7's, as the entry says: p99 9633 ms again
 > So RL 9484's brief EXTENDS to amend 03:904 (RL-1361 T10's diff row): a first diff request for a pair, rows or parquet, whose artifact is not yet stored answers 202 with the same Job; later requests answer 200 from it. RL 9484 covers 03:904, 03:933 and FR-232 together. S7's reds add: a first 250k rows diff request is 202, and a later diff request has p99 under 300 ms. FD 9487's diff-route limb is then DISCHARGED BY S7, named in the FD.
 
 and the entry "2026-10-05 22:28:33 BST — S7 cost chain: CONFIRMED; the four-record batch mint AGREED" confirms, verbatim: *"no limb stays outside S7"* and *"FD 9487 names S7 as the discharger of both limbs (HIGH, with the 250k figures)."* This finding names it: **S7 (SL-1391, WK-673) discharges both limbs, the cells page (rows and parquet) and the diff route, by serving every page from one stored artifact keyed by immutable version identity (RL-1442), and meets the budget of RL-1441 (OQ-1440's decision).** The Disposition above ("a follow-on slice in WK-1178") is superseded in place by this.
+
+
+***Resolved 2026-10-06*** — essay status set `closed` 2026-11-03 by the auditor, to match its register row (`register.md` FD-1439, Resolved 2026-10-06), on CR-1981 §5b and the maintainer's ruling (C) in `to-lead.md` "2026-11-03 16:03:37 GMT": discharged by SL-1391 (WK-673), PR #1206, squash `a9ef677747a98a156c1d4e8b8ae9d2b43c4e3ee5`, both limbs (LG-1444). *Date of record: 2026-10-06 — #1206, squash a9ef6777.*

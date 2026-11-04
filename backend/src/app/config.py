@@ -63,8 +63,7 @@ class SettingResolution[T]:
 
     def __repr__(self) -> str:
         return (
-            f"SettingResolution(key={self.key!r}, value={self.value!r}, "
-            f"source={self.source.value})"
+            f"SettingResolution(key={self.key!r}, value={self.value!r}, source={self.source.value})"
         )
 
     def __eq__(self, other: object) -> bool:
@@ -183,6 +182,12 @@ class Settings(BaseSettings):
     # NFR-528 treats a running job with no progress for this long as stalled.
     job_stall_seconds: Annotated[int, Field(gt=0, le=3600)] = 30
 
+    # B, the interval of the deployment switch's reconcile pass (FR-268, FD-1823, SL-1992): how
+    # long a process that missed a COMMIT, or an Environment created after start, can go
+    # unconverged. `le=30` is NFR-494's "within 30 s of the deploy command", so no value the type
+    # accepts breaks it. Also set by tests, through `Settings(...)`, to a second.
+    deployment_reconcile_seconds: Annotated[int, Field(ge=1, le=30)] = 10
+
     # How many hydrated bundles one worker holds (`platform.bundle_slot`, RL-882
     # clause 3). A **count**, never a byte budget: NFR-492 permits a bundle of up to
     # 500 MB including boosters and nothing here measures a hydrated `CompiledBundle`'s
@@ -194,7 +199,6 @@ class Settings(BaseSettings):
     # fail at startup with a field-level message instead of exhausting the worker under
     # load.
     bundle_slot_capacity: Annotated[int, Field(ge=1, le=64)] = 1
-
 
     @field_validator("database_url", "migration_database_url")
     @classmethod
