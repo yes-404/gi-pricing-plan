@@ -53,6 +53,17 @@ Not run by the executor (DP-3 (a)): the full SOLO gate, both halves, runs in a s
 
 **A6, the GREEN set:** the script is imported by no module of `backend/` or `packages/`; the three files that load it by path are the `test_bench_rating_*` files named above, and all three are in the table. No other hit.
 
+**The SOLO gate, both halves (2026-11-04 19:46:13 GMT, entered by the minting executor):** from-lead "2026-11-04 19:40:39 GMT" (the lead's own read of `scratch/sl8317-gate/gate`, matching the maintainer's read in to-lead "2026-11-04 19:40:01 GMT" on every item), exec-gate8317 at `c726f68a37bc9bac1068468dfbcaf5e8235ea61b`, tree `da219505e1a5bde19256d66dad5c0a04dbd4d4c2` (pre-mint head; the mint and this line are docs-only, `git diff --name-only c726f68a HEAD` lies entirely under `docs/`). It STANDS under common seat brief item 31.
+
+- **Python half, every rc file (7):** `ruff=0 mypy=0 import_linter=0 contracts=0 req_coverage=0 pytest=1 audit_docs=1`.
+- **pytest, whole line:** `13 failed, 7133 passed, 22 skipped, 5 xfailed, 146 warnings in 4761.88s (1:19:21)`. The 13 FAILED are exactly the eight item-31 files: `test_audit_docs_finding_citations` 1, `test_audit_docs_ids` 2, `test_audit_docs_process_core_digest` 2, `test_audit_docs_w37_11_ceiling` 1, `test_doc_index` 1, `test_register_lint` 3, `test_register_owed` 1, `test_repository_invariants` 2. Cause: check 31, the allocation gap that the slice's own unminted working ids open. Skipped 22 == the baseline of 22.
+- **audit_docs FAILED (1):** `check 31: gap in the full allocation between 2003 and 8316`, the slice's working ids only (item 31). The check-36 warnings on the legacy-form requirement ids in the workflow documents (for example WF-702 line 208) pre-exist on main `a5b1c537` and is not this slice's.
+- **Frontend:** `pnpm generate:api` 0, `lint` 0, `type-check` 0, `test --maxWorkers=2` 0 (vitest 138 files / 919 tests passed), `build` 0.
+- **Demo:** `demo.py --journey wf-699 --no-compose` rc 0, designed stop at 19:39:00 (both lines seen), 2037 s under the 2400 s cap; **dislocation #1 579 s** (29 Oct 422 / 387 / 383; this box's baseline 552 / 558; today's 555–697) = an environment reading, not a regression; load1 1.72 at start, 3.20 at end.
+- **Template guard** (`gipricing` at END): `alembic_version=1 environments=3 tenant_marker=1`, rc 0.
+- **Zeros:** own-DB count 0; RT db 1 `dbsize` 0; RD db 3 `dbsize` 0. Live redis db 0 `dbsize` 56 at START and 56 at END (unchanged).
+- **Item-31 conditions still owed before the ACK:** the docs-audit tests re-run via `run-small.sh` on the minted head, `audit-docs` rc 0 on the minted head, and PR CI including python; those results are Step 6 of the mint seat's report, not entered here.
+
 ### Audit
 
 (The auditor's, at slice close.)
