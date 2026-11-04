@@ -48,7 +48,17 @@ ruff check packages/pricing-core rc=0; mypy `expressions.py` rc=0 (head cdfceea5
 
 Pre-grep for the run (file and its conftest chain `packages/pricing-core/tests/conftest.py`, `conftest.py`): `grep -n -i "postgres|redis|database|DATABASE_URL|psycopg|asyncpg|autouse|localhost"` printed nothing, rc=1.
 
-**Not run, and why:** every file under `backend/tests/` is behind `backend/tests/conftest.py`, which re-exports `conftest_db`'s autouse `_seed_through_the_owner_seam` (conftest_db.py:1447) and session-autouse `_empty_the_database_after_the_session` (:1632). So even the DB-free direct-call tests in `test_custom_objectives_expression.py` reach Postgres and wait for the DB window. Their red/green is owed.
+**Backend runs (DB window 2026-11-04 03:07:49Z to 03:09:12Z; own database `gipricing_sl-8299_91c667a0`, Redis db 11, template never written; END zeros: Redis db 11 `dbsize` 0, `pg_database` count for the own DB 0).** Every file under `backend/tests/` is behind `backend/tests/conftest.py`, which re-exports `conftest_db`'s autouse `_seed_through_the_owner_seam` (conftest_db.py:1447) and session-autouse `_empty_the_database_after_the_session` (:1632), so even the direct-call tests needed the window. Logs are under `~/gi-pricing-plan.local/scratch/sl8299/`:
+
+| log | head= | result | rc= |
+|---|---|---|---|
+| `backend-prefix-84e9ad34.log` (`-k "over_bound or deep or grammar_refusal"`, `expressions.py` as of 84e9ad34, worktree c6d4d2b1) | 84e9ad34 | 3 failed, 6 passed, 23 deselected | 1 |
+| `backend-c6d4d2b13bf001dcddc05515401305824804b914.log` (all of `backend/tests/test_custom_objectives_expression.py`) | c6d4d2b1 | 32 passed, 1 warning | 0 |
+| `green-limits3-c6d4d2b13bf001dcddc05515401305824804b914.log` (`packages/pricing-core/tests/test_expression_limits.py`, run 3 Nov 18:21 UTC, DB-free) | c6d4d2b1 | 27 passed | 0 |
+
+The pre-fix reds, by cause. **Real reds (3):** `test_an_over_bound_loss_is_422_grammar_violation_on_create[2000-character unary chain]` answered 500 `INTERNAL_ERROR` (log: `SanitisedError: RecursionError`, `ast.py:274`); `test_grammar_refusal_does_not_raise_recursion_error_on_a_deep_loss` and `test_a_deep_factor_expression_is_422_not_recursion_error` each raised `RecursionError`. **Characterisation passes (6), already 422 before the fix:** the create route at depth 21 and at 201 nodes (`OBJECTIVE_GRAMMAR_VIOLATION`); `grammar_refusal` at depth 21 and 201 nodes; the factor caller at depth 21 and 201 nodes (`VALIDATION_FAILED`). So "never a 500" was a real defect only for the deep-chain case at both callers.
+
+DB-free check for the `test_expression_limits.py` run, quoted: `grep -n -i "postgres|redis|database|DATABASE_URL|psycopg|asyncpg|autouse|localhost"` over that file, `packages/pricing-core/tests/conftest.py` and `conftest.py` prints nothing (rc=1); the run set dead-port `GIP_TEST_DATABASE_URL` and `GIP_TEST_APP_DATABASE_URL`.
 
 ### Audit
 
@@ -56,7 +66,8 @@ Pre-grep for the run (file and its conftest chain `packages/pricing-core/tests/c
 
 ### Build log
 
-- 2026-11-03: T-1, T0, T1, T2, T3 as above; the backend tests' red and green are owed to the DB window; the full SOLO gate is a separate seat.
+- 2026-11-03: T-1, T0, T1, T2, T3 as above.
+- 2026-11-04: DB window 03:07:49Z to 03:09:12Z; the backend red and green lines are in the Gate section above. The full SOLO gate is a separate seat.
 
 ## PRs
 
