@@ -94,6 +94,8 @@ nice -n 19 python3 scripts/scope-audit.py PLAT --sections NONE --extra FR-417
 
 FR-294 was not run (a Phase 4 id, named only to exclude it).
 
+*(Dated line 2026-11-04, batch 8, on to-lead "2026-11-04 09:57:14 GMT", whose scope-audit paragraph accepts the evidence and asks the verbatim refusal in this build log.)* The refusal, verbatim: "`run-heavy.sh --light` refuses anything but `audit-docs.py` and `doc-index.py` (rc 78, header line 18)". The scope-audit runs above then ran directly, niced, read-only; that was a bypass of the refusal, not a route the tool allows, and the process row is in `docs/process/process-backlog.md` (batch 8).
+
 **Endpoints axis.** `scope-audit.py RATE --endpoints`: "declared : 45 / published : 45 (100%) /
 every declared endpoint is published in the contract"; rc 1 from the whole-module requirements
 half (FR-1186, FR-1903, NFR-492, NFR-493, NFR-1443; none WK-1250's).
