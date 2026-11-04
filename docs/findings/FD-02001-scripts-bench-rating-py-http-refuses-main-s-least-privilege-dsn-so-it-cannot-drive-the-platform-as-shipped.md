@@ -1,5 +1,5 @@
 ---
-id: FD-8312
+id: FD-2001
 family: finding
 title: scripts/bench-rating.py --http refuses main's least-privilege DSN, so it cannot drive the platform as shipped
 status: active
@@ -10,7 +10,7 @@ corrected_by: []
 relates: [WK-1178, FD-1729, LG-1760, PL-1454]
 ---
 
-# FD-8312 — scripts/bench-rating.py --http refuses main's least-privilege DSN, so it cannot drive the platform as shipped
+# FD-2001 — scripts/bench-rating.py --http refuses main's least-privilege DSN, so it cannot drive the platform as shipped
 
 ## Finding
 
@@ -40,4 +40,4 @@ by this script until it passes the application a least-privilege DSN.
 Open, owner WK-1178, **fix before close with an owner**. Fixed before P2 close if a gate slot frees
 before Tue 10 Nov 2026, else carried to P3 with the C' driver as the interim harness (the maintainer's
 "2026-11-04 09:51:05 GMT"). The event that next discharges it: the merge of the harness fix, or the
-P3 plan review if carried. Filed under working id 8312.
+P3 plan review if carried. Filed under working id 8312 (minted as FD-2001).

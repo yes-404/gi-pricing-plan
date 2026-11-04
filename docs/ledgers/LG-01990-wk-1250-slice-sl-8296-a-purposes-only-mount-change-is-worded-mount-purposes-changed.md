@@ -93,7 +93,7 @@ and `packages/pricing-core/tests/conftest.py`, neither loads `backend/tests/conf
 
 ~~Written by the auditor.~~
 
-*(Dated line 2026-11-04, docs batch 8, by the auditor.)* The slice audit is CR 8309 (WK-1250 fresh close audit; §1 and §3 evidence SL-1989's requirements with the red commit 7e2fdfa2 and the gate of record 322b20ec), by route (a) of to-lead "2026-11-04 09:57:14 GMT". The gap is accepted by that dated line; this record stands in the slice audit's place for the two-way ledger check, the build log and the gate of record above being the executor's record.
+*(Dated line 2026-11-04, docs batch 8, by the auditor.)* The slice audit is CR-1999 (WK-1250 fresh close audit; §1 and §3 evidence SL-1989's requirements with the red commit 7e2fdfa2 and the gate of record 322b20ec), by route (a) of to-lead "2026-11-04 09:57:14 GMT". The gap is accepted by that dated line; this record stands in the slice audit's place for the two-way ledger check, the build log and the gate of record above being the executor's record.
 
 ### Build log
 

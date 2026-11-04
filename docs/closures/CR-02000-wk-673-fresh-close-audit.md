@@ -1,5 +1,5 @@
 ---
-id: CR-8310
+id: CR-2000
 family: closure
 kind: work                     # work | phase | review — no other value (§1.2)
 title: WK-673 fresh Work close audit — Dislocation with attribution (re-tests CR-1981)
@@ -13,9 +13,9 @@ corrected_by: []
 relates: [CR-1981, PL-1267, PL-1500, PL-1501, PL-1984, RL-1504, SL-1388, SL-1389, SL-1985, SL-1997, LG-1570, LG-1582, LG-1986, LG-1998, FD-1481, FD-1490, FD-1491, FD-1495, FD-1576, FD-1578, FD-1651, FD-1982, FD-1983]
 ---
 
-# CR-8310 — WK-673 fresh Work close audit
+# CR-2000 — WK-673 fresh Work close audit
 
-*Working id CR 8310, reserved by the lead. The auditor seat aud-wk673b wrote this record on
+*Working id CR 8310 (minted as CR-2000), reserved by the lead. The auditor seat aud-wk673b wrote this record on
 2026-11-04 from 09:44 GMT (`date -u`). The instruction is the lead's brief
 `brief-aud-freshclose-2026-11-04.md`, on the maintainer's entry "2026-11-04 08:46:25 GMT" (the
 ruling: the fresh close audits) and the condition in "2026-11-04 08:05:12 GMT" (FD-1982 ruling

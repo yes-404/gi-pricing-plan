@@ -1,5 +1,5 @@
 ---
-id: CR-8309
+id: CR-1999
 family: closure
 kind: work                     # work | phase | review — no other value (§1.2)
 title: WK-1250 fresh Work close audit — sub-graph composition and MTA/cancellation pricing, re-testing CR-1979 after SL-1989 and the fresh full gate
@@ -13,9 +13,9 @@ corrected_by: []
 relates: [CR-1979, PL-1254, PL-1325, PL-1572, PL-1629, PL-1991, SL-1989, LG-1990, FD-1768, FD-1326, FD-1241, FD-1317, FD-1297, CR-1247, CR-1907]
 ---
 
-# CR 8309 — WK-1250 fresh Work close audit
+# CR-1999 — WK-1250 fresh Work close audit
 
-*Working id CR 8309, reserved by the lead. The auditor seat aud-wk1250b (`opus`, Claude Opus 5.5)
+*Working id CR 8309 (minted as CR-1999), reserved by the lead. The auditor seat aud-wk1250b (`opus`, Claude Opus 5.5)
 wrote this record on 2026-11-04 from 09:43 GMT, on the lead's brief
 `~/gi-pricing-plan.local/handover/brief-aud-freshclose-2026-11-04.md` (sha256 `b2764443b2b9…`),
 under the maintainer's ruling in the entry "2026-11-04 08:46:25 GMT" and the entry
@@ -193,7 +193,7 @@ No NFR id is in the derived scope. **NFR-489 on a mounted bundle: PROPOSED defer
 item (2); plan accepted "2026-11-04 09:04:20 GMT"). If S1 reads it unmet, it is a P2 finding owned
 by WK-1250, "fixed or carried with a resolution at the close" (16:13:02 (2)). NFR-489: mounted bundle (an NCD sub-graph mount + a cancellation purpose mount, pins.sub_graphs set): measured Thu 5 on nfr-bench-1 by driver sha256 df6e7c9c3216895d175434cf92bd5d26c0335fe7f48621dfee5c2919997513d3, reading owed; Thursday's reading lands as a dated delta line in this CR; unmet → an FD owned by WK-1250 (to-lead 2026-11-03 16:13:02 (2)).
 
-**Pre-registration of nfr-bench-1 item D** (the maintainer's ruling "2026-11-04 09:45:54 GMT": "the WK-1250 record that carries D's hash is CR 8309"; the hash of record from "2026-11-04 09:51:05 GMT"):
+**Pre-registration of nfr-bench-1 item D** (the maintainer's ruling "2026-11-04 09:45:54 GMT": "the WK-1250 record that carries D's hash is CR-1999"; the hash of record from "2026-11-04 09:51:05 GMT"):
 
 | Id | Configuration and driver | Reading |
 |---|---|---|

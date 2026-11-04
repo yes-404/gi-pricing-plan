@@ -48,7 +48,7 @@ Owed: the full SOLO gate, both halves, in the slot the lead grants for the final
 
 ~~(The auditor's.)~~
 
-*(Dated line 2026-11-04, docs batch 8, by the auditor.)* The slice audit is CR 8310 §1b (SL-1985 and SL-1997, per-requirement evidence), by route (a) of to-lead "2026-11-04 09:57:14 GMT", adopted for these two slices in "2026-11-04 10:00:29 GMT" (closing acts 1–4). The gap is accepted by that dated line; this record stands in the slice audit's place for the two-way ledger check, the build log and the gate of record above being the executor's record.
+*(Dated line 2026-11-04, docs batch 8, by the auditor.)* The slice audit is CR-2000 §1b (SL-1985 and SL-1997, per-requirement evidence), by route (a) of to-lead "2026-11-04 09:57:14 GMT", adopted for these two slices in "2026-11-04 10:00:29 GMT" (closing acts 1–4). The gap is accepted by that dated line; this record stands in the slice audit's place for the two-way ledger check, the build log and the gate of record above being the executor's record.
 
 ### Build log
 
