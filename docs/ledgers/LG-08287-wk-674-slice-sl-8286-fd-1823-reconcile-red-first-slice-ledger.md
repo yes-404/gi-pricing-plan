@@ -88,6 +88,16 @@ At the first red attempt (head 139899bd tests) R1.c was reported only as the lif
 - 2026-11-03 139899bd — `03` dated note after :213 and the :1042 parenthetical.
 - 2026-11-03 03d98c21 — test-only repair found in the window: the shared helper asserted the app was still stale after deploy 2, which is false for R1.b at B = 1 once the reconcile exists (it converges during the 10 s COMMIT wait); the assertion moved to R1.c (B = 30). `_app` now reports a failing body as itself. The base reds were re-run on this head (above). No test was removed or weakened (A6).
 
+### 2026-11-04 — gate red and its test-file-only fix (ruling to-lead "2026-11-04 03:09:02 GMT" (a))
+
+Red (the SOLO gate, `~/gi-pricing-plan.local/scratch/sl8286-gate/gate/pytest.log`): head=d290abc99b754d814f53ede98258dd7af550c8b2 `backend/tests/test_error_sinks.py::test_every_failure_sink_on_a_quote_input_path_is_accounted_for` failed on `assert _census() == {key: count for key, (count, _) in _SINKS.items()}` (NFR-499): the census holds three keys `_SINKS` lacks, all in `backend/src/app/platform/deployment_switch.py`: `('_run','exception')` (:638), `('ensure','exc_info')` (:524), `('ensure','exception')` (:523, asyncio `Task.exception()`, not a log sink); whole-suite line `14 failed, 7031 passed, 22 skipped, 5 xfailed, 146 warnings in 4959.66s (1:22:39)`, rc=1 (the other 13 fails are the item-31 set).
+
+Fix: head=30de18644a2594b9d8d67d36c635f4ad7310701f three `_SINKS` rows citing the ruling; `git diff --stat d290abc9..HEAD` names `backend/tests/test_error_sinks.py` only (12 insertions); `deployment_switch.py` untouched. `ruff check` rc=0, `mypy` rc=0. `ruff format --check` rc=1 on that file, as it is at d290abc9 and on main; CI's `python.yml` runs `ruff check .` only (lead's ruling, 03:11:02 GMT); not reformatted.
+
+Window (single-tenant): START 03:11:26 UTC (load1 1.99, all slots free, datnames `gipricing postgres template0 template1`, redis db 11/12/13 = 0); copy `gipricing_sl-8286_5f177197` by `createdb -T gipricing`, `alembic upgrade head` rc=0 on the copy only; `GIP_REDIS_URL=redis://localhost:6379/11`; two `run-small.sh` invocations (its limit is 3 files; `PYTEST_ADDOPTS=-rfs`). END 03:12:58 UTC: redis db 11/12/13 flushed, dbsize 0/0/0; `dropdb` rc=0; datnames back to `gipricing postgres template0 template1`.
+
+Green: head=30de18644a2594b9d8d67d36c635f4ad7310701f `test_error_sinks.py` + `test_deployment_switch.py`: 28 passed, 4 warnings in 6.74s, 0 failed, rc=0. `test_deployment_switch_http.py` + `test_deployment_switch_slot_namespace.py`: 13 passed, 1 warning in 50.50s, 0 failed, rc=0.
+
 ## PRs
 
 (none yet; the lead opens the PR after the SOLO gate)
