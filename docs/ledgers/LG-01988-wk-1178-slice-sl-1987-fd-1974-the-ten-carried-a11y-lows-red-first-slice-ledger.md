@@ -2,7 +2,7 @@
 id: LG-1988
 family: ledger
 title: WK-1178 slice SL-1987 — FD-1974's ten carried a11y lows (NFR-463) on the WK-675 surfaces, red first (slice ledger)
-status: active                 # active → closed (§1.2a)
+status: closed                 # active → closed (§1.2a)
 created: 2026-11-03
 owner: executor
 tree: a8ef6f19c0be1142b0ac9dea88086f1ce6f95cbe   # origin/main at the branch cut
@@ -19,7 +19,7 @@ relates: [FD-1974, PL-1927]
 # LG-1988 — WK-1178 slice SL-1987: FD-1974's ten carried a11y lows, red first
 
 **GO:** to-lead "2026-11-03 15:52:04 GMT": the GO on PL-1927 row 7 (S5); DP-S5-1 (a), DP-S5-2 (a), DP-S5-3 (a), DP-S5-4 (a), DP-S5-5 (G1, the full code gate); owner WK-1178; and "2026-11-03 15:46:13 GMT" (full speed).
-**MERGE-ACK:** (added at merge.)
+**MERGE-ACK:** ~~(added at merge.)~~ *(filled 2026-11-04, docs batch 8, by the auditor, on to-lead "2026-11-04 09:57:14 GMT" and "10:00:29 GMT" closing acts)* to-lead "2026-11-03 23:36:23 GMT" — Maintainer: MERGE-ACK #1422 (SL-1987; head 02ddfb12167c8ba00bf8079f89250792b1aad223, expected squash tree d91f7b389098f8982f834fd588c24ee84f1cf5ef). CI by id on that head: python 41736821797, docs 41736821736, frontend 41736821728, history-policy 41736821735 (all success).
 
 ## Tasks
 
@@ -40,7 +40,34 @@ Not run by the executor (DP-S5-5 G1: the lead grants the slot). Executor's own c
 
 ### Audit
 
-(The auditor's.)
+~~(The auditor's.)~~
+
+*(Written 2026-11-04 in docs batch 8 by the auditor aud-docs8 (sonnet, 5.5), as the one slice audit written in place of a Work audit: WK-675 is closed by the user, so no Work close audit will name SL-1987 (to-lead "2026-11-04 09:57:14 GMT", SL-1987 paragraph; proposed to the lead, whose verdict it is.) Form: `close-workstream`'s slice form; scope derived from the spec first, then evidenced, read at `9da8e477` (the #1422 squash, tree `d91f7b38`).)*
+
+**Requirements.** `00-overview.md:586` NFR-463 (WCAG 2.2 AA, no spec change); FD-1974's ten carried lows, rows 1 to 10 of its Evidence table (`FD-1974` is `closed`). Verdicts, one per row:
+
+| FD-1974 row / low | Verdict | Test (at `9da8e477`) and what it asserts |
+|---|---|---|
+| 1, L-1 help text | delivered, tested | `components/__tests__/FormField.test.ts:50` "a field's help text is the control's description": the control has an accessible description from the help; `components/sandbox/__tests__/QuoteFormA11y.test.ts:36` for the QuoteForm caller; `StepInspector.test.ts` 3.3.1 asserts `si-reason-help` and `si-problems` both in `aria-describedby` (the assertion changed under the lead's item-13 OK, `LG-1988` 2026-11-03 section) |
+| 2, L-2 node tab stops | delivered, tested | `DagDesigner.test.ts:100`: `.vue-flow__node[tabindex="0"]` has length 0 (11 at the base per the red log) |
+| 3, L-3 `role="dialog"` | delivered, tested | `BulkOperationDialog.test.ts:121-122`: role `region` named "Bulk operation" present, `queryByRole("dialog")` null |
+| 4, L-4 disabled "Review changes" | delivered, tested | `RateTableEditorView.test.ts:287`: the button's accessible description names the blocking condition (edit a cell, change note, working) and is empty when enabled |
+| 5, L-5 diff results announcement | delivered, tested | `RateTableDiffPanel.test.ts:182`: "Showing 2 changed cells, page 1." inside `role="status"`; page 2 text changes |
+| 6, L-6 pager focus | delivered, tested | `RateTableDiffPanel.test.ts:193`: focus moves to the other pager button |
+| 7, L-7 enum / bool | enum delivered, tested (`QuoteFormA11y.test.ts:15`, `aria-invalid="true"` and the problem tie; unflagged enum has none); bool **no change, argued statically**: `quoteForm.ts:60-63` sets no problem for a bool, so there is no failing case | static evidence in the build log, accepted as a verdict on the evidence |
+| 8, L-8 count announcement | delivered, tested | `RatingVersionListView.test.ts:341,344`: "Showing 3 rating versions." / "Showing 1 rating version." in `role="status"` |
+| 9, scrollers | delivered, tested | `RateTableEditorView.test.ts:309` region "Rate table cells" with `tabindex="0"`; `RateTableDiffPanel.test.ts:209` region "Changed cells" |
+| 10, repeated status | editor delivered, tested (`RateTableEditorView.test.ts` L-10: "Review ready" is null while the second review is pending); sandbox **no change**, `QuoteSandboxView.vue:78` empties the result before the await; re-announcement left to `OQ-1960` | static evidence in the build log, accepted |
+
+Delivered 8 of 10 with a test; two (L-7 bool, L-10 sandbox) argued static-only and unchanged, named as such in the slice's own scope ("L-2, L-7 (bool) and L-10 (sandbox) are static-only" in `SL-1987`); the rendered focus order and announcements are `OQ-1960`'s (no `axe-core`/Playwright coverage exists), so NFR-463 is evidenced by a static read plus unit assertions, not in a browser. Not-started or unowned requirements: none.
+
+**Tests and asserts read.** The seven files above, read at `9da8e477` by `git show`; each assertion is a behavioural check on the rendered DOM (accessible description, role and name, `aria-invalid`, focus, presence/absence), not a constant. The reds are quoted in the build log with rc 1 and the failing assertion (L-1 `toHaveAccessibleDescription()`, L-2 "expected …(11) to have a length of +0", L-3 role-not-found, L-5/L-8 text-not-found, L-6 focus on `body`, L-9 role-not-found, L-10 stale status present): each test failed for the reason it names before its fix (red first proven for the 11 testable limbs). The one edited existing assertion (`StepInspector.test.ts`, the 3.3.1 test) is weakened from equality to "contains both ids" by necessity (the help id joins the description); the item-13 OK and the maintainer's acceptance "2026-11-03 18:06:07 GMT" (a) are cited in the ledger.
+
+**Gate of record.** Gate 1 at `211e1d4b` (16:11:49 to 18:19:37 GMT): python half the item-31 docs-audit class, skipped 22 = baseline; END `rc=124` (the demo hit its cap); its one frontend failure was the `StepInspector.test.ts` change above. The quiet re-run at `5c9c6dc2` (finished 22:50:42 GMT): frontend lint, type-check, vitest `Test Files 138 passed`, `Tests 919 passed (919)`, build rc 0; demo stopped by design. Merged as #1422 with CI by id on `02ddfb12`: python 41736821797, docs 41736821736, frontend 41736821728, history-policy 41736821735, all success (MERGE-ACK above). The auditor did not re-run the gate; this audit reads the recorded results and the tests.
+
+**NFR measurement / broken-input proof.** NFR-463 has no numeric budget; the broken-input proof is the red-first runs above (each assertion failed on the unfixed code).
+
+**Proposed verdict (the lead's to adopt):** slice audit clean; SL-1987 evidenced; residual: the two static-only limbs and `OQ-1960` (axe-core/Playwright) carry in FD-1974's own text and WK-1178, nothing unowned.
 
 ### Build log
 
@@ -96,4 +123,8 @@ Verdict from the gate evidence: the gate of record at `211e1d4b` (16:11:49 to 18
 
 ## PRs
 
-(None yet; the lead opens it.)
+~~(None yet; the lead opens it.)~~
+
+#1422, squash commit 9da8e47740b84b21e324fa6fed6e9382ef4a0799 (tree d91f7b389098f8982f834fd588c24ee84f1cf5ef), merged 2026-11-03T23:37:09Z; on main. Filled 2026-11-04 in docs batch 8.
+
+(Closed 2026-11-04 by the auditor in docs batch 8, on to-lead "2026-11-04 09:57:14 GMT" and "2026-11-04 10:00:29 GMT" (the six-slice closing acts): SL-1987 merged as #1422, squash commit 9da8e47740b84b21e324fa6fed6e9382ef4a0799 on main, tree d91f7b389098f8982f834fd588c24ee84f1cf5ef.)

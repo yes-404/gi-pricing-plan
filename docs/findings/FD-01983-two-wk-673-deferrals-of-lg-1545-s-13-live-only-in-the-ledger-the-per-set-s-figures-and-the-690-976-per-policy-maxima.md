@@ -41,3 +41,7 @@ Open, owner WK-673, **deferred with an owner**, both limbs. The event that next 
 WK-673 slice that changes the harness to emit the per-set S figures and the per-policy contributions
 for the two sets, before WK-673's Work close; or a dated ruling carrying or accepting the limbs.
 Filed under working id 8308.
+
+## Dated line, 2026-11-04 — carried to WK-1178
+
+*(Docs batch 8, by the auditor, on the maintainer's ruling on CR-2000 BLOCKER (1) in `to-lead.md` "2026-11-04 10:00:29 GMT".)* **CARRIED**, owner ~~WK-673~~ WK-1178, discharge event the P3 plan review, alongside FD-1576: the per-set S figures and the 690 / 976 per-policy maxima are the attribution-cost family already carried to P3, no price moves, and a harness slice before Tue 10 Nov buys a record, not a safer price. The finding stays open on WK-1178; the Disposition above is not edited.

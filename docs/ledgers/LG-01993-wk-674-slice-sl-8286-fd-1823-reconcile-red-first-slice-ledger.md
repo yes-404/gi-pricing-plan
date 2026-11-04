@@ -2,7 +2,7 @@
 id: LG-1993
 family: ledger
 title: WK-674 slice SL-1992 — FD-1823's reconcile: the deployment switch loads the latest committed Deployment periodically and on reconnect, and discovers Environments created after start (red first)
-status: active                 # active → closed (§1.2a)
+status: closed                 # active → closed (§1.2a)
 created: 2026-11-03               # drafted 2026-11-03 under working id 8287
 owner: executor
 tree: 03d98c2170d7f7cbe283e1b91d91c9f2057f0480   # the branch head the runs below were made on (before this file)
@@ -19,7 +19,7 @@ relates: [FD-1823, WK-674]
 Minted 2026-11-04 from working ids SL 8286 and LG 8287 (as SL-1992 and LG-1993), with the mint tool of record `mint-repoint.py` (sha256 `4d83681a`).
 
 **GO:** to-lead "2026-11-03 15:50:00 GMT — Maintainer: MERGE-ACK #1413 (Dependabot frontend dev group, merge 44) + GO for SL 8286 (FD-1823's reconcile, PL-1688 row 3)", as relayed in the lead's brief: DP-R1 (b) a Settings field `deployment_reconcile_seconds` Field(ge=1, le=30) = 10 (`GIP_DEPLOYMENT_RECONCILE_SECONDS`), DP-R2 (a) restart-equivalent hydration, DP-R3 (a) no compose runtime run; condition: the 03 dated note names the field, its bounds and the NFR-494 derivation; reds in one single-tenant DB window; green + SOLO full gate Wed 4 Nov; hard stop Mon 9 Nov.
-**MERGE-ACK:** (added at merge)
+**MERGE-ACK:** ~~(added at merge)~~ *(filled 2026-11-04, docs batch 8, by the auditor, on to-lead "2026-11-04 09:57:14 GMT" and "10:00:29 GMT" closing acts)* to-lead "2026-11-04 04:04:34 GMT" — Maintainer: MERGE-ACK #1424 (SL-1992; head 28adc1f6c42cda22a4ca46b24d0e348fcf28d640, expected squash tree 3f7be98d2b5a818457b16bd303427dfdcbba9150). CI by id on that head: python 41767928030, docs 41767927970, history-policy 41767927965 (all success).
 
 ## Tasks
 
@@ -79,7 +79,9 @@ At the first red attempt (head 139899bd tests) R1.c was reported only as the lif
 
 ### Audit
 
-(the auditor's)
+~~(the auditor's)~~
+
+*(Dated line 2026-11-04, docs batch 8, by the auditor.)* The slice audit is WK-674's audit (Mon 9 Nov 2026), which names this slice, by route (a) of to-lead "2026-11-04 09:57:14 GMT" — the gap is accepted by that dated line, the audit not yet written. The gap is accepted by that dated line; this record stands in the slice audit's place for the two-way ledger check, the build log and the gate of record above being the executor's record.
 
 **Gate verdict (the executor's record, 2026-11-04; the audit is the auditor's):** the gate STANDS under the common seat brief's item 31 (the lead's "2026-11-04 03:14:50 GMT"), on two evidence entries: from-lead "2026-11-04 03:07:04 GMT" (the SOLO gate at `d290abc9`: pytest 14 failed, 7031 passed, 22 skipped = the 13 item-31 docs-audit failures plus the NFR-499 census red; frontend all rc 0, vitest 905 of 905; demo designed stop 1688 s, dislocation #1 609 s; window 01:10:27 to 03:06:15 UTC) and from-lead "2026-11-04 03:14:22 GMT" (the fix `30de1864` with this ledger at `29264dcf`: window 03:11:26 to 03:12:58 UTC, run-small 28 plus 13 passed, 0 failed). The census rows are ruling (a) of to-lead "2026-11-04 03:09:02 GMT": three `_SINKS` rows in `backend/tests/test_error_sinks.py` for the reconcile loop's own sinks, test file only, `deployment_switch.py` untouched.
 
@@ -102,4 +104,8 @@ Green: head=30de18644a2594b9d8d67d36c635f4ad7310701f `test_error_sinks.py` + `te
 
 ## PRs
 
-(none yet; the lead opens the PR after the SOLO gate)
+~~(none yet; the lead opens the PR after the SOLO gate)~~
+
+#1424, squash commit bb9781a952d607af06dac38e0780f4de63787d9d (tree 3f7be98d2b5a818457b16bd303427dfdcbba9150), merged 2026-11-04T04:05:05Z; on main. Filled 2026-11-04 in docs batch 8.
+
+(Closed 2026-11-04 by the auditor in docs batch 8, on to-lead "2026-11-04 09:57:14 GMT" and "2026-11-04 10:00:29 GMT" (the six-slice closing acts): SL-1992 merged as #1424, squash commit bb9781a952d607af06dac38e0780f4de63787d9d on main, tree 3f7be98d2b5a818457b16bd303427dfdcbba9150.)
