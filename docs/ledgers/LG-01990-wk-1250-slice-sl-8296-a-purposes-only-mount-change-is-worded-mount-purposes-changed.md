@@ -101,3 +101,7 @@ Written by the auditor.
 ## PRs
 
 None yet.
+
+## 2026-11-04 — the verdict at the mint
+
+Verdict from the gate evidence: the full gate at `322b20ec` (window 2026-11-03 23:08:40 to END 2026-11-04 01:08:27 GMT): python half 13 failed, exactly the eight docs-audit test files of the common seat brief's item 31, with skipped 22 = baseline and audit-docs failing only check 31 on this slice's own working ids; frontend lint, type-check, test and build all rc 0, vitest 905 of 905; demo stopped by design at 1999 s, dislocation #1 586 s. The item-31 class stands for the code on the conditions of that item, which this mint's checks discharge (see the minted-head rows of the report). Mint 2026-11-04: SL-1989, LG-1990 and PL-1991 (working ids 8296, 8297, 8298); FD-1768 closed in place.
