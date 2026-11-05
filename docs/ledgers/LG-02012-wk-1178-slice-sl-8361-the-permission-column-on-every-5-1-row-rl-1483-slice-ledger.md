@@ -118,8 +118,6 @@ The rulings' edits are in the commit that follows `4610b9e7` (see `git log`).
 
 *(Dated line, 2026-11-05, to-lead "2026-11-05 16:21:19 GMT".)* `03` §5.1's `GET /api/v1/dislocation-runs/{id}/movers` Permission cell is changed from `rating:read` to `rating:read` and `dataset:read` on that Dataset Version, in the form of the POST rows: the pin found the cell short of its own Purpose text ("requires `rating:read` and `dataset:read` on that Dataset Version").
 
-*(Dated line, 2026-11-05 17:50 UTC, to-lead, after #1434's CI failed. Closed record: a correction, not a re-opening.)* `03` §5.1's two rate-table diff rows, `GET /api/v1/rate-tables/{slug}@{version}/diff?against=&portfolio=` and `GET …/diff/cells?…`, carried the Permission cell "`rating:read`; with `portfolio`, also `dataset:read` on the portfolio Dataset Version". The cell is corrected to exactly "`rating:read`; with `portfolio`, also `dataset:read`", the scope clause dropped; nothing else in either row is touched. **Why:** the rows' own Purpose text says the check is "the same for any id", and `rate_tables.py` calls `require_permission` with no scope, so the clause named a scope the code does not apply. **The failing test:** `backend/tests/test_route_scope_guard.py::test_the_spec_names_a_dataset_scope_only_for_routes_declared_dataset`, red in #1434's CI on these two rows. **Why the audit missed it:** its row-3 count of spec "also" clauses compared each cell's permission names with the route's `requires()`; it read the permission, not the scope the cell attached to it.
-
 ## PRs
 
 None. Ends unpushed.
