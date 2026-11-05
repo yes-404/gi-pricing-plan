@@ -76,6 +76,52 @@ async def test_a_declared_length_over_the_limit_is_refused_before_the_handler() 
 
 
 @pytest.mark.req("FR-450")
+async def test_a_declared_length_over_the_limit_reads_no_body_before_the_refusal() -> None:
+    """The ordering proof (PL 8324 A4): the cap sits before body consumption.
+
+    Green at its base by design (the middleware already checks `Content-Length` first); the
+    break that turns it red is a `receive()` ahead of that check.
+    """
+    reads = 0
+    sent: list[dict[str, object]] = []
+
+    async def receive() -> dict[str, object]:
+        nonlocal reads
+        reads += 1
+        return {"type": "http.request", "body": b"x" * 10, "more_body": True}
+
+    async def send(message: dict[str, object]) -> None:
+        sent.append(message)
+
+    async def inner(scope: object, receive: object, send: object) -> None:
+        raise AssertionError("the app was entered")
+
+    scope = {
+        "type": "http",
+        "method": "POST",
+        "path": PATH,
+        "headers": [(b"content-length", str(LIMIT + 1).encode())],
+    }
+    await BodyLimitMiddleware(inner, max_bytes=LIMIT)(scope, receive, send)  # type: ignore[arg-type]
+    assert reads == 0
+    assert sent[0]["status"] == 413
+
+
+@pytest.mark.req("FR-450")
+async def test_the_refusals_trace_header_is_the_problems_trace_id() -> None:
+    """Trace propagation survives the cap (PL 8324 A4): `x-trace-id` equals `trace_id`."""
+    entered: list[int] = []
+    body, content_type = _multipart(LIMIT + 1)
+    async with _client(_app(entered)) as client:
+        response = await client.post(
+            PATH, content=body, headers={"content-type": content_type, "traceparent": TRACEPARENT}
+        )
+    assert response.status_code == 413
+    assert response.headers["x-trace-id"] == response.json()["trace_id"]
+    assert response.headers["x-trace-id"] == "0af7651916cd43dd8448eb211c80319c"
+
+
+@pytest.mark.req("FR-450")
 async def test_a_chunked_body_over_the_limit_is_refused() -> None:
     entered: list[int] = []
     pulled = 0
@@ -151,20 +197,45 @@ def test_a_declaration_without_a_cap_or_a_cap_without_a_declaration_is_caught(
     assert "^/nowhere$" in _unpaired()
 
 
+def _declared_413_paths() -> list[str]:
+    """The real routes that declare 413, from OpenAPI, with a concrete value per parameter."""
+    app = create_app(Settings(environment=Environment.LOCAL, version="test"))
+    paths = [
+        p
+        for p, ops in app.openapi()["paths"].items()
+        if any("413" in op.get("responses", {}) for op in ops.values())
+    ]
+    assert len(paths) == 2
+    return [re.sub(r"\{[^}]+\}", "abc", p) for p in paths]
+
+
 @pytest.mark.req("FR-450")
-async def test_the_application_caps_its_real_upload_route_before_authentication() -> None:
-    """The wiring: `create_app` refuses an oversized body with no credentials, with a trace id."""
+@pytest.mark.parametrize("path", _declared_413_paths())
+@pytest.mark.parametrize("declared", [True, False])
+async def test_the_application_caps_each_real_upload_route_before_authentication(
+    path: str, declared: bool
+) -> None:
+    """The wiring, both routes driven: no credentials, so a 413 (not a 401) means the cap ran first.
+
+    DB-free: the refusal is raised before routing reaches the handler or its dependencies.
+    """
     app = create_app(Settings(environment=Environment.LOCAL, version="test", max_upload_body_mib=1))
     body, content_type = _multipart(MIB + 1)
+
+    async def chunks() -> AsyncIterator[bytes]:
+        for start in range(0, len(body), 64 * 1024):
+            yield body[start : start + 64 * 1024]
+
     async with _client(app) as client:
         response = await client.post(
-            "/api/v1/sources/abc/preview",
-            content=body,
+            path,
+            content=body if declared else chunks(),
             headers={"content-type": content_type, "traceparent": TRACEPARENT},
         )
     assert response.status_code == 413
     assert response.json()["code"] == "PAYLOAD_TOO_LARGE"
     assert response.json()["trace_id"] == "0af7651916cd43dd8448eb211c80319c"
+    assert response.headers["x-trace-id"] == response.json()["trace_id"]
     assert "1 MiB" in response.json()["detail"]
 
 
