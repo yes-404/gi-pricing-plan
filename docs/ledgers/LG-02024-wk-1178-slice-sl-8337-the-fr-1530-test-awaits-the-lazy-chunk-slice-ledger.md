@@ -1,20 +1,20 @@
 ---
-id: LG-8338
+id: LG-2024
 family: ledger
-title: WK-1178 slice SL-8337 — the FR-1530 test awaits the lazy chunk (FD-1748, FD-1800)
+title: WK-1178 slice SL-2023 — the FR-1530 test awaits the lazy chunk (FD-1748, FD-1800)
 status: active
 created: 2026-11-05
 owner: executor
 tree: c218fc5a07f49d03a8fc5ef74e61c78926710c5e
 phase: P2
 work: WK-1178
-slice: SL-8337
-plans: [PL-8336]
+slice: SL-2023
+plans: [PL-2022]
 corrected_by: []
 relates: [FD-1748, FD-1800, FR-1530]
 ---
 
-# LG-8338 — the FR-1530 test awaits the lazy chunk
+# LG-2024 — the FR-1530 test awaits the lazy chunk
 
 **GO:** to-lead "2026-11-05 10:36:35 GMT" (DP-F1 keep `findBy` after the chunk await; DP-F2 the 20 runs granted when F asks, never beside a timed gate stage).
 **MERGE-ACK:** (added at merge)
@@ -23,7 +23,7 @@ relates: [FD-1748, FD-1800, FR-1530]
 
 ### Scope
 
-PL 8336, SL 8337: add `await import("@/components/dag/DagDesigner.vue")` to the `beforeAll` of `frontend/src/views/__tests__/RatingDesignView.test.ts`. Requirement: FR-1530 (no spec change). Findings: FD-1748, FD-1800.
+PL-2022, SL-2023: add `await import("@/components/dag/DagDesigner.vue")` to the `beforeAll` of `frontend/src/views/__tests__/RatingDesignView.test.ts`. Requirement: FR-1530 (no spec change). Findings: FD-1748, FD-1800.
 
 ### Task list
 

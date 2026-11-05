@@ -1,9 +1,9 @@
 ---
-id: PL-8336
+id: PL-2022
 family: plan
 kind: map
-title: WK-1178 — the FR-1530 test awaits the lazy chunk, a deterministic wait for both flake findings (FD-1748, FD-1800), SL-8337 — a dated Work-plan delta
-status: draft                   # draft → active → superseded | retired (§1.2a) — L1: draft→active rides the slice's PR
+title: WK-1178 — the FR-1530 test awaits the lazy chunk, a deterministic wait for both flake findings (FD-1748, FD-1800), SL-2023 — a dated Work-plan delta
+status: active                  # draft → active → superseded | retired (§1.2a); active at the mint
 created: 2026-11-05             # filed under working id 8336
 owner: planner
 tree: dae9637ea6f6a56f6502e9db70392cdfb2f3983d
@@ -15,13 +15,13 @@ corrected_by: []
 relates: [FD-1748, FD-1800, FD-1747, FR-1530]
 ---
 
-# PL-8336 — WK-1178: the FR-1530 test awaits the lazy chunk (SL 8337, a dated Work-plan delta)
+# PL-2022 — WK-1178: the FR-1530 test awaits the lazy chunk (SL-2023, a dated Work-plan delta)
 
 > **For agentic workers:** this is a **dated Work-plan delta** under Lean P2 L1 (a')
-> (`.claude/roles/planner.md`, "Lean P2"). It holds one slice row, SL 8337, and edits no filed plan.
+> (`.claude/roles/planner.md`, "Lean P2"). It holds one slice row, SL-2023, and edits no filed plan.
 > The executor's skills are `superpowers:test-driven-development`, `vue-testing-best-practices`,
-> `.claude/skills/vue-frontend` and `git-hygiene`. PL 8336, SL 8337 and LG 8338 are working ids
-> reserved by the lead.
+> `.claude/skills/vue-frontend` and `git-hygiene`. PL-2022, SL-2023 and LG-2024 were drafted under working ids
+> 8336, 8337 and 8338, reserved by the lead, and minted on 2026-11-05 (`mint-repoint.py`).
 
 ## Authority
 
@@ -91,9 +91,9 @@ tree. Items 1 and 2 apply to this plan; A1 to A8 apply to the slice.
 The slice:
 
 - **A1. The write set.** `git diff --name-only origin/main...HEAD` lists only
-  `frontend/src/views/__tests__/RatingDesignView.test.ts`, LG 8338, and the mint's files. **Not**
+  `frontend/src/views/__tests__/RatingDesignView.test.ts`, LG-2024, and the mint's files. **Not**
   `RatingDesignView.vue`, `vitest.config.ts` or `test-setup.ts`.
-- **A2. Red first, by cause, for both findings.** LG 8338 quotes, on the slice's named base with the
+- **A2. Red first, by cause, for both findings.** LG-2024 quotes, on the slice's named base with the
   delayed-import mock of R1 in place: `FR-1530 … Unable to find a label with the text of: input step
   Driver age (s_in_age)`, failing just past 1000 ms. The mock is **injected and not committed**.
 - **A3. Green under the same mock.** With R2 in place and the same mock, the file passes. `git diff
@@ -101,7 +101,7 @@ The slice:
 - **A4. No timer.** `git diff origin/main...HEAD -- frontend | grep -E '^\+.*(timeout|Timeout|setTimeout|sleep)'`
   prints nothing, and no `asyncUtilTimeout` or `configure(` is added.
 - **A5. The repeated run under load**, as DP-F2 rules: every run's `Test Files  1 passed`, its load1 and
-  its rc, in LG 8338. **Zero failures in the count.** One failure stops the slice and is reported with
+  its rc, in LG-2024. **Zero failures in the count.** One failure stops the slice and is reported with
   its time and its query: FD-1800's hypothesis then did not hold.
 - **A6. The GREEN set and the gate.** The file's own closure (common seat brief, item 29): commands and
   list in the LG. **The full code gate, both halves, SOLO**, green at the re-merged head, every rc quoted,
@@ -129,7 +129,7 @@ No DB, no Redis, no docker, nothing on the NFR VM. A5's written grant, outside a
 
 ## Tasks
 
-### SL 8337 — the deterministic wait
+### SL-2023 — the deterministic wait
 
 **The row.** WK-1178 fix slice. One `sonnet` executor. Requirements: FR-1530 (the test's subject; no
 spec change). Register: FD-1748 and FD-1800 (both MEDIUM), closing at the merge (A7). Depends on: the GO; A5's grant; the first gate slot
@@ -169,8 +169,8 @@ diff: `frontend`, `docs`, `history-policy`; `python` only if a filter matches.
 ### Write set
 
 - `frontend/src/views/__tests__/RatingDesignView.test.ts`.
-- LG 8338 under `docs/ledgers/`.
-- At the mint: the SL 8337 row in `docs/roadmap.md`, `docs/INDEX.md`, this plan's `status:`, the two essays
+- LG-2024 under `docs/ledgers/`.
+- At the mint: the SL-2023 row in `docs/roadmap.md`, `docs/INDEX.md`, this plan's `status:`, the two essays
   and `docs/findings/register.md` (A7).
 
 ### Files shared with other groups
