@@ -187,6 +187,50 @@ def test_review_mode_does_not_match_a_row_with_no_14_mention(tmp_path: pathlib.P
     assert register_owed.select_matches(rows, "review") == []
 
 
+# --- Reads the live decision text, not the superseded opening kept below it (FD-1916) ---------
+
+_SUPERSEDED = "This supersedes the owner and event of the opening kept below."
+
+
+def test_review_mode_ignores_a_superseded_opening(tmp_path: pathlib.Path) -> None:
+    content = _HEADER + _row(
+        "U (F999980)", "WK-671", "2",
+        f"deferred with an owner: WK-A. {_SUPERSEDED} Opening: this decays to the next "
+        "CLAUDE.md §14 plan review",
+    )
+    rows = _parse(tmp_path, content)
+    assert register_owed.select_matches(rows, "review") == []
+
+
+def test_work_mode_ignores_a_superseded_opening(tmp_path: pathlib.Path) -> None:
+    content = _HEADER + _row(
+        "V (F999981)", "WK-671", "2",
+        f"deferred with an owner: WK-A. {_SUPERSEDED} Opening: owned by WK-B",
+    )
+    rows = _parse(tmp_path, content)
+    assert register_owed.select_matches(rows, "WK-B") == []
+
+
+def test_a_live_text_naming_the_review_before_the_marker_still_matches(
+    tmp_path: pathlib.Path,
+) -> None:
+    content = _HEADER + _row(
+        "W (F999982)", "WK-671", "2",
+        f"carry forward to the next CLAUDE.md §14 plan review. {_SUPERSEDED} Opening: WK-B",
+    )
+    rows = _parse(tmp_path, content)
+    assert len(register_owed.select_matches(rows, "review")) == 1
+
+
+def test_a_row_with_no_marker_is_read_whole(tmp_path: pathlib.Path) -> None:
+    content = _HEADER + _row(
+        "Y (F999983)", "WK-671", "2", "carry forward — owned by WK-B, decays to the §14 review",
+    )
+    rows = _parse(tmp_path, content)
+    assert len(register_owed.select_matches(rows, "WK-B")) == 1
+    assert len(register_owed.select_matches(rows, "review")) == 1
+
+
 # --- Dirty-tree / uncommitted-revision refusal (RL-912 constraint 1, enforced) ----------
 
 def _git(repo: pathlib.Path, *args: str) -> None:
