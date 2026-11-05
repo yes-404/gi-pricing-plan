@@ -21,6 +21,8 @@ Filed 2026-10-22 under working id 8171 (lead-reserved in eta.md); minted 2026-10
 **GO:** the maintainer's (by delegation) entry "2026-10-22 15:43:10 BST — Maintainer: SPEED MEASURES …" item 2 (`to-lead.md`): FD-1838 prioritised, built red-first, the remedy as reserved at "2026-10-21 21:13:34 BST"; dispatched by lead 26 in the brief `brief-exec-1838-2026-10-22.md`.
 **MERGE-ACK:** not yet given.
 
+*Correction: merged as #1363, squash 6753c495, 2026-10-22T20:41:15Z (gh); correction 2026-11-05 by aud-sl1854 on the lead's adoption.*
+
 ## Tasks
 
 ### Scope
@@ -149,7 +151,30 @@ All 13 previously failing tests pass; the gate's pytest count is 13 failed, 6646
 
 ### Audit
 
-Not yet written.
+Audit by `aud-sl1854` (auditor, Sonnet 5.5), 2026-11-05T09:35:24Z, on `dae9637ea6f6a56f6502e9db70392cdfb2f3983d` (main), slice merge #1363, squash `6753c4953250fcd601f0309becb4ca142d0f13d2`; PR head `4d2110ba9a63742004f3bb268cf612aa1c65769e` (`refs/pull/1363/head`; `git diff --stat <head> 6753c495` is empty). Verdicts are PROPOSALS (CLAUDE.md §12). No test was re-run: `test_deployment_switch_slot_namespace.py` has two Redis tests (one in 3), so by brief it is cited from the gate record, not run. DB-free predicate for the code reads: `git -C <wt> diff 6753c495^ 6753c495 -- backend .claude` (read whole).
+
+**Scope source.** No plan exists. Criteria are derived, before looking at evidence, from (a) FD-1838 "Remedy (not made here)" (essay lines 60-62), its Disposition (lines 66-68), and (b) the SL-1854 row's "Scope, exactly" (`docs/roadmap.md`, row under `#### SL-1854`) with LG-1855's Scope section (line 28).
+
+| # | Criterion (source) | Verdict | Evidence |
+|---|---|---|---|
+| C1 | One helper `switch_stack(environment, tenant_id)` builds the stack prefix for both callers (roadmap SL-1854 Scope; LG Scope l.28) | MET | `deployment_switch.py` adds `switch_stack` (+`__all__`); `main.py:132` and `test_deployment_switch_http.py:86` call it; `git grep -n -E "RedisSwitch\(" 6753c495 -- backend packages scripts` finds only those two callers plus the new test; no inline `f"{environment}:{tenant_id}"` left. |
+| C2 | It appends `basename($GIP_GATE_SLOT)` when set, through `RedisSwitch`'s existing `stack` argument; no new constructor (roadmap Scope; FD-1838 Remedy l.60-61) | MET | Body: `slot = os.environ.get("GIP_GATE_SLOT")`; `return f"{stack}:{os.path.basename(slot)}" if slot else stack`. `RedisSwitch`/`RedisSwitchTransport` signatures unchanged (diff touches neither class). |
+| C3 | A process with no slot (production) is unchanged (roadmap Scope) | MET | Unset or empty slot returns `f"{environment}:{tenant_id}"`, the string the old inline code built. `test_without_a_gate_slot_the_stack_is_unchanged` asserts `== "local:local"` (pure function, `monkeypatch.delenv`). Read to the assert; not re-run (file mixes Redis tests). Gate record: pytest of the whole file passed in the GREEN run (15 passed). MET (code and assert read); run itself MET-BY-RECORD. |
+| C4 | Red first: a test with a foreign subscriber on the unsuffixed channel (roadmap Scope; FD-1838 Remedy l.62; Disposition l.66-67) | MET-BY-RECORD | `test_a_subscriber_on_the_unsuffixed_channel_is_not_counted_in_the_quorum` subscribes a foreign pubsub to `gip:switch:local:local:dev`, builds the switch with `switch_stack` under `GIP_GATE_SLOT=/tmp/slots/gate-1`, and asserts `outcome.receivers == 1` and `prepared == {"slot-process"}` (asserts read). Needs live Redis, so not run here. RED at `a83531d0`, rc=1, `2 failed, 1 passed`, with `SwitchIncompleteError: 1 of 2 subscribed processes acknowledged PREPARE` (LG l.39-43); GREEN at `b95c9d3d`, rc=0, `15 passed` (LG l.44-45). Both SHAs: `merge-base --is-ancestor <sha> 4d2110ba` exit 0 (the squash commit has no ancestry to them, by construction). |
+| C5 | The slot name is set per slot by the gate scripts and `run-small.sh`, not re-implemented (FD-1838 Remedy l.60; roadmap Scope "already export GIP_GATE_SLOT … not changed") | MET | `scripts/run-small.sh:64` at `6753c495`: `env GIP_GATE_SLOT="$slot"`; the slice diff touches no file under `scripts/` (`git diff --name-only 6753c495^ 6753c495 -- scripts` is empty). Gate script row `GIP_GATE_SLOT, /tmp/slots/gate-1b (exported)` is the LG's gate record (MET-BY-RECORD for the gate script itself; script not read here). |
+| C6 | The remedy is shown to work under the slot named in a gate: the two paired slots do not share a channel (FD-1838 Evidence l.46-48) | MET | `test_two_gate_slots_get_two_stacks` asserts `gate-1` and `gate-1b` stacks differ and neither equals `local:local` (pure; read). The FD's own "not a reproduction" caveat for gate-1 + gate-1b is closed by this assert plus the gate-1b run being the slice's own. |
+| C7 | FR-268 keeps its behaviour; no new requirement (LG Scope l.28) | MET-BY-RECORD | `test_deployment_switch.py` + new file: 15 passed (LG l.44-45); gate pytest `13 failed, 6646 passed`, the 13 being exactly the docs-audit set, re-run green on minted head `89eea73d` (LG l.129-148; 1(f) condition). `git diff` shows no spec file touched; `grep -n "FR-"` over `git diff 6753c495^ 6753c495 -- backend .claude` finds nothing (rc 1). Not re-run here (DB-backed or Redis). |
+| C8 | Disposition: FD-1838 discharges on "a merged per-slot namespace with a red-first test against a concurrent subscriber" (FD-1838 l.66-67) | MET (code), OPEN (record) | The merged namespace and red-first test exist (C1-C4). The record is not yet updated: at `dae9637e` FD-1838 still reads `status: active` with Disposition "Open, owner WK-1178", the roadmap SL-1854 row says "MERGE-ACK: not yet given", and LG-1855 says "MERGE-ACK: not yet given" and "merge commit: not yet merged" while #1363 is merged as `6753c495`. These are the lead's/auditor's closing acts after adoption; this audit edits only the LG's Audit section. |
+
+**NFRs.** None are claimed by the scope (no FR/NFR id). No measurement owed.
+
+**Broken-input proof.** The red run (`a83531d0`, `2 failed`) is the deliberately-broken-input proof: the same assertions fail on the pre-fix code and pass on the fix; the LG gives the log paths (`~/gi-pricing-plan.local/scratch/fix-1838/red.log`, `green.log`), which this audit did not open.
+
+**Ledger two-way match.** Every LG commit SHA (`a83531d0`, `b95c9d3d`, `34c427ea`, `89eea73d`) is reachable from PR head `4d2110ba` (`git merge-base --is-ancestor`, exit 0 each). Every changed path of the merge (8 files) is named by the LG scope or build log, or is `docs/INDEX.md`.
+
+**Observations (not criteria).** (1) The gate's overlap note (LG l.140) says the other window's TestClients used the unsuffixed channels; the fix makes that harmless by design (C4). (2) A one-line note in the SKILL.md matches the code (`switch_stack`, `app.platform.deployment_switch`); verified by reading the diff.
+
+**The lead's adoption:** "Lead's adoption, 2026-11-05 (lead 30, from-lead): C1–C7 ADOPTED as proposed (C3 / C4 / C7 MET-BY-RECORD: the slice's tests need live Redis; the gate record and the asserts were read, no re-run). C8 ADOPTED as MET for the code and OPEN for the record: FD-1838 remained `status: active` after #1363 merged (2026-10-22T20:41:15Z, squash 6753c4953250fcd601f0309becb4ca142d0f13d2); its closing act (essay + register row) and the SL-1854 roadmap row's merge line and status ride docs batch 10 (merge 61), not this commit."
 
 ### Build log
 
@@ -159,3 +184,4 @@ Not yet written.
 ## PRs
 
 - #1363 — `fix(backend): SL-1854 — FD-1838, the switch channels carry the gate slot's name`, opened 2026-10-22; merge commit: not yet merged.
+  *Correction: merged as #1363, squash 6753c495, 2026-10-22T20:41:15Z (gh); correction 2026-11-05 by aud-sl1854 on the lead's adoption.*
