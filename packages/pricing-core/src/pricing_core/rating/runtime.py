@@ -1127,12 +1127,18 @@ class CompiledBundle:
     algorithm: RatingAlgorithm
     boosters: Mapping[str, object]
     purposes: Mapping[str, PurposeEvaluation] = field(default_factory=dict)
+    #: The base evaluation's `PurposeEvaluation.diagnose`.
+    diagnose: Callable[[Mapping[str, Any]], RuntimeError | None] = field(
+        default=lambda _context: None, repr=False, compare=False
+    )
 
     def evaluation_for(self, purpose: str) -> PurposeEvaluation:
         """The decision and algorithm a quote of `purpose` is evaluated by (`RL-1628`
         condition 1): the purpose's own when a mount selects it, the base pair otherwise. Every
         read of the algorithm or decision while scoring goes through this one selector."""
-        return self.purposes.get(purpose) or PurposeEvaluation(self.decision, self.algorithm)
+        return self.purposes.get(purpose) or PurposeEvaluation(
+            self.decision, self.algorithm, self.diagnose
+        )
 
 
 def _check_graph_matches_inlined_algorithm(graph: JdmGraph, algorithm: RatingAlgorithm) -> None:
@@ -1221,6 +1227,7 @@ def load_bundle(bundle: Bundle) -> CompiledBundle:
         decision=base.decision,
         algorithm=base.algorithm,
         boosters=boosters,
+        diagnose=base.diagnose,
         purposes={
             purpose: evaluation(graph, purpose_algorithms[purpose])
             for purpose, graph in bundle.purpose_graphs.items()
