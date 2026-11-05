@@ -188,3 +188,5 @@ it: the WK-1178 plan for the docs check is filed and the discharge above is met.
 Filed 2026-10-01 as working id 9772; minted 2026-10-03 as FD-1381 (the item-5 batch, with RL 9751 -> RL-1379 and RL 9986 -> RL-1380).
 
 Severity and discharge set by the maintainer 2026-10-01 (pre-mint).
+
+*(Dated line, 2026-11-05, docs batch 11, by the auditor, on to-lead "2026-11-05 09:58:58 GMT" and the correction staged 2026-11-05 10:00:34 GMT: FD-1381 stays the named freeze exception (about 16 h; the maintainer decides it Tue 18:00). With FD-1482 limb 2 and FD-1723 limb FR-7 it is one of the THREE named freeze exceptions of to-lead "2026-11-05 10:31:31 GMT" item (C)(5).)*

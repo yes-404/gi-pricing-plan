@@ -178,3 +178,22 @@ The 15:21:30 pre-grant (exact `Decimal` quantize form) is superseded by this lin
 **Checks (no test run — gate-1 held, DB-backed):** `ruff check` on the two files rc 0; `py_compile` rc 0. `ruff format --check` rc 1 on both files **and rc 1 on their `HEAD` versions before this edit** (pre-existing, not introduced here; the files are hand-aligned and not format-clean on main either).
 
 GREEN = the re-gate (owed).
+
+## Addendum 2026-11-05 — nfr-bench-1 session 1: item E, NFR-502 DP-A2 limbs (exec-nfrs1)
+
+*(2026-11-05; authority: the lead's brief of record for exec-nfrs1; method of LG-1896's 2026-10-25 12:16 UTC window where it has one, else the same scratch files.)*
+
+Main `dae9637ea6f6a56f6502e9db70392cdfb2f3983d`, tree `715a8fd2e8ddeb27b68414db85929ccac359d1ad`, checked out detached at `~/gi` on the dedicated VM `nfr-bench-1` (GCE e2-standard-8, 8 vCPU, 32 GB; CPU Intel Xeon @ 2.20 GHz, family 6 model 79 stepping 0, flags hash `9674b27761c0`, the same as the shared box on 3 Nov; cpubench x3 py-loop 1.512/1.504/1.547 s, sha256-64MB 0.194/0.192/0.197 s; pgbench -s 10 -c 4 -j 2 -T 20: 1324.96 tps, 3.019 ms; CTAS 1 M rows 2579 ms). Run logs and driver outputs: `~/gi-pricing-plan.local/scratch/nfr-bench-1/s1/` (shared box; not in the repository); on the VM `~/logs/s1/`. Nothing else ran on the VM during a timed item (quiet bar: load1 < 1.0, `pgrep -c pytest` 0, read before each start).
+
+Bring-up lines: plan step 5 (pnpm frozen install) = not run, cause: no node/pnpm on the VM; no S1 item depends on it. The login role `gip_app_login` was missing on the VM's pre-FD-1729 volume: `deploy/postgres/app-login-role.sql` was applied with `-d postgres` (cluster-level, not the template database) and `scripts/provision-app-role.py` set its password (the lead accepted this). The `--serve-dsn` form passed was `postgresql+asyncpg://gip_app_login@127.0.0.1:5432/<item db>` (password not recorded); the owner `--dsn` was `postgresql+asyncpg://gipricing@127.0.0.1:5432/<item db>`. Each item ran on its own `createdb -T gipricing` copy migrated to head `b7e4c2a91d36` (the template stayed at `a4d1f08c3b97`, untouched); server redis db 11. `redis-cli -n 0 dbsize` was 1 at START (a stale `gip:tenant` key from 21 Oct, not written by this session) and is quoted again at END. The VM already held database `gipricing_sl1455_t4_1792592230` from 21 Oct; it was left alone.
+
+Method: the 25 Oct window's scratch files, copied to the VM and re-hashed there: `limb13.py` `e9f57bfd60e5…`, `limb3.py` `9d900f5030ae…`, `shapes.py` `afeba890778f…`, `test_zz_limb2.py` `3b8159d37b0c…`, `verdict.py` `4f64c2e31612…` (all from `scratch/sl-1569/t6/`), driven by `bench-ef-window.sh` sha256 prefix `323c61e6ca2f`, an adaptation of `w2-window.sh` (sha256 `331d084b29ff…`). Deviations from the 25 Oct window, disclosed: no gate-1b `flock`; redis db 11 (not 2/4); the abort rule is load1 ≥ 1.0 at start (not ≥ 5); the thread caps are exported as before (4); `alembic upgrade` on the copy returned rc 1 (the template schema `a4d1f08c3b97` is newer than the older tree's own migrations), so the copy kept the template schema and the two limb-2 tests passed on it. Base `102341aa` against HEAD `96e1b369` (VM worktree `~/wt-e`), DB `nfrs1_e`, 10:44:01–10:52:19 UTC, load1 0.68 at start; ZEROS: redis11 0, database dropped, tree status lines 0; log `iteme-window.log`; rc 0.
+
+Limb 2, p99 ms per run 1/2/3:
+
+| route | base | HEAD | delta of medians against base's range |
+|---|---|---|---|
+| `/score` | 33.112 / 26.724 / 31.950 (median 31.950, range 6.389) | 26.522 / 26.544 / 33.337 (median 26.544) | −5.406, STOP=False |
+| `/score/compare` | 54.634 / 54.543 / 52.493 (median 54.543, range 2.142) | 50.074 / 50.317 / 57.560 (median 50.317) | −4.225, STOP=False |
+
+Limb 3 (structural, HEAD tree): `/api/v1/score` and `/api/v1/score/compare` both `response_model None`, `response_field None`, schema200 `$ref` `ScoringResult` / `ScoreComparison`. Verdict: **NO_STOP_CONDITION = PASS**.

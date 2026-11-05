@@ -2,12 +2,12 @@
 id: FD-1330
 family: finding
 title: The premium ladder attributes a clamp's effect to the office_premium rung, not to the constraints rung
-status: active
+status: closed
 created: 2026-09-30
 owner: auditor
 tree: 25ca36df89b0ac6e97a14cb08ca2b07f54fef085
 corrected_by: []
-relates: [WK-674]
+relates: [WK-674, SL-1345, LG-1363]
 ---
 
 # FD-1330 — The premium ladder attributes a clamp's effect to the office_premium rung, not to the constraints rung
@@ -118,3 +118,5 @@ The unclamped case is unchanged. Slice 3's own stop condition stands: it stops i
 moves.
 
 *Disclosure: this record was drafted under working id 9967 and minted as FD-1330; the working id survives only in this line and in PR #1000's history.*
+
+***Resolved 2026-11-05*** — closed in place 2026-11-05 by the auditor (aud-fdclose), on the lead's brief under to-lead "2026-11-05 09:40:57 GMT" item 8 (2), the FD-1842 form. Delivered remedy (the Disposition's red-first acceptance on the builder rewrite: a clamped quote's ladder attributes the clamp to its constraint rung): WK-674 Slice 3L, SL-1345 (LG-1363), PR #1045, squash commit 1dd5e264195677b4a13268b80ac8673c2c027135, merged 2026-10-01T08:58:45Z. `packages/pricing-core/tests/test_rating_ladder_exact.py::test_a_min_premium_clamp_sits_on_the_constraints_rung` (:334-354) asserts `office_premium` stays 1436, the `constraints` rung is 5000 with `kind == "clamp"`, `bound == "min"` and `applied == ["MIN_PREMIUM_APPLIED"]`, and the downstream rungs and payable stay 5250; the unclamped case is `test_an_unclamped_quote_is_unchanged_and_constraints_is_none`. One deliberate difference from the essay: the factor is asserted `Decimal("1.1")`, not "1.1000", per RL-1329 (the exact-unrounded rungs). Slice 3's own stop condition (no golden payable moves) is a gate on the slice, not a separate limb; `baseline_ladder.py` was added by the merge and not re-read here.

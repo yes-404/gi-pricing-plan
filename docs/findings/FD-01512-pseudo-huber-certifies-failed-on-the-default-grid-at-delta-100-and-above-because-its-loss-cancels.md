@@ -174,3 +174,5 @@ is unusable in the range it exists for, on the default grid.
 
 Open. Filed by the auditor, 2026-10-05, on the lead's relay of `LG-1412`'s note; severity and
 owner are proposals. The verdict is the lead's; the severity is the maintainer's (by delegation) at the mint.
+
+*(Dated line, 2026-11-05, docs batch 11, by the auditor, on to-lead "2026-11-05 10:15:18 GMT" (FD-1512 limb 3 ruled): limb 3, the decision-maker question, is raised as OQ-2008 (open-questions.md and `02-modelling.md` §10, mirrored). The recommendation, the maintainer's, is to add the loss-evaluation term as P3 work. FD-1512 CLOSES on that OQ by this dated line for limb 3; limbs 1 and 2 stand on their own entries.)*

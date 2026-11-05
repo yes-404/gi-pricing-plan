@@ -313,3 +313,5 @@ SL-1994 is cut in `docs/roadmap.md` under `### WK-690`, after `SL-1622`, as `dra
 - **Not run.** Every behavioural statement is read from code; the reds are the measurement.
 - **Placeholders.** `2026-11-0x` (the amendment date) and the PR number are values the
   executor reads when it writes them.
+
+*(Dated line, 2026-11-05, docs batch 11, by the auditor, on the staged line of 2026-11-05 11:18:38 GMT: this plan's front matter still reads `status: draft`; the roadmap row at `docs/roadmap.md:1990` cites it as the plan of record for SL-1994. The field is stale against that use; it is not edited here (a filed plan is frozen at its date) and this line governs it.)*
