@@ -21,6 +21,7 @@ from uuid import UUID, uuid4
 import pytest
 from backend.tests.conftest_db import grant_roles_as_owner
 from backend.tests.dry_run_reports import stored_dry_run_report
+from backend.tests.test_api_rate_tables import _LEVELS
 from backend.tests.test_approvals import (
     AUTHOR,
     RATING,
@@ -41,17 +42,21 @@ from backend.tests.test_deployments import (  # noqa: F401  (fixtures, by import
 from backend.tests.test_diagnostics import _fit
 from backend.tests.test_model_jobs import _actuary, _spec
 from backend.tests.test_model_lifecycle import _next_version_of, _principal_with
+from backend.tests.test_nfr498_audit_events import _CSV as _NFR498_CSV
+from backend.tests.test_nfr498_audit_events import _table as _nfr498_table
 from backend.tests.test_peril_structure_approval import (
     _model_id,
     _reconciled,
     _set_model_status,
 )
 from backend.tests.test_peril_structures import _book, _burning_cost_peril
+from backend.tests.test_rate_tables_service import _seed_approved_model
 from backend.tests.test_rating_versions import _draft, _gate, _principal
 from fastapi.testclient import TestClient
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.config import Settings
 from app.db.models import (
     ApprovalRequestRow,
     AuditEventRow,
@@ -64,6 +69,8 @@ from app.db.models import (
     ModelRow,
     ObjectiveCertificateRow,
     PerilStructureRow,
+    RateTableRow,
+    RateTableVersionRow,
     ReferenceTableRow,
     ReferenceTableVersionRow,
     ValidationRuleRow,
@@ -78,10 +85,12 @@ from app.platform import metrics as metric_service
 from app.platform import modelling as model_service
 from app.platform import objectives as objective_service
 from app.platform import perils as peril_service
+from app.platform import rate_tables as rate_table_service
 from app.platform import rating_versions as rating_service
 from app.platform import reference as reference_service
 from app.platform import validation as validation_service
 from app.platform import validation_rules as rule_service
+from app.platform.blobs import BlobStore
 from app.worker.data_handlers import register_data_handlers
 from app.worker.model_handlers import register_model_handlers
 from app.worker.rating_handlers import register_rating_handlers
@@ -119,7 +128,11 @@ from model_schema.metrics import VALID_METRIC_TRANSITIONS
 from model_schema.modelling import VALID_MODEL_TRANSITIONS
 from model_schema.objectives import VALID_OBJECTIVE_TRANSITIONS
 from model_schema.perils import VALID_PERIL_STRUCTURE_TRANSITIONS
-from model_schema.rating import VALID_RATING_VERSION_TRANSITIONS
+from model_schema.rating import (
+    VALID_RATING_VERSION_TRANSITIONS,
+    RateTableCell,
+    RateTableManualEdit,
+)
 
 register_data_handlers()
 register_model_handlers()
@@ -2032,3 +2045,177 @@ async def test_a_declared_transition_writes_its_event_in_its_transaction(
     assert (event.after or {}).get("status") == row.after
     if row.status is not None:
         assert await row.status(env, ctx) == row.after
+
+
+# The four rate-table creations (PL 8376 DP-4 (a), STOP-1 ruled (b) 2026-11-05): their writers
+# open their own unit of work, so the rollback leg is a fault injected from the test. The seam
+# is `app.platform.rate_tables.audit.record`, the module attribute every writer's event goes
+# through; it is patched inside one test by `monkeypatch`, never autouse. The patched call
+# writes the real event and then raises, so what is proved is that the version row and its
+# event leave together.
+
+
+class _InjectedError(Exception):
+    """The fault the test injects after the event is written."""
+
+
+_RATE_TABLE_ACTIONS = (
+    "rate_table_version.seeded",
+    "rate_table_version.imported",
+    "rate_table_version.bulk_operation",
+    "rate_table_version.edited",
+)
+
+
+async def _rate_table_write(
+    action: str,
+    database: Database,
+    workspace_id: UUID,
+    principal: Principal,
+    blob_store: BlobStore,
+) -> tuple[str, int, Callable[[], Awaitable[Any]]]:
+    """Set up so one call of the returned writer creates `slug@number` and emits `action`."""
+    slug, _first = await _nfr498_table(database, workspace_id, principal, blob_store)
+    settings = Settings()
+    if action == "rate_table_version.seeded":
+        family = f"mf-{uuid4().hex[:8]}"
+        await _seed_approved_model(database, workspace_id, family, _LEVELS)
+
+        def write() -> Awaitable[Any]:
+            return rate_table_service.seed_from_model(
+                database,
+                workspace_id,
+                principal,
+                settings,
+                blob_store,
+                slug=slug,
+                model_ref=ArtifactRef(type="model", slug=family, version=1),
+                factor="driver_age_band",
+                change_note="FR-7 table",
+            )
+
+    elif action == "rate_table_version.imported":
+
+        def write() -> Awaitable[Any]:
+            return rate_table_service.import_confirmed(
+                database,
+                workspace_id,
+                principal,
+                settings,
+                blob_store,
+                slug=slug,
+                version=1,
+                filename="fr7.csv",
+                content=_NFR498_CSV,
+            )
+
+    elif action == "rate_table_version.bulk_operation":
+
+        def write() -> Awaitable[Any]:
+            return rate_table_service.bulk_operation(
+                database,
+                workspace_id,
+                principal,
+                settings,
+                blob_store,
+                slug=slug,
+                version=1,
+                kind="uplift_table",
+                parameters={"percentage": "0.10"},
+            )
+
+    else:
+
+        def write() -> Awaitable[Any]:
+            return rate_table_service.manual_edit_confirmed(
+                database,
+                workspace_id,
+                principal,
+                settings,
+                blob_store,
+                slug=slug,
+                body=RateTableManualEdit(
+                    base_version=1,
+                    change_note="FR-7 table",
+                    confirm=True,
+                    edits=[RateTableCell({"driver_age_band": "21-24", "relativity": "1.4500"})],
+                ),
+            )
+
+    return slug, 2, write
+
+
+async def _rate_table_versions(
+    database: Database, workspace_id: UUID, slug: str, number: int
+) -> int:
+    async with database.session() as session:
+        return len(
+            (
+                await session.scalars(
+                    select(RateTableVersionRow)
+                    .join(RateTableRow, RateTableRow.id == RateTableVersionRow.rate_table_id)
+                    .where(
+                        RateTableRow.workspace_id == workspace_id,
+                        RateTableRow.slug == slug,
+                        RateTableVersionRow.version_number == number,
+                    )
+                )
+            ).all()
+        )
+
+
+@pytest.mark.req("FR-7")
+@pytest.mark.req("FR-368")
+@pytest.mark.parametrize("leg", ["commit", "rollback"])
+@pytest.mark.parametrize("action", _RATE_TABLE_ACTIONS)
+async def test_a_declared_transition_writes_its_event_in_its_transaction_rate_tables(
+    database: Database,
+    workspace_id: UUID,
+    principal: Principal,
+    blob_store: BlobStore,
+    monkeypatch: pytest.MonkeyPatch,
+    action: str,
+    leg: str,
+) -> None:
+    """Commit: one event with the action on `slug@2`. Rollback: the event write is followed by a
+    raise inside the writer's own unit of work; that exact exception propagates, and neither
+    the version row nor the event remains."""
+    slug, number, write = await _rate_table_write(
+        action, database, workspace_id, principal, blob_store
+    )
+    since = await _sequence(database, workspace_id)
+    ref = f"rate_table:{slug}@{number}"
+
+    if leg == "commit":
+        await write()
+        events = await _owed(
+            database,
+            workspace_id,
+            Row("rate_table", None, "created", action, _no_setup, _noop),
+            ref,
+            since,
+        )
+        assert len(events) == 1
+        assert await _rate_table_versions(database, workspace_id, slug, number) == 1
+        return
+
+    real = audit.record
+
+    async def inject(session: AsyncSession, **kwargs: Any) -> Any:
+        written = await real(session, **kwargs)
+        if kwargs["action"] == action:
+            raise _InjectedError(action)
+        return written
+
+    monkeypatch.setattr(audit, "record", inject)
+    with pytest.raises(_InjectedError) as raised:
+        await write()
+    assert str(raised.value) == action
+    monkeypatch.undo()
+    assert await _rate_table_versions(database, workspace_id, slug, number) == 0
+    row = Row("rate_table", None, "created", action, _no_setup, _noop)
+    assert await _owed(database, workspace_id, row, ref, since) == []
+
+
+async def _noop(session: AsyncSession, env: Env, ctx: Ctx) -> None:
+    return None
