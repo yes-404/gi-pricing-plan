@@ -42,7 +42,7 @@ T5 `test_a_hashed_bound_is_never_rounded_to_the_context_precision` (two 38-digit
 
 ### R3 — green (drafted, uncommitted until the window)
 
-Patch `~/gi-pricing-plan.local/scratch/sl-8340-decimalstr-positional/code.patch` sha256 `f5c5f9f9473ca3508e227ae47df0db4f6294a48915a1407d6a503928b71c18ac`, 3 files (`money.py`, `regression.py`, `test_money.py` docstring). `CanonicalDecimalStr` serialises through `_canonical_decimal`: zero first (`0`), else `value.normalize(Context(prec=max(len(value.as_tuple().digits), 1), traps=[Inexact]))` then `format(…, "f")`, as ruled. `test_money.py` 40 passed; `ruff check packages/model-schema` clean; `mypy` on `money.py` clean.
+Patch `~/gi-pricing-plan.local/scratch/sl-8340-decimalstr-positional/code.patch` sha256 `10093e77719436a0e6d172cb4df0fa445d1dc2276d8b048daf134bdf690ed2f5`, 3 files (`money.py`, `regression.py`, `test_money.py` docstring). `CanonicalDecimalStr` serialises through `_canonical_decimal`: zero first (`0`), else `value.normalize(Context(prec=max(len(value.as_tuple().digits), 1), traps=[Inexact]))` then `format(…, "f")`, as ruled. `test_money.py` 40 passed; `ruff check packages/model-schema` clean; `mypy` on `money.py` clean.
 
 **`.normalize(` sites** — predicate `git grep -n '\.normalize(' -- backend/src packages/*/src` at head `496723cf` plus the draft, 9 lines, one is `unicodedata.normalize` (not a Decimal). Read by "does the output reach a hash site (A5)":
 - `money.py:152` — this slice's own, exact context; reaches `suite_content_hash` via `MonotoneInInput.lower/upper` only.
@@ -51,6 +51,10 @@ Patch `~/gi-pricing-plan.local/scratch/sl-8340-decimalstr-positional/code.patch`
 - `analysis.py:339` `_edge_text`: display text of a band edge, no hash.
 - `rate_tables/operations.py:697` `_format_value` (FD-1648, SL 8322's R1): writes the cell text of an operation result; the cells reach `version_content_hash` (`diff_cache.py:48`), the diff cache's key, not a governed hash, and the rounding at 28 digits is ambient there. Outside this slice's write set; for the lead.
 - `ingest.py:95`: `unicodedata.normalize`, not a Decimal.
+
+### R2d — sNaN (to-lead "2026-11-05 16:33:41 GMT"), red first (`e24299c0`)
+
+Validation refuses `sNaN`, `NaN` and `Infinity` for `CanonicalDecimalStr` (pydantic's Decimal validation, `allow_inf_nan` off; run: all four `ValidationError`), but `Holder.model_construct(value=Decimal("sNaN")).model_dump(mode="json")` reaches the serialiser and, with `traps=[Inexact]` only, wrote `'NaN'`. T6 `test_a_signalling_nan_that_skips_validation_is_not_written_as_a_number` is red on that form (`DID NOT RAISE`); the form is now `Context(prec=max(len(value.as_tuple().digits), 1), traps=[Inexact, InvalidOperation])`, the same as R2's, and T6 is green (`test_money.py` 41 passed). Patch sha256 `10093e77719436a0e6d172cb4df0fa445d1dc2276d8b048daf134bdf690ed2f5`.
 
 ### Disclosure
 
