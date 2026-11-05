@@ -369,12 +369,14 @@ def test_the_frontend_serves_the_spa_and_reaches_the_api_through_lb(
     json.loads(body)
 
 
-#: The model backends the platform declares (FR-415 / 02-modelling); the compose image must run all of them.
+#: The model backends the platform declares; the compose image must be able to import all of them.
 _BACKENDS = ("lightgbm", "xgboost", "glum", "interpret")
 
 
 @pytest.mark.req("FR-432")
-def test_the_built_image_imports_every_declared_model_backend(built_n: str) -> None:
+def test_the_built_image_imports_every_declared_model_backend(
+    built_n: str,  # noqa: F811
+) -> None:
     """FD 8353: the CI runner installs system libraries the image lacks. `lightgbm` needs
     `libgomp.so.1`, which `python:3.12-slim` does not carry, so a fit in a compose worker could not
     even import it. Every backend is imported in the BUILT image, one process each."""
@@ -398,11 +400,11 @@ SIGTERM_ROUNDS = 10
 
 #: FD-1199's extension list, loaded before the service starts: a served API or worker otherwise
 #: loads only the eager modules until a fit or a prediction runs, and the arm would be vacuous.
-#: `lightgbm` is left out: the image has no `libgomp.so.1`, so it cannot be imported there at all.
 _PRELOAD = (
-    "import sys, numpy, scipy, polars, sklearn, pandas, pyarrow, numexpr, glum, xgboost;"
+    "import sys, numpy, scipy, polars, sklearn, pandas, pyarrow, numexpr, glum, xgboost,"
+    " lightgbm;"
     "print('PRELOADED', *sorted(m for m in ('sklearn', 'pandas', 'pyarrow', 'numexpr', 'glum',"
-    " 'xgboost') if m in sys.modules), flush=True);"
+    " 'xgboost', 'lightgbm') if m in sys.modules), flush=True);"
 )
 _SERVED_COMMANDS = {
     "api": _PRELOAD
