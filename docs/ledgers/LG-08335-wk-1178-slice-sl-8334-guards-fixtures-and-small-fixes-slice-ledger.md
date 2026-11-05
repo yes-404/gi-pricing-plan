@@ -67,7 +67,7 @@ Not run by the executor: the SOLO full gate at the re-merged head, after R's and
 
 **A5.** `git grep -n '("exc", "e", "err")' -- backend/tests/test_error_sinks.py` prints nothing (rc 1). **A6.** No site can hold a quote input. `runtime.py:822` was read first: `_ModelCallRefusal` is raised once, `_predict_model`'s last statement, with the step id (authored in the graph) and the model_type (from the artifact). The other five: a `SwitchIncompleteError` (process ids), two `consumed_features` `ValueError`s on a stored model's fit result (fixed texts), a Custom Objective's `ObjectiveError` at compile, and a smoke fit over seeded synthetic rows.
 
-**A7.** The live-route class check and T5 are in. With the import kept and a local same-named class appended, `ast_problems` reports nothing for the four Environment rows (the AST half checks only the imported set), so it is the live check that catches that variant; the existing import-removed variant still fails the AST half (`test_a_body_class_defined_in_the_api_module_is_refused`). Reported to the lead as a reading of A7.
+**A7.** The live-route class check and T5 are in. With the import kept and a local same-named class appended, `ast_problems` reports nothing for the four Environment rows (the AST half checks only the imported set), so it is the live check that catches that variant; the existing import-removed variant still fails the AST half (`test_a_body_class_defined_in_the_api_module_is_refused`). Reported to the lead as a reading of A7, who accepted it: the live-route class check is what catches that case.
 
 **A8.** `git diff e8a59770...HEAD -- tests/test_doc_id_migrate.py | grep -ci prune` prints `0`.
 
@@ -77,7 +77,11 @@ Not run by the executor: the SOLO full gate at the re-merged head, after R's and
 
 **A11.** T7, T8 and T9 green (`13 passed`); the new handler logs the type only and the census still passes with no new row.
 
-**A3 (owed).** The stamped proof needs the lead's DB window; appended below when run.
+**A3 (run, DB window granted by the lead, START 2026-11-05 11:01:49 GMT, END 11:06:48 GMT).** Tree \`ec4c4240c6c20d3b75490a9cdeb9a88fe05efab4\` (code head). Template guard before createdb and at END: \`alembic_version=1 environments=3 tenant_marker=1\`. Copy \`gipricing_sl8334a3\` (\`createdb -T gipricing\`), every URL (\`GIP_DATABASE_URL\`, \`GIP_MIGRATION_DATABASE_URL\`, \`GIP_TEST_DATABASE_URL\`) on the copy, redis \`-n 11\`; load1 4.40 and 8 GB available at start. One DB-backed file, \`backend/tests/test_workspaces.py\`, through run-small:
+- stamped one back (\`b7e4c2a91d36 -> 9b3e7c15d4a2\`): rc 1 in 25 s, \`_pytest.outcomes.Exit: the test database is at ['9b3e7c15d4a2'], the scripts' heads are ['b7e4c2a91d36']: run \`uv run alembic upgrade head\` against this database (FD-1488)\`;
+- restamped to head: rc 0 in 23 s, \`2 passed, 2 warnings in 2.08s\`;
+- a revision the scripts do not know (set by SQL on the copy only, DP-H2): rc 0, \`UserWarning: the test database is ahead of this checkout: ['zz_unknown_ahead'] is not a revision of these migration scripts (DP-H2)\`, \`2 passed, 3 warnings in 3.43s\`.
+END: \`redis-cli -n 11 FLUSHDB\` then \`-n 11/12/13 dbsize\` = 0, 0, 0; \`-n 0 dbsize\` = 56 before and after; copy dropped, \`select count(*) from pg_database where datname='gipricing_sl8334a3'\` = 0; datnames \`gipricing postgres template0 template1\`.
 
 ## PRs
 
