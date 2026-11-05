@@ -356,3 +356,5 @@ with an escaped pipe are still `docs/findings/register.md:197`, `:213` and `:222
 `python3 scripts/doc-index.py --phase P2` still raises `parsed 211 of 214 data row(s)` in this
 tree, which carries this record's own row; `tests/test_audit_docs_ids.py:2427` and `:2476` are
 unchanged. `RL-1483` is minted in the same batch (T1) as this record.
+
+*(Dated line, 2026-11-05, docs batch 11, by the auditor, on to-lead "2026-11-05 09:51:53 GMT" (triage b28ba8e9454c accepted as the proposal of record), item (8), and the user's decision relayed in "2026-11-05 09:58:58 GMT": the carrier PR #977 (head `dm-rule-9907-route-permission`) is CLOSED unmerged (`gh pr view 977 --json state,mergedAt`: CLOSED, mergedAt null, closedAt 2026-10-08T11:41:59Z), so the carrier this record names is dead. Item (8) carried this finding to P3 (MEDIUM, WK-1178 maintenance); that carry is WITHDRAWN by the correction staged 2026-11-05 10:00:34 GMT on the 09:58:58 decision: it is coded before Thu 12 Nov 2026.)*
