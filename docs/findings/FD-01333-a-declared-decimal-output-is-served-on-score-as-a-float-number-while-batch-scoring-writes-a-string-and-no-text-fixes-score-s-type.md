@@ -303,3 +303,5 @@ Ownership shape: event
 ## Decision
 
 Not yet decided. The proposal above is the auditor's; the lead adopts, amends or rejects it.
+
+*(Dated line, 2026-11-05, docs batch 11, by the auditor, on to-lead "2026-11-05 10:52:44 GMT" (S1 item E; ruled "2026-11-05 10:53:08 GMT"): closing line on the re-measurement RL-1343 called for: NFR-502 reads NO_STOP_CONDITION. `/score` p99 median base 31.950 ms against HEAD 26.544 ms (delta -5.406); `/score/compare` 54.543 against 50.317 (delta -4.225); limb 3 (structural) `response_model` None and `response_field` None on both routes. Both arms on main's schema (upgrade_rc=1); same-schema comparison, not era-schema. Record: LG-1896 addendum 2026-11-05. No re-run.)*

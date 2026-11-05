@@ -103,3 +103,5 @@ Limit of the sweep: it covers `frontend/src` test files at the stated tree; it d
 The event that next discharges it: the WK-1178 slice in P2 that awaits the lazy chunk in
 `RatingDesignView.test.ts`, red first with a delayed-import mock, and no timeout change. Same
 family as FD-1747 (a test racing a time-dependent resource), different mechanism.
+
+*(Dated line, 2026-11-05, docs batch 11, by the auditor, on to-lead "2026-11-05 09:51:53 GMT" (triage b28ba8e9454c accepted as the proposal of record), item (4): severity RULED MEDIUM, as proposed.)*

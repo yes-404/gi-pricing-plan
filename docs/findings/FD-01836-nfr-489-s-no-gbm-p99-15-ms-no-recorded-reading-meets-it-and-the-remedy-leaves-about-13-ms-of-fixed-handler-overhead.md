@@ -92,3 +92,7 @@ pending the H1 and H2 readings (the maintainer, "2026-10-21 15:31:24 BST", item 
 the no-GBM p99 under 15 ms through configuration or deployment topology, the ETA stands; if not, a remedy
 slice or a budget change is the user's decision (row 2's scope is the user's, set 14 Oct), put to the user
 with measured options. Filed as working id 8144; minted FD-1836 on 2026-10-21, in the D29 batch mint PR.
+
+*(Dated line, 2026-11-05, docs batch 11, by the auditor, on the staged S1 item C reading of 2026-11-05 10:30:13 GMT (record: LG-1760 addendum, nfr-bench-1 session 1): NFR-489 is UNMET: without GBM p99 37.5 to 41.2 ms against the budget of under 15 ms (OVER in 4 of 4 runs, both arms, at the first rung); with GBM marginal at 25 rps and OVER by 50 to 100 rps; handler mean about 27 to 31 ms; the no-GBM arm is no faster than the GBM arm. This confirms the finding's title (no recorded reading meets 15 ms) and shows the miss is not the GBM's.)*
+
+*(Dated line, 2026-11-05, docs batch 11, by the auditor, on to-lead "2026-11-05 10:44:00 GMT" (S1 item D, mounted bundle): the mounted bundle adds about 2 ms over the plain path at every rung; the miss is the handler's. Explicit-ref at 25 rps read 42.975 ms against item C's 40.775 ms. NFR-489 on the composed path is carried by FD-1836 under WK-674; there is no separate finding for WK-1250.)*
