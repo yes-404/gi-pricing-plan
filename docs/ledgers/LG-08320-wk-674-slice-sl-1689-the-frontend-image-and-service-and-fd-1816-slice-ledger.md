@@ -139,6 +139,18 @@ Not yet (the slice's auditor).
 - **Window 2 end:** `docker ps -a --filter label=com.docker.compose.project=gip-s4-runtime -q | wc -l` = 0; shared
   stack postgres, keycloak, minio, redis `Up 44 hours (healthy)`, keycloak bind source under tools-main;
   `docker image rm gi-pricing-app:5575547b` by exact tag; `df -h /` 7.3G free (88%).
+- **libgomp, FD 8353 (ruled (a) by lead 30, brief AMENDMENT 2026-11-05 10:53:50; window 2 extended to ~12:30; the Write set widens by `deploy/Dockerfile`, named here).**
+  Red first at `b516697f`: `test_the_built_image_imports_every_declared_model_backend` (lightgbm, xgboost, glum, interpret,
+  one `docker run --entrypoint python -c "import <m>"` each) failed `1 failed in 28.74s` with
+  `{'lightgbm': 'OSError: libgomp.so.1: cannot open shared object file: No such file or directory'}`
+  (`img-red.log`). Fix `637952ae`: `apt-get install --no-install-recommends -y libgomp1` in the `deploy/Dockerfile`
+  runtime stage, and lightgbm back in FD-1211's preload. Green on the rebuilt image: `1 passed in 94.58s`
+  (`img-green.log`). FD-1211 rerun with lightgbm preloaded, N = 10 each: `api: 10 SIGTERM stops, problems=[]`,
+  `worker-compute: 10 SIGTERM stops, problems=[]`, with the broken-input proof: `2 passed in 1100.95s`, rc 0
+  (`fd1211b.log`, N=`637952ae`). This supersedes the lightgbm-less run above (20 stops each way, same result).
+- **Window 2 end 2026-11-05 12:01:58 UTC:** compose project containers 0; shared stack `Up 45 hours (healthy)`,
+  keycloak bind source under tools-main; `gi-pricing-app:637952ae…` removed by exact tag, no gi-pricing image left;
+  `df -h /` 4.4G free (93%). No prune.
 - Seat slip, recorded: one early call ran a bare `cd /tmp` (no-cd breach); the shell reset and nothing was written.
 
 ## PRs
