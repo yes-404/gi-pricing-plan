@@ -403,6 +403,7 @@ backend/tests/test_workspaces.py
 ### Build log
 
 - 2026-11-05 R0 `fb5f7acc`; R1 `99120993`; R2 `64525585`. Ledger drafted before audit.
+- 2026-11-05 23:24:32 GMT — C's 14th gate failure, ruled by the maintainer's `to-lead.md` entry "2026-11-05 22:25:29 GMT": a fifth `_PATTERN_VALUES` entry in `backend/tests/test_api_authorisation_sweep.py`, key `^[a-z0-9][a-z0-9_-]{1,62}$`, value `sweep_factor`; `UNSATISFIABLE` and its `len == 2` guard untouched; no full re-gate (test-only delta). Proof, tree `bc5ccf78` plus this line, DB window `sl8328f` (`createdb -T`, redis db 11): `backend/tests/test_api_authorisation_sweep.py` alone, `9 passed, 1 warning in 27.82s`, rc 0; a temporary local print (not committed) showed `POST /api/v1/factors` exercised and refused: `403 PERMISSION_DENIED`; the test's `set(skipped) == set(UNSATISFIABLE)` assert held (no skip beyond the two). The pytest stage otherwise stands; CI at the head runs everything.
 
 ## PRs
 
