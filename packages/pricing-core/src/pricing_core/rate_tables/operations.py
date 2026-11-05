@@ -76,6 +76,7 @@ FLOOR_ABOVE_CAP = "FLOOR_ABOVE_CAP"
 REBASE_NO_MATCH = "REBASE_NO_MATCH"
 REBASE_AMBIGUOUS = "REBASE_AMBIGUOUS"
 REBASE_ZERO_REFERENCE = "REBASE_ZERO_REFERENCE"
+BULK_OPERATION_NOT_APPLICABLE = "BULK_OPERATION_NOT_APPLICABLE"
 IMPORT_KEY_MISMATCH = "IMPORT_KEY_MISMATCH"
 IMPORT_TYPE_MISMATCH = "IMPORT_TYPE_MISMATCH"
 IMPORT_PARSE_ERROR = "IMPORT_PARSE_ERROR"
@@ -737,6 +738,27 @@ def _check_filter_key(table: RateTableVersion, filter: KeyFilter) -> None:
         )
 
 
+_ALL_VALUE_TYPES = frozenset(RateTableValueType)
+
+#: FR-233: the value types each bulk operation has a meaning on. Absence refuses, so a value
+#: type added later is refused until someone says otherwise.
+_OPERATION_VALUE_TYPES: Mapping[str, frozenset[RateTableValueType]] = {
+    "uplift_table": _ALL_VALUE_TYPES - {RateTableValueType.COUNT},
+    "uplift_by_filter": _ALL_VALUE_TYPES - {RateTableValueType.COUNT},
+    "floor_and_cap": _ALL_VALUE_TYPES,
+    "rebase_to_level": frozenset({RateTableValueType.RELATIVITY}),
+}
+
+
+def _check_value_type(table: RateTableVersion, kind: str) -> None:
+    """FR-233: refuse before anything else reads the table."""
+    if table.value.type not in _OPERATION_VALUE_TYPES[kind]:
+        raise ValueError(
+            f"{BULK_OPERATION_NOT_APPLICABLE}: {kind} has no meaning on a "
+            f"{table.value.type.value} column of rate_table:{table.slug}@{table.version}"
+        )
+
+
 def _row_matches(row: CellRow, filter: KeyFilter) -> bool:
     return all(row[key] in values for key, values in filter.items())
 
@@ -756,6 +778,7 @@ def uplift_table(
     The result is validated against the declared bounds before it persists
     (FR-234), and the version records the operation (04 §4.4).
     """
+    _check_value_type(table, "uplift_table")
     rows = _rows_of(table)
     factor = Decimal(1) + percentage
     new_rows, changed = _transform_rows(rows, table.value.name, lambda old: old * factor)
@@ -777,6 +800,7 @@ def uplift_by_filter(
     table: RateTableVersion, *, percentage: Decimal, filter: KeyFilter
 ) -> RateTableVersion:
     """FR-233: uplift only the cells matching the filter, new immutable version."""
+    _check_value_type(table, "uplift_by_filter")
     rows = _rows_of(table)
     _check_filter_key(table, filter)
     factor = Decimal(1) + percentage
@@ -819,6 +843,7 @@ def floor_and_cap(
     The floor is enforced at operation time (03 §5.2), not shape-enforced: a version
     may still carry values outside the declared bounds if an earlier save allowed it.
     """
+    _check_value_type(table, "floor_and_cap")
     if floor > cap:
         raise ValueError(f"{FLOOR_ABOVE_CAP}: floor {floor} is above cap {cap}")
     rows = _rows_of(table)
@@ -847,7 +872,11 @@ def rebase_to_level(
     The reference row's value becomes exactly 1 and everything else is expressed
     relative to it. Every cell is re-stringified (the ratio), so even a row whose
     value equals the reference keeps a normalized rendering.
+
+    It runs only on a `relativity` column, and it moves premiums unless the base rate
+    offsets it (FR-233).
     """
+    _check_value_type(table, "rebase_to_level")
     rows = _rows_of(table)
     _check_filter_key(table, base_level)
     matching = [row for row in rows if _row_matches(row, base_level)]

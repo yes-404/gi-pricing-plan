@@ -273,7 +273,7 @@ Each `kind` uses the parameters FR-233 names:
 - `floor_and_cap` — `floor` and `cap` (decimal strings, `floor ≤ cap`); clamps every cell
   into the bounds.
 - `rebase_to_level` — `base_level`; rescales the table so the named reference level's
-  value becomes 1.0.
+  value becomes 1.0. *(Amended 2026-11-05, SL 8389, FD 8387: `03` FR-233 refuses `rebase_to_level` on any column but `relativity`, and both uplifts on `count`, with `BULK_OPERATION_NOT_APPLICABLE`.)*
 
 `percentage`, `floor`, `cap` ~~and `base_level`~~ are decimal strings, never floats (R2). *(Amended 2026-10-12, the maintainer's (by delegation) entry "2026-10-12 03:07:15 BST": `base_level` is a key filter, as the example above and the next sentence state, never a decimal; its listing here was an error. Delivered with SL-1669, which types `percentage`, `floor` and `cap` as decimal strings.)*
 `filter` and `base_level` use exact-value matching over the table's declared keys (`03`

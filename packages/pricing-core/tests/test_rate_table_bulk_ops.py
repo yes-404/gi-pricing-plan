@@ -808,3 +808,19 @@ class TestBulkOperationValueType:
             assert result.version == table.version + 1
             assert result.created_by_operation is not None
             assert result.created_by_operation.kind == kind
+
+    @pytest.mark.req("FR-233")
+    def test_the_refusal_comes_before_the_filter_check(self) -> None:
+        with pytest.raises(ValueError, match=r"^BULK_OPERATION_NOT_APPLICABLE: "):
+            rebase_to_level(_typed("money_minor"), base_level={"no_such_key": ["x"]})
+
+    @pytest.mark.req("FR-233")
+    def test_the_refusal_comes_before_the_parquet_check(self) -> None:
+        table = _version(
+            storage=RateTableStorageMode.PARQUET,
+            value=RateTableValue(
+                name="relativity", type=RateTableValueType.COUNT, unit="u", min=None, max=None
+            ),
+        )
+        with pytest.raises(ValueError, match=r"^BULK_OPERATION_NOT_APPLICABLE: "):
+            uplift_table(table, percentage=Decimal("0.10"))
