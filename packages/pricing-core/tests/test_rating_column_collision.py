@@ -182,7 +182,7 @@ def _predict_outcome(scorer: Any, features: dict[str, Any]) -> str | None:
         scorer.predict(features)
     except PredictionError as error:
         return str(error.code)
-    except Exception as error:  # noqa: BLE001 - anything past the collision check is not under test
+    except Exception as error:
         return type(error).__name__
     return None
 
