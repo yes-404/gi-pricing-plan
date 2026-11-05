@@ -213,8 +213,9 @@ def cell_count(line: str) -> int:
     return len(UNESCAPED_PIPE.findall(line)) - 1
 ```
 
-T1 decides whether a row ending `\|` needs the placeholder form instead (`strip("|")` would eat the pipe of a
-trailing `\|`): `_split_row`'s placeholder handles it, so **if T1's trailing case fails, use the placeholder form.**
+**This regex form loses a trailing `\|`** (RUN: `| a | b\|c | d\|` gives `['a', 'b\\|c', 'd\\']`, because
+`strip("|")` eats that pipe), so T1's trailing case is red on it, and the delivered body takes `_split_row`'s
+placeholder form, as ruled. The sketch above shows the intent, not the final body.
 `is_table_row` is whatever the three regexes' prefix needs, once.
 
 **R2 — the three copies.** `scope-audit.py:68`, `audit-docs.py:299`, `guide.py:64`: a helper in `table_rows.py`,
@@ -267,7 +268,7 @@ in its output by A8. **Serial with nobody for building; the gate is serial, last
 ## Self-review
 
 1. **Every cite was read** at `dae9637e`; the marked items were run. 2. **Requirement ids:** none apply; no range.
-3. **Placeholders:** `is_table_row` is defined by the three regexes it replaces. T1 settles the one open line of
-`split_row`, and the plan says which way. 4. **The red is by cause.** 5. **The route is carried verbatim;** only
+3. **Placeholders:** `is_table_row` is defined by the three regexes it replaces. `split_row`'s final body is the
+ruled placeholder form. 4. **The red is by cause.** 5. **The route is carried verbatim;** only
 two genuine choices are DPs. 6. **The essay's figures are re-read:** 39 and 23 hold; the rows moved. 7. **Calendar:**
 12 Nov 2026 is a Thursday, 11 Nov a Wednesday.
