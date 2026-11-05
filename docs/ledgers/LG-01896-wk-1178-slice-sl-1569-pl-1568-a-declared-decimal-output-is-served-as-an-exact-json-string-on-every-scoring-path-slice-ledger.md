@@ -56,6 +56,8 @@ Disclosure: drafted under working id 8154 (lead-reserved, eta 2026-10-22 11:54:4
 
 Not launched by the executor. OWED: GATE READY.
 
+**Dated line, 2026-11-05 (docs batch 10), by the auditor, the gate of record and the audit adoptions:** the only gate line above in Build log is the RED gate at 2026-10-25 15:19:13 (14 failed = 13 docs-class + 1 real); the green gate is recorded in the channel: to-lead "2026-10-25 19:26:48 GMT" (the re-gate @aaebd5df STANDS under common seat brief item 1(f)) and "2026-10-25 21:05:20 GMT" (the 13 green @2bf59444 and the #1387 pre-ACK). No FD. Audit: the adoptions are filed under working ids (RS 8207, RS 8210), not the minted RS-1897/1898/1899: to-lead "2026-10-23 11:19:33 BST — SL-1569 RS 8207 NOT-CLEAN — adoption CONFIRMED; B1 fixed inside the slice" and "2026-10-23 11:38:45 BST — SL-1569 RS 8210 — … narrow NOT-CLEAN adoption CONFIRMED"; B1 was fixed inside the slice, and the two residues B1′ and B2′ are record-form. Authority: to-lead "2026-11-04 20:56:54 GMT" item 7 (d) and "2026-11-04 20:59:50 GMT" (the correction naming the working-id adoptions); the gate and adoption stamps staged by lead 30.**
+
 ### Audit
 
 Not yet.

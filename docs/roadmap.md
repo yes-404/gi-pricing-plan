@@ -2333,7 +2333,7 @@ The fix for FD-1421 (HIGH, the maintainer (by delegation), 2026-10-05 13:12:56 B
 id: SL-1455
 family: slice
 title: WK-1178 fix slice — NFR-489: the /score request path meets its p99 budget at 25 to 200 rps
-status: active                  # draft → active → closed | retired (§1.2a)
+status: closed                  # draft → active → closed | retired (§1.2a)
 created: 2026-10-06            # original date 2026-10-04, set at the draft; minted 2026-10-06
 owner: planner                   # cut by the planner (draft); lead dispatches (active)
 tree: 4eb1364428a2861fbc8014957e89924f631dd1ff
@@ -2594,7 +2594,7 @@ The FD-1561 fix (MEDIUM, LATENT; owner WK-1178), on the maintainer's (by delegat
 id: SL-1569
 family: slice
 title: WK-1178 fix slice — a declared decimal output is served as an exact JSON string on every scoring path
-status: active                  # draft → active → closed | retired (§1.2a)
+status: closed                  # draft → active → closed | retired (§1.2a)
 created: 2026-10-10  # original date 2026-10-05, set at the draft; minted 2026-10-10
 owner: planner                   # cut by the planner (draft); lead dispatches (active)
 tree: fb178c360f6fd5b2fdb7ae60eea924811a65492f
@@ -2880,7 +2880,7 @@ On the maintainer's (by delegation) entries "2026-10-14 11:06:52 BST" (item 2: *
 id: SL-1924
 family: slice
 title: WK-1178 fix slice (S4) — FD-1754: a pinned GBM in a model_call refuses every non-IDENTITY Factor type
-status: active                    # draft → active → closed | retired (§1.2a)
+status: closed                    # draft → active → closed | retired (§1.2a)
 created: 2026-10-25
 owner: lead
 tree: 8ac770f545eb66ef3677576e210f147ed85cb401
@@ -3085,7 +3085,7 @@ On the maintainer's entry "2026-10-22 16:22:33 BST" (`to-lead.md`): FD-1850 (MED
 id: SL-1892
 family: slice
 title: WK-1178 delta — FD-1851 close vehicle: a guard test that RESOURCE_BACKED holds only Environment-scoped paths
-status: active                    # draft → active → closed | retired (§1.2a)
+status: closed                    # draft → active → closed | retired (§1.2a)
 created: 2026-10-22
 owner: lead
 tree: 71e481fa5d240ed366cd80c1a8c6cf6cd1d918d5
@@ -3105,7 +3105,7 @@ On the maintainer's entry "2026-10-22 17:21:38 BST" (`to-lead.md`), item 2: the 
 id: SL-1921
 family: slice
 title: WK-1178 fix slice — FD-1920: the tenant-binding tests' Redis db follows GIP_REDIS_URL and avoids the gate dbs
-status: active                    # draft → active → closed | retired (§1.2a)
+status: closed                    # draft → active → closed | retired (§1.2a)
 created: 2026-10-25
 owner: lead
 tree: 102341aade6720dc7b71a1e696cc5b6d8017a2f1
@@ -3147,7 +3147,7 @@ Retired 2026-10-26: re-cut by PL-1927 into S1a (SL-1942) and S1b (PL-1927's S1b 
 id: SL-1942
 family: slice
 title: WK-1178 fix slice (S1a) — FD-1729 part 1: the application connects as a login role, not the owner (PL-1927's S1a, the re-cut of SL-1771)
-status: active                    # draft → active → closed | retired (§1.2a)
+status: closed                    # draft → active → closed | retired (§1.2a)
 created: 2026-10-26
 owner: lead
 tree: 58fdb69f64eecbcd03e65881a88a07f351995272
@@ -3211,7 +3211,7 @@ FD-1951's fix: the application refuses to start on a login role that reaches the
 id: SL-1948
 family: slice
 title: WK-1178 fix slice (S1b) — FD-1729 part 2: the startup refusal, the tamper proof and the exact grant map (PL-1927's S1b)
-status: active                    # draft → active → closed | retired (§1.2a)
+status: closed                    # draft → active → closed | retired (§1.2a)
 created: 2026-10-26
 owner: lead
 tree: 54e0fca083628964aa1227c0ada467d3d7b3a379
@@ -3293,7 +3293,7 @@ The fix of FD-1803 (filed in D21; HIGH, owner WK-1178), planned in PL-1809. `Dec
 id: SL-1888
 family: slice
 title: WK-1178 fix slice — FD-1887: a static guard, every test that reaches the freMTPL2 data carries the data-present guard
-status: active                   # draft → active → closed | retired (§1.2a)
+status: closed                   # draft → active → closed | retired (§1.2a)
 created: 2026-10-25   # drafted 2026-10-22 under working id 8195; minted 2026-10-25 as SL-1888
 owner: executor                  # dispatched by the lead (active)
 tree: 71e481fa5d240ed366cd80c1a8c6cf6cd1d918d5
@@ -3313,19 +3313,23 @@ The remedy of FD-1887 (LOW-MEDIUM, owner WK-1178), ordered by the maintainer's e
 id: SL-1854
 family: slice
 title: WK-1178 fix slice — FD-1838: the deployment switch's channels carry the gate slot's name, so a concurrent subscriber is not counted in the PREPARE quorum
-status: active                   # draft → active → closed | retired (§1.2a)
+status: closed                   # draft → active → closed | retired (§1.2a)
 created: 2026-10-22   # filed under working id 8170 (lead-reserved in eta.md); minted 2026-10-22 as SL-1854
 owner: executor                  # cut by the lead as a Work-plan delta row (Lean P2 L5); lead dispatches (active)
 tree: f3462d8fc1336dc4583fe8a7af92fed399993a55
 phase: P2
 work: WK-1178
 corrected_by: []
-relates: [FD-1838, WK-674, SL-1711]
+relates: [FD-1838, WK-674, SL-1711, LG-1855]
 ```
 
 The fix of FD-1838 (MEDIUM, owner WK-1178), a Work-plan delta row under WK-1178 (Lean P2 L5): PUBLISH's receiver count is the PREPARE quorum (`prepare_round` in `backend/src/app/platform/deployment_switch.py`) and counts subscribers on the whole Redis server, so a second process on the same channel is a receiver that never acknowledges. **Scope, exactly:** one helper `switch_stack(environment, tenant_id)` that builds the stack prefix for both of its callers (`backend/src/app/main.py`, `backend/tests/test_deployment_switch_http.py`) and appends `basename($GIP_GATE_SLOT)` when the variable is set, through `RedisSwitch`'s existing `stack` argument; a process with no slot (production) is unchanged. Red first: a test with a foreign subscriber on the unsuffixed channel. Gate scripts and `scripts/run-small.sh` already export `GIP_GATE_SLOT` and are not changed. The ledger is `LG-1855`.
 
 (Activated 2026-10-22 on the maintainer's (by delegation) entry "2026-10-22 15:43:10 BST — Maintainer: SPEED MEASURES …" item 2 (`to-lead.md`): FD-1838 prioritised, built red-first, the remedy as reserved at "2026-10-21 21:13:34 BST". MERGE-ACK: not yet given.)
+
+*Correction: merged as #1363, squash 6753c495, 2026-10-22T20:41:15Z (gh); correction 2026-11-05 by aud-sl1854 on to-lead "2026-11-05 09:37:04 GMT".*
+
+Closed 2026-11-05 on its slice audit (LG-1855 Audit section, the lead's adoption) and FD-1838's close; to-lead "2026-11-05 09:43:14 GMT" (the maintainer's status line).
 
 #### SL-1928 — WK-1178 fix slice (S2) — FD-1610 limb 2: the feature_map keys a model_call drops are traced, then refused when they feed a required input
 
@@ -3333,7 +3337,7 @@ The fix of FD-1838 (MEDIUM, owner WK-1178), a Work-plan delta row under WK-1178 
 id: SL-1928
 family: slice
 title: WK-1178 fix slice (S2) — FD-1610 limb 2: the feature_map keys a model_call drops are traced, then refused when they feed a required input
-status: active                    # draft → active → closed | retired (§1.2a)
+status: closed                    # draft → active → closed | retired (§1.2a)
 created: 2026-10-26               # drafted 2026-10-25 under working id 8244
 owner: lead
 tree: 3ffdbe3f787c195e43ebd3f8ae6a17143777d2e8
@@ -3373,7 +3377,7 @@ Slice C of `PL-1856` (WK-1178's dated delta on FD-1723's residual limbs). Docs o
 id: SL-1878
 family: slice
 title: WK-1178 fix slice — FD-1852: a dataset-scoped grant reaches the dictionary, rule-set and acknowledge writes (held-anywhere route gate), and a permanent route-scope guard
-status: active                   # draft → active → closed | retired (§1.2a)
+status: closed                   # draft → active → closed | retired (§1.2a)
 created: 2026-10-25                  # drafted 2026-10-22 under working id 8185; minted 2026-10-25 as SL-1878
 owner: planner                   # cut by the planner; lead dispatches (active)
 tree: 71e481fa5d240ed366cd80c1a8c6cf6cd1d918d5
@@ -3490,7 +3494,7 @@ The frontend fixes for the ten carried NFR-463 lows of FD-1974 on the WK-675 sur
 id: SL-2005
 family: slice
 title: WK-1178 slice — FD-2001's fix, scripts/bench-rating.py --http serves the application a least-privilege DSN (--serve-dsn)
-status: active                    # draft → active → closed (§1.2a)
+status: closed                    # draft → active → closed (§1.2a)
 created: 2026-11-04
 owner: lead
 tree: da219505e1a5bde19256d66dad5c0a04dbd4d4c2
