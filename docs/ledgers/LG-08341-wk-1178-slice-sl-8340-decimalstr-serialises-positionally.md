@@ -40,7 +40,7 @@ A signed or exponent zero is the value 0: T4 `test_every_spelling_of_zero_gives_
 
 T5 `test_a_hashed_bound_is_never_rounded_to_the_context_precision` (two 38-digit bounds ending `.10` and `.20` stay distinct; `.10` and `.100` hash alike) and `test_a_hashed_bound_does_not_depend_on_the_ambient_decimal_context` (one case under `localcontext()` with `prec=5`). Red measured twice: on the committed tree without the draft, the first fails (`.10` and `.100` hash apart; the second passes, because `str` ignores the context); on the draft with `v.normalize()`, **both fail** (the two 38-digit values collide to one hash, and `prec=5` changes the hash of `123456.7890`).
 
-### R3 — green (drafted, uncommitted until the window)
+### R3 — green (committed after the window)
 
 Patch `~/gi-pricing-plan.local/scratch/sl-8340-decimalstr-positional/code.patch` sha256 `10093e77719436a0e6d172cb4df0fa445d1dc2276d8b048daf134bdf690ed2f5`, 3 files (`money.py`, `regression.py`, `test_money.py` docstring). `CanonicalDecimalStr` serialises through `_canonical_decimal`: zero first (`0`), else `value.normalize(Context(prec=max(len(value.as_tuple().digits), 1), traps=[Inexact]))` then `format(…, "f")`, as ruled. `test_money.py` 40 passed; `ruff check packages/model-schema` clean; `mypy` on `money.py` clean.
 
@@ -62,7 +62,17 @@ While syntax-checking the window scripts I ran `regspell.py` once against the sh
 
 ## Re-measure (A3 to A5)
 
-(window result added after the lead's grant)
+Window 2026-11-05 19:28:53 to 19:50:10 UTC, single-tenant, read-only (TEMP-table controls only, in a session on the `postgres` database), lead's grant and "No STOP" ruling to-lead "2026-11-05 19:50:54 GMT". Scripts and logs: `~/gi-pricing-plan.local/scratch/sl-8340-decimalstr-positional/` (`SHA256SUMS`, `out/`).
+
+**no stored DecimalStr instance found on this stack; Postgres near-empty: 5 rows across 3 DBs, regression_suite_versions 0: a zero over a near-empty corpus: controls red (exponent 2 of 3, regspell 3 of 5); MinIO 7 448 of 35 544 read**
+
+- **A3 tracked blobs** (`decexp.py`, `decexp2.py`, `decexp3.py` at head `bb4cf209`): 2814 files; 135 quoted exponent strings in 31 files, all prose, source or tests, none in a data file; the control (`decexp_ctl.py`) counted its planted values.
+- **A3 PostgreSQL** (`decexp_pg.py`, `regspell.py`, `rowcount.py`): 3 databases, 64 tables, 5 rows (alembic_version 1, environments 3, tenant_marker 1); exponent-form rows 0; `regression_suite_versions` 1 database, 0 rows, 0 bound values, 0 non-canonical spellings including `-0` and `0E+3`. Controls (`decexp_ctl.py` PG part, `regspell_ctl.py`): exponent 2 of 3 planted rows, regspell 3 non-canonical of 5 bounds.
+- **A3 MinIO** (`minio_scan.sh`, `minio_scan4.sh`; control `minio_ctl.sh`, 2 objects, 1 hit): 7 448 of 35 544 objects read, in 6 buckets. The 28 100 unread are all in `gip-test-blobs`, test artifacts by name, out of this slice's scope. 19 objects with a quoted exponent-form string, all in `gip-blobs`, all under the key `relativity` (rate-table cell text, not a `DecimalStr`-typed field): they belong on FD-1648, origin unproven.
+- **A4:** both counts are 0 for the shape this slice changes, over the corpus above; no version bump, no stop.
+- **A5 hash sweep:** R0 above (`suite_content_hash` the only site a `DecimalStr` reaches); the `.normalize(` sweep in R3.
+- **Guards:** template `alembic_version=1 environments=3 tenant_marker=1`, `redis-cli -n 0 dbsize` 56, `pg_database` 4 rows (md5 `0e557aec019c29ead221153636bd8d08`), `mc ls g/` 6 buckets: each the same before and after.
+
 
 ## PRs
 

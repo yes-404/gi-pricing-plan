@@ -130,7 +130,7 @@ def test_relativity_refuses_a_float_too():
 
 
 def test_positional_decimal_str_never_serialises_in_scientific_notation():
-    """`DecimalStr` gives `1E-7`, `1.2E-28` and `1E+1`, which break its own pattern."""
+    """The type never gives `1E-7`, `1.2E-28` or `1E+1`, which break its own pattern (FD-1337)."""
     from model_schema.money import PositionalDecimalStr
 
     class Holder(BaseModel):

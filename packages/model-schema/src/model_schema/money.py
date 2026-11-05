@@ -33,7 +33,7 @@ prose is one nobody notices breaking. Two design choices carry the weight:
 
 from __future__ import annotations
 
-from decimal import Decimal
+from decimal import Context, Decimal, Inexact, InvalidOperation
 from typing import Annotated, Any
 
 from pydantic import BeforeValidator, Field, GetJsonSchemaHandler, PlainSerializer, Strict
@@ -43,6 +43,7 @@ from pydantic_core import core_schema
 from model_schema.input_free import InputFreeError
 
 __all__ = [
+    "CanonicalDecimalStr",
     "Currency",
     "DecimalStr",
     "MoneyMinor",
@@ -122,25 +123,42 @@ def _reject_float(value: Any) -> Any:
     return value
 
 
-#: An exact decimal that crosses every boundary as a string. Strict on the way in: a float
+#: An exact decimal that crosses every boundary as a string, always positional, so every value
+#: matches the published pattern (FR-21, FD-1337). Spelling is kept: `66000.440` stays. A float
 #: is a validation error, not a silent coercion (`OQ-547`).
 DecimalStr = Annotated[
     Decimal,
     BeforeValidator(_reject_float),
-    PlainSerializer(str, return_type=str, when_used="always"),
+    PlainSerializer(lambda v: format(v, "f"), return_type=str, when_used="always"),
     _DecimalStrSchema(),
 ]
 
-#: An exact decimal that always serialises in positional notation (`RL-1329` §3, B2).
-#: `DecimalStr` renders with `str()`, so `Decimal("0.0000001")` becomes `"1E-7"` and
-#: `Decimal("1.2E-28")` stays `"1.2E-28"`, both outside the type's own JSON Schema
-#: pattern. This type renders `format(value, "f")` instead, with the same float refusal and
-#: the same JSON Schema. `DecimalStr` is left alone: changing its serialiser would change
-#: stored bytes and content hashes beyond the ladder.
-PositionalDecimalStr = Annotated[
+#: Kept for the ladder's imports (`RL-1329`): the same type since FD-1337.
+PositionalDecimalStr = DecimalStr
+
+
+def _canonical_decimal(value: Decimal) -> str:
+    """One spelling per value: positional, trailing zeros dropped, every zero `0` (FD-1337).
+
+    `normalize` rounds to the *ambient* context's precision (28 digits by default), which would
+    make a governed hash depend on a thread-local setting and merge two long values. The
+    context here is sized to the value's own digits and traps `Inexact` and `InvalidOperation`,
+    so a rounding, or a signalling NaN that skipped validation, raises instead of silently
+    changing the value. `normalize` also keeps a zero's sign, hence the zero branch.
+    """
+    if not value:
+        return "0"
+    exact = Context(prec=max(len(value.as_tuple().digits), 1), traps=[Inexact, InvalidOperation])
+    return format(value.normalize(exact), "f")
+
+
+#: `DecimalStr` with one spelling per value, for a field a governed hash reads (FD-1337).
+#: `normalize` alone would give `1E+2`; `format` keeps it positional. Every zero (`-0`, `0.00`,
+#: `0E+3`) is written `0`: `normalize` keeps a zero's sign, which is no part of the value.
+CanonicalDecimalStr = Annotated[
     Decimal,
     BeforeValidator(_reject_float),
-    PlainSerializer(lambda v: format(v, "f"), return_type=str, when_used="always"),
+    PlainSerializer(_canonical_decimal, return_type=str, when_used="always"),
     _DecimalStrSchema(),
 ]
 
@@ -149,7 +167,7 @@ PositionalDecimalStr = Annotated[
 Relativity = Annotated[
     Decimal,
     BeforeValidator(_reject_float),
-    PlainSerializer(str, return_type=str),
+    PlainSerializer(lambda v: format(v, "f"), return_type=str),
     _DecimalStrSchema(),
 ]
 
