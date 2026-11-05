@@ -461,9 +461,27 @@ Notably absent from Pricing Actuary: ~~every `*:approve` permission~~ `approval:
 
 ```json
 {
+  "id": "0190b5a2-7c3e-7a10-9d21-4f6b8c2e1a01",
+  "workspace_id": "0190b5a2-7c3e-7a10-9d21-4f6b8c2e1a01",
   "artifact_ref": "rating_version:motor-gb@27",
   "artifact_type": "rating_version",
-  "submitted_by": "uuid", "submitted_at": "2026-09-12T14:02:00Z",
+  "submitted_by": "0190b5a2-7c3e-7a10-9d21-4f6b8c2e1a01", "submitted_at": "2026-09-12T14:02:00Z",
+  "change_summary": "AD frequency model refit on 2026H1 data; driver-age relativities softened at young ages; minimum premium raised to £280.",
+  "status": "review",
+  "decisions": [
+    {"approver_id": "0190b5a2-7c3e-7a10-9d21-4f6b8c2e1a01", "decision": "approve", "at": "2026-09-13T10:11:00Z",
+     "comment": "Dislocation is within the agreed envelope; young-driver softening is supported by the refit and the GIPP evidence is clean."}
+  ],
+  "approvers_required": 2, "approvers_recorded": 1
+}
+```
+
+The block above validates as an `ApprovalRequest`. The block below is FR-352's full submission:
+`change_summary`, with the `expedited`, `evidence_bundle`, `checklist` and `flags` keys, as the example
+first printed them.
+
+```json
+{
   "change_summary": "AD frequency model refit on 2026H1 data; driver-age relativities softened at young ages; minimum premium raised to £280.",
   "expedited": false,
   "evidence_bundle": {
@@ -479,15 +497,14 @@ Notably absent from Pricing Actuary: ~~every `*:approve` permission~~ `approval:
     {"item": "GIPP check passing", "checked": true, "by": "uuid", "auto_verified": true},
     {"item": "Reinsurance impact considered", "checked": true, "by": "uuid"}
   ],
-  "flags": [],
-  "status": "review",
-  "decisions": [
-    {"approver_id": "uuid", "decision": "approve", "at": "2026-09-13T10:11:00Z",
-     "comment": "Dislocation is within the agreed envelope; young-driver softening is supported by the refit and the GIPP evidence is clean."}
-  ],
-  "approvers_required": 2, "approvers_recorded": 1
+  "flags": []
 }
 ```
+
+> **Dated 2026-11-05 (`RL-8375` row 19, FD-1381; `RL-1522` DP-4 (a)).** The first block validates against
+> `model-schema`'s `ApprovalRequest`. The second block is FR-352's full submission, which is **ahead of the
+> code**: `expedited`, `evidence_bundle`, `checklist` and `flags` are not fields of the shape now, and
+> FR-352's checklist and evidence limbs are owned by WK-677. FR-352 is not amended by this note.
 
 *Amended 2026-10-05 (WK-1178), on `RL-1522` DP-1 and DP-4.* A decision's value is
 the act: `approve`, `reject` or `request_changes`, as §5.1's decide row and the glossary's
@@ -535,10 +552,10 @@ Generated sections, in order (R3). Each cites the artifacts it drew from.
 
 ```json
 {
-  "id": "01J…",
-  "workspace_id": "uuid",
+  "id": "0190b5a2-7c3e-7a10-9d21-4f6b8c2e1a01",
+  "workspace_id": "0190b5a2-7c3e-7a10-9d21-4f6b8c2e1a01",
   "at": "2026-09-13T10:11:00.482Z",
-  "actor": {"kind": "user", "id": "uuid", "display": "a.actuary@insurer.example"},
+  "actor": {"kind": "user", "id": "0190b5a2-7c3e-7a10-9d21-4f6b8c2e1a01", "display": "a.actuary@insurer.example"},
   "source": "ui",
   "action": "rating_version.approved",
   "entity_ref": "rating_version:motor-gb@27",
@@ -547,8 +564,8 @@ Generated sections, in order (R3). Each cites the artifacts it drew from.
   "justification": "Dislocation within the agreed envelope; GIPP clean.",
   "trace_id": "4bf92f3577b34da6a3ce929d0e0e4736",
   "job_id": null,
-  "prev_event_hash": "sha256:…",
-  "event_hash": "sha256:…"
+  "prev_event_hash": "sha256:3b8e3b8e3b8e3b8e3b8e3b8e3b8e3b8e3b8e3b8e3b8e3b8e3b8e3b8e3b8e3b8e",
+  "event_hash": "sha256:9f2c9f2c9f2c9f2c9f2c9f2c9f2c9f2c9f2c9f2c9f2c9f2c9f2c9f2c9f2c9f2c"
 }
 ```
 
