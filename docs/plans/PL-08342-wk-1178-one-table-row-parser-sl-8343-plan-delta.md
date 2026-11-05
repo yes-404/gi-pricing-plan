@@ -78,7 +78,7 @@ by the planner**, read-only (`/tmp/plan-slices/p6.py`; `doc-index.py` through th
 | `tests/test_audit_docs_ids.py:2451`, `:2500` | lookbehind split | tests |
 | `tests/test_findings_ids.py:157`, `tests/test_permission_parity.py:62`, `backend/tests/test_contracts.py:263` | plain split | tests |
 
-  **Fourteen script and source sites, three of which are duplicates by a stated choice** (`audit-docs.py:295-298`,
+  **Fifteen script and source sites, three of which are duplicates by a stated choice** (`audit-docs.py:295-298`,
   `guide.py:60-63`, whose comments must go), and five test sites.
 - **`audit-docs.py:636-642` is not a splitter of cells to read.** It *enforces* that a pipe inside a code
   span is escaped. It counts separators, and it is the check that makes `\|` the convention. It moves to the
