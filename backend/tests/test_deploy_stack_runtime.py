@@ -369,6 +369,132 @@ def test_the_frontend_serves_the_spa_and_reaches_the_api_through_lb(
     json.loads(body)
 
 
+# -- FD-1211: a served process takes SIGTERM and finalizes the interpreter -------------------
+
+#: DP-211: stop rounds per service. FD-1199's abort is intermittent, so one clean stop proves
+#: nothing; the count is the evidence FD-1199's retirement cites.
+SIGTERM_ROUNDS = 10
+
+#: FD-1199's extension list, loaded before the service starts: a served API or worker otherwise
+#: loads only the eager modules until a fit or a prediction runs, and the arm would be vacuous.
+#: `lightgbm` is left out: the image has no `libgomp.so.1`, so it cannot be imported there at all.
+_PRELOAD = (
+    "import sys, numpy, scipy, polars, sklearn, pandas, pyarrow, numexpr, glum, xgboost;"
+    "print('PRELOADED', *sorted(m for m in ('sklearn', 'pandas', 'pyarrow', 'numexpr', 'glum',"
+    " 'xgboost') if m in sys.modules), flush=True);"
+)
+_SERVED_COMMANDS = {
+    "api": _PRELOAD
+    + "from uvicorn.main import main;"
+    "sys.argv = ['uvicorn', 'app.main:create_app', '--factory', '--host', '0.0.0.0',"
+    " '--port', '8000']; main()",
+    "worker-compute": _PRELOAD
+    + "from celery.__main__ import main;"
+    "sys.argv = ['celery', '-A', 'app.worker.entrypoint', 'worker', '--queues', 'compute',"
+    " '--concurrency', '2']; main()",
+}
+
+
+def _override(path: pathlib.Path, commands: dict[str, str]) -> pathlib.Path:
+    services = {name: {"command": ["python", "-c", code]} for name, code in commands.items()}
+    path.write_text(json.dumps({"services": services}))  # JSON is YAML
+    return path
+
+
+def _container(n: str, service: str, override: pathlib.Path) -> str:
+    return _compose(n, "ps", "-a", "-q", service, extra_files=(override,)).stdout.split()[0]
+
+
+def _logs(cid: str) -> str:
+    out = subprocess.run(["docker", "logs", cid], capture_output=True, text=True, check=True)
+    return out.stdout + out.stderr
+
+
+def _wait_ready(cid: str, marker: str, after: int = 0) -> None:
+    """The service is serving: its marker line appears after `after` characters of log."""
+    deadline = time.monotonic() + 90
+    while time.monotonic() < deadline:
+        if marker in _logs(cid)[after:]:
+            time.sleep(3)  # let the process finish installing its signal handlers
+            return
+        time.sleep(1)
+    raise AssertionError(f"{cid} never printed {marker!r}: {_logs(cid)[-800:]}")
+
+
+def _unclean_stop_problems(exit_code: int, logs: str) -> list[str]:
+    problems = []
+    if exit_code != 0:
+        problems.append(f"exit code {exit_code} (134 is the FD-1199 abort), not 0")
+    if "Fatal Python error" in logs:
+        problems.append("the log holds a `Fatal Python error`")
+    return problems
+
+
+def _stop_rounds(
+    n: str, service: str, override: pathlib.Path, ready_marker: str, rounds: int
+) -> list[str]:
+    cid = _container(n, service, override)
+    _wait_ready(cid, ready_marker)
+    problems: list[str] = []
+    for i in range(rounds):
+        _compose(n, "stop", "-t", "20", service, extra_files=(override,))
+        code = int(
+            subprocess.run(
+                ["docker", "inspect", "-f", "{{.State.ExitCode}}", cid],
+                capture_output=True, text=True, check=True,
+            ).stdout
+        )
+        logs = _logs(cid)
+        problems += [f"{service} round {i + 1}: {p}" for p in _unclean_stop_problems(code, logs)]
+        assert "PRELOADED" in logs, "the extensions were not preloaded: the round proves nothing"
+        if i + 1 < rounds:
+            mark = len(logs)
+            _compose(n, "start", service, extra_files=(override,))
+            _wait_ready(cid, ready_marker, mark)
+    print(f"{service}: {rounds} SIGTERM stops, problems={problems}")
+    return problems
+
+
+@pytest.mark.req("NFR-531")
+def test_a_served_process_with_its_extensions_loaded_ends_cleanly_on_sigterm(
+    built_n: str, down: None, tmp_path: pathlib.Path  # noqa: F811
+) -> None:
+    """FD-1211 / FD-1199: `api` and `worker-compute`, started with FD-1199's extensions
+    preloaded, are stopped (SIGTERM) `SIGTERM_ROUNDS` times each. Each stop must exit 0 with no
+    `Fatal Python error`: the interpreter finalizes with the native threads alive."""
+    n = built_n
+    override = _override(tmp_path / "docker-compose.preload.yml", _SERVED_COMMANDS)
+    _compose(n, "up", "-d", "--wait", "api", "worker-compute")  # provisions the project
+    _compose(
+        n, "up", "-d", "--no-deps", "--force-recreate", "--wait", "api", "worker-compute",
+        extra_files=(override,),
+    )
+    problems = _stop_rounds(n, "api", override, "Application startup complete", SIGTERM_ROUNDS)
+    problems += _stop_rounds(n, "worker-compute", override, "[queues]", SIGTERM_ROUNDS)
+    assert problems == [], problems
+
+
+@pytest.mark.req("NFR-531")
+def test_the_sigterm_check_reports_a_container_that_aborts_on_stop(
+    built_n: str, down: None, tmp_path: pathlib.Path  # noqa: F811
+) -> None:
+    """Broken-input proof: a container that loads the extensions and aborts on SIGTERM is
+    reported, not read as a clean stop."""
+    aborting = (
+        _PRELOAD
+        + "import os, signal, time;"
+        "signal.signal(signal.SIGTERM, lambda *_: os.abort());"
+        "print('ready.', flush=True); time.sleep(600)"
+    )
+    override = _override(tmp_path / "docker-compose.abort.yml", {"worker-compute": aborting})
+    _compose(n := built_n, "up", "-d", "--wait", "redis")  # provisions the project
+    _compose(
+        n, "up", "-d", "--no-deps", "--force-recreate", "worker-compute", extra_files=(override,)
+    )
+    problems = _stop_rounds(n, "worker-compute", override, "ready.", 1)
+    assert any("exit code" in p for p in problems), problems  # named only when the code is not 0
+
+
 # -- PL-1690 E4.3: delivery, not declaration -------------------------------------------------
 
 #: The bound inside which a submitted Job must leave `queued`: NFR-527's 5 s submit-to-running

@@ -47,6 +47,7 @@ No shared database and no shared Redis were used; the runtime tests ran on the t
 - **R1** — shape tests red, then green (A2, A3). Discharged.
 - **R2** — `_build_frontend_from_commit`, the runtime test (A5). Discharged.
 - **R3** — FD-1816 red then green (A6), whole runtime file (A7). Discharged.
+- **FD-1211** — the served-process SIGTERM proof (brief amendment 10:32:58). Discharged; see Build log.
 - **R4** — docs, same PR (A8). Edits made; audit-docs below.
 - **G** — the SOLO gate: not run by this seat.
 
@@ -113,6 +114,31 @@ Not yet (the slice's auditor).
   `run-heavy.sh --light -- env -C <wt> python3 scripts/audit-docs.py`: `FAILED (4)`, all on the
   working ids and the index regeneration the mint owns: check 31 gap between 2006 and 8319; check 32 twice,
   `LG-8320 does not resolve in docs/INDEX.md`; check 39, `docs/INDEX.md is stale`. No other failing line.
+- **Maintainer's `docker builder prune`, 2026-11-05 10:18:02 UTC** (lead 30's notice): build cache only. The
+  footprint above is from the df readings before it (6.4G to 3.8G); the free-space jump to 12G is this prune.
+- **FD-1211 (brief amendment 10:32:58), build window 2, START 2026-11-05 10:49:27 UTC, END 11:39:03 UTC.**
+  Test `test_a_served_process_with_its_extensions_loaded_ends_cleanly_on_sigterm` (and its broken-input proof
+  `test_the_sigterm_check_reports_a_container_that_aborts_on_stop`) in `backend/tests/test_deploy_stack_runtime.py`;
+  `compose()` in `deploy_stack_helpers.py` gained `extra_files`. `api` and `worker-compute` run under a compose
+  override whose command preloads FD-1199's extensions (sklearn, pandas, pyarrow, numexpr, glum, xgboost; each
+  container prints `PRELOADED …`, asserted), are stopped with `compose stop -t 20` (SIGTERM, python as PID 1) and
+  the exit code read from `docker inspect`. **N = 10 per service (DP-211): `api: 10 SIGTERM stops,
+  problems=[]`, `worker-compute: 10 SIGTERM stops, problems=[]`; the pair passed with the broken-input proof:
+  `2 passed in 1252.79s`, rc 0** (`fd1211.log`; N=`5575547b`, tests at the working tree on `d18564bb`). The broken-input
+  proof: a container that aborts in its SIGTERM handler reports `exit code 139 … not 0`. **A guard, not a red:**
+  it passes at head, and the slice changes nothing in the served process, so it is green at the base too; it was not
+  run at the base. The run is the evidence FD-1199's retirement cites (20 stops, 0 aborts). Reasoning confirmed by
+  measurement: as PID 1 uvicorn and celery finalize and exit 0.
+- **Findings during window 2.** (1) `lightgbm` cannot be imported in the image: `OSError: libgomp.so.1: cannot
+  open shared object file` (`deploy/Dockerfile` is `python:3.12-slim` with no libgomp1); it is left out of the
+  preload with a comment, reported to the lead, `deploy/Dockerfile` untouched (outside the Write set). (2) Celery's
+  `ready.` line is not printed at the default log level; the test waits for the banner's `[queues]` plus 3 s.
+  First run of the worker arm died on that marker (`fd1211-run1-worker-marker.log`, api arm 10 clean stops).
+  (3) The first window-2 attempt hit the 580 s tool timeout mid-rounds; its containers were removed with
+  `compose down -v` before the rerun.
+- **Window 2 end:** `docker ps -a --filter label=com.docker.compose.project=gip-s4-runtime -q | wc -l` = 0; shared
+  stack postgres, keycloak, minio, redis `Up 44 hours (healthy)`, keycloak bind source under tools-main;
+  `docker image rm gi-pricing-app:5575547b` by exact tag; `df -h /` 7.3G free (88%).
 - Seat slip, recorded: one early call ran a bare `cd /tmp` (no-cd breach); the shell reset and nothing was written.
 
 ## PRs

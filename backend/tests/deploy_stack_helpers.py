@@ -67,7 +67,9 @@ def _provision_once(sha: str) -> None:
     os.environ["GIP_TEST_DATABASE_URL"] = url
 
 
-def compose(sha: str, *args: str, check: bool = True) -> subprocess.CompletedProcess[str]:
+def compose(
+    sha: str, *args: str, check: bool = True, extra_files: tuple[pathlib.Path, ...] = ()
+) -> subprocess.CompletedProcess[str]:
     if args[:1] == ("up",) and PROJECT not in _provisioned:
         _provision_once(sha)
     if args[:1] == ("down",):
@@ -84,6 +86,7 @@ def compose(sha: str, *args: str, check: bool = True) -> subprocess.CompletedPro
             str(ROOT / "deploy" / "docker-compose.yml"),
             "-f",
             str(ROOT / "deploy" / "docker-compose.isolated.yml"),
+            *(arg for f in extra_files for arg in ("-f", str(f))),
             "--profile",
             "app",
             *args,
