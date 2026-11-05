@@ -450,6 +450,31 @@ def test_an_approved_model_is_refused_archive_by_state_not_permission(
 
 
 @pytest.mark.req("FR-202")
+def test_a_model_in_review_is_refused_archive_by_state(
+    api_client: TestClient, workspace_id
+) -> None:
+    """`review → archived` is not an edge: the request is withdrawn first, so the approver's
+    queue does not lose an item undecided. A fit holder is refused by state (409
+    `VALIDATION_FAILED`), not by permission, and the model stays in `review`."""
+    actor, model_id, slug, _ = _fitted(workspace_id)
+    reader = _headers(actor.id, workspace_id)
+    etag = api_client.get(f"/api/v1/models/{slug}", headers=reader).headers["etag"]
+    submitted = api_client.post(
+        f"/api/v1/models/{model_id}/submit",
+        json={"change_summary": "archive-permission test"},
+        headers={**reader, "If-Match": etag},
+    )
+    assert submitted.status_code == 200, submitted.text
+    assert api_client.get(f"/api/v1/models/{slug}", headers=reader).json()["status"] == "review"
+    caller = _caller_with(workspace_id, {"model:read", "model:fit"})
+    refused = _archive(api_client, model_id, slug, caller, reader)
+    assert refused.status_code == 409, refused.text
+    assert refused.json()["code"] == "VALIDATION_FAILED"
+    after = api_client.get(f"/api/v1/models/{slug}", headers=reader)
+    assert after.json()["status"] == "review"
+
+
+@pytest.mark.req("FR-202")
 def test_a_superseded_model_is_archived_by_a_fit_holder(
     api_client: TestClient, workspace_id
 ) -> None:
