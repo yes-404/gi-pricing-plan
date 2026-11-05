@@ -74,9 +74,9 @@ changed modules `T0 = {model_schema.refs, app.api.models}` (`git diff --name-onl
 (`ARTIFACT_TYPES, ArtifactRef, BlobRef, ModelRef, Slug`); level 2 = every `.py` importing a level-1 source module;
 GREEN = the `test_*.py` files in level 1 ∪ level 2. `spec_from_file_location` loaders: `git grep -l
 spec_from_file_location -- backend packages` names only backend tests (none loading a changed module by path;
-each is already in the set where it imports one). Result: 294 test files (168 backend/tests, 48
+each is already in the set where it imports one). Result: 294 test files (169 backend/tests, 48
 packages/model-schema, 77 packages/pricing-core), of which 145 classed DB-free
-and 148 DB-backed by a second AST pass (a fixture argument from `conftest_db.py`: `blob_store, database, grant,
+and 149 DB-backed by a second AST pass (a fixture argument from `conftest_db.py`: `blob_store, database, grant,
 membership, owner_database`, or a text hit on `conftest_db|GIP_(TEST_)?DATABASE|createdb|psycopg|asyncpg|redis|docker`).
 
 **Run at this head (stopped by the lead's order, 2026-11-05 16:38:04 GMT):** 2 files of the 145, one pytest process each through
@@ -85,7 +85,9 @@ membership, owner_database`, or a text hit on `conftest_db|GIP_(TEST_)?DATABASE|
   fixture (the classifier called the file DB-free wrongly), not an assertion against the slice. It is DB-backed → OWED-TO-GATE.
 - `backend/tests/test_approval_guard.py` — `11 passed, 2 warnings` (the run was killed after the summary; no rc line).
 
-**OWED-TO-GATE:** the other 143 DB-free files and all 148 DB-backed files. C's full suite is the decisive
+**Reconciled 2026-11-05 16:39:24 GMT:** the first pass printed 294 test files but the classifier read the list with an off-by-one slice and dropped the first, `backend/tests/test_api_acknowledge.py` (DB-backed: it takes the `database`, `grant` and `membership` fixtures), so the parts summed to 293 (168 + 48 + 77; 145 + 148). Now 169 + 48 + 77 = 294 and 145 + 149 = 294. The classifier also called `test_api_auth.py` DB-free wrongly, so the 145 / 149 split is approximate; the gate's full suite is the proof.
+
+**OWED-TO-GATE:** the other 143 DB-free files and all 149 DB-backed files. C's full suite is the decisive
 green and covers them; none was run here beyond the two above.
 
 DB-free list (145):
@@ -236,8 +238,9 @@ packages/pricing-core/tests/test_transparency.py
 packages/pricing-core/tests/test_tweedie_power.py
 packages/pricing-core/tests/test_validate.py
 ```
-DB-backed list (148):
+DB-backed list (149):
 ```
+backend/tests/test_api_acknowledge.py
 backend/tests/test_api_approvals.py
 backend/tests/test_api_audit.py
 backend/tests/test_api_authorisation_sweep.py
