@@ -67,6 +67,8 @@ Runs through `run-heavy.sh --over-load "2026-11-05 13:58:21 GMT"`, load1 ~17-22,
 - **A17 (a note, not an NFR reading):** `score_one` on the score fixture, 1000 calls per run, five runs, µs per call, load1 ~17-20 on an 8-vCPU box beside a gate: base 3628-4526 (min 3628) and 8833-12126; head 4289-9523 (min 4289) and 5784-7079. The noise exceeds the difference; the one addition is `_check_unparseable_cells`, a loop over the steps. Cell parse at load: `zen.evaluate_expression` ~1.1 µs a cell (the plan's RUN), not re-measured.
 - Scripts: `/tmp/sl8345/`.
 
+- 2026-11-05 16:19 GMT (exec-r2b, to-lead "2026-11-05 14:18:33 GMT" (2) and "16:14:12 GMT"; reachability not claimed): red a72dbe7e `decimal_snan` FAILED (`ValueError: cannot convert signaling NaN to float` at `_row_frame`; `Decimal('Infinity')`/`('-Infinity')` already passed), green d6d5ffa0 (`test_glm_scalar_predict.py` 39 passed, 4 skipped; ruff rc=0). Red c836b932 `[true]`,`[false]`,`[1+1]` FAILED (3 failed, 3 passed), green: `test_rating_compile_fr240.py` 31 passed, `test_rating_score.py` 53 passed (pinned clean-wire sha `eb5bac43...` unchanged), `test_rate_table_bulk_ops.py` 84 passed, ruff rc=0, mypy rc=0. `1_000` still reads (`Decimal('1_000')` accepts it): no ruling needed.
+
 ## PRs
 
 (none: the slice ends unpushed; the lead pushes.)
