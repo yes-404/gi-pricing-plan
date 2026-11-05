@@ -113,7 +113,7 @@ Re-runs on my own detached worktree `aud-slr1` @ `3559a9c1`, DB-free, one file p
 
 **Gate-record readings** (not re-run): the four `demo-run2` tracebacks read as the journey's negative steps per to-lead "2026-11-05 15:43:06 GMT"; the exposure window per "15:27:35 GMT" (0 `demo/guide` requests in 15:25:50 to 15:26:30).
 
-**Owed, in order:** run 3 (quiet demo, on the mint head) with its line in `### Gate`; the mint's re-run of the eight docs-audit files; the closing acts' placeholders `<the merge's PR>`; `docs/INDEX.md` regenerated after the closing acts (item 17).
+**Owed, in order:** run 3 (quiet demo, on the mint head) with its line in `### Gate`; the mint's re-run of the eight docs-audit files; the closing acts' placeholders #1436; `docs/INDEX.md` regenerated after the closing acts (item 17).
 
 *Adoption: (the lead's line, dated, at the merge.)*
 
@@ -134,4 +134,4 @@ Re-runs on my own detached worktree `aud-slr1` @ `3559a9c1`, DB-free, one file p
 
 ## PRs
 
-(none: the slice ends unpushed; the lead pushes.)
+#1436 (opened by the lead after the push of this branch).
