@@ -45,6 +45,7 @@ from model_schema.input_free import InputFreeError
 __all__ = [
     "CanonicalDecimalStr",
     "Currency",
+    "DecimalMagnitudeError",
     "DecimalStr",
     "MoneyMinor",
     "PositionalDecimalStr",
@@ -123,13 +124,42 @@ def _reject_float(value: Any) -> Any:
     return value
 
 
+#: The largest adjusted exponent, either sign, an exact decimal may have when it is *written*
+#: (FR-21). Positional text grows with the exponent (`1E+999999999` is a gigabyte, `1E-400` is
+#: 402 characters), and the engine carries float64 (FR-273), whose magnitude ends near
+#: `1E+308`: a value past it is no value the engine can use. Writing only: validation takes
+#: any exponent, and a value past the bound fails loudly when it is serialised.
+MAX_POSITIONAL_EXPONENT = 308
+
+
+class DecimalMagnitudeError(InputFreeError):
+    """An exact decimal past `MAX_POSITIONAL_EXPONENT`, refused when written (FR-21).
+
+    A type of its own so the API can answer it as a coded 422 (`DECIMAL_OUT_OF_RANGE`) rather
+    than the 500 an unnamed serialisation error becomes.
+    """
+
+
+def _positional(value: Decimal) -> str:
+    """`format(value, "f")` behind the FR-21 bound on the adjusted exponent.
+
+    The one writer for `DecimalStr`, `Relativity` and `CanonicalDecimalStr`.
+    """
+    if not -MAX_POSITIONAL_EXPONENT <= value.adjusted() <= MAX_POSITIONAL_EXPONENT:
+        raise DecimalMagnitudeError(
+            "an exact decimal whose adjusted exponent is beyond 308 either way is not written "
+            "in positional notation (FR-21; the engine carries float64, FR-273)"
+        )
+    return format(value, "f")
+
+
 #: An exact decimal that crosses every boundary as a string, always positional, so every value
 #: matches the published pattern (FR-21, FD-1337). Spelling is kept: `66000.440` stays. A float
 #: is a validation error, not a silent coercion (`OQ-547`).
 DecimalStr = Annotated[
     Decimal,
     BeforeValidator(_reject_float),
-    PlainSerializer(lambda v: format(v, "f"), return_type=str, when_used="always"),
+    PlainSerializer(_positional, return_type=str, when_used="always"),
     _DecimalStrSchema(),
 ]
 
@@ -149,7 +179,7 @@ def _canonical_decimal(value: Decimal) -> str:
     if not value:
         return "0"
     exact = Context(prec=max(len(value.as_tuple().digits), 1), traps=[Inexact, InvalidOperation])
-    return format(value.normalize(exact), "f")
+    return _positional(value.normalize(exact))
 
 
 #: `DecimalStr` with one spelling per value, for a field a governed hash reads (FD-1337).
@@ -167,7 +197,7 @@ CanonicalDecimalStr = Annotated[
 Relativity = Annotated[
     Decimal,
     BeforeValidator(_reject_float),
-    PlainSerializer(lambda v: format(v, "f"), return_type=str),
+    PlainSerializer(_positional, return_type=str),
     _DecimalStrSchema(),
 ]
 
