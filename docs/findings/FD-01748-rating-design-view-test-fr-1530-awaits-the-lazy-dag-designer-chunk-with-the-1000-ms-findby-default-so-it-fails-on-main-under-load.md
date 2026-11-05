@@ -2,12 +2,12 @@
 id: FD-1748
 family: finding
 title: RatingDesignView.test.ts FR-1530 awaits the lazily imported DagDesigner chunk with findByLabelText's 1000 ms default, so it fails on main under load
-status: active
+status: closed
 created: 2026-10-17 # original date 2026-10-14, set at the filing; minted 2026-10-17
 owner: auditor
 tree: beee5ebedcfebc03c1658728442827960975392a
 corrected_by: []
-relates: [WK-1178, FD-1747, FR-1530, P2]
+relates: [WK-1178, FD-1747, FR-1530, P2, SL-2023, LG-2024, PL-2022]
 ---
 
 # FD-1748 — a 1000 ms wait races a lazy chunk: FR-1530 fails on main when the box is loaded
@@ -105,3 +105,5 @@ The event that next discharges it: the WK-1178 slice in P2 that awaits the lazy 
 family as FD-1747 (a test racing a time-dependent resource), different mechanism.
 
 *(Dated line, 2026-11-05, docs batch 11, by the auditor, on to-lead "2026-11-05 09:51:53 GMT" (triage b28ba8e9454c accepted as the proposal of record), item (4): severity RULED MEDIUM, as proposed.)*
+
+***Resolved 2026-11-05*** — closed in place 2026-11-05 by the auditor, as the closing act of the mint of SL-2023 (WK-1178, LG-2024, PL-2022; this PR; its number, squash commit and merge date are written at the merge's date-of-record), on the lead's brief under the GO to-lead "2026-11-05 10:36:35 GMT" (DP-F1, DP-F2), with the ruling "2026-11-05 09:51:53 GMT" recorded: The maintainer (by delegation) ruled FD-1748 severity MEDIUM as proposed ("(4)"), and FD-1748's remedy stands as ruled "2026-10-14 17:51:06 BST". Delivered remedy: `RatingDesignView.test.ts` `beforeAll` awaits `import("@/components/dag/DagDesigner.vue")`, the chunk the view's `defineAsyncComponent` loads, so `findByLabelText` waits for the draw and never for the import; no timer changed, `RatingDesignView.vue` untouched. Red first, by cause, in LG-2024 R1: with an injected 1200 ms delayed-import mock (not committed) at base `c218fc5a`, FR-1530 failed at 1015 ms with `Unable to find a label with the text of: input step Driver age (s_in_age)`; R2 passes under the same mock (7 of 7). Repeated run under load: 20 consecutive single-file runs, load1 ≥ 6 at each start (7.03 to 14.63), 0 failures, every run `Test Files 1 passed (1)`. Gate evidence is in LG-2024 (the gate's rows are in its Gate section; the MERGE-ACK adds the PR's CI line).

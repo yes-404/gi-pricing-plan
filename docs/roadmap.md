@@ -3561,7 +3561,7 @@ Every path that writes a rate-table cell value checks it against the rating engi
 id: SL-2023
 family: slice
 title: WK-1178 slice — FD-1748 and FD-1800, the FR-1530 test awaits the lazy chunk
-status: active                    # draft → active → closed (§1.2a)
+status: closed                    # draft → active → closed (§1.2a)
 created: 2026-11-05
 owner: lead
 tree: e6cdcd15c72ad85d293d58072a31740bb1cc49bf
@@ -3572,6 +3572,8 @@ relates: [FD-1748, FD-1800, FR-1530, PL-2022, LG-2024]
 ```
 
 Test only, no spec change. In `frontend/src/views/__tests__/RatingDesignView.test.ts`, the `beforeAll` awaits the dynamic import of `DagDesigner.vue` that the view's `defineAsyncComponent` loads, so a `findBy` waits for the draw and never for the chunk import (FR-1530's test). No timer is changed. `FD-1748` and `FD-1800` close at the merge (the auditor's act), per `PL-2022` section "SL-2023". Its ledger is `LG-2024`.
+
+*(Closed 2026-11-05 by the audit commit of the slice's PR, on the lead's adoption of aud-slf, from-lead "2026-11-05 16:23:45 GMT"; the row read `active` at the mint head a93b1cdf.)*
 
 ### WK-1250 — Sub-graph composition and MTA/cancellation pricing — FR-217's inlining and FR-218's authoring half
 
