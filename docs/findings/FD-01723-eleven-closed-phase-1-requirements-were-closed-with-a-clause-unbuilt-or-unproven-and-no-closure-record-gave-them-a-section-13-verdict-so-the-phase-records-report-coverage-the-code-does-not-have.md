@@ -107,3 +107,5 @@ Proposals only: the lead rules and the maintainer accepts.
 ## Evidence limits
 
 No test was run. The glum spike ran once, single-threaded and niced, on the root checkout's venv (glum 3.4.1), and shows only the family spelling and the default θ. It does not show an end-to-end `fit_glm` failure; the `GLM_FIT_FAILED` mapping is read from `glm.py:661-691`. The FR-127 GLM limb is established by reading (`git grep -nEi "loss_treatment" -- packages/pricing-core/src/pricing_core/modelling/glm.py` → none; the field is on `ModelSpecCommon`), not by running a capped GLM fit; the red-first test in the fix is the run. FR-80's "readable to Auditors" through the API was not exercised.
+
+*(Dated line, 2026-11-05, docs batch 11, by the auditor, on to-lead "2026-11-05 10:31:31 GMT" (second triage c9e75802158f accepted), item (C)(5): limb FR-7 (about 12 h) joins FD-1381 and FD-1482 limb 2 as the three named freeze exceptions. Limbs FR-14 and FR-15 are CARRIED TO P3, a departure from the earlier rulings by this word.)*
