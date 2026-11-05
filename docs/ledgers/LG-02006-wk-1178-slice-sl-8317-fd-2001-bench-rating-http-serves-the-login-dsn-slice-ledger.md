@@ -64,11 +64,20 @@ Not run by the executor (DP-3 (a)): the full SOLO gate, both halves, runs in a s
 - **Demo:** `demo.py --journey wf-699 --no-compose` rc 0, designed stop at 19:39:00 (both lines seen), 2037 s under the 2400 s cap; **dislocation #1 579 s** (29 Oct 422 / 387 / 383; this box's baseline 552 / 558; today's 555–697) = an environment reading, not a regression; load1 1.72 at start, 3.20 at end.
 - **Template guard** (`gipricing` at END): `alembic_version=1 environments=3 tenant_marker=1`, rc 0.
 - **Zeros:** own-DB count 0; RT db 1 `dbsize` 0; RD db 3 `dbsize` 0. Live redis db 0 `dbsize` 56 at START and 56 at END (unchanged).
-- **Item-31 conditions still owed before the ACK:** the docs-audit tests re-run via `run-small.sh` on the minted head, `audit-docs` rc 0 on the minted head, and PR CI including python; those results are Step 6 of the mint seat's report, not entered here.
+~~- **Item-31 conditions still owed before the ACK:** the docs-audit tests re-run via `run-small.sh` on the minted head, `audit-docs` rc 0 on the minted head, and PR CI including python; those results are Step 6 of the mint seat's report, not entered here.~~
+  - **Discharged, 2026-11-05 (docs batch 10), by the auditor, on the lead's from-lead "2026-11-04 20:17:12 GMT" ("Checks after A8: audit-docs rc 0; doc-index --check 0; register-lint 0; docs-audit 257 passed / 0 failed") and "2026-11-04 20:50:33 GMT" (CI by id on f65cb07f, all success: python 41905333243, docs 41905333095, history-policy 41905333068), merged as PR #1431, squash dae9637ea6f6a56f6502e9db70392cdfb2f3983d (from-lead "2026-11-04 20:51:47 GMT"); item-31 conditions all met.** Authority: to-lead "2026-11-04 20:56:54 GMT" item 7 (b).
 
 ### Audit
 
-(The auditor's, at slice close.)
+~~(The auditor's, at slice close.)~~
+
+**Audit verdicts A1–A8 — recorded 2026-11-05 (docs batch 10) by the auditor from the lead's adoption in from-lead "2026-11-04 20:17:12 GMT" ("aud-sl8317 FINAL — A1–A8 ADOPTED (§12)"), under to-lead "2026-11-04 20:56:54 GMT" item 7 (b).** The audit commit is `f65cb07f916e32be9a273495381015dca2a530c6` (tree `715a8fd2e8ddeb27b68414db85929ccac359d1ad`, equal to the squash tree on main `a5b1c537`); against `2be92516` it changed exactly four files (INDEX, the FD-2001 essay, `register.md`, this ledger), all within the amended bound. All eight verdicts ADOPTED as proposed:
+- A1 MET; A2 MET; A3 MET; A4 MET; A5 MET.
+- A6 MET on (i) the gate, (ii) the 5-passed re-run and (iii) the 0-hit reach grep, with the false "No other hit" claim corrected in place by the append-only 20:05:21 GMT line above (tests 4, scripts 6; 2 of the 6 load `bench-rating.py` by path).
+- A7 MET; A8 MET (FD-2001 `status: closed`, relates += SL-2005 / LG-2006 / PL-2004, "Resolved 2026-11-04" in the FD-1842 form).
+- Checks after A8, as the lead recorded them: audit-docs rc 0; doc-index --check 0; register-lint 0; docs-audit 257 passed / 0 failed.
+- Cosmetic, not a finding: the check-36 sentence grammar above.
+- Merged as PR #1431, squash `dae9637ea6f6a56f6502e9db70392cdfb2f3983d` (from-lead "2026-11-04 20:51:47 GMT"); the squash backfill of FD-2001 is batch 10 item 5.
 
 ### Build log
 
