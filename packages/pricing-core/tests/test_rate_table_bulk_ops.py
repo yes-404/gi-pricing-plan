@@ -32,6 +32,7 @@ from model_schema.rating import (
 )
 from model_schema.refs import ArtifactRef
 from pricing_core.rate_tables.operations import (
+    _format_value,
     apply_cell_edits,
     decide_storage_mode,
     export_to_csv,
@@ -110,6 +111,43 @@ def _version(
         change_note="baseline version",
         seeded_from=seeded_from,
     )
+
+
+class TestFormatValueIsFixedPoint:
+    """FD-1648 limb (i): a computed cell is written in fixed point, never with an exponent,
+    because the rating engine's parser refuses `1E+2` (PL 8321 R1.1)."""
+
+    @pytest.mark.req("FR-234")
+    @pytest.mark.parametrize(
+        ("value", "written"),
+        [
+            (Decimal("100"), "100"),
+            (Decimal("1000"), "1000"),
+            (Decimal("0.5"), "0.5"),
+            (Decimal("0.50"), "0.5"),
+            (Decimal("1E+2"), "100"),
+        ],
+    )
+    def test_format_value_is_fixed_point(self, value: Decimal, written: str) -> None:
+        assert _format_value(value) == written
+
+    @pytest.mark.req("FR-234")
+    def test_a_small_fitted_relativity_is_written_positionally(self) -> None:
+        base = _version(
+            rows=[{"driver_age_band": "17-20", "relativity": "0.0000001"}],
+            value=_value(min=None, max=None),
+        )
+        result = uplift_table(base, percentage=Decimal("0.36"))
+        assert _cells(result) == [{"driver_age_band": "17-20", "relativity": "0.000000136"}]
+
+    @pytest.mark.req("FR-234")
+    def test_an_uplift_that_lands_on_a_round_hundred_is_written_without_an_exponent(self) -> None:
+        base = _version(
+            rows=[{"driver_age_band": "17-20", "relativity": "50"}],
+            value=_value(min=None, max=None),
+        )
+        result = uplift_table(base, percentage=Decimal("1"))
+        assert _cells(result) == [{"driver_age_band": "17-20", "relativity": "100"}]
 
 
 class TestDecideStorageMode:
