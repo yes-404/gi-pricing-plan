@@ -69,7 +69,8 @@ loaded gates. Both findings close. No product code changes.
 
 ## Decision points
 
-For the maintainer, on the GO.
+**Both ruled** (the entry "2026-11-05 10:36:35 GMT"): DP-F1 (a); DP-F2 (a), "granted when F asks", "never beside a timed gate
+stage". F's gate goes "in the first slot after D's". The table is kept as the record of the options.
 
 | DP | Question | Options | Recommendation |
 |---|---|---|---|
@@ -131,8 +132,8 @@ No DB, no Redis, no docker, nothing on the NFR VM. A5's written grant, outside a
 ### SL 8337 — the deterministic wait
 
 **The row.** WK-1178 fix slice. One `sonnet` executor. Requirements: FR-1530 (the test's subject; no
-spec change). Register: FD-1748 and FD-1800 (both MEDIUM), closing at the merge (A7). Depends on: DP-F1 and
-DP-F2 ruled; the GO; a gate slot. **Size:** 1.5 h (triage 2 h), with A5's 15 min. SOLO gate about 2.5 h, not
+spec change). Register: FD-1748 and FD-1800 (both MEDIUM), closing at the merge (A7). Depends on: the GO; A5's grant; the first gate slot
+after D's. **Size:** 1.5 h (triage 2 h), with A5's 15 min. SOLO gate about 2.5 h, not
 counted. Merged before Thu 12 Nov 2026; still red at Wed 11 Nov 12:00 → the exception list.
 
 **R1 — red first (injected, not committed).** At the top of the test file, in the working tree only:
@@ -178,12 +179,9 @@ None. **Safe in parallel with every group.** It needs no window but A5's grant.
 
 ## Hand-off (not this plan's writes)
 
-- DP-F1, DP-F2 and the GO: the maintainer. The grant and the gate slot: the lead. The LG: the executor. A7:
+- The GO and A5's grant: the maintainer. The gate slot: the lead. The LG: the executor. A7:
   the auditor.
-- **An option for the lead on the gate order.** The 09:58:58 order puts F last of the seven. FD-1748 says
-  "Land early: it costs gate classification in every loaded gate". The code is ten lines and no other
-  plan depends on it: F first in the gate chain removes the FR-1530 classification from every later gate.
-  The order is the maintainer's.
+- **The gate order is ruled:** F in the first slot after D's (10:36:35), as FD-1748's "land early" asks.
 - **After merge:** common seat brief item 25's standing FR-1530 re-run rule has no further use. Retiring it
   is the maintainer's.
 
