@@ -38,5 +38,3 @@ Filed from the maintainer's (by delegation) entry "2026-10-12 05:39:20 BST — S
 ## Disposition
 
 **Owner WK-1178.** The question of which A/E the platform defines (per row, or weighted by the declared scheme) is `OQ-1692`, with options and a recommendation; the spec text follows by ruling, not by this finding. The maintainer's instruction: "The (i) slice fixes ONLY the weight-0 exclusion. It does NOT change the A/E definition, so it does not pre-empt the OQ." So the weight-0 slice (`SL-1675`, planned in `PL-1674`; the FR-111 clause) leaves these statistics as they are. Event that next confirms or discharges it: a ruling on `OQ-1692` applied to FR-171/FR-183 and to `_partition`, with a test that a severity book whose claim counts vary per row reads the weighted A/E. Filed by the minter from the entry, 2026-10-12.
-
-*(Dated line, 2026-11-05, docs batch 11, by the auditor, on to-lead "2026-11-05 10:31:31 GMT" item (C)(3): OQ-1692 is decided as option (a): keep the per-row ratio and say so, by Fri 6 Nov 2026. This finding becomes ruling-only: its remedy is the spec labelling of FR-171 and FR-184, not a code change to the A/E definition.)*
