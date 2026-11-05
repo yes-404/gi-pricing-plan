@@ -20,12 +20,10 @@ paths are compared as `scripts/audit-docs.py`'s `_path_segments` compares them.
 from __future__ import annotations
 
 import ast
-import contextlib
 import importlib.util
 import inspect
 import re
 import sys
-import textwrap
 from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
@@ -148,35 +146,106 @@ def _dependency_calls(dependant: object) -> Iterable[object]:
         yield from _dependency_calls(dependency)
 
 
-def require_permission_arguments(source: str, lines: frozenset[int] | None = None) -> set[str]:
-    """Values of `permission=Permission.X` in every `require_permission(` call of `source`.
+def _checks_in(node: ast.AST, lines: frozenset[int] | None = None) -> set[str]:
+    """Values of `permission=Permission.X` in every `require_permission(` call under `node`.
 
     With `lines`, only the calls whose own first line is in the set (a `HANDLER_GUARDED`
     site, `(file, line, needle)`, names the line of the call).
     """
     found: set[str] = set()
-    for node in ast.walk(ast.parse(source)):
-        if not isinstance(node, ast.Call):
+    for call in ast.walk(node):
+        if not isinstance(call, ast.Call):
             continue
-        func = node.func
+        func = call.func
         callee = func.id if isinstance(func, ast.Name) else getattr(func, "attr", None)
-        if callee != "require_permission" or (lines is not None and node.lineno not in lines):
+        if callee != "require_permission" or (lines is not None and call.lineno not in lines):
             continue
-        for keyword in node.keywords:
+        for keyword in call.keywords:
             value = keyword.value
             if keyword.arg == "permission" and isinstance(value, ast.Attribute):
                 found.add(_MEMBERS[value.attr])
     return found
 
 
-def _handler_checks(method: str, path: str, endpoint: object) -> set[str]:
-    """Permissions checked by the handler's own body, or at a `HANDLER_GUARDED` site."""
+def require_permission_arguments(source: str, lines: frozenset[int] | None = None) -> set[str]:
+    return _checks_in(ast.parse(source), lines)
+
+
+def _module_functions(tree: ast.Module) -> dict[str, ast.AST]:
+    return {
+        node.name: node
+        for node in tree.body
+        if isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef)
+    }
+
+
+def handler_checks(module_source: str, handler: str) -> set[str]:
+    """What a handler checks: in its own body, and in the functions it calls that are
+    **defined in the same module** (ONE level: the helper's own callees are not followed, and
+    a function of another module is not read; lead's ruling, 2026-11-05 16:11:02 GMT).
+    A callee is followed by what the call reaches, never by its name.
+    """
+    functions = _module_functions(ast.parse(module_source))
+    body = functions.get(handler)
+    if body is None:  # a handler built inside a factory: nothing at module level to read
+        return set()
+    found = _checks_in(body)
+    for call in ast.walk(body):
+        if isinstance(call, ast.Call) and isinstance(call.func, ast.Name):
+            callee = functions.get(call.func.id)
+            if callee is not None and call.func.id != handler:
+                found |= _checks_in(callee)
+    return found
+
+
+#: Routes whose cell names a resource condition beyond a permission, each with the service
+#: function that holds it. ONE entry (the lead's ruling, 2026-11-05 16:11:02 GMT, FR-82):
+#: `PATCH /datasets/{dataset_id}` is gated on `dataset:read` by `requires()`, and
+#: `set_owner` applies "Admin, or the current owner". A new entry is a visible diff:
+#: `test_the_named_list_is_exactly_one_entry` asserts the whole mapping.
+NAMED_CONDITIONS: dict[tuple[str, str], tuple[str, str]] = {
+    ("PATCH", "/api/v1/datasets/{dataset_id}"): ("platform/datasets.py", "set_owner"),
+}
+
+
+def named_condition_checks(source: str, function: str) -> set[str]:
+    """`{admin:manage_roles}` if `function` holds BOTH limbs of FR-82 and raises, else empty.
+
+    Both limbs (`is_owner` and `ADMIN_MANAGE_ROLES`) must sit in the test of one `if` whose body
+    raises; a function that lost either, or no longer raises, proves nothing and the row stays red.
+    """
+    body = _module_functions(ast.parse(source)).get(function)
+    if body is None:
+        return set()
+    assigned = any(
+        isinstance(n, ast.Name) and n.id == "is_owner" and isinstance(n.ctx, ast.Store)
+        for n in ast.walk(body)
+    )
+    for branch in ast.walk(body):
+        if not assigned or not isinstance(branch, ast.If):
+            continue
+        test = list(ast.walk(branch.test))
+        owner = any(isinstance(n, ast.Name) and n.id == "is_owner" for n in test)
+        admin = any(isinstance(n, ast.Attribute) and n.attr == "ADMIN_MANAGE_ROLES" for n in test)
+        raises = any(isinstance(n, ast.Raise) for stmt in branch.body for n in ast.walk(stmt))
+        if owner and admin and raises:
+            return {Permission.ADMIN_MANAGE_ROLES.value}
+    return set()
+
+
+def _handler_checks(method: str, path: str, endpoint: Callable[..., object]) -> set[str]:
+    """Permissions checked in the handler, one level below it, at a `HANDLER_GUARDED` site, or
+    by a `NAMED_CONDITIONS` service function."""
     found: set[str] = set()
-    with contextlib.suppress(OSError, TypeError):
-        found |= require_permission_arguments(textwrap.dedent(inspect.getsource(endpoint)))
-    for file, line, _needle in HANDLER_GUARDED.get((method, path), ()):
-        source = (APP_SRC / file).read_text(encoding="utf-8")
+    file = inspect.getsourcefile(endpoint)
+    if file is not None:
+        found |= handler_checks(Path(file).read_text(encoding="utf-8"), endpoint.__name__)
+    for site, line, _needle in HANDLER_GUARDED.get((method, path), ()):
+        source = (APP_SRC / site).read_text(encoding="utf-8")
         found |= require_permission_arguments(source, frozenset({line, line - 1, line - 2}))
+    if (method, path) in NAMED_CONDITIONS:
+        site, function = NAMED_CONDITIONS[(method, path)]
+        found |= named_condition_checks((APP_SRC / site).read_text(encoding="utf-8"), function)
     return found
 
 
@@ -306,6 +375,69 @@ def test_a_handler_check_is_read_from_its_permission_argument() -> None:
     )
     assert require_permission_arguments(source) == {"job:read"}
     assert require_permission_arguments(source, frozenset({99})) == set()
+
+
+_HELPER = """
+async def _guard(c):
+    await rbac.require_permission(s, permission=Permission.DATASET_READ)
+
+async def _deeper(c):
+    await _guard(c)
+
+async def handler(c):
+    await {call}(c)
+"""
+
+
+def test_the_walk_follows_a_same_module_helper_one_level() -> None:
+    assert handler_checks(_HELPER.format(call="_guard"), "handler") == {"dataset:read"}
+
+
+def test_broken_the_helper_without_the_check_proves_nothing() -> None:
+    source = _HELPER.format(call="_guard").replace("require_permission", "log")
+    assert handler_checks(source, "handler") == set()
+
+
+def test_broken_the_walk_stops_at_one_level() -> None:
+    assert handler_checks(_HELPER.format(call="_deeper"), "handler") == set()
+
+
+def test_broken_the_walk_does_not_read_another_module() -> None:
+    source = "async def handler(c):\n    await other.guard(c)\n    await imported_guard(c)\n"
+    assert handler_checks(source, "handler") == set()
+
+
+_SET_OWNER = """
+async def set_owner(actor, row):
+    is_owner = actor.id == row.owner_id
+    if not is_owner and not await has_permission(permission=Permission.ADMIN_MANAGE_ROLES):
+        raise PlatformError("PERMISSION_DENIED")
+"""
+
+
+def test_the_named_condition_holds_with_both_limbs_and_a_raise() -> None:
+    assert named_condition_checks(_SET_OWNER, "set_owner") == {"admin:manage_roles"}
+
+
+@pytest.mark.parametrize(
+    "removed",
+    [
+        ("is_owner = actor.id == row.owner_id", "is_o = actor.id == row.owner_id"),
+        ("not is_owner and ", ""),
+        ("ADMIN_MANAGE_ROLES", "DATASET_READ"),
+        ('raise PlatformError("PERMISSION_DENIED")', "pass"),
+    ],
+)
+def test_broken_a_named_condition_that_lost_a_limb_proves_nothing(removed: tuple[str, str]) -> None:
+    broken = _SET_OWNER.replace(*removed)
+    assert broken != _SET_OWNER
+    assert named_condition_checks(broken, "set_owner") == set()
+
+
+def test_the_named_list_is_exactly_one_entry() -> None:
+    assert NAMED_CONDITIONS == {
+        ("PATCH", "/api/v1/datasets/{dataset_id}"): ("platform/datasets.py", "set_owner")
+    }
 
 
 # --- the live tree -----------------------------------------------------------------------
