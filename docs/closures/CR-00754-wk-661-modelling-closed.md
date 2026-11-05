@@ -211,3 +211,5 @@ the artifacts, the jobs, the lifecycle and the contracts — with 41 of 41 endpo
 and every remaining gap named above with an owner.
 
 ---
+
+*(Dated line, 2026-11-05, docs batch 11, by the auditor, on to-lead "2026-11-05 11:23:52 GMT": the rows at :162-163 (NFR-475 and NFR-476, carried to "the slice with a 16-core worker") are carried to P3: the 16-core-worker measurement is owned by the P2 closure record, maintainer-accepted at the P2 close, and the section 14 review proposes the P3 Work that measures them on the spec's host. See FD-2007.)*

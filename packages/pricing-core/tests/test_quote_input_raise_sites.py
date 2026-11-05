@@ -109,7 +109,7 @@ _INPUT_FREE = {
     ("rating/compile.py", "_refuse_unapproved_objectives"): 1,
     # rate table ref, key name and Factor ref
     ("rating/compile.py", "_refuse_control_factor_keys"): 1,
-    # FD-1648 (SL 8322): rate table ref, key values and the stored cell text, at compile
+    # FD-1648 (SL-2020): rate table ref, key values and the stored cell text, at compile
     ("rating/compile.py", "_refuse_unparseable_cells"): 1,
     # model ref, a fitted feature name and the Factor's slug@version
     ("rating/compile.py", "_refuse_control_factor_features"): 1,

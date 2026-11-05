@@ -2,12 +2,12 @@
 id: FD-1513
 family: finding
 title: Rate table version writes and rating algorithm saves emit no Audit Event, so NFR-498 is unmet for two of its named classes and no record owns the gap
-status: active
+status: closed
 created: 2026-10-08            # original date 2026-10-05, set at the draft; minted 2026-10-08
 owner: auditor
 tree: 4d3be1414ad4dacdaa0c14ef49fb21853adbaed6
 corrected_by: []
-relates: [NFR-498, FR-230, FR-233, FR-235, WK-670, WK-674, WK-1178, CR-925, CR-927, CR-1212, RL-1514, RL-1515, PL-1516, SL-1517]
+relates: [NFR-498, FR-230, FR-233, FR-235, WK-670, WK-674, WK-1178, CR-925, CR-927, CR-1212, RL-1514, RL-1515, PL-1516, SL-1517, LG-1646]
 ---
 
 # Rate table version writes and rating algorithm saves emit no Audit Event, so NFR-498 is unmet for two of its named classes and no record owns the gap
@@ -161,3 +161,5 @@ owner: WK-1178**. **Bound:** the fix lands before the P2 code freeze (Wed 4 Nov 
 
 Event that next confirms or discharges the row: a merged SL-1517 with the four classes recording an Audit Event, before the
 P2 code freeze.
+
+***Resolved 2026-11-05*** — closed in place 2026-11-05 by the auditor (aud-fdclose), on the lead's brief under to-lead "2026-11-05 09:40:57 GMT" item 8 (2), the FD-1842 form. Delivered remedy (the ruled disposition: red-first Audit Events with before and after on the four classes seed_from_model, import_confirmed, bulk_operation and create_algorithm, the sub-graph paths decided in or out with a reason, and a correcting record on CR-1212): SL-1517 (WK-1178, LG-1646), PR #1288, squash commit fc4401dcad789692f79f6c3ffc058c1c3921b7b9, merged 2026-10-12T00:45:55Z, before the P2 code freeze of Wed 4 Nov. `platform/rate_tables.py` (:1489) and `platform/rating_algorithms.py` (:353) call `audit.record`; `platform/sub_graphs.py` (:94) records the sub-graph paths (in, not out); `backend/tests/test_nfr498_audit_events.py` asserts before and after per class, a refused write recording nothing, and the chain verifying after every class. The correcting record is `RL-1514` and `CR-1212` carries `corrected_by` naming it. The ruling's "the P2 phase closure record lists it" is a duty of that record, which does not yet exist; closing this essay does not discharge it.

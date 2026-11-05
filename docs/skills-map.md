@@ -139,7 +139,8 @@ where the project's hard problems live.
 | mypy --strict | `packages/` | ★★ | Strict-mode idioms with Pydantic v2 and Polars, typed protocols for callbacks | [mypy docs](https://mypy.readthedocs.io/) |
 | Ruff | all Python | ★ | Rule selection, line length 100, import sorting, import-linter-style layering (ADR-703) | [Ruff docs](https://docs.astral.sh/ruff/) |
 | Vitest / Vue Testing Library / Playwright ✔ | frontend | ★ | **Skill vendored** (`vue-testing-best-practices`). Remaining: mocking against the *generated* API types so a contract change breaks the test rather than the runtime | [Vitest](https://vitest.dev/), [Playwright](https://playwright.dev/) |
-| Docker Compose / Helm | `deploy/` | ★ | Local full-stack parity (NFR-462), worker scaling, MinIO wiring | [Compose docs](https://docs.docker.com/compose/) |
+| Docker Compose / Helm | `deploy/` | ★ | Local full-stack parity (NFR-462), worker scaling, MinIO wiring; the `frontend` image's Node build stage (`deploy/frontend.Dockerfile`) | [Compose docs](https://docs.docker.com/compose/) |
+| nginx | `deploy/` (07 §8, FR-432) | ★ | The `lb` in front of `api` replicas and the `frontend` image's static server with its `/api/` proxy, both on `nginx:1.27-alpine`; SPA history fallback, Docker-DNS re-resolution | [nginx docs](https://nginx.org/en/docs/) |
 
 ---
 
