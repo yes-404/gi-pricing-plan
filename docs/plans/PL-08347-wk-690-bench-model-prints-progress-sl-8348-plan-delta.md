@@ -180,7 +180,7 @@ def progress_lines(every: int) -> Iterator[None]:
 ```
 
 `main`: `--progress-every`, type `int`, default 25, help naming this plan; the phase dispatch runs inside `with
-progress_lines(args.progress_every):`. If `xgb` is a local import at `:470`, it moves to the top with the others: read at R1.
+progress_lines(args.progress_every):`. `import xgboost as xgb` is local at `:453`; it moves to the top with the others (`pricing_core.modelling.gbm`, `:82`, already loads it, so the baseline RSS line does not move).
 `uv run ruff check .` and `ruff format --check` on the two files, rc quoted (common seat brief, item 16).
 
 ### Write set
