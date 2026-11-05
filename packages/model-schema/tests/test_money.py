@@ -245,3 +245,35 @@ def test_every_spelling_of_zero_gives_the_hash_of_zero(zero):
     assert suite_content_hash(_suite_with_bounds(Decimal(zero), Decimal("100"))) == (
         suite_content_hash(_suite_with_bounds(Decimal("0"), Decimal("100")))
     )
+
+
+_BIG = "123456789012345678901234567890123456"  # 36 digits: wider than the default context (28)
+
+
+@pytest.mark.req("FR-21")
+def test_a_hashed_bound_is_never_rounded_to_the_context_precision():
+    """Ruled 2026-11-05 16:18:17: two 38-digit bounds ending .10 and .20 stay distinct, and
+    trailing zeros are still dropped (`.10` and `.100` are one value)."""
+    from model_schema.regression import suite_content_hash
+
+    def digest(text):
+        return suite_content_hash(_suite_with_bounds(Decimal(text), Decimal("1" + "0" * 40)))
+
+    assert digest(f"{_BIG}.10") != digest(f"{_BIG}.20")
+    assert digest(f"{_BIG}.10") == digest(f"{_BIG}.100")
+
+
+@pytest.mark.req("FR-21")
+def test_a_hashed_bound_does_not_depend_on_the_ambient_decimal_context():
+    """One case under `localcontext(prec=5)`: the same value gives the same hash."""
+    from decimal import localcontext
+
+    from model_schema.regression import suite_content_hash
+
+    def digest():
+        return suite_content_hash(_suite_with_bounds(Decimal("123456.7890"), Decimal("999999")))
+
+    expected = digest()
+    with localcontext() as ctx:
+        ctx.prec = 5
+        assert digest() == expected
