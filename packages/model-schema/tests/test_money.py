@@ -277,3 +277,20 @@ def test_a_hashed_bound_does_not_depend_on_the_ambient_decimal_context():
     with localcontext() as ctx:
         ctx.prec = 5
         assert digest() == expected
+
+
+@pytest.mark.req("FR-21")
+def test_a_signalling_nan_that_skips_validation_is_not_written_as_a_number():
+    """Validation refuses `sNaN`; `model_construct` does not. The normaliser must raise, not
+    write `NaN` (to-lead 2026-11-05 16:33:41: `traps=[Inexact, InvalidOperation]`)."""
+    from decimal import InvalidOperation
+
+    from pydantic_core import PydanticSerializationError
+
+    from model_schema.money import CanonicalDecimalStr
+
+    class Holder(BaseModel):
+        value: CanonicalDecimalStr
+
+    with pytest.raises((InvalidOperation, PydanticSerializationError)):
+        Holder.model_construct(value=Decimal("sNaN")).model_dump(mode="json")
