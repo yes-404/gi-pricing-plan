@@ -305,6 +305,8 @@ The slice, SL 8389:
 - [ ] Bring this plan in: `git -C <wt> fetch origin draft/pl-fd8387-2026-11-05` then `git -C <wt>
   merge --no-ff FETCH_HEAD`. It brings `2f108b1e..bdad1322`, 63 paths, all under `docs/`
   (`git diff --name-only 2f108b1e bdad1322 | grep -v '^docs/'` prints nothing).
+  `git merge-tree --write-tree cda3c0dc draft/pl-fd8387-2026-11-05` reports one conflict, `docs/INDEX.md`:
+  take theirs and regenerate (the common seat brief, item 5). Any other conflict is a STOP.
 - [ ] `uv sync --directory <wt> --all-packages --frozen`.
 
 **T1 — the failing function-level matrix** (`packages/pricing-core/tests/test_rate_table_bulk_ops.py`,
