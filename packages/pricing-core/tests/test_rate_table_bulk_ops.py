@@ -264,6 +264,30 @@ class TestFormatValueGoldens:
             assert Decimal(_format_value(value)) == value
 
 
+class TestFormatValueIsExact:
+    """`_format_value` writes the cell text, so it must not round to the ambient context's 28
+    digits: a value wider than that is written in full (SL 8345 / LG 8346, R2)."""
+
+    @pytest.mark.req("FR-234")
+    @pytest.mark.parametrize(
+        ("value", "written"),
+        [
+            ("1234567890123456789012345678901234.5678", "1234567890123456789012345678901234.5678"),
+            ("-0.12345678901234567890123456789012345", "-0.12345678901234567890123456789012345"),
+            ("1234567890123456789012345678901234.5000", "1234567890123456789012345678901234.5"),
+            ("12345678901234567890123456789012345E+3", "12345678901234567890123456789012345000"),
+            ("1E+40", "1" + "0" * 40),
+            ("0.000", "0"),
+            ("0E+5", "0"),
+        ],
+    )
+    def test_a_value_wider_than_the_ambient_precision_is_written_in_full(
+        self, value: str, written: str
+    ) -> None:
+        assert _format_value(Decimal(value)) == written
+        assert Decimal(_format_value(Decimal(value))) == Decimal(value)
+
+
 class TestDecideStorageMode:
     @pytest.mark.req("FR-232")
     def test_small_table_uses_rows_storage(self) -> None:
