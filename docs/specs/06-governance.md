@@ -560,36 +560,44 @@ Generated sections, in order (R3). Each cites the artifacts it drew from.
 
 ### 5.1 REST API
 
-| Method | Path | Purpose |
-|---|---|---|
-| `GET` | `/api/v1/me` | Current principal, roles, effective permissions |
-| `GET` | `/api/v1/me/workspaces` | The principal's own memberships, unscoped — the list first selection chooses from (FR-396) |
-| `POST` | `/api/v1/me/workspace` | Audits a switch into both chains; an absent `Workspace-Id` is `left=None`, the first selection (FR-396) |
-| `GET`/`POST` | `/api/v1/roles` | List / create roles (FR-344) |
-| `POST` | `/api/v1/role-assignments` | Assign a scoped role (FR-345) |
-| `POST` | `/api/v1/break-glass` | Time-boxed elevation with reason (FR-349) |
-| `GET`/`PUT` | `/api/v1/approval-policy` | Read / update the workspace policy (FR-354) |
-| `POST` | `/api/v1/approval-requests` | Submit an artifact; validates evidence and checklist (FR-352) *(Clarified 2026-10-05, `RL-1524` DP-2: a Rating Version is submitted through its own route, `POST /api/v1/rating-versions/{id}/submit` (`03` FR-260 (1)), which moves it to `review` and opens its request. This route refuses a Rating Version that is not in `review` with `APPROVAL_SUBJECT_NOT_IN_REVIEW` (FR-351).)* |
-| `GET` | `/api/v1/approval-requests?assigned_to=me&status=review` | Approvals inbox (FR-358) |
-| `GET` | `/api/v1/approval-requests/{id}` | Request with resolved evidence inline |
-| `POST` | `/api/v1/approval-requests/{id}/decide` | `approve` / `reject` / `request_changes` + comment (FR-353/355) |
-| `POST` | `/api/v1/approval-requests/{id}/withdraw` | Withdraw before deployment (FR-357) |
+| Method | Path | Purpose | Permission |
+|---|---|---|---|
+| `GET` | `/api/v1/me` | Current principal, roles, effective permissions | `authenticated` |
+| `GET` | `/api/v1/me/workspaces` | The principal's own memberships, unscoped — the list first selection chooses from (FR-396) | `authenticated` |
+| `POST` | `/api/v1/me/workspace` | Audits a switch into both chains; an absent `Workspace-Id` is `left=None`, the first selection (FR-396) | `authenticated` |
+| `GET` | `/api/v1/roles` | List roles (FR-344) | `admin:manage_roles` |
+| `POST` | `/api/v1/roles` | Create a role (FR-344) | `admin:manage_roles` |
+| `POST` | `/api/v1/role-assignments` | Assign a scoped role (FR-345) | `admin:manage_roles` |
+| `POST` | `/api/v1/break-glass` | Time-boxed elevation with reason (FR-349) | `admin:break_glass` |
+| `GET` | `/api/v1/approval-policy` | Read the workspace policy (FR-354) | `authenticated` |
+| `PUT` | `/api/v1/approval-policy` | Update the workspace policy (FR-354) | `admin:manage_roles` |
+| `POST` | `/api/v1/approval-requests` | Submit an artifact; validates evidence and checklist (FR-352) *(Clarified 2026-10-05, `RL-1524` DP-2: a Rating Version is submitted through its own route, `POST /api/v1/rating-versions/{id}/submit` (`03` FR-260 (1)), which moves it to `review` and opens its request. This route refuses a Rating Version that is not in `review` with `APPROVAL_SUBJECT_NOT_IN_REVIEW` (FR-351).)* | `authenticated` |
+| `GET` | `/api/v1/approval-requests?assigned_to=me&status=review` | Approvals inbox (FR-358) | `authenticated` |
+| `GET` | `/api/v1/approval-requests/{id}` | Request with resolved evidence inline | `authenticated` |
+| `POST` | `/api/v1/approval-requests/{id}/decide` | `approve` / `reject` / `request_changes` + comment (FR-353/355) | `approval:decide` |
+| `POST` | `/api/v1/approval-requests/{id}/withdraw` | Withdraw before deployment (FR-357) | `approval:decide` |
+| `POST` | `/api/v1/attestations` | Record a periodic review (FR-361) | `approval:decide` |
+| `GET` | `/api/v1/audit?actor=&entity=&action=&from=&to=&q=` | Query the audit log (FR-371) | `audit:read` |
+| `GET` | `/api/v1/audit/verify?from=&to=` | Verify the hash chain (FR-372) | `audit:read` |
+| `POST` | `/api/v1/audit/anchor` | Export a signed chain head for external anchoring (FR-373) | `audit:read` |
+| `GET` | `/api/v1/audit/export` | Export CSV/JSON *(Amended 2026-10-17, SL-1709, FD-1684: **200** `text/csv` for `format=csv` (the default), or JSON Lines, `application/x-ndjson`, one audit event per line, for `format=json`.)* | `audit:read` |
+| `POST` | `/api/v1/dossiers` | **202** Generate a dossier for an artifact (FR-376) | `audit:read` |
+| `GET` | `/api/v1/dossiers/{id}?format=html\|pdf\|bundle` | Render / export (FR-379) | `audit:read` |
+| `POST` | `/api/v1/dossiers/{id}/commentary` | Add/update an attributed Commentary Block (FR-377) | `approval:decide` |
+| `POST` | `/api/v1/regulatory-exports` | **202** Point-in-time evidence archive (FR-382) | `audit:read` |
+| `GET` | `/api/v1/artifacts/{ref}/history` | Uniform history view (FR-383) | `audit:read` |
+| `GET` | `/api/v1/artifacts/{ref}/dependencies?direction=up\|down` | Blast radius (FR-384) | `audit:read` |
+
+ *(Added 2026-11-05, `RL-1483` item 1, `SL-8361`: the `Permission` column. Each cell is the permission name(s) from `06` §4.1, `authenticated` or `open`; a row with two methods is one row per method. The approval-request and approval-policy cells are the former `Route | Requires` table (below). **`POST /attestations` and `POST /dossiers/{id}/commentary` (`approval:decide`), and `POST /audit/anchor`, `POST /dossiers`, `GET /dossiers/{id}`, `POST /regulatory-exports`, `GET /artifacts/{ref}/history` and `GET /artifacts/{ref}/dependencies` (`audit:read`) are unbuilt and this spec names no permission for them; the values are provisional and the lead's to rule (see `SL-8361`'s ledger).**)*
 
 *(Dated note, 2026-10-12, on the maintainer's (by delegation) entry "2026-10-12 01:30:34 BST — SL-1527 condition 4" in `to-lead.md`, which decides `CR-823` Q2(a) (`docs/closures/CR-00823-plan-review-5-at-wk-664-s-close.md`, lines 55 to 58) as that record recommends: the three routes `GET`/`POST /api/v1/roles`, `POST /api/v1/role-assignments` and `POST /api/v1/break-glass` above are **spec-ahead-of-phase**. They are owned by `WK-676` (Phase 3, "Full scoped RBAC, custom roles, break-glass", which owns FR-342 to FR-349), and none is built in Phase 2: the machinery exists at the service layer only (`rbac.py`). A caller who copies this table gets a 404 on those three until `WK-676` delivers them. Finding: `FD-1658` (working id 9801; a product identifier is the spec's, this id is the findings family's). No membership route is specified here (FR-350 is Phase 3), so there is no second finding.)*
+
+*(Dated note, 2026-11-05, `RL-1483` item 1, `SL-8361`: the blockquoted `| Route | Requires |` table that stood here since 2026-08-15 is **folded into the `Permission` column above**: one declaration, not two. Its six rows are the cells of the approval-request and approval-policy rows; nothing in them changed. The prose below is that note's reasoning, kept because it explains the `authenticated` cells.)*
 
 > **Permissions on this table, stated 2026-08-15 after an independent audit.** Four of
 > these six require **authentication only**, and nothing said so — a route sweep found them
 > answering a principal holding no roles at all, which read as a hole until the handlers
 > were read.
->
-> | Route | Requires |
-> |---|---|
-> | `POST /approval-requests` | authenticated |
-> | `GET /approval-requests` | authenticated |
-> | `GET /approval-requests/{id}` | authenticated |
-> | `GET /approval-policy` | authenticated |
-> | `POST …/decide`, `POST …/withdraw` | `approval:decide` |
-> | `PUT /approval-policy` | `admin:manage_roles` |
 >
 > **Submitting is asking.** The module owning the artifact has already decided whether this
 > principal could create it; gating the ask as well would stop an analyst who built a model
@@ -601,17 +609,6 @@ Generated sections, in order (R3). Each cites the artifacts it drew from.
 > and none of them decides anything. The deciding routes carry `approval:decide`, and
 > FR-353's separation of duties is enforced in three independent layers, database
 > constraint included.
-| `POST` | `/api/v1/attestations` | Record a periodic review (FR-361) |
-| `GET` | `/api/v1/audit?actor=&entity=&action=&from=&to=&q=` | Query the audit log (FR-371) |
-| `GET` | `/api/v1/audit/verify?from=&to=` | Verify the hash chain (FR-372) |
-| `POST` | `/api/v1/audit/anchor` | Export a signed chain head for external anchoring (FR-373) |
-| `GET` | `/api/v1/audit/export` | Export CSV/JSON *(Amended 2026-10-17, SL-1709, FD-1684: **200** `text/csv` for `format=csv` (the default), or JSON Lines, `application/x-ndjson`, one audit event per line, for `format=json`.)* |
-| `POST` | `/api/v1/dossiers` | **202** Generate a dossier for an artifact (FR-376) |
-| `GET` | `/api/v1/dossiers/{id}?format=html\|pdf\|bundle` | Render / export (FR-379) |
-| `POST` | `/api/v1/dossiers/{id}/commentary` | Add/update an attributed Commentary Block (FR-377) |
-| `POST` | `/api/v1/regulatory-exports` | **202** Point-in-time evidence archive (FR-382) |
-| `GET` | `/api/v1/artifacts/{ref}/history` | Uniform history view (FR-383) |
-| `GET` | `/api/v1/artifacts/{ref}/dependencies?direction=up\|down` | Blast radius (FR-384) |
 
 **Error codes owned by this module:** `PERMISSION_DENIED`, `SCOPE_DENIED`,
 `SUBMITTER_CANNOT_APPROVE`, `AUTHOR_CANNOT_APPROVE`, `APPROVAL_AUTHOR_UNRESOLVED`,
