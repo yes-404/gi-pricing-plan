@@ -231,6 +231,33 @@ def _unenforced(environment: str) -> float:
     )
 
 
+def _unenforced_total() -> float:
+    """`gip_rate_limit_unenforced_total` summed over every environment label."""
+    return sum(
+        sample.value
+        for family in metrics.REGISTRY.collect()
+        for sample in family.samples
+        if sample.name == "gip_rate_limit_unenforced_total"
+    )
+
+
+#: The two tests that fail open on purpose; anything else that moves the counter was not enforced.
+_FAILS_OPEN = {
+    "test_a_redis_outage_admits_counts_and_logs_each_request",
+    "test_without_the_fail_open_guard_an_outage_is_a_500",
+}
+
+
+@pytest.fixture(autouse=True)
+def _limiter_was_enforced(request: pytest.FixtureRequest) -> Iterator[None]:
+    """FD-1747: a fail-open admit and a correct admit are both `!= 429`, so a Redis timeout
+    otherwise reads as a limiter bug (`409 == 429`). Fail the test that failed open, by name."""
+    before = _unenforced_total()
+    yield
+    if request.node.name not in _FAILS_OPEN:
+        assert _unenforced_total() == before, "limiter not enforced: it failed open in this test"
+
+
 @pytest.mark.req("FR-452")
 def test_a_redis_outage_admits_counts_and_logs_each_request(
     client: TestClient, admin_headers: dict[str, str], caplog: pytest.LogCaptureFixture
