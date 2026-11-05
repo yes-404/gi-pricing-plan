@@ -41,6 +41,8 @@ from pricing_core.modelling import (
     predict_glm,
 )
 from pricing_core.modelling.diagnostics import (
+    _NORMAL_975,
+    _partition,
     compute_ebm_diagnostics,
     compute_gbm_diagnostics,
     deviance,
@@ -901,3 +903,149 @@ def test_a_banded_glm_factor_is_swept_in_band_order_not_label_order() -> None:
         assert result.glm is not None
         (check,) = result.glm.monotonicity
         assert check.holds is expected
+
+
+# --------------------------------------------------------------------------------------
+# FR-171 / FR-183 / FR-184 (OQ-1692, ruled (b) as corrected 2026-11-05 11:55:25) — A/E is
+# Σw·y / Σw·μ with w the model's declared weight column, else 1
+# --------------------------------------------------------------------------------------
+
+
+def _ae_spec(**over: object) -> GlmSpec:
+    base: dict[str, object] = {
+        "model_family_slug": "ae",
+        "dataset_version_id": uuid4(),
+        "response_column": "y",
+    }
+    base.update(over)
+    return GlmSpec(**base)  # type: ignore[arg-type]
+
+
+def _ae_partition(spec: GlmSpec, data: pl.DataFrame, family: str, power: float = 1.5):
+    """`_partition` on hand-written rows: `mu` is the column `mu`, so every expected value
+    below is arithmetic on the rows printed in the test, not a fitted number."""
+    return _partition(
+        data, spec, [_factor("area")],
+        mu=data["mu"].to_numpy(), family=family, power=power,
+        excluded_zero_weight=0, excluded_unknown_response=None,
+        bandings=None, groupings=None,
+    )
+
+
+#: Severity: `y` is the per-claim mean cost, `n` the claim count, so `n·y` is the total cost
+#: and `n·μ` the expected total. Area `a`: per-row 3000/3000 = 1.0, weighted
+#: (1·1000 + 9·2000) / (1·1100 + 9·1900) = 19000 / 18200. Area `b`: (2·500 + 3·800) /
+#: (2·400 + 3·1000) = 3400 / 3800.
+_SEV = pl.DataFrame(
+    {
+        "area": ["a", "a", "b", "b"],
+        "y": [1000.0, 2000.0, 500.0, 800.0],
+        "n": [1.0, 9.0, 2.0, 3.0],
+        "mu": [1100.0, 1900.0, 400.0, 1000.0],
+    }
+)
+_SEV_SPEC = _ae_spec(
+    response_column="y", family="gamma", offset=OffsetSpec(kind="none"),
+    weight=WeightSpec(kind="column", column="n"),
+)
+
+
+@pytest.mark.req("FR-171")
+@pytest.mark.req("FR-184")
+def test_a_severity_books_ae_is_weighted_by_the_claim_count() -> None:
+    """On main this is the per-row ratio Σy/Σμ = 4300/4400, total-cost-wrong."""
+    part = _ae_partition(_SEV_SPEC, _SEV, "gamma")
+
+    weighted = (1 * 1000 + 9 * 2000 + 2 * 500 + 3 * 800) / (
+        1 * 1100 + 9 * 1900 + 2 * 400 + 3 * 1000
+    )
+    assert weighted == pytest.approx(22400 / 22000)
+    assert part.ae_overall == pytest.approx(weighted, rel=1e-12)
+    assert part.ae_overall != pytest.approx(4300 / 4400)
+
+
+@pytest.mark.req("FR-171")
+@pytest.mark.req("FR-184")
+def test_a_frequency_books_ae_ignores_exposure_because_mu_carries_it() -> None:
+    """`μ` is already the expected count, so w = 1: A/E = Σy / Σμ before and after, overall and
+    by level, with the interval exactly main's `z·√actual / expected`. Green at the base."""
+    data = pl.DataFrame(
+        {
+            "area": ["a", "a", "b", "b"],
+            "y": [1.0, 0.0, 2.0, 1.0],
+            "exposure_years": [0.25, 1.5, 0.5, 1.0],
+            "mu": [0.3, 0.9, 1.4, 0.6],
+        }
+    )
+    spec = _ae_spec(
+        response_column="y", offset=OffsetSpec(kind="log_column", column="exposure_years")
+    )
+    part = _ae_partition(spec, data, "poisson")
+
+    assert part.ae_overall == sum([1.0, 0.0, 2.0, 1.0]) / sum([0.3, 0.9, 1.4, 0.6])
+    by = {c.level: c for c in part.ae_by_factor}
+    for level, (ys, mus) in {"a": ([1.0, 0.0], [0.3, 0.9]), "b": ([2.0, 1.0], [1.4, 0.6])}.items():
+        actual, expected = sum(ys), sum(mus)
+        assert by[level].actual == actual and by[level].expected == expected
+        assert by[level].ae == actual / expected
+        half = _NORMAL_975 * math.sqrt(actual) / expected
+        assert by[level].ci_95 == (actual / expected - half, actual / expected + half)
+
+
+@pytest.mark.req("FR-171")
+@pytest.mark.req("FR-184")
+def test_a_pure_premium_is_weighted_only_when_exposure_is_the_declared_weight() -> None:
+    """The weight is whatever makes w·y the aggregate. Exposure carried as an offset has put the
+    aggregate in μ (w = 1); exposure declared as the weight column is the weight."""
+    data = pl.DataFrame(
+        {
+            "area": ["a", "b", "b"],
+            "y": [100.0, 40.0, 10.0],
+            "exposure_years": [0.5, 2.0, 1.0],
+            "mu": [60.0, 70.0, 20.0],
+        }
+    )
+    tweedie = {"family": "tweedie", "family_params": {"power": 1.5}}
+    as_offset = _ae_spec(offset=OffsetSpec(kind="log_column", column="exposure_years"), **tweedie)
+    as_weight = _ae_spec(
+        offset=OffsetSpec(kind="none"),
+        weight=WeightSpec(kind="column", column="exposure_years"), **tweedie,
+    )
+
+    assert _ae_partition(as_offset, data, "tweedie").ae_overall == pytest.approx(
+        (100 + 40 + 10) / (60 + 70 + 20), rel=1e-12
+    )
+    assert _ae_partition(as_weight, data, "tweedie").ae_overall == pytest.approx(
+        (0.5 * 100 + 2 * 40 + 1 * 10) / (0.5 * 60 + 2 * 70 + 1 * 20), rel=1e-12
+    )
+
+
+@pytest.mark.req("FR-171")
+@pytest.mark.req("FR-183")
+def test_a_cells_actual_expected_and_ae_are_the_weighted_sums() -> None:
+    part = _ae_partition(_SEV_SPEC, _SEV, "gamma")
+
+    by = {c.level: c for c in part.ae_by_factor}
+    assert by["a"].actual == pytest.approx(1 * 1000 + 9 * 2000)
+    assert by["a"].expected == pytest.approx(1 * 1100 + 9 * 1900)
+    assert by["a"].ae == pytest.approx(19000 / 18200, rel=1e-12)
+    assert by["b"].actual == pytest.approx(2 * 500 + 3 * 800)
+    assert by["b"].expected == pytest.approx(2 * 400 + 3 * 1000)
+    assert by["b"].ae == pytest.approx(3400 / 3800, rel=1e-12)
+    # The overall is the total of the same sums, not a second formula.
+    assert part.ae_overall == pytest.approx(
+        sum(c.actual for c in by.values()) / sum(c.expected for c in by.values()), rel=1e-12
+    )
+
+
+@pytest.mark.req("FR-171")
+def test_a_weighted_cells_interval_is_ratio_z_over_root_sum_of_weights() -> None:
+    """Under a weight column `actual` is a total cost, so √actual is no longer a count's
+    standard error (DP-M1): the half-width is ratio·z/√Σw."""
+    part = _ae_partition(_SEV_SPEC, _SEV, "gamma")
+
+    by = {c.level: c for c in part.ae_by_factor}
+    for level, sum_w in {"a": 1 + 9, "b": 2 + 3}.items():
+        ratio = by[level].ae
+        half = ratio * _NORMAL_975 / math.sqrt(sum_w)
+        assert by[level].ci_95 == pytest.approx((ratio - half, ratio + half), rel=1e-12)
