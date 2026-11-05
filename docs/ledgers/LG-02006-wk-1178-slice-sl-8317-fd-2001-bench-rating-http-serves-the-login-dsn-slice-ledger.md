@@ -71,7 +71,7 @@ Not run by the executor (DP-3 (a)): the full SOLO gate, both halves, runs in a s
 
 ~~(The auditor's, at slice close.)~~
 
-**Audit verdicts A1–A8 — recorded 2026-11-05 (docs batch 10) by the auditor from the lead's adoption in from-lead "2026-11-04 20:17:12 GMT" ("aud-sl8317 FINAL — A1–A8 ADOPTED (§12)"), under to-lead "2026-11-04 20:56:54 GMT" item 7 (b).** The audit commit is `f65cb07f916e32be9a273495381015dca2a530c6` (tree `715a8fd2e8ddeb27b68414db85929ccac359d1ad`, equal to the squash tree on main `a5b1c537`); against `2be92516` it changed exactly four files (INDEX, the FD-02001 essay, `register.md`, this ledger), all within the amended bound. All eight verdicts ADOPTED as proposed:
+**Audit verdicts A1–A8 — recorded 2026-11-05 (docs batch 10) by the auditor from the lead's adoption in from-lead "2026-11-04 20:17:12 GMT" ("aud-sl8317 FINAL — A1–A8 ADOPTED (§12)"), under to-lead "2026-11-04 20:56:54 GMT" item 7 (b).** The audit commit is `f65cb07f916e32be9a273495381015dca2a530c6` (tree `715a8fd2e8ddeb27b68414db85929ccac359d1ad`, equal to the squash tree on main `a5b1c537`); against `2be92516` it changed exactly four files (INDEX, the FD-2001 essay, `register.md`, this ledger), all within the amended bound. All eight verdicts ADOPTED as proposed:
 - A1 MET; A2 MET; A3 MET; A4 MET; A5 MET.
 - A6 MET on (i) the gate, (ii) the 5-passed re-run and (iii) the 0-hit reach grep, with the false "No other hit" claim corrected in place by the append-only 20:05:21 GMT line above (tests 4, scripts 6; 2 of the 6 load `bench-rating.py` by path).
 - A7 MET; A8 MET (FD-2001 `status: closed`, relates += SL-2005 / LG-2006 / PL-2004, "Resolved 2026-11-04" in the FD-1842 form).
