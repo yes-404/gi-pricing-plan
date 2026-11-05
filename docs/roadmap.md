@@ -604,6 +604,8 @@ a date. The freeze gates limit only what may **enter** P2, never when a start ha
 
 *(Re-dated 2026-11-05, docs batch 11, by the auditor, quoting the maintainer's entry "2026-11-05 09:58:58 GMT" (`to-lead.md`), which relays the user's decision, verbatim: "move to 12 Thursday, but manage the project to work full speed." **Code freeze: Thu 2026-11-12** (~~Tue 2026-11-10~~); **docs freeze: Fri 2026-11-13** (~~Wed 2026-11-11~~). The P2 exit demo stays **Wed 2026-11-18**, the SL-1913 rehearsal Mon 16 Nov and the section 14 plan review Mon 16 to Tue 17 Nov, all unchanged by that entry. Weekdays read with `date -d`: Thursday, Friday, Wednesday, Monday, Tuesday. The superseded dates are struck here; the 2026-11-03 line above and the 2026-09-29 blockquote stay as written. A search of this file at this tree for a WK-1178 row that names either freeze date (`grep -n -E "Tue 10 Nov|Wed 11 Nov|2026-11-10|2026-11-11" docs/roadmap.md`) returns only the three lines that quote the 2026-11-03 move (`:601`, `:603`, `:3449`), so no WK-1178 row text changes; the freeze for those rows is read from this line.)*
 
+*(Dated line, 2026-11-05, docs batch 11, by the auditor, on to-lead "2026-11-05 13:26:35 GMT" (the user's acceptance given in chat, relayed by delegation): **the G1 count, P2 exit criterion G1 of CR-1212: WK-675, WK-1250 and WK-673 are closed; WK-690 and WK-674 are open on their S1 readings; WK-1178 is the chain.** The acceptances are the user's ("point 2 and 3 accepted"), recorded on CR-1999 and CR-2000; this line is the count, not an acceptance.)*
+
 #### Phase 2 status
 
 *(Added 2026-09-29 on `CR-1247`, and the maintainer's entry "2026-09-29 17:27:28 BST · maintainer (acting on the maintainer's behalf) · ACCEPTANCES: the WK-672 Work close (#906) and plan review 16 (#905), per proposal", §2 row 12: "Accepted: (a). An 'Exit demo' row under P2, owned by the lead, discharging FD-1209." The form is Phase 1b's status table.)*
@@ -695,11 +697,13 @@ From “Workstreams” (line 377): Testing: golden quotes, property assertions, 
 id: WK-673
 family: work
 title: Dislocation with attribution
-status: active
+status: closed
 created: 2026-08-14
 owner: maintainer
 phase: P2
 ```
+
+*(Dated line, 2026-11-05, docs batch 11, by the auditor, on to-lead "2026-11-05 13:26:35 GMT" (the user's acceptance given in chat, relayed by delegation): **WK-673 closed, accepted by the user on [`CR-2000`](closures/CR-02000-wk-673-fresh-close-audit.md)**, relayed by delegation: CLOSE-READY condition met at #1427 (e3c150c4). The `status:` field above reads `closed` from this line (it read `active`).)*
 
 From “Workstreams” (line 383): Dislocation with attribution | FR-263, FR-264, FR-265, FR-266, FR-224, FR-257 limb (2), `06` FR-364, FR-231 (F-W10-2), NFR-495, NFR-496 (applied to this Work's artifacts) — **close audit filed (CR-1981), acceptance owed** *(dated 2026-11-03 by the auditor, on the maintainer's entry "2026-11-03 15:36:59 GMT" item (5) in `to-lead.md`; audited at `c807a59d`.)* — **fresh close audit filed (CR-2000, re-testing CR-1981), acceptance owed** *(dated 2026-11-04 by the auditor, on the maintainer's entry "2026-11-04 08:46:25 GMT" in `to-lead.md`; audited at `db92a7bc`.)*
 
@@ -3518,11 +3522,13 @@ relates: [FD-2001, FD-1729, PL-2004, LG-2006, NFR-489, FR-44]
 id: WK-1250
 family: work
 title: Sub-graph composition and MTA/cancellation pricing — FR-217's inlining and FR-218's authoring half
-status: active
+status: closed
 created: 2026-09-29
 owner: maintainer
 phase: P2
 ```
+
+*(Dated line, 2026-11-05, docs batch 11, by the auditor, on to-lead "2026-11-05 13:26:35 GMT" (the user's acceptance given in chat, relayed by delegation): **WK-1250 closed, accepted by the user on [`CR-1999`](closures/CR-01999-wk-1250-fresh-close-audit.md)**, relayed by delegation: condition (1) met at #1427 (e3c150c4); condition (2) discharged by the S1 item D reading of 2026-11-05; NFR-489 on the composed path is carried by FD-1836 under WK-674. The `status:` field above reads `closed` from this line (it read `active`).)*
 
 Opened `draft` 2026-09-29 on `CR-1247`, and the maintainer's entry "2026-09-29 17:27:28 BST · maintainer (acting on the maintainer's behalf) · ACCEPTANCES: the WK-672 Work close (#906) and plan review 16 (#905), per proposal", §2 row 10: "Accepted as amended. #907 is the interim fail-closed fix (HIGH). A **new P2 Work** for FR-217's inlining and FR-218's authoring half is opened `draft` by the lead, its map plan by the planner. WK-669 is not reopened; CR-838 is corrected (16:25:49 item 4)." **Scope** (`CR-1247` Proposal 10, option (a)): FR-217's inlining limb, where `compile_bundle` resolves `SubGraphRef.mount_point` and inlines the pinned sub-graph; and FR-218, where the `purpose` mount is declared on the Rating Version and version-pinned, and the interim guard is replaced by the real check. **Sequenced after WK-674 and before WK-675**, so that WK-675's DAG designer authors a sub-graph against a backend that inlines one. *(Amended 2026-09-30 by the lead, on `RL-1263` item 5.)* The "after WK-674" is not a blanket dependency: it names no WK-674 slice or artifact, so under item 5 it is bare sequencing and is lifted (`PL-1278` re-derives it so). What orders WK-1250 against WK-674 is lane and file contention under `RL-1263`: at most two build slices at once, and slices that change the same file serialise. The designer's sub-graph view stays WK-675's. **Predecessors:** FD-1241 (`CR-838` marks FR-217 delivered, but its versioned-artifact, pin and bundle-time inlining limbs are not built); the interim fail-closed fix, #907 (`a78fe98f`, under WK-1178); and FR-218's interim rule, `RL-1242` (#911). **Its map plan is the planner's**, and its activation is the maintainer's, on that map plan. **Minted 2026-09-29** at #916's merge turn, from `doc-id.py next --ref origin/main` at `a380aa7a` (working id 9670).
 
