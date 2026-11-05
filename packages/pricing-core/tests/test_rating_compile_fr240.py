@@ -383,7 +383,7 @@ async def test_g1_an_approved_objective_in_a_pinned_sub_graph_compiles() -> None
     assert "m_ncd__s_rp" in bundle.graph.nodes
 
 
-# -- A stored cell the engine cannot read (FD-1648, SL 8322, PL 8321 R1.3) -----------------
+# -- A stored cell the engine cannot read (FD-1648, SL-2020, PL-2019 R1.3) -----------------
 
 
 def _with_cells(*raws: str) -> FakeResolver:

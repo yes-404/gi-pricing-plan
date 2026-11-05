@@ -119,7 +119,7 @@ _VALIDATION_CODES = {
     "NULL_VALUE": "RATE_TABLE_INCOMPLETE",
     "OUT_OF_BOUNDS": "RATE_TABLE_INCOMPLETE",
     "DUPLICATE_KEY": "RATE_TABLE_KEY_DUPLICATE",
-    # FR-234, FD-1648: one code for write, compile and score (PL 8321 DP-R2).
+    # FR-234, FD-1648: one code for write, compile and score (PL-2019 DP-R2).
     "RATE_TABLE_CELL_UNPARSEABLE": "RATE_TABLE_CELL_UNPARSEABLE",
 }
 

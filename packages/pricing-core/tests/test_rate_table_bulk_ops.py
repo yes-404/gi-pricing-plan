@@ -117,7 +117,7 @@ def _version(
 
 class TestFormatValueIsFixedPoint:
     """FD-1648 limb (i): a computed cell is written in fixed point, never with an exponent,
-    because the rating engine's parser refuses `1E+2` (PL 8321 R1.1)."""
+    because the rating engine's parser refuses `1E+2` (PL-2019 R1.1)."""
 
     @pytest.mark.req("FR-234")
     @pytest.mark.parametrize(
@@ -203,7 +203,7 @@ _WRITE_PATHS = [_import_csv, _edit, _uplift, _uplift_by_filter, _floor_and_cap]
 
 class TestAWriteNeverLandsACellTheEngineCannotRead:
     """FD-1648 limb (ii): every write path refuses the whole write, naming the first
-    cell, with RATE_TABLE_CELL_UNPARSEABLE (PL 8321 R1.2; the rebase and seed paths write
+    cell, with RATE_TABLE_CELL_UNPARSEABLE (PL-2019 R1.2; the rebase and seed paths write
     only computed fixed-point text and are covered by the limb (i) tests)."""
 
     @pytest.mark.req("FR-234")

@@ -3537,6 +3537,24 @@ Docs only. Every §5.1 REST table in `docs/specs/01`–`07` gains a fourth colum
 
 (Minted 2026-11-05 from working id 8361, on the rulings to-lead "2026-11-05 12:14:32 GMT" and "2026-11-05 15:59:27 GMT" (4), with the mint tool of record `mint-repoint.py`; ledger LG-2012 (working id 8362), open questions OQ-2013, OQ-2014 and OQ-2015 (working ids 8363, 8364, 8365); the finding raised for it is still working id 8366 and has no id yet; executed on branch `sl-8361-permission-column`, unpushed.)
 
+#### SL-2020 — WK-1178 slice — FD-1648 limbs (i) and (ii): a write never lands a rate-table cell the engine cannot read
+
+```yaml
+id: SL-2020
+family: slice
+title: WK-1178 slice — FD-1648 limbs (i) and (ii), a write never lands a rate-table cell the engine cannot read (FR-234)
+status: active                    # draft → active → closed (§1.2a)
+created: 2026-11-05
+owner: lead
+tree: 81dc64af871320c3780f767305fd01c8ede0b501
+phase: P2
+work: WK-1178
+corrected_by: []
+relates: [FD-1648, FD-1767, FD-1780, FD-1781, PL-2019, LG-2021]
+```
+
+Every path that writes a rate-table cell value checks it against the rating engine's expression parser before commit and refuses the whole write, naming the first refused cell, with `RATE_TABLE_CELL_UNPARSEABLE` (FR-234, `03` §5.2); compile and score carry the same code as a backstop (FR-240), and a value the platform computes is written in fixed point. `FD-1767`, `FD-1780` and `FD-1781` are closed by it and `FD-1648` gains its line, per `PL-2019` section "R1, SL-2020" (plan of record; the other cut, SL 8345, is R2's). Its ledger is `LG-2021`.
+
 ### WK-1250 — Sub-graph composition and MTA/cancellation pricing — FR-217's inlining and FR-218's authoring half
 
 ```yaml
