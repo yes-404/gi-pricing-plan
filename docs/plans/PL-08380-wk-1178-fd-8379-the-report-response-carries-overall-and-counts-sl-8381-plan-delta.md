@@ -18,8 +18,10 @@ relates: [FD-8379, SL-8381, LG-8382, FR-42, FR-49, FR-451, NFR-469]
 # PL-8380 — WK-1178: FD 8379's fix. The report response carries `overall` and `counts`; the stored body does not change (SL 8381, a dated Work-plan delta)
 
 > **For agentic workers:** a **dated Work-plan delta** under Lean P2 L1 (a'): a new `PL-` that
-> edits no earlier plan. It holds one code slice, SL 8381. **It decides nothing, and no build seat
-> starts until the maintainer accepts it.** The executor's skills are
+> edits no earlier plan. It holds one code slice, SL 8381. **The maintainer ruled DP-1 to DP-5 at the entry
+> "2026-11-05 16:46:26 GMT"; they are closed decisions here. Seat after SL 8373's T3, as stacked.**
+> Two readings of that ruling are raised under Decision points and are not assumed. The executor's
+> skills are
 > `superpowers:test-driven-development`, `.claude/skills/python-test`,
 > `.claude/skills/contract-schema`, `.claude/skills/contract-guard` and `.claude/skills/spec-change`.
 > PL 8380, SL 8381, LG 8382 and FD 8379 are working ids, reserved by the lead. PL 8372, SL 8373 and
@@ -38,7 +40,12 @@ relates: [FD-8379, SL-8381, LG-8382, FR-42, FR-49, FR-451, NFR-469]
   @computed_field is refused; a response-side shape in `model-schema` (no hand-written shape) or a
   serialisation mode that keeps the stored form; the seat's plan says which. Contract regen in the
   same commit. The marks in §4.6 follow its landing: until then its row is `illustrative`".
-- **The row.** RL 8375 on `draft/rl-1381-2026-11-05` @`61712bd5`, row 5 (`01:550`), and its
+- **The ruling on this plan.** The maintainer's entry "2026-11-05 16:46:26 GMT", read whole; Decision
+  points quotes it limb by limb. It amends the "no extra gate" above on one path only, DP-1's red
+  branch.
+- **The window.** The maintainer's entries "2026-11-05 14:40:19 GMT" (2) and "2026-11-05 15:49:09 GMT"
+  (A), which rule (d)'s slot clause and add (j). Needs lists the conditions.
+- **The row.** RL 8375 on `draft/rl-1381-2026-11-05` @`555a1e8b`, row 5 (`01:550`), and its
   "Noticed, not ruled": `validation-report.schema.json:59` still declares `evidence_blob`, and T3
   does not edit it.
 - **The chain this rides.** PL 8372 on `draft/pl-1381-2026-11-05` @`f3094233`, accepted at the
@@ -147,22 +154,44 @@ Every file:line below was read at `bdad132291fdc05fe233d3ddc946e413dcbd2e1f`, or
 
 ## Decision points
 
-For the decision-maker; the GO request carries them to the maintainer. Each is ruled before the
-slice starts. The response-side choice above is the plan's, as the maintainer asked; these are what
-it leaves open.
+**All five are ruled: the maintainer's entry "2026-11-05 16:46:26 GMT".** The Ruling column is that
+entry, verbatim. The choice above stands: the entry accepts it, and says of the Serialisation-mode row
+"Spike's "rejected by reasoning, not run" on serialisation mode: fine, since the chosen form was
+spiked; the contract comparison unrun is T1's first read."
 
-| DP | Question | Options | Recommendation |
+| DP | Question | Ruling, verbatim | What it binds here |
 |---|---|---|---|
-| DP-1 (blocking) | How does SL 8381 order against SL 8373, and how does it ride one gate? | (a) **Stacked.** SL 8381's branch starts at SL 8373's S4 head, its work runs before S5, and S5's one SOLO gate runs at SL 8381's head, a superset of SL 8373's. Two PRs: SL 8373's first from its own tip, SL 8381's second. (b) SL 8381 first, from `main`, with TRACK A merged: it then needs a gate of its own. (c) Parallel branches and a gate on a throwaway merge of the two: one gate, on a tree neither PR holds | **(a).** It is the only order with no extra gate on a tree that a PR actually carries. It also leaves SL 8373 whole if the line fails: SL 8373's tip never contains this slice, so PL 8372's G1 ("Nothing under `backend/src/`…") stays true of its diff and its tooling-only exception survives. **Costs, stated.** PL 8372's A14 reads "on the re-merged head", and here that head is SL 8381's: this asks the maintainer to accept that reading. If SL 8381 reds the gate, SL 8373 either waits for the fix or takes its own gate, which is one extra gate on the failure path only. After SL 8373's squash, SL 8381 re-merges `origin/main` and the merged tree is compared with the gated head (A13) |
-| DP-2 | The published name. The route's OpenAPI component changes with the class | (a) **`ValidationReportView`**, naming `load_report_view`; `ValidationReport` stays the artifact, and `validation.ts:4` moves. (b) The wire keeps `ValidationReport` and the artifact is renamed: 30-plus sites across `pricing-core`, `backend` and tests, in files the chain is in. (c) `ValidationReportResponse`, as `UploadUrlResponse` (`uploads.py:32`), which avoids reading like `ValidationReportView.vue` | **(a).** `DemoView` (`demo.py:27`) and `load_report_view` are the same word for the same idea. (c) is sound, and only the name differs |
-| DP-3 (blocking) | "Red first" on the pre-fix-body test. At the base, nothing is broken: reading and re-dumping a pre-fix body passes, and it must, because the test states what must never change | (a) **Green at the base by design; its red is the refused fix, planted.** R1 applies the bare `@computed_field` as an uncommitted mutation, records the red by cause, reverts, and the LG holds both runs. (b) Force a red at the base by importing `ValidationReportView`: an `ImportError`, which is a red by nothing | **(a).** A test of an invariant cannot be red before the change that threatens it, and A2's rule refuses an import red. (a) also proves the exact thing the maintainer refused is what the test catches. **The maintainer's words were "red first", so this reading needs the ruling and is not assumed** |
-| DP-4 | The DB limbs, R1's T4 and T5, need a database | (a) **One short granted DB window** on a `createdb -T` copy, about 15 min, for their red and green before the gate. (b) No window: they first run in the gate | **(a).** Under (b) a defect in them surfaces inside the 2.5 h gate that also carries SL 8373. (b) stays the fallback if no window is free before the line: the DB-free tests still prove the constraint |
-| DP-5 | The authored contract's other limbs. Adding the slug to the guard (T1) needs `empty_layers` declared there | (a) **Declare `empty_layers` and correct `:76`** to §4.6's amended rule, each with a dated `$comment`. `evidence_blob` at `:59` stays: nested, outside the guard, and RL 8375 leaves it. (b) Leave the guard row out, and change nothing authored | **(a).** The guard row is what would have caught FD 8379, and T1's red depends on it. `:76` is the same file stating the same field wrongly, and a reader of the new contract meets it first |
+| DP-1 | How SL 8381 orders against SL 8373, and how it rides one gate | "stacked on SL 8373's S4 head, one gate at SL 8381's head; A14's "re-merged head" reads as SL 8381's head by dated line. Accepted because SL 8373's head is an ancestor of what is gated and CI runs at each PR. If the gate reds in SL 8381's own paths: fix and re-gate there if ≤ one gate-length before the Wed 11 12:00 line; else SL 8373 takes its own gate, and FD 8379 carries by name: an extra gate at that point is my word, given now." | That A14 is **PL 8372's** A14; this plan's is the FD closing act. **Dated line, 2026-11-05, on that ruling: PL 8372's A14 "on the re-merged head" reads as SL 8381's head.** PL 8372 is not this plan's to edit, so its holder takes the same line (Hand-off). The stated reason is a condition: A13 proves the ancestry. Steps 18 and 19 and the table at the end of Tasks carry the red branch |
+| DP-2 | The published name | "accepted: `ValidationReportView`; the stored contract `validation-report` unchanged; the OpenAPI move stated in its PR." | The route's component is `ValidationReportView`, and `validation.ts:4` moves. The PR body states the move (A17). See **Reading 1** |
+| DP-3 | "Red first" on the pre-fix-body test | "the planted @computed_field, reverted, both runs in the LG, ACCEPTED as the round-trip test's red: and it is not the only red: A's response limb has a natural one: GET report at base lacks `overall`: that test is red at base and stated. Green-at-base by design is said so in the LG." | T3 and T5 are green at the base by design, and the LG says so; M1 is their red; both runs are in the LG (A3). T4 is the response limb's natural red at the base, and the LG states it (A2) |
+| DP-4 | The DB limbs, T4 and T5 | "accepted, one window under 14:40:19 + (d), (j): own GIP_GATE_SLOT; fallback, gate lane." | One window, Step 14, on Needs' conditions (A18). The fallback is T4 and T5 in the gate's pytest, with what that leaves unrun stated in the LG |
+| DP-5 | The authored contract's other limbs | "accepted, all three: the missing guard row is why this stayed green, so it comes with a planted red." | The three: `empty_layers` declared; `:76` corrected; the guard row. The planted red is M2, Step 13 (A16). `evidence_blob` at `:59` stays, as RL 8375 notes. "01:559 by dated line accepted": Step 15 |
+
+The rest of the entry: "Seat after SL 8373's T3, as stacked. Mint in merge order: SL 8373 first."
+
+**Raised, not assumed. Neither changes a task until it is answered; both go to the maintainer through
+the lead.**
+
+- **Reading 1: "the stored contract `validation-report` unchanged", against DP-5.** No form leaves
+  everything under that name byte-identical, and the guard row green. Nothing in `backend/src`,
+  `packages/*/src` or `scripts/` validates a stored body against this contract: the hits of
+  `git grep -n -E '"validation-report|validation-report\b' -- backend packages scripts tests` are
+  `test_contracts.py`, `audit-docs.py` and `generate-contracts.py`, once the plural route is filtered
+  out. The authored file requires `overall` and `counts`, so if the slug stayed mapped to
+  `ValidationReport`, T1 could never go green. A new slug for the view needs those two keys taken out
+  of `:7-8`, which changes the authored contract more. **This plan reads "unchanged" as: the slug, the
+  authored path and its `required` at `:7-8` do not move, the stored body stays `ValidationReport`, and
+  DP-5's limbs are the only authored edits. The generated file under the slug moves to the view (Step
+  9, A11).** If the maintainer meant the generated file too, Step 9 and A11 change and T1 needs a new
+  answer.
+- **Reading 2: "≤ one gate-length before the Wed 11 12:00 line".** In word order this admits a re-gate
+  only when the line is at most one gate away. **This plan reads it as: the re-gate, about 2.5 h
+  (PL 8372 Needs), can end before the line.** The other reading would start a gate that cannot finish.
 
 ## Acceptance Standard
 
 Each item is checked by a command a fresh reviewer can run from the repository root on the slice's
-merge tree. Items 1 and 2 apply to this plan. A1 to A15 apply to the slice.
+merge tree. Items 1 and 2 apply to this plan. A1 to A18 apply to the slice.
 
 1. **This delta passes the docs checks on its own branch.** `python3 scripts/audit-docs.py` prints no
    failing line except those for the working ids this file uses, and `python3 scripts/doc-index.py
@@ -172,19 +201,21 @@ merge tree. Items 1 and 2 apply to this plan. A1 to A15 apply to the slice.
 
 The slice, SL 8381:
 
-- **A1. The write set.** `git diff --name-only <SL 8373 tip>...HEAD` lists only this plan's Write set.
+- **A1. The write set.** `git diff --name-only <SL 8373 tip>...HEAD` lists only this plan's Write set
+  before SL 8373's squash, and `git diff --name-only origin/main...HEAD` after this slice's re-merge.
 - **A2. Red first, by its cause.** The LG holds R1's runs. T1 fails with `the contract declares fields
   the model lacks: ['counts', 'overall']`; T2 with an `AssertionError` naming `overall` missing from
-  the route's `required`; T4 with `KeyError: 'overall'` on the response body. A fixture, import or
-  `NameError` is not the red. A matching status with a differing reason is a plan defect: STOP.
-- **A3. The constraint's proof ran red** (on DP-3's ruling). T3 and T5 are green at the base, and the
-  LG says so. Under mutation M1, the bare `@computed_field` on `overall` and `counts`, each goes red
+  the route's `required`; T4 with `KeyError: 'overall'` on the response body, which is the natural
+  red the maintainer named: GET report at the base lacks `overall`, and the LG states it. A fixture,
+  import or `NameError` is not the red. A matching status with a differing reason is a plan defect: STOP.
+- **A3. The constraint's proof ran red** (DP-3 as ruled). T3 and T5 are green at the base by design,
+  and the LG says so. Both runs are in the LG. Under mutation M1, the bare `@computed_field` on `overall` and `counts`, each goes red
   with both keys named, and M1 is reverted with `git diff --stat` empty for
   `packages/model-schema/src/model_schema/validation.py`. Printed failing, per `CLAUDE.md` §13.
 - **A4. The fixture is pre-fix, by the record.** `git log --diff-filter=A --format=%h --
   packages/model-schema/tests/fixtures/validation-report-pre-fix.json` names a commit that is an
-  ancestor of the first commit touching `packages/model-schema/src/model_schema/validation.py`, and
-  the LG quotes the capture command and the base sha.
+  ancestor of the first commit in `<S4 head>..HEAD` touching
+  `packages/model-schema/src/model_schema/validation.py`, and the LG quotes the capture command and the base sha.
 - **A5. Stored bytes unchanged.** T3 passes at the head:
   `json.dumps(ValidationReport.model_validate(body).model_dump(mode="json"))` equals the fixture's
   stored text exactly, key order included.
@@ -216,8 +247,10 @@ The slice, SL 8381:
   with this one block moved. `ILLUSTRATIVE_CEILING` in `tests/test_spec_examples.py` is 30.
   `uv run pytest tests/test_spec_examples.py` passes with the `01` block's id present. Under the
   mutation "the block's `counts.warn` becomes 2", that id fails; reverted.
-- **A13. One gate, on the tree that lands.** No gate of this slice's own. S5's SOLO gate on SL 8381's
-  head holds every rc, and T1 to T6 are in its passed set by name. After SL 8373's squash and this
+- **A13. One gate, on the tree that lands.** No gate of this slice's own, except on DP-1's red branch.
+  S5's SOLO gate on SL 8381's head holds every rc, and T1 to T6 are in its passed set by name.
+  `git merge-base --is-ancestor <SL 8373 tip> <gated head>` exits 0, the condition of DP-1's acceptance,
+  and SL 8373's PR opens from that same tip. After SL 8373's squash and this
   slice's re-merge, `git diff <gated head> HEAD` is empty, or lists only files SL 8373's squash and
   the re-merge account for, read by the auditor. Anything else follows the common seat brief, items
   5 and 21.
@@ -227,8 +260,19 @@ The slice, SL 8381:
   `docs/findings/register.md`. **The essay is not this plan's and no seat before the auditor writes
   it.**
 - **A15. The LG's Audit section.** LG 8382 has its five sections, and its Audit section holds the
-  auditor's verdict on A1 to A14 with `origin/main...` ranges named, never a tip alone (`CLAUDE.md`
+  auditor's verdict on A1 to A14 and A16 to A18 with `origin/main...` ranges named, never a tip alone (`CLAUDE.md`
   §13). The red and green lines are in the LG before the audit.
+- **A16. The guard row's planted red** (DP-5). With `"validation-report"` in the parametrize list at the
+  head, mutation M2 reds T1 with `the contract declares fields the model lacks: ['counts', 'overall']`.
+  M2 is reverted, `generate-contracts.py --check` exits 0, and `git diff --stat` is empty. Both runs are
+  in the LG. T1's red at the base (A2) does not discharge this: M2 is the row catching the defect on a
+  repaired tree.
+- **A17. The OpenAPI move is stated** (DP-2). `gh pr view <n> --json body` on SL 8381's PR states that
+  the route's component moved from `ValidationReport` to `ValidationReportView` in
+  `docs/contracts/openapi/generated.json`, and that `ValidationReport` left that file.
+- **A18. The window** (DP-4). The LG holds Step 14's START and END lines with every quoted value in
+  Needs' list, including `GIP_GATE_SLOT=/tmp/slots/window-sl8381` from the process environ. On the
+  fallback, the LG says so and names what did not run (Step 14).
 
 ## Global Constraints
 
@@ -249,32 +293,50 @@ The slice, SL 8381:
   (common seat brief, item 33). **db 0 is LIVE**: an unset `GIP_REDIS_URL` defaults to it, so the
   URL is always set. No bare `FLUSHDB`.
 - **G11. A DB window runs on a `createdb -T` copy, never the template** and never a URL naming the
-  template. A DB window is single-tenant.
+  template. It may sit beside a gate's pytest stage only, on the conditions in Needs; any other window
+  stays single-tenant (`to-lead.md` "2026-11-05 14:40:19 GMT" (4)).
 
 ## Needs
 
-- **Seats:** one executor, model per the role file; one auditor. No decision-maker unless the
-  maintainer routes the DPs to one.
+- **Seats:** one executor, model per the role file; one auditor. No decision-maker: the DPs are ruled.
 - **Ids:** PL 8380, SL 8381, LG 8382, FD 8379 are held. No others.
-- **DB:** under DP-4 (a), one granted window of about 15 min, on a `createdb -T` copy, for T4 and T5:
-  two test files. Under (b), none.
-- **Redis:** the window's run sets `GIP_REDIS_URL=redis://localhost:6379/<11|12|13>`. Cleanup is
-  `redis-cli -n <db> FLUSHDB`, then `redis-cli -n <db> dbsize` = 0, and `-n 0 dbsize` is read before
-  and after as a guard: it must not fall. Nothing else uses Redis.
+- **DB: one window, about 15 min, for T4 and T5: two test files (DP-4).** The brief quotes each of
+  these. From "2026-11-05 14:40:19 GMT" (2), with (d) and (j) as "2026-11-05 15:49:09 GMT" (A) rules them:
+  - (a) A `-T` copy with both URLs on it, name unique to the window; createdb with mkdb's retry;
+    template guard 1/3/1 at both ends.
+  - (b) END reads the window's own named DB gone and the gate's DB still there.
+  - (c) Redis db from 11 to 13, every command `-n <db>`, dbsize 0 at both ends, db 0 = 56 quoted at both
+    ends. `GIP_REDIS_URL` is set, and the run refuses if it is unset.
+  - (d) Own MinIO bucket name, through `GIP_TEST_BUCKET`. `GIP_GATE_SLOT=/tmp/slots/window-sl8381`,
+    quoted from the process environ; `gip:switch` channels read at START. A fixture that ignores the
+    slot is a STOP, and the executor reads the fixtures of both files first.
+  - (e) No compose up or restart, no shared-service restart, no fixed-port serve.
+  - (f) Run through `run-heavy.sh`, nice 10, inside the heavy cap in force, with the memory guard.
+  - (g) Beside a gate only in its pytest stage, with that pytest expected to outlast the window by
+    30 min, by the gate's own progress line, quoted. The window ends before the gate leaves pytest.
+  - (h) START and END name the gate and its stage, and that gate's END read lists the window.
+  - (i) A DB-touching FAIL with the gate's times overlapping is read against those times before it is
+    RED, and re-run alone.
+  - (j) No switch test. Neither file is a `test_deployment_switch*.py`.
+  **Fallback, "gate lane":** T4 and T5 first run in S5's gate pytest. Step 14 says what that leaves.
 - **Docker, compose, NFR VM:** nothing else.
-- **Gate:** none of its own. It rides SL 8373's S5 (about 2.5 h, PL 8372 Needs), on DP-1 (a).
-- **Size:** **about 5 h of executor time**, gate not counted: R1 1 h, R2 1.5 h, the window 0.5 h, R3
-  0.5 h, the frontend line and the green set 0.5 h, LG and re-merge 1 h. **Auditor about 1.5 h**,
+- **Gate:** none of its own. It rides SL 8373's S5 (about 2.5 h, PL 8372 Needs), at SL 8381's head (DP-1).
+  **The failure path holds one more:** a re-gate here, or SL 8373's own gate. The maintainer gave that
+  word in the ruling, and it needs no second ask.
+- **Size:** **about 5.25 h of executor time**, gate not counted: R1 1 h, R2 1.5 h, M2 0.25 h, the window
+  0.5 h, R3 0.5 h, the frontend line and the green set 0.5 h, LG and re-merge 1 h. **Auditor about 1.5 h**,
   with FD 8379's essay and closing act.
-- **Earliest start:** SL 8373's S4 head exists, so TRACK A has merged. **The line:** if S5 cannot
+- **Earliest start:** "Seat after SL 8373's T3, as stacked." T3 is TRACK A's task in PL 8372, and it
+  gives §4.6's text. The branch is cut at SL 8373's S4 head (DP-1), so a seat placed before that head
+  exists re-derives G8's lines and cuts no branch until it does. **The line:** if S5 cannot
   finish before Wed 11 Nov 2026 12:00 with this slice on it, the slice does not ride, and FD 8379 is
   carried with the P2 closure record by name.
 
 ## Tasks
 
-### SL 8381: the report response carries `overall` and `counts`. Its row: scope A1 to A15; lane WK-1178; after SL 8373's S4, before its S5
+### SL 8381: the report response carries `overall` and `counts`. Its row: scope A1 to A18; lane WK-1178; seated after SL 8373's T3, based on its S4, before its S5
 
-**Files:** see Write set. **Base:** SL 8373's S4 head, on DP-1 (a). Branch `sl-8381-report-response`.
+**Files:** see Write set. **Base:** SL 8373's S4 head, DP-1 as ruled. Branch `sl-8381-report-response`.
 Every literal below was read at `bdad1322`. Where a test sample differs from the neighbouring test,
 mirror the neighbour.
 
@@ -293,17 +355,17 @@ mirror the neighbour.
 | T1 | `backend/tests/test_contracts.py`: add `"validation-report"` to the parametrize list of `test_an_artifact_shape_carries_exactly_what_its_contract_declares` (`:722-:736`) | red, DB-free | `the contract declares fields the model lacks: ['counts', 'overall']` |
 | T2 | same file, new `test_the_report_route_publishes_its_outcome`: from `OPENAPI`, resolve `paths["/api/v1/validation-reports/{report_id}"]["get"]["responses"]["200"]["content"]["application/json"]["schema"]["$ref"]`, assert `{"overall", "counts"}` is a subset of its `required` | red, DB-free | `AssertionError`: `overall` and `counts` absent from `required` |
 | T3 | new `packages/model-schema/tests/test_validation_report_stored_form.py`: `body = fixture text`; `json.dumps(ValidationReport.model_validate(json.loads(body)).model_dump(mode="json")) == body`; `"overall" not in` and `"counts" not in` the dump; a second, minimal body holding only the six required fields reads | **green, by design** (DP-3) | Under M1 below: the strings differ by the two keys |
-| T4 | `backend/tests/test_api_acknowledge.py:102`, extend `test_an_actuary_acknowledges_a_warning_through_the_route`: read the view **before** and after the POST, assert `view["overall"] == "pass_with_warnings"`, `view["counts"]["warn"] == 1`, and the two reads agree | red, DB | `KeyError: 'overall'` |
+| T4 | `backend/tests/test_api_acknowledge.py:77`, extend `test_an_actuary_acknowledges_a_warning_through_the_route`: read the view **before** and after the POST, assert `view["overall"] == "pass_with_warnings"`, `view["counts"]["warn"] == 1`, and the two reads agree | **red, DB: the response limb's natural red** (DP-3) | `KeyError: 'overall'`: GET report at the base lacks it |
 | T5 | `backend/tests/test_validation_reports.py`, new test beside `test_a_stored_report_reads_back_byte_identical` (`:98`): store, call `load_report_view`, fetch the `ValidationReportRow`, assert `row.body == report.model_dump(mode="json")` and neither key in it | **green, by design** | Under M1: the stored body holds both keys, so `load_report_view` raises `extra_forbidden` at `model_validate`, or, if it is called after the assert, the "neither key" assert fails. Either line names `overall` or `counts` |
 
   Mark them `@pytest.mark.req("FR-42")`; T3 and T5 also `req("NFR-469")`.
 
 - [ ] **Step 3: run them.** T1 and T2 through
   `run-small.sh <wt> backend/tests/test_contracts.py`; T3 through
-  `run-small.sh <wt> packages/model-schema/tests/test_validation_report_stored_form.py`; T4 and T5 in the
-  DB window (DP-4). Each failure line goes in the LG verbatim, with the head sha.
+  `run-small.sh <wt> packages/model-schema/tests/test_validation_report_stored_form.py`. T4 and T5 run
+  at Step 14, at this commit's sha. Each failure line goes in the LG verbatim, with the head sha.
 - [ ] **Step 4: mutation M1, uncommitted.** On `ValidationReport`, put `@computed_field` on `counts`
-  and `overall`. Run T3, and T5 in the window. Record the reds. Revert; quote the empty `git diff
+  and `overall`. Run T3; T5's run under M1 is at Step 14. Record the red. Revert; quote the empty `git diff
   --stat`. A mutation whose edit does not apply aborts the run.
 - [ ] **Step 5: commit** the fixture and the tests, alone: `test(data): the report response and the
   stored form (SL 8381 R1)`. T1, T2 and T4 are red at this commit, so it is not pushed as a PR head.
@@ -387,54 +449,77 @@ class ValidationReportView(_ReportFields):
   `-> ValidationReportView`, and the import at `:56`.
 - [ ] **Step 9: the contract.** `scripts/generate-contracts.py:131`:
   `"validation-report": "ValidationReportView"`, with a dated comment naming FD 8379. In the authored
-  `docs/contracts/schemas/validation-report.schema.json`, on DP-5 (a): declare `empty_layers`, correct
+  `docs/contracts/schemas/validation-report.schema.json`, as DP-5 ruled: declare `empty_layers`, correct
   the invariant at `:76` to "… and at least one result is `warn`; acknowledgement is checked at
   promotion (FR-46), not here", and add a dated `$comment` saying the document describes the response
   and the stored body is the same object without `overall` and `counts`. `:7-8` do not change. Then
   `uv run python scripts/generate-contracts.py` and commit what it writes, by hand-editing nothing
-  under `generated/`. If `test_contracts.py` reds on a path other than T1's, that is a guard speaking:
+  under `generated/`. The slug, the authored path and `:7-8` stay (DP-2, Reading 1). The next
+  `test_contracts.py` run is the contract comparison's first read, which the spike did not run. Its
+  result goes in the LG, by name, for `overall` and `counts.*`. If `test_contracts.py` reds on a path other than T1's, that is a guard speaking:
   read which half it means (`.claude/skills/contract-guard`), and STOP if the fix would touch a
   comparator.
 - [ ] **Step 10: the frontend alias.** `frontend/src/api/validation.ts:4`:
   `export type ValidationReport = components["schemas"]["ValidationReportView"];`. The local name
   stays, so no importer changes.
 - [ ] **Step 11: green.** `pnpm --dir frontend generate:api` and `pnpm --dir frontend type-check`
-  under the load bound, rc quoted. `run-small.sh` on T1, T2, T3, T6's files, then T4 and T5 in the
-  window. `uv run ruff check .`, `ruff format --check` on the changed files, `uv run mypy`, each rc
+  under the load bound, rc quoted. `run-small.sh` on T1, T2, T3, T6's files. `uv run ruff check .`, `ruff format --check` on the changed files, `uv run mypy`, each rc
   quoted (item 16). Derive the green set by import closure and quote it (item 29): `validation.py`
   is imported widely, so the closure is run file-by-file where it is DB-free, and the gate is the
   decisive green for the rest.
 - [ ] **Step 12: commit** source, tests, regeneration and alias as one:
   `fix(data): the report response carries overall and counts; the stored body is unchanged (FD 8379)`.
+- [ ] **Step 13: mutation M2, uncommitted: the guard row's planted red (DP-5, A16).** At the head, set
+  `scripts/generate-contracts.py`'s row back to `"validation-report": "ValidationReport"` and run
+  `uv run python scripts/generate-contracts.py`. T1, through `run-small.sh`, must fail with `the contract
+  declares fields the model lacks: ['counts', 'overall']`. Revert with `git -C <wt> restore` on the paths
+  `git status --short` names, re-run T1 green, and quote `generate-contracts.py --check` rc 0 and the
+  empty `git diff --stat`. An edit that does not apply aborts the run. Both runs go in the LG.
+- [ ] **Step 14: the one window (DP-4, A18).** One window takes all the DB runs, because R1 and R2 are
+  hours apart and DP-4 grants one. It opens after Step 13, on Needs' conditions. In the own worktree:
+  `git -C <wt> checkout <R1 sha>`; run T4 (red) and T5 (green), one file at a time, both stated in the
+  LG; apply M1, run T5 (red), revert, quote the empty `git diff --stat`; `git -C <wt> checkout
+  sl-8381-report-response`; run T4 and T5 (green). Close the window with Needs' END reads.
+  **On the fallback:** T4 and T5 first run in S5's gate pytest at the head, green. T4's natural red and
+  T5's run under M1 are then not run: T2 stays the response limb's red and T3 under M1 the constraint's,
+  and the LG says this in those words.
 
-**R3: the mark, on landing. Its own commit, after R2.**
+**R3: the mark, on landing. Its own commit, after R2 and the window.**
 
-- [ ] **Step 13: `01` §4.6.** Change the fence from ` ```json illustrative` to
+- [ ] **Step 15: `01` §4.6.** Change the fence from ` ```json illustrative` to
   ` ```json schema=ValidationReportView`. Set the block's `counts` to its own results, one `warn`:
-  `{"pass": 0, "warn": 1, "fail": 0, "error": 0, "skipped": 0}`. Add a dated line under the block
+  `{"pass": 0, "warn": 1, "fail": 0, "error": 0, "skipped": 0}`. Add the dated line the maintainer
+  accepted ("01:559 by dated line accepted"; the line number is `bdad1322`'s, G8) under the block,
   naming FD 8379: the block is the response, `ValidationReportView`; the stored body is
   `ValidationReport`, the same object without `overall` and `counts`; the example's counts now agree
   with its one result. Follow `.claude/skills/spec-change`.
-- [ ] **Step 14: the ceiling.** `tests/test_spec_examples.py`: `ILLUSTRATIVE_CEILING` falls by one, to
+- [ ] **Step 16: the ceiling.** `tests/test_spec_examples.py`: `ILLUSTRATIVE_CEILING` falls by one, to
   30 (A12), in the same commit. Run `python3 scripts/audit-docs.py`, and `run-small.sh` on the file;
   apply A12's mutation; revert.
-- [ ] **Step 15: commit:** `docs(specs): 01 §4.6 validates as ValidationReportView (FD 8379)`.
+- [ ] **Step 17: commit:** `docs(specs): 01 §4.6 validates as ValidationReportView (FD 8379)`.
 
 **G: the gate.**
 
-- [ ] **Step 16: hand-off to S5.** SL 8381's head goes to SL 8373's S5: the re-merge, then the one SOLO
-  gate, both halves (`CLAUDE.md` §11). T1 to T6 must be in its passed set by name (A13). The docs
-  checks fail only on working ids until the mint (item 31).
-- [ ] **Step 17: the landing.** SL 8373's PR merges first, from its own tip. SL 8381 re-merges
+- [ ] **Step 18: hand-off to S5.** S5's re-merge lands on SL 8373's own tip, and SL 8381 merges that tip,
+  so that tip stays an ancestor of the gated head (A13). Then the one SOLO gate at SL 8381's head, both
+  halves (`CLAUDE.md` §11). T1 to T6 must be in its passed set by name, with DP-4's window read under
+  Needs (i) if the gate shares its times. The docs checks fail only on working ids until the mint
+  (item 31). **A red in SL 8381's own paths, the Write set, follows DP-1's red branch** (the table
+  below). Any other red is not in that ruling, and goes to the lead.
+- [ ] **Step 19: the landing.** "Mint in merge order: SL 8373 first." SL 8373's mint and PR come first,
+  from its own tip, and SL 8381's ids stay working ids until that has merged. SL 8381 re-merges
   `origin/main`, A13's diff is read, the auditor files the LG's Audit section and FD 8379's essay and
-  closing act (A14, A15), the mint runs, and SL 8381's PR opens. `frontend.yml` fires on this PR.
+  closing act (A14, A15), the mint runs, and SL 8381's PR opens, its body stating the OpenAPI move
+  (A17). `frontend.yml` fires on this PR.
 
 **The ordering if the two come apart.**
 
 | Case | What happens to the mark | What happens to FD 8379 |
 |---|---|---|
 | SL 8373's S5 runs with this slice, before the line | `illustrative` at S4, flipped by R3 before the gate; on `main` it arrives `schema=` one PR after SL 8373 | Closed in SL 8381's PR |
-| This slice is not ready at S5, and the line can still hold | SL 8373 lands with the block `illustrative`, ceiling 31. SL 8381 needs a gate of its own, which the ruling does not grant: **it goes back to the maintainer** | Open until then |
+| **DP-1's red branch, first limb.** The gate reds in SL 8381's own paths, and a re-gate can end before the line (Reading 2) | As the first row, once the re-gate at SL 8381's head passes | Closed in SL 8381's PR |
+| **DP-1's red branch, second limb.** The gate reds in SL 8381's own paths, and it cannot | SL 8373 takes its own gate at its own tip and lands with the block `illustrative`, ceiling 31. PL 8372's A14 reads as written. The maintainer's word is already given | Carried with the P2 closure record by name |
+| This slice is not ready at S5, and the line can still hold | SL 8373 lands with the block `illustrative`, ceiling 31. SL 8381 needs a gate of its own, which the ruling grants only on a red: **it goes back to the maintainer** | Open until then |
 | The line fails | The block stays `illustrative`, naming FD 8379, and the ceiling stays 31 | Carried with the P2 closure record by name |
 
 ### Write set
@@ -473,13 +558,15 @@ at the heads named, 2026-11-05 about 16:39Z. Hunks read with `-U0`.
 
 ## Hand-off (not this plan's writes)
 
-- **The maintainer:** DP-1 to DP-5, the acceptance, and the GO on the row. DP-1 (a) and DP-3 (a) each
-  ask for a reading of words already written: PL 8372's A14 "the re-merged head", and "red first".
-- **The lead:** the DB window on DP-4 (a); the ids; adding `sl-8381-report-response` to S5's brief so
+- **The maintainer:** Reading 1 and Reading 2. Each is one word; DP-1 to DP-5 are ruled.
+- **The holder of PL 8372:** DP-1's dated line on its A14 at the draft branch. T3 already takes one
+  dated line there, for 62 to 63 (RL 8375 @`555a1e8b`).
+- **The lead:** the DB window (DP-4); the ids; the seat after SL 8373's T3; adding `sl-8381-report-response` to S5's brief so
   the gate's Object line names SL 8381's head; the SL row and LG id at the mint; a P2 closure carry
   line if the line fails.
 - **SL 8373's seat:** S4's marks as PL 8372 has them. The block is `illustrative`, ceiling 31.
-- **The executor:** LG 8382.
+- **The executor:** LG 8382, with A2's and A3's statements, M1's and M2's runs, and the window's lines;
+  the PR body's OpenAPI line (A17).
 - **The slice's auditor:** FD 8379's essay, its closing act and register row, at the mint (A14), and
   the LG's Audit section (A15). `relates:` here gains PL 8372's, SL 8373's and RL 8375's minted ids.
 - **Not done here, on purpose:** `_counts` at `platform/validation.py:54` restates `report.counts`, a
@@ -496,10 +583,18 @@ at the heads named, 2026-11-05 about 16:39Z. Hunks read with `-U0`.
 3. **The spike's limits are stated.** Toy classes, not the real module; `TypedDict` and the sibling
    shape were run, the serialisation-mode row was reasoned. The generated `ValidationReportView`
    against `test_contracts.py`'s scalar and constraint comparisons has **not** been run. `overall` and
-   `counts.*` enter their intersection for the first time, and Step 9 says what to do if one reds.
+   `counts.*` enter their intersection for the first time, and Step 9 says what to do if one reds. The
+   maintainer accepted these limits: that comparison "is T1's first read".
 4. **Every requirement is named by id:** FR-42, FR-49, FR-451, NFR-469, FR-46; no range. No requirement
    states the wire form of the report today; `01` §4.6 does, and the slice leaves it as the statement.
 5. **No placeholders** except the `...` in Step 7's sample, each saying which existing body moves.
 6. **The reds are by cause.** T1, T2 and T4 by the missing keys. T3 and T5 are stated as green at the
    base, and DP-3 carries that openly rather than presenting them as red.
 7. **The calendar is stated once:** the line Wed 11 Nov 2026 12:00, freeze Thu 12, docs Fri 13.
+8. **The fold of "2026-11-05 16:46:26 GMT".** Each limb of the entry was walked to a site here: DP-1 to
+   Steps 18 and 19, A13 and the table; DP-2 to A17 and Step 9; DP-3 to A2 and A3; DP-4 to Step 14, A18,
+   Needs and G11; DP-5 to Steps 9 and 13 and A16; "01:559" to Step 15; "Seat after" to Needs; "Mint in
+   merge order" to Step 19. RL 8375 moved to `555a1e8b`; row 5, its Mark and "Noticed, not ruled" were
+   re-read there. T4's cite was `:102` and is `:77` at `bdad1322`. A4 now scopes its first commit to the
+   branch, because `main`'s history already touches `validation.py`. The fold found that one window must
+   hold both the red and the green, which R1 and R2 split: Step 14 is why.
