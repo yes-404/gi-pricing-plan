@@ -262,4 +262,4 @@ def test_no_test_pins_a_metric_certificates_measured_text() -> None:
         for phrase in _MEASURED_DETAIL_PHRASES
         if phrase in path.read_text(encoding="utf-8")
     ]
-    assert not pins, "a test pins a metric certificate's measured text (FD-1354): " + "; ".join(pins)
+    assert not pins, "a test pins a certificate's measured text (FD-1354): " + "; ".join(pins)
