@@ -294,3 +294,70 @@ def test_a_signalling_nan_that_skips_validation_is_not_written_as_a_number():
 
     with pytest.raises((InvalidOperation, PydanticSerializationError)):
         Holder.model_construct(value=Decimal("sNaN")).model_dump(mode="json")
+
+
+# --- FR-21: a bound on WRITING (T7, N1 ruled (a), to-lead 2026-11-05 20:46:28) -----------------
+
+_T7_SCRIPT = """
+import json, resource, sys
+resource.setrlimit(resource.RLIMIT_AS, (1 << 29, 1 << 29))  # 512 MiB: a gigabyte string cannot fit
+from decimal import Decimal
+from pydantic import BaseModel
+from model_schema.money import CanonicalDecimalStr, DecimalStr, Relativity
+
+out = {}
+for name, tp in (("DecimalStr", DecimalStr), ("Relativity", Relativity),
+                 ("CanonicalDecimalStr", CanonicalDecimalStr)):
+    class Holder(BaseModel):
+        v: tp
+    for text in ("1E+999999999", "1E-400"):
+        try:
+            Holder(v=text).model_dump(mode="json")
+            out[name + " " + text] = "WROTE"
+        except BaseException as exc:  # MemoryError is what the unbounded writer raises
+            out[name + " " + text] = type(exc).__name__ + ": " + str(exc)[:60]
+print(json.dumps(out))
+"""
+
+
+@pytest.mark.req("FR-21")
+def test_an_exponent_past_308_is_refused_when_written_without_taking_the_memory():
+    """T7. Run in a child with a 512 MiB address-space limit and a timeout, so the unbounded
+    writer fails this test by `MemoryError` rather than by taking the machine's gigabytes."""
+    import json
+    import subprocess
+    import sys
+
+    done = subprocess.run(
+        [sys.executable, "-I", "-c", _T7_SCRIPT],
+        capture_output=True,
+        text=True,
+        timeout=120,
+        check=False,
+    )
+    assert done.returncode == 0, done.stderr[-500:]
+    outcomes = json.loads(done.stdout)
+    assert len(outcomes) == 6
+    assert all(v.startswith("PydanticSerializationError") for v in outcomes.values()), outcomes
+
+
+@pytest.mark.req("FR-21")
+@pytest.mark.parametrize("text", ["1E+308", "-1E+308", "1E-308", "9.9E+308", "123.456"])
+def test_an_exponent_inside_the_bound_is_written_positionally(text):
+    class Holder(BaseModel):
+        v: DecimalStr
+
+    assert Holder(v=text).model_dump(mode="json")["v"] == format(Decimal(text), "f")
+
+
+@pytest.mark.req("FR-21")
+@pytest.mark.parametrize("text", ["1E+309", "-1E+309", "1E-309", "1.5E-400"])
+def test_an_exponent_one_past_the_bound_is_refused_both_ways(text):
+    from pydantic_core import PydanticSerializationError
+
+    class Holder(BaseModel):
+        v: DecimalStr
+
+    assert Holder(v=text).v == Decimal(text)  # validation takes any exponent (G3)
+    with pytest.raises(PydanticSerializationError):
+        Holder(v=text).model_dump(mode="json")
