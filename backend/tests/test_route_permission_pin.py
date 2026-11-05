@@ -89,13 +89,13 @@ class Declared:
     where: str
 
 
-def declared_rows(spec_texts: Mapping[str, str]) -> tuple[dict[Key, Declared], list[str]]:
+def declared_rows(spec_texts: Mapping[str, str]) -> tuple[dict[Key, list[Declared]], list[str]]:
     """Every `§5.1` endpoint row, by `(METHOD, path segments)`, and the rows with no cell.
 
     A multi-method row (`GET`/`PUT`) is read once per method, though RL-1483 item 1 splits
     them; a row naming several backticked paths is read once per path.
     """
-    rows: dict[Key, Declared] = {}
+    rows: dict[Key, list[Declared]] = {}
     problems: list[str] = []
     for name, text in spec_texts.items():
         in_section = False
@@ -114,7 +114,7 @@ def declared_rows(spec_texts: Mapping[str, str]) -> tuple[dict[Key, Declared], l
             paths = _PATH.findall(path_cell) or [path_cell]
             for method in re.split(r"`?/`?", method_cell):
                 for path in paths:
-                    rows[(method, segments(path))] = Declared(cell, where)
+                    rows.setdefault((method, segments(path)), []).append(Declared(cell, where))
     return rows, problems
 
 
@@ -249,10 +249,10 @@ def _handler_checks(method: str, path: str, endpoint: Callable[..., object]) -> 
     return found
 
 
-def checked_routes(app: FastAPI) -> dict[Key, Checked]:
+def checked_routes(app: FastAPI) -> dict[Key, list[Checked]]:
     from app.api.authz import PERMISSION_ATTRIBUTE
 
-    checked: dict[Key, Checked] = {}
+    checked: dict[Key, list[Checked]] = {}
     for method, path, route in _flattened_operations(app.routes):
         required = {
             str(getattr(call, PERMISSION_ATTRIBUTE).value)
@@ -260,8 +260,8 @@ def checked_routes(app: FastAPI) -> dict[Key, Checked]:
             if getattr(call, PERMISSION_ATTRIBUTE, None) is not None
         }
         required |= _handler_checks(method, path, route.endpoint)
-        checked[(method, segments(path))] = Checked(
-            path, frozenset(required), path in OPEN_BY_DESIGN
+        checked.setdefault((method, segments(path)), []).append(
+            Checked(path, frozenset(required), path in OPEN_BY_DESIGN)
         )
     return checked
 
@@ -269,29 +269,45 @@ def checked_routes(app: FastAPI) -> dict[Key, Checked]:
 # --- the comparison ----------------------------------------------------------------------
 
 
-def pin_violations(declared: Mapping[Key, Declared], checked: Mapping[Key, Checked]) -> list[str]:
-    """Each live route against its row. A row with no live route is an unbuilt declaration."""
+def pin_violations(
+    declared: Mapping[Key, list[Declared]], checked: Mapping[Key, list[Checked]]
+) -> list[str]:
+    """Each live route against its row. A row with no live route is an unbuilt declaration.
+
+    `segments` collapses every `{...}` segment, so two routes (or two rows) can share a key.
+    Nothing is overwritten: every route is compared, and rows sharing a key must agree, since
+    the key cannot say which row belongs to which route.
+    """
     violations: list[str] = []
-    for key, code in sorted(checked.items()):
+    for key, routes in sorted(checked.items()):
         method = key[0]
-        row = declared.get(key)
-        if row is None:
-            violations.append(f"{method} {code.path}: live route with no §5.1 row")
-            continue
-        kind, names = claim(row.cell)
-        if code.open:
-            ok = kind == OPEN and not code.permissions
-            seen = OPEN
-        elif code.permissions:
-            ok = kind == "permissions" and names == code.permissions
-            seen = ", ".join(sorted(code.permissions))
-        else:
-            ok = kind == AUTHENTICATED
-            seen = AUTHENTICATED
-        if not ok:
-            violations.append(
-                f"{method} {code.path}: spec ({row.where}) says {row.cell!r}; code checks {seen}"
+        rows = declared.get(key)
+        if not rows:
+            violations.extend(
+                f"{method} {code.path}: live route with no §5.1 row" for code in routes
             )
+            continue
+        if len({row.cell for row in rows}) > 1:
+            where = ", ".join(row.where for row in rows)
+            violations.append(
+                f"{method} {routes[0].path}: rows ({where}) share one path key and disagree"
+            )
+        row = rows[0]
+        kind, names = claim(row.cell)
+        for code in routes:
+            if code.open:
+                ok = kind == OPEN and not code.permissions
+                seen = OPEN
+            elif code.permissions:
+                ok = kind == "permissions" and names == code.permissions
+                seen = ", ".join(sorted(code.permissions))
+            else:
+                ok = kind == AUTHENTICATED
+                seen = AUTHENTICATED
+            if not ok:
+                violations.append(
+                    f"{method} {code.path}: spec ({row.where}) says {row.cell!r}; code checks {seen}"
+                )
     return violations
 
 
@@ -311,14 +327,16 @@ def _synthetic(cell: str) -> dict[str, str]:
 
 
 _CODE = {
-    ("GET", segments("/api/v1/audit")): Checked("/api/v1/audit", frozenset({"audit:read"}), False),
-    ("POST", segments("/api/v1/things/{x}")): Checked(
-        "/api/v1/things/{x}", frozenset({"dataset:write"}), False
-    ),
+    ("GET", segments("/api/v1/audit")): [
+        Checked("/api/v1/audit", frozenset({"audit:read"}), False)
+    ],
+    ("POST", segments("/api/v1/things/{x}")): [
+        Checked("/api/v1/things/{x}", frozenset({"dataset:write"}), False)
+    ],
 }
 
 
-def _violations(cell: str, code: Mapping[Key, Checked] = _CODE) -> list[str]:
+def _violations(cell: str, code: Mapping[Key, list[Checked]] = _CODE) -> list[str]:
     rows, _ = declared_rows(_synthetic(cell))
     return pin_violations(rows, code)
 
@@ -335,15 +353,18 @@ def test_broken_a_route_whose_requires_is_swapped_fails() -> None:
     """RL-1483's own case: `ReadAudit` AUDIT_READ -> JOB_READ in the code, the cell unchanged."""
     swapped = {
         **_CODE,
-        ("GET", segments("/api/v1/audit")): Checked(
-            "/api/v1/audit", frozenset({"job:read"}), False
-        ),
+        ("GET", segments("/api/v1/audit")): [
+            Checked("/api/v1/audit", frozenset({"job:read"}), False)
+        ],
     }
     assert [v for v in _violations("`audit:read`", swapped) if "GET /api/v1/audit" in v]
 
 
 def test_broken_a_live_route_with_no_row_fails() -> None:
-    extra = {**_CODE, ("GET", segments("/api/v1/new")): Checked("/api/v1/new", frozenset(), False)}
+    extra = {
+        **_CODE,
+        ("GET", segments("/api/v1/new")): [Checked("/api/v1/new", frozenset(), False)],
+    }
     assert any("live route with no §5.1 row" in v for v in _violations("`audit:read`", extra))
 
 
@@ -354,10 +375,41 @@ def test_broken_authenticated_against_a_permissioned_route_fails() -> None:
 def test_broken_a_permission_on_a_permission_free_route_fails() -> None:
     free = {
         **_CODE,
-        ("GET", segments("/api/v1/audit")): Checked("/api/v1/audit", frozenset(), False),
+        ("GET", segments("/api/v1/audit")): [Checked("/api/v1/audit", frozenset(), False)],
     }
     assert _violations("`audit:read`", free)
     assert _violations("`authenticated`", free) == []
+
+
+def test_broken_two_routes_on_one_path_key_are_both_walked() -> None:
+    """`/x/{slug}@{version}` and `/x/{id}` normalise to one key: a swap on the second route,
+    which an overwriting map would never see, fails."""
+    texts = {
+        "x.md": "### 5.1 Rest\n\n| Method | Path | Purpose | Permission |\n|---|---|---|---|\n"
+        "| `GET` | `/api/v1/x/{slug}@{version}` | a | `rating:read` |\n"
+        "| `GET` | `/api/v1/x/{id}` | b | `rating:read` |\n"
+    }
+    rows, _ = declared_rows(texts)
+    key = ("GET", segments("/api/v1/x/{id}"))
+    assert len(rows[key]) == 2
+    first = Checked("/api/v1/x/{slug}@{version}", frozenset({"rating:read"}), False)
+    second = Checked("/api/v1/x/{id}", frozenset({"rating:read"}), False)
+    assert pin_violations(rows, {key: [first, second]}) == []
+    swapped = Checked("/api/v1/x/{id}", frozenset({"job:read"}), False)
+    assert pin_violations(rows, {key: [first, swapped]})
+    assert pin_violations(rows, {key: [swapped, second]})
+
+
+def test_broken_rows_sharing_a_key_that_disagree_fail() -> None:
+    texts = {
+        "x.md": "### 5.1 Rest\n\n| Method | Path | Purpose | Permission |\n|---|---|---|---|\n"
+        "| `GET` | `/api/v1/x/{slug}@{version}` | a | `rating:read` |\n"
+        "| `GET` | `/api/v1/x/{id}` | b | `rating:write` |\n"
+    }
+    rows, _ = declared_rows(texts)
+    key = ("GET", segments("/api/v1/x/{id}"))
+    code = Checked("/api/v1/x/{id}", frozenset({"rating:read"}), False)
+    assert any("share one path key and disagree" in v for v in pin_violations(rows, {key: [code]}))
 
 
 def test_broken_open_against_a_guarded_route_fails() -> None:
@@ -453,7 +505,9 @@ def test_every_row_has_a_permission_cell() -> None:
 def test_the_spec_declares_what_every_live_route_checks(app: FastAPI) -> None:
     declared, _ = declared_rows(_spec_texts())
     checked = checked_routes(app)
-    assert len(checked) >= 50, f"only {len(checked)} live operations walked"
-    assert len(declared) >= len(checked) - 5
+    walked = sum(len(routes) for routes in checked.values())
+    assert walked == len(list(_flattened_operations(app.routes))), "an operation was not walked"
+    assert walked >= 50, f"only {walked} live operations walked"
+    assert sum(len(rows) for rows in declared.values()) >= walked - 5
     violations = pin_violations(declared, checked)
     assert not violations, "\n".join(violations)
