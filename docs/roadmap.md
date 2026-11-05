@@ -3516,6 +3516,26 @@ relates: [FD-2001, FD-1729, PL-2004, LG-2006, NFR-489, FR-44]
 
 (Minted 2026-11-04 from working id 8317, on the maintainer's GO "2026-11-04 16:42:29 GMT" and the lead's mint order, with the mint tool of record `mint-repoint.py` (sha256 `4d83681a`); plan PL-2004 (working id 8316), ledger LG-2006 (working id 8318); executed on branch `sl-8317-fd2001-serve-dsn`.)
 
+#### SL-2011 — WK-1178 slice — FD-1482 limb (a), RL-1483 item 1: the `Permission` column on every §5.1 REST row of the seven module specs
+
+```yaml
+id: SL-2011
+family: slice
+title: WK-1178 slice — FD-1482 limb (a), RL-1483 item 1, the Permission column on every §5.1 row
+status: active                    # draft → active → closed (§1.2a)
+created: 2026-11-05
+owner: lead
+tree: dd5a001387502150f06c8c599bf9882cd91a6fee
+phase: P2
+work: WK-1178
+corrected_by: []
+relates: [FD-1482, RL-1483, LG-2012, OQ-2013, OQ-2014, OQ-2015]
+```
+
+Docs only. Every §5.1 REST table in `docs/specs/01`–`07` gains a fourth column `Permission`, filled on every row; a multi-method row splits to one row per method; `06`'s blockquoted `| Route | Requires |` table is folded into `06` §5.1's column (RL-1483 item 1). The `04` and `05` tables are a named widening of RL-1483's five (ledger LG-2012, Scope). The permissions of routes not yet built are proposals, raised as OQ-2013 (`04`), OQ-2014 (`05`) and OQ-2015 (`06`'s unbuilt routes). Limb (b), the pin, waits on LAST-2's `table_rows` and is not this slice's. FD-1482's closing acts are the auditor's.
+
+(Minted 2026-11-05 from working id 8361, on the rulings to-lead "2026-11-05 12:14:32 GMT" and "2026-11-05 15:59:27 GMT" (4), with the mint tool of record `mint-repoint.py`; ledger LG-2012 (working id 8362), open questions OQ-2013, OQ-2014 and OQ-2015 (working ids 8363, 8364, 8365); the finding raised for it is still working id 8366 and has no id yet; executed on branch `sl-8361-permission-column`, unpushed.)
+
 ### WK-1250 — Sub-graph composition and MTA/cancellation pricing — FR-217's inlining and FR-218's authoring half
 
 ```yaml

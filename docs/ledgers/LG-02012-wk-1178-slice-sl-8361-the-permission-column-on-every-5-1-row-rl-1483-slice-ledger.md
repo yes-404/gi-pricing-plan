@@ -1,12 +1,12 @@
 ---
-id: LG-8362
+id: LG-2012
 family: ledger
-title: WK-1178 slice SL-8361 — FD-1482 limb 2 (a), RL-1483 item 1: the Permission column on every §5.1 row (slice ledger)
+title: WK-1178 slice SL-2011 — FD-1482 limb 2 (a), RL-1483 item 1: the Permission column on every §5.1 row (slice ledger)
 status: active                 # active → closed (§1.2a)
 created: 2026-11-05            # filed under working id 8362
 owner: executor
 tree: 2e8a40ca                 # sl-8361-permission-column, the commit of `07`'s spec change (base 2f108b1eda22a4835279cee9b4c9e305babe3662, origin/main)
-slice: SL-8361
+slice: SL-2011
 phase: P2
 work: WK-1178
 plans: []
@@ -14,7 +14,7 @@ corrected_by: []
 relates: [FD-1482, RL-1483, FR-343]
 ---
 
-# LG-8362 — WK-1178 slice SL-8361: the `Permission` column on every §5.1 row
+# LG-2012 — WK-1178 slice SL-2011: the `Permission` column on every §5.1 row
 
 **GO:** to-lead "2026-11-05 12:02:53 GMT" (SEAT GO: docs only; no DB, docker or source; audit-docs via `run-heavy --light`; any spec/code disagreement is a finding; ends unpushed; (b), the pin, waits on LAST-2's `table_rows`). Lead's reading of the enumeration: `04` and `05` are beyond RL-1483's five tables; the widening is named below.
 **MERGE-ACK:** none yet (unpushed).
@@ -49,7 +49,7 @@ relates: [FD-1482, RL-1483, FR-343]
 | `scripts/audit-docs.py` (`--light`) | rc 0; failures by check: 2 → 5, 5 → 5, 30 → 71, 32 → 244, 35 → 27, 36 → 497 | rc 1; the same counts, except check 32 → 278 (+34) and check 39 → 1 |
 | `scripts/doc-index.py --check` | not run | rc 1 (stale: the new ledger), then `doc-index.py` wrote `docs/INDEX.md` (+7 lines), committed |
 
-The 34 added check-32 lines all name this slice's working ids (`SL-8361`, `OQ-8363`, `OQ-8364`, `OQ-8365`; `LG-8362`), none minted yet. Check 39 is the INDEX, regenerated after. Checks 22 (cell counts) and the endpoint checks print no failure. The other failing checks (2, 5, 30, 35, 36) are identical at base and are not this slice's.
+The 34 added check-32 lines all name this slice's working ids (`SL-2011`, `OQ-2013`, `OQ-2014`, `OQ-2015`; `LG-2012`), none minted yet. Check 39 is the INDEX, regenerated after. Checks 22 (cell counts) and the endpoint checks print no failure. The other failing checks (2, 5, 30, 35, 36) are identical at base and are not this slice's.
 
 **Reader route counts** (predicate: `scope-audit.py`'s `declared_endpoints(module)` loaded by path, `/tmp/count8361.py`, per module; before = origin/main 2f108b1e, after = this branch): DATA 39 → 39, MODEL 45 → 45, RATE 45 → 45, OPT 11 → 11, MON 18 → 18, GOV 23 → 23, PLAT 26 → 26; total **207 → 207**. The split rows and the fourth cell change nothing the reader counts. `audit-docs.py`'s `_ENDPOINT_ROW` and `guide.py`'s `_SPEC_ENDPOINT` are the same regex as `scope-audit.py`'s `_ENDPOINT`; `audit-docs.py` ran with no endpoint failure; `guide.py` was read, not run (no test run in this slice).
 
@@ -69,7 +69,7 @@ Not yet. The auditor's.
    - `02` `POST /models/{id}/archive` = `model:fit`: `06` §4.1 makes `model:fit` the model write right (`RL-1236` DP-A), and `model:submit` is "submitting a Model … for approval", which archiving is not. Dated clause under `02`'s table.
    - `02` `POST /models/{id}/predict` = `model:read`: a prediction reads the fitted model and writes no artifact.
    - `03` `POST /rating-versions/{id}/regression-runs` = `rating:compile`: dated clause on `06` §4.1's `rating:compile` row ("…and running its Regression Suite against that bundle"), and a note under `03`'s table.
-2. **The unbuilt rows** keep their cells (declared permission names, one of RL-1483's three forms); the under-table notes became one OQ per module, mirrored in `docs/open-questions.md` and each spec's §10: `OQ-8363` (`04`, names the missing `optimisation:read`; recommends adding it; alternative: fold into `rating:read`), `OQ-8364` (`05`), `OQ-8365` (`06`'s unbuilt rows). Owner: the Work that builds the routes.
+2. **The unbuilt rows** keep their cells (declared permission names, one of RL-1483's three forms); the under-table notes became one OQ per module, mirrored in `docs/open-questions.md` and each spec's §10: `OQ-2013` (`04`, names the missing `optimisation:read`; recommends adding it; alternative: fold into `rating:read`), `OQ-2014` (`05`), `OQ-2015` (`06`'s unbuilt rows). Owner: the Work that builds the routes.
    - **Count by predicate.** Unbuilt = a §5.1 row whose route no `@router.<method>(...)` handler under `backend/src/app/` serves (read at head; the listing `/tmp/routes8361.py`, AST, run before the hold, matches by path): `04`=10 of 10, `05`=16 of 16, `06`=12 of 25 (`GET`/`POST /roles`, `POST /role-assignments`, `POST /break-glass`, `POST /attestations`, `POST /audit/anchor`, `POST /dossiers`, `GET /dossiers/{id}`, `POST /dossiers/{id}/commentary`, `POST /regulatory-exports`, `GET /artifacts/{ref}/history`, `GET /artifacts/{ref}/dependencies`); the other 13 of `06` (`/me` ×3, approval-policy ×2, approval-requests ×5, audit ×3) are built. Total in the three OQs: 38. `01`, `02`, `03` and `07` carry no OQ: their rows are built, or take their cell from the spec's text (the unbuilt `03` deployment rows take `deployment:promote` from FR-345 and FR-267).
 
 #### Spec/code disagreements
@@ -102,6 +102,10 @@ The hold said "no run of any kind". This seat ran stdlib-only Python under `/tmp
 ## Commits after the rulings
 
 The rulings' edits are in the commit that follows `4610b9e7` (see `git log`).
+
+## Mint
+
+*(2026-11-05, to-lead "2026-11-05 15:59:27 GMT" (4).)* Working ids 8361, 8362, 8363, 8364 and 8365 are minted as SL-2011, LG-2012, OQ-2013, OQ-2014 and OQ-2015 with `mint-repoint.py`; FD 8366 stays a working id. **One hand edit, disclosed:** `docs/specs/06-governance.md` line 284 is a `>` blockquote line, which the tool skips by rule; its one `SL-8361` was changed to `SL-2011` with `sed`. A first mint at SL-2014 to OQ-2018 was withdrawn when the ruling moved the slice to the next ids on main; it is kept on the local ref `draft/sl-8361-mint-old`.
 
 ## PRs
 
