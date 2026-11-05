@@ -1892,53 +1892,55 @@ imported from §4.5 rather than restated — the same catalogue, read two ways.
 
 ### 5.1 REST API
 
-| Method | Path | Purpose |
-|---|---|---|
-| `POST` | `/api/v1/factors` | Create/version a Factor (FR-83) |
-| `GET` | `/api/v1/factors?dataset_id=` | List factors with intent, monotonic direction, prohibited flag. Filters by Dataset **id**, as its two siblings below do; an unrecognised query parameter is a 422 naming it, never an unfiltered list |
-| `POST` | `/api/v1/bandings/propose` | Propose boundaries by method against a dataset version (FR-98) *Amended 2026-10-18 (SL-1806, FD-1799): a `slug` that `00` §4.2 ID-3 / §4.3's pattern does not admit is refused **422** `VALIDATION_FAILED`, `errors[].field` `slug`, `errors[].code` `STRING_PATTERN_MISMATCH` (to-lead 2026-10-18 03:02:03 BST item 3).* |
-| `POST` | `/api/v1/bandings/evaluate` | Recompute band statistics for **edited** boundaries, persisting nothing (FR-102) |
-| `POST` | `/api/v1/bandings` | **201** Persist a Banding (with editable boundaries) *Amended 2026-10-18 (SL-1806, FD-1799): a `slug` that `00` §4.2 ID-3 / §4.3's pattern does not admit is refused **422** `VALIDATION_FAILED`, `errors[].field` `slug`, `errors[].code` `STRING_PATTERN_MISMATCH` (to-lead 2026-10-18 03:02:03 BST item 3).* |
-| `GET` | `/api/v1/bandings?dataset_id=` | List bandings, latest version first |
-| `POST` | `/api/v1/groupings/propose` | Propose a grouping by method (FR-105) *Amended 2026-10-18 (SL-1806, FD-1799): a `slug` that `00` §4.2 ID-3 / §4.3's pattern does not admit is refused **422** `VALIDATION_FAILED`, `errors[].field` `slug`, `errors[].code` `STRING_PATTERN_MISMATCH` (to-lead 2026-10-18 03:02:03 BST item 3).* |
-| `POST` | `/api/v1/groupings/evaluate` | Recompute the deviance/df evidence for an **edited** mapping (FR-102) |
-| `POST` | `/api/v1/groupings` | **201** Persist a Grouping *Amended 2026-10-18 (SL-1806, FD-1799): a `slug` that `00` §4.2 ID-3 / §4.3's pattern does not admit is refused **422** `VALIDATION_FAILED`, `errors[].field` `slug`, `errors[].code` `STRING_PATTERN_MISMATCH` (to-lead 2026-10-18 03:02:03 BST item 3).* |
-| `GET` | `/api/v1/groupings?dataset_id=` | List groupings, latest version first |
-| `POST` | `/api/v1/model-specs/validate` | **200** with `SpecValidation` — `ok` plus every problem, never only the first. A spec that merely cannot be fitted is not a bad *request*, so it is not a 4xx; a spec naming a version that does not exist is a 404 (FR-153, FR-185) |
-| `POST` | `/api/v1/models` | **202** Fit → Job; returns existing model on `spec_hash` match (FR-204) |
-| `GET` | `/api/v1/models` | List models, filtered by `family` and `status`, cursor-paginated newest first (`00` §5.2). Every listed model reports `flags: []` — FR-205's flag is a per-model read, so a page of 50 would be 51 round trips to decorate rows the caller is about to narrow; `GET /models/{slug}` answers it, and is the only place it gates anything |
-| `GET` | `/api/v1/models/{slug}?version=` | Model artifact — latest, or a named version |
-| `GET` | `/api/v1/models/{slug}/diagnostics?version=` | Diagnostics artifact — latest version, or a named one, exactly as `GET /models/{slug}` selects |
-| `POST` | `/api/v1/models/{id}/transparency` | **202** Build a transparency artifact (FR-132) |
-| `GET` | `/api/v1/models/{id}/transparency` | The model's most recent artifact (FR-139) |
-| `POST` | `/api/v1/models/{id}/backtest` | **202** Backtest against another dataset version (FR-187) |
-| `GET` | `/api/v1/models/backtests/{id}` | The stored backtest artifact (§4.12, FR-94) |
-| `POST` | `/api/v1/models/compare` | **202** Comparison artifact for 2+ models on a shared holdout (FR-186) |
-| `GET` | `/api/v1/models/comparisons/{id}` | The stored comparison artifact (§4.11) |
-| `POST` | `/api/v1/models/{id}/predict` | **200** Score rows with FR-194's uncertainty (dev/debug scale, row-capped; production scoring is `03`) |
-| `POST` | `/api/v1/models/{id}/submit` | Submit for approval (`06`) — `fitted → review`, `If-Match` required |
-| `POST` | `/api/v1/models/{id}/archive` | `draft \| fitted \| superseded → archived` (FR-202), `If-Match` required |
-| `POST` | `/api/v1/custom-objectives` | **201** Create → `draft` (FR-142). An `expression` objective names its `applicability`, because it has no §4.5 template to default from; a create without it is refused 422 `VALIDATION_FAILED` (**added 2026-10-04, `RL-1410` R3**) |
-| `POST` | `/api/v1/custom-objectives/preview` | Stateless live parse and loss-curve preview of an `expression` loss: parse only without a `grid`, derive and evaluate with one; 200 with `ok: false` for a loss that does not parse; 422 `VALIDATION_FAILED` over a bound; 403 without `model:fit` and `custom_objective:author`; 409 `OBJECTIVE_KIND_NOT_ENABLED` while the flag is off; persists and audits nothing (FR-1840; **built 2026-10-21, WK-690 Slice 5, `RL-1616`**) |
-| `GET` | `/api/v1/custom-objectives` | The workspace's objectives, cursor-paginated, filterable by `status` and `slug`, each row carrying `usage_count` (FR-167) |
-| `GET` | `/api/v1/custom-objectives/{id}` | The objective, its status and its certificate outcome (FR-166) |
-| `POST` | `/api/v1/custom-objectives/{id}/derive` | Symbolically derive gradient/hessian from `loss` (FR-144) and store them with `derived_at` and an audit event. Refused with `OBJECTIVE_KIND_NOT_ENABLED` (FR-150) while the workspace's flag is off; 409 `VALIDATION_FAILED` for a template, a non-`draft` or an already derived objective (**built 2026-10-04, WK-690 Slice 3, `PL-1382` Task 4; the already derived refusal ruled by `RL-1410` R4**) *(Amended 2026-10-04, RL-1410: an `ExpressionError` raised while deriving, after the loss has parsed, also answers 422 `OBJECTIVE_GRAMMAR_VIOLATION` with `errors[0].field` `loss`; its message carries no line and column, because no source position exists at that stage.)* |
-| `POST` | `/api/v1/custom-objectives/{id}/certify` | **202** Run the certificate checks (FR-146). An `expression` objective whose `derived` is null is refused 409 `VALIDATION_FAILED` before a job is enqueued, with a `detail` naming `POST /api/v1/custom-objectives/{id}/derive` (**added 2026-10-04, `RL-1362` DP-S3-3**) |
-| `GET` | `/api/v1/custom-objectives/{id}/certificate` | The latest `ObjectiveCertificate` for that version (FR-166) |
-| `POST` | `/api/v1/custom-objectives/{id}/submit` | Submit for approval (FR-163) *(Amended 2026-10-04, RL-1410: a submission whose `certificate_id` names no stored certificate is refused 409 `VALIDATION_FAILED`, the stored-state code of the certify row, rather than read as an unviolated certificate.)* |
-| `GET` | `/api/v1/custom-objectives/{id}/usage` | Blast radius: models, rating versions, deployments (FR-164) |
-| `POST` | `/api/v1/custom-metrics` | **201** Create → `draft` (FR-154, FR-155) |
-| `GET` | `/api/v1/custom-metrics` | The workspace's metrics, cursor-paginated, filterable by `status` and `slug`, each row carrying `usage_count` (FR-167) |
-| `GET` | `/api/v1/custom-metrics/{id}` | The metric, its status and its certificate outcome (FR-162) |
-| `POST` | `/api/v1/custom-metrics/{id}/certify` | **202** Run §4.7's metric checks (FR-157) |
-| `GET` | `/api/v1/custom-metrics/{id}/certificate` | The latest `MetricCertificate` for that version (FR-162) |
-| `POST` | `/api/v1/custom-metrics/{id}/submit` | Submit for approval (FR-154's lifecycle) |
-| `GET` | `/api/v1/custom-metrics/{id}/usage` | Blast radius: models using this metric version (FR-162) |
-| `POST` | `/api/v1/peril-structures` | **201** Create/version a Peril Structure (FR-188) |
-| `GET` | `/api/v1/peril-structures` | The workspace's peril structures, cursor-paginated, filterable by `status` and `slug` (FR-167) |
-| `GET` | `/api/v1/peril-structures/{id}` | The structure and its reconciliation (FR-192) |
-| `POST` | `/api/v1/peril-structures/{id}/reconcile` | **202** Recompute reconciliation (FR-190) |
-| `POST` | `/api/v1/peril-structures/{id}/submit` | Submit for approval, `reconciled → review` (FR-192) |
+| Method | Path | Purpose | Permission |
+|---|---|---|---|
+| `POST` | `/api/v1/factors` | Create/version a Factor (FR-83) | `model:fit` |
+| `GET` | `/api/v1/factors?dataset_id=` | List factors with intent, monotonic direction, prohibited flag. Filters by Dataset **id**, as its two siblings below do; an unrecognised query parameter is a 422 naming it, never an unfiltered list | `model:read` |
+| `POST` | `/api/v1/bandings/propose` | Propose boundaries by method against a dataset version (FR-98) *Amended 2026-10-18 (SL-1806, FD-1799): a `slug` that `00` §4.2 ID-3 / §4.3's pattern does not admit is refused **422** `VALIDATION_FAILED`, `errors[].field` `slug`, `errors[].code` `STRING_PATTERN_MISMATCH` (to-lead 2026-10-18 03:02:03 BST item 3).* | `model:fit` |
+| `POST` | `/api/v1/bandings/evaluate` | Recompute band statistics for **edited** boundaries, persisting nothing (FR-102) | `model:fit` |
+| `POST` | `/api/v1/bandings` | **201** Persist a Banding (with editable boundaries) *Amended 2026-10-18 (SL-1806, FD-1799): a `slug` that `00` §4.2 ID-3 / §4.3's pattern does not admit is refused **422** `VALIDATION_FAILED`, `errors[].field` `slug`, `errors[].code` `STRING_PATTERN_MISMATCH` (to-lead 2026-10-18 03:02:03 BST item 3).* | `model:fit` |
+| `GET` | `/api/v1/bandings?dataset_id=` | List bandings, latest version first | `model:read` |
+| `POST` | `/api/v1/groupings/propose` | Propose a grouping by method (FR-105) *Amended 2026-10-18 (SL-1806, FD-1799): a `slug` that `00` §4.2 ID-3 / §4.3's pattern does not admit is refused **422** `VALIDATION_FAILED`, `errors[].field` `slug`, `errors[].code` `STRING_PATTERN_MISMATCH` (to-lead 2026-10-18 03:02:03 BST item 3).* | `model:fit` |
+| `POST` | `/api/v1/groupings/evaluate` | Recompute the deviance/df evidence for an **edited** mapping (FR-102) | `model:fit` |
+| `POST` | `/api/v1/groupings` | **201** Persist a Grouping *Amended 2026-10-18 (SL-1806, FD-1799): a `slug` that `00` §4.2 ID-3 / §4.3's pattern does not admit is refused **422** `VALIDATION_FAILED`, `errors[].field` `slug`, `errors[].code` `STRING_PATTERN_MISMATCH` (to-lead 2026-10-18 03:02:03 BST item 3).* | `model:fit` |
+| `GET` | `/api/v1/groupings?dataset_id=` | List groupings, latest version first | `model:read` |
+| `POST` | `/api/v1/model-specs/validate` | **200** with `SpecValidation` — `ok` plus every problem, never only the first. A spec that merely cannot be fitted is not a bad *request*, so it is not a 4xx; a spec naming a version that does not exist is a 404 (FR-153, FR-185) | `model:fit` |
+| `POST` | `/api/v1/models` | **202** Fit → Job; returns existing model on `spec_hash` match (FR-204) | `model:fit` |
+| `GET` | `/api/v1/models` | List models, filtered by `family` and `status`, cursor-paginated newest first (`00` §5.2). Every listed model reports `flags: []` — FR-205's flag is a per-model read, so a page of 50 would be 51 round trips to decorate rows the caller is about to narrow; `GET /models/{slug}` answers it, and is the only place it gates anything | `model:read` |
+| `GET` | `/api/v1/models/{slug}?version=` | Model artifact — latest, or a named version | `model:read` |
+| `GET` | `/api/v1/models/{slug}/diagnostics?version=` | Diagnostics artifact — latest version, or a named one, exactly as `GET /models/{slug}` selects | `model:read` |
+| `POST` | `/api/v1/models/{id}/transparency` | **202** Build a transparency artifact (FR-132) | `model:fit` |
+| `GET` | `/api/v1/models/{id}/transparency` | The model's most recent artifact (FR-139) | `model:read` |
+| `POST` | `/api/v1/models/{id}/backtest` | **202** Backtest against another dataset version (FR-187) | `model:fit` |
+| `GET` | `/api/v1/models/backtests/{id}` | The stored backtest artifact (§4.12, FR-94) | `model:read` |
+| `POST` | `/api/v1/models/compare` | **202** Comparison artifact for 2+ models on a shared holdout (FR-186) | `model:fit` |
+| `GET` | `/api/v1/models/comparisons/{id}` | The stored comparison artifact (§4.11) | `model:read` |
+| `POST` | `/api/v1/models/{id}/predict` | **200** Score rows with FR-194's uncertainty (dev/debug scale, row-capped; production scoring is `03`) | `model:read` |
+| `POST` | `/api/v1/models/{id}/submit` | Submit for approval (`06`) — `fitted → review`, `If-Match` required | `model:submit` |
+| `POST` | `/api/v1/models/{id}/archive` | `draft \| fitted \| superseded → archived` (FR-202), `If-Match` required | `model:submit` |
+| `POST` | `/api/v1/custom-objectives` | **201** Create → `draft` (FR-142). An `expression` objective names its `applicability`, because it has no §4.5 template to default from; a create without it is refused 422 `VALIDATION_FAILED` (**added 2026-10-04, `RL-1410` R3**) | `model:fit`; an `expression` objective also requires `custom_objective:author` (FR-367) |
+| `POST` | `/api/v1/custom-objectives/preview` | Stateless live parse and loss-curve preview of an `expression` loss: parse only without a `grid`, derive and evaluate with one; 200 with `ok: false` for a loss that does not parse; 422 `VALIDATION_FAILED` over a bound; 403 without `model:fit` and `custom_objective:author`; 409 `OBJECTIVE_KIND_NOT_ENABLED` while the flag is off; persists and audits nothing (FR-1840; **built 2026-10-21, WK-690 Slice 5, `RL-1616`**) | `model:fit` and `custom_objective:author` |
+| `GET` | `/api/v1/custom-objectives` | The workspace's objectives, cursor-paginated, filterable by `status` and `slug`, each row carrying `usage_count` (FR-167) | `model:read` |
+| `GET` | `/api/v1/custom-objectives/{id}` | The objective, its status and its certificate outcome (FR-166) | `model:read` |
+| `POST` | `/api/v1/custom-objectives/{id}/derive` | Symbolically derive gradient/hessian from `loss` (FR-144) and store them with `derived_at` and an audit event. Refused with `OBJECTIVE_KIND_NOT_ENABLED` (FR-150) while the workspace's flag is off; 409 `VALIDATION_FAILED` for a template, a non-`draft` or an already derived objective (**built 2026-10-04, WK-690 Slice 3, `PL-1382` Task 4; the already derived refusal ruled by `RL-1410` R4**) *(Amended 2026-10-04, RL-1410: an `ExpressionError` raised while deriving, after the loss has parsed, also answers 422 `OBJECTIVE_GRAMMAR_VIOLATION` with `errors[0].field` `loss`; its message carries no line and column, because no source position exists at that stage.)* | `model:fit` and `custom_objective:author` |
+| `POST` | `/api/v1/custom-objectives/{id}/certify` | **202** Run the certificate checks (FR-146). An `expression` objective whose `derived` is null is refused 409 `VALIDATION_FAILED` before a job is enqueued, with a `detail` naming `POST /api/v1/custom-objectives/{id}/derive` (**added 2026-10-04, `RL-1362` DP-S3-3**) | `model:fit` |
+| `GET` | `/api/v1/custom-objectives/{id}/certificate` | The latest `ObjectiveCertificate` for that version (FR-166) | `model:read` |
+| `POST` | `/api/v1/custom-objectives/{id}/submit` | Submit for approval (FR-163) *(Amended 2026-10-04, RL-1410: a submission whose `certificate_id` names no stored certificate is refused 409 `VALIDATION_FAILED`, the stored-state code of the certify row, rather than read as an unviolated certificate.)* | `model:submit` |
+| `GET` | `/api/v1/custom-objectives/{id}/usage` | Blast radius: models, rating versions, deployments (FR-164) | `model:read` |
+| `POST` | `/api/v1/custom-metrics` | **201** Create → `draft` (FR-154, FR-155) | `model:fit` |
+| `GET` | `/api/v1/custom-metrics` | The workspace's metrics, cursor-paginated, filterable by `status` and `slug`, each row carrying `usage_count` (FR-167) | `model:read` |
+| `GET` | `/api/v1/custom-metrics/{id}` | The metric, its status and its certificate outcome (FR-162) | `model:read` |
+| `POST` | `/api/v1/custom-metrics/{id}/certify` | **202** Run §4.7's metric checks (FR-157) | `model:fit` |
+| `GET` | `/api/v1/custom-metrics/{id}/certificate` | The latest `MetricCertificate` for that version (FR-162) | `model:read` |
+| `POST` | `/api/v1/custom-metrics/{id}/submit` | Submit for approval (FR-154's lifecycle) | `model:submit` |
+| `GET` | `/api/v1/custom-metrics/{id}/usage` | Blast radius: models using this metric version (FR-162) | `model:read` |
+| `POST` | `/api/v1/peril-structures` | **201** Create/version a Peril Structure (FR-188) | `model:fit` |
+| `GET` | `/api/v1/peril-structures` | The workspace's peril structures, cursor-paginated, filterable by `status` and `slug` (FR-167) | `model:read` |
+| `GET` | `/api/v1/peril-structures/{id}` | The structure and its reconciliation (FR-192) | `model:read` |
+| `POST` | `/api/v1/peril-structures/{id}/reconcile` | **202** Recompute reconciliation (FR-190) | `model:fit` |
+| `POST` | `/api/v1/peril-structures/{id}/submit` | Submit for approval, `reconciled → review` (FR-192) | `model:submit` |
+
+ *(Added 2026-11-05, `RL-1483` item 1, `SL-8361`: the `Permission` column. Each cell is the permission name(s) from `06` §4.1, `authenticated` or `open`; a row with two methods is one row per method. Cells follow `06` §4.1's `Governs` text and FR-367. **`POST /models/{id}/archive` takes `model:submit` because `06` §4.1 and FR-202 name no archive permission and the code checks it; whether archive is `model:submit`, `model:fit` or a new member is open (see `SL-8361`'s ledger).**)*
 
 > **Amended 2026-08-22 (WK-661, the audit-remediation slice): three interface rows, and §5.2
 > checked in both directions for the first time.** §5.1's *endpoint* table matched the code
