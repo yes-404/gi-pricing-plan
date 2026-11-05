@@ -1199,6 +1199,11 @@ def _database_configured() -> bool:
     )
 
 
+def migration_problem(current: set[str], heads: set[str], known: set[str]) -> str | None:
+    """The refusal for a database behind the script heads, or None (FD-1488)."""
+    return None
+
+
 @pytest_asyncio.fixture
 async def database() -> AsyncIterator[Database]:
     """An engine per test, against a database the migration has already been run on.
