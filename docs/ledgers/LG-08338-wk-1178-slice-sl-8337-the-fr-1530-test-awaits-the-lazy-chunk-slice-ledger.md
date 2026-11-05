@@ -34,6 +34,8 @@ PL 8336, SL 8337: add `await import("@/components/dag/DagDesigner.vue")` to the 
 
 ### Gate
 
+GREEN set (item 29, import closure): changed source modules = `git diff --name-only origin/main...HEAD -- frontend/src` prints only `frontend/src/views/__tests__/RatingDesignView.test.ts`, a test file, no source module. Importers of it: `git grep -n -E "RatingDesignView.test" -- frontend` prints nothing. GREEN = that one file. (`git grep -l DagDesigner -- frontend/src` also lists DagDesigner.test.ts, DagDesignerMounts.test.ts, DagDesignerValidation.test.ts, DiffOverlay.test.ts; they import the component, which is not changed, so they are outside the closure.)
+
 (owed: the lead's slot)
 
 ### Audit
@@ -43,6 +45,8 @@ PL 8336, SL 8337: add `await import("@/components/dag/DagDesigner.vue")` to the 
 ### Build log
 
 - 2026-11-05 11:34:48Z R1/R2 done; commit 3f1d7727.
+
+- 2026-11-05 11:35:32Z Lead's TESTS HOLD reached the seat at 11:35:00; R1 and R2 ran at 11:34, before it: lag, not a breach (lead's reading). A5's 20 runs wait for the lead's RELEASE and written grant. GREEN set derived above.
 
 ## PRs
 
