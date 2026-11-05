@@ -82,6 +82,8 @@ Window 2026-11-05 19:28:53 to 19:50:10 UTC, single-tenant, read-only (TEMP-table
 
 **R2 `_format_value`** (`sl-8345-r2-cell-hard-error@cda3c0dc`, `operations.py:692`; read only): reached with `old * (1 + percentage)` (:760, :789). The ambient context's Emax (999999) bounds the text to about 1 MB; `_validate_result` (:587) then runs `validate_rate_table` on the result rows, and `cell_parses` (:331) refuses it, coded, after the write. No change here.
 
+**Closing lines (2026-11-05, exec-sl8340c, LAST-1, to-lead "2026-11-05 21:01:00 GMT"):** `DECIMAL_OUT_OF_RANGE` is owned by `00-overview.md` §5.3's "Error codes owned by this module" line (one owner; audit-docs check 10) and sits in `_GENERIC_ERROR_CODES` in `backend/src/app/errors.py`; FR-21's "no module's block lists it" amended to match. The handler carries a comment: the match is on pydantic's message text because pydantic_core does not chain `__cause__` through FastAPI's serialiser; fragile by that known cause; pinned by `test_decimal_write_bound.py`.
+
 ## PRs
 
 (none yet — the push, PR and mint are not the executor's in this brief)

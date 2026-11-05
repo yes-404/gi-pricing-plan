@@ -432,7 +432,14 @@ RATING_ERROR_CODES: Final[frozenset[str]] = frozenset(
 
 #: Codes raised by the shared request machinery rather than owned by one module.
 _GENERIC_ERROR_CODES: Final[frozenset[str]] = frozenset(
-    {"VALIDATION_FAILED", "NOT_FOUND", "METHOD_NOT_ALLOWED", "INTERNAL_ERROR"}
+    {
+        "VALIDATION_FAILED",
+        "NOT_FOUND",
+        "METHOD_NOT_ALLOWED",
+        "INTERNAL_ERROR",
+        # FR-21; owned by `00` §5.3's block (audit-docs check 10 reads it there).
+        "DECIMAL_OUT_OF_RANGE",
+    }
 )
 
 _KNOWN_CODES: Final[frozenset[str]] = (
@@ -646,8 +653,9 @@ async def _handle_serialization_error(
     Validation takes any exponent, so a caller can submit a value that no response can carry.
     The problem names no value (NFR-499).
     """
-    # Through FastAPI's response serialiser the original exception is not chained (`__cause__`
-    # is None); pydantic-core keeps only its type name and message, so that is what is read.
+    # The match is on pydantic's message text because pydantic_core does not chain `__cause__`
+    # through FastAPI's serialiser (`__cause__` is None; only the type name and message survive).
+    # Fragile by that known cause, not by choice; pinned by `test_decimal_write_bound.py`.
     if not (
         isinstance(exc.__cause__, DecimalMagnitudeError)
         or f"{DecimalMagnitudeError.__name__}:" in str(exc)
