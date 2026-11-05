@@ -521,9 +521,9 @@ def scan_bold_id_rows(path: Path, root: Path) -> list[Record]:
     (`docs/specs/*.md`) are two-column — `| **FR-283** | <description> |`, no separate
     title/status cells — while `open-questions.md` and this slice's own fixture corpus use
     more. The row's id is always captured from the leading cell; everything after it is
-    split on an *unescaped* `|` (`_docid.table_rows.UNESCAPED_PIPE`) into as many cells as the row actually
-    has, and the first two (if present) become `title`/`status`. A prior version of this
-    function required a fixed 4-column shape and only matched a real two-column row by
+    split on an *unescaped* `|` (`_docid.table_rows.UNESCAPED_PIPE`) into as many cells as the
+    row actually has, and the first two (if present) become `title`/`status`. A prior version
+    of this function required a fixed 4-column shape and only matched a real two-column row by
     accident, when its description happened to contain a stray, un-escaped literal `|` —
     every row without one (the overwhelming majority) silently produced no `Record` at all,
     which is `doc-id.py check`'s RFC-937 §7(b) noncontiguous-id failure: a requirement
@@ -547,7 +547,8 @@ def scan_bold_id_rows(path: Path, root: Path) -> list[Record]:
             rest = rest.strip()
             if rest.endswith("|"):
                 rest = rest[:-1].strip()
-            cells = [c.strip() for c in _docid.table_rows.UNESCAPED_PIPE.split(rest)] if rest else []
+            split = _docid.table_rows.UNESCAPED_PIPE.split
+            cells = [c.strip() for c in split(rest)] if rest else []
             title = cells[0] if cells else ""
             status = cells[1] if len(cells) > 1 else ""
         else:

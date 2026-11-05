@@ -40,6 +40,7 @@ import re
 import sys
 
 import pytest
+
 from model_schema.table_rows import split_row
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent

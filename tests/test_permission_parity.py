@@ -17,6 +17,7 @@ from pathlib import Path
 import pytest
 from fastapi import Depends, FastAPI
 from fastapi.routing import APIRoute, APIRouter, iter_route_contexts
+
 from model_schema.table_rows import split_row
 
 ROOT = Path(__file__).resolve().parents[1]
