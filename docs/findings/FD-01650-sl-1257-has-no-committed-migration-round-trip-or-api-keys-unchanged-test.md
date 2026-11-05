@@ -2,12 +2,12 @@
 id: FD-1650
 family: finding
 title: SL-1257's migration c5a91e7d3b26 has no committed round-trip test and no test that existing api_keys rows are unchanged
-status: active
+status: closed
 created: 2026-10-12
 owner: auditor
 tree: 372fa92ae3ab306bc067c234487ce929dc0e2a04
 corrected_by: []
-relates: [WK-674, SL-1257, PL-1583, LG-1634, RS-1649, FR-417]
+relates: [WK-674, SL-1257, PL-1583, LG-1634, RS-1649, FR-417, SL-1258, LG-1792]
 ---
 
 # FD-1650 — no committed test for SL-1257's migration
@@ -36,3 +36,5 @@ Filed by the retro audit RS-1649. Reads are at the squash-merge `fe80aec6` (PR #
 Required by the maintainer's condition, `to-lead.md` "2026-10-11 20:17:38 BST" item 4: "each retro FD names its DISCHARGE PATH and date, not only an owner, so \"delivered-but-untested\" is closed by a TEST that runs, before the P2 close".
 
 Fold into WK-674 S4's write set (SL-1258, its next alembic slice) as a red-first migration round-trip test: `upgrade` / `downgrade -1` / `upgrade` on a database holding `api_keys` rows, asserting the rows unchanged. Date: merged with SL-1258 and no later than the P2 exit demo, Thu 2026-11-12 (`docs/roadmap.md`, "Target: the P2 exit demo").
+
+***Resolved 2026-11-05*** — closed in place 2026-11-05 by the auditor (aud-fdclose), on the lead's brief under to-lead "2026-11-05 09:40:57 GMT" item 8 (2), the FD-1842 form. Delivered remedy (one migration round-trip test over `api_keys` rows, in SL-1258's write set): SL-1258 (LG-1792), PR #1337, squash commit eea416cab3c698a12bfc1f3620af0bc7906e4587, merged 2026-10-18T08:55:12Z. `backend/tests/test_migration_environment_settings.py::test_environment_settings_round_trip_leaves_api_keys_unchanged` seeds three `api_keys` rows (live, revoked, expired), runs upgrade, downgrade to the prior revision and upgrade again pinned to revision ids, and asserts the revision, the `environment_settings` table and `SELECT * FROM api_keys` unchanged after each step. Whether the test was run red first was not re-checked.

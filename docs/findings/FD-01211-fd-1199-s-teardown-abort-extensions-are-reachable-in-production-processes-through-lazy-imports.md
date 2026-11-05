@@ -2,12 +2,12 @@
 id: FD-1211
 family: finding
 title: FD-1199's teardown-abort extensions are reachable in production processes through lazy imports
-status: active
+status: closed
 created: 2026-09-28
 owner: auditor
 tree: 5ec47dc46ac2f174c5d427f5558a6cb365ff8166
 corrected_by: []
-relates: [FD-1199, FD-1150, WK-674]
+relates: [FD-1199, FD-1150, WK-674, SL-1258, LG-1792]
 ---
 
 # FD-1211 — FD-1199's teardown-abort extensions are reachable in production processes through lazy imports
@@ -65,3 +65,5 @@ executor-s1's fix, are pending and do not test a served process.
 3. Event: WK-674's restart and shutdown design states whether workers and the API finalize the
 interpreter on stop or recycle, and a test of a process that loads the extensions and then exits
 shows the result. Until then the risk is a shutdown abort after work is done, not a wrong result.
+
+***Resolved 2026-11-05*** — closed in place 2026-11-05 by the auditor (aud-fdclose), on the lead's brief under to-lead "2026-11-05 09:40:57 GMT" item 8 (2), the FD-1842 form. Delivered remedy (the Disposition's event: WK-674's restart and shutdown design states whether the processes finalize or recycle, and a test of a process that loads the extensions and exits shows the result): WK-674 Slice 4, SL-1258 (LG-1792), PR #1337, squash commit eea416cab3c698a12bfc1f3620af0bc7906e4587, merged 2026-10-18T08:55:12Z. The design is stated in `deploy/docker-compose.yml:146-149` ("FINALIZE, then REPLACE", `stop_grace_period: 20s`) and `deploy/README.md:146`. `backend/tests/test_deploy_shutdown.py::test_a_process_that_loads_the_extensions_exits_cleanly_every_time` runs 25 fresh interpreters that import numpy, scipy, polars, sklearn, pandas, pyarrow, numexpr, glum, xgboost, lightgbm and the worker's model handlers and asserts every exit code is 0; `test_the_check_reports_an_abort_at_exit` plants `os.abort()` and expects -6 twice. Caveat: this is interpreter level, not a SIGTERM to a served API or worker, which the essay's own "Not proven" paragraph did not ask for in its event.
