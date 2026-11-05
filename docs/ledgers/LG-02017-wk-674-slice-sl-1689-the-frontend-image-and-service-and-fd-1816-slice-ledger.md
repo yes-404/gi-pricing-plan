@@ -167,6 +167,8 @@ tools-main. A4: the gate log carries no `docker compose --profile app config --s
 span is 18:17:05 to 18:24:07 UTC; the doc-index run beside the demo, about 19:17 to 19:19 UTC, is disclosed, not hidden.
 
 
+**Mint's non-docs edits, dated 2026-11-05 20:01:11 GMT (executor, at the lead's request).** `git diff 08e9591d 2a24beb9 --stat` lists two non-docs paths, each one line: `deploy/Dockerfile` (gated file) line 12, a `#` comment only: `-# … does not carry (FD 8353).` / `+# … does not carry (FD-2018).`, no instruction line changed; and `backend/tests/test_deploy_stack_runtime.py` line 380, a docstring: `-"""FD 8353: …` / `+"""FD-2018: …`.
+
 ### Build log
 
 - **2026-11-05 10:12 UTC, R0 census and cites.** Over every remote head, `git diff --name-only
