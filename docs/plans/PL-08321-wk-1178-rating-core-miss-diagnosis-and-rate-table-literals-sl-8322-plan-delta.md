@@ -321,16 +321,17 @@ with the code DP-R2 rules. `load_bundle` is **not** changed (G2).
 - `to_wire(graph, payloads=None, *, miss_guards=None)`, where `miss_guards: Mapping[str, Sequence[str]]
   | None` maps a step id to its produced names. When `None`, the output is byte-identical (T8). When
   given, the path at `:555-566` adds a guard node and edge after each named step.
-- `PurposeEvaluation` gains `failing_step: Callable[[Mapping[str, Any]], str | None]`, a closure from
+- `PurposeEvaluation` gains `diagnose: Callable[[Mapping[str, Any]], RuntimeError | None]`, a closure from
   `evaluation()` in `load_bundle` that, on first call, builds the guarded decision on the same
   `engine` from the inlined algorithm's `on_miss="error"` `table` and `lookup` steps, memoises it,
-  evaluates the context, and returns the `nodeId` of the `RuntimeError` through `_failing_node`, or
-  `None`. Two workers' or two tasks' first calls may both build: harmless, last write wins. Move
-  `_failing_node` to `runtime.py`.
+  evaluates the context, and returns the `RuntimeError` it raises, or `None`. Two workers' or two
+  tasks' first calls may both build: harmless, last write wins. **`_failing_node` stays in
+  `score.py`:** `test_error_sinks.py`'s `_SINKS` lists it by file and function, and that file is H's.
 
 **Green, `rating/score.py`:** `_reraise_engine_failure(evaluation, context, exc)`:
 
-- `node = evaluation.failing_step(context)`. If it starts with `MISS_GUARD_PREFIX`, take the step.
+- `diagnosed = evaluation.diagnose(context)`, `node = _failing_node(diagnosed) if diagnosed else None`.
+  If it starts with `MISS_GUARD_PREFIX`, take the step.
   If that step is a `table` and `unparseable_cells` of its payload is non-empty:
   `RATING_EVALUATION_FAILED`, "table step … holds a cell the engine cannot parse". Otherwise
   `RATE_TABLE_MISS` or `REFERENCE_LOOKUP_MISS` by the step's type.
@@ -342,7 +343,7 @@ with the code DP-R2 rules. `load_bundle` is **not** changed (G2).
   unparseable cell raises `RATING_EVALUATION_FAILED`, same text. The bundle's payloads reach it from
   `build_scoring_result`, which holds `bundle`.
 - The two callers (`:1039`, `:1220`) pass `evaluation` and `context`. The four direct test calls
-  gain them (A12): a small stub with `failing_step=lambda _: None`.
+  gain them (A12): a small stub with `diagnose=lambda _: None`.
 - `test_wf699_journey.py:582-584`: the comment is corrected (the finding is closed); any assert that
   reads the code changes with it. It is DB-backed: the gate proves it.
 
