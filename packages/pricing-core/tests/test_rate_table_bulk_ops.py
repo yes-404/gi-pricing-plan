@@ -13,7 +13,7 @@ import hashlib
 import random
 from collections.abc import Callable
 from datetime import UTC, datetime
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 from io import BytesIO
 from typing import ClassVar
 
@@ -286,6 +286,13 @@ class TestFormatValueIsExact:
     ) -> None:
         assert _format_value(Decimal(value)) == written
         assert Decimal(_format_value(Decimal(value))) == Decimal(value)
+
+    @pytest.mark.req("FR-234")
+    def test_a_signaling_nan_still_raises_as_before(self) -> None:
+        """The exact form must not widen what passes: `sNaN` raised `InvalidOperation` at
+        e6d141ba (ambient traps), so it still does."""
+        with pytest.raises(InvalidOperation):
+            _format_value(Decimal("sNaN"))
 
 
 class TestDecideStorageMode:
