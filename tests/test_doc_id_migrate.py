@@ -161,12 +161,12 @@ def _remove_worktree(repo: pathlib.Path, worktree: pathlib.Path, tmp: pathlib.Pa
 
     The removal runs with `check=True`, so a failure raises `CalledProcessError` out of the
     fixture instead of leaving a registered worktree behind in the shared `.git` unseen; the
-    temporary directory is removed either way. No prune: a stale registration is reported.
+    temporary directory is removed either way. A stale registration is reported, never cleaned.
     """
     try:
         subprocess.run(
             ["git", "worktree", "remove", "--force", str(worktree)],
-            cwd=repo, check=False, capture_output=True, text=True,
+            cwd=repo, check=True, capture_output=True, text=True,
         )
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
