@@ -742,3 +742,69 @@ class TestApplyCellEdits:
     def test_a_non_decimal_value_is_out_of_bounds_by_the_shared_check(self) -> None:
         result = apply_cell_edits(_version(), [self._edit("17-20", "abc")])
         assert [(i.index, i.code) for i in result.issues] == [(0, "OUT_OF_BOUNDS")]
+
+
+_OPERATIONS: dict[str, Callable[[RateTableVersion], RateTableVersion]] = {
+    "uplift_table": lambda t: uplift_table(t, percentage=Decimal("0.10")),
+    "uplift_by_filter": lambda t: uplift_by_filter(
+        t, percentage=Decimal("0.10"), filter={"driver_age_band": ["17-20"]}
+    ),
+    "rebase_to_level": lambda t: rebase_to_level(t, base_level={"driver_age_band": ["17-20"]}),
+    "floor_and_cap": lambda t: floor_and_cap(t, floor=Decimal("3"), cap=Decimal("6")),
+}
+
+#: FR-233's matrix, written out here on purpose: the code is checked against this literal.
+_REFUSED_CELLS = {
+    ("uplift_table", "count"),
+    ("uplift_by_filter", "count"),
+    ("rebase_to_level", "percentage"),
+    ("rebase_to_level", "money_minor"),
+    ("rebase_to_level", "count"),
+}
+_ALL_CELLS = [
+    (kind, value_type.value) for kind in _OPERATIONS for value_type in RateTableValueType
+]
+
+#: Cells 2, 4 and 8, after each operation.
+_EXPECTED = {
+    "uplift_table": ["2.2", "4.4", "8.8"],
+    "uplift_by_filter": ["2.2", "4", "8"],
+    "rebase_to_level": ["1", "2", "4"],
+    "floor_and_cap": ["3", "4", "6"],
+}
+
+
+def _typed(value_type: str) -> RateTableVersion:
+    return _version(
+        rows=[
+            {"driver_age_band": "17-20", "relativity": "2"},
+            {"driver_age_band": "21-24", "relativity": "4"},
+            {"driver_age_band": "25-29", "relativity": "8"},
+        ],
+        value=RateTableValue(
+            name="relativity", type=RateTableValueType(value_type), unit="u", min=None, max=None
+        ),
+    )
+
+
+class TestBulkOperationValueType:
+    @pytest.mark.req("FR-233")
+    @pytest.mark.parametrize(("kind", "value_type"), _ALL_CELLS)
+    def test_the_matrix(self, kind: str, value_type: str) -> None:
+        table = _typed(value_type)
+        operate = _OPERATIONS[kind]
+        if (kind, value_type) in _REFUSED_CELLS:
+            with pytest.raises(ValueError, match=r"^BULK_OPERATION_NOT_APPLICABLE: ") as refused:
+                operate(table)
+            text = str(refused.value)
+            assert kind in text
+            assert value_type in text
+            assert f"rate_table:{_SLUG}@{table.version}" in text
+        else:
+            result = operate(table)
+            assert [Decimal(c["relativity"]) for c in _cells(result)] == [
+                Decimal(v) for v in _EXPECTED[kind]
+            ]
+            assert result.version == table.version + 1
+            assert result.created_by_operation is not None
+            assert result.created_by_operation.kind == kind
