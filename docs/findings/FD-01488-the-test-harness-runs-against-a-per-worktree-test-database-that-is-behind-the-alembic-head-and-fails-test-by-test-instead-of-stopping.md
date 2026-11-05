@@ -86,3 +86,5 @@ the verdict. Until the fix lands, the "alembic current == heads" gate-checklist 
 
 SL-1409's three real failures (the registry test, the authorisation sweep's line pins,
 `test_doc_id_migrate` in a worktree) are the slice's, per the 14:10:08 entry.
+
+*(Dated line, 2026-11-05, docs batch 11, by the auditor, on to-lead "2026-11-05 09:51:53 GMT" (triage b28ba8e9454c accepted as the proposal of record), item (4): severity RULED MEDIUM, as proposed.)*

@@ -250,3 +250,5 @@ Monday, 2026-11-18 Wednesday. Old → new, each place in this file:
   governs them. SL-1913's own row in `docs/roadmap.md` (:3327, :3343 at `c807a59d`) still reads
   Mon 9 Nov; its dated line is the lead's, in docs batch 6 or later. The rest of this plan is
   unchanged.)*
+
+*(Delta line, dated 2026-11-05 by the auditor, docs batch 11, on to-lead "2026-11-05 09:58:58 GMT" (the user's decision, verbatim: "move to 12 Thursday, but manage the project to work full speed."): **code freeze Thu 12 Nov 2026** (was Tue 10 Nov) and **docs freeze Fri 13 Nov** (was Wed 11 Nov). The P2 exit demo Wed 18 Nov, the SL-1913 rehearsal Mon 16 Nov and the section 14 review Mon 16 to Tue 17 Nov are unchanged. Weekdays read with `date -d`. The 2026-11-03 delta above keeps its words as a dated quote; the rest of this plan is unchanged.)*
