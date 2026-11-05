@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import copy
 import pathlib
+import re
 import sys
 from typing import Any
 
@@ -20,6 +21,8 @@ import pytest
 import yaml
 from backend.tests.deploy_stack_helpers import one_beat_problems, own_postgres_owner_url
 
+from app.api.body_limit import MIB
+from app.config import Environment, Settings
 from app.platform.jobs import DEFAULT_QUEUE_FOR_KIND
 from app.worker.celery_app import RELAY_QUEUE
 
@@ -500,3 +503,36 @@ def test_provisioning_refuses_the_shared_postgres_port_and_names_the_projects_ow
     with pytest.raises(ValueError, match="shared"):
         own_postgres_owner_url(5432)
     assert own_postgres_owner_url(49211).endswith("@127.0.0.1:49211/gipricing")
+
+
+_NGINX_CONFS = ("lb.conf", "frontend.nginx.conf")
+_BODY_SIZE = re.compile(r"^\s*client_max_body_size\s+(\d+)([kKmMgG]?)\s*;", re.MULTILINE)
+_UNITS = {"": 1, "k": 1024, "m": 1024**2, "g": 1024**3}
+
+
+def _client_max_body_size(text: str) -> int | None:
+    found = _BODY_SIZE.search(text)
+    return int(found[1]) * _UNITS[found[2].lower()] if found else None
+
+
+@pytest.mark.req("FR-450")
+@pytest.mark.parametrize("conf", _NGINX_CONFS)
+def test_the_proxy_does_not_undercut_the_request_body_limit(conf: str) -> None:
+    """nginx answers first with an HTML 413 above its own default of 1 MiB (FD-1802).
+
+    `frontend.nginx.conf` arrives with the frontend image (PL 8319); until it is on the tree
+    only `lb.conf` is held to the limit.
+    """
+    path = COMPOSE.parent / conf
+    if not path.exists():
+        pytest.skip(f"deploy/{conf} is not on this tree yet")
+    limit = Settings(environment=Environment.LOCAL, version="test").max_upload_body_mib * MIB
+    size = _client_max_body_size(path.read_text(encoding="utf-8"))
+    assert size is not None, f"deploy/{conf} sets no client_max_body_size"
+    assert size >= limit + MIB, f"deploy/{conf}: {size} is under the API limit {limit} + 1 MiB"
+
+
+def test_the_body_size_check_reads_a_directive_and_not_a_comment() -> None:
+    assert _client_max_body_size("client_max_body_size 65m;") == 65 * 1024**2
+    assert _client_max_body_size("# client_max_body_size 65m;") is None
+    assert _client_max_body_size("server { }") is None
