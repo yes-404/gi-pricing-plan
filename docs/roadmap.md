@@ -3320,7 +3320,7 @@ tree: f3462d8fc1336dc4583fe8a7af92fed399993a55
 phase: P2
 work: WK-1178
 corrected_by: []
-relates: [FD-1838, WK-674, SL-1711]
+relates: [FD-1838, WK-674, SL-1711, LG-1855]
 ```
 
 The fix of FD-1838 (MEDIUM, owner WK-1178), a Work-plan delta row under WK-1178 (Lean P2 L5): PUBLISH's receiver count is the PREPARE quorum (`prepare_round` in `backend/src/app/platform/deployment_switch.py`) and counts subscribers on the whole Redis server, so a second process on the same channel is a receiver that never acknowledges. **Scope, exactly:** one helper `switch_stack(environment, tenant_id)` that builds the stack prefix for both of its callers (`backend/src/app/main.py`, `backend/tests/test_deployment_switch_http.py`) and appends `basename($GIP_GATE_SLOT)` when the variable is set, through `RedisSwitch`'s existing `stack` argument; a process with no slot (production) is unchanged. Red first: a test with a foreign subscriber on the unsuffixed channel. Gate scripts and `scripts/run-small.sh` already export `GIP_GATE_SLOT` and are not changed. The ledger is `LG-1855`.
