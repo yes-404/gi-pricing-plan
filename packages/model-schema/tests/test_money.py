@@ -159,3 +159,78 @@ def test_positional_decimal_str_refuses_a_float_and_keeps_the_string_schema():
     prop = Holder.model_json_schema()["properties"]["value"]
     assert prop["type"] == "string"
     assert prop["pattern"] == r"^-?[0-9]+(\.[0-9]+)?$"
+
+
+# --- FD-1337 (FR-21): an exact decimal serialises inside its own schema ------------------
+
+_EXACT_DECIMALS = [
+    Decimal("0.0000001"),
+    Decimal("1.2E-28"),
+    Decimal("1E+2"),
+    Decimal(100).normalize(),
+    Decimal(10),
+    Decimal("66000.440"),
+]
+
+
+@pytest.mark.req("FR-21")
+@pytest.mark.parametrize("value", _EXACT_DECIMALS, ids=[str(v) for v in _EXACT_DECIMALS])
+@pytest.mark.parametrize("kind", [DecimalStr, Relativity], ids=["DecimalStr", "Relativity"])
+def test_every_exact_decimal_serialises_inside_its_own_schema(value, kind):
+    """A dump that matches the pattern the type publishes; `'1E-7'` does not."""
+    import re
+
+    class Holder(BaseModel):
+        value: kind  # type: ignore[valid-type]
+
+    pattern = Holder.model_json_schema()["properties"]["value"]["pattern"]
+    dumped = Holder(value=value).model_dump(mode="json")["value"]
+    assert re.fullmatch(pattern, dumped), dumped
+    assert Decimal(dumped) == value
+
+
+def _suite_with_bounds(lower: Decimal, upper: Decimal):
+    from model_schema.regression import RegressionSuiteContent
+
+    return RegressionSuiteContent.model_validate(
+        {
+            "algorithm_slug": "motor-gb",
+            "golden_quotes": [],
+            "properties": [
+                {
+                    "name": "monotone-in-age",
+                    "check": {
+                        "kind": "monotone",
+                        "input": "driver_age",
+                        "direction": "increasing",
+                        "strict": False,
+                        "lower": lower,
+                        "upper": upper,
+                    },
+                }
+            ],
+            "generation": {"cases": 5000, "seed": 1, "strategy": "input_contract_sampling"},
+        }
+    )
+
+
+@pytest.mark.req("FR-21")
+def test_equal_bounds_give_one_suite_hash():
+    """`10`, `1E+1` and `10.0` are one value, so one `suite_content_hash`."""
+    from model_schema.regression import suite_content_hash
+
+    hashes = {
+        suite_content_hash(_suite_with_bounds(lower, Decimal("100")))
+        for lower in (Decimal("10"), Decimal("1E+1"), Decimal("10.0"))
+    }
+    assert len(hashes) == 1, hashes
+
+
+@pytest.mark.req("FR-21")
+def test_a_field_outside_a_governed_hash_keeps_its_spelling():
+    """Control: only the hashed bounds drop trailing zeros; `66000.440` stays."""
+
+    class Holder(BaseModel):
+        value: DecimalStr
+
+    assert Holder(value=Decimal("66000.440")).model_dump(mode="json") == {"value": "66000.440"}
