@@ -100,6 +100,7 @@ REGISTER = register_lint.TARGETS[0]
 
 _PHASE_ID = re.compile(r"^[0-9][0-9a-zA-Z]*$")
 _REVIEW_MARKER = re.compile(r"§14")
+_SUPERSEDED_OPENING = re.compile(r"supersedes[^.]{0,80}opening kept below", re.IGNORECASE)
 
 
 class Match:
@@ -130,6 +131,16 @@ def _is_resolved(decision: str) -> bool:
     return bool(register_lint._opens_with_status(decision))
 
 
+def _live_text(decision: str) -> str:
+    """The Decision cell above the superseded opening the register keeps below it (FD-1916).
+
+    A row with no marker is read whole. A live text naming the target before the marker still
+    matches, correctly. `_is_resolved` reads the cell's prefix and does not need this.
+    """
+    marker = _SUPERSEDED_OPENING.search(decision)
+    return decision[: marker.start()] if marker else decision
+
+
 def _matches_phase(row: register_lint.Row, phase: str) -> bool:
     cell = row.fields[3]
     parts = [p.strip().lower() for p in cell.split("/")]
@@ -139,11 +150,11 @@ def _matches_phase(row: register_lint.Row, phase: str) -> bool:
 def _matches_work_id(row: register_lint.Row, work_id: str) -> bool:
     pattern = _word_boundary(work_id)
     work_item, decision = row.fields[2], row.fields[4]
-    return bool(pattern.search(work_item) or pattern.search(decision))
+    return bool(pattern.search(work_item) or pattern.search(_live_text(decision)))
 
 
 def _matches_review(row: register_lint.Row) -> bool:
-    return bool(_REVIEW_MARKER.search(row.fields[4]))
+    return bool(_REVIEW_MARKER.search(_live_text(row.fields[4])))
 
 
 def select_matches(
