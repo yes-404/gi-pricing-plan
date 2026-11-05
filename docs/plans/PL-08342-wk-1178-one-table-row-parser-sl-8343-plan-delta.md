@@ -68,7 +68,7 @@ by the planner**, read-only (`/tmp/plan-slices/p6.py`; `doc-index.py` through th
 
 | Site | Form | Reads |
 |---|---|---|
-| `scripts/scope-audit.py:68`, `scripts/audit-docs.py:299`, `backend/src/app/demo/guide.py:64` | the `([^|]+)` regex | a §5.1 row |
+| `scripts/scope-audit.py:68`, `scripts/audit-docs.py:299`, `backend/src/app/demo/guide.py:64` | the `([^\|]+)` regex | a §5.1 row |
 | `backend/src/app/demo/guide.py:87` | plain split | a table |
 | `scripts/audit-docs.py:353`, `:394`, `:578`, `:4153` | plain split | tables |
 | `scripts/audit-docs.py:636`, `:642` | lookbehind: a **count** and an offender search | the cell-count check |
@@ -103,7 +103,7 @@ entry also says "T folded": T's commits ride this branch and this gate (PL 8330)
 | DP | Question | Options | Recommendation |
 |---|---|---|---|
 | DP-P1 | A newly visible route fails a check (declared, unbuilt, out of phase). What then? | (a) **Stop and report each with its check line;** the lead rules, row by row, as a spec correction or a dated exception, in this slice's PR. (b) Exempt them in the checker to keep the migration green. A check that hides a declared route is this finding again. | **(a).** |
-| DP-P2 | What does `split_row` return for an escaped pipe: `\|` as written, or `|`? | (a) **`\|`, as `_split_row` does:** the ruled model, and the register's byte-compare behaviour stays. A caller wanting display text unescapes. (b) `|`. Cleaner for a reader; changes every register comparison. | **(a).** |
+| DP-P2 | What does `split_row` return for an escaped pipe: `\|` as written, or a bare pipe? | (a) **`\|`, as `_split_row` does:** the ruled model, and the register's byte-compare behaviour stays. A caller wanting display text unescapes. (b) `\|`. Cleaner for a reader; changes every register comparison. | **(a).** |
 
 The route is ruled. DP-P1's (a) is what the essay's "a false completeness figure" implies; it is a DP only
 because its outcome may need the maintainer. **The fallback** for the Wed 12:00 line: R3 alone (`doc-index.py`
