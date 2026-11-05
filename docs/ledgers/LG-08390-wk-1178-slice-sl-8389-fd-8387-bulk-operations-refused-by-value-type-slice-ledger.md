@@ -72,6 +72,8 @@ The 11 allowed cells are green at base by design (they assert today's behaviour)
 
 **Spec-reading tests, wider predicate (lead, HOLD):** `git grep -lE 'docs/specs|"docs" */ *"specs"' -- backend/tests tests` lists 18 files; the 6 not yet run are **OWED** until the lead lifts the HOLD: `backend/tests/test_contracts.py`, `backend/tests/test_demo_guide.py`, `backend/tests/test_route_scope_guard.py`, `tests/test_doc_id.py`, `tests/test_permission_parity.py`, `tests/test_repository_invariants.py` (the DB-free / DB-backed split is read at the run). No pytest or audit-docs started since the HOLD.
 
+**Six owed spec-readers, run under the lead's side-run word (to-lead "2026-11-05 18:11:52 GMT" (2)), one file per call, DB-free, at e3644fc7 (`sr-*.log`):** `test_contracts.py` 177 passed, 2 skipped rc=0; `test_route_scope_guard.py` 10 passed rc=0; `tests/test_doc_id.py` 145 passed rc=0; `tests/test_permission_parity.py` 16 passed rc=0; `tests/test_repository_invariants.py` 2 failed, 9 passed rc=1 (`test_money_discipline_is_enforced_by_the_docs_audit`, `test_journey_citations_are_audited_in_ci`: both assert `audit-docs.py` is clean on the real tree, so they carry its pre-mint failures; item 31's docs-audit set, clear at the mint); `backend/tests/test_demo_guide.py` 1 failed, 10 passed, 1 error rc=1, both `ConnectionRefusedError 127.0.0.1:1` (needs PostgreSQL): **OWED to the window**, not a pass.
+
 **T4 / DB window: OWED.** The window `sl8389` is queued behind LAST-1, FD 8366's, G and SL 8377 (brief). Three runs of `-k bulk_operation_value_type_matrix_at_the_route`: red at `0b718b91` (expect 5 failed with 201, 11 passed), green at `b9873496` (16 passed), plant P (11 red, 5 green). Lines to be appended.
 
 ## PRs
