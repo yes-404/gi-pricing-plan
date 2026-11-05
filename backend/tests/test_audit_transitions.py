@@ -24,8 +24,18 @@ from backend.tests.test_approvals import (
     _user,
     _with_role,
 )
+from backend.tests.test_deployments import (  # noqa: F401  (fixtures, by import)
+    _approve,
+    _request_for_prod,
+    api_settings,
+    client,
+    deploy,
+    seat,
+)
 from backend.tests.test_model_jobs import _actuary
 from backend.tests.test_model_lifecycle import _principal_with
+from backend.tests.test_rating_versions import _draft, _gate, _principal
+from fastapi.testclient import TestClient
 from sqlalchemy import select
 
 from app.db.models import (
@@ -39,8 +49,10 @@ from app.db.session import Database
 from app.platform import approvals as approval_service
 from app.platform import metrics as metric_service
 from app.platform import objectives as objective_service
+from app.platform import rating_versions as rating_service
 from model_schema import (
     Applicability,
+    ArtifactRef,
     CertificateCheck,
     CertificateOutcome,
     CertificateResult,
@@ -333,3 +345,78 @@ async def test_the_first_of_two_approvals_is_a_decision_not_a_state(
     (event,) = events
     assert event.before == {"status": "review", "approvers_recorded": 0}
     assert event.after == {"status": "review", "approvers_recorded": 1}
+
+
+async def _events_named(database: Database, workspace_id: UUID, action: str) -> list[AuditEventRow]:
+    async with database.session() as session:
+        return list(
+            (
+                await session.scalars(
+                    select(AuditEventRow).where(
+                        AuditEventRow.workspace_id == workspace_id,
+                        AuditEventRow.action == action,
+                    )
+                )
+            ).all()
+        )
+
+
+@pytest.mark.req("FR-7")
+@pytest.mark.req("FR-238")
+async def test_submitting_a_rating_version_emits_its_event(
+    database: Database, workspace_id: UUID
+) -> None:
+    """`draft → review` is built (PL 8376 DP-6) and owes `rating_version.submitted`, on the
+    version's own ArtifactRef, found by a query on that `entity_ref`."""
+    analyst = await _principal(database, workspace_id, "analyst")
+    actuary = await _principal(database, workspace_id, "pricing_actuary")
+    rating_id = await _draft(
+        database, workspace_id, analyst, ArtifactRef(type="model", slug="fremtpl2-glm", version=1)
+    )
+    gate = await _gate(database, workspace_id)
+    await gate.adopt(rating_id)
+    async with database.unit_of_work() as session:
+        row, request = await rating_service.submit_for_review(
+            session,
+            workspace_id=workspace_id,
+            actor=actuary,
+            rating_version_id=rating_id,
+            change_summary="submitted",
+            blob_store=gate.blob_store,
+            load_compiled=gate.load,
+        )
+        ref = f"rating_version:{row.slug}@{row.version}"
+        request_id = request.id
+
+    submitted = [
+        e
+        for e in await _events(database, workspace_id, ref)
+        if e.action == "rating_version.submitted"
+    ]
+    (event,) = submitted
+    assert event.before == {"status": "draft"}
+    assert event.after == {"status": "review", "approval_request_id": str(request_id)}
+
+
+@pytest.mark.req("FR-7")
+@pytest.mark.req("FR-267")
+async def test_executing_a_deployment_request_emits_its_event(
+    client: TestClient,  # noqa: F811
+    database: Database,
+    workspace_id: UUID,
+    seat: Any,  # noqa: F811
+) -> None:
+    """`approved → executed` is built (PL 8376 DP-6) and owes `deployment_request.executed`,
+    on the request's own reference."""
+    submitter, ref, request = await _request_for_prod(client, database, workspace_id, seat)
+    await _approve(client, seat, submitter, request["ref"])
+    done = deploy(client, submitter, "prod", ref, deployment_request_ref=request["ref"])
+    assert done.status_code == 201, done.text
+
+    (event,) = [
+        e
+        for e in await _events_named(database, workspace_id, "deployment_request.executed")
+        if e.entity_ref == request["ref"]
+    ]
+    assert event.before == {"status": "approved"}
+    assert event.after == {"status": "executed"}
