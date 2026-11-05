@@ -7,7 +7,7 @@ created: 2026-11-05   # working id 8393, minted at the batch 12 mint
 owner: lead
 tree: cded9f0e1953f2db6a6a1375892257a1a4822fc3   # origin/main when drafted; the evidence is a live host read, not a tree
 corrected_by: []
-relates: [WK-1178, FD-8350]
+relates: [WK-1178, FD-2007]
 ---
 
 # FD-8393 — virtio_balloon cycling on an e2 machine
@@ -26,4 +26,4 @@ Read by the maintainer at 18:36:27 GMT, mid-dip: `balloon_inflate` 325,613,355, 
 
 ## Disposition
 
-Open, owner WK-1178. Goes to the §14 draft beside FD-8350's host question; a dedicated host is the user's call. Filed as working id 8393.
+Open, owner WK-1178. Goes to the §14 draft beside FD-2007's host question; a dedicated host is the user's call. Filed as working id 8393.

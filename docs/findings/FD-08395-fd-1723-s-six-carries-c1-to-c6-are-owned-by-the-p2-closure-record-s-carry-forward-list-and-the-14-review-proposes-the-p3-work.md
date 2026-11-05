@@ -22,7 +22,7 @@ One finding, **six limbs, one register row** (to-lead "2026-11-05 16:50:00 GMT" 
 | **C2** | Custom Objective and Custom Metric `→ deprecated`: 6 edges, two routes, and OQ-609's selection refusal | DP-9 (b) |
 | **C3** | Peril Structure `→ archived`: 3 edges, one route | DP-10 (b) |
 | **C4** | FR-369's `entity_ref` form, missed by `ingestion.py:492` and the others in D0 §4(c) | DP-13 F5 |
-| **C5** | **Role revocation, verdict "not started":** `revoked_at` is honoured on read (`rbac.py:190`) and has **no writer**; with FR-350 | DP-14 (a) |
+| **C5** | **Role revocation, verdict "not started":** `revoked_at` is honoured on read (`backend/src/app/platform/rbac.py:183`, `backend/src/app/api/me.py:133`; `:190` is the `expires_at` line) and has **no writer**; with FR-350 | DP-14 (a) |
 | **C6** | `traces.py:297`: no caller outside `test_traces.py`; the first route to call it owes an event | DP-14 (c) |
 
 C2 and C3 are spec-only in the slice: a dated clause names the carry's owner (FR-154, FR-163, `02:1664`); the edges stay in `NOT_BUILT` under SL 8377's T3 guard.
