@@ -296,13 +296,14 @@ def predict_glm(
 
 
 def _row_frame(row: Mapping[str, Any]) -> pl.DataFrame:
-    """The one-row frame of a quote. A non-finite `Decimal` is carried as the float it equals:
-    `pl.DataFrame` panics (pyo3 `PanicException`) building a Decimal NaN, where a float NaN is
-    a missing value and reaches `apply_banding`'s coded refusal (FD 8354; FR-97)."""
+    """The one-row frame of a quote. A non-finite `Decimal` is carried as the float it equals
+    (a signaling NaN, which `float()` refuses, as a quiet NaN): `pl.DataFrame` panics (pyo3
+    `PanicException`) building a Decimal NaN, where a float NaN is a missing value and reaches
+    `apply_banding`'s coded refusal (FD 8354; FR-97)."""
     return pl.DataFrame(
         [
             {
-                name: float(value)
+                name: (float("nan") if value.is_nan() else float(value))
                 if isinstance(value, Decimal) and not value.is_finite()
                 else value
                 for name, value in row.items()
