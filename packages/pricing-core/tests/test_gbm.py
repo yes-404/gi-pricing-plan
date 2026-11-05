@@ -748,8 +748,8 @@ def test_a_constrained_booster_has_no_cross_group_split(backend: str) -> None:
     `test_a_declared_interaction_group_reaches_the_backend` uses a group that is the whole
     feature set, so it cannot fail if the constraint never reaches the backend. Here the
     groups `(a, b)` and `(c, d)` forbid every root-to-leaf path that splits on a feature of each,
-    on data whose only signal is an `a * c` interaction. The unconstrained fit must contain such a path (else the
-    walker proves nothing) and must predict differently on a holdout.
+    on data whose only signal is an `a * c` interaction. The unconstrained fit must contain such
+    a path (else the walker proves nothing) and must predict differently on a holdout.
     """
     train = _cross_group_data(6_000, 20261105)
     holdout = _cross_group_data(2_000, 20261106)
