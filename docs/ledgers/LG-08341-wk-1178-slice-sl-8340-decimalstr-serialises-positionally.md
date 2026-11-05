@@ -39,3 +39,7 @@ Patch `~/gi-pricing-plan.local/scratch/sl-8340-decimalstr-positional/code.patch`
 ## Re-measure (A3 to A5)
 
 (window result added after the lead's grant)
+
+## PRs
+
+(none yet — the push, PR and mint are not the executor's in this brief)
