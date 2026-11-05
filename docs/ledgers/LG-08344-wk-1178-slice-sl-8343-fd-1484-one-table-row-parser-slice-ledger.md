@@ -90,6 +90,7 @@ Every one of the 16 failures is the same cause, named by the assert text: `audit
 
 - 2026-11-05: worktree `.claude/worktrees/sl-8343` from `c8d85227`; PL 8330's `7b5aa255` merged (`d6481cba`), the only conflict being `docs/INDEX.md`, where both plan rows were kept.
 - 2026-11-05: R1–R4, T4 and the ruff fixes as the task list; the SL 8331 commits are in LG 8332.
+- 2026-11-05 19:58 GMT: correction to aud-sl8343's "no script or test copies `scripts/` out of the tree" (not in this ledger; it is in the audit's reading): `tests/test_doc_id_migrate.py` does, in two fixtures -- `_migrate_module_with_source_mutation` (`test_class6_keys_on_the_generated_set_not_reproducibility`) and `test_migrate_leaves_no_pycache_in_a_snapshot_carrying_its_own_scripts` -- and exec-sl8370b found both red by `FileNotFoundError` on `table_rows.py`, because `scripts/_docid.py` loads `packages/model-schema/src/model_schema/table_rows.py` by path. Ruling: lead's to-lead "2026-11-05 19:54:56 GMT", option (a): the snapshot fixtures copy the parser too (`_copy_scripts_snapshot`); no fallback in `_docid.py`, no move of the parser.
 
 ## PRs
 

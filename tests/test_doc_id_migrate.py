@@ -465,6 +465,24 @@ def test_class6_a_hand_edited_readme_fails_and_names_the_file(
     assert "docs/INDEX.md" in classification.per_class["6-generated-artifact"]
 
 
+def _copy_scripts_snapshot(root: pathlib.Path, *, ignore_pycache: bool = False) -> None:
+    """`scripts/` plus what `scripts/_docid.py` loads by path from outside it
+    (`packages/model-schema/src/model_schema/table_rows.py`, FD-1484), copied into a
+    snapshot `root` -- so a snapshot holds everything `migrate()` loads from its own
+    `REPO_ROOT`, not only the `scripts/` tree.
+    """
+    import shutil
+
+    shutil.copytree(
+        ROOT / "scripts",
+        root / "scripts",
+        ignore=shutil.ignore_patterns("__pycache__") if ignore_pycache else None,
+    )
+    rel = pathlib.Path("packages/model-schema/src/model_schema/table_rows.py")
+    (root / rel).parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy(ROOT / rel, root / rel)
+
+
 def _migrate_module_with_source_mutation(
     tmp_path: pathlib.Path, old: str, new: str, *, name: str
 ) -> types.ModuleType:
@@ -489,7 +507,7 @@ def _migrate_module_with_source_mutation(
     )
     source = source.replace(old, new, 1)
     root = tmp_path / name
-    shutil.copytree(ROOT / "scripts", root / "scripts")
+    _copy_scripts_snapshot(root)
     shutil.copytree(ROOT / "docs" / "_templates", root / "docs" / "_templates")
     (root / "scripts" / "doc-id.py").write_text(source, encoding="utf-8")
     return _load_by_path(
@@ -829,10 +847,7 @@ def test_migrate_leaves_no_pycache_in_a_snapshot_carrying_its_own_scripts(
 
     root = tmp_path / "snap"
     shutil.copytree(FIXTURE_CORPUS, root)
-    shutil.copytree(
-        ROOT / "scripts", root / "scripts",
-        ignore=shutil.ignore_patterns("__pycache__"),
-    )
+    _copy_scripts_snapshot(root, ignore_pycache=True)
     _run_git(["init", "--initial-branch=main", "--quiet"], cwd=root)
     _run_git(["config", "user.email", "test@example.com"], cwd=root)
     _run_git(["config", "user.name", "Test"], cwd=root)
