@@ -378,7 +378,7 @@ no step produced, and mounted a sub-graph at a step it did not define.)*
   "rateable": true,
   "storage": "rows",
   "keys": [{"name": "driver_age_banded", "type": "string", "factor_ref": "factor:driver_age_banded@3"}],
-  "value": {"name": "relativity", "type": "relativity", "min": 0.2, "max": 5.0},
+  "value": {"name": "relativity", "type": "relativity", "unit": "factor", "min": 0.2, "max": 5.0},
   "default_row": null,
   "rows": [
     {"driver_age_banded": "17-20", "relativity": "1.8400"},
@@ -389,14 +389,11 @@ no step produced, and mounted a sub-graph at a step it did not define.)*
   "created_by_operation": null,
   "created_by_import": null,
   "created_by_edit": {"applied_to": "rate_table:motor-driver-age-relativity@5", "edited_cells": 1},
-  "change_note": "Softened 17-20 from 1.92 to 1.84 following competitor review; see OPT run 2026-07-11.",
-  "diff_vs_previous": {"changed_cells": 3, "max_abs_change_pct": 4.2,
-                       "exposure_weighted_mean_change_pct": 0.8,
-                       "portfolio_exposure": "48210.5", "matched_exposure": "47902.0"},
-  "diff_vs_seed": {"changed_cells": 7, "exposure_weighted_mean_change_pct": -2.1,
-                   "portfolio_exposure": "48210.5", "matched_exposure": "47902.0"}
+  "change_note": "Softened 17-20 from 1.92 to 1.84 following competitor review; see OPT run 2026-07-11."
 }
 ```
+
+A diff against the previous version or the seed is not a field of the version: it is served by `GET …/diff?against=&portfolio=` (FR-231), against a portfolio the caller names, so an immutable version cannot hold one. *(Clarified 2026-11-05, `RL-8375` row 14, FD-1381: the example printed `diff_vs_previous` and `diff_vs_seed` before this date.)*
 
 Values are stored as decimal strings, never JSON floats (R2).
 
@@ -1027,7 +1024,7 @@ A Deployment binds one `approved` Rating Version to one Environment at a point i
   "workspace_id": "0c6e8f0a-5d21-4b7e-8d62-1a9b3c4d5e6f",
   "environment": "prod",
   "rating_version_ref": "rating_version:motor-gb@27",
-  "bundle_hash": "sha256:9f2c…",
+  "bundle_hash": "sha256:9f2c9f2c9f2c9f2c9f2c9f2c9f2c9f2c9f2c9f2c9f2c9f2c9f2c9f2ca1b2c3d4",
   "deployed_by": "3b8e4d7a-1c52-4f09-a6d3-7e5b2c8f1a04",
   "deployed_at": "2026-10-01T06:00:00Z",
   "reason": "Annual rate review, effective 1 November",
