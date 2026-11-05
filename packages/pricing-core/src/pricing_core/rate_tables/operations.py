@@ -19,7 +19,7 @@ import hashlib
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import datetime
-from decimal import Decimal, InvalidOperation
+from decimal import Context, Decimal, Inexact, InvalidOperation
 from io import BytesIO, StringIO
 from itertools import product
 from typing import Literal
@@ -693,8 +693,16 @@ def _format_value(value: Decimal) -> str:
     """Fixed point, trailing zeros dropped: never a float (R2), never an exponent (FD-1648).
 
     `RateTableValue` declares no dp, so this normalises and formats (the entry
-    "2026-11-05 10:11:39 GMT", limb (i))."""
-    return format(value.normalize(), "f")
+    "2026-11-05 10:11:39 GMT", limb (i)).
+
+    The cell text is stored, so it is exact: `normalize` runs in a context sized to the
+    value's own digits (it cannot round) rather than the ambient 28. `Inexact` is trapped
+    as a guard that never fires on a valid Decimal. A non-finite value passes through as
+    `Infinity` / `NaN` (the callers' `Decimal(row[...])` and the bounds check own those)."""
+    if value.is_zero():
+        return "0"
+    exact = Context(prec=max(len(value.as_tuple().digits), 1), traps=[Inexact])
+    return format(value.normalize(exact), "f")
 
 
 def _transform_rows(
