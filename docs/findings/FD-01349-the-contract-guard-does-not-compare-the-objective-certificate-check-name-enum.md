@@ -2,12 +2,12 @@
 id: FD-1349
 family: finding
 title: The contract guard does not compare the objective-certificate check-name enum against the code's check vocabulary
-status: active
+status: closed
 created: 2026-10-01
 owner: auditor
 tree: ee5de4438c84cb76ba1343012dcf4bca3444cad7
 corrected_by: []
-relates: [WK-690]
+relates: [WK-690, SL-1273, SL-1622, LG-1680]
 ---
 
 # FD-1349 — The contract guard does not compare the objective-certificate check-name enum
@@ -63,3 +63,5 @@ prove it red on broken input as in Evidence 1, add its meta-guard) and lands **b
 ## Decision
 
 Adopted by the lead at MEDIUM, owner WK-690 (`DISPATCH-WK-690-S2-2026-09-30.md` Delta 4). Discharged when the follow-up slice's guard comparison merges and Evidence 1's broken input turns it red.
+
+***Resolved 2026-11-05*** — closed in place 2026-11-05 by the auditor (aud-fdclose), on the lead's brief under to-lead "2026-11-05 09:40:57 GMT" item 8 (2), the FD-1842 form; the register row was already marked Resolved 2026-10-12 and this closes the essay to match. Delivered remedy (the Disposition's single limb: a contract-guard comparison of the certificate check-name enum, red on the finding's own broken input): the guard comparison landed in SL-1273 (PR #1122, squash commit 36a9f48325af47b482bd1f3211b01e90d2b4b149, merged 2026-10-05T10:45:05Z) as a test in `backend/tests/test_contracts.py` (at main dae9637e the docstring citing FD-1349 is at :3095, the comparison of the authored enum against the union of `OBJECTIVE_CERTIFICATE_CHECKS` and `OBJECTIVE_CERTIFICATE_CHECKS_SYMBOLIC` at :3097-3105, its meta-test at :3118-3124). SL-1622 (PR #1295, squash commit 2a81974184ee405536fb43d30f59a990b3953669, merged 2026-10-12T07:07:29Z, LG-1680) proved it red on Evidence 1's broken input (five names set to BOGUS: the comparison failed, then restored and passed), recorded in CR-1980. The comparison landed before WK-690 closed.
