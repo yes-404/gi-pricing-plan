@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import re
 from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
+from decimal import Decimal
 from statistics import NormalDist
 from typing import Any
 from uuid import UUID
@@ -294,6 +295,22 @@ def predict_glm(
     )
 
 
+def _row_frame(row: Mapping[str, Any]) -> pl.DataFrame:
+    """The one-row frame of a quote. A non-finite `Decimal` is carried as the float it equals:
+    `pl.DataFrame` panics (pyo3 `PanicException`) building a Decimal NaN, where a float NaN is
+    a missing value and reaches `apply_banding`'s coded refusal (FD 8354; FR-97)."""
+    return pl.DataFrame(
+        [
+            {
+                name: float(value)
+                if isinstance(value, Decimal) and not value.is_finite()
+                else value
+                for name, value in row.items()
+            }
+        ]
+    )
+
+
 def linear_predictor_row(
     fit: GlmFitResult,
     row: Mapping[str, Any],
@@ -315,7 +332,7 @@ def linear_predictor_row(
     same values in the same order: the result is bit-identical, which
     `test_glm_scalar_predict.py` holds exactly.
     """
-    frame = pl.DataFrame([dict(row)])
+    frame = _row_frame(row)
     resolved = resolve_factor_columns(frame, factors, bandings=bandings, groupings=groupings)
     return _accumulate(
         _design_columns(fit, resolved.terms, lambda name: resolved.column(frame, name), 1),
