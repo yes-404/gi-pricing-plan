@@ -420,8 +420,9 @@ Schemas in `docs/contracts/schemas/`. All entities carry `ArtifactEnvelope` (`00
 
 ```json
 {
+  "id": "0190b5a2-7c3e-7a10-9d21-4f6b8c2e1a01",
   "slug": "driver_age_banded",
-  "dataset_id": "uuid",
+  "dataset_id": "0190b5a2-7c3e-7a10-9d21-4f6b8c2e1a01",
   "version": 3,
   "type": "banding",
   "source_columns": ["driver_age"],
@@ -430,7 +431,7 @@ Schemas in `docs/contracts/schemas/`. All entities carry `ArtifactEnvelope` (`00
   "monotonic_rationale": "Claim frequency falls with age above 25; enforced to prevent noise-driven reversals in thin bands.",
   "prohibited": false,
   "prohibited_reason": null,
-  "banding_id": "uuid",
+  "banding_id": "0190b5a2-7c3e-7a10-9d21-4f6b8c2e1a01",
   "grouping_id": null,
   "operand_factor_ids": [],
   "expression": null,
@@ -543,17 +544,17 @@ empty on the next.
 
 ```json
 {
-  "id": "uuid",
+  "id": "0190b5a2-7c3e-7a10-9d21-4f6b8c2e1a01",
   "slug": "vehicle-group-to-rating-group",
-  "dataset_id": "uuid",
+  "dataset_id": "0190b5a2-7c3e-7a10-9d21-4f6b8c2e1a01",
   "version": 1,
   "column": "abi_vehicle_group",
   "method": "credibility_weighted",
   "method_params": {"credibility_model": "limited_fluctuation",
                     "credibility_standard_claims": 1082, "credibility_pk": {"p": 0.90, "k": 0.05},
                     "merge_tolerance_relativity": 0.05},
-  "derived_on_dataset_version_id": "uuid",
-  "mapping": {"1": "G1", "2": "G1", "3": "G1", "4": "G2", "…": "…"},
+  "derived_on_dataset_version_id": "0190b5a2-7c3e-7a10-9d21-4f6b8c2e1a01",
+  "mapping": {"1": "G1", "2": "G1", "3": "G1", "4": "G2", "5": "G4"},
   "unseen_level_behaviour": "map_to_default",
   "default_target_level": "G4",
   "parent_grouping_id": null,
@@ -562,7 +563,7 @@ empty on the next.
     "credibility_components": null,
     "deviance_before": 184221.4, "deviance_after": 184388.1,
     "df_saved": 42, "chi2_p_value": 0.31,
-    "target_level_stats": [{"level": "G1", "exposure_years": "180422.1", "claim_count": 19204, "relativity": 0.78}]
+    "target_level_stats": [{"level": "G1", "exposure_years": "180422.1", "claim_count": 19204}]
   }
 }
 ```
@@ -685,10 +686,13 @@ cap are different models, and must not collide on `spec_hash`.
 > A reader should not conclude from `v1`..`v9` that the tag tracks *fields*. It tracks what
 > a digest promises, and `v10` is the case that distinguishes the two.
 
-`GlmSpec` adds:
+`GlmSpec` adds the fields below to the common block. The example also carries the common fields the arm needs to be valid on its own: `model_family_slug`, `dataset_version_id` and `response_column`, and the `offset` a Poisson spec must declare (FR-111).
 
 ```json
 {
+  "model_family_slug": "motor-ad-frequency",
+  "dataset_version_id": "0190b5a2-7c3e-7a10-9d21-4f6b8c2e1a01",
+  "response_column": "claim_count",
   "family": "poisson",
   "family_params": {},
   "link": "log",
@@ -697,7 +701,8 @@ cap are different models, and must not collide on `spec_hash`.
   "tweedie": null,
   "max_iter": 200, "tolerance": 1e-8,
   "approximates_model_id": null,
-  "approximates_model": null
+  "approximates_model": null,
+  "offset": {"kind": "log_column", "column": "exposure_years"}
 }
 ```
 
@@ -724,13 +729,15 @@ cap are different models, and must not collide on `spec_hash`.
 
 ```json
 {
-  "method": "random | temporal | grouped_by_key",
+  "method": "random",
   "folds": 5,
   "alphas": [0.0, 0.001, 0.01, 0.1, 1.0],
   "key_column": null,
   "time_column": null
 }
 ```
+
+`method` is `"random"`, `"temporal"` or `"grouped_by_key"`; the example shows `"random"`.
 
 > **Added 2026-08-21 (the regularisation-and-CV slice).** `cv` carries the cross-validated
 > penalty path when `select_by` is `"cv"` and is `null` under `"fixed"` selection. The
@@ -891,10 +898,13 @@ cap are different models, and must not collide on `spec_hash`.
 > GBMs over one population would otherwise share a digest — which FR-204 would answer
 > by handing the second caller the first caller's model.
 
-`EbmSpec` adds (`model_type` is `"ebm"`):
+`EbmSpec` adds the fields below to the common block (`model_type` is `"ebm"`). The example also carries the common fields the arm needs to be valid on its own: `model_family_slug`, `dataset_version_id` and `response_column`:
 
 ```json
 {
+  "model_family_slug": "motor-ad-frequency",
+  "dataset_version_id": "0190b5a2-7c3e-7a10-9d21-4f6b8c2e1a01",
+  "response_column": "claim_count",
   "objective": "rmse",
   "interactions": 0,
   "max_bins": 64,
@@ -1091,6 +1101,8 @@ Example `expression` objective — under-pricing penalised twice as hard, on a l
 
 ```json
 {
+  "id": "0190b5a2-7c3e-7a10-9d21-4f6b8c2e1a01",
+  "version": 1,
   "slug": "asymmetric-burning-cost",
   "kind": "expression",
   "bound_symbols": ["y", "f", "w"],
@@ -1137,37 +1149,45 @@ Produced by `POST /custom-objectives/{id}/certify`; required for submission (FR-
 
 ```json
 {
-  "custom_objective_id": "uuid", "objective_version": 1,
-  "checks": [
-    {"name": "symbolic_vs_numeric_gradient", "status": "pass",
-     "detail": "max relative error 8.9e-7 over 9,959 sampled (y,f,w) points (41 excluded near the branch boundary); h=1e-6, Richardson-extrapolated"},
-    {"name": "symbolic_vs_numeric_hessian", "status": "pass",
-     "detail": "max relative error 3.8e-4, within the step-aware tolerance for h=1e-6 on a loss of this curvature (FR-149)"},
-    {"name": "finiteness", "status": "pass",
-     "detail": "no NaN/inf for y ∈ [0, 1e7], f ∈ [-20, 20], w ∈ (0, 1e4]"},
-    {"name": "convexity", "status": "violated",
-     "detail": "hessian < 0 wherever exp(f) < y/2 — 63.9% of this sampling grid; strongly dependent on y_range/f_range, so the share is only meaningful alongside the sampling block below. Mitigated by hessian_strategy=clip_to_min"},
-    {"name": "branch_discontinuity", "status": "warn",
-     "detail": "gradient and hessian are discontinuous at the branch boundary exp(f) = y; 41 of 10,000 sampled points fell within h of it and were excluded from the derivative comparison (FR-147/148)"},
-    {"name": "minimum_at_truth", "status": "pass",
-     "detail": "loss minimised at f = log(y) for w_under=w_over"},
-    {"name": "monotone_loss", "status": "pass", "detail": "loss increases with |exp(f) − y|"},
-    {"name": "scale_behaviour", "status": "warn",
-     "detail": "loss scales quadratically with y; gradient magnitude spans 6 orders over the observed y range — consider a log-scale variant"},
-    {"name": "smoke_fit", "status": "pass",
-     "detail": "recovered known relativities on synthetic data (n=200k) within 1.2%; 300 rounds, 41s"}
-  ],
-  "sampling": {"n_points": 10000, "seed": 20260814,
-               "y_range": [0, 10000000], "f_range": [-20, 20], "w_range": [0.001, 10000]},
-  "overall": "certified_with_findings",
-  "_note": "Figures above are illustrative of the shape of a real certificate. The convexity share and error magnitudes are those measured for this objective on this sampling grid (research/track-a-findings.md F3/F4); they are not constants.",
-  "library_versions": {"sympy": "1.14.0", "numpy": "2.x", "xgboost": "2.x"}
+  "id": "0190b5a2-7c3e-7a10-9d21-4f6b8c2e1a01",
+  "custom_objective_id": "0190b5a2-7c3e-7a10-9d21-4f6b8c2e1a01", "objective_version": 1,
+  "certified_at": "2026-08-14T11:05:00Z",
+  "job_id": "0190b5a2-7c3e-7a10-9d21-4f6b8c2e1a01",
+  "result": {
+    "checks": [
+      {"name": "symbolic_vs_numeric_gradient", "status": "pass",
+       "detail": "max relative error 8.9e-7 over 9,959 sampled (y,f,w) points (41 excluded near the branch boundary); h=1e-6, Richardson-extrapolated"},
+      {"name": "symbolic_vs_numeric_hessian", "status": "pass",
+       "detail": "max relative error 3.8e-4, within the step-aware tolerance for h=1e-6 on a loss of this curvature (FR-149)"},
+      {"name": "finiteness", "status": "pass",
+       "detail": "no NaN/inf for y ∈ [0, 1e7], f ∈ [-20, 20], w ∈ (0, 1e4]"},
+      {"name": "convexity", "status": "violated",
+       "detail": "hessian < 0 wherever exp(f) < y/2 — 63.9% of this sampling grid; strongly dependent on y_range/f_range, so the share is only meaningful alongside the sampling block below. Mitigated by hessian_strategy=clip_to_min"},
+      {"name": "branch_discontinuity", "status": "warn",
+       "detail": "gradient and hessian are discontinuous at the branch boundary exp(f) = y; 41 of 10,000 sampled points fell within h of it and were excluded from the derivative comparison (FR-147/148)"},
+      {"name": "minimum_at_truth", "status": "pass",
+       "detail": "loss minimised at f = log(y) for w_under=w_over"},
+      {"name": "monotone_loss", "status": "pass", "detail": "loss increases with |exp(f) − y|"},
+      {"name": "scale_behaviour", "status": "warn",
+       "detail": "loss scales quadratically with y; gradient magnitude spans 6 orders over the observed y range — consider a log-scale variant"},
+      {"name": "smoke_fit", "status": "pass",
+       "detail": "recovered known relativities on synthetic data (n=200k) within 1.2%; 300 rounds, 41s"}
+    ],
+    "sampling": {"n_points": 10000, "seed": 20260814,
+                 "y_range": [0, 10000000], "f_range": [-20, 20], "w_range": [0.001, 10000]},
+    "overall": "certified_with_findings",
+    "library_versions": {"sympy": "1.14.0", "numpy": "2.x", "xgboost": "2.x"}
+  }
 }
 ```
 
 > *(Amended 2026-09-30, `RL-1289`: `library_versions.sympy` is the version pinned in
 > `uv.lock`, read from `sympy.__version__`. The example's former value was a version
 > range with no recorded rationale, and it is replaced by the pin.)*
+
+The figures in the example are illustrative of the shape of a real certificate. The convexity
+share and error magnitudes are those measured for this objective on this sampling grid
+(`research/track-a-findings.md` F3/F4); they are not constants.
 
 `overall` ∈ `certified` | `certified_with_findings` | `failed`. A `failed` certificate
 blocks submission entirely.
@@ -1237,6 +1257,11 @@ derivatives rather than a SymPy-derived form (FR-151). Every other check, and th
 > at 1 000 points. Loosening a tolerance is how a check stops checking, so the other side is
 > pinned by test: an absolute error of `1e-08` in the Gamma hessian — two hundred times the
 > noise where that hessian is smallest — is still `failed`.
+
+> **Clarified 2026-11-05 (`RL-8375` row 12, FD-1381).** The example in this section is now nested as
+> built: the identity fields (`id`, `custom_objective_id`, `objective_version`, `certified_at`, `job_id`)
+> sit beside `result`, which holds `checks`, `sampling`, `overall` and `library_versions`. The amendment
+> above describes the example as printed before this date, flat.
 
 > **`MetricCertificate` (FR-157), added 2026-08-19.** Same two-object split as
 > `ObjectiveCertificate` and for the same ADR-703 reason: `certify_metric` computes a
@@ -1530,23 +1555,24 @@ backends; `best_iteration` is what `predict_gbm` passes as `iteration_range` /
 
 ```json
 {
-  "model_id": "uuid",
-  "kinds": ["glm_approximation", "shap_summary", "ebm_shape_functions"],
+  "id": "0190b5a2-7c3e-7a10-9d21-4f6b8c2e1a01",
+  "created_at": "2026-08-14T09:00:00Z",
+  "model_id": "0190b5a2-7c3e-7a10-9d21-4f6b8c2e1a01",
   "glm_approximation": {
-    "approximating_model_id": "uuid",
+    "approximating_model_id": "0190b5a2-7c3e-7a10-9d21-4f6b8c2e1a01",
     "target": "gbm_prediction",
     "r_squared": 0.973, "deviance_explained": 0.968,
     "worst_regions": [
       {"description": "driver_age < 21 AND annual_mileage > 20000",
        "exposure_share": 0.008, "mean_abs_error_pct": 11.4}
     ],
-    "relativity_table_blob": "blob:sha256:…"
+    "relativity_table_blob": {"sha256": "9f2c9f2c9f2c9f2c9f2c9f2c9f2c9f2c9f2c9f2c9f2c9f2c9f2c9f2ca1b2c3d4", "bytes": 48211, "media_type": "application/vnd.apache.parquet"}
   },
   "shap_summary": {
     "sample_rows": 200000, "seed": 20260814, "algorithm": "tree_shap",
     "mean_abs_contribution": [{"factor": "vehicle_group_rated", "value": 0.181},
                               {"factor": "driver_age_banded", "value": 0.144}],
-    "dependence_blob": "blob:sha256:…",
+    "dependence_blob": {"sha256": "9f2c9f2c9f2c9f2c9f2c9f2c9f2c9f2c9f2c9f2c9f2c9f2c9f2c9f2ca1b2c3d4", "bytes": 48211, "media_type": "application/vnd.apache.parquet"},
     "top_interactions": [{"pair": ["driver_age_banded", "ncd"], "strength": 0.041,
                           "holdout_strength_ratio": 0.83}]
   },
@@ -1860,14 +1886,14 @@ backtests must mint a fresh `(model, version)` pair per test, which
 
 ```json
 {
-  "id": "uuid", "slug": "capped-gamma-nll", "version": 2,
+  "id": "0190b5a2-7c3e-7a10-9d21-4f6b8c2e1a01", "slug": "capped-gamma-nll", "version": 2,
   "kind": "template", "template": "capped_gamma",
   "params": {"cap": 250000},
   "applicability": {"responses": ["claim_severity"], "backends": ["xgboost", "lightgbm"],
                     "offset_required": false, "y_domain": {"min_exclusive": 0.0}},
   "direction": "lower_is_better",
   "status": "approved",
-  "certificate_id": "uuid", "approval_request_id": "uuid",
+  "certificate_id": "0190b5a2-7c3e-7a10-9d21-4f6b8c2e1a01", "approval_request_id": "0190b5a2-7c3e-7a10-9d21-4f6b8c2e1a01",
   "description": "Gamma NLL with losses capped at 250k, for early stopping on large-loss-heavy severity fits"
 }
 ```
