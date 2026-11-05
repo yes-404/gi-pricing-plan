@@ -383,21 +383,18 @@ def _approve_over_the_api(
     assert decided.status_code == 200, decided.text
 
 
-def _set_status(model_id: UUID, status: str) -> None:
-    """Put a model in `superseded` directly: the transition into it is
-    `_supersede_earlier_versions`'s and is tested there; this test is about the way out."""
+def _supersede(workspace_id: UUID, actor: Principal, approver: Principal, model_id: UUID) -> None:
+    """Approve `model_id`, then approve its next version, so `_supersede_earlier_versions`
+    moves it to `superseded` — the state the way the service makes it, not an `UPDATE`."""
     from backend.tests.conftest_db import test_database_url
-    from sqlalchemy import update
-
-    from app.db.models import ModelRow
+    from backend.tests.test_model_lifecycle import _approve, _next_version_of
 
     async def run() -> None:
         database = Database(Settings(database_url=test_database_url()))
         try:
-            async with database.unit_of_work() as session:
-                await session.execute(
-                    update(ModelRow).where(ModelRow.id == model_id).values(status=status)
-                )
+            await _approve(database, workspace_id, actor, approver, model_id)
+            second = await _next_version_of(database, workspace_id, model_id)
+            await _approve(database, workspace_id, actor, approver, second)
         finally:
             await database.dispose()
 
@@ -453,9 +450,12 @@ def test_a_superseded_model_is_archived_by_a_fit_holder(
     api_client: TestClient, workspace_id
 ) -> None:
     """`superseded → archived` is an edge, and a model-write holder takes it."""
-    actor, model_id, slug, _ = _fitted(workspace_id)
+    actor, model_id, slug, approver = _fitted(workspace_id)
     reader = _headers(actor.id, workspace_id)
-    _set_status(model_id, "superseded")
+    _supersede(workspace_id, actor, approver, model_id)
+    assert api_client.get(
+        f"/api/v1/models/{slug}", params={"version": 1}, headers=reader
+    ).json()["status"] == "superseded"
     caller = _caller_with(workspace_id, {"model:read", "model:fit"})
     archived = _archive(api_client, model_id, slug, caller, reader)
     assert archived.status_code == 200, archived.text
