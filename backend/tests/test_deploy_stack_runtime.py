@@ -41,6 +41,7 @@ from backend.tests.deploy_stack_helpers import (
     LB_PORT,
     PROJECT,
     ROOT,
+    _build_frontend_from_commit,
     _build_from_commit,
     beat_fixture,  # noqa: F401  (pytest fixture, used by name)
     built_n,  # noqa: F401  (pytest fixture, used by name)
@@ -294,6 +295,76 @@ def test_a_failed_api_roll_leaves_the_pre_roll_replicas_and_no_never_healthy_one
     url, headers, body = _scoring_request()
     statuses = [_score(url, headers, body) for _ in range(20)]
     assert statuses == [200] * 20, f"requests through lb after the failed roll: {statuses}"
+
+
+@pytest.mark.req("NFR-531")
+def test_a_failed_api_roll_leaves_a_stopped_pre_roll_container(
+    shas: tuple[str, str], down: None, tmp_path: pathlib.Path
+) -> None:
+    """FD-1816: a stopped pre-roll container is not the roll's to remove."""
+    n1, n = shas
+    _compose(n1, "up", "-d", "--wait", "--scale", "api=3", "lb")
+    running = sorted(_api_containers())
+    assert len(running) == 3
+    stopped = running[-1]
+    subprocess.run(["docker", "stop", stopped], check=True, capture_output=True)
+    before = sorted(_api_containers_all_states())
+    never_healthy = tmp_path / "docker-compose.never-healthy.yml"
+    never_healthy.write_text(
+        "services:\n"
+        "  api:\n"
+        "    healthcheck:\n"
+        "      test: [\"CMD-SHELL\", \"exit 1\"]\n"
+        "      interval: 2s\n"
+        "      timeout: 2s\n"
+        "      retries: 1\n"
+    )
+    result = subprocess.run(
+        [
+            str(ROOT / "deploy" / "roll-api.sh"), "-t", "30", PROJECT,
+            str(ROOT / "deploy" / "docker-compose.yml"),
+            str(ROOT / "deploy" / "docker-compose.isolated.yml"),
+            str(never_healthy),
+        ],
+        env={**os.environ, "GIP_BUILD": n, "GIP_LB_PORT": LB_PORT},
+        capture_output=True, text=True,
+    )
+    print(result.stdout, result.stderr)
+    assert result.returncode != 0, "the roll must fail when no new replica turns healthy"
+    remaining = sorted(_api_containers_all_states())
+    assert stopped in remaining, f"cleanup removed the stopped pre-roll container {stopped}"
+    assert remaining == before
+
+
+@pytest.mark.req("FR-432")
+def test_the_frontend_serves_the_spa_and_reaches_the_api_through_lb(
+    built_n: str, down: None  # noqa: F811
+) -> None:
+    """FR-432: the image built from a clean copy of the commit serves `/`, falls back to the SPA
+    for a deep route, and proxies `/api/` to `lb`, so the answer is the API's, never nginx's 502."""
+    print(f"frontend image built from commit {built_n}")
+    _build_frontend_from_commit(built_n)
+    _compose(built_n, "up", "-d", "--no-build", "--wait", "frontend")
+    port = _compose(built_n, "port", "frontend", "80").stdout.strip().rsplit(":", 1)[-1]
+
+    def fetch(path: str) -> tuple[int, str, bytes]:
+        try:
+            with urllib.request.urlopen(f"http://127.0.0.1:{port}{path}", timeout=10) as r:
+                return int(r.status), r.headers.get("Content-Type", ""), r.read()
+        except urllib.error.HTTPError as exc:
+            return exc.code, exc.headers.get("Content-Type", ""), exc.read()
+
+    status, ctype, _ = fetch("/")
+    print(f"GET / -> {status} {ctype}")
+    assert status == 200 and "text/html" in ctype
+    status, ctype, _ = fetch("/data/some-dataset/rules")
+    print(f"GET /data/some-dataset/rules -> {status} {ctype}")
+    assert status == 200 and "text/html" in ctype, "the history fallback must serve the SPA"
+    status, ctype, body = fetch("/api/v1/auth/config")
+    print(f"GET /api/v1/auth/config -> {status} {ctype}")
+    assert status != 502, "nginx could not reach lb"
+    assert "json" in ctype, f"not the API's answer: {ctype} {body[:80]!r}"
+    json.loads(body)
 
 
 # -- PL-1690 E4.3: delivery, not declaration -------------------------------------------------

@@ -289,18 +289,30 @@ def api(method: str, path: str, headers: dict[str, str], body: Any = None) -> An
 _compose = compose
 
 
-def _build_from_commit(sha: str) -> None:
-    """Build `gi-pricing-app:<sha>` from `git archive <sha>`, so the image is that commit's."""
+def _docker_build_from_commit(sha: str, *build_args: str) -> None:
+    """`docker build <build_args> .` in a clean `git archive <sha>` copy: the image is that commit's."""
     with tempfile.TemporaryDirectory() as tmp:
         archive = subprocess.run(
             ["git", "-C", str(ROOT), "archive", sha], check=True, capture_output=True
         ).stdout
         subprocess.run(["tar", "-x", "-C", tmp], input=archive, check=True)
-        subprocess.run(
-            ["docker", "build", "-f", "deploy/Dockerfile", "--build-arg", f"GIP_BUILD={sha}",
-             "-t", f"gi-pricing-app:{sha}", "."],
-            cwd=tmp, check=True,
-        )
+        subprocess.run(["docker", "build", *build_args, "."], cwd=tmp, check=True)
+
+
+def _build_from_commit(sha: str) -> None:
+    """Build `gi-pricing-app:<sha>` from `git archive <sha>`, so the image is that commit's."""
+    _docker_build_from_commit(
+        sha, "-f", "deploy/Dockerfile", "--build-arg", f"GIP_BUILD={sha}",
+        "-t", f"gi-pricing-app:{sha}",
+    )
+
+
+def _build_frontend_from_commit(sha: str) -> None:
+    """Build `gi-pricing-frontend:<sha>` the same way (FR-432). `docker build`, not `compose
+    build`: the box's buildx is below the 0.17.0 `compose build` needs (PL-1688)."""
+    _docker_build_from_commit(
+        sha, "-f", "deploy/frontend.Dockerfile", "-t", f"gi-pricing-frontend:{sha}"
+    )
 
 
 @pytest.fixture
