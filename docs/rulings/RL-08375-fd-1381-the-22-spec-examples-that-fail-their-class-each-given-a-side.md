@@ -1,7 +1,7 @@
 ---
 id: RL-8375
 family: ruling
-title: FD-1381 TRACK A — the 22 spec examples that fail their class, each given a side (11 spec wrong, 9 fragment by design, 2 code wrong)
+title: FD-1381 TRACK A — the 22 spec examples that fail their class, each given a side (10 spec wrong, 9 fragment by design, 1 spec ahead of code, 2 code wrong)
 status: active                 # active → superseded | retired (§1.2a) — a ruling opens active
 created: 2026-11-05            # drafted under working id 8375
 owner: decision-maker
@@ -22,6 +22,10 @@ relates: [FD-1381, FD-1281, FD-1374, RL-1522, RL-1301, RL-1311, RL-1263]
   `to-lead.md` "2026-11-05 16:11:50 GMT": DP-4 (b), *"every one of the 22 gets a recorded side"*. The discharge is
   `FD-1381`'s item 1: the spec example is never matched to the code silently, and where the code is wrong that is its own
   finding.
+- **Accepted, with three rulings.** `to-lead.md` "2026-11-05 16:31:45 GMT" accepted the 22 rows otherwise and ruled three: (1) row 5's
+  finding is FD 8379 (working id), MEDIUM, owner WK-1178; (2) row 19 is not spec wrong but spec ahead of code, and its block
+  splits; (3) `07:234` as `JobError` is accepted as a correction by that dated line, and the hidden-validator fixes at `01:224`,
+  `02:544` and `02:690` are accepted. Those rulings are applied below.
 - **The tree.** `origin/main` `bdad132291fdc05fe233d3ddc946e413dcbd2e1f`, tree `850cf225`. **Every line number here holds
   at this commit only** (G7). `NN:line` is the opening fence line in `docs/specs/NN-*.md`.
 - **Not ruled here.** No spec text, code or fence line changes in this record. T3 applies the fixes; S4 of SL 8373 applies
@@ -57,13 +61,15 @@ table, with three corrections to what that table can show:
 
 ## Ruled
 
-Every one of the 22 has the side, the fix and the mark in **The 22**, under these four rules:
+Every one of the 22 has the side, the fix and the mark in **The 22**, under these rules:
 
 - **`schema=<Class>` wherever a block can validate without losing what it exists to show.** A fragment gains the fields
   rather than a mark: an `illustrative` block is never read again, which is the class of defect `FD-1381` records.
-- **`illustrative` on a row of the 22 needs one of two grounds.** Either it is an elision or a union template shown not to
-  contradict the class (rows 15 and 17; **Proof** below), or it is a code-wrong row carried by a finding (rows 5 and 18).
-  Nothing else; so no `illustrative` here turns the check green over an unrecorded disagreement.
+- **`illustrative` on a row of the 22 needs one of three grounds.** It is an elision or a union template shown not to contradict
+  the class (rows 15 and 17; **Proof** below), or a code-wrong row carried by a finding (rows 5 and 18), or the worked statement
+  of a live requirement ahead of the code, with its owner on a dated line (row 19's second block). Nothing else; so no
+  `illustrative` here turns the check green over an unrecorded disagreement. DP-4's objection does not apply to row 19: its target
+  was a mark that hides a disagreement, and here the record states it (`to-lead.md` "2026-11-05 16:31:45 GMT" (2)).
 - **A dated note is a record and is not edited.** Where a note says the example is flat, or is not rewritten, T3 leaves it and
   appends a dated line citing this ruling.
 - **The keys and the side are this ruling's; the literal values are T3's** (uuids, hashes, timestamps). A block that does not
@@ -71,7 +77,7 @@ Every one of the 22 has the side, the fix and the mark in **The 22**, under thes
 
 ### The 22
 
-Side counts: **spec wrong 11, fragment by design 9, code wrong 2.** Sum 22, equal to T1's count. A row with any code-wrong limb
+Side counts: **spec wrong 10, fragment by design 9, spec ahead of code 1, code wrong 2.** Sum 22, equal to T1's count. A row with any code-wrong limb
 counts as code wrong.
 
 | # | Block | Class | Side | The spec says | The code says | Fix (T3) | Mark (S4) |
@@ -80,7 +86,7 @@ counts as code wrong.
 | 2 | `01:224` | `Dataset` | fragment by design | Omits the envelope by §4's stated convention: "every entity also carries the `ArtifactEnvelope`" | `datasets.py`: `id`, `workspace_id`, `created_at` required; `latest_version` and `latest_version_status` are "one fact" (`:224`) | **Fields.** Add `id`, `workspace_id`, `created_at`, `latest_version_status`; literal uuids | `schema=Dataset` |
 | 3 | `01:329` | `ValidationRule` | spec wrong | `"owner": "pricing-actuary@example.com"` | `validation.py:83`: no `owner`, `extra="forbid"`. `validation-rule.schema.json`'s description, reconciled 2026-08-23, already records `owner` as "carried by no field of the model". No FR names a rule owner | Remove `owner`; add `id` and `version` | `schema=ValidationRule` |
 | 4 | `01:346` | `ValidationRuleSet` | spec wrong | `"rules": [{"rule_id": …, "rule_version": 2, "enabled": true, "severity_override": null}]` | `validation.py:157`: `entries: tuple[RuleSetEntry, ...]`, each embedding the whole `rule` (`:115`). `GET`/`PUT …/rule-set` return that class (`api/validation.py:422`, `:439`). The `PUT` body is `rules` of `rule_id`, `enabled`, `severity_override` (`RuleSetReplace`, `:124`), with no `rule_version` | Replace `rules` by `entries`, one entry embedding row 3's fixed rule; add `id`; literal uuids. Dated line under the 2026-08-15 note: the read shape is `entries`, the `PUT` body is `rules`, and neither has the printed `rule_version` | `schema=ValidationRuleSet` |
-| 5 | `01:550` | `ValidationReport` | **code wrong** (wire) + spec wrong (limbs) | Prints `overall` and `counts`; the authored `validation-report.schema.json:7-8` requires both. Also `evidence_blob`, and `overall` as a four-way string | `validation.py:556`, `:567`: plain properties, so `GET /validation-reports/{report_id}` (`api/validation.py:146`) omits both, as does `generated.json`'s `ValidationReport`. `RuleResult` (`:510`) has no `evidence_blob`, nothing builds one, and FR-49 does not list one; the authored contract's nullable entry (`:59`) is the only other trace | Spec limbs only: add `id`, literal uuids, remove `evidence_blob`, `"overall": "pass_with_warnings"`. **Keep `overall` and `counts`.** Dated line naming the finding of **Code wrong** below | `illustrative` until that finding closes |
+| 5 | `01:550` | `ValidationReport` | **code wrong** (wire) + spec wrong (limbs) | Prints `overall` and `counts`; the authored `validation-report.schema.json:7-8` requires both. Also `evidence_blob`, and `overall` as a four-way string | `validation.py:556`, `:567`: plain properties, so `GET /validation-reports/{report_id}` (`api/validation.py:146`) omits both, as does `generated.json`'s `ValidationReport`. `RuleResult` (`:510`) has no `evidence_blob`, nothing builds one, and FR-49 does not list one; the authored contract's nullable entry (`:59`) is the only other trace | Spec limbs only: add `id`, literal uuids, remove `evidence_blob`, `"overall": "pass_with_warnings"`. **Keep `overall` and `counts`.** Dated line naming FD 8379 | `illustrative`, naming FD 8379, until it lands |
 | 6 | `02:421` | `Factor` | fragment by design | Omits the envelope, §4's convention | `id` required | **Fields.** Add `id`; literal uuids | `schema=Factor` |
 | 7 | `02:544` | `Grouping` | spec wrong | `target_level_stats` carries `"relativity": 0.78`; `mapping` holds `"…": "…"` | `modelling.py:563`: `tuple[OneWayRow, ...]`; `profiles.py:137` has no `relativity`. FR-107 asks for Level statistics and the change in fit, not a relativity | Remove `relativity`. Replace the `"…"` entry with a real entry mapping a source level to `G4`, so `default_target_level` is a target level. Literal uuids | `schema=Grouping` |
 | 8 | `02:690` | `GlmSpec` | fragment by design | "`GlmSpec` adds:" (`02:688`), the arm's own fields only | `model_family_slug`, `dataset_version_id`, `response_column` required; a Poisson spec needs `offset` (`modelling.py:1222`) | **Fields.** Add those three and `"offset": {"kind": "log_column", "column": "exposure_years"}`, §4.4's own common-block value. Reword `02:688` to say the example also carries the required common fields | `schema=GlmSpec` |
@@ -94,7 +100,7 @@ counts as code wrong.
 | 16 | `03:1024` | `Deployment` | spec wrong | `"bundle_hash": "sha256:9f2c…"`, truncated | `deployments.py:49`, 64 hex; every other value in the block is literal | A full 64-hex value | `schema=Deployment` |
 | 17 | `04:254` | the four rating `*Operation` classes | fragment by design | `kind` lists all four and `parameters` all their keys: a template of the union, explained by the list after it | `rating.py:1464`, `:1468`, `:1472`, `:1476`, not in `model_schema.__all__`, so no marker can name them. Each kind with its FR-233 parameters, all else as printed, passes `BulkOperation` | **`illustrative`.** No text change | `illustrative` |
 | 18 | `06:346` | `ApprovalPolicy` | **code wrong** (`FD-1281`) | `expedited` (FR-385) and `separation_of_duties` | `approvals.py:250`: neither; a flat `submitter_may_approve`. FR-385 is unbuilt, owner WK-677 | **No text change.** Not re-ruled: `FD-1281` is active and its Disposition settles the shape when that Work builds FR-385 or amends §4.2. No new finding | `illustrative` until `FD-1281` closes |
-| 19 | `06:462` | `ApprovalRequest` | spec wrong | `expedited`, `evidence_bundle`, `checklist`, `flags` | `approvals.py:490`: none. `RL-1522` DP-4 (a) ruled them "not fields of the shape now"; FR-352's limbs and FR-385 stay owned by WK-677, a P3 Work | Remove the four; add `id`, `workspace_id`; literal uuids. Dated line under the note at `06:492`: the example now validates, and that note's "illustrates FR-352's full submission" no longer describes it. The same line names `checklist`'s item keys (`item`, `checked`, `by`, `auto_verified`) so the shape stays on record. FR-352 is not amended | `schema=ApprovalRequest` |
+| 19 | `06:462` | `ApprovalRequest` | **spec ahead of code**, owner WK-677 | `expedited`, `evidence_bundle`, `checklist`, `flags`: the block "illustrates FR-352's full submission" (`06:496`). FR-352 is unamended, and this is the only worked statement of it | `approvals.py:490`: none of the four. `RL-1522` DP-4 (a) ruled them "not fields of the shape now", kept the example on purpose, and left FR-352's checklist and evidence limbs with WK-677, a P3 Work | **Split.** First block: the printed block less the four keys, plus `id` and `workspace_id`, literal uuids. Second block, directly after it: `change_summary`, the third thing FR-352 names, and the four keys verbatim, as printed. After it a dated line naming WK-677 and `RL-1522`, saying which block validates and which is FR-352's full submission. FR-352 is not amended, and the note at `06:492` is not edited | First block `schema=ApprovalRequest`; second block `illustrative` |
 | 20 | `06:536` | `AuditEvent` | spec wrong | `"id": "01J…"`, truncated hashes | `audit.py:78`: `id` a UUID, as ID-1 says; both hashes 64 hex (`:86`, `:93`) | Literal uuids; full hashes | `schema=AuditEvent` |
 | 21 | `07:234` | `JobError` (T1, item 2) | fragment by design | `{"error": {…}}`, the one member of a failed Job | `jobs.py:174`: the inner object passes as printed | **Fields, by narrowing.** Drop the wrapper; the block is the `JobError`. Reword `07:232` to say it is `Job.error` on a failed Job | `schema=JobError`, not `Job` |
 | 22 | `07:248` | `Environment` | spec wrong | No `slug`; `settings`; truncated hash | `deployments.py:59`. The notes at `07:262` and `07:268` already record both, each saying "The example above is not rewritten" (`RL-1301` A.6; `RL-1311`) | Add `"slug": "prod"`; remove `settings`; a full hash. Dated line after those notes that the example is now rewritten | `schema=Environment` |
@@ -102,25 +108,29 @@ counts as code wrong.
 **Proof.** `fix_proof.py` applies each fix above to the spec's own block at the base, and each named row passes
 `model_validate`, the model validators included: 27 `PASS` lines, among them all four kinds of row 17 and row 15 with its
 elisions filled. The one `FAIL` line is `02:544` with its `mapping` left as printed, which is why row 7 replaces that entry.
-Row 18 is not in the script, having no fix. Row 5's block passes with `overall` and `counts` removed, so its code-wrong limb is
+Row 18 is not in the script, having no fix. Row 19's line is its first block, the printed block less the four keys, plus `id` and
+`workspace_id`. Row 5's block passes with `overall` and `counts` removed, so its code-wrong limb is
 the only thing keeping it `illustrative`. T3 re-runs the script at its own base, since slice C changes `model_schema/refs.py`.
 
-**End state, for S4 and A9.** Of the 62: `schema=` 32 (the 12 that pass, `01:809` and `02:1861` after T3, and 18 of these 22);
-`illustrative` 30 (the 6 with no class, the 20 that do not parse, and rows 5, 15, 17, 18). 32 + 30 = 62.
+**End state, for S4 and A9.** Row 19's split adds one `json` block, so the 62 become 63. `schema=` 32 (the 12 that pass, `01:809`
+and `02:1861` after T3, and 18 of these 22, row 19's first block among them); `illustrative` 31 (the 6 with no class, the 20 that do
+not parse, rows 5, 15, 17, 18, and row 19's second block). 32 + 31 = 63.
 
 ### Code wrong
 
-- **Row 5: a new finding, for the lead to file; no id minted here.** `GET /api/v1/validation-reports/{report_id}` omits
-  `overall` and `counts`, which `01` §4.6 and the authored contract state. **Why the code and not the spec.** The other three
-  statements agree: the example, the authored contract's `required`, and `ReportSummary`, the sibling route, which does carry
-  `overall` (`api/dataset_versions.py:188`). The model's own sibling calls this exact omission a defect: *"A plain `@property`
-  is not serialised … A client deriving it from `entries` would be a second implementation of the rule"* (`validation.py:187`,
-  `ValidationRuleSet.empty_layers`). Row 13's `kinds` looks the same and is not: it is in neither contract and has a recorded
-  reason. For `overall`, `grep -rln 'ValidationReport.overall\|`overall`' docs/rulings docs/findings` at this tree prints
-  three records, and each is about another `overall` (`RL-1900`, `RL-1172`, `FD-1512`). **Trap for whoever fixes it.** The
-  stored body is `report.model_dump(mode="json")` (`platform/validation.py:114`), read back by `model_validate` (`:154`) under
-  `extra="forbid"`, so a bare `@computed_field` writes keys the read then refuses. **It does not widen TRACK A.** Until it
-  closes the block is `illustrative` and `ILLUSTRATIVE_CEILING` counts it.
+- **Row 5: FD 8379 (working id; the real id comes at its mint), CONFIRMED, MEDIUM, owner WK-1178** (`to-lead.md`
+  "2026-11-05 16:31:45 GMT" (1)). `GET /api/v1/validation-reports/{report_id}` omits `overall` and `counts`, which `01` §4.6 and
+  the authored contract state. **Why the code and not the spec.** The other three statements agree: the example, the authored
+  contract's `required`, and `ReportSummary`, the sibling route, which does carry `overall` (`api/dataset_versions.py:188`). The
+  model's own sibling calls this exact omission a defect: *"A plain `@property` is not serialised … A client deriving it from
+  `entries` would be a second implementation of the rule"* (`validation.py:187`, `ValidationRuleSet.empty_layers`). Row 13's
+  `kinds` looks the same and is not: it is in neither contract and has a recorded reason. For `overall`, `grep -rln
+  'ValidationReport.overall\|`overall`' docs/rulings docs/findings` at this tree prints three records, and each is about another
+  `overall` (`RL-1900`, `RL-1172`, `FD-1512`). **The constraint is the maintainer's, not this record's.** The stored body is
+  `report.model_dump(mode="json")` (`platform/validation.py:114`), read back by `model_validate` (`:154`) under `extra="forbid"`.
+  Stored bytes stay unchanged, old bodies still read, and `overall` is never written into the stored body, so a bare
+  `@computed_field` is refused. The fix is its own slice riding SL 8373's gate, before the freeze. **It does not widen TRACK A.**
+  Until it lands the block is `illustrative`, naming FD 8379, and `ILLUSTRATIVE_CEILING` counts it.
 - **Row 18: `FD-1281`, existing.** No new finding.
 
 ### Noticed, not ruled
@@ -142,7 +152,8 @@ Nothing. DP-4's fallback is not used.
 - **T3 (executor):** rows 1 to 14, 16 and 19 to 22, one commit per spec, each citing this ruling. Rows 15, 17 and 18 have no
   text change. A3 holds on this list: every fix is in a §4 section, and none is in `06` §4.1, the section SL 8361 shares.
 - **S4 of SL 8373:** the Mark column. Row 21 is `schema=JobError`.
-- **The lead:** row 5's finding, whose id T3's dated line and A2 then name.
+- **T3 also:** a dated line on PL 8372 moving its 62 to 63 for row 19's new block (`to-lead.md` "2026-11-05 16:31:45 GMT" (2)), and
+  citing FD 8379 by its working id on row 5.
 
 ## Acceptance — the violation that must become detectable
 
@@ -152,6 +163,6 @@ not pass. This ruling adds no script; these are the checks.
 1. **Every row has a side (A1).** `grep -cE '^\| [0-9]+ \| `[0-9]{2}:[0-9]+` \|' <this file>` prints 22.
 2. **Each fix passes, until check 40 lands.** `fix_proof.py` at T3's base prints no `FAIL` line but the one for `02:544` as printed.
    Once T3 has merged, the blocks themselves are the input, and `tests/test_spec_examples.py` of SL 8373 (A11) reads them.
-3. **No other `illustrative` on this list.** After S4, of these 22 fences only rows 5, 15, 17 and 18 carry `illustrative`, and each
-   of the others carries the class in its Mark column. Check 40's note line must then read 62 blocks, 32 `schema`, 30 `illustrative`,
-   0 unmarked, unless a dated line moves a block.
+3. **No other `illustrative` on this list.** After S4, of these 22 fences only rows 5, 15, 17 and 18 carry `illustrative`, with row 19's
+   new second block, and each of the others carries the class in its Mark column. Check 40's note line must then read 63 blocks,
+   32 `schema`, 31 `illustrative`, 0 unmarked, unless a dated line moves a block.
