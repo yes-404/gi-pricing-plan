@@ -24,8 +24,13 @@ relates: [OQ-1692, FD-1691, SL-1675, PL-1674, FR-111, FR-171, FR-183, FR-184, FR
 
 ## Authority
 
-**The ruling, closed, verbatim** (the maintainer's entry "2026-11-05 11:50:05 GMT" in
+**The ruling of record is the correction, closed, verbatim** (the maintainer's entry "2026-11-05 11:55:25 GMT" in
 `~/gi-pricing-plan.local/channel/to-lead.md`):
+
+> OQ-1692 RULING CORRECTED (my 11:50:05) and PLAN M. CORRECTION, verified at origin/main 2f108b1e: `_weights` (diagnostics.py:133–139) returns the OFFSET column first, so on a frequency model it is exposure, and "Σw·y / Σw·μ with `_weights`" would be the double count the same ruling forbids — the two clauses could not both hold; the GUARD is the substance and the `_weights` clause is STRUCK by this dated line. THE DEFINITION OF RECORD: A/E = Σw·y / Σw·μ where w = `ae_weights` = the model's DECLARED WEIGHT COLUMN, else 1 — severity: the claim count; frequency (exposure offset, `mu` already the expected count): 1, so Σy / Σμ unchanged; a pure-premium model lands on exposure only when it declares exposure as its weight column, and on 1 when it carries exposure as an offset (`mu` is then the expected total), which is the same principle — the weight is whatever makes w·y the aggregate, and an offset has already put the aggregate in `mu`. `_weights` stays for calibration, unchanged. T2's mutation swaps `_weights` back in and the frequency fixture catches the double count — that is the red the ruling asked for. FR-171/183/184's dated lines carry THIS wording, not 11:50's. DP-M1 (by-level `ci_95`, :406): `ratio·z/√Σw` under a weight column, byte-identical for frequency — ACCEPTED, the byte-identity proven by the frequency fixture's before/after, not asserted. DP-M2 (comparison.py:274's own unweighted `ae_overall`, verified): the SAME `ae_weights` — ACCEPTED; the comparison table and the Diagnostics page must print one number. DP-M3 (offset AND weight column both declared): the weight column — ACCEPTED as the rule, R0 enumerates the tree and quotes the count (expected 0); a hit is reported before T1, not resolved silently; R0 also enumerates the pure-premium case (how each burning-cost spec in the tree declares exposure) and quotes it. COUNT: "15" was my number from one predicate and does not travel — at 2f108b1e `git grep -lE ae_overall 2f108b1e -- '*test*'` prints 21 and `… -- 'packages/*/tests/*.py' 'backend/tests/*.py'` prints 15; the LG states its own predicate verbatim and the number it prints, and lists every file whose expected values move with each new value shown as the weighted sum. A moved value on a no-weight model = STOP (A9). SL-1913: any rehearsal note pinning a severity A/E is re-derived by dated line, named in the LG. The ~20 min window after the mutation, before the SOLO gate, ACCEPTED — moved values are read there first. PLAN M ACCEPTED at 6b85918a (PL 8358 / SL 8359 / LG 8360, base 2f108b1e, 6 h, SOLO gate after R, A and D) subject to the planner's FINAL head: if it moves, the lead names the delta and I accept on the diff as with G. The 11:50 fallback stands: chain slipping at the Tue 10 18:00 census → (a) with a named carry, the OQ open with this ruling recorded as deferred.
+
+**The ruling it corrects, for the record** (the entry "2026-11-05 11:50:05 GMT"; **its `_weights` clause is STRUCK** by the entry above, and FR-171, FR-183 and FR-184
+carry the correction's wording, not this one's):
 
 > OQ-1692 RULED (b) — A/E for a diagnostic partition is WEIGHTED BY THE DECLARED SCHEME: overall and by-level A/E = Σw·y / Σw·μ with
 > `_weights` (diagnostics.py:132–139) under the scheme `_weighting` records on the partition (:444), as calibration already does
@@ -59,11 +64,11 @@ Every cite was read at `origin/main` `2f108b1eda22a4835279cee9b4c9e305babe3662`,
 
 - **The defect.** `_partition` (`:353`): `exposure = _weights(spec, data)` (`:380`), `scheme = _weighting(spec)` (`:381`), `ae_overall = Σy / Σmu`
   (`:383-385`); by level `actual`, `expected`, `ratio` (`:393-400`). Calibration divides by `bin_exposure`.
-- **The ruling's `_weights` and its guard are not one function, and the plan must not read them as one.** `_weights` (`:135-141`) returns the
+- **`_weights` and the guard are not one function** (the correction, 11:55:25). `_weights` (`:135-141`) returns the
   **offset column first**, then the weight column, then ones, and calibration needs that. For a frequency model it returns exposure. `Σ exposure·y /
-  Σ exposure·μ` is the double count the guard forbids. **So A/E needs its own selection:** a declared weight column, else ones. A frequency or
-  burning-cost model (offset, no weight column) gets 1, unchanged. Severity (weight column, the claim count) moves. A pure premium per unit
-  (weight column, exposure) moves. That is the guard's three cases in one rule, and `_weights` stays as it is for calibration, lift and the
+  Σ exposure·μ` is the double count the guard forbids. **So A/E needs its own selection:** a declared weight column, else ones. A frequency model
+  or a pure premium carrying exposure as an offset gets 1, unchanged. Severity (weight column, the claim count) moves. A pure premium declaring
+  exposure as its weight column moves. That is the definition of record in one rule, and `_weights` stays as it is for calibration, lift and the
   deviance.
 - **`_weighting` (`:124-133`)** returns `EXPOSURE` for an offset, `CLAIM_COUNT` for a weight column, else `COUNT`. A weight column holding exposure is
   therefore labelled `CLAIM_COUNT`. Pre-existing; the label cannot grow a value (no contract widening), so FR-184's clause says "the declared weight".
@@ -78,7 +83,8 @@ Every cite was read at `origin/main` `2f108b1eda22a4835279cee9b4c9e305babe3662`,
   `test_api_backtests.py`, `test_backtests.py`, `test_diagnostics.py`, `test_ebm_model_jobs.py`, `test_glm_approximation_model.py`, `test_model_jobs_gbm.py`,
   `test_wf01_journey.py`; `frontend/src/views/__tests__/fixtures.ts`; model-schema `test_backtests.py`, `test_comparison.py`,
   `test_cross_validation_diagnostics.py`, `test_partition_zero_weight_count.py`; pricing-core `test_backtests.py`, `test_comparison.py`, `test_diagnostics.py`, and
-  `test_gbm.py` (16 by this predicate: the ruling's 15 is the triage's count, and the LG lists what the predicate prints). Most construct shapes or use
+  `test_gbm.py` (16 by this predicate, which includes the frontend fixture. **The count does not travel** (11:55:25): the LG states its own predicate
+  verbatim and the number it prints). Most construct shapes or use
   frequency fits, so **few values are expected to move.** Which do is found by running them, not assumed.
 - **The spec.** FR-171 (`02:303`), FR-183 (`:315`), FR-184 (`:316`). OQ-1692: `02:3417` and `docs/open-questions.md:122`. The §4 example `:1698` (`"ae_overall",
   "weighting": "exposure"`) stands. `02:2997`: "`05` reuses `compute_diagnostics`' A/E computation on live data", so monitoring inherits this.
@@ -87,13 +93,9 @@ Every cite was read at `origin/main` `2f108b1eda22a4835279cee9b4c9e305babe3662`,
 
 ## Decision points
 
-The formula, the guard, the spec, the fixtures, the close and the fallback are ruled. Two consequences are not:
-
-| DP | Question | Options | Recommendation |
-|---|---|---|---|
-| DP-M1 | The by-level interval, once `actual` is a weighted sum. | (a) **`half = ratio · z / √N`, where N is `Σw` in the cell under a weight column and `actual` otherwise.** Identical for frequency (`z·√actual/expected` = `ratio·z/√actual`), and it keeps the comment's meaning, the claim count as the only random quantity. (b) Leave the line. `√(total cost) / expected`: narrower or wider by an accident of currency. (c) Drop the interval for weighted cells. A contract-legal `None`, and a thin cell loses its warning. | **(a).** The line must change or be wrong in a new way, and frequency's bytes do not move. It changes a number the ruling did not name, so **it needs the maintainer's word.** For a weight column holding exposure, N is exposure, not claims: the interval is then an approximation, and the code comment says so. |
-| DP-M2 | The comparison's `ae_overall` (`comparison.py:274`). | (a) **The same weights, one helper:** `ae_weights(spec, frame)`, public in `diagnostics.py`. One name, one statistic. (b) Leave it. Scope is the ruling's letter, and a severity comparison disagrees with the same models' Diagnostics page. | **(a).** Otherwise the table the actuary compares models on contradicts the headline the ruling fixed. |
-| DP-M3 | A spec with an offset **and** a weight column. `_weighting` says `EXPOSURE`, and the rule above takes the weight column. | (a) **The weight column.** `mu` carries the offset, and the weight is what multiplies the row; the partition's label stays `EXPOSURE`, which `_weighting` owns. (b) 1. Reads the guard's "`mu` already carries exposure" literally, and drops a declared weight. | **(a),** and the LG counts how many specs in the suite and the seed declare both. Expected none. |
+**None open.** All three are ruled by the entry "2026-11-05 11:55:25 GMT": DP-M1 `ratio·z/√Σw` under a weight column, "the byte-identity proven by the frequency fixture's
+before/after, not asserted"; DP-M2 the same `ae_weights` in `comparison.py`; DP-M3 the weight column, "a hit is reported before T1, not resolved silently". For a weight column
+holding exposure, Σw is exposure, not claims, so the interval there is an approximation, and the code comment says so.
 
 ## Acceptance Standard
 
@@ -114,13 +116,13 @@ The slice:
   the base with that per-row value.
 - **A4. The frequency guard.** T2, varying exposure: `ae_overall` equals Σy / Σμ **before and after**, quoted at base and head; by-level likewise. A mutation using
   `_weights` in place of the A/E weight reds it: the double count is shown caught.
-- **A5. The pure premium.** T3: a per-unit response with a weight column gives Σ exposure·y / Σ exposure·μ.
+- **A5. The pure premium, both declarations.** T3: exposure declared as the weight column gives Σ exposure·y / Σ exposure·μ; exposure carried as an offset gives Σy / Σμ.
 - **A6. By level.** T4: a cell's `actual`, `expected` and `ae` are the weighted sums, and `ae_overall` is the total of the same sums.
-- **A7. The interval,** as DP-M1 rules: T5, and frequency's `ci_95` byte-identical at base and head.
-- **A8. The comparison,** as DP-M2 rules: T6.
-- **A9. The test files.** LG 8360 lists every file the predicate prints, each `no value moved` or the moved values. **Each new expected value is shown as the weighted
+- **A7. The interval,** `ratio·z/√Σw` under a weight column: T5, and frequency's `ci_95` byte-identical, **proven by the frequency fixture's before and after at base and head, not asserted**.
+- **A8. The comparison:** T6: `comparison.py`'s `ae_overall` and the Diagnostics partition print one number on one fixture, by one `ae_weights`.
+- **A9. The test files.** LG 8360 states its own predicate verbatim and the number it prints, and lists every file whose expected values move. **Each new expected value is shown as the weighted
   sum, not retyped** (the ruling): in the test as an expression where it can be, else derived in the LG from the fixture's rows. A value that moves on a model with no
-  weight column is a STOP: the guard failed.
+  weight column is a STOP: the guard failed. **SL-1913:** any rehearsal note pinning a severity A/E is re-derived by dated line, named in the LG.
 - **A10. Both mirrors.** `git grep -n 'OQ-1692' -- docs/specs/02-modelling.md docs/open-questions.md` shows DECIDED in both, the same wording, and `audit-docs.py`'s mirror
   checks pass.
 - **A11. The gate and the records.** The GREEN set by import closure (common seat brief, item 29). **The full code gate, both halves, SOLO, its own, never a ride** (triage2
@@ -141,8 +143,8 @@ The slice:
 ## Needs
 
 No DB window of its own: T1 to T6 are pricing-core tests through `~/gi-pricing-plan.local/handover/run-small.sh`. The backend files among the 15 are DB-backed and are proved in
-the gate; **reading which move needs either the gate or a lead-granted DB window** (about 20 min, a `createdb -T` copy, **never the template**, Redis `-n 11`, `12` or `13`, never
-db 0, which is live, ending with the two quoted zeros). Recommended: the window, since a first sight of moved values inside a 2.5 h gate costs a re-gate. No docker beyond that;
+the gate, but **moved values are read first in a lead-granted DB window** (ruled; about 20 min, **after the mutation, before the SOLO gate**, a `createdb -T` copy, **never the template**, Redis `-n 11`, `12` or `13`,
+never db 0, which is live, ending with the two quoted zeros). No docker beyond that;
 nothing on the NFR VM.
 
 ## Tasks
@@ -150,10 +152,11 @@ nothing on the NFR VM.
 ### SL 8359 — the weighted A/E
 
 **The row.** Ahead of G (the lead's order). WK-1178. One `sonnet` executor. Requirements: `02` FR-171, FR-183, FR-184, FR-186 (under DP-M2). Register: FD-1691 (MEDIUM), closing at the
-merge. Depends on: DP-M1 to DP-M3 ruled; the GO; the window; a gate slot, after R, A and D (triage2 §5). **Size:** 6 h (triage2 5 h, plus the interval and the comparison). SOLO gate
+merge. Depends on: the GO; the window; a gate slot, after R, A and D (triage2 §5). **Size:** 6 h (triage2 5 h, plus the interval and the comparison). SOLO gate
 about 2.5 h, not counted. Merged before Thu 12 Nov 2026; still red at Wed 11 Nov 12:00 → the exception list, or the ruled fallback from Tue 10 18:00.
 
-**R0.** Re-read every cite at the base. Run the predicate of A9 and count specs with both an offset and a weight column.
+**R0.** Re-read every cite at the base. Run A9's predicate. **Enumerate over the tree and quote, before T1** (ruled): every spec declaring both an offset and a weight column, count expected 0, a hit reported, not resolved silently; and how each
+burning-cost or pure-premium spec declares exposure, as a weight column or as an offset. Search `examples/`, `scripts/`, `backend/` and `packages/`, with the predicate quoted.
 
 **R1 — red first (uncommitted until R2).** `packages/pricing-core/tests/test_diagnostics.py`, `req("FR-171")` and `req("FR-184")`:
 
@@ -161,38 +164,38 @@ about 2.5 h, not counted. Merged before Thu 12 Nov 2026; still red at Wed 11 Nov
   **Red:** `1.0`.
 - **T2** `test_a_frequency_books_ae_ignores_exposure_because_mu_carries_it`, exposures varying, the expected value written as `sum(y) / sum(mu)`. **Green at base and head;** the
   mutation of A4 is the red.
-- **T3** the pure premium, **T4** by level, **T5** the interval, as ruled.
-- **T6**, `test_comparison.py`, `req("FR-186")`, under DP-M2.
+- **T3** the pure premium, both declarations, **T4** by level, **T5** the interval.
+- **T6**, `test_comparison.py`, `req("FR-186")`.
 
 **R2 — green, one commit (A2).** In `diagnostics.py`, beside `_weights`:
 
 ```python
 def ae_weights(spec: ModelSpecCommon, data: pl.DataFrame) -> npt.NDArray[np.float64]:
-    """The weight that turns the per-row response into its aggregate (OQ-1692, ruled 2026-11-05):
-    the claim count for severity, exposure for a pure premium per unit. A count whose `mu`
-    carries exposure gets 1, so exposure is never counted twice: this is **not** `_weights`,
+    """A/E's weight (OQ-1692, as corrected 2026-11-05 11:55:25): the declared weight column, else 1.
+    Whatever makes w·y the aggregate: an offset has already put the aggregate in `mu`, so a
+    frequency model gets 1 and exposure is never counted twice. This is **not** `_weights`,
     which is the offset first, for calibration."""
     if spec.weight.kind == "column" and str(spec.weight.column) in data.columns:
         return data[str(spec.weight.column)].cast(pl.Float64).to_numpy()
     return np.ones(data.height, dtype=np.float64)
 ```
 
-`_partition`: `w = ae_weights(spec, data)`; `expected_total = Σ w·mu`, `actual_total = Σ w·y`; by level, the same over `mask`, and `half` as DP-M1 rules. `exposure_years` stays
-`Σ exposure`. `comparison.py:274` as DP-M2 rules.
+`_partition`: `w = ae_weights(spec, data)`; `expected_total = Σ w·mu`, `actual_total = Σ w·y`; by level, the same over `mask`, and `half = ratio * _NORMAL_975 / math.sqrt(n)`, `n` being `Σ w[mask]` under a weight column and `actual` otherwise, with the guard on `n > 0`. `exposure_years` stays
+`Σ exposure`. `comparison.py:274`: `Σ w·actual / Σ w·mu` with `ae_weights(candidate.spec, holdout)`.
 
-**The spec, same commit, under `spec-change`, dated, citing the 11:50:05 entry and this plan:**
+**The spec, same commit, under `spec-change`, dated, citing the 11:55:25 entry and this plan, in its wording, not 11:50's:**
 
-- **FR-171:** "Overall and by-level A/E on a partition is Σw·y / Σw·μ, where w turns the per-row response into its aggregate: the declared weight (the claim count for severity, exposure
-  for a pure premium per unit), and 1 for a response whose μ already carries exposure, so exposure is never counted twice."
+- **FR-171:** "A/E = Σw·y / Σw·μ, where w is the model's declared weight column, else 1: the claim count for severity; 1 for frequency, whose μ is already the expected count, so Σy / Σμ
+  is unchanged; a pure-premium model lands on exposure only when it declares exposure as its weight column, and on 1 when it carries exposure as an offset."
 - **FR-183:** the same weighting on train and holdout, so the two sides are one statistic.
 - **FR-184:** the A/E's label is the scheme the partition records.
-- **OQ-1692,** both mirrors, the same wording: DECIDED 2026-11-05: (b), by the entry above, with the guard; (c) not taken.
+- **OQ-1692,** both mirrors, the same wording: DECIDED 2026-11-05: (b) as corrected by the entry above; (c) not taken.
 
 **R3 — the test files.** A9. **G.** A11.
 
 ### Write set
 
-`packages/pricing-core/src/pricing_core/modelling/diagnostics.py`, `comparison.py` (DP-M2); the test files A9 finds moved; `docs/specs/02-modelling.md`, `docs/open-questions.md`; LG 8360 under
+`packages/pricing-core/src/pricing_core/modelling/diagnostics.py`, `comparison.py`; the test files A9 finds moved; `docs/specs/02-modelling.md`, `docs/open-questions.md`; LG 8360 under
 `docs/ledgers/`. At the mint: the SL 8359 row in `docs/roadmap.md`, `docs/INDEX.md`, this plan's `status:`, FD-1691's essay and `docs/findings/register.md`.
 
 ### Files shared with other groups
@@ -202,11 +205,10 @@ def ae_weights(spec: ModelSpecCommon, data: pl.DataFrame) -> npt.NDArray[np.floa
 
 ## Hand-off (not this plan's writes)
 
-- DP-M1 to DP-M3 and the GO: the maintainer. The Tue 18:00 census and the fallback's call: the lead and the maintainer. The window and the gate: the lead. The LG: the executor. The close: the auditor.
-- **For SL-1913 and the demo:** a severity model fitted after this merge shows a different headline A/E from any figure in a rehearsal note. A note or golden that pins one is re-derived, not retyped.
+- The GO: the maintainer. The Tue 18:00 census and the fallback's call: the lead and the maintainer. The window and the gate: the lead. The LG: the executor. The close: the auditor.
+- **For SL-1913 and the demo:** a severity model fitted after this merge shows a different headline A/E from any figure in a rehearsal note. A note that pins one is re-derived by dated line, named in the LG (A9).
 - `05`'s monitoring A/E inherits the definition (`02:2997`): when it is built, its spec says so. No P2 code.
 
 ## Self-review
 
-1. **Every cite was read** at `2f108b1e`. 2. **Requirements by id**, no range. 3. **No placeholder.** 4. **The ruling is verbatim.** It names `_weights`; its own guard requires a different selection, and the Evidence says why, not as a
-departure from the formula but as the guard read to its end. **The maintainer should read that line.** 5. **The red is by cause,** with worked numbers. 6. **The count:** the ruling's 15, the predicate's 16 here, listed. 7. **Calendar:** 10 Nov 2026 is a Tuesday, 12 Nov a Thursday.
+1. **Every cite was read** at `2f108b1e`. 2. **Requirements by id**, no range. 3. **No placeholder.** 4. **The rulings are verbatim:** the correction of 11:55:25 is of record, and 11:50:05 is kept with its struck clause marked. 5. **The red is by cause,** with worked numbers. 6. **The count** does not travel: the LG states its own predicate. 7. **Calendar:** 10 Nov 2026 is a Tuesday, 12 Nov a Thursday.
