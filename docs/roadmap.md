@@ -1274,7 +1274,7 @@ Date-based routing and shadow scoring, both built and default off per environmen
 id: SL-1689
 family: slice
 title: the scheduler (beat) and frontend-image row: FR-432's last two limbs (FR-432, FR-413, FR-406; FD-1661)
-status: draft                  # draft → active → closed | retired (§1.2a)
+status: active                 # draft → active → closed | retired (§1.2a)
 created: 2026-10-12
 owner: planner                   # cut in the map plan (draft); lead dispatches (active)
 tree: 604ea084c96efe93f521fb9ba17738e05241e61a

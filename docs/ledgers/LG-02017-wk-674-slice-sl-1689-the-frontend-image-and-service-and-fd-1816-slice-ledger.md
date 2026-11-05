@@ -1,5 +1,5 @@
 ---
-id: LG-8320
+id: LG-2017
 family: ledger
 title: WK-674 slice SL-1689 — the frontend image and service (FR-432's last limb, FD-1661) and FD-1816, the roll leaves a stopped pre-roll container (slice ledger)
 status: active                 # active → closed (§1.2a)
@@ -9,12 +9,12 @@ tree: ddab6d02ba290810c8cff0e83f4f63b106f41f18   # sl-1689-d-frontend-fd1816, th
 slice: SL-1689
 phase: P2
 work: WK-674
-plans: [PL-8319]
+plans: [PL-2016]
 corrected_by: []
-relates: [FD-1661, FD-1816, PL-8319, FR-432, NFR-531]
+relates: [FD-1661, FD-1816, PL-2016, FR-432, NFR-531]
 ---
 
-# LG-8320 — WK-674 slice SL-1689: the frontend image and service, and FD-1816
+# LG-2017 — WK-674 slice SL-1689: the frontend image and service, and FD-1816
 
 **GO:** the maintainer's entry "2026-11-05 09:58:58 GMT" (to-lead): "ORDER: WK-674's pair first
 (FD-1661 frontend limb + FD-1816, one SOLO compose gate)"; DP-D1 (a) and DP-D2 (docs only) per
@@ -25,7 +25,7 @@ relates: [FD-1661, FD-1816, PL-8319, FR-432, NFR-531]
 
 ### Scope
 
-`PL-8319` (draft branch `draft/pl-d-2026-11-05` at `1f3f67cf`), the SL-1689 row, Tasks R0 to R4 and G.
+`PL-2016` (draft branch `draft/pl-d-2026-11-05` at `1f3f67cf`), the SL-1689 row, Tasks R0 to R4 and G.
 Requirements: FR-432 (the `frontend` limb), NFR-531 (the roll is unchanged on its success path).
 Register: FD-1661, FD-1816. The gate G, the mint, A12 and A13 are not this executor's (brief).
 No shared database and no shared Redis were used; the runtime tests ran on the throwaway project `gip-s4-runtime`.
@@ -113,7 +113,7 @@ Not yet (the slice's auditor).
   `run-small.sh` on `test_deploy_stack.py` + `test_compose_binds.py`: `47 passed, 2 warnings`, rc 0;
   `run-heavy.sh --light -- env -C <wt> python3 scripts/audit-docs.py`: `FAILED (4)`, all on the
   working ids and the index regeneration the mint owns: check 31 gap between 2006 and 8319; check 32 twice,
-  `LG-8320 does not resolve in docs/INDEX.md`; check 39, `docs/INDEX.md is stale`. No other failing line.
+  `LG-2017 does not resolve in docs/INDEX.md`; check 39, `docs/INDEX.md is stale`. No other failing line.
 - **Maintainer's `docker builder prune`, 2026-11-05 10:18:02 UTC** (lead 30's notice): build cache only. The
   footprint above is from the df readings before it (6.4G to 3.8G); the free-space jump to 12G is this prune.
 - **FD-1211 (brief amendment 10:32:58), build window 2, START 2026-11-05 10:49:27 UTC, END 11:39:03 UTC.**
@@ -139,7 +139,7 @@ Not yet (the slice's auditor).
 - **Window 2 end:** `docker ps -a --filter label=com.docker.compose.project=gip-s4-runtime -q | wc -l` = 0; shared
   stack postgres, keycloak, minio, redis `Up 44 hours (healthy)`, keycloak bind source under tools-main;
   `docker image rm gi-pricing-app:5575547b` by exact tag; `df -h /` 7.3G free (88%).
-- **libgomp, FD 8353 (ruled (a) by lead 30, brief AMENDMENT 2026-11-05 10:53:50; window 2 extended to ~12:30; the Write set widens by `deploy/Dockerfile`, named here).**
+- **libgomp, FD-2018 (ruled (a) by lead 30, brief AMENDMENT 2026-11-05 10:53:50; window 2 extended to ~12:30; the Write set widens by `deploy/Dockerfile`, named here).**
   Red first at `b516697f`: `test_the_built_image_imports_every_declared_model_backend` (lightgbm, xgboost, glum, interpret,
   one `docker run --entrypoint python -c "import <m>"` each) failed `1 failed in 28.74s` with
   `{'lightgbm': 'OSError: libgomp.so.1: cannot open shared object file: No such file or directory'}`

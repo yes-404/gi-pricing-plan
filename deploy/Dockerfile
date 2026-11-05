@@ -9,7 +9,7 @@
 # value outside `local` (FR-18), so an image cannot be built that records no platform version.
 FROM python:3.12-slim
 
-# LightGBM needs OpenMP at import (`libgomp.so.1`), which the slim base does not carry (FD 8353).
+# LightGBM needs OpenMP at import (`libgomp.so.1`), which the slim base does not carry (FD-2018).
 RUN apt-get update \
     && apt-get install --no-install-recommends -y libgomp1 \
     && rm -rf /var/lib/apt/lists/*

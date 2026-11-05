@@ -377,7 +377,7 @@ _BACKENDS = ("lightgbm", "xgboost", "glum", "interpret")
 def test_the_built_image_imports_every_declared_model_backend(
     built_n: str,  # noqa: F811
 ) -> None:
-    """FD 8353: the CI runner installs system libraries the image lacks. `lightgbm` needs
+    """FD-2018: the CI runner installs system libraries the image lacks. `lightgbm` needs
     `libgomp.so.1`, which `python:3.12-slim` does not carry, so a fit in a compose worker could not
     even import it. Every backend is imported in the BUILT image, one process each."""
     failures = {}

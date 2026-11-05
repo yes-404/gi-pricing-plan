@@ -1,9 +1,9 @@
 ---
-id: PL-8319
+id: PL-2016
 family: plan
 kind: map
 title: WK-674 — the frontend-image limb of FR-432 (FD-1661) and the roll cleanup's stopped container (FD-1816), one SOLO compose gate, the remaining SL-1689 row — a dated Work-plan delta
-status: draft                   # draft → active → superseded | retired (§1.2a) — L1: draft→active rides the slice's PR
+status: active                  # draft → active → superseded | retired (§1.2a) — L1: draft→active rides the slice's PR
 created: 2026-11-05             # filed under working id 8319
 owner: planner
 tree: dae9637ea6f6a56f6502e9db70392cdfb2f3983d
@@ -15,7 +15,7 @@ corrected_by: []
 relates: [PL-1688, PL-1237, SL-1689, SL-1968, SL-1813, FD-1661, FD-1816, FD-1970, FR-432, NFR-531]
 ---
 
-# PL-8319 — WK-674: the frontend-image limb and FD-1816 (the SL-1689 row, a dated Work-plan delta)
+# PL-2016 — WK-674: the frontend-image limb and FD-1816 (the SL-1689 row, a dated Work-plan delta)
 
 > **For agentic workers:** this is a **dated Work-plan delta** under Lean P2 L1 (a')
 > (`.claude/roles/planner.md`, "Lean P2"). It `relates:` `PL-1688` and leaves it unedited (a filed
@@ -246,7 +246,7 @@ The slice:
 **The row.** First in the 09:58:58 order. Existing row, WK-674, `draft`. Lane: one `sonnet`
 executor (the executor charter's model line governs).
 
-- **Scope (what LG 8320 quotes):** R0 to R4 and G below.
+- **Scope (what LG-2017 quotes):** R0 to R4 and G below.
 - **Requirements:** `07` §3.2 FR-432 (the `frontend` limb), NFR-531 (read: the roll is unchanged on
   its success path).
 - **Register:** FD-1661 (MEDIUM), FD-1816 (LOW), owner WK-674, close at the merge (A12).
@@ -396,7 +396,7 @@ real cover, not the gate. No contract regeneration, no migration. CI expected: `
 - `backend/tests/test_deploy_stack.py`, `backend/tests/test_deploy_stack_runtime.py`,
   `backend/tests/deploy_stack_helpers.py`.
 - `docs/skills-map.md`, `docs/specs/07-platform.md` (§8 only).
-- LG 8320 under `docs/ledgers/`.
+- LG-2017 under `docs/ledgers/`.
 - At the mint: `docs/roadmap.md` (the SL-1689 row's status and A12's dated line), `docs/INDEX.md`,
   this plan's `status:`, the FD-1661 and FD-1816 essays and `docs/findings/register.md` (A12).
 
@@ -409,7 +409,7 @@ beside every group until the build window.** The window and the gate are serial 
 ## Hand-off (not this plan's writes)
 
 - DP-D1 and DP-D2 and the GO: the maintainer. The window grant and gate slot: the lead.
-- The SL-1689 mint, LG 8320's id and the row's status: the lead; the LG: the executor; A12's
+- The SL-1689 mint, LG-2017's id and the row's status: the lead; the LG: the executor; A12's
   closing acts and A13's audit: the slice's auditor; the adoption line: the lead.
 - **For SL-1913's owner:** after this merges, a compose stack from the bare `up` needs
   `gi-pricing-frontend:$GIP_BUILD` built first (DP-D2 (a)).
