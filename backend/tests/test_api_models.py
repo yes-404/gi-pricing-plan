@@ -157,6 +157,30 @@ def test_the_declared_filter_still_narrows_the_factor_list(
     assert datasets == {dataset_a}, "the filter narrowed to exactly the dataset asked for"
 
 
+@pytest.mark.req("FR-83")
+@pytest.mark.parametrize("slug", ["", "Veh Brand", "a:b@1", "a" * 65, "a"])
+def test_a_factor_slug_outside_the_grammar_is_a_422_naming_the_field(
+    api_client: TestClient, actuary: dict[str, str], slug: str
+) -> None:
+    """**Negative** (FD-1384): the write boundary refuses what `00` §4.3 does not admit."""
+    refused = api_client.post(
+        "/api/v1/factors",
+        json={"slug": slug, "dataset_id": str(new_uuid7()), "source_columns": ["driver_age"]},
+        headers=actuary,
+    )
+    assert refused.status_code == 422, refused.text
+    problem = refused.json()
+    assert problem["code"] == "VALIDATION_FAILED"
+    assert [e["field"] for e in problem["errors"]] == ["slug"], problem
+    # Positive control: the grammar admits `_`, which the Slug grammar does not.
+    created = api_client.post(
+        "/api/v1/factors",
+        json={"slug": "veh_brand", "dataset_id": str(new_uuid7()), "source_columns": ["veh_brand"]},
+        headers=actuary,
+    )
+    assert created.status_code == 201, created.text
+
+
 @pytest.mark.req("FR-450")
 @pytest.mark.parametrize("collection", ["bandings", "groupings"])
 def test_the_sibling_list_routes_refuse_an_unrecognised_filter_too(
