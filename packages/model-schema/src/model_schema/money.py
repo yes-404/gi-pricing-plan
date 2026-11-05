@@ -122,6 +122,14 @@ def _reject_float(value: Any) -> Any:
     return value
 
 
+#: The largest adjusted exponent, either sign, an exact decimal may have when it is *written*
+#: (FR-21). Positional text grows with the exponent (`1E+999999999` is a gigabyte, `1E-400` is
+#: 402 characters), and the engine carries float64 (FR-273), whose magnitude ends near
+#: `1E+308`: a value past it is no value the engine can use. Writing only: validation takes
+#: any exponent, and a value past the bound fails loudly when it is serialised.
+MAX_POSITIONAL_EXPONENT = 308
+
+
 #: An exact decimal that crosses every boundary as a string. Strict on the way in: a float
 #: is a validation error, not a silent coercion (`OQ-547`).
 DecimalStr = Annotated[

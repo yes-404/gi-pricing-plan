@@ -1274,18 +1274,19 @@ Date-based routing and shadow scoring, both built and default off per environmen
 id: SL-1689
 family: slice
 title: the scheduler (beat) and frontend-image row: FR-432's last two limbs (FR-432, FR-413, FR-406; FD-1661)
-status: draft                  # draft → active → closed | retired (§1.2a)
+status: active                 # draft → active → closed | retired (§1.2a)
 created: 2026-10-12
 owner: planner                   # cut in the map plan (draft); lead dispatches (active)
 tree: 604ea084c96efe93f521fb9ba17738e05241e61a
 phase: P2
 work: WK-674
 corrected_by: []
-relates: [PL-1237, PL-1666, SL-1258, FD-1661]
+relates: [PL-1237, PL-1666, SL-1258, FD-1661, FD-1816]
 ```
 
 The `scheduler` service (the Celery beat process, which runs the outbox relay today and FR-413's tick when that lands) and the `frontend` image and service, both under the `app` profile on Slice 4's path: FR-432's `scheduler` and `frontend` limbs, which discharge FD-1661 with Slice 4's `worker`. The maintainer (by delegation) placed it in the entries "2026-10-12 02:53:52 BST" item 4 (beat as its own row after S4, serialised on `deploy/docker-compose.yml`) and "2026-10-12 03:09:50 BST" (DP-S4-3 (b): the `frontend` image folds into this row, in P2, with three conditions). Work-plan delta PL-1688 (both of its decision points ruled 05:37:23, so `active` at its mint). **Activation needs:** `SL-1258` merged, with this row's base containing it; `SL-1258`'s worker consuming `default,compute` (DP-B1 ruled (a), an S4 GO condition) and DP-B2 ruled (a), the frontend on `${GIP_WEB_PORT:-5173}`, both in the lead's entry "2026-10-12 05:37:23 BST"; the lane free and serialised on `deploy/docker-compose.yml`; a build window booked for the runtime and fresh-checkout proofs; the maintainer's dispatch GO and the lead's go. Off the exit path. **If the cut ladder takes its lane**, it moves to P3 by the dated line PL-1688 B0.3 pre-names (owner WK-674; discharge event: this row's merge), and is never dropped. *(Cut 2026-10-12 by the planner under working id 9883, reserved by the lead; minted 2026-10-12 as SL-1689 from working id 9883, with PL-1688 from working id 9882.)*
 
+*Dated 2026-11-05 by the auditor (A12 of PL-2016, the closing acts of SL-1689): SL-1968 took the `scheduler` limb (#1409, `aad4fd58`); SL-1689's scope is now FR-432's `frontend` limb plus FD-1816 (the roll's stopped pre-roll container) under PL-2016, with FD-1211's served-process SIGTERM proof (FD-1199 following) and FD-2018 (libgomp in the image) riding it by the lead's amendments of 2026-11-05 10:32:58 and 10:53:50 GMT; ledger LG-2017; `relates:` gains `FD-1816`. FD-1661, FD-1816, FD-1211 and FD-2018 close at the merge (PR #1435); FD-1199 is retired on its own event. FR-432's service clause is met at this merge; its compose-run seed is carried to SL-1913.*
 
 #### SL-1711 — WK-674 demo slice — the scripted WF-701 deployment steps (A1–A6, C1–C4, C6, C7) over the Slice 4 path, after Slice 5
 
@@ -3515,6 +3516,44 @@ relates: [FD-2001, FD-1729, PL-2004, LG-2006, NFR-489, FR-44]
 `scripts/bench-rating.py --http` serves the application a least-privilege DSN (`--serve-dsn`, default `GIP_TEST_APP_DATABASE_URL`) and keeps the owner DSN for `_seed` and `_measure_fetch`, so the harness drives the platform as shipped (FD-2001, planned in PL-2004 row SL-2005); NFR-489 is the requirement the harness measures, FR-44 the refusal it now honours. FD-2001 closes at the merge (the auditor's closing act, A8).
 
 (Minted 2026-11-04 from working id 8317, on the maintainer's GO "2026-11-04 16:42:29 GMT" and the lead's mint order, with the mint tool of record `mint-repoint.py` (sha256 `4d83681a`); plan PL-2004 (working id 8316), ledger LG-2006 (working id 8318); executed on branch `sl-8317-fd2001-serve-dsn`.)
+
+#### SL-2011 — WK-1178 slice — FD-1482 limb (a), RL-1483 item 1: the `Permission` column on every §5.1 REST row of the seven module specs
+
+```yaml
+id: SL-2011
+family: slice
+title: WK-1178 slice — FD-1482 limb (a), RL-1483 item 1, the Permission column on every §5.1 row
+status: closed                    # draft → active → closed (§1.2a)
+created: 2026-11-05
+owner: lead
+tree: f331678f4152c964d06446195d435091e72e027c
+phase: P2
+work: WK-1178
+corrected_by: []
+relates: [FD-1482, RL-1483, LG-2012, OQ-2013, OQ-2014, OQ-2015]
+```
+
+Docs only. Every §5.1 REST table in `docs/specs/01`–`07` gains a fourth column `Permission`, filled on every row; a multi-method row splits to one row per method; `06`'s blockquoted `| Route | Requires |` table is folded into `06` §5.1's column (RL-1483 item 1). The `04` and `05` tables are a named widening of RL-1483's five (ledger LG-2012, Scope). The permissions of routes not yet built are proposals, raised as OQ-2013 (`04`), OQ-2014 (`05`) and OQ-2015 (`06`'s unbuilt routes). Limb (b), the pin, waits on LAST-2's `table_rows` and is not this slice's. FD-1482's closing acts are the auditor's.
+
+(Minted 2026-11-05 from working id 8361, on the rulings to-lead "2026-11-05 12:14:32 GMT" and "2026-11-05 15:59:27 GMT" (4), with the mint tool of record `mint-repoint.py`; ledger LG-2012 (working id 8362), open questions OQ-2013, OQ-2014 and OQ-2015 (working ids 8363, 8364, 8365); the finding raised for it is still working id 8366 and has no id yet; executed on branch `sl-8361-permission-column`, unpushed.)
+
+#### SL-2020 — WK-1178 slice — FD-1648 limbs (i) and (ii): a write never lands a rate-table cell the engine cannot read
+
+```yaml
+id: SL-2020
+family: slice
+title: WK-1178 slice — FD-1648 limbs (i) and (ii), a write never lands a rate-table cell the engine cannot read (FR-234)
+status: active                    # draft → active → closed (§1.2a)
+created: 2026-11-05
+owner: lead
+tree: 81dc64af871320c3780f767305fd01c8ede0b501
+phase: P2
+work: WK-1178
+corrected_by: []
+relates: [FD-1648, FD-1767, FD-1780, FD-1781, PL-2019, LG-2021]
+```
+
+Every path that writes a rate-table cell value checks it against the rating engine's expression parser before commit and refuses the whole write, naming the first refused cell, with `RATE_TABLE_CELL_UNPARSEABLE` (FR-234, `03` §5.2); compile and score carry the same code as a backstop (FR-240), and a value the platform computes is written in fixed point. `FD-1767`, `FD-1780` and `FD-1781` are closed by it and `FD-1648` gains its line, per `PL-2019` section "R1, SL-2020" (plan of record; the other cut, SL 8345, is R2's). Its ledger is `LG-2021`.
 
 ### WK-1250 — Sub-graph composition and MTA/cancellation pricing — FR-217's inlining and FR-218's authoring half
 

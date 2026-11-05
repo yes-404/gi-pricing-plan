@@ -5,7 +5,9 @@
 #
 # Scales out beside the old replicas (`--no-recreate` leaves them running), waits until both new
 # containers report healthy (by container id, bounded, failing loud), then stops and removes the
-# old ones one at a time, ending at two replicas on the new image. A plain `up --scale api=2`
+# old ones one at a time, ending at two replicas on the new image. A pre-roll replica that is
+# stopped counts as an old one: it is removed with them on success, and a failed roll leaves it
+# in place (never removed as if the roll had created it). A plain `up --scale api=2`
 # recreates every replica at once, leaving none healthy until the new ones pass their healthcheck.
 # It never pulls, builds or prunes, and touches no project but the one given. A failure before the
 # first old replica is stopped removes the new replicas and leaves the old ones; after that it
@@ -27,13 +29,16 @@ compose=(docker compose -p "$project")
 for f in "$@"; do compose+=(-f "$f"); done
 compose+=(--profile app)
 
+# `api_ids` lists the running replicas; `api_ids -a` lists every one, stopped included.
 api_ids() {
-  docker ps -q --filter "label=com.docker.compose.project=$project" \
+  docker ps "$@" -q --filter "label=com.docker.compose.project=$project" \
     --filter "label=com.docker.compose.service=api"
 }
 say() { echo "roll-api $(date -u +%H:%M:%S.%3N) $*"; }
 
-mapfile -t old < <(api_ids)
+# `old` is every pre-roll replica, stopped ones included: `up --scale` starts a stopped replica
+# and counts it, so it is the roll's to leave alone on failure and to remove on success (FD-1816).
+mapfile -t old < <(api_ids -a)
 say "old api containers: ${old[*]:-none}"
 
 # Until the first old replica is stopped, a failed roll returns to the pre-roll replicas: the new
@@ -55,8 +60,9 @@ cleanup_new() {
 }
 trap cleanup_new EXIT
 
-say "scaling out to $((REPLICAS * 2)) beside the old ones"
-"${compose[@]}" up -d --no-deps --no-recreate --scale "api=$((REPLICAS * 2))" api >/dev/null
+target=$((${#old[@]} + REPLICAS))
+say "scaling out to $target beside the old ones"
+"${compose[@]}" up -d --no-deps --no-recreate --scale "api=$target" api >/dev/null
 
 mapfile -t new < <(comm -13 <(printf '%s\n' "${old[@]}" | sort) <(api_ids | sort))
 [[ ${#new[@]} -eq $REPLICAS ]] || { say "FAIL: expected $REPLICAS new api containers, got ${#new[@]}: ${new[*]:-none}"; exit 1; }
