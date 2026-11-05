@@ -32,9 +32,17 @@ Base `ddec34fe`, merged by sha: C `4abb3798`, R1 `662867bb` (INDEX.md: theirs, r
 - T2: `AssertionError` over three hashes for `10`, `1E+1`, `10.0` (`sha256:028228ef…`, `sha256:19a11329…`, `sha256:a50acf09…`).
 - T3 control: green (`66000.440` kept).
 
+### R2b — DP-L2 extended (to-lead "2026-11-05 16:14:34 GMT"), red first (`9a0a1ffe`)
+
+A signed or exponent zero is the value 0: T4 `test_every_spelling_of_zero_gives_the_hash_of_zero`, `-0`, `-0.00`, `-0E+3`, `0E+3` each against `0`. Red on the committed tree without the draft: **4 failed**. The ruling also lets the window run two TEMP-table controls (`decexp_ctl.py`'s PG part, `regspell_ctl.py`) in a writable session on the `postgres` db, `CREATE TEMP TABLE` only, and extends the stored-instance predicate to negative-zero spellings; a stored `-0` changes its hash, and the STOP applies. PL-8339 is a filed plan, frozen at its date, so this record carries the dated line on its "no write" (G2/Needs) rather than an edit to it.
+
 ### R3 — green (drafted, uncommitted until the window)
 
-Patch `~/gi-pricing-plan.local/scratch/sl-8340-decimalstr-positional/code.patch` sha256 `10615855409b657995ef72e2039d7dbef72c95d290356632a8b9589f7f9679df`, 3 files; `test_money.py` 34 passed, `ruff check packages/model-schema` clean on the drafted tree. Noted: `Decimal("-0").normalize()` formats `-0` (pattern admits it); `-0` and `0` would still hash apart.
+Patch `~/gi-pricing-plan.local/scratch/sl-8340-decimalstr-positional/code.patch` sha256 `fe469f364576b9d1a1b792e2f2783e20a5679ab19fd124e12bffc3991299925a`, 3 files (`money.py`, `regression.py`, `test_money.py` docstring); `CanonicalDecimalStr` writes `format(v.normalize() if v else Decimal(0), "f")`. On it `test_money.py` 38 passed, `ruff check packages/model-schema` clean. Noted for the audit: `Decimal.normalize` rounds to the context precision (28 digits), so a bound with more than 28 significant digits would change value; no such bound is plausible.
+
+### Disclosure
+
+While syntax-checking the window scripts I ran `regspell.py` once against the shared server, before the grant (about 16:2x UTC): SELECT only, READ ONLY transactions, `PGOPTIONS` read-only; it printed `databases 4 | with regression_suite_versions 2 | version rows 0`. That output is not the window result and is not used as one; the window runs it afresh.
 
 ## Re-measure (A3 to A5)
 
