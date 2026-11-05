@@ -301,18 +301,20 @@ after cells, actor — is the `03` NFR-498 Audit Event, not part of this record.
 
 ### 5.1 REST API
 
-| Method | Path | Purpose |
-|---|---|---|
-| `POST` | `/api/v1/demand-models/{id}/elasticity` | **202** Compute elasticity surface with CIs (FR-279/280) |
-| `GET` | `/api/v1/demand-models/{id}/price-variation` | Identifiability report per segment (FR-278) |
-| `POST` | `/api/v1/optimisation-runs` | **202** Launch a run → Job (FR-284) |
-| `GET` | `/api/v1/optimisation-runs/{id}` | Run + result artifact |
-| `GET` | `/api/v1/optimisation-runs/{id}/frontier` | Efficient frontier points (FR-290) |
-| `GET` | `/api/v1/optimisation-runs/compare?ids=` | Segment-level diff between runs (FR-291) |
-| `POST` | `/api/v1/optimisation-runs/{id}/materialise` | Preview cell-level diff; accept per segment (FR-303/304) |
-| `POST` | `/api/v1/gipp-checks` | **202** Run a GIPP check → Job (FR-294) |
-| `GET` | `/api/v1/gipp-checks/{id}` | GIPP evidence artifact |
-| `POST` | `/api/v1/disparity-reports` | **202** Outcome disparity report against a supplied reference (FR-302) |
+| Method | Path | Purpose | Permission |
+|---|---|---|---|
+| `POST` | `/api/v1/demand-models/{id}/elasticity` | **202** Compute elasticity surface with CIs (FR-279/280) | `optimisation:run` |
+| `GET` | `/api/v1/demand-models/{id}/price-variation` | Identifiability report per segment (FR-278) | `authenticated` |
+| `POST` | `/api/v1/optimisation-runs` | **202** Launch a run → Job (FR-284) | `optimisation:run` |
+| `GET` | `/api/v1/optimisation-runs/{id}` | Run + result artifact | `authenticated` |
+| `GET` | `/api/v1/optimisation-runs/{id}/frontier` | Efficient frontier points (FR-290) | `authenticated` |
+| `GET` | `/api/v1/optimisation-runs/compare?ids=` | Segment-level diff between runs (FR-291) | `authenticated` |
+| `POST` | `/api/v1/optimisation-runs/{id}/materialise` | Preview cell-level diff; accept per segment (FR-303/304) | `optimisation:materialise` |
+| `POST` | `/api/v1/gipp-checks` | **202** Run a GIPP check → Job (FR-294) | `optimisation:run` |
+| `GET` | `/api/v1/gipp-checks/{id}` | GIPP evidence artifact | `authenticated` |
+| `POST` | `/api/v1/disparity-reports` | **202** Outcome disparity report against a supplied reference (FR-302) | `optimisation:run` |
+
+ *(Added 2026-11-05, `RL-1483` item 1, `SL-8361`: the `Permission` column. Each cell is the permission name(s) from `06` §4.1, `authenticated` or `open`; a row with two methods is one row per method. **No route of this module is built. The cells are the proposal for routes that do not exist; the pin reads built routes only, and `OQ-8363` decides them, and the missing read permission, before each route is built.**)*
 
 **Error codes owned by this module:** `DEMAND_MODEL_MISSING_PRICE_TERM`,
 `PRICE_VARIATION_INSUFFICIENT`, `POSITIVE_ELASTICITY_DETECTED`, `EXTRAPOLATION_REFUSED`,
@@ -448,4 +450,5 @@ Mirrored into [`open-questions.md`](../open-questions.md).
 | ~~**OQ-623**~~ | ~~Is `expected_profit` computed with the platform's own risk models, or should it accept an externally-supplied expected loss cost? Insurers often have a separate reserving-derived view that will not match our models, and the mismatch will be noticed.~~ **Open** — the recommendation is to support both, with the profit definition (FR-285) naming its expected-claims source; options and trade-offs are in `docs/open-questions.md`. **DECIDED 2026-08-26: support both — the profit definition names its expected-claims source, never a default** |
 | ~~**OQ-624**~~ | ~~How is the demand model's endogeneity problem handled? Historic prices were set by a rating structure that already conditioned on risk, so a naive elasticity estimate is biased. Do we specify instrumental variables, a randomised price-test capability, or simply document the caveat prominently?~~ **Open** — the recommendation is to document and quantify via FR-278's price-variation report, with an `identification_note` required on every Demand Model; real identification needs OQ-625. Options and trade-offs are in `docs/open-questions.md`. **DECIDED 2026-08-26: document prominently and quantify; identification_note required on every Demand Model** |
 | ~~**OQ-625**~~ | ~~Should the platform support~~ **price testing** (randomised price variation on a slice of live traffic) to generate the variation FR-278 needs? It is the correct answer to OQ-624 and is operationally and ethically loaded. **Deferred (post-Phase 4)**: not built in Phases 1–4 — deliberately quoting some customers a different price to learn from it has FCA fair-value implications — but the capability boundary (a `price_test` purpose the platform refuses to serve) is specified now, so an eventual addition is deliberate and governed rather than emergent. **DECIDED 2026-08-26: deferral confirmed — post-Phase 4, with the price_test capability boundary specified now** |
+| **OQ-8363** | **OPEN** — **Which permission does each `04` route need, and does an `optimisation:read` permission exist?** `§5.1`'s `Permission` cells are the proposal for routes not yet built; the pin reads only built routes; decided before the route is built, by the phase that builds it. `06` §4.1 has `optimisation:run` and `optimisation:materialise` as specified and no read permission. Options and recommendation: [`open-questions.md`](../open-questions.md) OQ-8363. Owner: the Work that builds each route (WK-684; WK-686). |
 | **OQ-626** | ~~For GIPP, what is the correct treatment of channel differences?~~ **RESOLVED 2026-08-14 — the rule prescribes it.** ICOBS 6B.2.5R(1) requires the channel the customer used when they *first purchased* the policy, with 6B.2.5R(2) falling back to the channel most commonly used by new-business customers. This is now FR-294/295, and it corrected a design that keyed off the *renewal* channel. |

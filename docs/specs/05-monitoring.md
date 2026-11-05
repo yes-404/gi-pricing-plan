@@ -275,24 +275,26 @@ Terms from `00-overview.md` §2.4 are used unchanged. Additional terms owned her
 
 ### 5.1 REST API
 
-| Method | Path | Purpose |
-|---|---|---|
-| `POST` | `/api/v1/monitors` | Create a Monitor (FR-307) |
-| `GET` | `/api/v1/monitors?environment=` | List monitors with last run status |
-| `POST` | `/api/v1/monitors/{id}/run` | **202** Run on demand → Job |
-| `POST` | `/api/v1/monitors/{id}/rebaseline` | Rebaseline with a required reason (FR-309) |
-| `GET` | `/api/v1/monitoring-results/{id}` | Result artifact with metrics and evidence links |
-| `GET` | `/api/v1/monitoring/drift?environment=&from=&to=` | Drift time series by factor (FR-312, FR-313, FR-314, FR-315, FR-316) |
-| `GET` | `/api/v1/monitoring/ae?model=&segment=&cohort=` | A/E with CIs and maturity (FR-317, FR-318, FR-319) |
-| `GET` | `/api/v1/monitoring/rate-achieved?rating_version=` | Rate achieved vs intended with decomposition (FR-326) |
-| `GET` | `/api/v1/monitoring/demand?segment=` | Realised vs expected conversion/retention (FR-323) |
-| `GET` | `/api/v1/monitoring/operational?environment=` | Latency, errors, declines, bundle health (FR-331, FR-332, FR-333) |
-| `GET` | `/api/v1/alerts?status=` | Alert inbox |
-| `POST` | `/api/v1/alerts/{id}/acknowledge` | Acknowledge with a note (FR-334) |
-| `POST` | `/api/v1/alerts/{id}/resolve` | Resolve with an action and note |
-| `POST` | `/api/v1/alerts/{id}/suppress` | Suppress with expiry and reason |
-| `POST` | `/api/v1/refit-recommendations` | Raise a refit recommendation (FR-340) |
-| `POST` | `/api/v1/monitoring-packs` | **202** Generate a committee pack (FR-339) |
+| Method | Path | Purpose | Permission |
+|---|---|---|---|
+| `POST` | `/api/v1/monitors` | Create a Monitor (FR-307) | `monitor:write` |
+| `GET` | `/api/v1/monitors?environment=` | List monitors with last run status | `authenticated` |
+| `POST` | `/api/v1/monitors/{id}/run` | **202** Run on demand → Job | `monitor:write` |
+| `POST` | `/api/v1/monitors/{id}/rebaseline` | Rebaseline with a required reason (FR-309) | `monitor:write` |
+| `GET` | `/api/v1/monitoring-results/{id}` | Result artifact with metrics and evidence links | `authenticated` |
+| `GET` | `/api/v1/monitoring/drift?environment=&from=&to=` | Drift time series by factor (FR-312, FR-313, FR-314, FR-315, FR-316) | `authenticated` |
+| `GET` | `/api/v1/monitoring/ae?model=&segment=&cohort=` | A/E with CIs and maturity (FR-317, FR-318, FR-319) | `authenticated` |
+| `GET` | `/api/v1/monitoring/rate-achieved?rating_version=` | Rate achieved vs intended with decomposition (FR-326) | `authenticated` |
+| `GET` | `/api/v1/monitoring/demand?segment=` | Realised vs expected conversion/retention (FR-323) | `authenticated` |
+| `GET` | `/api/v1/monitoring/operational?environment=` | Latency, errors, declines, bundle health (FR-331, FR-332, FR-333) | `authenticated` |
+| `GET` | `/api/v1/alerts?status=` | Alert inbox | `authenticated` |
+| `POST` | `/api/v1/alerts/{id}/acknowledge` | Acknowledge with a note (FR-334) | `alert:acknowledge` |
+| `POST` | `/api/v1/alerts/{id}/resolve` | Resolve with an action and note | `alert:resolve` |
+| `POST` | `/api/v1/alerts/{id}/suppress` | Suppress with expiry and reason | `alert:resolve` |
+| `POST` | `/api/v1/refit-recommendations` | Raise a refit recommendation (FR-340) | `monitor:write` |
+| `POST` | `/api/v1/monitoring-packs` | **202** Generate a committee pack (FR-339) | `monitor:write` |
+
+ *(Added 2026-11-05, `RL-1483` item 1, `SL-8361`: the `Permission` column. Each cell is the permission name(s) from `06` §4.1, `authenticated` or `open`; a row with two methods is one row per method. **No route of this module is built. The cells are the proposal for routes that do not exist; the pin reads built routes only, and `OQ-8364` decides them before each route is built.**)*
 
 **Error codes owned by this module:** `BASELINE_NOT_PINNED`, `INSUFFICIENT_MATURITY`,
 `INSUFFICIENT_CLAIM_VOLUME`, `MONITOR_POPULATION_EMPTY`, `REBASELINE_REASON_REQUIRED`,
@@ -434,4 +436,5 @@ Mirrored into [`open-questions.md`](../open-questions.md).
 | ~~**OQ-628**~~ | ~~Do we store monitoring time series in PostgreSQL or adopt a dedicated time-series store? Postgres is simpler and adequate at weekly cadence; daily operational metrics at per-replica granularity may outgrow it.~~ **Open** — the recommendation is PostgreSQL with declarative partitioning, no dedicated TSDB; options and trade-offs are in `docs/open-questions.md`. **DECIDED 2026-08-26: PostgreSQL with declarative partitioning; no TSDB in the required stack** |
 | ~~**OQ-629**~~ | ~~Who owns the claims-development pattern used for maturity adjustment (R4) — is it supplied by the user as reference data, fitted by the platform from claim triangles, or out of scope (tied to `01` OQ-560)?~~ **Open** — the recommendation is user-supplied reference data (`development_pattern`), tying off with `01` OQ-560; options and trade-offs are in `docs/open-questions.md`. **DECIDED 2026-08-26: user-supplied as a Reference Table (development_pattern), referenced by maturity_policy** |
 | ~~**OQ-630**~~ | ~~Should the platform support automated~~ **champion/challenger** — routing a slice of live traffic to a candidate Rating Version and comparing realised outcomes — or is shadow scoring (no customer impact) the ethical and practical limit? **Deferred (post-Phase 4)**: shadow scoring only (FR-271) — routing real customers to a challenger price is a live pricing experiment with fair-value implications, the same governed decision as price testing, and it is grouped with OQ-625 rather than decided separately. **DECIDED 2026-08-26: deferral confirmed — shadow scoring only, grouped with OQ-625** |
+| **OQ-8364** | **OPEN** — **Which permission does each `05` route need?** `§5.1`'s `Permission` cells are the proposal for routes not yet built; the pin reads only built routes; decided before the route is built, by the phase that builds it. `06` §4.1 has `monitor:write`, `alert:acknowledge` and `alert:resolve` as specified and no monitoring read permission. Options and recommendation: [`open-questions.md`](../open-questions.md) OQ-8364. Owner: the Work that builds each route (WK-687; WK-688). |
 | ~~**OQ-631**~~ | ~~What is the right default cadence set? Weekly for A/E is too frequent to be meaningful on low-frequency perils but monthly is too slow to catch a broken feed. Likely different cadences per metric family — needs to be specified rather than left to the user.~~ **Open** — the recommendation is per-family cadences (`input_drift` daily, `model_ae` monthly with a maturity floor) as the Monitor's template defaults; options and trade-offs are in `docs/open-questions.md`. **DECIDED 2026-08-26: per family: input_drift daily, operational hourly, price_portfolio weekly, demand weekly, model_ae monthly with a 6-month maturity floor** |

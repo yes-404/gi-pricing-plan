@@ -2,12 +2,12 @@
 id: FD-1320
 family: finding
 title: FR-447 says an invalid setting prevents startup, but nothing on the startup path reads the GIP_SETTING_ overrides
-status: active
+status: closed
 created: 2026-09-30
 owner: auditor
 tree: 48792023e09cd79c771c2184d6808e378732b76b
 corrected_by: []
-relates: [WK-674]
+relates: [WK-674, SL-1257, LG-1634]
 ---
 
 # FD-1320 — FR-447 says an invalid setting prevents startup, but nothing on the startup path reads the GIP_SETTING_ overrides
@@ -85,3 +85,5 @@ Slice 3's **red-first acceptance** (each written to fail on `origin/main` first)
 `require_startable` and the lifespan's two checks do not touch overrides.
 
 *Disclosure: this record was drafted under working id 9881 and minted as FD-1320; the working id survives only in this line and in PR #965's history.*
+
+***Resolved 2026-11-05*** — closed in place 2026-11-05 by the auditor (aud-fdclose), on the lead's brief under to-lead "2026-11-05 09:40:57 GMT" item 8 (2), the FD-1842 form. Delivered remedy (the four red-first acceptance cases, through the real `create_app` lifespan with the database, via a new check): WK-674 Slice 3, SL-1257 (LG-1634), PR #1280, squash commit fe80aec625b616adb467d4bca322674882e60f5c, merged 2026-10-11T17:43:37Z. `backend/src/app/platform/settings.py` gains `validate_setting_overrides`, called from the `main.py` lifespan; `backend/tests/test_settings_environment.py` asserts an unknown key (unit :98, lifespan :160), an ill-typed value (unit :107, lifespan :160) and an out-of-range value (unit :116 only) each refuse startup naming the key, and an Environment-only key as a process override refuses startup (unit :125, lifespan :169), using `api_settings`, which is database-backed (`backend/tests/conftest.py:41`). The out-of-range case has no lifespan test of its own; it goes through the same function.

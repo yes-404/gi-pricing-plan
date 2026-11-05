@@ -301,3 +301,5 @@ below is its output). It reads the 155 `file:line` hits, parses each file with `
 | be:platform/model_specs.py:132 | failure-only | `per_parameter` | no |
 | be:platform/approvals.py:521 | not a format spec (dict or set literal, comment or docstring) |  | n/a |
 | be:platform/approvals.py:522 | not a format spec (dict or set literal, comment or docstring) |  | n/a |
+
+*(Dated line, 2026-11-05, docs batch 11, by the auditor, on to-lead "2026-11-05 10:31:31 GMT" (second triage c9e75802158f accepted), item (C)(5): the widened item is CARRIED TO P3, a departure from the earlier rulings by this word.)*
