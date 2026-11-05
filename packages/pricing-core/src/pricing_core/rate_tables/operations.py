@@ -163,7 +163,8 @@ def extract_relativity_table(
         for level in levels:
             if level.relativity is None:
                 continue
-            rows.append({entry: level.level, value_name: str(Decimal(str(level.relativity)))})
+            text = format(Decimal(str(level.relativity)), "f")
+            rows.append({entry: level.level, value_name: text})
     return rows
 
 
@@ -680,8 +681,11 @@ def _new_version(
 
 
 def _format_value(value: Decimal) -> str:
-    """A decimal string with trailing zeros dropped — never a float (R2)."""
-    return str(value.normalize())
+    """Fixed point, trailing zeros dropped: never a float (R2), never an exponent (FD-1648).
+
+    `RateTableValue` declares no dp, so this normalises and formats (the entry
+    "2026-11-05 10:11:39 GMT", limb (i))."""
+    return format(value.normalize(), "f")
 
 
 def _transform_rows(
