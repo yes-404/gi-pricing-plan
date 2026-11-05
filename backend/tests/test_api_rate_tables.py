@@ -858,6 +858,33 @@ def test_bulk_operation_creates_a_new_version_with_the_operation_record(
     assert body["seeded_from"]["model_ref"] == f"model:{family}@1"
 
 
+def test_bulk_operation_with_a_huge_percentage_is_a_coded_422_not_a_memory_fault(
+    api_client: TestClient, workspace_id, actuary
+) -> None:
+    """SL 8345 N1 (OWED to SL 8389's DB window: not run by SL 8345's seat). A request's
+    `percentage` of `1E+999990` made `_format_value` write ~1 MB per row; the bound (|adjusted
+    exponent| <= 308, FR-21) refuses it first: a 422 `RATE_TABLE_CELL_UNPARSEABLE`, small body."""
+    family = f"mf-{uuid4().hex[:8]}"
+    _seed_approved_model(workspace_id, family, _LEVELS)
+    slug = _table_slug()
+    seeded = api_client.post(
+        f"/api/v1/rate-tables/{slug}/seed-from-model",
+        json=_seed_body(family),
+        headers=actuary,
+    )
+    assert seeded.status_code == 201, seeded.text
+
+    response = api_client.post(
+        f"/api/v1/rate-tables/{slug}@1/bulk-operation",
+        json=_bulk_body("uplift_table", {"percentage": "1E+999990"}),
+        headers=actuary,
+    )
+
+    assert response.status_code == 422, response.text[:300]
+    assert response.json()["code"] == "RATE_TABLE_CELL_UNPARSEABLE"
+    assert len(response.text) < 2000
+
+
 @pytest.mark.req("FR-233")
 def test_bulk_operation_refuses_an_unknown_kind(
     api_client: TestClient, workspace_id, actuary

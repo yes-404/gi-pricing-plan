@@ -152,6 +152,51 @@ class TestFormatValueIsFixedPoint:
         assert _cells(result) == [{"driver_age_band": "17-20", "relativity": "100"}]
 
 
+class TestFormatValueIsBoundedBeforeItIsBuilt:
+    """SL 8345 N1 (to-lead "2026-11-05 20:50:01 GMT"): fixed-point text grows with the exponent,
+    so `_format_value` refuses |adjusted exponent| > 308 (FR-21, FR-273: the engine carries
+    float64), zero's exponent included, BEFORE the text is built, with the cell code. A refusal
+    names the bound, never the value."""
+
+    @pytest.mark.req("FR-21")
+    @pytest.mark.parametrize(
+        "value",
+        [
+            Decimal("1E+309"),
+            Decimal("1E+999999"),
+            Decimal("-1E+309"),
+            Decimal("1E-309"),
+            Decimal("1E-999999"),
+            Decimal("0E-999999"),
+            Decimal("0E+309"),
+        ],
+    )
+    def test_a_magnitude_past_the_bound_is_refused_with_the_cell_code(self, value: Decimal) -> None:
+        with pytest.raises(ValueError, match=r"^RATE_TABLE_CELL_UNPARSEABLE: ") as refused:
+            _format_value(value)
+        message = str(refused.value)
+        assert message.startswith(f"{_CODE}: ")
+        assert "308" in message
+        assert len(message) < 300
+
+    @pytest.mark.req("FR-21")
+    def test_the_bound_itself_is_written(self) -> None:
+        assert _format_value(Decimal("1E+308")) == "1" + "0" * 308
+        assert _format_value(Decimal("1E-308")) == "0." + "0" * 307 + "1"
+        assert _format_value(Decimal("0E-308")) == "0"
+
+    @pytest.mark.req("FR-21")
+    def test_a_huge_percentage_is_refused_at_the_first_cell_not_after_every_row(self) -> None:
+        """Measured at cda3c0dc: 1E+999990 formatted every row (about 1 MB each) before
+        `_validate_result` saw one; 535 rows exhausted 512 MiB. The refusal is now per call."""
+        rows = [{"driver_age_band": f"b{i}", "relativity": "1.8400"} for i in range(50)]
+        base = _version(rows=rows, value=_value(min=None, max=None))
+        with pytest.raises(ValueError, match=r"^RATE_TABLE_CELL_UNPARSEABLE: ") as refused:
+            uplift_table(base, percentage=Decimal("1E+999990"))
+        assert str(refused.value).startswith(f"{_CODE}: ")
+        assert len(str(refused.value)) < 300
+
+
 _UNREADABLE = ["1E+2", "1.36E-7", ".5"]
 _CODE = "RATE_TABLE_CELL_UNPARSEABLE"
 
