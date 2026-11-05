@@ -162,12 +162,11 @@ does not touch: no re-gate by the 15:43:06 re-merge rule). A5/A6/A7 at the gate:
 brief item 31 (with `audit_docs` rc=1 on the slice's own working ids), which STANDS for the code on the conditions of item 31; frontend
 install/generate:api/lint/type-check/test (`138 passed` files, `919 passed` tests)/build rc=0; demo PASSED in the gate, 1679 s,
 dislocation 610 s; peaks: project 2,776 MB, all containers 4,210 MB; shared stack restored from tools-main, keycloak bind under
-tools-main. A4: the gate log carries no `docker compose --profile app config --services` line; A4 stays on the compose shape tests
-(`39 passed`) and is not claimed as read. **Disclosed by line:** two DB windows ran beside pytest (M, and FD 8366); memwatch's blind
+tools-main. A4: MET, by the lead's read, not the gate's (2026-11-05 about 20:01 GMT, at this tree): `docker compose -f deploy/docker-compose.yml --profile app config --services` lists 12 (postgres, migrate, minio, redis, api, lb, frontend, worker-compute, worker-default, scheduler, worker-io, worker-scoring); with no profile 3 (minio, postgres, redis), unchanged. The gate log itself carries no such line. **Disclosed by line:** two DB windows ran beside pytest (M, and FD 8366); memwatch's blind
 span is 18:17:05 to 18:24:07 UTC; the doc-index run beside the demo, about 19:17 to 19:19 UTC, is disclosed, not hidden.
 
 
-**Mint's non-docs edits, dated 2026-11-05 20:01:11 GMT (executor, at the lead's request).** `git diff 08e9591d 2a24beb9 --stat` lists two non-docs paths, each one line: `deploy/Dockerfile` (gated file) line 12, a `#` comment only: `-# … does not carry (FD 8353).` / `+# … does not carry (FD-2018).`, no instruction line changed; and `backend/tests/test_deploy_stack_runtime.py` line 380, a docstring: `-"""FD 8353: …` / `+"""FD-2018: …`.
+**Mint's non-docs edits, dated 2026-11-05 20:01:11 GMT (executor, at the lead's request).** `git diff 08e9591d 2a24beb9 --stat` lists two non-docs paths, each one line: `deploy/Dockerfile` (gated file) line 12, the mint's comment re-point, a `#` line only, no instruction changed, read by the lead: `-# … does not carry (FD 8353).` / `+# … does not carry (FD-2018).`, no instruction line changed; and `backend/tests/test_deploy_stack_runtime.py` line 380, a docstring: `-"""FD 8353: …` / `+"""FD-2018: …`.
 
 ### Build log
 
@@ -260,4 +259,4 @@ span is 18:17:05 to 18:24:07 UTC; the doc-index run beside the demo, about 19:17
 
 ## PRs
 
-`<the merge's PR>` (number written by the lead before the PR).
+PR #1435.

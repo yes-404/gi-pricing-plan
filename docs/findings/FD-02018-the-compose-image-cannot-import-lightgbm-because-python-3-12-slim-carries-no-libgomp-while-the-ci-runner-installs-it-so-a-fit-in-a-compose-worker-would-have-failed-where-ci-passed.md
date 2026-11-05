@@ -28,6 +28,6 @@ The image-import test above stays in `backend/tests/test_deploy_stack_runtime.py
 
 ## Disposition
 
-Closed in the PR that filed it: owner WK-674; the event that discharged it is SL-1689's merge (`<the merge's PR>`), the fix `637952ae` with its red-first image-import test.
+Closed in the PR that filed it: owner WK-674; the event that discharged it is SL-1689's merge (PR #1435), the fix `637952ae` with its red-first image-import test.
 
-***Resolved 2026-11-05*** — closed in place 2026-11-05 by the auditor, as the closing act of the mint of SL-1689 (WK-674, LG-2017, PL-2016; ~~this PR, its number and squash written at the merge's date-of-record~~ [`<the merge's PR>`]). Delivered remedy: `libgomp1` in the image, with the red-first image-import test above; evidence in LG-2017.
+***Resolved 2026-11-05*** — closed in place 2026-11-05 by the auditor, as the closing act of the mint of SL-1689 (WK-674, LG-2017, PL-2016; ~~this PR, its number and squash written at the merge's date-of-record~~ [PR #1435]). Delivered remedy: `libgomp1` in the image, with the red-first image-import test above; evidence in LG-2017.
