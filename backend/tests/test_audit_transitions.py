@@ -126,7 +126,7 @@ from model_schema.datasets import VALID_DATASET_TRANSITIONS
 from model_schema.jobs import VALID_TRANSITIONS as VALID_JOB_TRANSITIONS
 from model_schema.metrics import VALID_METRIC_TRANSITIONS
 from model_schema.modelling import VALID_MODEL_TRANSITIONS
-from model_schema.objectives import VALID_OBJECTIVE_TRANSITIONS
+from model_schema.objectives import OBJECTIVE_CERTIFICATE_CHECKS, VALID_OBJECTIVE_TRANSITIONS
 from model_schema.perils import VALID_PERIL_STRUCTURE_TRANSITIONS
 from model_schema.rating import (
     VALID_RATING_VERSION_TRANSITIONS,
@@ -149,20 +149,24 @@ _APPLICABILITY = Applicability(
 )
 
 
-def _result(outcome: CertificateOutcome) -> CertificateResult:
+def _result(outcome: CertificateOutcome, names: tuple[str, ...]) -> CertificateResult:
+    """A result carrying the artifact's whole battery (FR-158): the first check fails when the
+    run fails, the rest pass."""
     failed = outcome is CertificateOutcome.FAILED
-    check = CertificateCheck(
-        name="hessian_matches_numeric",
-        status=CheckStatus.FAILED if failed else CheckStatus.PASS,
-        detail="max relative error 4.1e-01" if failed else "matches",
+    checks = tuple(
+        CertificateCheck(
+            name=name,
+            status=CheckStatus.FAILED if failed and i == 0 else CheckStatus.PASS,
+            detail="max relative error 4.1e-01" if failed and i == 0 else "matches",
+        )
+        for i, name in enumerate(names)
     )
     return CertificateResult(
-        overall=outcome, sampling=_GRID, checks=(check,), library_versions={"numpy": "2.0.0"}
+        overall=outcome, sampling=_GRID, checks=checks, library_versions={"numpy": "2.0.0"}
     )
 
 
-PASSED = _result(CertificateOutcome.CERTIFIED)
-FAILED = _result(CertificateOutcome.FAILED)
+_METRIC_CHECKS = ("finiteness", "direction_holds", "scale_behaviour", "smoke_evaluation")
 
 
 @dataclass(frozen=True)
@@ -177,6 +181,15 @@ class Kind:
     submit: Callable[..., Awaitable[Any]]
     apply: Callable[..., Awaitable[Any]]
     key: str  # keyword naming the artifact's id in `record` and `submit`
+    names: tuple[str, ...]  # the artifact's certificate battery
+
+    @property
+    def passed(self) -> CertificateResult:
+        return _result(CertificateOutcome.CERTIFIED, self.names)
+
+    @property
+    def failed(self) -> CertificateResult:
+        return _result(CertificateOutcome.FAILED, self.names)
 
     def ref(self, row: Any) -> str:
         return f"{self.prefix}:{row.slug}@{row.version}"
@@ -231,6 +244,7 @@ KINDS = {
         objective_service.submit_for_review,
         objective_service.apply_approval_decision,
         "objective_id",
+        OBJECTIVE_CERTIFICATE_CHECKS,
     ),
     "custom_metric": Kind(
         "custom_metric",
@@ -241,6 +255,7 @@ KINDS = {
         metric_service.submit,
         metric_service.apply_approval_decision,
         "metric_id",
+        _METRIC_CHECKS,
     ),
 }
 
@@ -310,10 +325,10 @@ async def test_a_failed_certificate_says_so(
     actor = await _actuary(database, workspace_id)
     row = await kind.create(database, workspace_id, actor)
     if before == "certified":
-        row = await _record(kind, database, workspace_id, actor, row, PASSED)
+        row = await _record(kind, database, workspace_id, actor, row, kind.passed)
         assert row.status == "certified"
 
-    row = await _record(kind, database, workspace_id, actor, row, FAILED)
+    row = await _record(kind, database, workspace_id, actor, row, kind.failed)
 
     events = [e for e in await _events(database, workspace_id, kind.ref(row)) if e.after]
     last = events[-1]
@@ -341,10 +356,10 @@ async def test_a_late_certificate_moves_nothing(
     repoint `certificate_id`, and is recorded as `<type>.certificate_recorded` (PL 8376 DP-3):
     an approver reviews what was submitted, and a failed run landing under a review is readable."""
     kind = KINDS[kind_name]
-    result = PASSED if result_name == "passed" else FAILED
+    result = kind.passed if result_name == "passed" else kind.failed
     actor = await _actuary(database, workspace_id)
     row = await kind.create(database, workspace_id, actor)
-    row = await _record(kind, database, workspace_id, actor, row, PASSED)
+    row = await _record(kind, database, workspace_id, actor, row, kind.passed)
     submitted_certificate = row.certificate_id
 
     async with database.unit_of_work() as session:
@@ -850,7 +865,7 @@ async def _certified_kind(env: Env, kind: Kind, *, upto: str) -> Ctx:
     row = await kind.create(env.database, env.workspace_id, env.actor)
     data: dict[str, Any] = {"id": row.id, "kind": kind}
     if upto in {"certified", "review"}:
-        row = await _record(kind, env.database, env.workspace_id, env.actor, row, PASSED)
+        row = await _record(kind, env.database, env.workspace_id, env.actor, row, kind.passed)
     if upto == "review":
         async with env.database.unit_of_work() as session:
             _moved, request = await kind.submit(
@@ -930,9 +945,9 @@ def _kind_rows(kind: Kind) -> list[Row]:
         return Row(p, before, after, f"{p}.{action}", setup, perform, _kind_status)
 
     return [
-        row("draft", "certified", "certified", "draft", _kind_records(PASSED)),
-        row("draft", "draft", "certification_failed", "draft", _kind_records(FAILED)),
-        row("certified", "draft", "certification_failed", "certified", _kind_records(FAILED)),
+        row("draft", "certified", "certified", "draft", _kind_records(kind.passed)),
+        row("draft", "draft", "certification_failed", "draft", _kind_records(kind.failed)),
+        row("certified", "draft", "certification_failed", "certified", _kind_records(kind.failed)),
         row("certified", "review", "submitted", "certified", _kind_submits),
         row("review", "approved", "approved", "review", _kind_decides(DecisionKind.APPROVE)),
         row(
