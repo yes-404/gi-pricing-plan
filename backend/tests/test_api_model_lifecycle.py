@@ -453,9 +453,8 @@ def test_a_superseded_model_is_archived_by_a_fit_holder(
     actor, model_id, slug, approver = _fitted(workspace_id)
     reader = _headers(actor.id, workspace_id)
     _supersede(workspace_id, actor, approver, model_id)
-    assert api_client.get(
-        f"/api/v1/models/{slug}", params={"version": 1}, headers=reader
-    ).json()["status"] == "superseded"
+    first = api_client.get(f"/api/v1/models/{slug}", params={"version": 1}, headers=reader)
+    assert first.json()["status"] == "superseded"
     caller = _caller_with(workspace_id, {"model:read", "model:fit"})
     archived = _archive(api_client, model_id, slug, caller, reader)
     assert archived.status_code == 200, archived.text
