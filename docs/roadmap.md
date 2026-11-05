@@ -3327,6 +3327,8 @@ The fix of FD-1838 (MEDIUM, owner WK-1178), a Work-plan delta row under WK-1178 
 
 (Activated 2026-10-22 on the maintainer's (by delegation) entry "2026-10-22 15:43:10 BST — Maintainer: SPEED MEASURES …" item 2 (`to-lead.md`): FD-1838 prioritised, built red-first, the remedy as reserved at "2026-10-21 21:13:34 BST". MERGE-ACK: not yet given.)
 
+*Correction: merged as #1363, squash 6753c495, 2026-10-22T20:41:15Z (gh); correction 2026-11-05 by aud-sl1854 on to-lead "2026-11-05 09:37:04 GMT".*
+
 #### SL-1928 — WK-1178 fix slice (S2) — FD-1610 limb 2: the feature_map keys a model_call drops are traced, then refused when they feed a required input
 
 ```yaml
