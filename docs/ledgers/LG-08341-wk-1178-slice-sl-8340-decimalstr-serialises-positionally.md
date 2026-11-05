@@ -36,9 +36,21 @@ Base `ddec34fe`, merged by sha: C `4abb3798`, R1 `662867bb` (INDEX.md: theirs, r
 
 A signed or exponent zero is the value 0: T4 `test_every_spelling_of_zero_gives_the_hash_of_zero`, `-0`, `-0.00`, `-0E+3`, `0E+3` each against `0`. Red on the committed tree without the draft: **4 failed**. The ruling also lets the window run two TEMP-table controls (`decexp_ctl.py`'s PG part, `regspell_ctl.py`) in a writable session on the `postgres` db, `CREATE TEMP TABLE` only, and extends the stored-instance predicate to negative-zero spellings; a stored `-0` changes its hash, and the STOP applies. PL-8339 is a filed plan, frozen at its date, so this record carries the dated line on its "no write" (G2/Needs) rather than an edit to it.
 
+### R2c — no rounding to the ambient precision (to-lead "2026-11-05 16:18:17 GMT"), red first (`496723cf`)
+
+T5 `test_a_hashed_bound_is_never_rounded_to_the_context_precision` (two 38-digit bounds ending `.10` and `.20` stay distinct; `.10` and `.100` hash alike) and `test_a_hashed_bound_does_not_depend_on_the_ambient_decimal_context` (one case under `localcontext()` with `prec=5`). Red measured twice: on the committed tree without the draft, the first fails (`.10` and `.100` hash apart; the second passes, because `str` ignores the context); on the draft with `v.normalize()`, **both fail** (the two 38-digit values collide to one hash, and `prec=5` changes the hash of `123456.7890`).
+
 ### R3 — green (drafted, uncommitted until the window)
 
-Patch `~/gi-pricing-plan.local/scratch/sl-8340-decimalstr-positional/code.patch` sha256 `fe469f364576b9d1a1b792e2f2783e20a5679ab19fd124e12bffc3991299925a`, 3 files (`money.py`, `regression.py`, `test_money.py` docstring); `CanonicalDecimalStr` writes `format(v.normalize() if v else Decimal(0), "f")`. On it `test_money.py` 38 passed, `ruff check packages/model-schema` clean. Noted for the audit: `Decimal.normalize` rounds to the context precision (28 digits), so a bound with more than 28 significant digits would change value; no such bound is plausible.
+Patch `~/gi-pricing-plan.local/scratch/sl-8340-decimalstr-positional/code.patch` sha256 `f5c5f9f9473ca3508e227ae47df0db4f6294a48915a1407d6a503928b71c18ac`, 3 files (`money.py`, `regression.py`, `test_money.py` docstring). `CanonicalDecimalStr` serialises through `_canonical_decimal`: zero first (`0`), else `value.normalize(Context(prec=max(len(value.as_tuple().digits), 1), traps=[Inexact]))` then `format(…, "f")`, as ruled. `test_money.py` 40 passed; `ruff check packages/model-schema` clean; `mypy` on `money.py` clean.
+
+**`.normalize(` sites** — predicate `git grep -n '\.normalize(' -- backend/src packages/*/src` at head `496723cf` plus the draft, 9 lines, one is `unicodedata.normalize` (not a Decimal). Read by "does the output reach a hash site (A5)":
+- `money.py:152` — this slice's own, exact context; reaches `suite_content_hash` via `MonotoneInInput.lower/upper` only.
+- `approvals.py:157` `quantile_key`: a dictionary key and a message text (`rating_versions.py:1161-1177`), no hash; ambient precision, but a quantile has few digits.
+- `ladder.py:169,172,177,183`: inside `localcontext(_ctx())`, builds a `LadderOperation` (a scoring-trace shape), no hash site reads it.
+- `analysis.py:339` `_edge_text`: display text of a band edge, no hash.
+- `rate_tables/operations.py:697` `_format_value` (FD-1648, SL 8322's R1): writes the cell text of an operation result; the cells reach `version_content_hash` (`diff_cache.py:48`), the diff cache's key, not a governed hash, and the rounding at 28 digits is ambient there. Outside this slice's write set; for the lead.
+- `ingest.py:95`: `unicodedata.normalize`, not a Decimal.
 
 ### Disclosure
 
