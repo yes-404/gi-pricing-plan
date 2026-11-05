@@ -120,10 +120,16 @@ def _unpaired() -> list[str]:
     """Routes that declare 413 without a cap, and caps that match no declaring route."""
     app = create_app(Settings(environment=Environment.LOCAL, version="test"))
     paths = app.openapi()["paths"]
-    declared = {p for p, ops in paths.items() if any("413" in op.get("responses", {}) for op in ops.values())}
+    declared = {
+        p
+        for p, ops in paths.items()
+        if any("413" in op.get("responses", {}) for op in ops.values())
+    }
     assert declared
     uncapped = [p for p in declared if not any(r.match(p) for r in body_limit.CAPPED_ROUTES)]
-    dangling = [r.pattern for r in body_limit.CAPPED_ROUTES if not any(r.match(p) for p in declared)]
+    dangling = [
+        r.pattern for r in body_limit.CAPPED_ROUTES if not any(r.match(p) for p in declared)
+    ]
     return [*uncapped, *dangling]
 
 
@@ -140,7 +146,8 @@ def test_a_declaration_without_a_cap_or_a_cap_without_a_declaration_is_caught(
     first, *_ = body_limit.CAPPED_ROUTES
     monkeypatch.setattr(body_limit, "CAPPED_ROUTES", (first,))
     assert _unpaired()  # a route declares 413 and is not capped
-    monkeypatch.setattr(body_limit, "CAPPED_ROUTES", (*body_limit.CAPPED_ROUTES, re.compile("^/nowhere$")))
+    extra = re.compile("^/nowhere$")
+    monkeypatch.setattr(body_limit, "CAPPED_ROUTES", (*body_limit.CAPPED_ROUTES, extra))
     assert "^/nowhere$" in _unpaired()
 
 
