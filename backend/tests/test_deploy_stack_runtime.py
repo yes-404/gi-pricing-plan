@@ -369,6 +369,27 @@ def test_the_frontend_serves_the_spa_and_reaches_the_api_through_lb(
     json.loads(body)
 
 
+#: The model backends the platform declares (FR-415 / 02-modelling); the compose image must run all of them.
+_BACKENDS = ("lightgbm", "xgboost", "glum", "interpret")
+
+
+@pytest.mark.req("FR-432")
+def test_the_built_image_imports_every_declared_model_backend(built_n: str) -> None:
+    """FD 8353: the CI runner installs system libraries the image lacks. `lightgbm` needs
+    `libgomp.so.1`, which `python:3.12-slim` does not carry, so a fit in a compose worker could not
+    even import it. Every backend is imported in the BUILT image, one process each."""
+    failures = {}
+    for module in _BACKENDS:
+        run = subprocess.run(
+            ["docker", "run", "--rm", "--entrypoint", "python", f"gi-pricing-app:{built_n}",
+             "-c", f"import {module}"],
+            capture_output=True, text=True,
+        )
+        if run.returncode != 0:
+            failures[module] = run.stderr.strip().splitlines()[-1]
+    assert failures == {}, failures
+
+
 # -- FD-1211: a served process takes SIGTERM and finalizes the interpreter -------------------
 
 #: DP-211: stop rounds per service. FD-1199's abort is intermittent, so one clean stop proves
