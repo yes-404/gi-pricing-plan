@@ -176,24 +176,40 @@ async def test_equal_values_for_one_column_score_normally_at_predict(
 
 
 def _predict_outcome(scorer: Any, features: dict[str, Any]) -> str | None:
-    """The `PredictionError` code `predict` raises for `features`, or `None` when it returns."""
+    """What `predict` raises for `features`: the `PredictionError` code, else the exception's
+    class name, or `None` when it returns. Only the collision check is under test here."""
     try:
         scorer.predict(features)
     except PredictionError as error:
         return str(error.code)
+    except Exception as error:  # noqa: BLE001 - anything past the collision check is not under test
+        return type(error).__name__
     return None
 
 
 @pytest.mark.req("FR-222")
-@pytest.mark.parametrize("nan", [float("nan"), Decimal("NaN")], ids=["float", "decimal"])
 async def test_two_nan_for_one_column_are_the_ordinary_shared_column_case(
-    world: GlmWorld, monkeypatch: pytest.MonkeyPatch, nan: Any
+    world: GlmWorld, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """FD-1780: NaN is the one value unequal to itself, so `row[column] != value` called two
-    identical NaN a collision. They are equal for this purpose: both NaN, nothing to pick between."""
+    identical NaN a collision. They are equal for this purpose: both NaN, nothing to pick
+    between. What the model then does with a NaN (here: a null band, refused by name) is the
+    banding's refusal, not a collision."""
     bundle = await _bundle_bypassing_the_compile_guard(world, monkeypatch)
     scorer = runtime._glm_scorer(MODEL_REF, bundle.resolved_payloads)
+    nan = float("nan")
     assert _predict_outcome(scorer, {"age_fine": nan, "age_coarse": nan}) != COLLISION
+
+
+@pytest.mark.req("FR-222")
+@pytest.mark.parametrize("nan", [float("nan"), Decimal("NaN")], ids=["float", "decimal"])
+def test_two_nan_are_the_same_value_and_a_nan_is_not_a_number(nan: Any) -> None:
+    assert runtime._same_value(nan, nan)
+    assert runtime._same_value(nan, type(nan)("nan"))
+    assert not runtime._same_value(nan, 33.0)
+    assert not runtime._same_value(33.0, nan)
+    assert runtime._same_value(33.0, 33.0)
+    assert not runtime._same_value(33.0, 34.0)
 
 
 @pytest.mark.req("FR-222")

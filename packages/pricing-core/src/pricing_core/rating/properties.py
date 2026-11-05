@@ -99,8 +99,9 @@ def make_scorer(
     contract: Sequence[InputContractField],
 ) -> Scorer:
     """A memoising scorer on the synchronous `evaluate()` path (RL-868), as
-    `evaluate_golden_quotes` uses. An engine refusal (`ValueError`, `RuntimeError`) is
-    `None`; `NotImplementedError` — a genuinely undesigned case — propagates."""
+    `evaluate_golden_quotes` uses. An engine refusal (`ValueError`, `RuntimeError`, and the
+    `TypeError` of a wrongly typed value reaching the evaluation, FD-1781; the entry
+    "2026-11-05 10:41:08 GMT", DP-R4) is `None`; `NotImplementedError` — a genuinely undesigned case — propagates."""
     cache: dict[str, ScoringResult | None] = {}
 
     def score(context: QuoteContext) -> ScoringResult | None:
@@ -115,7 +116,7 @@ def make_scorer(
                 )
             except NotImplementedError:
                 raise
-            except (ValueError, RuntimeError):
+            except (ValueError, RuntimeError, TypeError):
                 cache[key] = None
         return cache[key]
 

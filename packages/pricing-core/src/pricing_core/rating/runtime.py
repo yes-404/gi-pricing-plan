@@ -163,6 +163,11 @@ def _model_call_failure(
     return {"output": output}
 
 
+def _same_value(a: Any, b: Any) -> bool:
+    """Equal, or both NaN: NaN is the one value unequal to itself (FD-1780)."""
+    return bool(a == b or (a != a and b != b))
+
+
 def _as_list(value: Any) -> list[Any]:
     """Match `compile.py`'s own `_as_list`: an already-list value is returned as-is."""
     return value if isinstance(value, list) else [value]
@@ -878,7 +883,7 @@ class _GlmScorer:
         row: dict[str, Any] = {}
         for key, value in feature_row.items():
             column = self.columns.get(key, key)
-            if column in row and row[column] != value:
+            if column in row and not _same_value(row[column], value):
                 # Never a silent pick (FD-8070): two slugs renamed to one source column, or a
                 # slug and a raw key of that column. Equal values are the ordinary shared-column
                 # case. The column is named, never a value (NFR-499).
