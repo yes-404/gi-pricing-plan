@@ -29,6 +29,7 @@ from openpyxl import Workbook, load_workbook  # type: ignore[import-untyped]
 from openpyxl.utils.exceptions import InvalidFileException  # type: ignore[import-untyped]
 
 from model_schema.modelling import Factor, FactorIntent, GlmFitResult, Model, RelativityLevel
+from model_schema.money import MAX_POSITIONAL_EXPONENT
 from model_schema.rating import (
     BulkOperation,
     BulkOperationResult,
@@ -702,7 +703,19 @@ def _format_value(value: Decimal) -> str:
     and the trap refuses, fail-closed.
     `InvalidOperation` stays trapped so a signaling NaN raises as it did under the ambient
     context. `Infinity` and a quiet `NaN`
-    pass through as `Infinity` / `NaN`, as they always did."""
+    pass through as `Infinity` / `NaN`, as they always did.
+
+    The text of a fixed-point value grows with its exponent (`1E+999990` is a megabyte, and
+    `_transform_rows` writes every row before `_validate_result` reads one), so the adjusted
+    exponent is bounded first, zero's included (`0E-999999999` is the same gigabyte): the same
+    `MAX_POSITIONAL_EXPONENT` the model-schema decimals use, refused before any text exists.
+    A special value's `adjusted()` is 0, so it is not caught here."""
+    if not -MAX_POSITIONAL_EXPONENT <= value.adjusted() <= MAX_POSITIONAL_EXPONENT:
+        raise ValueError(
+            f"{CELL_UNPARSEABLE}: a computed cell whose adjusted exponent is beyond "
+            f"{MAX_POSITIONAL_EXPONENT} either way is no value the rating engine can read "
+            "(FR-21, FR-273)"
+        )
     if value.is_zero():
         return "0"
     exact = Context(prec=max(len(value.as_tuple().digits), 1), traps=[Inexact, InvalidOperation])
