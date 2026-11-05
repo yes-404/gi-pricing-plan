@@ -361,7 +361,7 @@ named by the maintainer's ruling (2026-10-16 09:46:32). `s3_upload_id` is the `u
 | `GET` | `/metrics` | Prometheus metrics (FR-443) | `open` |
 | `GET` | `/api/v1/demo/guide` | What is testable today, derived (FR-409). **404 unless `dev_auth_enabled`** | `authenticated` (404 unless `dev_auth_enabled`) |
 
- *(Added 2026-11-05, `RL-1483` item 1, `SL-8361`: the `Permission` column. Each cell is the permission name(s) from `06` §4.1, `authenticated` or `open`; a row with two methods is one row per method. Cells follow `06` §4.1's `Governs` text. The health, version, metrics, OpenAPI and OIDC-config routes are `open`.)*
+ *(Added 2026-11-05, `RL-1483` item 1, `SL-2011`: the `Permission` column. Each cell is the permission name(s) from `06` §4.1, `authenticated` or `open`; a row with two methods is one row per method. Cells follow `06` §4.1's `Governs` text. The health, version, metrics, OpenAPI and OIDC-config routes are `open`.)*
 
 > **Amended 2026-08-27, at WK-664's close (plan review 5, proposal 2.4).** The three routes were
 > previously joined in one path cell, which a spec-reconciler pass read as declaring none of

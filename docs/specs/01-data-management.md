@@ -892,7 +892,7 @@ required this since Phase 0, and the response was the only documented `01` respo
 | `GET` | `/api/v1/reference-tables/{slug}/versions/{version}/rows?as_at=` | Rows of a **pinned** version, optionally as at a date (FR-70) | `dataset:read` |
 | `GET` | `/api/v1/reference-tables/{slug}/lookup?key=&as_at=` | Point lookup for debugging (FR-71) | `dataset:read` |
 
- *(Added 2026-11-05, `RL-1483` item 1, `SL-8361`: the `Permission` column. Each cell is the permission name(s) from `06` §4.1, `authenticated` or `open`; a row with two methods is one row per method. Cells follow `06` §4.1's `Governs` text and this module's own FRs (FR-82, FR-46, `01` §4.5 step 5).)*
+ *(Added 2026-11-05, `RL-1483` item 1, `SL-2011`: the `Permission` column. Each cell is the permission name(s) from `06` §4.1, `authenticated` or `open`; a row with two methods is one row per method. Cells follow `06` §4.1's `Governs` text and this module's own FRs (FR-82, FR-46, `01` §4.5 step 5).)*
 
 > **Three reference read routes added 2026-08-15 (WK-663).** §5.3 asks the `/reference` view
 > for a table list, a version timeline and an effective-date viewer, and §5.1 declared none
