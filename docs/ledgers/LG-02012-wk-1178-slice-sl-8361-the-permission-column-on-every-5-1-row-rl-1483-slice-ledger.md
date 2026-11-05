@@ -107,6 +107,8 @@ The rulings' edits are in the commit that follows `4610b9e7` (see `git log`).
 
 *(2026-11-05, to-lead "2026-11-05 15:59:27 GMT" (4).)* Working ids 8361, 8362, 8363, 8364 and 8365 are minted as SL-2011, LG-2012, OQ-2013, OQ-2014 and OQ-2015 with `mint-repoint.py`; FD 8366 stays a working id. **One hand edit, disclosed:** `docs/specs/06-governance.md` line 284 is a `>` blockquote line, which the tool skips by rule; its one `SL-8361` was changed to `SL-2011` with `sed`. A first mint at SL-2014 to OQ-2018 was withdrawn when the ruling moved the slice to the next ids on main; it is kept on the local ref `draft/sl-8361-mint-old`.
 
+*(Dated line, 2026-11-05, to-lead "2026-11-05 16:21:19 GMT".)* `03` §5.1's `GET /api/v1/dislocation-runs/{id}/movers` Permission cell is changed from `rating:read` to `rating:read` and `dataset:read` on that Dataset Version, in the form of the POST rows: the pin found the cell short of its own Purpose text ("requires `rating:read` and `dataset:read` on that Dataset Version").
+
 ## PRs
 
 None. Ends unpushed.
