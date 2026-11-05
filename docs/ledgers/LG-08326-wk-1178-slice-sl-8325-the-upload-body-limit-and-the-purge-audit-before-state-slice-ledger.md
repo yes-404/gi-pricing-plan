@@ -57,3 +57,7 @@ PL-8324, "SL 8325 — the upload body limit and the purge before state", R0 to R
 - `test_data_nfrs.py` changes only the docstring at the transition test (the claim now covers the transition class and points at the other four).
 
 **GREEN set (common seat brief item 29).** Changed modules: `app.api.body_limit` (new), `app.config`, `app.errors`, `app.main`, `app.platform.datasets` (`git diff --name-only d7af4f25...HEAD -- backend/src`). `app.main` imports every router, so the import closure is the whole backend suite; the predicate `git grep -l -E '^(from|import) app\.(config|errors|main|platform\.datasets|api\.body_limit)\b|^from app import .*\b(config|errors|main)\b|from app.platform import .*datasets' -- 'backend/tests/*.py'` alone matches 112 of 207 test files at this tree. The SOLO gate's full suite is the decisive green.
+
+## PRs
+
+(Owed at the PR: number, title, merge commit. Branch `sl-8325-a-upload-limit`, unpushed at this entry.)
