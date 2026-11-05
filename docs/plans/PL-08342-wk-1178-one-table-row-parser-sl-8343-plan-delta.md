@@ -97,6 +97,9 @@ by the planner**, read-only (`/tmp/plan-slices/p6.py`; `doc-index.py` through th
 
 ## Decision points
 
+**Both ruled** (the entry "2026-11-05 10:36:35 GMT"): DP-P1 (a), row by row; DP-P2 (a); the Wed 12:00 fallback is R3 alone. That
+entry also says "T folded": T's commits ride this branch and this gate (PL 8330). The table is kept as the record.
+
 | DP | Question | Options | Recommendation |
 |---|---|---|---|
 | DP-P1 | A newly visible route fails a check (declared, unbuilt, out of phase). What then? | (a) **Stop and report each with its check line;** the lead rules, row by row, as a spec correction or a dated exception, in this slice's PR. (b) Exempt them in the checker to keep the migration green. A check that hides a declared route is this finding again. | **(a).** |
@@ -174,8 +177,7 @@ DB-free if its fixture is; else the gate proves it.
 ### SL 8343 — one row parser
 
 **The row.** Last-2 in the 09:58:58 order. WK-1178. One `sonnet` executor. Requirements: none by id: tooling; the
-figures it corrects are §13 evidence. Register: FD-1484 (MEDIUM), closing at the merge (A11). Depends on: DP-P1 and
-DP-P2 ruled; the GO; a gate slot. **Size:** 8 h. SOLO gate about 2.5 h, not counted. Merged before Thu 12 Nov 2026;
+figures it corrects are §13 evidence. Register: FD-1484 (MEDIUM), closing at the merge (A11). Depends on: the GO; a gate slot. **Size:** 8 h. SOLO gate about 2.5 h, not counted. Merged before Thu 12 Nov 2026;
 still red at Wed 11 Nov 12:00 → the exception list, with the fallback's 1 h limb still landing before the exit
 review.
 
@@ -250,14 +252,14 @@ CI from the three-dot diff: `python`, `docs`, `history-policy`.
 ### Files shared with other groups
 
 **T:** `register-owed.py` reads `register_lint.parse_register`; T edits `register-owed.py` only, and this slice
-`register-lint.py`. No textual collision. T's option to fold onto this branch is in PL 8330's G. **C:**
+`register-lint.py`. No textual collision. **T is folded here** (10:36:35): this branch carries PL 8330's commits and one gate covers both. **C:**
 `backend/tests/test_contracts.py` is read by C's contract change, one line here. **H:** `tests/` different files.
 **Every plan's mint touches `docs/INDEX.md`**, which `doc-index.py` regenerates: re-merge after R3 changes nothing
 in its output by A8. **Serial with nobody for building; the gate is serial, last.**
 
 ## Hand-off (not this plan's writes)
 
-- DP-P1, DP-P2 and the GO: the maintainer. The gate slot, the row and the mint: the lead. The LG: the executor. A11:
+- The GO: the maintainer. The gate slot, the row and the mint: the lead. The LG: the executor. A11:
   the auditor.
 - **The dated lines of 09:51:53 (8)**, recording #977 and #982 as closed unmerged on FD-1484's and FD-1338's essays,
   are the docs batch's, not this slice's; A11's paragraph must not contradict them.
