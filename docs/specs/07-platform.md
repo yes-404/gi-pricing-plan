@@ -499,7 +499,8 @@ the `ProgressCallback` protocol, defined in `pricing-core` and *implemented* her
 | **OIDC (Keycloak or similar)** | User authentication | Authorisation code + PKCE for an SPA, token refresh, claim mapping, running a local provider in compose |
 | **OpenTelemetry** | Distributed tracing across API → queue → worker | Context propagation through Celery, span attributes, sampling |
 | **Prometheus / Grafana** | Metrics and dashboards | Histogram buckets for p99 latency, queue-depth alerting |
-| **Docker Compose / Helm** | Local stack and production packaging | Compose parity with production (R2), independently scalable pools, image signing and SBOM generation |
+| **Docker Compose / Helm** | Local stack and production packaging | Compose parity with production (R2), independently scalable pools, image signing and SBOM generation; the `frontend` image builds the SPA in a `node:22-alpine` stage (the frontend toolchain, not a new dependency) and serves it from `nginx` |
+| **nginx** | The `lb` round-robin over `api` replicas, and the `frontend` image's static server with its `/api/` proxy (FR-432; one image, `nginx:1.27-alpine`, for both) | Upstream re-resolution through Docker DNS for rolling replacement (NFR-531), SPA history fallback, same-origin proxying |
 | **GitHub Actions** | CI with path filters | Per-component pipelines, generated-artifact drift checks (FR-451) |
 
 New skills this spec adds to `skills-map.md`: Celery cancellation and resource budgeting;
