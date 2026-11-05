@@ -301,18 +301,20 @@ after cells, actor — is the `03` NFR-498 Audit Event, not part of this record.
 
 ### 5.1 REST API
 
-| Method | Path | Purpose |
-|---|---|---|
-| `POST` | `/api/v1/demand-models/{id}/elasticity` | **202** Compute elasticity surface with CIs (FR-279/280) |
-| `GET` | `/api/v1/demand-models/{id}/price-variation` | Identifiability report per segment (FR-278) |
-| `POST` | `/api/v1/optimisation-runs` | **202** Launch a run → Job (FR-284) |
-| `GET` | `/api/v1/optimisation-runs/{id}` | Run + result artifact |
-| `GET` | `/api/v1/optimisation-runs/{id}/frontier` | Efficient frontier points (FR-290) |
-| `GET` | `/api/v1/optimisation-runs/compare?ids=` | Segment-level diff between runs (FR-291) |
-| `POST` | `/api/v1/optimisation-runs/{id}/materialise` | Preview cell-level diff; accept per segment (FR-303/304) |
-| `POST` | `/api/v1/gipp-checks` | **202** Run a GIPP check → Job (FR-294) |
-| `GET` | `/api/v1/gipp-checks/{id}` | GIPP evidence artifact |
-| `POST` | `/api/v1/disparity-reports` | **202** Outcome disparity report against a supplied reference (FR-302) |
+| Method | Path | Purpose | Permission |
+|---|---|---|---|
+| `POST` | `/api/v1/demand-models/{id}/elasticity` | **202** Compute elasticity surface with CIs (FR-279/280) | `optimisation:run` |
+| `GET` | `/api/v1/demand-models/{id}/price-variation` | Identifiability report per segment (FR-278) | `authenticated` |
+| `POST` | `/api/v1/optimisation-runs` | **202** Launch a run → Job (FR-284) | `optimisation:run` |
+| `GET` | `/api/v1/optimisation-runs/{id}` | Run + result artifact | `authenticated` |
+| `GET` | `/api/v1/optimisation-runs/{id}/frontier` | Efficient frontier points (FR-290) | `authenticated` |
+| `GET` | `/api/v1/optimisation-runs/compare?ids=` | Segment-level diff between runs (FR-291) | `authenticated` |
+| `POST` | `/api/v1/optimisation-runs/{id}/materialise` | Preview cell-level diff; accept per segment (FR-303/304) | `optimisation:materialise` |
+| `POST` | `/api/v1/gipp-checks` | **202** Run a GIPP check → Job (FR-294) | `optimisation:run` |
+| `GET` | `/api/v1/gipp-checks/{id}` | GIPP evidence artifact | `authenticated` |
+| `POST` | `/api/v1/disparity-reports` | **202** Outcome disparity report against a supplied reference (FR-302) | `optimisation:run` |
+
+ *(Added 2026-11-05, `RL-1483` item 1, `SL-8361`: the `Permission` column. Each cell is the permission name(s) from `06` §4.1, `authenticated` or `open`; a row with two methods is one row per method. **This module names no permission and `06` §4.1 lists only `optimisation:run` and `optimisation:materialise`, both unbuilt. The writes take those names; the reads take `authenticated` because no read member exists. Both are provisional and the lead's to rule (see `SL-8361`'s ledger).**)*
 
 **Error codes owned by this module:** `DEMAND_MODEL_MISSING_PRICE_TERM`,
 `PRICE_VARIATION_INSUFFICIENT`, `POSITIVE_ELASTICITY_DETECTED`, `EXTRAPOLATION_REFUSED`,
