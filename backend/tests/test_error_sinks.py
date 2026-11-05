@@ -473,6 +473,20 @@ def test_the_census_sees_an_injected_sink() -> None:
         ("injected.py", "leak_info", "exc_info"): 1,
         ("injected.py", "leak_job", "JobError"): 1,
     }
+    # FD-1507: an exception is recognised by what it is -- bound by an enclosing `except ... as`
+    # (whatever the name), or a parameter named `exc` -- never by the spelling of a variable.
+    renamed = (
+        "def handler_str():\n    try:\n        pass\n    except ValueError as problem:\n"
+        "        return str(problem)\n\n\n"
+        "def handler_text():\n    try:\n        pass\n    except ValueError as failure:\n"
+        "        return f'failed: {failure}'\n"
+    )
+    assert dict(_sinks(renamed, "renamed.py")) == {
+        ("renamed.py", "handler_str", "str(exc)"): 1,
+        ("renamed.py", "handler_text", "{exc}"): 1,
+    }
+    not_an_exception = "def band(low):\n    e = 1\n    return str(e) + f'{e}'\n"
+    assert dict(_sinks(not_an_exception, "edge.py")) == {}
 
 
 class _Quote(BaseModel):
