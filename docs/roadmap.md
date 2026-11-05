@@ -3313,7 +3313,7 @@ The remedy of FD-1887 (LOW-MEDIUM, owner WK-1178), ordered by the maintainer's e
 id: SL-1854
 family: slice
 title: WK-1178 fix slice — FD-1838: the deployment switch's channels carry the gate slot's name, so a concurrent subscriber is not counted in the PREPARE quorum
-status: active                   # draft → active → closed | retired (§1.2a)
+status: closed                   # draft → active → closed | retired (§1.2a)
 created: 2026-10-22   # filed under working id 8170 (lead-reserved in eta.md); minted 2026-10-22 as SL-1854
 owner: executor                  # cut by the lead as a Work-plan delta row (Lean P2 L5); lead dispatches (active)
 tree: f3462d8fc1336dc4583fe8a7af92fed399993a55
@@ -3328,6 +3328,8 @@ The fix of FD-1838 (MEDIUM, owner WK-1178), a Work-plan delta row under WK-1178 
 (Activated 2026-10-22 on the maintainer's (by delegation) entry "2026-10-22 15:43:10 BST — Maintainer: SPEED MEASURES …" item 2 (`to-lead.md`): FD-1838 prioritised, built red-first, the remedy as reserved at "2026-10-21 21:13:34 BST". MERGE-ACK: not yet given.)
 
 *Correction: merged as #1363, squash 6753c495, 2026-10-22T20:41:15Z (gh); correction 2026-11-05 by aud-sl1854 on to-lead "2026-11-05 09:37:04 GMT".*
+
+Closed 2026-11-05 on its slice audit (LG-1855 Audit section, the lead's adoption) and FD-1838's close; to-lead "2026-11-05 09:43:14 GMT" (the maintainer's status line).
 
 #### SL-1928 — WK-1178 fix slice (S2) — FD-1610 limb 2: the feature_map keys a model_call drops are traced, then refused when they feed a required input
 
