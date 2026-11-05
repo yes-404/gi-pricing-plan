@@ -10,6 +10,7 @@ strings everywhere — never JSON floats, and never float through the file (R2).
 from __future__ import annotations
 
 import hashlib
+import random
 from collections.abc import Callable
 from datetime import UTC, datetime
 from decimal import Decimal
@@ -225,6 +226,42 @@ class TestAWriteNeverLandsACellTheEngineCannotRead:
         self, path: Callable[[str], object], raw: str
     ) -> None:
         path(raw)
+
+
+def _golden_values() -> list[Decimal]:
+    """At least 1 000 decimals spanning magnitudes, from a seeded generator (no clock, no luck)."""
+    rng = random.Random(8322)
+    values: list[Decimal] = []
+    for _ in range(1200):
+        digits = rng.randint(1, 9)
+        mantissa = rng.randint(0, 10**digits - 1)
+        exponent = rng.randint(-12, 6)
+        values.append(Decimal(mantissa).scaleb(exponent))
+    values += [Decimal(s) for s in ("0", "1", "1.0", "0.5", "1.8400", "2.024", "12345.6789")]
+    return values
+
+
+class TestFormatValueGoldens:
+    """FD-1648: where the old expression wrote no exponent, the bytes do not move (A7)."""
+
+    @pytest.mark.req("FR-234")
+    def test_format_value_is_bit_identical_where_it_was_already_fixed_point(self) -> None:
+        values = _golden_values()
+        assert len(values) >= 1000
+        compared = 0
+        for value in values:
+            old = str(value.normalize())  # the expression before FD-1648, held here
+            if "E" in old:
+                continue
+            compared += 1
+            assert _format_value(value) == old
+        assert compared >= 500  # the fixture spans both sides; the comparison is not vacuous
+
+    @pytest.mark.req("FR-234")
+    def test_no_value_is_written_with_an_exponent(self) -> None:
+        for value in _golden_values():
+            assert "E" not in _format_value(value).upper()
+            assert Decimal(_format_value(value)) == value
 
 
 class TestDecideStorageMode:
