@@ -369,6 +369,45 @@ def test_the_frontend_serves_the_spa_and_reaches_the_api_through_lb(
     json.loads(body)
 
 
+@pytest.mark.req("FR-450")
+def test_an_upload_past_the_limit_through_lb_is_the_apis_413_and_not_nginxs(
+    built_n: str, down: None  # noqa: F811
+) -> None:
+    """FR-450 (FD-1802, A7): through `lb`, a 2 MiB body reaches the API and a body of the limit + 1
+    byte is the API's RFC 9457 `PAYLOAD_TOO_LARGE`, not nginx's HTML 413 at its own 1 MiB default.
+
+    The cap runs before authentication, so no credentials are sent: a 413 here is the cap's, and
+    the smaller body's answer is whatever the API says to an anonymous caller, never a 413.
+    """
+    from app.api.body_limit import MIB
+    from app.config import Environment, Settings
+
+    limit = Settings(environment=Environment.LOCAL, version="test").max_upload_body_mib * MIB
+    _compose(built_n, "up", "-d", "--wait", "lb")
+
+    def post(size: int) -> tuple[int, str, bytes]:
+        request = urllib.request.Request(
+            f"http://127.0.0.1:{LB_PORT}/api/v1/sources/abc/preview",
+            data=b"\0" * size,
+            headers={"Content-Type": "multipart/form-data; boundary=x"},
+            method="POST",
+        )
+        try:
+            with urllib.request.urlopen(request, timeout=120) as r:
+                return int(r.status), r.headers.get("Content-Type", ""), r.read()
+        except urllib.error.HTTPError as exc:
+            return exc.code, exc.headers.get("Content-Type", ""), exc.read()
+
+    status, ctype, body = post(2 * MIB)
+    print(f"POST 2 MiB -> {status} {ctype}")
+    assert status != 413, f"a 2 MiB body was refused as too large: {body[:120]!r}"
+    status, ctype, body = post(limit + 1)
+    print(f"POST limit+1 ({limit + 1} bytes) -> {status} {ctype}")
+    assert status == 413
+    assert "json" in ctype, f"nginx's answer, not the API's: {ctype} {body[:80]!r}"
+    assert json.loads(body)["code"] == "PAYLOAD_TOO_LARGE"
+
+
 #: The model backends the platform declares; the compose image must be able to import all of them.
 _BACKENDS = ("lightgbm", "xgboost", "glum", "interpret")
 
