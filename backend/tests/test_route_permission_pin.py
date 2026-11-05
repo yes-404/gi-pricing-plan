@@ -306,7 +306,8 @@ def pin_violations(
                 seen = AUTHENTICATED
             if not ok:
                 violations.append(
-                    f"{method} {code.path}: spec ({row.where}) says {row.cell!r}; code checks {seen}"
+                    f"{method} {code.path}: spec ({row.where}) says {row.cell!r}; "
+                    f"code checks {seen}"
                 )
     return violations
 
