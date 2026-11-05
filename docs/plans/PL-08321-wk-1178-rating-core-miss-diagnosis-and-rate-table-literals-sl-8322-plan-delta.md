@@ -194,7 +194,11 @@ and `operations.py:59` already imports `pricing_core.rating.compile`, so `cell_p
 
 ## Decision points
 
-The three limbs, FD-1767 and "FD-1569" are ruled. Open, for the maintainer through the lead:
+The three limbs, FD-1767 and "FD-1569" are ruled. **All three below are now ruled too** (the entry "2026-11-05 10:41:08
+GMT"): DP-R1 (a); "THE CONSEQUENCE RULED: limb (iii) OVERRIDES FR-239 for a defective cell"; "a dated clause on FR-239 ("a
+defective cell refuses regardless of hash; a clean bundle's wire is byte-identical") rides R2's PR as the spec change in the
+same commit as the code; no opt-in flag"; the no-dp departure accepted; DP-R2 (a), `RATE_TABLE_CELL_UNPARSEABLE`; DP-R4 (a);
+A12's inversion OK. The table is kept as the record of the options.
 
 | DP | Question | Options | Recommendation |
 |---|---|---|---|
@@ -202,7 +206,7 @@ The three limbs, FD-1767 and "FD-1569" are ruled. Open, for the maintainer throu
 | DP-R2 | Which code for a cell the engine cannot parse, at write, compile and score? | (a) **A new `RATE_TABLE_CELL_UNPARSEABLE`**, one code for all three: `03` §5.2, `errors.py`, `_PER_QUOTE_CODES`. The ruling makes it a first-class failure and an HIGH finding, and neither "incomplete" nor "evaluation failed" says what to fix. (b) Reuse: `RATE_TABLE_INCOMPLETE` at write and compile, `RATING_EVALUATION_FAILED` at score. No new surface. | **(a).** Changed from the first draft's reuse, because the ruling widened the failure. The plan is written for (a); under (b) the code names change and nothing else. |
 | DP-R4 | The ruling's "reports it" (FD-1781): is a `fail` status enough? `None` carries no cause. | (a) **Status only**: catch at `:118`, as ruled. (b) Also carry the exception type: a `PropertyResult` field and a contract change, for a latent LOW. | **(a).** The auditor's paragraph says the cause is not surfaced. |
 
-**A12's test inversion** needs the lead's OK under common seat brief item 13.
+**A12's test inversion:** OK given by the same entry (common seat brief, item 13).
 
 ## Acceptance Standard
 
@@ -296,8 +300,7 @@ Items 1 and 2 apply to this plan. **A1 to A11 are R1 (SL 8322). A12 to A18 are R
 ### R1, SL 8322 — a write never lands a cell the engine cannot read
 
 **The row.** First after SL-1689. WK-1178. One `sonnet` executor. Requirements: `03` FR-234, FR-214 (guard), FR-222,
-FR-261. Register: FD-1767, FD-1780, FD-1781 close; FD-1648 gains its line. **Size 7.75 h.** Depends on: DP-R2 and DP-R4
-ruled; the GO; a gate slot.
+FR-261. Register: FD-1767, FD-1780, FD-1781 close; FD-1648 gains its line. **Size 7.75 h.** Depends on: the GO; a gate slot.
 
 **R1.0 — premises and spec.** Re-read every cite at the base. Amend `docs/specs/03-rating-engine.md` under `spec-change`,
 dated, citing this plan and the 10:11:39 entry. **FR-234**, appended: every value is a decimal the rating engine's
@@ -372,15 +375,17 @@ fire `frontend.yml`.
 
 ### R2, SL 8345 — a bad cell is a hard error, and a refusal says why
 
-**The row.** Branches from R1's merge. WK-1178. One `sonnet` executor. Requirements: `03` FR-255, FR-239 (read, DP-R1), NFR-489
-(read). Register: FD-1648, FD-1659, FD-1478 close. **Size 6.5 h.** Depends on: R1 merged; DP-R1 ruled; A12's OK; a gate slot.
+**The row.** Branches from R1's merge. WK-1178. One `sonnet` executor. Requirements: `03` FR-255, FR-239 (the ruled clause), NFR-489
+(read). Register: FD-1648, FD-1659, FD-1478 close. **Size 6.5 h.** Depends on: R1 merged; a gate slot.
 
 **R2.0 — premises and spec.** Confirm a real bundle's decision, with its `customHandler`, evaluates from inside `async def`
 (`test_rating_score_batch_outputs.py`'s GBM fixture). If not: `await async_evaluate` on the `score_one` path, `evaluate` on batch,
 and the LG says why. **FR-255**, appended: a refused quote's code comes from what failed, not from what the failing step
 consumes; an `on_miss="error"` step that found no row is `RATE_TABLE_MISS` or `REFERENCE_LOOKUP_MISS` for that step, a step
 consuming both included; a cell the engine cannot parse is a hard error of the DP-R2 code, on every `on_miss`, never an omitted
-output or a miss. Closes `RL-1313` DP-G4's stated limit. Commit alone.
+output or a miss. Closes `RL-1313` DP-G4's stated limit. **FR-239**, the ruled dated clause: "a defective cell refuses
+regardless of hash; a clean bundle's wire is byte-identical". The FR-255 clause commits alone; **the FR-239 clause rides the
+code's commit, as ruled.**
 
 **R2.1 — red first.** `test_rating_score.py`, `req("FR-255")`:
 
@@ -444,12 +449,12 @@ H re-derives after R. **Safe in parallel with A, C, T, H, F. Before LAST-1.** R2
 
 ## Hand-off (not this plan's writes)
 
-- DP-R1, DP-R2 and DP-R4, and A12's OK: the maintainer, through the lead.
+- All DPs ruled (10:41:08).
 - The rows and mints, the gate slots: the lead. The LGs: the executors. A11 and A18: each slice's auditor.
 - **For the lead, before the demo seed and SL-1913:** a stored Rate Table Version made by a bulk operation may already hold a `1E+2`
   cell. After R1 a new compile over it is refused, naming the key; after R2 a compiled bundle's quote that hits it is a hard error.
-  None is known. **A read-only census of stored cells is worth one window;** no record owns it yet, and any hit is a new version by
-  edit, not a data patch.
+  **The read-only census is ruled and owned** (10:41:08 (4)): the lead's or a seat's, not this plan's. A hit is a MEDIUM data finding
+  with its remediation, which may be "a re-format migration in R2's scope": then R2's write set and size change by a dated delta.
 
 ## Self-review
 
