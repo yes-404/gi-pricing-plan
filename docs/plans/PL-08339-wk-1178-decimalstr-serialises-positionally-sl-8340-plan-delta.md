@@ -94,7 +94,8 @@ the planner** on tools-main's venv, read-only (`/tmp/plan-slices/p5.py`).
 
 ## Decision points
 
-For the maintainer, on the GO. Each is ruled before the slice starts.
+**All three ruled** (the entry "2026-11-05 10:36:35 GMT"): DP-L1 (a); DP-L2 (c); DP-L3 (a); "the read-only measurement window
+before any code"; "ANY stored instance of the affected shape stops the slice for my ruling". The table is kept as the record.
 
 | DP | Question | Options | Recommendation |
 |---|---|---|---|
@@ -123,8 +124,8 @@ The slice:
   not a zero). Two counts: quoted exponent-form values; and, under DP-L2 (c), `lower` or `upper` values
   in `regression_suites` with a non-canonical spelling.
 - **A4. The rule is applied.** If both counts are 0: no version bump, and the LG and the commit say so,
-  citing A3. If either is above 0: `suite_content_hash` gains a version, on the `spec_hash` precedent, as
-  ruled, and the slice stops first to tell the lead what was found.
+  citing A3. **If either is above 0 the slice stops for the maintainer's ruling** (10:36:35), which supersedes the
+  automatic bump of 2026-09-30 by naming the stop first.
 - **A5. The hash sweep.** LG 8341 lists every `sha256` site in `backend/src` and `packages/*/src`
   (`git grep -n -E 'sha256|_canonical_sha256' -- backend/src packages/model-schema/src
   packages/pricing-core/src`), and whether a `DecimalStr` reaches it. The audit-event writers are
@@ -180,7 +181,7 @@ The slice:
 ### SL 8340 — positional `DecimalStr`
 
 **The row.** Last-1 in the 09:58:58 order. WK-1178. One `sonnet` executor. Requirements: `00` FR-10, FR-21.
-Register: FD-1337 (MEDIUM), closing at the merge (A13). Depends on: DP-L1 to DP-L3 ruled; the GO; the window;
+Register: FD-1337 (MEDIUM), closing at the merge (A13). Depends on: the GO; the window;
 R and C merged. **Size:** 7 h (the triage's), including the window. SOLO gate about 2.5 h, not counted.
 Merged before Thu 12 Nov 2026; still red at Wed 11 Nov 12:00 → the exception list.
 
@@ -252,7 +253,7 @@ C by the order.** The code can be built beside any group; the **window and the g
 
 ## Hand-off (not this plan's writes)
 
-- DP-L1 to DP-L3 and the GO: the maintainer. The window and the gate: the lead. The LG: the executor. A13: the
+- The GO: the maintainer. The window and the gate: the lead. The LG: the executor. A13: the
   auditor.
 - **If A4 finds an instance:** the bump is ruled in advance, but it is a stop, because a stored suite whose hash
   is pinned as evidence (`rating_versions.py`, `evidence.golden_quotes.suite_content_hash`) needs a read
