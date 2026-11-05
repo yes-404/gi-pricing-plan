@@ -66,6 +66,10 @@ PLATFORM_ERROR_CODES: Final[frozenset[str]] = frozenset(
         "JOB_HANDLER_FAILED",
         "IDEMPOTENCY_KEY_CONFLICT",
         "RATE_LIMITED",
+        # FR-450 (2026-11-05, FD-1802): a request body past the stated limit, raised by
+        # `api.body_limit.BodyLimitMiddleware` and, as an `HTTPException`, through
+        # `_STATUS_CODES` below.
+        "PAYLOAD_TOO_LARGE",
         "BLOB_NOT_FOUND",
         "SECRET_NOT_FOUND",
         "SETTING_INVALID",
@@ -552,6 +556,7 @@ async def _handle_validation_error(
 _STATUS_CODES: Final[dict[int, tuple[str, str]]] = {
     status.HTTP_404_NOT_FOUND: ("NOT_FOUND", "Resource not found"),
     status.HTTP_405_METHOD_NOT_ALLOWED: ("METHOD_NOT_ALLOWED", "Method not allowed"),
+    status.HTTP_413_CONTENT_TOO_LARGE: ("PAYLOAD_TOO_LARGE", "Request body too large"),
 }
 
 

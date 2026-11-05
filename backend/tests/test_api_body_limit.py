@@ -18,6 +18,7 @@ from app.errors import install_error_handlers
 from app.observability.middleware import TraceMiddleware
 
 LIMIT = 4096
+CHUNK = 512
 PATH = "/api/v1/sources/abc/preview"
 TRACEPARENT = "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01"
 
@@ -74,19 +75,19 @@ async def test_a_declared_length_over_the_limit_is_refused_before_the_handler() 
 async def test_a_chunked_body_over_the_limit_is_refused() -> None:
     entered: list[int] = []
     pulled = 0
-    chunk = b"y" * 1000
+    payload, content_type = _multipart(LIMIT * 10)
 
     async def body() -> AsyncIterator[bytes]:
         nonlocal pulled
-        for _ in range(100):
+        for start in range(0, len(payload), CHUNK):
             pulled += 1
-            yield chunk
+            yield payload[start : start + CHUNK]
 
     async with _client(_app(entered)) as client:
         response = await client.post(
             PATH,
             content=body(),
-            headers={"content-type": "multipart/form-data; boundary=b", "traceparent": TRACEPARENT},
+            headers={"content-type": content_type, "traceparent": TRACEPARENT},
         )
     assert response.status_code == 413
     problem = response.json()
@@ -96,7 +97,7 @@ async def test_a_chunked_body_over_the_limit_is_refused() -> None:
     # part 2: the problem still carries the trace id, because the trace middleware is outside.
     assert problem["trace_id"] == "0af7651916cd43dd8448eb211c80319c"
     # The body was not read to its end: the refusal came as the limit was passed.
-    assert pulled <= LIMIT // len(chunk) + 2
+    assert pulled <= LIMIT // CHUNK + 2
     assert entered == []
 
 
