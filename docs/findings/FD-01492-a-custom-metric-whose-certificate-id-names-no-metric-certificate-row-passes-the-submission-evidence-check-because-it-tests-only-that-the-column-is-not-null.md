@@ -2,12 +2,12 @@
 id: FD-1492
 family: finding
 title: A custom metric whose certificate_id names no metric_certificate row passes the submission evidence check, because the check tests only that the column is not null
-status: active
+status: closed
 created: 2026-10-08            # original date 2026-10-05, set at the draft; minted 2026-10-08
 owner: auditor
 tree: 47d770e8fcbd2410fa101019ed8cf3aae69a1baa
 corrected_by: []
-relates: [WK-690, FR-157, FR-364]
+relates: [WK-690, FR-157, FR-364, SL-1622, LG-1680]
 ---
 
 # FD-1492 — a custom metric's `certificate_id` is never resolved before submission
@@ -144,3 +144,5 @@ the model comment at `models.py:1868-1871` records why the column is not one.
 - It does not claim a mispricing. `grep -n certificate_id backend/src/app/platform/approvals.py` has no match: the approval path never reads the id, so the dangling id is not consumed downstream of the evidence check by that module.
 - The audit cited `db/models.py:1740` for the column; at `47d770e8` line 1740 is not that column (the metric column is
   `:1860`; `:1733` is the objective model's). This essay uses the lines at `47d770e8`.
+
+***Resolved 2026-11-05*** — closed in place 2026-11-05 by the auditor (aud-fdclose), on the lead's brief under to-lead "2026-11-05 09:40:57 GMT" item 8 (2), the FD-1842 form; the register row was already marked Resolved 2026-10-12 and this closes the essay to match. Delivered remedy (the Disposition's single limb: `_require_evidence` resolves the pointer in the same workspace and for the same metric, else 409 `VALIDATION_FAILED`, red first through `submit`): SL-1622, PR #1295, squash commit 2a81974184ee405536fb43d30f59a990b3953669, merged 2026-10-12T07:07:29Z, LG-1680. `backend/src/app/platform/metrics.py` now loads `MetricCertificateRow` for `row.certificate_id` and refuses a missing row, another workspace's row or another metric's row. Tests in `backend/tests/test_custom_metrics_api.py`: `test_a_certificate_id_naming_no_certificate_row_is_refused_at_submit` (a hand-written random id) and `test_another_metrics_certificate_is_no_evidence_for_this_one` (a certificate row of another metric). No foreign key was added, as the Disposition said.
