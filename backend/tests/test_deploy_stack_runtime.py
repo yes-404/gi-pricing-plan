@@ -41,8 +41,8 @@ from backend.tests.deploy_stack_helpers import (
     LB_PORT,
     PROJECT,
     ROOT,
-    _build_frontend_from_commit,
     _build_from_commit,
+    _build_frontend_from_commit,
     beat_fixture,  # noqa: F401  (pytest fixture, used by name)
     built_n,  # noqa: F401  (pytest fixture, used by name)
 )
@@ -356,10 +356,12 @@ def test_the_frontend_serves_the_spa_and_reaches_the_api_through_lb(
 
     status, ctype, _ = fetch("/")
     print(f"GET / -> {status} {ctype}")
-    assert status == 200 and "text/html" in ctype
+    assert status == 200
+    assert "text/html" in ctype
     status, ctype, _ = fetch("/data/some-dataset/rules")
     print(f"GET /data/some-dataset/rules -> {status} {ctype}")
-    assert status == 200 and "text/html" in ctype, "the history fallback must serve the SPA"
+    assert status == 200
+    assert "text/html" in ctype, "the history fallback must serve the SPA"
     status, ctype, body = fetch("/api/v1/auth/config")
     print(f"GET /api/v1/auth/config -> {status} {ctype}")
     assert status != 502, "nginx could not reach lb"

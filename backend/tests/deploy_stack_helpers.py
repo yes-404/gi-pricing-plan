@@ -290,7 +290,7 @@ _compose = compose
 
 
 def _docker_build_from_commit(sha: str, *build_args: str) -> None:
-    """`docker build <build_args> .` in a clean `git archive <sha>` copy: the image is that commit's."""
+    """`docker build <build_args> .` in a clean `git archive <sha>` copy (that commit's image)."""
     with tempfile.TemporaryDirectory() as tmp:
         archive = subprocess.run(
             ["git", "-C", str(ROOT), "archive", sha], check=True, capture_output=True
