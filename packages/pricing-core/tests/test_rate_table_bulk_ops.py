@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import hashlib
 from datetime import UTC, datetime
+from collections.abc import Callable
 from decimal import Decimal
 from io import BytesIO
 from typing import ClassVar
@@ -148,6 +149,82 @@ class TestFormatValueIsFixedPoint:
         )
         result = uplift_table(base, percentage=Decimal("1"))
         assert _cells(result) == [{"driver_age_band": "17-20", "relativity": "100"}]
+
+
+_UNREADABLE = ["1E+2", "1.36E-7", ".5"]
+_CODE = "RATE_TABLE_CELL_UNPARSEABLE"
+
+
+def _stored(raw: str) -> RateTableVersion:
+    """A version whose second row already holds `raw`, a text `Decimal` reads and the engine does not."""
+    return _version(
+        rows=[
+            {"driver_age_band": "17-20", "relativity": "1.5"},
+            {"driver_age_band": "21-24", "relativity": raw},
+        ],
+        value=_value(min=None, max=None),
+    )
+
+
+def _csv(raw: str) -> bytes:
+    return f"driver_age_band,relativity\n17-20,1.5\n21-24,{raw}\n".encode()
+
+
+def _import_csv(raw: str) -> object:
+    return import_from_csv(_stored("1"), _csv(raw), filename="x.csv")
+
+
+def _edit(raw: str) -> object:
+    result = apply_cell_edits(
+        _stored("1"), [RateTableCell({"driver_age_band": "21-24", "relativity": raw})]
+    )
+    if result.issues:
+        raise ValueError(f"{result.issues[0].code}: {result.issues[0].message}")
+    return result
+
+
+def _uplift(raw: str) -> object:
+    return uplift_table(_stored(raw), percentage=Decimal(0))
+
+
+def _uplift_by_filter(raw: str) -> object:
+    return uplift_by_filter(
+        _stored(raw), percentage=Decimal(0), filter={"driver_age_band": ["17-20"]}
+    )
+
+
+def _floor_and_cap(raw: str) -> object:
+    return floor_and_cap(_stored(raw), floor=Decimal(0), cap=Decimal(1000))
+
+
+_WRITE_PATHS = [_import_csv, _edit, _uplift, _uplift_by_filter, _floor_and_cap]
+
+
+class TestAWriteNeverLandsACellTheEngineCannotRead:
+    """FD-1648 limb (ii): every write path refuses the whole write, naming the first
+    cell, with RATE_TABLE_CELL_UNPARSEABLE (PL 8321 R1.2; the rebase and seed paths write
+    only computed fixed-point text and are covered by the limb (i) tests)."""
+
+    @pytest.mark.req("FR-234")
+    @pytest.mark.parametrize("raw", _UNREADABLE)
+    @pytest.mark.parametrize("path", _WRITE_PATHS)
+    def test_a_cell_the_engine_cannot_read_is_refused_naming_the_cell(
+        self, path: Callable[[str], object], raw: str
+    ) -> None:
+        with pytest.raises(ValueError, match=_CODE) as caught:
+            path(raw)
+        message = str(caught.value)
+        assert message.startswith(f"{_CODE}: ")
+        assert repr(raw) in message
+        assert "21-24" in message
+
+    @pytest.mark.req("FR-234")
+    @pytest.mark.parametrize("raw", ["1.36e-7", "1_000", "5."])
+    @pytest.mark.parametrize("path", _WRITE_PATHS)
+    def test_a_cell_the_engine_reads_still_passes(
+        self, path: Callable[[str], object], raw: str
+    ) -> None:
+        path(raw)
 
 
 class TestDecideStorageMode:
