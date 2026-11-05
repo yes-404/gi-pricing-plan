@@ -105,6 +105,14 @@ Not yet (the slice's auditor).
   `gi-pricing-app:1f3f67cf` printed 3 Untagged lines; `df -h /` 11G free (82%).
 - **DP-D2 (a)** applied: `demo.py` unchanged; the README build block gains the frontend `docker build` line
   and the buildx note. Hand-off to SL-1913's owner: a bare `up` needs `gi-pricing-frontend:$GIP_BUILD` built first.
+- **Checks at `ba6c8bb6` (tree of this worktree; logs `~/gi-pricing-plan.local/scratch/sl-1689d/`):**
+  `ruff check .` rc 0 ("All checks passed!", after fixing E501, I001 and two PT018 in the new hunks);
+  `ruff format --check` on the three changed test files reports them unformatted, and the same three
+  files are unformatted at the base `1f3f67cf` (pre-existing drift, not reformatted here);
+  `run-small.sh` on `test_deploy_stack.py` + `test_compose_binds.py`: `47 passed, 2 warnings`, rc 0;
+  `run-heavy.sh --light -- env -C <wt> python3 scripts/audit-docs.py`: `FAILED (4)`, all on the
+  working ids and the index regeneration the mint owns: check 31 gap between 2006 and 8319; check 32 twice,
+  `LG-8320 does not resolve in docs/INDEX.md`; check 39, `docs/INDEX.md is stale`. No other failing line.
 - Seat slip, recorded: one early call ran a bare `cd /tmp` (no-cd breach); the shell reset and nothing was written.
 
 ## PRs
