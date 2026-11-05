@@ -42,3 +42,5 @@ For limb (a), the lead's recommendation (19:25:28 item 1) is both of: positional
 ## Disposition
 
 **Owner: WK-1178, fix before close.** Decision: `fix before close with an owner: WK-1178`; a fix slice planned under WK-1178, not on the G2 path (the demo's fits have no exponent-form value). Event that next confirms or discharges it: a merged slice with a red-first test that an exponent-form value is refused or written positionally, and a test that a ZEN parse error is not reported as `RATE_TABLE_MISS`. Rides D13. Filed by the executor from the lead's entries, 2026-10-11; the lead gives the verdict.
+
+*(Dated line, 2026-11-05, docs batch 11, by the auditor, on to-lead "2026-11-05 10:41:08 GMT" item (4): the stored-cell census is VACUOUS: no live stack database exists on the shared server (`gipricing` is the template, `rate_table_cells` 0 rows by the template guard; `postgres`); denominator 0; no data finding is raised. Re-run on any future deployed store.)*
