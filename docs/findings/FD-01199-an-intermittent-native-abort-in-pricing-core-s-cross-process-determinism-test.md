@@ -2,12 +2,12 @@
 id: FD-1199
 family: finding
 title: An intermittent native abort in pricing-core's cross-process determinism test
-status: active
+status: retired
 created: 2026-09-28
 owner: auditor
 tree: 2bff3c9f6fe6dbc64ad27db8f95b2ac95a8cbed2
 corrected_by: []
-relates: [WK-1178]
+relates: [WK-1178, FD-1211, SL-1689, LG-2017]
 ---
 
 # FD-1199 — An intermittent native abort in pricing-core's cross-process determinism test
@@ -46,3 +46,5 @@ scoring path.
 **Deferred with an owner — the lead**, until triaged, under WK-1178. The event is the triage:
 reproduce the abort under load with N repeats. It is on plan review 15's risk list (the deputy).
 **If WK-672 Slice 2's N=5 gate run aborts this way, the triage moves ahead of Slice 2.**
+
+***Retired 2026-11-05*** — retired in place 2026-11-05 by the auditor on the row's own event, following FD-1211 (SL-1689, LG-2017, `<the merge's PR>`): the served-process SIGTERM proof ran **20 stops, 0 aborts** (10 `api`, 10 `worker-compute`, extensions preloaded, exit 0 each; LG-2017 `fd1211b.log`), and its broken-input proof shows the check would have named one. The abort is masked in the determinism test's child by `os._exit(0)` (#876, `a5118a30`) and is unexplained; no production process reproduced it. Accepted as a masked, unexplained abort with that run count as the evidence. (Note: the earlier lightgbm-less run, `fd1211.log`, also read 20 clean stops; it is the superseded run, not counted here.)
