@@ -4,7 +4,7 @@ family: finding
 title: The bulk rate-table operations run at the ambient 28 digits and no spec clause states a decimal-places or rounding policy for a rate cell
 status: active
 created: 2026-11-05   # working id 8383, minted at the batch 12 mint
-owner: WK-1178
+owner: lead
 tree: cded9f0e1953f2db6a6a1375892257a1a4822fc3   # origin/main when drafted; the measurements ran on cda3c0dc of sl-8345-r2-cell-hard-error
 corrected_by: []
 relates: [WK-1178, OQ-8396, FD-1783, OQ-1784]

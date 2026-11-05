@@ -4,7 +4,7 @@ family: finding
 title: The NFR-499 error-sink census does not see an exception passed bare to a logging call, repr(exc) or exc.args
 status: active
 created: 2026-11-05   # working id 8384, minted at the batch 12 mint
-owner: WK-1178
+owner: lead
 tree: bdad1322   # the tree of the lead's check below; origin/main when drafted is cded9f0e1953f2db6a6a1375892257a1a4822fc3
 corrected_by: []
 relates: [FD-1507, NFR-499, WK-1178]
@@ -16,7 +16,9 @@ relates: [FD-1507, NFR-499, WK-1178]
 
 **LOW, owner WK-1178**, as DP-H3 of PL 8333 was ruled (to-lead "2026-11-05 10:31:31 GMT"), **on one check** (to-lead "2026-11-05 16:52:49 GMT" item 2). The census (`_sinks`, `backend/tests/test_error_sinks.py`) identifies an exception by binding (an `except … as` name, or a parameter named `exc`) but counts two shapes of use only: `str(<name>)` and `{<name>}` in an f-string. FD-1507's essay, step 4, measured that `_log.warning("failed: %s", exc)` and `return repr(exc)` pass it; `<name>.args` is the same class. NFR-499 is guarded for two shapes of an exception's text, not for the family.
 
-## The check, and why LOW stands
+## Evidence
+
+The check, and why LOW stands:
 
 The lead ran the live-tree scan at `bdad1322`: `~/gi-pricing-plan.local/scratch/fd8384/fd8384.py`, an AST scan over `backend/src`, `packages/pricing-core/src` and `packages/model-schema/src` (**203 files, tests excluded**) for names bound by an except handler or a parameter named `exc` that reach `repr(name)`, `name.args`, `!r` in an f-string, or a logging-call argument. **0 hits.** The instrument was proved red on a planted multi-line file (`scratch/fd8384/planted.py`): **3 of 3** shapes found. `exc_info` appears on 6 lines; all 6 are sanitised (see the maintainer's reply, to-lead "2026-11-05 16:52:49 GMT"). None today means LOW stands; a real hit would have made it MEDIUM and a fix.
 

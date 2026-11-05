@@ -4,7 +4,7 @@ family: finding
 title: Rebase and uplift on a money_minor or count column write a ratio or a fraction into a column in minor units, and nothing consults the value type
 status: active
 created: 2026-11-05   # working id 8387, minted at the batch 12 mint
-owner: WK-1178
+owner: lead
 tree: cded9f0e1953f2db6a6a1375892257a1a4822fc3   # origin/main; measurements ran on cda3c0dc of sl-8345-r2-cell-hard-error
 corrected_by: []
 relates: [WK-1178, FR-228, FR-233, OQ-8396, FD-8383]
@@ -20,7 +20,9 @@ relates: [WK-1178, FR-228, FR-233, OQ-8396, FD-8383]
 
 The only `RateTableRow(` is in the seed path (`platform/rate_tables.py:201`), where `operations.py` declares RELATIVITY; edit and import carry `base.value`; `03` §5.1 has **no create route**. So **no shipped route creates a non-relativity table**: the measured case below needs a row written directly. `_new_version` / `default_row` is unreachable and ignored (the seed sets None, edit and copy carry it, nothing sets it, no `rating/` code reads it). `floor_and_cap` on a `count` column can give a non-integral result under the same limit.
 
-## Measured (M5, cda3c0dc, DB-free; `~/gi-pricing-plan.local/scratch/dm-fd8383/measure_types.py`)
+## Evidence
+
+Measured (M5, cda3c0dc, DB-free; `~/gi-pricing-plan.local/scratch/dm-fd8383/measure_types.py`)
 
 A fee consumed at area F, a golden quote at C: F 18500 becomes 15001 with no automatic refusal, and the golden quote still passes (15000). **Kept as measured.** Limits: a constructed fee on a constructed algorithm; a user's own act; the submit, dislocation and approver steps are human stops and were **read, not run**; no real table is shown affected; seeded data is not affected. The error is of a type (orders of magnitude, unrefused), not a live incident. **Fractional money is contained:** a `money_minor` output is rounded once at the payable (`score.py:808-860`, dp 0); a cell 12807.9375 and a cell 12808 both give 14819.
 

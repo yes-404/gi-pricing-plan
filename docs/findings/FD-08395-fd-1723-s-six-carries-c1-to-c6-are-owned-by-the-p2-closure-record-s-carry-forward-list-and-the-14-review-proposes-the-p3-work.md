@@ -4,7 +4,7 @@ family: finding
 title: FD-1723's six carries (C1 to C6) are owned by the P2 closure record's carry-forward list, and the §14 review proposes the P3 Work
 status: active
 created: 2026-11-05   # working id 8395, minted at the batch 12 mint
-owner: the P2 closure record's carry-forward list
+owner: lead
 tree: ac123679   # PL 8376's head; origin/main when drafted is cded9f0e1953f2db6a6a1375892257a1a4822fc3
 corrected_by: []
 relates: [FD-1723, FD-2007, PL-8376, SL-8377, WK-1178]
@@ -26,6 +26,10 @@ One finding, **six limbs, one register row** (to-lead "2026-11-05 16:50:00 GMT" 
 | **C6** | `traces.py:297`: no caller outside `test_traces.py`; the first route to call it owes an event | DP-14 (c) |
 
 C2 and C3 are spec-only in the slice: a dated clause names the carry's owner (FR-154, FR-163, `02:1664`); the edges stay in `NOT_BUILT` under SL 8377's T3 guard.
+
+## Evidence
+
+PL 8376 @ `ac123679`, the carry table and the DPs it cites, quoted above; the rulings are the two to-lead entries named.
 
 ## Disposition
 

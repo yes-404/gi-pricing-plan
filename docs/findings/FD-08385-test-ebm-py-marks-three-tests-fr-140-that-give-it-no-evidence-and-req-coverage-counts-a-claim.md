@@ -4,7 +4,7 @@ family: finding
 title: test_ebm.py marks three tests FR-140 that give it no evidence, and req-coverage counts a claim
 status: active
 created: 2026-11-05   # working id 8385, minted at the batch 12 mint
-owner: WK-1178
+owner: lead
 tree: ca63dd15   # the head the auditor read; origin/main when drafted is cded9f0e1953f2db6a6a1375892257a1a4822fc3
 corrected_by: []
 relates: [FD-1228, SL-8334, LG-8335, PL-8333, FR-140, FR-122, WK-1178]
@@ -20,6 +20,10 @@ relates: [FD-1228, SL-8334, LG-8335, PL-8333, FR-140, FR-122, WK-1178]
 - `:448` `test_fit_seconds_and_library_versions_are_recorded` asserts a provenance record (FD-1228 noted it and left it).
 
 Two effects: FR-140 is over-credited, and the requirement each test actually evidences is uncredited. The refit test at `:427-428` (FR-11's, not FR-140's) is the same shape and was raised earlier in the FD-1228 records.
+
+## Evidence
+
+The lines named above, read by the auditor at `ca63dd15` (`scratch/aud-slh/FD-new-ebm-markers.md`); `scripts/req-coverage.py` before and after is owed by the remedy.
 
 ## Not claimed
 
