@@ -381,3 +381,39 @@ async def test_g1_an_approved_objective_in_a_pinned_sub_graph_compiles() -> None
     version, resolver = _planted_in_a_sub_graph("approved")
     bundle = await compile_bundle(version, resolver)
     assert "m_ncd__s_rp" in bundle.graph.nodes
+
+
+# -- A stored cell the engine cannot read (FD-1648, SL 8322, PL 8321 R1.3) -----------------
+
+
+def _with_cells(*raws: str) -> FakeResolver:
+    res = _resolver()
+    res._payloads[TABLE] = {
+        "rateable": True,
+        "keys": [{"name": "driver_age_band", "type": "string"}],
+        "value": {"name": "relativity"},
+        "rows": [
+            {"driver_age_band": f"band-{at}", "relativity": raw} for at, raw in enumerate(raws)
+        ],
+    }
+    return res
+
+
+@pytest.mark.req("FR-234")
+@pytest.mark.req("FR-240")
+@pytest.mark.parametrize("raw", ["1E+2", "1.36E-7", ".5"])
+async def test_a_stored_cell_the_engine_cannot_read_does_not_compile(raw: str) -> None:
+    """The backstop for a version saved before the write-time refusal existed."""
+    with pytest.raises(ValueError, match="RATE_TABLE_CELL_UNPARSEABLE") as refused:
+        await compile_bundle(_version(), _with_cells("1.5", raw))
+    message = str(refused.value)
+    assert TABLE in message
+    assert "band-1" in message
+    assert repr(raw) in message
+
+
+@pytest.mark.req("FR-234")
+@pytest.mark.req("FR-240")
+@pytest.mark.parametrize("raw", ["1.36e-7", "1_000", "100"])
+async def test_a_stored_cell_the_engine_reads_compiles(raw: str) -> None:
+    await compile_bundle(_version(), _with_cells("1.5", raw))
