@@ -986,7 +986,8 @@ def test_a_frequency_books_ae_ignores_exposure_because_mu_carries_it() -> None:
     by = {c.level: c for c in part.ae_by_factor}
     for level, (ys, mus) in {"a": ([1.0, 0.0], [0.3, 0.9]), "b": ([2.0, 1.0], [1.4, 0.6])}.items():
         actual, expected = sum(ys), sum(mus)
-        assert by[level].actual == actual and by[level].expected == expected
+        assert by[level].actual == actual
+        assert by[level].expected == expected
         assert by[level].ae == actual / expected
         half = _NORMAL_975 * math.sqrt(actual) / expected
         assert by[level].ci_95 == (actual / expected - half, actual / expected + half)
