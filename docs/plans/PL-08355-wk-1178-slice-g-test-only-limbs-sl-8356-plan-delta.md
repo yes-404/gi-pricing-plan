@@ -67,7 +67,7 @@ backend/tests packages scripts deploy` is empty.
 - **FD-1887.** `tests/test_fremtpl2_data_guard.py`: `_is_guard` `:140-148` asks only for `exists` in the `If` test, so
   `if other.exists(): pytest.skip(...)` passes (H2 open). `_names_the_data_path` (`:94`) matches the literal
   `fremtpl2/data` and a `BinOp` join, so `os.path.join(...)` and `Path("examples", "fremtpl2", "data")` pass unseen, and
-  lowercase `fremtpl2` in a join is not matched (H1 open). `_data_aliases` (`:130`) is where an import alias would meet
+  lowercase `fremtpl2` in a join is not matched (H1 open). `_data_aliases` (`:124`) is where an import alias would meet
   it. **Hardening a guard can red real tests:** a test that reaches the data with a guard H2 now refuses goes red at base
   (a finding: the test needs a real guard, and that test is in the write set only as this plan's R3 says).
 - **FD-1354.** `git grep -n -E 'value at f=log|one unit away|value changes by a factor|constant population of 1,000'
