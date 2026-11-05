@@ -74,6 +74,14 @@ Window 2026-11-05 19:28:53 to 19:50:10 UTC, single-tenant, read-only (TEMP-table
 - **Guards:** template `alembic_version=1 environments=3 tenant_marker=1`, `redis-cli -n 0 dbsize` 56, `pg_database` 4 rows (md5 `0e557aec019c29ead221153636bd8d08`), `mc ls g/` 6 buckets: each the same before and after.
 
 
+## N1 — the bound on writing (to-lead "2026-11-05 20:46:28 GMT", ruled (a))
+
+**Reach (probe at head `955ea8ab` + the writer, `~/gi-pricing-plan.local/scratch/sl-8340b/probe_http.py`, TestClient over `create_app`, no DB):** the real `ReconcileRequest` (`api/peril_structures.py:85`, field `tolerance` at :120) *validates* `1E+999999999` (200 on an accept route); a route that *echoes* it answered **500 `INTERNAL_ERROR`** for `1E+400` and `1E-400` (red log `bound-red.log`), now **422 `DECIMAL_OUT_OF_RANGE`** (`bound-green.log`, 5 passed). `pydantic_core` does not chain the cause through FastAPI's serialiser (`__cause__` is None), so `errors.py` `_handle_serialization_error` reads the exception's type name in its message. The real reconcile route (`peril_structures.py:256`) does not echo the field: `reconcile_payload` (`platform/perils.py:238`) carries `str(tolerance)` and the route answers a Job (held by `test_the_reconcile_job_payload_does_not_write_the_tolerance_positionally`). **HTTP reach on a shipped path: none found; the 500 was reachable by any route that echoes a request `DecimalStr`, so the coded 422 is the backstop. No FD owed on this limb.**
+
+**Fields of the three types (predicate, run at `955ea8ab`):** `git grep -n -E ':\s*(tuple\[|list\[)?(DecimalStr|Relativity|CanonicalDecimalStr)\b' HEAD -- packages/model-schema/src ':!packages/model-schema/src/model_schema/money.py'` = 29 lines, plus `backend/src/app/api/peril_structures.py:120` (the backend has one). By model name, request-bearing: `UpliftTableParameters.percentage`, `UpliftByFilterParameters.percentage`, `FloorAndCapParameters.floor/cap` (`rating.py:1389-1407`), the approval and dislocation thresholds (`approvals.py:152-153`, `rating.py:135-137`, `dislocation.py:52`), `modelling.py:344`, `ReconcileRequest.tolerance`; the rest (`exposure_years`, `profiles`, `diagnostics`, `Reconciliation.tolerance`, `imputed_share`, `CanonicalDecimalStr` `lower/upper`) are stored or derived. Not verified route by route; the writer and the handler do not depend on the split.
+
+**R2 `_format_value`** (`sl-8345-r2-cell-hard-error@cda3c0dc`, `operations.py:692`; read only): reached with `old * (1 + percentage)` (:760, :789). The ambient context's Emax (999999) bounds the text to about 1 MB; `_validate_result` (:587) then runs `validate_rate_table` on the result rows, and `cell_parses` (:331) refuses it, coded, after the write. No change here.
+
 ## PRs
 
 (none yet — the push, PR and mint are not the executor's in this brief)
