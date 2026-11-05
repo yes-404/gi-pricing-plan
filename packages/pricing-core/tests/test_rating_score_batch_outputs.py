@@ -227,14 +227,13 @@ async def test_a_fractional_declared_output_is_a_decimal_string_in_batch(
 
 @pytest.mark.req("FR-214")
 @pytest.mark.parametrize("step_type", ["int", "count"])
-@pytest.mark.parametrize("declared_type", ["relativity", "percentage"])
 async def test_an_int_or_count_step_into_a_decimal_output_is_one_string_on_both_paths(
-    step_type: str, declared_type: str
+    step_type: str,
 ) -> None:
-    """FD-1767, a guard: an int or count step feeding a declared decimal output is the exact
+    """FD-1767, a guard: an int or count step feeding a declared `decimal` output (the compiler's widening) is the exact
     string `18.00` on `score_one` and in the batch `outputs_json`, since SL-1569 (96e1b369)
     moved the declared-type form into `_build_outputs`, which both paths share. Green at base."""
-    payload = _probe_payload(declared_type, "driver_age")
+    payload = _probe_payload("decimal", "driver_age")
     for step in payload["steps"]:
         if step["step_id"] == "s_probe":
             step["result_type"] = step_type
