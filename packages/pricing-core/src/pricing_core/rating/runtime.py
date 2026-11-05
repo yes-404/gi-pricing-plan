@@ -59,7 +59,12 @@ from model_schema.modelling import (
     Grouping,
 )
 from model_schema.perils import LargeLossKind, PerilMethod, PerilStructure
-from model_schema.rating import RatingAlgorithm, RatingModelCallStep
+from model_schema.rating import (
+    RatingAlgorithm,
+    RatingLookupStep,
+    RatingModelCallStep,
+    RatingTableStep,
+)
 from pricing_core.modelling.errors import ModellingError
 from pricing_core.modelling.factors import consumed_features, required_model_inputs
 from pricing_core.modelling.gbm import GbmFitError, load_gbm_booster, predict_gbm
@@ -71,6 +76,7 @@ from pricing_core.modelling.predict import (
 from pricing_core.rating.compile import (
     Bundle,
     JdmGraph,
+    cell_parses,
     check_step_refs_pinned,
     peril_component_refs,
 )
@@ -78,7 +84,10 @@ from pricing_core.rating.inline import inline_mounts, mounted_fragments
 from pricing_core.safe_error import CodedError
 
 __all__ = [
+    "CELL_GUARD_PREFIX",
+    "MISS_GUARD_PREFIX",
     "MODEL_CALL_ERROR_KEY",
+    "UNPARSEABLE_CELL",
     "CompiledBundle",
     "clamp_keys",
     "exact_key",
@@ -99,6 +108,19 @@ EXACT_PREFIX = "__exact__"
 #: to match the engine's own reserved `$nodes` key and stay clear of any user-declared
 #: `produces` name.
 MODEL_CALL_ERROR_KEY = "$model_call_error"
+
+#: What a rate-table cell the engine cannot parse is written as on the wire (FD-1648 (b), FD-1478;
+#: `03` FR-255). The engine omits the output of a decision-table row it cannot read, which no
+#: field of its error tells from a miss; a string literal exists, so it is in the result, and
+#: `score.py`'s `_check_unparseable_cells` refuses it. A clean table never carries it: its wire
+#: is byte-identical (FR-239, the clause for a defective cell).
+UNPARSEABLE_CELL = "__UNPARSEABLE_CELL__"
+
+#: The node ids of the diagnostic guards `to_wire(guards=...)` adds after a table or lookup step.
+#: They exist only in the lazily built diagnostic decision (`PurposeEvaluation.diagnose`), never
+#: in the live one, so a quote that scores pays for neither (NFR-489).
+CELL_GUARD_PREFIX = "__cell_guard__"
+MISS_GUARD_PREFIX = "__miss_guard__"
 
 #: The engine node `type` each `RatingAlgorithm` step type translates to (Task 1.3 Step 3,
 #: rules 3/5/6, widened by Task 1.4 for `constraint`). `input` and `output` are handled
@@ -171,6 +193,35 @@ def _same_value(a: Any, b: Any) -> bool:
 def _as_list(value: Any) -> list[Any]:
     """Match `compile.py`'s own `_as_list`: an already-list value is returned as-is."""
     return value if isinstance(value, list) else [value]
+
+
+_SENTINEL_LITERAL = json.dumps(UNPARSEABLE_CELL)
+
+
+def _guard_node(
+    step_id: str, prefix: str, names: Sequence[str], test: str
+) -> dict[str, Any]:
+    """A diagnostic `expressionNode` after `step_id`: for each produced `name`, fail on
+    `test.format(name)`. The engine's failure then carries *this* node's id, which says what
+    went wrong (a bad cell, a miss) where the consumer's id cannot."""
+    guard_id = f"{prefix}{step_id}"
+    return {
+        "id": guard_id,
+        "type": "expressionNode",
+        "name": guard_id,
+        "position": {"x": 0, "y": 0},
+        "content": {
+            "expressions": [
+                {
+                    "id": f"{guard_id}_e{i}",
+                    "key": f"{guard_id}__{name}",
+                    "value": f"{test.format(name)} ? 1 * null : true",
+                }
+                for i, name in enumerate(names)
+            ],
+            "passThrough": True,
+        },
+    }
 
 
 def _edge(source: str, target: str) -> dict[str, str]:
@@ -289,7 +340,7 @@ def _decision_table_node(
                     f"i{j}": _quote(str(row[key_names[j]]), str(keys[j]["type"]))
                     for j in range(len(key_names))
                 },
-                "o0": str(row[value_column]),
+                "o0": cell if cell_parses(cell := str(row[value_column])) else _SENTINEL_LITERAL,
             }
             for i, row in enumerate(rows)
         ]
@@ -507,7 +558,12 @@ def _dependency_order(graph: JdmGraph, interior_ids: Sequence[str]) -> list[str]
     return order
 
 
-def to_wire(graph: JdmGraph, payloads: Mapping[str, Any] | None = None) -> dict[str, Any]:
+def to_wire(
+    graph: JdmGraph,
+    payloads: Mapping[str, Any] | None = None,
+    *,
+    guards: Mapping[str, tuple[Sequence[str], bool]] | None = None,
+) -> dict[str, Any]:
     """Translate pricing-core's `JdmGraph` into the JDM shape zen's binding consumes.
 
     `JdmGraph` is pricing-core's own intermediate form: a dict keyed by `step_id` with
@@ -532,6 +588,12 @@ def to_wire(graph: JdmGraph, payloads: Mapping[str, Any] | None = None) -> dict[
 
     `payloads` (`Bundle.resolved_payloads`) hydrates `table`/`lookup` steps with real row
     data; omitted, those steps produce a structurally valid but empty decision table.
+
+    `guards` maps a `table`/`lookup` step to its produced names and whether it is
+    `on_miss="error"`. Omitted (the live decision), the wire gains nothing. Given, a `table`
+    gets a node after it that fails on an `UNPARSEABLE_CELL` output and, when the flag is set,
+    a node that fails on an absent one, in that order: the diagnostic decision
+    `PurposeEvaluation.diagnose` re-runs a failed quote through (FR-255).
     """
     payloads = payloads or {}
     unsupported = sorted(
@@ -569,6 +631,16 @@ def to_wire(graph: JdmGraph, payloads: Mapping[str, Any] | None = None) -> dict[
             wire_nodes.append(_constraint_node(step_id, node))
         else:
             wire_nodes.append(_model_call_node(step_id))
+
+        if guards and step_id in guards:
+            names, miss_is_error = guards[step_id]
+            specs = [(CELL_GUARD_PREFIX, f"{{}} == {_SENTINEL_LITERAL}")] if kind == "table" else []
+            specs += [(MISS_GUARD_PREFIX, "{} == null")] if miss_is_error else []
+            for prefix, test in specs:
+                guard = _guard_node(step_id, prefix, names, test)
+                wire_nodes.append(guard)
+                edges.append(_edge(previous, guard["id"]))
+                previous = guard["id"]
 
     exact_names = exact_read_names(graph)
     if exact_names:
@@ -1026,6 +1098,12 @@ class PurposeEvaluation:
 
     decision: Any
     algorithm: RatingAlgorithm
+    #: Re-runs a quote the live decision failed through the guarded decision and returns the
+    #: engine error that names what failed (a guard's id), or `None` when no guard fires
+    #: (FR-255). The default is for a purpose built without a bundle's payloads.
+    diagnose: Callable[[Mapping[str, Any]], RuntimeError | None] = field(
+        default=lambda _context: None, repr=False, compare=False
+    )
 
 
 @dataclass(frozen=True)
@@ -1118,7 +1196,24 @@ def load_bundle(bundle: Bundle) -> CompiledBundle:
         engine = zen.ZenEngine({"customHandler": handler})
         decision = engine.create_decision(json.dumps(wire))
         decision.validate()
-        return PurposeEvaluation(decision, inlined)
+        guarded: list[Any] = []  # the diagnostic decision, built on the first failure
+
+        def diagnose(context: Mapping[str, Any]) -> RuntimeError | None:
+            if not guarded:
+                guards = {
+                    s.step_id: (tuple(str(n) for n in _as_list(s.produces)), s.on_miss == "error")
+                    for s in inlined.steps
+                    if isinstance(s, RatingTableStep | RatingLookupStep)
+                }
+                wire_g = to_wire(graph, bundle.resolved_payloads, guards=guards)
+                guarded.append(engine.create_decision(json.dumps(wire_g)))
+            try:
+                guarded[0].evaluate(dict(context))
+            except RuntimeError as exc:
+                return exc
+            return None
+
+        return PurposeEvaluation(decision, inlined, diagnose)
 
     base = evaluation(bundle.graph, algorithm)
     return CompiledBundle(

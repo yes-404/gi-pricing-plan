@@ -39,7 +39,7 @@ from model_schema.rating import Pins, RatingVersion, SubGraphRef
 from model_schema.refs import ArtifactRef
 from model_schema.scoring import QuoteContext, QuoteContextOptions
 from pricing_core.rating.compile import ArtifactResolver, Bundle, ResolvedArtifact, compile_bundle
-from pricing_core.rating.runtime import CompiledBundle, load_bundle, to_wire
+from pricing_core.rating.runtime import CompiledBundle, PurposeEvaluation, load_bundle, to_wire
 from pricing_core.rating.score import _score_context_sync, score_one
 
 _RATING_VERSION_REF = ArtifactRef(type="rating_version", slug="score-fixture", version=1)
@@ -1040,6 +1040,11 @@ def test_a_table_with_one_bad_cell_differs_in_that_cell_only() -> None:
     assert {n["id"] for n in clean["nodes"]} == {n["id"] for n in bad["nodes"]}
 
 
+def _undiagnosed(algorithm: Any) -> PurposeEvaluation:
+    """An evaluation whose diagnostic decision finds no guard to fire (FR-255)."""
+    return PurposeEvaluation(decision=None, algorithm=algorithm, diagnose=lambda _context: None)
+
+
 @pytest.mark.req("FR-255")
 @pytest.mark.parametrize("engine_error", [
     "boom",
@@ -1054,7 +1059,7 @@ def test_no_engine_failure_escapes_as_a_bare_runtime_error(engine_error: str) ->
 
     algorithm = RatingAlgorithm.model_validate(_algorithm_payload())
     with pytest.raises(ValueError, match=r"^RATING_EVALUATION_FAILED:"):
-        _reraise_engine_failure(algorithm, RuntimeError(engine_error))
+        _reraise_engine_failure(_undiagnosed(algorithm), {}, RuntimeError(engine_error))
 
 
 @pytest.mark.req("FR-255")
@@ -1065,7 +1070,7 @@ def test_an_engine_failure_with_no_table_or_lookup_to_blame_is_coded() -> None:
 
     algorithm = RatingAlgorithm.model_validate(_with_step("s_expense", on_miss="default"))
     with pytest.raises(ValueError, match=r"^RATING_EVALUATION_FAILED:"):
-        _reraise_engine_failure(algorithm, RuntimeError("boom"))
+        _reraise_engine_failure(_undiagnosed(algorithm), {}, RuntimeError("boom"))
 
 
 @pytest.mark.req("NFR-499")
@@ -1080,7 +1085,7 @@ def test_an_engine_error_text_never_reaches_the_raised_message() -> None:
     for nodeid in ("s_decl_cap", sentinel):
         engine_error = f'{{"type":"NodeError","source":"{sentinel}","nodeId":"{nodeid}"}}'
         with pytest.raises(ValueError, match=r"^RATING_EVALUATION_FAILED:") as raised:
-            _reraise_engine_failure(algorithm, RuntimeError(engine_error))
+            _reraise_engine_failure(_undiagnosed(algorithm), {}, RuntimeError(engine_error))
         assert sentinel not in str(raised.value)
 
 

@@ -459,12 +459,17 @@ async def test_a_coded_error_does_not_carry_the_exception_it_replaced() -> None:
 
     from pricing_core.rating.score import _reraise_engine_failure
 
-    algorithm = compiled.algorithm
+    from pricing_core.rating.runtime import PurposeEvaluation
+
+    evaluation = PurposeEvaluation(
+        decision=None, algorithm=compiled.algorithm, diagnose=lambda _context: None
+    )
+
     def _handled() -> None:
         try:
             raise RuntimeError(f"engine says {_SENTINEL}")
         except RuntimeError as engine:
-            _reraise_engine_failure(algorithm, engine)
+            _reraise_engine_failure(evaluation, {}, engine)
 
     with pytest.raises(CodedError) as engine_caught:
         _handled()
