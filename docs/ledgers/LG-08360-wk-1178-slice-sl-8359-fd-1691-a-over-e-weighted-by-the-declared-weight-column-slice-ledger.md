@@ -55,4 +55,10 @@ Run via `run-heavy.sh --over-load`; logs `~/gi-pricing-plan.local/scratch/sl-835
 
 ### Window and gate
 
-The ~20 min DB window (moved values in the seven DB-backed backend files, one per call) and the SOLO gate: **owed** — recorded here when run.
+**DB window, 2026-11-05 17:12:21 → 17:18:00 GMT** (to-lead "17:11:38 GMT" (2); beside D's PYTEST stage, gate-1, `gipricing_sld_gate`), tree head `091e2c4c4906ba37fb022116729eb8d34c25d98a`. Slot `/tmp/slots/window-8359` (quoted from `/proc/$$/environ` on each call), DB copy `gi_sl8359` from `createdb -T gipricing` (all three URLs name it), redis `-n 11`, bucket `gip-test-blobs-8359`. START: `-n 0 dbsize` 56, `-n 11 dbsize` 0, `PUBSUB CHANNELS 'gip:switch:*'` empty, template guard `alembic_version=1 environments=3 tenant_marker=1`. Seven files, one per `run-heavy` call, all rc 0: `backend/tests/` `test_api_backtests` 6 passed, `test_backtests` 10, `test_diagnostics` 9, `test_ebm_model_jobs` 9, `test_glm_approximation_model` 15, `test_model_jobs_gbm` 19, `test_wf01_journey` 1. **No value moved** (A9: no expected value re-derived; none on a no-weight model moved). END: `-n 11 dbsize` 0, `-n 0 dbsize` 56, own DB count 0, `gipricing_sld_gate` present, template guard rc 0. Driver `scratch/sl-8359-m-weighted-ae/win.sh`, log `win-run.log`.
+
+The SOLO gate: **owed** — recorded here when run.
+
+## PRs
+
+None yet: the branch ends unpushed (brief item 10); the lead pushes and opens the PR.
