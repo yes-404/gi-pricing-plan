@@ -28,4 +28,4 @@ Memory at any size; no reproduction was run. This was read at `e75e0f1a`, not ru
 
 ## Disposition
 
-Open, owner WK-1178 (the lead's verdict on the owner is not in the staged line: **the lead confirms**). Event that next discharges it: a merged change that bounds the expansion (streamed decompression with a running cap; a workbook entry-size check) with a red-first test of a small file that expands past the cap, or a dated ruling accepting the absence. Filed as working id 8386.
+Open, owner WK-1178. Event that next discharges it: a merged change that bounds the expansion (streamed decompression with a running cap; a workbook entry-size check) with a red-first test of a small file that expands past the cap, or a dated ruling accepting the absence. Filed as working id 8386.
