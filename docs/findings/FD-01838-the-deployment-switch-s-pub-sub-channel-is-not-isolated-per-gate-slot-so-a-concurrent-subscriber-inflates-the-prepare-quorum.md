@@ -2,12 +2,12 @@
 id: FD-1838
 family: finding
 title: The deployment switch's pub/sub channel is not isolated per gate slot, so a concurrent subscriber inflates the PREPARE quorum
-status: active
+status: closed
 created: 2026-10-21
 owner: auditor
 tree: c35113b2052877fc779eddd44229b607aef162a9
 corrected_by: []
-relates: [WK-1178, WK-674, SL-1711, FD-1823]
+relates: [WK-1178, WK-674, SL-1711, FD-1823, SL-1854, LG-1855]
 ---
 
 # FD-1838 — The deployment switch's pub/sub channel is not isolated per gate slot, so a concurrent subscriber inflates the PREPARE quorum
@@ -66,3 +66,5 @@ red-first against a concurrent subscriber on the unsuffixed channel. This record
 Open, owner WK-1178. **Deferred with an owner: WK-1178**; the event that next discharges it: a merged
 per-slot namespace with a red-first test against a concurrent subscriber, or a dated ruling accepting the
 absence. Filed under working id 8150; minted as FD-1838 on 2026-10-21.
+
+***Resolved 2026-11-05*** — closed in place 2026-11-05 by the auditor (aud-sl1854), on the maintainer's ruling at `to-lead.md` "2026-11-05 09:37:04 GMT", as part of the SL-1854 slice audit: SL-1854 (WK-1178, LG-1855) delivered the remedy, PR #1363, squash commit 6753c4953250fcd601f0309becb4ca142d0f13d2 on main, merged 2026-10-22T20:41:15Z (`gh pr view 1363 --json mergedAt`). Delivered remedy: `switch_stack(environment, tenant_id)` in `app.platform.deployment_switch` builds the stack prefix for both callers (`backend/src/app/main.py`, `backend/tests/test_deployment_switch_http.py`) and appends `basename($GIP_GATE_SLOT)` when the variable is set, through `RedisSwitch`'s existing stack argument; a process with no slot is unchanged. Red first: `backend/tests/test_deployment_switch_slot_namespace.py` (RED at `a83531d0`, rc 1, 2 failed; GREEN at `b95c9d3d`, rc 0, 15 passed, in LG-1855). The audit is in LG-1855's Audit section.

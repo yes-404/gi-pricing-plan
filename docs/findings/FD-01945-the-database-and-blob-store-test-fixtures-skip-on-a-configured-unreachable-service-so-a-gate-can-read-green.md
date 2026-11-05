@@ -2,7 +2,7 @@
 id: FD-1945
 family: finding
 title: The database and blob_store test fixtures skip on a configured-but-unreachable service, so a gate can read green with the tests unrun
-status: active
+status: closed
 created: 2026-10-26   # drafted 2026-10-26 under working id 8256
 owner: executor
 tree: 98a4ff195dc7f1da136686051549a4fe1350deb3
@@ -44,3 +44,5 @@ Skips left in `conftest_db.py`, all in the unconfigured branch of `_unavailable`
 ## Disposition
 
 Open, owner WK-1178; **fix before close**: SL-1942 / LG-1941. Closed in place citing the PR when that slice merges. Filed under working id FD-1945.
+
+***Resolved 2026-11-05*** — closed in place 2026-11-05 by the auditor (aud-fdclose), on the lead's brief under to-lead "2026-11-05 09:40:57 GMT" item 8 (2), the FD-1842 form. Delivered remedy (`_unavailable(configured, message)` in `conftest_db.py`: a configured but unreachable database or blob store fails, an unconfigured one skips, and no message carries a password): SL-1942 (WK-1178, LG-1941), PR #1398, squash commit 1e0a8abbc90723ae9c887a901f700b72f6f94cc1, merged 2026-10-26T08:41:18Z. Tests in `backend/tests/test_conftest_db_unreachable.py`: `test_configured_but_unreachable_database_fails_naming_the_target`, `test_configured_but_unreachable_blob_store_fails_naming_endpoint_and_bucket` and `test_nothing_configured_still_skips_without_a_password`.

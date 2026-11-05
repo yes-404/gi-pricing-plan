@@ -2,12 +2,12 @@
 id: FD-1494
 family: finding
 title: The exit demo's recorded workspace is absent from the database the demo uses, and no check on main verifies that the recorded workspace exists
-status: active
+status: closed
 created: 2026-10-08            # original date 2026-10-05, set at the draft; minted 2026-10-08
 owner: auditor
 tree: 5ff49c6d425f537c7fed19d1212035f18e067b68
 corrected_by: []
-relates: [WK-1178, SL-1409, PL-1408, RL-1407, FD-1356]
+relates: [WK-1178, SL-1409, PL-1408, RL-1407, FD-1356, SL-1527, LG-1647]
 ---
 
 # FD-1494 — the demo's `last-seed.json` names a workspace that `gipricing` does not hold
@@ -148,3 +148,5 @@ LG-1417) rewrote `last-seed.json`, and the demo record now names a present works
 `01a10bbe-3a03-740c-8d4b-a6af38d2dd4b`. The finding stands as the record of the gap: on `main` no check verifies that the
 recorded workspace exists, and the pre-flight's refusal for an absent workspace still carries the misleading "the seed
 did not finish" message. Severity is unchanged (MEDIUM, the maintainer's (by delegation)).
+
+***Resolved 2026-11-05*** — closed in place 2026-11-05 by the auditor (aud-fdclose), on the lead's brief under to-lead "2026-11-05 09:40:57 GMT" item 8 (2), the FD-1842 form. Delivered remedy, all three limbs: (1) an explicit named pre-flight check, before the rule-set count, that the recorded workspace and analyst exist, with a message naming the record and saying to re-run without `--skip-seed`: `scripts/check-seed-record.py` (refusal text :58-67), run by `scripts/demo.py` on every path (:443-455), test `backend/tests/test_demo_command.py` (:192, FD-1494 limb 1); (2) `_verify_journey_postconditions` turns an `HTTPError` into a `DemoRefusedError` (`scripts/demo.py`, the `except urllib.error.HTTPError` branch; test at `test_demo_command.py:260`, a 403 answer); (3) `ensure_member` option (a): `backend/src/app/platform/workspaces.py` looks the user up by `(issuer, subject)` and raises `VALIDATION_FAILED` 422 naming both ids when the stored id differs, test `test_an_id_that_contradicts_the_stored_identity_is_refused_where_it_arises` in `backend/tests/test_workspace_members.py`. Slice: SL-1527 (WK-1178, LG-1647), PR #1289, squash commit 073bf5b4a2199e0a16f3f17f060a8a699f207f6d, merged 2026-10-12T02:54:43Z. No commit subject names FD-1494; the merge carries it in its tests and comments, and the maintainer ruled it onto this list (to-lead "2026-11-05 09:51:53 GMT" (7), relayed by the lead). Not re-run: the essay's scratch-database acceptance on both paths.

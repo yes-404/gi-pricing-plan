@@ -234,6 +234,58 @@ def scheduler_starts_after_its_dependencies(compose: dict[str, Any]) -> list[str
     return problems
 
 
+FRONTEND_DOCKERFILE = "deploy/frontend.Dockerfile"
+FRONTEND_NGINX = COMPOSE.parent / "frontend.nginx.conf"
+ROOT_DOCKERIGNORE = COMPOSE.parents[1] / ".dockerignore"
+
+
+def frontend_is_built_from_its_dockerfile(compose: dict[str, Any]) -> list[str]:
+    """FR-432: `frontend` exists under `app` and is built from `deploy/frontend.Dockerfile`."""
+    frontend = compose["services"].get("frontend")
+    if frontend is None:
+        return ["no service named frontend"]
+    problems = []
+    if "app" not in (frontend.get("profiles") or []):
+        problems.append("frontend is not under the app profile")
+    build = frontend.get("build")
+    dockerfile = build.get("dockerfile") if isinstance(build, dict) else None
+    if dockerfile != FRONTEND_DOCKERFILE:
+        problems.append(f"frontend dockerfile is {dockerfile!r}, not {FRONTEND_DOCKERFILE}")
+    if "lb" not in (frontend.get("depends_on") or {}):
+        problems.append("frontend does not depend on lb")
+    ports = [str(p) for p in frontend.get("ports") or []]
+    if not any(p.startswith("127.0.0.1:${GIP_WEB_PORT:-5173}:") for p in ports):
+        problems.append("frontend does not publish ${GIP_WEB_PORT:-5173} on 127.0.0.1")
+    return problems
+
+
+def nginx_conf_problems(conf: str) -> list[str]:
+    problems = []
+    if "location /api/" not in conf or "lb:8000" not in conf:
+        problems.append("the nginx conf has no /api/ proxy block to lb:8000")
+    if "try_files" not in conf or "/index.html" not in conf:
+        problems.append("the nginx conf has no history fallback to index.html")
+    return problems
+
+
+def frontend_proxies_api_to_lb(_compose: dict[str, Any]) -> list[str]:
+    """FR-432: the browser stays same-origin: `/api/` goes to `lb:8000`, read from the conf."""
+    if not FRONTEND_NGINX.exists():
+        return [f"{FRONTEND_NGINX.name} does not exist"]
+    return nginx_conf_problems(FRONTEND_NGINX.read_text(encoding="utf-8"))
+
+
+def backend_image_context_still_excludes_the_frontend(_compose: dict[str, Any]) -> list[str]:
+    """Guard (green at base and head): the frontend image brings `frontend/` in through its own
+    ignore file, never by widening the backend image's root `.dockerignore`."""
+    lines = {ln.strip() for ln in ROOT_DOCKERIGNORE.read_text(encoding="utf-8").splitlines()}
+    return [
+        f"the root .dockerignore no longer excludes {x}"
+        for x in ("frontend", "docs")
+        if x not in lines
+    ]
+
+
 CHECKS = [
     api_needs_no_worker,
     migrations_are_their_own_step,
@@ -247,6 +299,9 @@ CHECKS = [
     scheduler_keeps_its_schedule_file_under_tmp,
     scheduler_is_one_process,
     scheduler_starts_after_its_dependencies,
+    frontend_is_built_from_its_dockerfile,
+    frontend_proxies_api_to_lb,
+    backend_image_context_still_excludes_the_frontend,
 ]
 
 
@@ -361,6 +416,22 @@ def test_the_scheduler_waits_for_migrate_and_redis() -> None:
     assert scheduler_starts_after_its_dependencies(_load()) == []
 
 
+@pytest.mark.req("FR-432")
+def test_the_frontend_is_built_from_its_dockerfile_behind_lb() -> None:
+    assert frontend_is_built_from_its_dockerfile(_load()) == []
+
+
+@pytest.mark.req("FR-432")
+def test_the_frontend_proxies_api_to_lb_and_falls_back_to_the_spa() -> None:
+    assert frontend_proxies_api_to_lb(_load()) == []
+
+
+@pytest.mark.req("FR-432")
+def test_the_backend_image_context_still_excludes_the_frontend() -> None:
+    """A guard, not a red-first check: green at the base and at the head."""
+    assert backend_image_context_still_excludes_the_frontend(_load()) == []
+
+
 @pytest.mark.req("FR-434")
 @pytest.mark.req("FR-435")
 def test_the_default_up_is_still_only_the_backing_services() -> None:
@@ -421,9 +492,22 @@ def _break_worker_consumes_two_pools(c: dict[str, Any]) -> None:
     c["services"][name]["command"] = words
 
 
+def _break_frontend_missing(c: dict[str, Any]) -> None:
+    del c["services"]["frontend"]
+
+
+def _break_frontend_other_dockerfile(c: dict[str, Any]) -> None:
+    c["services"]["frontend"]["build"]["dockerfile"] = "deploy/Dockerfile"
+
+
+def _break_frontend_on_every_interface(c: dict[str, Any]) -> None:
+    c["services"]["frontend"]["ports"] = ["${GIP_WEB_PORT:-5173}:80"]
+
+
 @pytest.mark.req("FR-434")
 @pytest.mark.req("FR-435")
 @pytest.mark.req("FR-415")
+@pytest.mark.req("FR-432")
 @pytest.mark.req("NFR-489")
 @pytest.mark.parametrize(
     ("breaker", "check"),
@@ -437,6 +521,9 @@ def _break_worker_consumes_two_pools(c: dict[str, Any]) -> None:
         (_break_worker_consumes_two_pools, each_worker_consumes_one_pool),
         (_break_api_without_web_concurrency, api_declares_its_worker_count),
         (_break_api_passes_workers_flag, api_declares_its_worker_count),
+        (_break_frontend_missing, frontend_is_built_from_its_dockerfile),
+        (_break_frontend_other_dockerfile, frontend_is_built_from_its_dockerfile),
+        (_break_frontend_on_every_interface, frontend_is_built_from_its_dockerfile),
     ],
 )
 def test_each_check_goes_red_on_the_break_it_exists_for(breaker: Any, check: Any) -> None:
@@ -518,14 +605,8 @@ def _client_max_body_size(text: str) -> int | None:
 @pytest.mark.req("FR-450")
 @pytest.mark.parametrize("conf", _NGINX_CONFS)
 def test_the_proxy_does_not_undercut_the_request_body_limit(conf: str) -> None:
-    """nginx answers first with an HTML 413 above its own default of 1 MiB (FD-1802).
-
-    `frontend.nginx.conf` arrives with the frontend image (PL 8319); until it is on the tree
-    only `lb.conf` is held to the limit.
-    """
+    """nginx answers first with an HTML 413 above its own default of 1 MiB (FD-1802)."""
     path = COMPOSE.parent / conf
-    if not path.exists():
-        pytest.skip(f"deploy/{conf} is not on this tree yet")
     limit = Settings(environment=Environment.LOCAL, version="test").max_upload_body_mib * MIB
     size = _client_max_body_size(path.read_text(encoding="utf-8"))
     assert size is not None, f"deploy/{conf} sets no client_max_body_size"
@@ -536,3 +617,15 @@ def test_the_body_size_check_reads_a_directive_and_not_a_comment() -> None:
     assert _client_max_body_size("client_max_body_size 65m;") == 65 * 1024**2
     assert _client_max_body_size("# client_max_body_size 65m;") is None
     assert _client_max_body_size("server { }") is None
+
+
+@pytest.mark.req("FR-432")
+@pytest.mark.parametrize(
+    "conf",
+    [
+        "server { location / { try_files $uri /index.html; } }",
+        "server { location /api/ { proxy_pass http://lb:8000; } }",
+    ],
+)
+def test_the_nginx_check_goes_red_on_a_conf_missing_a_limb(conf: str) -> None:
+    assert nginx_conf_problems(conf)

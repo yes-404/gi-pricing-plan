@@ -85,3 +85,5 @@ Re-runnable at `a3fc2e8d`: `git show a3fc2e8d:backend/src/app/platform/datasets.
 The event that next discharges it: the WK-1178 slice that passes `before` on the purge event and
 adds a per-class assertion for acknowledgements, dictionary edits, rule-set changes and purges,
 each red on the pre-fix tree. The rule-set assertion is SL 1736's.
+
+*(Dated line, 2026-11-05, docs batch 11, by the auditor, on to-lead "2026-11-05 09:51:53 GMT" (triage b28ba8e9454c accepted as the proposal of record), item (4): severity RULED MEDIUM, as proposed.)*

@@ -122,3 +122,5 @@ decision point; the planner does not pick it.
 severity LOW as proposed. Event that next confirms or discharges it: the ruling on the remedy
 decision above (open), then the remedy PR with a test red at its parent that submits a dict key and reads
 `field` back.
+
+*(Dated line, 2026-11-05, docs batch 11, by the auditor, on to-lead "2026-11-05 09:51:53 GMT" (triage b28ba8e9454c accepted as the proposal of record): carried, owner WK-1178, discharge event the P3 plan review; LOW, slice over 1 h, under the 09:40:57 criteria.)*

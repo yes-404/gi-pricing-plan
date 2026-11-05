@@ -2,12 +2,12 @@
 id: FD-1661
 family: finding
 title: deploy/docker-compose.yml brings up only the dependencies: it has no api, worker, scheduler or frontend service, against FR-432
-status: active
+status: closed
 created: 2026-10-12
 owner: auditor
 tree: fc4401dcad789692f79f6c3ffc058c1c3921b7b9
 corrected_by: []
-relates: [WK-674, FR-432, FR-413, SL-1527, LG-1647]
+relates: [WK-674, FR-432, FR-413, SL-1527, LG-1647, SL-1689, LG-2017, PL-2016]
 ---
 
 # FD-1661 — the compose stack does not run the platform
@@ -37,3 +37,7 @@ Annotated 2026-10-29 (to-lead "2026-10-29 10:26:13 GMT"; scheduling noted at "10
 ## Annotation, 2026-10-29 (scheduler limb resolved by this PR)
 
 ***Scheduler limb resolved 2026-10-29*** — closed by the merged fix, this PR (SL-1968 / LG-1969; the merge sha is added at the read-back). The `scheduler` service is in `deploy/docker-compose.yml` under the `app` profile (`celery -A app.worker.entrypoint beat --schedule /tmp/celerybeat-schedule`, `depends_on` `migrate` and `redis`, one process); `docker compose -f deploy/docker-compose.yml --profile app config --services | grep -x scheduler` prints `scheduler` (see the audit section of LG-1969, A2, for the run). Runtime: no scheduler → Job `queued`, outbox `pending|1`; with it → `succeeded`, `published|1` (project `gip-s4-runtime`, image `gi-pricing-app:125779310f85…`). **Status unchanged: the `frontend` limb remains, owner SL-1689 (WK-674).** FR-432 stays open until it merges.
+
+## Resolution, 2026-11-05
+
+***Resolved 2026-11-05*** — closed in place 2026-11-05 by the auditor, as the closing act of the mint of SL-1689 (WK-674, LG-2017, PL-2016; ~~this PR, its number and squash written at the merge's date-of-record~~ [PR #1435]), on the lead's brief under the maintainer's entry "2026-11-05 09:58:58 GMT" (`to-lead.md`, a local channel file): "WK-674's pair first (FD-1661 frontend limb + FD-1816, one SOLO compose gate)". **The `frontend` limb was the last open one** (`api`, `migrate`, `worker-*`, `lb`: #1337 `eea416ca`; `scheduler`: #1409 `aad4fd58`). Delivered remedy: `frontend` is a service under the `app` profile (`deploy/docker-compose.yml`, `image: gi-pricing-frontend:${GIP_BUILD:-unset}`, `ports: ["127.0.0.1:${GIP_WEB_PORT:-5173}:80"]`, `depends_on` `lb`), built from `deploy/frontend.Dockerfile` (a `node:22-alpine` stage that runs `generate:api` from the committed contract and `pnpm build`, then `nginx:1.27-alpine`) with the repository root as context and `deploy/frontend.Dockerfile.dockerignore` admitting `frontend/` and the OpenAPI contract only; `deploy/frontend.nginx.conf` serves `/` with a history fallback and proxies `/api/` to `lb`. The isolated test overlay moves its port to an ephemeral loopback port. Red first, by cause, in LG-2017 at base `1f3f67cf`: `assert ['no service named frontend'] == []` and `frontend.nginx.conf does not exist` (the three frontend breaker rows are red by `KeyError: 'frontend'` at the base, not a red by cause, and are proved by their own run: `39 passed`, then `47 passed`). Reachability from a clean copy of the commit, in the build window (project `gip-s4-runtime`, image from `git archive 5575547b`): `GET / -> 200 text/html`; `GET /data/some-dataset/rules -> 200 text/html` (the history fallback); `GET /api/v1/auth/config -> 200 application/json` (the API's answer through `lb`, not nginx's 502). Gate evidence is in LG-2017 (the SOLO gate's rows are written there by the gate's owner; OWED at this draft). **FR-432's service clause is met at this merge:** "`api`, `worker`, `scheduler`, `frontend`, plus dependencies" is in `deploy/docker-compose.yml` under the `app` profile and covered by the compose shape tests (`39 passed`); `docker compose --profile app config --services` lists 12 services and, with no profile, the 3 unchanged, by the lead's read of 2026-11-05 about 20:01 GMT (A4), not the gate's. **Carried, not claimed:** FR-432's clause "a working stack with seeded demo data (R2)": LG-1841's "0.7 the seed over the compose ports" was never evidenced by a compose-run seeded journey, and is carried to SL-1913 (the rehearsal slice).
