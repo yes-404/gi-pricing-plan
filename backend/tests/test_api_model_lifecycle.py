@@ -301,3 +301,190 @@ def test_submitting_requires_the_submit_permission(
         headers={**_headers(outsider.id, workspace_id), "If-Match": 'W/"anything"'},
     )
     assert refused.status_code == 403, refused.text
+
+
+# -- Archive is a model write, not a submission (FD 8366, SL 8368) -------------------------
+
+
+def _caller_with(workspace_id: UUID, permissions: set[str]) -> dict[str, str]:
+    """Headers for a caller whose only role is a custom one carrying exactly `permissions`.
+
+    A built-in role cannot separate `model:fit` from `model:submit` the second way round
+    (`pricing_actuary` holds both, `analyst` only fit), so the refused-without-fit case needs
+    a custom role. The `auditor` grant supplies the workspace and the membership.
+    """
+    from backend.tests.conftest_db import seed_as_owner, test_database_url
+
+    from app.db.models import RoleAssignmentRow, RoleRow
+    from model_schema import ScopeType
+
+    who = Principal(kind=ActorKind.USER, id=new_uuid7(), display="custom@insurer.example")
+
+    async def seed(session) -> None:
+        role = RoleRow(
+            workspace_id=workspace_id,
+            slug=f"custom-{who.id}",
+            permissions=sorted(permissions),
+            builtin=False,
+        )
+        session.add(role)
+        await session.flush()
+        session.add(
+            RoleAssignmentRow(
+                workspace_id=workspace_id,
+                principal_kind="user",
+                principal_id=who.id,
+                role_id=role.id,
+                scope_type=ScopeType.WORKSPACE.value,
+            )
+        )
+
+    loop = asyncio.new_event_loop()
+    try:
+        database = Database(Settings(database_url=test_database_url()))
+        try:
+            loop.run_until_complete(_grant_role(database, workspace_id, who.id, "auditor"))
+            loop.run_until_complete(seed_as_owner(seed))
+        finally:
+            loop.run_until_complete(database.dispose())
+    finally:
+        loop.close()
+    return _headers(who.id, workspace_id)
+
+
+def _archive(
+    api_client: TestClient,
+    model_id: UUID,
+    slug: str,
+    headers: dict[str, str],
+    reader: dict[str, str],
+    version: int = 1,
+):
+    """Archive the model's `version`; the `If-Match` is that version's, not the latest's."""
+    etag = api_client.get(
+        f"/api/v1/models/{slug}", params={"version": version}, headers=reader
+    ).headers["etag"]
+    return api_client.post(
+        f"/api/v1/models/{model_id}/archive", headers={**headers, "If-Match": etag}
+    )
+
+
+def _approve_over_the_api(
+    api_client: TestClient, model_id: UUID, slug: str, actor_headers, approver_headers
+) -> None:
+    etag = api_client.get(f"/api/v1/models/{slug}", headers=actor_headers).headers["etag"]
+    submitted = api_client.post(
+        f"/api/v1/models/{model_id}/submit",
+        json={"change_summary": "archive-permission test"},
+        headers={**actor_headers, "If-Match": etag},
+    )
+    assert submitted.status_code == 200, submitted.text
+    decided = api_client.post(
+        f"/api/v1/approval-requests/{submitted.json()['approval_request_id']}/decide",
+        json={"decision": "approve", "comment": "ok"},
+        headers=approver_headers,
+    )
+    assert decided.status_code == 200, decided.text
+
+
+def _supersede(workspace_id: UUID, actor: Principal, approver: Principal, model_id: UUID) -> None:
+    """Approve `model_id`, then approve its next version, so `_supersede_earlier_versions`
+    moves it to `superseded` — the state the way the service makes it, not an `UPDATE`."""
+    from backend.tests.conftest_db import test_database_url
+    from backend.tests.test_model_lifecycle import _approve, _next_version_of
+
+    async def run() -> None:
+        database = Database(Settings(database_url=test_database_url()))
+        try:
+            await _approve(database, workspace_id, actor, approver, model_id)
+            second = await _next_version_of(database, workspace_id, model_id)
+            await _approve(database, workspace_id, actor, approver, second)
+        finally:
+            await database.dispose()
+
+    asyncio.run(run())
+
+
+@pytest.mark.req("FR-202")
+def test_archiving_requires_model_fit_and_not_model_submit(
+    api_client: TestClient, workspace_id
+) -> None:
+    """`06` §4.1 DP-A: `model:fit` is the Model write right; `model:submit` is for putting a
+    model in front of an approver, which archiving is not (FD 8366). A caller with fit and
+    without submit archives; one with submit and without fit is refused."""
+    actor, model_id, slug, _ = _fitted(workspace_id)
+    reader = _headers(actor.id, workspace_id)
+    submit_only = _caller_with(workspace_id, {"model:read", "model:submit"})
+    refused = _archive(api_client, model_id, slug, submit_only, reader)
+    assert refused.status_code == 403, refused.text
+    assert refused.json()["code"] == "PERMISSION_DENIED"
+
+    fit_only = _caller_with(workspace_id, {"model:read", "model:fit"})
+    archived = _archive(api_client, model_id, slug, fit_only, reader)
+    assert archived.status_code == 200, archived.text
+    assert archived.json()["status"] == "archived"
+
+
+@pytest.mark.req("FR-202")
+@pytest.mark.parametrize(
+    "permissions",
+    [{"model:read", "model:fit"}, {"model:read", "model:fit", "model:submit"}],
+)
+def test_an_approved_model_is_refused_archive_by_state_not_permission(
+    api_client: TestClient, workspace_id, permissions: set[str]
+) -> None:
+    """Moving archive to `model:fit` widens who may call it to `analyst`; the state guard is
+    what keeps an `approved` model (a Rating Version's referent) out of reach, for the fit
+    holder and the holder of both alike: 409 `VALIDATION_FAILED`, not 403."""
+    actor, model_id, slug, approver = _fitted(workspace_id)
+    reader = _headers(actor.id, workspace_id)
+    _approve_over_the_api(
+        api_client, model_id, slug, reader, _headers(approver.id, workspace_id)
+    )
+    caller = _caller_with(workspace_id, permissions)
+    refused = _archive(api_client, model_id, slug, caller, reader)
+    assert refused.status_code == 409, refused.text
+    assert refused.json()["code"] == "VALIDATION_FAILED"
+    after = api_client.get(f"/api/v1/models/{slug}", headers=reader)
+    assert after.json()["status"] == "approved"
+
+
+@pytest.mark.req("FR-202")
+def test_a_model_in_review_is_refused_archive_by_state(
+    api_client: TestClient, workspace_id
+) -> None:
+    """`review → archived` is not an edge: the request is withdrawn first, so the approver's
+    queue does not lose an item undecided. A fit holder is refused by state (409
+    `VALIDATION_FAILED`), not by permission, and the model stays in `review`."""
+    actor, model_id, slug, _ = _fitted(workspace_id)
+    reader = _headers(actor.id, workspace_id)
+    etag = api_client.get(f"/api/v1/models/{slug}", headers=reader).headers["etag"]
+    submitted = api_client.post(
+        f"/api/v1/models/{model_id}/submit",
+        json={"change_summary": "archive-permission test"},
+        headers={**reader, "If-Match": etag},
+    )
+    assert submitted.status_code == 200, submitted.text
+    assert api_client.get(f"/api/v1/models/{slug}", headers=reader).json()["status"] == "review"
+    caller = _caller_with(workspace_id, {"model:read", "model:fit"})
+    refused = _archive(api_client, model_id, slug, caller, reader)
+    assert refused.status_code == 409, refused.text
+    assert refused.json()["code"] == "VALIDATION_FAILED"
+    after = api_client.get(f"/api/v1/models/{slug}", headers=reader)
+    assert after.json()["status"] == "review"
+
+
+@pytest.mark.req("FR-202")
+def test_a_superseded_model_is_archived_by_a_fit_holder(
+    api_client: TestClient, workspace_id
+) -> None:
+    """`superseded → archived` is an edge, and a model-write holder takes it."""
+    actor, model_id, slug, approver = _fitted(workspace_id)
+    reader = _headers(actor.id, workspace_id)
+    _supersede(workspace_id, actor, approver, model_id)
+    first = api_client.get(f"/api/v1/models/{slug}", params={"version": 1}, headers=reader)
+    assert first.json()["status"] == "superseded"
+    caller = _caller_with(workspace_id, {"model:read", "model:fit"})
+    archived = _archive(api_client, model_id, slug, caller, reader)
+    assert archived.status_code == 200, archived.text
+    assert archived.json()["status"] == "archived"
