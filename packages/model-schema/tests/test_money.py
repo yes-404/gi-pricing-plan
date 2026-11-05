@@ -234,3 +234,14 @@ def test_a_field_outside_a_governed_hash_keeps_its_spelling():
         value: DecimalStr
 
     assert Holder(value=Decimal("66000.440")).model_dump(mode="json") == {"value": "66000.440"}
+
+
+@pytest.mark.req("FR-21")
+@pytest.mark.parametrize("zero", ["-0", "-0.00", "-0E+3", "0E+3"])
+def test_every_spelling_of_zero_gives_the_hash_of_zero(zero):
+    """DP-L2 extended 2026-11-05: a signed or exponent zero is the value 0, so one hash."""
+    from model_schema.regression import suite_content_hash
+
+    assert suite_content_hash(_suite_with_bounds(Decimal(zero), Decimal("100"))) == (
+        suite_content_hash(_suite_with_bounds(Decimal("0"), Decimal("100")))
+    )
