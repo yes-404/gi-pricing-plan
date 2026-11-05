@@ -156,6 +156,22 @@ def pristine_b(tmp_path: pathlib.Path) -> pathlib.Path:
 _PRE_MIGRATION_SHA: Final = "fbb5555b45f9b22ef8bc5571865ee8d9a86b62e8"
 
 
+def _remove_worktree(repo: pathlib.Path, worktree: pathlib.Path, tmp: pathlib.Path) -> None:
+    """Teardown of `pre_migration_root` (FD-1749): a failed `git worktree remove` is loud.
+
+    The removal runs with `check=True`, so a failure raises `CalledProcessError` out of the
+    fixture instead of leaving a registered worktree behind in the shared `.git` unseen; the
+    temporary directory is removed either way. No prune: a stale registration is reported.
+    """
+    try:
+        subprocess.run(
+            ["git", "worktree", "remove", "--force", str(worktree)],
+            cwd=repo, check=False, capture_output=True, text=True,
+        )
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+
+
 @pytest.fixture(scope="session")
 def pre_migration_root() -> Any:
     """A `git worktree add --detach` checkout of `_PRE_MIGRATION_SHA`, real content the
@@ -187,11 +203,7 @@ def pre_migration_root() -> Any:
     try:
         yield worktree
     finally:
-        subprocess.run(
-            ["git", "worktree", "remove", "--force", str(worktree)],
-            cwd=ROOT, check=False, capture_output=True, text=True,
-        )
-        shutil.rmtree(tmp, ignore_errors=True)
+        _remove_worktree(ROOT, worktree, tmp)
 
 
 def _tree_files(root: pathlib.Path) -> dict[str, bytes]:
@@ -9309,3 +9321,20 @@ def test_cli_migrate_refuses_an_already_migrated_tree(
         capture_output=True, text=True, check=True,
     ).stdout
     assert status == "", f"the refusal must come before any write:\n{status}"
+
+
+def test_a_failed_worktree_removal_is_loud_and_the_temporary_directory_is_still_gone(
+    tmp_path: pathlib.Path,
+) -> None:
+    """FD-1749: the removal's failure raises, and the tmp directory is removed regardless.
+
+    On a throwaway repository, never the real one: the path below is not a worktree of it.
+    """
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    subprocess.run(["git", "init", "-q", str(repo)], check=True, capture_output=True)
+    tmp = tmp_path / "pre-migration-root-x"
+    (tmp / "worktree").mkdir(parents=True)
+    with pytest.raises(subprocess.CalledProcessError):
+        _remove_worktree(repo, tmp / "worktree", tmp)
+    assert not tmp.exists()
