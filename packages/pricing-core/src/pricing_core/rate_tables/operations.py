@@ -56,7 +56,7 @@ from model_schema.rating import (
     UpliftTableParameters,
 )
 from model_schema.refs import ArtifactRef, slug_is_admitted
-from pricing_core.rating.compile import ValidationIssue
+from pricing_core.rating.compile import ValidationIssue, cell_parses
 
 _APPROVED_OR_BETTER = frozenset({"approved", "live", "retired"})
 
@@ -66,6 +66,7 @@ INCOMPLETE_KEY_DOMAIN = "INCOMPLETE_KEY_DOMAIN"
 NULL_VALUE = "NULL_VALUE"
 OUT_OF_BOUNDS = "OUT_OF_BOUNDS"
 DUPLICATE_KEY = "DUPLICATE_KEY"
+CELL_UNPARSEABLE = "RATE_TABLE_CELL_UNPARSEABLE"
 
 #: W10-3B's named failure codes (03 §5.2, FR-233/235/232). Internal codes: the API
 #: maps them onto 03 §5.1's module error codes at the boundary.
@@ -163,7 +164,8 @@ def extract_relativity_table(
         for level in levels:
             if level.relativity is None:
                 continue
-            rows.append({entry: level.level, value_name: str(Decimal(str(level.relativity)))})
+            text = format(Decimal(str(level.relativity)), "f")
+            rows.append({entry: level.level, value_name: text})
     return rows
 
 
@@ -324,6 +326,14 @@ def _value_issue(
         return ValidationIssue(
             code=OUT_OF_BOUNDS,
             message=_non_finite_message(raw, key_values),
+            field=value.name,
+        )
+    if not cell_parses(raw):
+        return ValidationIssue(
+            code=CELL_UNPARSEABLE,
+            message=(
+                f"value {raw!r} for key {key_values} is not a number the rating engine can read"
+            ),
             field=value.name,
         )
     if value.min is not None and decimal_value < value.min:
@@ -680,8 +690,11 @@ def _new_version(
 
 
 def _format_value(value: Decimal) -> str:
-    """A decimal string with trailing zeros dropped — never a float (R2)."""
-    return str(value.normalize())
+    """Fixed point, trailing zeros dropped: never a float (R2), never an exponent (FD-1648).
+
+    `RateTableValue` declares no dp, so this normalises and formats (the entry
+    "2026-11-05 10:11:39 GMT", limb (i))."""
+    return format(value.normalize(), "f")
 
 
 def _transform_rows(
