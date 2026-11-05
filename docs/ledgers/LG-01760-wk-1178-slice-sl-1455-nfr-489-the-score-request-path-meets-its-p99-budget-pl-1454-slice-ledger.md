@@ -545,3 +545,5 @@ Median p99 ms over the runs that reached the rung (runs; over-runs):
 | without GBM (< 15), default-live | 41.226 (4; 4 over) | not reached | not reached | not reached |
 
 Errors 0 except one at 100 rps default-live. Handler p99 without GBM 33–42 ms, handler mean 23–29 ms, against the 15 ms budget. Verdict: **NFR-489 UNMET on both conditions (OVER on the driver's own summary for every arm) → FD owed (owner WK-674, FD-1836's reading)**. The without-GBM arm is no faster than the with-GBM arm at 25 rps (mean 27 ms against 30 ms); the auditor should look at that before reading the budget miss as a GBM cost. No retry.
+
+*(Dated line, 2026-11-05, docs batch 11, by the auditor, on to-lead "2026-11-05 11:23:52 GMT" (FD-1836 correction accepted): the addendum sentence "Handler p99 without GBM 33–42 ms" (S1 item C) reads 30.05 to 42.45 ms. At 25 rps the handler means per run are, with GBM, explicit-ref 25.3 to 26.7 ms and default-live 29.9 to 32.2 ms, and, without GBM, explicit-ref 23.2 to 24.2 ms and default-live 27.8 to 28.5 ms: the no-GBM arm is about 2.5 ms faster in both arms.)*
