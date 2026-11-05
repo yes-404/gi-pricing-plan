@@ -317,3 +317,5 @@ Not yet decided. The proposal above is the auditor's; the lead adopts, amends or
 are the maintainer's.
 
 Ownership shape: event
+
+*(Dated line, 2026-11-05, docs batch 11, by the auditor, on to-lead "2026-11-05 09:51:53 GMT" (triage b28ba8e9454c accepted as the proposal of record), item (8), and the user's decision relayed in "2026-11-05 09:58:58 GMT": the P3 carry of item (8) (MEDIUM, WK-1178 maintenance) is WITHDRAWN by the correction staged 2026-11-05 10:00:34 GMT: this finding is coded before Thu 12 Nov 2026.)*

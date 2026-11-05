@@ -2,12 +2,12 @@
 id: FD-1610
 family: finding
 title: The fragment inliner renames feature_map VALUES (model features) instead of KEYS (graph names), so a mounted model_call can read the wrong graph names
-status: active
+status: closed
 created: 2026-10-11
 owner: auditor
 tree: 99f22479
 corrected_by: []
-relates: [WK-1178, FD-1374, RL-1571, SL-1541, FR-222, FR-239, FR-246]
+relates: [WK-1178, FD-1374, RL-1571, SL-1541, FR-222, FR-239, FR-246, SL-1928, LG-1929]
 ---
 
 # FD-1610 — the inliner renames `feature_map` VALUES, not KEYS
@@ -91,3 +91,5 @@ The choice is the maintainer's through the lead; this record does not pick one.
 **Owner: WK-1178**, discharged by SL-1541. Decision: `fix before close with an owner: SL-1541`. Second limb:
 open, event that next confirms or discharges it: the lead's ruling on options (a) to (d). Filed by the auditor,
 2026-10-11; the lead gives the verdict.
+
+***Resolved 2026-11-05*** — closed in place 2026-11-05 by the auditor (aud-fdclose), on the lead's brief under to-lead "2026-11-05 09:40:57 GMT" item 8 (2), the FD-1842 form. Both limbs are delivered. Limb 1 (the inliner renames `feature_map` keys and never values; `03` gains a dated correcting line): SL-1541, PR #1272, squash commit d699a561d6a93f33b74beb9c07023f8e655bb8c7, merged 2026-10-11T10:12:29Z; `rating/inline.py:118` collects keys, test `test_a_feature_map_value_equal_to_a_fragment_name_is_not_renamed` (`test_rating_inline.py:173`). Limb 2 (the runtime silent drop, ruled option (d) then (c)): SL-1928 (WK-1178, LG-1929), PR #1395, squash commit c1e134d0cc6df8144cff763f25a8ee42600c4217, merged 2026-10-26T03:44:02Z; `rating/runtime.py` and `score.py` trace the dropped keys (`dropped_inputs`) and refuse one that feeds a required input; tests in `packages/pricing-core/tests/test_rating_model_call_dropped_inputs.py`; the exposure measurement is in LG-1929.

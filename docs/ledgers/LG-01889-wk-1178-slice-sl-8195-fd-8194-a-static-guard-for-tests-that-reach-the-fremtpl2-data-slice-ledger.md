@@ -54,6 +54,8 @@ Not run. Docs-and-test-only slice; the lead grants the gate. Table empty.
 
 Static checks at `d66ad2ed40ef150d8bc1d26f79ea33a2bbc2397b`: `ruff check tests/test_fremtpl2_data_guard.py` "All checks passed!"; `ruff format` clean; `mypy tests/test_fremtpl2_data_guard.py` "Success: no issues found in 1 source file".
 
+**Dated line, 2026-11-05 (docs batch 10), by the auditor, the gate of record:** the lead's gate heading "2026-10-25 17:30:39 GMT" reads "FD 8194 gate @b781ec96 STANDS under 1(f)"; ACK 2026-10-25 20:06:02 GMT. The "Not run" line above is the executor's at its date and stays. Audit: RS-1891 adopted CLEAN (see Audit below). Authority: to-lead "2026-11-04 20:56:54 GMT" item 7 (e), the stamps staged by lead 30 at 2026-11-04 20:59:03 GMT (each heading re-read by the lead in the channel), and "2026-11-04 20:59:50 GMT" (the eleven closes adopted).**
+
 ### Audit
 
 Not yet written (the auditor's).

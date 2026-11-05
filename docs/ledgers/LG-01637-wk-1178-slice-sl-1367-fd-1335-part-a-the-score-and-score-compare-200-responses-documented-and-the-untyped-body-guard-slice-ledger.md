@@ -353,3 +353,24 @@ into the slice branch would ship to main: they live on an evidence branch with a
 ## PRs
 
 #1282
+
+## Addendum 2026-11-05 — nfr-bench-1 session 1: item F, NFR-502 DP-A2 limbs (exec-nfrs1)
+
+*(2026-11-05; authority: the lead's brief of record for exec-nfrs1; method of LG-1637's 2026-10-25 12:16 UTC window where it has one, else the same scratch files.)*
+
+Main `dae9637ea6f6a56f6502e9db70392cdfb2f3983d`, tree `715a8fd2e8ddeb27b68414db85929ccac359d1ad`, checked out detached at `~/gi` on the dedicated VM `nfr-bench-1` (GCE e2-standard-8, 8 vCPU, 32 GB; CPU Intel Xeon @ 2.20 GHz, family 6 model 79 stepping 0, flags hash `9674b27761c0`, the same as the shared box on 3 Nov; cpubench x3 py-loop 1.512/1.504/1.547 s, sha256-64MB 0.194/0.192/0.197 s; pgbench -s 10 -c 4 -j 2 -T 20: 1324.96 tps, 3.019 ms; CTAS 1 M rows 2579 ms). Run logs and driver outputs: `~/gi-pricing-plan.local/scratch/nfr-bench-1/s1/` (shared box; not in the repository); on the VM `~/logs/s1/`. Nothing else ran on the VM during a timed item (quiet bar: load1 < 1.0, `pgrep -c pytest` 0, read before each start).
+
+Bring-up lines: plan step 5 (pnpm frozen install) = not run, cause: no node/pnpm on the VM; no S1 item depends on it. The login role `gip_app_login` was missing on the VM's pre-FD-1729 volume: `deploy/postgres/app-login-role.sql` was applied with `-d postgres` (cluster-level, not the template database) and `scripts/provision-app-role.py` set its password (the lead accepted this). The `--serve-dsn` form passed was `postgresql+asyncpg://gip_app_login@127.0.0.1:5432/<item db>` (password not recorded); the owner `--dsn` was `postgresql+asyncpg://gipricing@127.0.0.1:5432/<item db>`. Each item ran on its own `createdb -T gipricing` copy migrated to head `b7e4c2a91d36` (the template stayed at `a4d1f08c3b97`, untouched); server redis db 11. `redis-cli -n 0 dbsize` was 1 at START (a stale `gip:tenant` key from 21 Oct, not written by this session) and is quoted again at END. The VM already held database `gipricing_sl1455_t4_1792592230` from 21 Oct; it was left alone.
+
+Method: the 25 Oct window's scratch files, copied to the VM and re-hashed there: `limb13.py` `e9f57bfd60e5…`, `limb3.py` `9d900f5030ae…`, `shapes.py` `afeba890778f…`, `test_zz_limb2.py` `3b8159d37b0c…`, `verdict.py` `4f64c2e31612…` (all from `scratch/sl-1569/t6/`), driven by `bench-ef-window.sh` sha256 prefix `323c61e6ca2f`, an adaptation of `w2-window.sh` (sha256 `331d084b29ff…`). Deviations from the 25 Oct window, disclosed: no gate-1b `flock`; redis db 11 (not 2/4); the abort rule is load1 ≥ 1.0 at start (not ≥ 5); the thread caps are exported as before (4); `alembic upgrade` on the copy returned rc 1 (the template schema `a4d1f08c3b97` is newer than the older tree's own migrations), so the copy kept the template schema and the two limb-2 tests passed on it. Base `372fa92a (13a02bba^)` against HEAD `13a02bba` (VM worktree `~/wt-f`), DB `nfrs1_f`, 10:52:31–11:01:47 UTC, load1 0.90 at start; ZEROS: redis11 0, database dropped, tree status lines 0; log `itemf-window.log`; rc 0.
+
+Limb 2, p99 ms per run 1/2/3:
+
+| route | base | HEAD | delta of medians against base's range |
+|---|---|---|---|
+| `/score` | 41.540 / 44.555 / 50.332 (median 44.555, range 8.792) | 43.356 / 46.531 / 50.843 (median 46.531) | +1.975 ≤ 8.792, STOP=False |
+| `/score/compare` | 46.780 / 41.004 / 49.656 (median 46.780, range 8.651) | 42.348 / 49.314 / 50.634 (median 49.314) | +2.534 ≤ 8.651, STOP=False |
+
+The `03` NFR-502 dated line this item owes is spec text: handed to the lead, not edited here.
+
+Limb 3 (structural, HEAD tree): `/api/v1/score` and `/api/v1/score/compare` both `response_model None`, `response_field None`, schema200 `$ref` `ScoringResult` / `ScoreComparison`. Verdict: **NO_STOP_CONDITION = PASS**.

@@ -2,12 +2,12 @@
 id: FD-1684
 family: finding
 title: Non-JSON 2xx responses are published as application/json with an empty schema, so the generated contract misstates the wire
-status: active
+status: closed
 created: 2026-10-12
 owner: auditor
 tree: 50bbdd96b2154cb4eb79ccf91658191e51ab8906
 corrected_by: []
-relates: [FD-1335, PL-1364, SL-1367, PL-1682, WK-1178, WK-679, FR-235, FR-371, FR-451]
+relates: [FD-1335, PL-1364, SL-1367, PL-1682, WK-1178, WK-679, FR-235, FR-371, FR-451, SL-1709, LG-1775]
 ---
 
 # FD-1684 — Non-JSON 2xx responses are published as `application/json` with an empty schema
@@ -153,3 +153,5 @@ stale-list test (`test_every_untyped_body_exclusion_is_still_untyped`) shows any
 makes stale. **S5 (`SL-1547`) is unchanged.**
 
 **Event:** the finding closes when the sweep predicate above, run on `main`, prints no line.
+
+***Resolved 2026-11-05*** — closed in place 2026-11-05 by the auditor (aud-fdclose), on the lead's brief under to-lead "2026-11-05 09:40:57 GMT" item 8 (2), the FD-1842 form. Delivered remedy (the Disposition's one slice: the four routes declare their response media types, a contract test per route, and the `UNTYPED_2XX_PERMANENT` entries removed): SL-1709 (WK-1178, LG-1775), PR #1328, squash commit bdff304ae5ba034e521597a11898ec734d530bfc, merged 2026-10-18T00:21:03Z. `rate_tables.py` declares `text/csv` and the spreadsheetml type, `jobs.py` declares `text/event-stream`, `audit.py` declares `text/csv` and `application/x-ndjson`; tests `test_export_csv_publishes_text_csv`, `test_export_xlsx_publishes_the_spreadsheetml_type`, `test_export_publishes_csv_and_json_lines` and `test_events_publish_text_event_stream` assert the declared sets. `UNTYPED_2XX_PERMANENT` no longer exists in `backend/tests/test_contracts.py` at main dae9637e. Read by the auditor against the merge diff; the sweep predicate was not re-run.

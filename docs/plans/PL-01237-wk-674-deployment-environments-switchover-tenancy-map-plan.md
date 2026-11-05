@@ -1176,3 +1176,5 @@ row has its resolver, `RL-1232`. Steps 2 and 3 are the lead's.
    - **Consistency checked by grep:** every id in the coverage table appears in its slice's
      Task, and no `Resolved by` cell is empty
      (`grep -E '^\| DP-[0-9]' <this file> | grep -c '| |$'` prints 0).
+
+*(Dated line, 2026-11-05, docs batch 11, by the auditor, on to-lead "2026-11-05 11:23:52 GMT" (read from PL-1237:114-116 by aud-wk674): F1 reassigned to WK-1178 by register :442, confirmed 2026-11-05; WK-1178 owes F1's harness and reading or its own carry. The 3 drops F1 saw in m-n4-r1 go with it: PL-1237:116's open question moves to WK-1178's row, else it stays on WK-674's row after F1 moves.)*
