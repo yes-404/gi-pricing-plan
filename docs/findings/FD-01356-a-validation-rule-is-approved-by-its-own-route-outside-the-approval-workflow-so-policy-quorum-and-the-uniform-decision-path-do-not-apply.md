@@ -2,12 +2,12 @@
 id: FD-1356
 family: finding
 title: A validation rule is approved by its own route outside the approval workflow, so policy quorum and the uniform decision path do not apply
-status: active
+status: closed
 created: 2026-10-01
 owner: auditor
 tree: 65b334792e65704206d2c21015690d7c613092cc
 corrected_by: []
-relates: [WK-1178]
+relates: [WK-1178, SL-1409, LG-1417]
 ---
 
 # FD-1356 — A validation rule is approved by its own route outside the approval workflow, so policy quorum and the uniform decision path do not apply
@@ -283,3 +283,5 @@ Re-read at `origin/main` `9b0fb97c` against this record's tree `65b33479`. **The
 **What changed, and what it means.** WK-674 Slice 2a added a PostgreSQL trigger refusing any write of an approved status outside the decision path. `approve_rule` now passes it by opening `approvals.approval_decision`, a **named, temporary allowance**, so the direct route still approves a rule with no `approval_request`. That is the "S2's temporary exemption" the Disposition names: the defect is unchanged and the allowance is the item the fix slice removes. Not re-run at `9b0fb97c`: the HTTP cases 1-5 and the database counts (code read only); no commit since 2026-09-30 touches the route, the service function's logic or `_carry_to_the_artifact`'s branches.
 
 *Filed 2026-09-30 as working id 9892; minted 2026-10-01 as FD-1356.*
+
+***Resolved 2026-11-05*** — closed in place 2026-11-05 by the auditor (aud-fdclose), on the lead's brief under to-lead "2026-11-05 09:40:57 GMT" item 8 (2), the FD-1842 form. The register row was already marked Resolved 2026-10-05; this closes the essay to match. Delivered remedy (rule approval through `approvals.submit` and `decide`, a `_carry_to_the_artifact` validation-rule branch, an `error` dry run refused at submit and approve, S2's temporary exemption removed, unbacked approved rules reset with the count recorded): SL-1409 (WK-1178, LG-1417), PR #1157, squash commit cdaaa57345cb765f96034ce1ec2733c338f1c3cd, merged 2026-10-05T14:36:13Z. Evidence at main: `api/validation.py` approve route opens a request and decides through the workflow; `platform/validation_rules.py` `_require_executed_dry_run` (:372); `test_validation_rule_approval.py::test_one_approval_under_a_quorum_of_two_leaves_the_rule_in_review` (:413); `scripts/reset-unbacked-rule-approvals.py`.

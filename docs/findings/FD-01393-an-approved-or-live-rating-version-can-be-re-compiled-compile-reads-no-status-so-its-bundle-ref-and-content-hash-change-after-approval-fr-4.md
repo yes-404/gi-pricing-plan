@@ -2,12 +2,12 @@
 id: FD-1393
 family: finding
 title: An approved or live rating version can be re-compiled, because compile reads no status, so its bundle ref and content hash change after approval (FR-4)
-status: active
+status: closed
 created: 2026-10-03
 owner: auditor
 tree: 8bd782acbbdde8e3b4195b5a0acb89183b5a0253
 corrected_by: []
-relates: [WK-674, WK-1178, FR-4, FR-238, FR-239, FR-267, RL-921, RL-922, RL-865]
+relates: [WK-674, WK-1178, FR-4, FR-238, FR-239, FR-267, RL-921, RL-922, RL-865, SL-1256, LG-1405, RL-1379]
 ---
 
 # FD-1393 — An approved or live rating version can be re-compiled (FR-4)
@@ -178,3 +178,5 @@ Dated 2026-10-03 (18:34 BST), at the mint, from the auditor's audit of the rulin
 3. **Left as filed:** "I did not measure whether `content_hash` covers `compiled_at`" is an open question, not an error; `RL-1379` answers it (the hash excludes `compiled_at`).
 
 Filed 2026-10-01 as working id 9754; minted 2026-10-03 as `FD-1393`.
+
+***Resolved 2026-11-05*** — closed in place 2026-11-05 by the auditor (aud-fdclose), on the lead's brief under to-lead "2026-11-05 09:40:57 GMT" item 8 (2), the FD-1842 form. Delivered remedy (option 1 of RL-1379, DP-S2-7: compile refused unless the Rating Version is a draft, in the service as well as the route, with a dated spec line and a red test): WK-674 Slice 2, SL-1256 (LG-1405), PR #1104, squash commit dfddfad890243a13b8c700f4f279f944125e777f, merged 2026-10-04T15:48:09Z. `backend/src/app/platform/rating_versions.py` `require_compilable` (:187) raises 409 `RATING_VERSION_IMMUTABLE` (the essay's example name was `ARTIFACT_IMMUTABLE`; RL-1379 chose the code) and is called by the route and by `compile_rating_version`; `backend/tests/test_rating_version_compile.py` (:842) is parametrised over review, approved, live, retired and approved-with-deployment and asserts 409, no Job, no bundle change and no audit event, with the status-changed-after-submission case at :880 and draft controls at :911 and :921; `03-rating-engine.md` FR-239 carries the dated amendment (:139).

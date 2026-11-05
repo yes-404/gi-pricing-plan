@@ -2,12 +2,12 @@
 id: FD-1424
 family: finding
 title: The rating save-time type check treats money_minor and decimal as interchangeable for expression producers
-status: active
+status: closed
 created: 2026-10-05            # original date 2026-10-05, set at the draft; minted 2026-10-05
 owner: auditor
 tree: 4d3be1414ad4dacdaa0c14ef49fb21853adbaed6
 corrected_by: []
-relates: [WK-1178, FR-226, FR-227]
+relates: [WK-1178, FR-226, FR-227, SL-1563, LG-1785]
 ---
 
 # FD-1424 — `_compatible` passes every pair of `_NUMERIC` types (`compile.py:124-129`)
@@ -203,3 +203,5 @@ non-money output, serving `49.5` in the probe) **is closed by the 17:36:28 BST O
 (`03-rating-engine.md:155`, `:483`; the §6 worked example `:272-274`). The record carrying the FR-227 definition is
 RL 9512 (working id, space form). Of the options listed above, **(p) and (q) are not taken**, and no OQ is raised.
 Severity stays MEDIUM, LATENT.
+
+***Resolved 2026-11-05*** — closed in place 2026-11-05 by the auditor (aud-fdclose), on the lead's brief under to-lead "2026-11-05 09:40:57 GMT" item 8 (2), the FD-1842 form. Delivered remedy (the maintainer's ruling of "2026-10-05 17:36:28 BST", option (a) narrowed: `money_minor` closed both ways at save, one red per refused direction, a sweep that no committed algorithm newly fails): SL-1563 (WK-1178, LG-1785), PR #1333, squash commit 57c2ea7752f9e3116acb70bd45fd7848440a5f76, merged 2026-10-18T03:52:45Z. `packages/pricing-core/src/pricing_core/rating/compile.py` `_compatible` (:141-155) refuses money_minor out to any other type and into money_minor except from money_minor or decimal at an output step; tests in `packages/pricing-core/tests/test_rating_compile.py` (:522-680) assert one `RATING_TYPE_MISMATCH` per refused direction. The int and non-money pairs went to OQ-1560, decided 2026-10-05; the unrounded-expression amendment was closed by definition (FR-227 text), per the essay's own dated note. The sweep is recorded in LG-1785.

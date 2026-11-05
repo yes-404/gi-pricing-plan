@@ -139,3 +139,5 @@ Ownership shape: workstream
 ## Decision
 
 The decision is the lead's and the maintainer's, recorded in this finding's row of `docs/findings/register.md`, not here (a frozen essay goes stale).
+
+*(Dated line, 2026-11-05, docs batch 11, by the auditor, on to-lead "2026-11-05 09:51:53 GMT" (triage b28ba8e9454c accepted as the proposal of record): carried, owner WK-1178, discharge event the P3 plan review; LOW, slice over 1 h, under the 09:40:57 criteria. The named carrier, PR #982 (head `wk1178-id-ledger-backlog`), is CLOSED unmerged (`gh pr view 982 --json state,mergedAt`: CLOSED, mergedAt null, closedAt 2026-10-08T13:43:33Z), so the carrier this record names does not exist; the interim rule and the standing idsweep hold.)*
