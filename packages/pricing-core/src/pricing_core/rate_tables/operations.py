@@ -697,8 +697,11 @@ def _format_value(value: Decimal) -> str:
 
     The cell text is stored, so it is exact: `normalize` runs in a context sized to the
     value's own digits (it cannot round) rather than the ambient 28. `Inexact` is trapped
-    as a guard that never fires on a valid Decimal, and `InvalidOperation` stays trapped so a
-    signaling NaN raises as it did under the ambient context. `Infinity` and a quiet `NaN`
+    as a guard: inside the default Context exponent range (+/-999999) the sized precision
+    means `normalize` cannot round; outside it (exponents past +/-999999) `Inexact` is raised
+    and the trap refuses, fail-closed (aud-slr2 probe, `scratch/aud-slr2/probe_fv.out`).
+    `InvalidOperation` stays trapped so a signaling NaN raises as it did under the ambient
+    context. `Infinity` and a quiet `NaN`
     pass through as `Infinity` / `NaN`, as they always did."""
     if value.is_zero():
         return "0"
