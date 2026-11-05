@@ -697,11 +697,12 @@ def _format_value(value: Decimal) -> str:
 
     The cell text is stored, so it is exact: `normalize` runs in a context sized to the
     value's own digits (it cannot round) rather than the ambient 28. `Inexact` is trapped
-    as a guard that never fires on a valid Decimal. A non-finite value passes through as
-    `Infinity` / `NaN` (the callers' `Decimal(row[...])` and the bounds check own those)."""
+    as a guard that never fires on a valid Decimal, and `InvalidOperation` stays trapped so a
+    signaling NaN raises as it did under the ambient context. `Infinity` and a quiet `NaN`
+    pass through as `Infinity` / `NaN`, as they always did."""
     if value.is_zero():
         return "0"
-    exact = Context(prec=max(len(value.as_tuple().digits), 1), traps=[Inexact])
+    exact = Context(prec=max(len(value.as_tuple().digits), 1), traps=[Inexact, InvalidOperation])
     return format(value.normalize(exact), "f")
 
 
