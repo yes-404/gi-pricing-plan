@@ -10,6 +10,8 @@ strings everywhere — never JSON floats, and never float through the file (R2).
 from __future__ import annotations
 
 import hashlib
+import random
+from collections.abc import Callable
 from datetime import UTC, datetime
 from decimal import Decimal
 from io import BytesIO
@@ -32,6 +34,7 @@ from model_schema.rating import (
 )
 from model_schema.refs import ArtifactRef
 from pricing_core.rate_tables.operations import (
+    _format_value,
     apply_cell_edits,
     decide_storage_mode,
     export_to_csv,
@@ -110,6 +113,155 @@ def _version(
         change_note="baseline version",
         seeded_from=seeded_from,
     )
+
+
+class TestFormatValueIsFixedPoint:
+    """FD-1648 limb (i): a computed cell is written in fixed point, never with an exponent,
+    because the rating engine's parser refuses `1E+2` (PL 8321 R1.1)."""
+
+    @pytest.mark.req("FR-234")
+    @pytest.mark.parametrize(
+        ("value", "written"),
+        [
+            (Decimal("100"), "100"),
+            (Decimal("1000"), "1000"),
+            (Decimal("0.5"), "0.5"),
+            (Decimal("0.50"), "0.5"),
+            (Decimal("1E+2"), "100"),
+        ],
+    )
+    def test_format_value_is_fixed_point(self, value: Decimal, written: str) -> None:
+        assert _format_value(value) == written
+
+    @pytest.mark.req("FR-234")
+    def test_a_small_fitted_relativity_is_written_positionally(self) -> None:
+        base = _version(
+            rows=[{"driver_age_band": "17-20", "relativity": "0.0000001"}],
+            value=_value(min=None, max=None),
+        )
+        result = uplift_table(base, percentage=Decimal("0.36"))
+        assert _cells(result) == [{"driver_age_band": "17-20", "relativity": "0.000000136"}]
+
+    @pytest.mark.req("FR-234")
+    def test_an_uplift_that_lands_on_a_round_hundred_is_written_without_an_exponent(self) -> None:
+        base = _version(
+            rows=[{"driver_age_band": "17-20", "relativity": "50"}],
+            value=_value(min=None, max=None),
+        )
+        result = uplift_table(base, percentage=Decimal("1"))
+        assert _cells(result) == [{"driver_age_band": "17-20", "relativity": "100"}]
+
+
+_UNREADABLE = ["1E+2", "1.36E-7", ".5"]
+_CODE = "RATE_TABLE_CELL_UNPARSEABLE"
+
+
+def _stored(raw: str) -> RateTableVersion:
+    """A version whose second row already holds `raw`, which `Decimal` reads and the engine not."""
+    return _version(
+        rows=[
+            {"driver_age_band": "17-20", "relativity": "1.5"},
+            {"driver_age_band": "21-24", "relativity": raw},
+        ],
+        value=_value(min=None, max=None),
+    )
+
+
+def _csv(raw: str) -> bytes:
+    return f"driver_age_band,relativity\n17-20,1.5\n21-24,{raw}\n".encode()
+
+
+def _import_csv(raw: str) -> object:
+    return import_from_csv(_stored("1"), _csv(raw), filename="x.csv")
+
+
+def _edit(raw: str) -> object:
+    result = apply_cell_edits(
+        _stored("1"), [RateTableCell({"driver_age_band": "21-24", "relativity": raw})]
+    )
+    if result.issues:
+        raise ValueError(f"{result.issues[0].code}: {result.issues[0].message}")
+    return result
+
+
+def _uplift(raw: str) -> object:
+    return uplift_table(_stored(raw), percentage=Decimal(0))
+
+
+def _uplift_by_filter(raw: str) -> object:
+    return uplift_by_filter(
+        _stored(raw), percentage=Decimal(0), filter={"driver_age_band": ["17-20"]}
+    )
+
+
+def _floor_and_cap(raw: str) -> object:
+    return floor_and_cap(_stored(raw), floor=Decimal(0), cap=Decimal(1000))
+
+
+_WRITE_PATHS = [_import_csv, _edit, _uplift, _uplift_by_filter, _floor_and_cap]
+
+
+class TestAWriteNeverLandsACellTheEngineCannotRead:
+    """FD-1648 limb (ii): every write path refuses the whole write, naming the first
+    cell, with RATE_TABLE_CELL_UNPARSEABLE (PL 8321 R1.2; the rebase and seed paths write
+    only computed fixed-point text and are covered by the limb (i) tests)."""
+
+    @pytest.mark.req("FR-234")
+    @pytest.mark.parametrize("raw", _UNREADABLE)
+    @pytest.mark.parametrize("path", _WRITE_PATHS)
+    def test_a_cell_the_engine_cannot_read_is_refused_naming_the_cell(
+        self, path: Callable[[str], object], raw: str
+    ) -> None:
+        with pytest.raises(ValueError, match=_CODE) as caught:
+            path(raw)
+        message = str(caught.value)
+        assert message.startswith(f"{_CODE}: ")
+        assert repr(raw) in message
+        assert "21-24" in message
+
+    @pytest.mark.req("FR-234")
+    @pytest.mark.parametrize("raw", ["1.36e-7", "1_000", "5."])
+    @pytest.mark.parametrize("path", _WRITE_PATHS)
+    def test_a_cell_the_engine_reads_still_passes(
+        self, path: Callable[[str], object], raw: str
+    ) -> None:
+        path(raw)
+
+
+def _golden_values() -> list[Decimal]:
+    """At least 1 000 decimals spanning magnitudes, from a seeded generator (no clock, no luck)."""
+    rng = random.Random(8322)
+    values: list[Decimal] = []
+    for _ in range(1200):
+        digits = rng.randint(1, 9)
+        mantissa = rng.randint(0, 10**digits - 1)
+        exponent = rng.randint(-12, 6)
+        values.append(Decimal(mantissa).scaleb(exponent))
+    values += [Decimal(s) for s in ("0", "1", "1.0", "0.5", "1.8400", "2.024", "12345.6789")]
+    return values
+
+
+class TestFormatValueGoldens:
+    """FD-1648: where the old expression wrote no exponent, the bytes do not move (A7)."""
+
+    @pytest.mark.req("FR-234")
+    def test_format_value_is_bit_identical_where_it_was_already_fixed_point(self) -> None:
+        values = _golden_values()
+        assert len(values) >= 1000
+        compared = 0
+        for value in values:
+            old = str(value.normalize())  # the expression before FD-1648, held here
+            if "E" in old:
+                continue
+            compared += 1
+            assert _format_value(value) == old
+        assert compared >= 500  # the fixture spans both sides; the comparison is not vacuous
+
+    @pytest.mark.req("FR-234")
+    def test_no_value_is_written_with_an_exponent(self) -> None:
+        for value in _golden_values():
+            assert "E" not in _format_value(value).upper()
+            assert Decimal(_format_value(value)) == value
 
 
 class TestDecideStorageMode:
