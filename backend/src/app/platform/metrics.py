@@ -243,7 +243,8 @@ async def create(
             "VALIDATION_FAILED",
             "That metric version already exists",
             409,
-            f"{slug}@{version} was created by another request. Retry to take the next version.",
+            f"{slug}@{version} was created by another request. Retry to take the next "
+            "version.",
         ) from None
 
     await audit.record(
@@ -267,7 +268,9 @@ async def load_metric(
     session: AsyncSession, *, workspace_id: UUID, metric_id: UUID
 ) -> CustomMetric:
     """One metric by id."""
-    return to_metric(await _get_or_404(session, workspace_id=workspace_id, metric_id=metric_id))
+    return to_metric(
+        await _get_or_404(session, workspace_id=workspace_id, metric_id=metric_id)
+    )
 
 
 async def list_metrics(
