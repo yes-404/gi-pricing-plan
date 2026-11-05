@@ -275,24 +275,26 @@ Terms from `00-overview.md` §2.4 are used unchanged. Additional terms owned her
 
 ### 5.1 REST API
 
-| Method | Path | Purpose |
-|---|---|---|
-| `POST` | `/api/v1/monitors` | Create a Monitor (FR-307) |
-| `GET` | `/api/v1/monitors?environment=` | List monitors with last run status |
-| `POST` | `/api/v1/monitors/{id}/run` | **202** Run on demand → Job |
-| `POST` | `/api/v1/monitors/{id}/rebaseline` | Rebaseline with a required reason (FR-309) |
-| `GET` | `/api/v1/monitoring-results/{id}` | Result artifact with metrics and evidence links |
-| `GET` | `/api/v1/monitoring/drift?environment=&from=&to=` | Drift time series by factor (FR-312, FR-313, FR-314, FR-315, FR-316) |
-| `GET` | `/api/v1/monitoring/ae?model=&segment=&cohort=` | A/E with CIs and maturity (FR-317, FR-318, FR-319) |
-| `GET` | `/api/v1/monitoring/rate-achieved?rating_version=` | Rate achieved vs intended with decomposition (FR-326) |
-| `GET` | `/api/v1/monitoring/demand?segment=` | Realised vs expected conversion/retention (FR-323) |
-| `GET` | `/api/v1/monitoring/operational?environment=` | Latency, errors, declines, bundle health (FR-331, FR-332, FR-333) |
-| `GET` | `/api/v1/alerts?status=` | Alert inbox |
-| `POST` | `/api/v1/alerts/{id}/acknowledge` | Acknowledge with a note (FR-334) |
-| `POST` | `/api/v1/alerts/{id}/resolve` | Resolve with an action and note |
-| `POST` | `/api/v1/alerts/{id}/suppress` | Suppress with expiry and reason |
-| `POST` | `/api/v1/refit-recommendations` | Raise a refit recommendation (FR-340) |
-| `POST` | `/api/v1/monitoring-packs` | **202** Generate a committee pack (FR-339) |
+| Method | Path | Purpose | Permission |
+|---|---|---|---|
+| `POST` | `/api/v1/monitors` | Create a Monitor (FR-307) | `monitor:write` |
+| `GET` | `/api/v1/monitors?environment=` | List monitors with last run status | `authenticated` |
+| `POST` | `/api/v1/monitors/{id}/run` | **202** Run on demand → Job | `monitor:write` |
+| `POST` | `/api/v1/monitors/{id}/rebaseline` | Rebaseline with a required reason (FR-309) | `monitor:write` |
+| `GET` | `/api/v1/monitoring-results/{id}` | Result artifact with metrics and evidence links | `authenticated` |
+| `GET` | `/api/v1/monitoring/drift?environment=&from=&to=` | Drift time series by factor (FR-312, FR-313, FR-314, FR-315, FR-316) | `authenticated` |
+| `GET` | `/api/v1/monitoring/ae?model=&segment=&cohort=` | A/E with CIs and maturity (FR-317, FR-318, FR-319) | `authenticated` |
+| `GET` | `/api/v1/monitoring/rate-achieved?rating_version=` | Rate achieved vs intended with decomposition (FR-326) | `authenticated` |
+| `GET` | `/api/v1/monitoring/demand?segment=` | Realised vs expected conversion/retention (FR-323) | `authenticated` |
+| `GET` | `/api/v1/monitoring/operational?environment=` | Latency, errors, declines, bundle health (FR-331, FR-332, FR-333) | `authenticated` |
+| `GET` | `/api/v1/alerts?status=` | Alert inbox | `authenticated` |
+| `POST` | `/api/v1/alerts/{id}/acknowledge` | Acknowledge with a note (FR-334) | `alert:acknowledge` |
+| `POST` | `/api/v1/alerts/{id}/resolve` | Resolve with an action and note | `alert:resolve` |
+| `POST` | `/api/v1/alerts/{id}/suppress` | Suppress with expiry and reason | `alert:resolve` |
+| `POST` | `/api/v1/refit-recommendations` | Raise a refit recommendation (FR-340) | `monitor:write` |
+| `POST` | `/api/v1/monitoring-packs` | **202** Generate a committee pack (FR-339) | `monitor:write` |
+
+ *(Added 2026-11-05, `RL-1483` item 1, `SL-8361`: the `Permission` column. Each cell is the permission name(s) from `06` §4.1, `authenticated` or `open`; a row with two methods is one row per method. **This module names no permission and `06` §4.1 lists only `monitor:write`, `alert:acknowledge` and `alert:resolve`, all unbuilt. The writes take those names (suppress takes `alert:resolve`; refit-recommendations and monitoring-packs take `monitor:write`); the reads take `authenticated` because no read member exists. All are provisional and the lead's to rule (see `SL-8361`'s ledger).**)*
 
 **Error codes owned by this module:** `BASELINE_NOT_PINNED`, `INSUFFICIENT_MATURITY`,
 `INSUFFICIENT_CLAIM_VOLUME`, `MONITOR_POPULATION_EMPTY`, `REBASELINE_REASON_REQUIRED`,
