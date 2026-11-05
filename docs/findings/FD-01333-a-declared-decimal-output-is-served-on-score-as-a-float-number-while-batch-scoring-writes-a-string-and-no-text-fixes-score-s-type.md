@@ -2,7 +2,7 @@
 id: FD-1333
 family: finding
 title: A declared decimal output is served on /score as a float JSON number, while batch scoring writes it as a string, and no text or contract fixes /score's type
-status: active
+status: closed
 created: 2026-09-30
 owner: auditor
 tree: 8d5c67a56c27a9dcbba8d4e4ad28a1895e1dd862
@@ -305,3 +305,5 @@ Ownership shape: event
 Not yet decided. The proposal above is the auditor's; the lead adopts, amends or rejects it.
 
 *(Dated line, 2026-11-05, docs batch 11, by the auditor, on to-lead "2026-11-05 10:52:44 GMT" (S1 item E; ruled "2026-11-05 10:53:08 GMT"): closing line on the re-measurement RL-1343 called for: NFR-502 reads NO_STOP_CONDITION. `/score` p99 median base 31.950 ms against HEAD 26.544 ms (delta -5.406); `/score/compare` 54.543 against 50.317 (delta -4.225); limb 3 (structural) `response_model` None and `response_field` None on both routes. Both arms on main's schema (upgrade_rc=1); same-schema comparison, not era-schema. Record: LG-1896 addendum 2026-11-05. No re-run.)*
+
+***Resolved 2026-11-05*** — closed in place 2026-11-05 by the auditor (docs batch 11), on to-lead "2026-11-05 13:30:49 GMT" answer (a): RL-1343 rule 4 (one producer, `_build_outputs`: the exact-decimal string on `/score`) is on main in PR #1387 (SL-1569, PL-1568), squash commit 96e1b369bc024db65f41e118e7a63e310a679cb3, merged 2026-10-25T21:42:49Z (`gh pr view 1387 --json state,mergedAt,mergeCommit`: MERGED; `git merge-base --is-ancestor 96e1b369 origin/main` exits 0; the commit changes `backend/src/app/api/score.py` and `backend/tests/test_score.py`); and RL-1343's open limb, the NFR-502 re-measure (RL-1343:249-250), was taken by S1 item E (NO_STOP_CONDITION, both arms on main's schema, upgrade_rc=1, in the dated line above).
