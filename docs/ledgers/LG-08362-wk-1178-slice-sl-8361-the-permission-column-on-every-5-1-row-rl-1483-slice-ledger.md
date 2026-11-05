@@ -67,6 +67,24 @@ Not yet. The auditor's.
 
 None found on the built rows where the spec states a value. Checked against `backend/src/app/api/*.py` (an AST listing of each route's `requires(...)` dependency, plus `rbac.require_permission(` in `platform/deployments.py` and `platform/shadow.py`) over the 100-odd built routes; the deploy, rollback, routing and deployment-request cells rely on `deployments.py:_authorised_environment` and were not each traced to their call site. `PATCH /datasets/{dataset_id}` is `dataset:read` plus an owner-or-`admin:manage_roles` rule in the handler, as FR-82's 2026-08-23 text says; `POST /validation-rules` is `dataset:write` or `admin:manage_settings` for a `sql` check, as the code docstring and `01` §4.5 step 5 say.
 
+#### The handler-guarded rows, traced by reading (2026-11-05, on the lead's instruction; no script run)
+
+Each `03` §5.1 row below takes `deployment:promote` on the Environment (or `admin:manage_settings`) in its cell. The code reaches the check as follows (`backend/src/app/platform/`, at the branch head):
+
+| Row | Route handler (`api/deployments.py`) | Service path | Check |
+|---|---|---|---|
+| `POST /environments/{env}/deployment-requests` | `service.submit_request` (`:72`) | `deployments.submit_request` (`:255`) calls `_authorised_environment` (`:274`) | `deployment:promote`, resource the Environment (`:131-135`) |
+| `POST /environments/{env}/deployments` | `service.deploy_and_switch` (`:103`) | `deploy_and_switch` (`:673`) → `deploy` (`:693`, defined `:530`) → `_authorised_environment` (`:555`) | same |
+| `POST /environments/{env}/deployments/rollback` | `service.rollback_and_switch` (`:133`) | `rollback_and_switch` (`:810`) → `rollback` (`:822`, defined `:708`) → `_authorised_environment` (`:729`) | same |
+| `PUT /environments/{env}/routing` | `routing.write_rule` (`:187`) | `routing.write_rule` (`:63`) calls `_authorised_environment` (`:77`, imported `:24`) | same |
+| `PUT /environments/{env}/shadow` | `shadow.write_config` (`:216`) | `shadow.write_config` (`:52`) | `admin:manage_settings` (`shadow.py:71`), matching the cell |
+
+All five agree with the cells. `GET /environments/{env}/deployments` is `requires(RATING_READ)` (`api/deployments.py:49`), matching `rating:read`.
+
+#### Process slip
+
+At about 12:05 GMT this seat ran `cd backend/src/app/api` inside a Bash call (the NO-CD ban). The repo's relative hook path then failed every Bash call. The seat recovered with `EnterWorktree` on its own worktree path. No git write ran from the subdirectory and nothing outside the worktree was touched.
+
 ## PRs
 
 None. Ends unpushed.
