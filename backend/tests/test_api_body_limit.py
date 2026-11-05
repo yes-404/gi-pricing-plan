@@ -6,6 +6,7 @@ handlers and one `File()` route, with a sentinel that records whether the handle
 
 from __future__ import annotations
 
+import re
 from collections.abc import AsyncIterator
 from typing import Annotated
 
@@ -13,8 +14,11 @@ import httpx
 import pytest
 from fastapi import FastAPI, File, UploadFile
 
-from app.api.body_limit import BodyLimitMiddleware
+from app.api import body_limit
+from app.api.body_limit import MIB, BodyLimitMiddleware
+from app.config import Environment, Settings
 from app.errors import install_error_handlers
+from app.main import create_app
 from app.observability.middleware import TraceMiddleware
 
 LIMIT = 4096
@@ -110,3 +114,55 @@ async def test_a_body_at_the_limit_passes(size: int, status: int) -> None:
         response = await client.post(PATH, content=body, headers={"content-type": content_type})
     assert response.status_code == status
     assert bool(entered) == (status == 200)
+
+
+def _unpaired() -> list[str]:
+    """Routes that declare 413 without a cap, and caps that match no declaring route."""
+    app = create_app(Settings(environment=Environment.LOCAL, version="test"))
+    paths = app.openapi()["paths"]
+    declared = {p for p, ops in paths.items() if any("413" in op.get("responses", {}) for op in ops.values())}
+    assert declared
+    uncapped = [p for p in declared if not any(r.match(p) for r in body_limit.CAPPED_ROUTES)]
+    dangling = [r.pattern for r in body_limit.CAPPED_ROUTES if not any(r.match(p) for p in declared)]
+    return [*uncapped, *dangling]
+
+
+@pytest.mark.req("FR-450")
+def test_the_capped_routes_are_the_routes_that_declare_413() -> None:
+    assert _unpaired() == []
+
+
+@pytest.mark.req("FR-450")
+def test_a_declaration_without_a_cap_or_a_cap_without_a_declaration_is_caught(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The proof by break: each direction of the pairing goes red when it is broken."""
+    first, *_ = body_limit.CAPPED_ROUTES
+    monkeypatch.setattr(body_limit, "CAPPED_ROUTES", (first,))
+    assert _unpaired()  # a route declares 413 and is not capped
+    monkeypatch.setattr(body_limit, "CAPPED_ROUTES", (*body_limit.CAPPED_ROUTES, re.compile("^/nowhere$")))
+    assert "^/nowhere$" in _unpaired()
+
+
+@pytest.mark.req("FR-450")
+async def test_the_application_caps_its_real_upload_route_before_authentication() -> None:
+    """The wiring: `create_app` refuses an oversized body with no credentials, with a trace id."""
+    app = create_app(Settings(environment=Environment.LOCAL, version="test", max_upload_body_mib=1))
+    body, content_type = _multipart(MIB + 1)
+    async with _client(app) as client:
+        response = await client.post(
+            "/api/v1/sources/abc/preview",
+            content=body,
+            headers={"content-type": content_type, "traceparent": TRACEPARENT},
+        )
+    assert response.status_code == 413
+    assert response.json()["code"] == "PAYLOAD_TOO_LARGE"
+    assert response.json()["trace_id"] == "0af7651916cd43dd8448eb211c80319c"
+    assert "1 MiB" in response.json()["detail"]
+
+
+@pytest.mark.req("FR-450")
+def test_the_limit_is_a_typed_setting_defaulting_to_64_mib() -> None:
+    assert Settings(environment=Environment.LOCAL, version="test").max_upload_body_mib == 64
+    with pytest.raises(ValueError, match="max_upload_body_mib"):
+        Settings(environment=Environment.LOCAL, version="test", max_upload_body_mib=0)
