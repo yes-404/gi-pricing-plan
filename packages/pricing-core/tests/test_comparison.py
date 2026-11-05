@@ -266,7 +266,8 @@ def test_the_comparison_and_the_diagnostics_page_print_one_ae(book) -> None:
     table is its holdout partition's `ae_overall` — one `ae_weights`, one number on both pages
     — and it is the weighted sum Σ n·y / Σ n·μ, not the per-row ratio."""
     claims = book.filter(pl.col("claim_count") > 0)
-    train, holdout = claims[:1500], claims[1500:]
+    cut = claims.height * 2 // 3
+    train, holdout = claims[:cut], claims[cut:]
     weight = {
         "response_column": "avg_cost", "family": "gamma",
         "offset": OffsetSpec(kind="none"),
