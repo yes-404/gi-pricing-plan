@@ -118,7 +118,7 @@ gate-2 flock (common seat brief, item 6).
 ### SL 8331 — `_live_text`
 
 **The row.** WK-1178 fix slice. One `sonnet` executor. Register: FD-1916 (LOW), closing at the merge
-(A7). Depends on: the maintainer's GO; a gate slot. **Size:** 1 h. SOLO gate about 2.5 h, not counted.
+(A7). Depends on: the maintainer's GO; LAST-2's branch and gate. **Size:** 1 h. SOLO gate about 2.5 h, not counted.
 Merged before Thu 12 Nov 2026; still red at Wed 11 Nov 12:00 → the exception list.
 
 **R1 — red first.** `tests/test_register_owed.py`, by the essay's three rows, with
@@ -153,12 +153,8 @@ def _live_text(decision: str) -> str:
 
 **R3 — the real register.** A4's before-and-after, in LG 8332, at named trees, through the gate-2 flock.
 
-**G — the gate.** Full code gate, both halves, SOLO, after a re-merge of `origin/main`. **Option for the
-lead:** this slice and LAST-2 (FD-1484) both touch `scripts/`, and T's code is 1 h against a 2.5 h gate.
-Folding T's commits onto LAST-2's branch spends one gate rather than two, at the cost of tying a LOW to
-the chain's last slice; T's PR stays separate only if the two must not wait for each other. The
-09:58:58 entry says "one PL per group", so the plans stay separate either way. CI: `python`, `docs`,
-`history-policy`.
+**G — the gate.** **Folded onto LAST-2's branch and gate** (the entry "2026-11-05 10:36:35 GMT": "LAST-2 @15592cd7 (FD-1484, T
+folded)"). One gate covers both; this plan and its SL and LG stay separate records. CI: `python`, `docs`, `history-policy`.
 
 ### Write set
 
@@ -179,7 +175,7 @@ the chain's last slice; T's PR stays separate only if the two must not wait for 
   main must report a collision (the essay's red-first proof), and the mint procedure's text gains
   `git grep -n "under working id <N>" origin/main -- docs`, which must print nothing. Its closing act is
   the lead's to route. The script is local and not in the repository.
-- The GO: the maintainer. The row, the mint, the gate slot and G's option: the lead. The LG: the
+- The GO: the maintainer. The row, the mint and the gate slot: the lead. The LG: the
   executor. A7: the auditor.
 
 ## Self-review
