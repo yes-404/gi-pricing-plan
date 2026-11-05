@@ -3522,10 +3522,10 @@ relates: [FD-2001, FD-1729, PL-2004, LG-2006, NFR-489, FR-44]
 id: SL-2011
 family: slice
 title: WK-1178 slice — FD-1482 limb (a), RL-1483 item 1, the Permission column on every §5.1 row
-status: active                    # draft → active → closed (§1.2a)
+status: closed                    # draft → active → closed (§1.2a)
 created: 2026-11-05
 owner: lead
-tree: dd5a001387502150f06c8c599bf9882cd91a6fee
+tree: f331678f4152c964d06446195d435091e72e027c
 phase: P2
 work: WK-1178
 corrected_by: []

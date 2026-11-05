@@ -2,10 +2,10 @@
 id: LG-2012
 family: ledger
 title: WK-1178 slice SL-2011 — FD-1482 limb 2 (a), RL-1483 item 1: the Permission column on every §5.1 row (slice ledger)
-status: active                 # active → closed (§1.2a)
+status: closed                 # active → closed (§1.2a)
 created: 2026-11-05            # filed under working id 8362
 owner: executor
-tree: 2e8a40ca                 # sl-8361-permission-column, the commit of `07`'s spec change (base 2f108b1eda22a4835279cee9b4c9e305babe3662, origin/main)
+tree: f331678f                 # the tree the audit ran on: sl-8361-permission-column @7f4ce407 (base origin/main bdad1322); the build log's earlier tree was 2e8a40ca, the commit of `07`'s spec change
 slice: SL-2011
 phase: P2
 work: WK-1178
@@ -57,7 +57,16 @@ The 34 added check-32 lines all name this slice's working ids (`SL-2011`, `OQ-20
 
 ### Audit
 
-Not yet. The auditor's.
+*(2026-11-05, aud-sl2011, on to-lead "2026-11-05 15:51:04 GMT"; lead adopted all six verdicts. Object: `sl-8361-permission-column` @7f4ce407, tree f331678f, porcelain 0; range `origin/main...sl-8361-permission-column`, origin/main bdad1322, 11 files, docs only. Scripts under the job tmp dir, not committed.)*
+
+1. **Enumeration: MET.** Predicate: for each `docs/specs/0{1..7}-*.md`, the lines between `### 5.1` and the next `### `; a row matches `^\|\s*`?(GET|POST|PUT|PATCH|DELETE)`; a header matches `^\|\s*Method\s*\|`; cells split on unescaped `|`. Result at head: 7 tables, one header each, **207 rows** (`01`=40, `02`=45, `03`=45, `04`=10, `05`=16, `06`=25, `07`=26); every header and row has 4 cells; no other pipe line in any range; no multi-method row left. The same predicate on `origin/main` gives 39/45/45/10/16/23/24 = **202**, the triage's figure, plus 5 splits = 207. **Note (stale 157):** the "157" in this ledger and in RL-1483 is RL-1483's five-table figure (`01`, `02`, `03`, `06`, `07`); by this predicate those five are 176 at base and 181 at head, and RL-1483's own later amendment gives 156, 161 and 163. It is a stale citation, not a defect of the slice.
+2. **Forms: MET.** Of the 207 cells, 180 hold permission names, 20 hold `authenticated`, 6 hold `open`, 1 holds `authenticated` with a gating qualifier (`GET /api/v1/demo/guide`, "404 unless `dev_auth_enabled`"; accepted by the lead as it stands); 0 are empty. All 30 distinct names appear in `06` §4.1. None mixes a name with `authenticated` or `open`.
+3. **Cells against `06` §4.1 and the route `requires()`: MET.** All 207 cells were compared with an AST map of every `@router.<method>` under `backend/src/app` (166 operations); this covers every module and far more than 30 rows. **207 = 166 built operations + 3 app-level routes + 38 unbuilt.** Of the 166: **140** equal the code's `requires()` exactly; **7** carry a spec "also" clause that the handler enforces (`PATCH /datasets/{dataset_id}` owner-or-`admin:manage_roles`; `POST /custom-objectives` `custom_objective:author`, `custom_objectives.py:264`; the two rate-table diffs, `rate_tables.py:437`, `:536`; `POST /dislocation-runs`, `/dislocation-runs/estimate` and `GET /dislocation-runs/{id}/movers`, `dislocation_runs.py:66`, the helper each handler calls); **18** show no `requires()` in the decorator or signature and agree by another route: 7 handler-guarded (the 5 deployment, routing and shadow rows via `_authorised_environment` and `shadow.write_config`; `POST /validation-rules` by check kind; `POST /score/compare` via the imported `RatingReadDep`) and 11 `authenticated` or `open` rows with no permission in code (`/me` ×3, `GET /approval-policy`, `/approval-requests` ×3, `/healthz`, `/readyz`, `/metrics`, `/demo/guide`); **1** disagrees (below). 140 + 7 + 18 + 1 = 166. The 3 app-level routes (`/version`, `/api/v1/auth/config`, `/openapi.json`) are served in `main.py` (`:258`, `:269`, `:200`), cell `open`. The 38 unbuilt (no `@router` handler): `04` 10 of 10, `05` 16 of 16, `06` 12 of 25 — the count of OQ-2013, OQ-2014 and OQ-2015. **Disagreements, quoted:** exactly one, `02` `POST /api/v1/models/{id}/archive`: spec `model:fit`, code `requires(Perm.MODEL_SUBMIT)` (`api/models.py`, `archive_model`); it is the one listed in this ledger, and `06` §4.1 supports the spec reading (`model:submit` = "Submitting a Model … for approval"). **No unlisted disagreement**, so no new finding proposal. FD 8366 (the LOW finding for the archive constant) stays a working id; its row and essay come with its own slice (sl-8368). It is quoted once in `docs/` (line 77 above), and no `audit-docs.py` line cites it.
+4. **Mint: MET.** `origin/main` bdad1322's highest id is 2010; head adds SL-2011 (`docs/roadmap.md`, under `### WK-1178`), LG-2012, OQ-2013, OQ-2014, OQ-2015: contiguous. No id 2016 to 2018 exists in any family (the withdrawn mint is absent); no working id 8361 to 8365 survives anywhere in the tree. Each OQ is mirrored in `docs/open-questions.md` and in its spec's §10 (`04`, `05`, `06`), by id and title, in the long and short forms the repo already uses (OQ-2008's pair differs the same way). `03` line 1128, the `GET /dislocation-runs/{id}/movers` cell, reads "`rating:read` and `dataset:read` on that Dataset Version", as ruled on to-lead "2026-11-05 16:21:19 GMT", and agrees with its Purpose text.
+5. **Checks at 7f4ce407 (before the audit commit):** `scripts/audit-docs.py` rc 0; `scripts/doc-index.py --check` rc 0. The checks at the audit commit are in the report to the lead.
+6. **FD-1482:** limb 2 (a) lands here; limb 2 (b), the pin, does not. FD-1482 stays open (dated line on its essay).
+
+LG-2012 and SL-2011 are set `closed` in the audit commit, on the lead's adoption.
 
 ### Build log
 
