@@ -125,7 +125,7 @@ term must be added here before it is used in any other document.**
 |---|---|
 | **Dataset** | A named, logical container for one body of policy/claims/exposure data (e.g. "Motor GB — quote & bind"). Holds no data itself; holds Dataset Versions. |
 | **Dataset Version** | An **immutable** snapshot of data for a Dataset, identified by `dataset_id + version` (monotonic integer). Carries its schema, validation report, profile, and status. All modelling references a Dataset Version, never a Dataset. |
-| **Dataset status** | `draft → validated → archived`. Fitting is permitted only on `validated`. `archived` is terminal and read-only but never deleted. |
+| **Dataset status** | `draft → validated → archived`. Fitting is permitted only on `validated`. `archived` is terminal and read-only but never deleted. *(Pointer added 2026-11-05, PL 8376 DP-13: the stored status values are `draft \| validating \| validated \| failed \| archived`, in `01-data-management.md` at line 262 of the tree `SL-8377` was cut from.)* |
 | **Record grain** | The row meaning of a dataset table: `policy_exposure` (one row per policy × exposure period), `claim` (one row per claim), or `reference` (lookup table). |
 | **Exposure** | Time-on-risk for a record, in years (`Decimal`, > 0). The offset/weight in frequency and burning-cost models. |
 | **Reference Table** | Effective-dated lookup data used for validation and rating (postcode → rating area, vehicle → group, occupation codes). Versioned like datasets. |

@@ -50,17 +50,18 @@ class RatingVersionStatus(StrEnum):
     RETIRED = "retired"
 
 
-#: The lifecycle, as data rather than scattered `if` statements. `draft` may skip review
-#: straight to `approved` only where the caller is an approver deciding in one step; the
-#: normal path goes through `review`. `live` and `retired` are unreachable here — their
-#: transitions are WK-674's, because FR-238 makes `live` a property of a Deployment.
+#: The lifecycle, as data rather than scattered `if` statements. A version reaches `approved`
+#: only through `review` (`draft → approved` has no writer and was dropped, PL 8376 DP-11), and
+#: returns to `draft` from `review` on a rejection or a request for changes (FR-355). `live` and
+#: `retired` are never stored: FR-238 makes `live` a property of a Deployment, and what
+#: `retired` means is an open question (PL 8376 DP-11).
 VALID_RATING_VERSION_TRANSITIONS: dict[
     RatingVersionStatus, frozenset[RatingVersionStatus]
 ] = {
-    RatingVersionStatus.DRAFT: frozenset(
-        {RatingVersionStatus.REVIEW, RatingVersionStatus.APPROVED}
+    RatingVersionStatus.DRAFT: frozenset({RatingVersionStatus.REVIEW}),
+    RatingVersionStatus.REVIEW: frozenset(
+        {RatingVersionStatus.APPROVED, RatingVersionStatus.DRAFT}
     ),
-    RatingVersionStatus.REVIEW: frozenset({RatingVersionStatus.APPROVED}),
     RatingVersionStatus.APPROVED: frozenset(),
     RatingVersionStatus.LIVE: frozenset(),
     RatingVersionStatus.RETIRED: frozenset(),
