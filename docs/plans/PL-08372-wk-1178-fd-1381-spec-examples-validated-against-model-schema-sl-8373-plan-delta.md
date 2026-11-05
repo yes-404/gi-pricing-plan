@@ -517,3 +517,9 @@ slice, by re-merge.
    `check_spec_examples`, `ILLUSTRATIVE_CEILING` agree between S2, S3 and S4. 5. **Sums:** 62 and 76
    above are recounted; 12 + 22 + 2 + 6 + 20 = 62. 6. **Calendar:** read from `date`: Wed 11, Thu 12,
    Fri 13 Nov. 7. **No range of requirement ids.** 8. **The plan decides nothing:** five DPs, open.
+
+## Dated lines
+
+- **2026-11-05 17:46:59 GMT — block count 62 → 63 (T3, `RL-8375` row 19; `to-lead.md` "2026-11-05 16:31:45 GMT" (2)).** Row 19's block at `06:462` splits into two `json` blocks, so the `json` blocks of `docs/specs/*.md` are 63, not 62. Every "62" above (the Evidence table, "The 62, by what each needs", S4's "all 62 blocks", T9's "61 against 62", the self-review sums) reads 63 from this line: the 12 + 22 + 2 + 6 + 20 = 62 sum gains the one block, and S4's end state is `schema=` 32 + `illustrative` 31 = 63 (`RL-8375` "End state"). T3 sets no mark: the marks are S4's.
+- **2026-11-05 17:46:59 GMT — A14's "the re-merged head" is SL 8381's head (`to-lead.md` "2026-11-05 16:46:26 GMT", "2026-11-05 16:55:19 GMT").** Where A14 says "One SOLO full gate on the re-merged head", the head is SL 8381's, not SL 8373's branch tip alone.
+- **2026-11-05 17:47:05 GMT — row 5 (`01:550`, `ValidationReport`) is code wrong, finding FD 8379 (working id; `RL-8375`, `to-lead.md` "2026-11-05 16:31:45 GMT" (1)).** MEDIUM, owner WK-1178. The block keeps `overall` and `counts` and is marked `illustrative` by S4, naming FD 8379, until the fix lands; `ILLUSTRATIVE_CEILING` counts it.
