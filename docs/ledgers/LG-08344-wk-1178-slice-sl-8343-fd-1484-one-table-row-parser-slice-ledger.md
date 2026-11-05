@@ -5,7 +5,7 @@ title: WK-1178 slice SL-8343 — FD-1484, one table-row parser, table_rows.py (s
 status: active                 # active → closed (§1.2a)
 created: 2026-11-05            # filed under working id 8344
 owner: executor
-tree: afe1ee999f91cd0959609c8a0c146e2daeecd178   # sl-8343-table-row-parser, the code head this was written against (base c8d8522758859d23fac5542815ccaa59c5a4b087)
+tree: 966f817fa707322b32e6e733e9cc88bc6318511d   # the tree of commit afe1ee99 (sl-8343-table-row-parser, the code head this was written against; base c8d8522758859d23fac5542815ccaa59c5a4b087). Corrected 2026-11-05 17:12 GMT: the field held the commit id.
 slice: SL-8343
 phase: P2
 work: WK-1178
@@ -43,6 +43,7 @@ The full code gate, both halves, SOLO, belongs to the lead and is not run by the
 
 - `python3 scripts/doc-index.py --phase P2` (bare `env -i PATH=/usr/bin:/bin python3 -I`): `ValueError: findings/register.md: parsed 352 of 362 data row(s) — coverage mismatch (RL-982 acceptance item 2)`.
 - `declared_endpoints("DATA")` 39 and `declared_endpoints("GOV")` 23 (A7's base).
+- The demo guide's declared-but-unbuilt list, `build_guide(...).unpublished_endpoints` (A2; added 2026-11-05 17:12 GMT on the auditor's catch): **40** at base (GOV 10). `scope-audit.py GOV --endpoints` at base: `published 13 (57%)`, `NOT PUBLISHED — 10`.
 - T1–T3, with `table_rows.py` moved aside on the slice tree: `ImportError: cannot import name 'table_rows' from 'model_schema'`.
 - T2 with a planted `import pydantic` (not committed): `AssertionError: {'pydantic'}`.
 - T4 on base (the test file copied into a detached worktree of `c8d85227`, `/tmp/sl8343/base`): `AssertionError: assert ('GET', '/api/v1/dataset-versions/{}/lineage') in {...}`, `1 failed in 0.30s`.
@@ -52,10 +53,11 @@ The full code gate, both halves, SOLO, belongs to the lead and is not run by the
 - `packages/model-schema/tests/test_table_rows.py`: `12 passed in 3.38s`.
 - `tests/test_scope_audit_escaped_pipe.py`: `1 passed in 0.62s`.
 - `declared_endpoints("DATA")` 40 and `("GOV")` 25 (A7).
+- The demo guide's unbuilt list (A2), re-read 2026-11-05 17:10 GMT at `5748acc7` by `build_guide(...).unpublished_endpoints` through `run-heavy.sh`: **42** (MON 18, GOV 12, OPT 11, PLAT 1); 40 at base, so +2, both in GOV. `scope-audit.py GOV --endpoints` at head: `published 13 (52%)`, `NOT PUBLISHED — 12`. The two added rows are the two routes of A9 below. GOV NOT PUBLISHED 10 → 12 and 57 % → 52 % (13 of 23 → 13 of 25): the published count is unchanged at 13; the instrument now sees two declared routes it could not see, so it is more accurate, not a regression.
 - `python3 scripts/doc-index.py --phase P2`: rc 0, the report prints (`11 closed`, `122 planned, 103 delivered`); `register-lint.py`: rc 0, `0 violations`.
 - `ruff check .`: `All checks passed!`.
-- A5, bare environment: `env -i PATH=/usr/bin:/bin python3 -I` loads `scope-audit.py` (the figures above) and `scripts/scope-audit.py --help` prints; `audit-docs.py`, `doc-index.py` and `register-lint.py` ran under `run-heavy.sh` (inherited environment).
-- A6: `git grep -n -E '\.split\(.\|.\)|\(\[\^\|\]\+\)|\(\?<!\\\\\)\\\|' -- scripts backend/src packages tests backend/tests` prints only `table_rows.py:20` (`UNESCAPED_PIPE`) and `:36` (`split_row`'s own split). The exception list is empty.
+- A5, bare environment: `env -i PATH=/usr/bin:/bin python3 -I` loads `scope-audit.py` (the figures above) and `scripts/scope-audit.py --help` prints; `audit-docs.py`, `doc-index.py` and `register-lint.py` ran under `run-heavy.sh` (inherited environment). *Dated line, 2026-11-05 17:12 GMT, the auditor's A5 finding:* `doc-id.py check` under `-I` fails `No module named '_docid'` at base `c8d85227` too (`-I` drops the script's directory from `sys.path` and `doc-id.py` does `import _docid`, `scripts/doc-id.py:61`); without `-I` it loads. That is a wording fault in the plan's "same for … `doc-id.py check`", not the slice's; the maintainer accepted it as a plan wording, to-lead "2026-11-05 17:08:30 GMT".
+- A6: `git grep -n -E '\.split\(.\|.\)|\(\[\^\|\]\+\)|\(\?<!\\\\\)\\\|' -- scripts backend/src packages tests backend/tests` prints only `table_rows.py:20` (`UNESCAPED_PIPE`) and `:36` (`split_row`'s own split). The exception list is empty. *Dated line, 2026-11-05 17:12 GMT, the auditor's A6 correction:* the same predicate also prints `tests/test_scope_audit_escaped_pipe.py:4`, a docstring line naming the old `([^|]+)` capture. It is prose, not a splitter, so the exception list stays empty.
 
 **Tests by import closure (slice tree, `pytest -q <file>`):**
 
@@ -78,7 +80,7 @@ The full code gate, both halves, SOLO, belongs to the lead and is not run by the
 
 Every one of the 16 failures is the same cause, named by the assert text: `audit-docs.py` exits 1 on check 31 (`gap in the full allocation between 2006 and 8330` and `between 8331 and 8342`) and check 39 (`docs/INDEX.md is stale against a fresh regeneration`), and `test_doc_index` asserts `the live allocation is not contiguous: [(2006, 8330), (8331, 8342)]`. These are the working-id reds the brief allows; they clear at the mint. `test_check_29_wiring_is_undisturbed` (`tests/test_register_owed.py`) is red on base for the same reason. Not yet run (the batch was stopped by the lead's HOLD): test_double_stamp_scan, test_template_headers, test_file_census, test_doc_id, test_doc_id_verify, test_d5_h1_ruling_heading, backend test_demo_guide, test_demo_command, test_contracts.
 
-**`audit-docs.py` at the slice tree (before the INDEX regeneration):** `FAILED (3)`: check 31 ×2 (the working-id gaps above) and check 39. `849` DISCLOSED lines, all residue. Journey citations: `34 endpoints, 8 functions, all declared`. DP-P1: no newly visible route fails a check, so nothing is stopped (A9: none).
+**`audit-docs.py` at the slice tree (before the INDEX regeneration):** `FAILED (3)`: check 31 ×2 (the working-id gaps above) and check 39. `849` DISCLOSED lines, all residue. Journey citations: `34 endpoints, 8 functions, all declared`. DP-P1: no newly visible route fails a check. ~~A9: none surfaced.~~ **Dated line, 2026-11-05 17:12 GMT, correcting "none surfaced" (the auditor's catch, and the reason for the maintainer's 15:55:11 requirement):** the parser surfaces two routes, `GET /api/v1/dossiers/{id}` (`docs/specs/06-governance.md:610`) and `GET /api/v1/artifacts/{ref}/dependencies` (`06-governance.md:614`), declared in the spec and not built. Ruled DP-P1 (a) for both, to-lead "2026-11-05 17:08:30 GMT": surfaced by the parser, owner WK-680 (P3), `docs/roadmap.md` :3801 (WK-680's row, FR-379, the dossier render) and :3803 (its dated line, FR-384, blast radius) — those are `origin/main`'s line numbers; at this branch's tree the same two lines are :3787 and :3789, no new carry. GOV NOT PUBLISHED 10 → 12 and published 57 % → 52 %: the instrument getting more accurate, not a regression (both counts above). T4's docstring said "three published routes"; two are unpublished, corrected at `tests/test_scope_audit_escaped_pipe.py:5`. The third hidden route, lineage (`01` §5.1), is published (DATA 40 of 40).
 
 ### Audit
 

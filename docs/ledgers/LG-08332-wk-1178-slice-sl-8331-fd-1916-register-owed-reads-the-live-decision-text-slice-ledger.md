@@ -5,7 +5,7 @@ title: WK-1178 slice SL-8331 — FD-1916, register-owed.py reads the live decisi
 status: active                 # active → closed (§1.2a)
 created: 2026-11-05            # filed under working id 8332
 owner: executor
-tree: afe1ee999f91cd0959609c8a0c146e2daeecd178   # sl-8343-table-row-parser, the code head this was written against (base c8d8522758859d23fac5542815ccaa59c5a4b087)
+tree: 966f817fa707322b32e6e733e9cc88bc6318511d   # the tree of commit afe1ee99 (sl-8343-table-row-parser, the code head this was written against; base c8d8522758859d23fac5542815ccaa59c5a4b087). Corrected 2026-11-05 17:12 GMT: the field held the commit id.
 slice: SL-8331
 phase: P2
 work: WK-1178

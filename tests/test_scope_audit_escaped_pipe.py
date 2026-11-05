@@ -2,8 +2,9 @@
 
 Three rows (`01` lineage, `06` dossiers and dependencies) carry `?direction=up\\|down` in
 their path cell. The old `([^|]+)` capture stopped at the backslash, lost the closing
-backtick, and so the three published routes were declared in neither direction: no
-requirement audit, no demo-guide check. No `@pytest.mark.req`: this is the audit tool's
+backtick, and so the three routes (lineage is published; the `06` dossier and dependencies
+routes are declared and not built) were declared in neither direction: no requirement
+audit, no demo-guide check. No `@pytest.mark.req`: this is the audit tool's
 own correctness, as in `tests/test_scope_audit.py`.
 """
 
