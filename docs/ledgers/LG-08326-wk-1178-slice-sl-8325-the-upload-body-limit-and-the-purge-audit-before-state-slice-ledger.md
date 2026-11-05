@@ -58,6 +58,17 @@ PL-8324, "SL 8325 — the upload body limit and the purge before state", R0 to R
 
 **GREEN set (common seat brief item 29).** Changed modules: `app.api.body_limit` (new), `app.config`, `app.errors`, `app.main`, `app.platform.datasets` (`git diff --name-only d7af4f25...HEAD -- backend/src`). `app.main` imports every router, so the import closure is the whole backend suite; the predicate `git grep -l -E '^(from|import) app\.(config|errors|main|platform\.datasets|api\.body_limit)\b|^from app import .*\b(config|errors|main)\b|from app.platform import .*datasets' -- 'backend/tests/*.py'` alone matches 112 of 207 test files at this tree. The SOLO gate's full suite is the decisive green.
 
+**2026-11-05 17:04 UTC, the audit's two not-met limbs (exec-sl8325b; base e75e0f1a, plan merged in at 19620e00, merge `91d11d86`).** DB-free through `run-heavy.sh --over-load` with the three URLs pointed at port 1.
+
+- A4 tests, `23c3b641`, `test_api_body_limit.py`: `14 passed`, rc 0 (was 9). Green at base by design: the code already refuses on `Content-Length` before any read and the trace middleware is already outermost, so there is no red to take from the base. Each is proved by a planted break, restored (`git status --porcelain` empty after each):
+  - (a) `await receive()` planted ahead of the `content-length` check in `body_limit.py`: `6 failed, 8 passed`; `test_a_declared_length_over_the_limit_reads_no_body_before_the_refusal` is among them.
+  - (b) `TraceMiddleware` moved inside `BodyLimitMiddleware` in the test app: `3 failed, 11 passed`; `test_the_refusals_trace_header_is_the_problems_trace_id` is among them.
+  - (c) the import route's pattern removed from `CAPPED_ROUTES`: `3 failed, 11 passed`; both `rate-tables/abc@abc/import` arms of the driven test are red, beside the pairing test.
+- (c) needs no database: the cap refuses before routing reaches the handler or its authorisation, so the two real routes, taken from OpenAPI and driven through `create_app` with no credentials, declared and chunked, answer 413 (not 401) with `x-trace-id` equal to `trace_id`. Nothing here is OWED-TO-GATE.
+- A7 README, `aa1cce60`: `deploy/README.md` states both limits, the 1 MiB margin (`65m`), that the proxy never answers first, and that a deployer who raises the setting raises both nginx values. A7's runtime limb and `client_max_body_size 65m` in D's frontend conf stay owed after D merges (not this seat's).
+- `ruff check .` rc 0; `ruff format --check backend/tests/test_api_body_limit.py` rc 0.
+- The audit's LOW notes, recorded and not edited: (1) FR-450's "before any of the body is held in memory" is true of the declared-length path only; on a chunked body FastAPI's form parse has read up to the limit when the count raises. (2) The spec names the import route `{id}/import`; the route is `{slug}@{version}/import` (`03` §5.3 spells it so). (3) The version ordering of the purge event's `before` (the fix orders by `version`) is asserted by no test. The spec is not edited here; routing the wording is the lead's.
+
 ## PRs
 
 (Owed at the PR: number, title, merge commit. Branch `sl-8325-a-upload-limit`, unpushed at this entry.)
