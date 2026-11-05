@@ -146,7 +146,7 @@ Measured for each of 15 local chain branches: `git diff --name-only $(git merge-
 | SL 8361, SL 8370 | `06` `:284`, `:563-:604`, `:764`; `02:1895`; `03:1089` | Clear of `06:85`, `:92`, `:154`. |
 | M SL 8359 | `02` `:303`, `:315`, `:3417` | Clear of `02:246`, `:257`. |
 | LAST-1 SL 8340 | `00:234` | Clear of `00:128`. |
-| FD-1381 TRACK A, SL 8373 | `docs/specs/` §4 sections and fence lines | Two of this plan's lines share a §4 section with TRACK A's blocks: `02:1664` in §4.10 (between fences `:1596` and `:1683`) and `03:1044` in §4.12 (after fence `:1006`). Different lines, no fence touched here. Whichever merges second re-reads. TRACK A has no branch to measure yet, so this is read from `PL-8372`'s block list. |
+| FD-1381 TRACK A, SL 8373 | `docs/specs/` §4 sections and fence lines | Two of this plan's lines share a §4 section with TRACK A's blocks: `02:1664` in §4.10 (between fences `:1596` and `:1683`) and `03:1044` in §4.12 (after fence `:1006`). Different lines, no fence touched here. Whichever merges second re-reads. TRACK A has no branch to measure yet, so this is read from PL 8372's block list. |
 | D, F, G, LAST-2 + T, P | none | No path in common. |
 
 `docs/INDEX.md` and `docs/roadmap.md` are shared with every slice, by re-merge. No chain branch writes any of the five
