@@ -324,7 +324,15 @@ def test_a_factor_resolution_refusal_is_the_same_on_both_paths(world: World) -> 
 
 @pytest.mark.req("FR-87")
 @pytest.mark.parametrize(
-    "missing", [float("nan"), Decimal("NaN")], ids=["float_nan", "decimal_nan"]
+    "missing",
+    [
+        float("nan"),
+        Decimal("NaN"),
+        Decimal("sNaN"),
+        Decimal("Infinity"),
+        Decimal("-Infinity"),
+    ],
+    ids=["float_nan", "decimal_nan", "decimal_snan", "decimal_inf", "decimal_neg_inf"],
 )
 def test_a_nan_banded_input_is_a_factor_resolution_refusal_on_both_paths(
     world: World, missing: Any
