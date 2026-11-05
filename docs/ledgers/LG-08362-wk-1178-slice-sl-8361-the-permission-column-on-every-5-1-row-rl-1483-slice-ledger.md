@@ -42,7 +42,16 @@ relates: [FD-1482, RL-1483, FR-343]
 
 ### Gate
 
-**Pending: TESTS HOLD.** No `audit-docs.py`, `doc-index.py` or `scope-audit.py` has been run on this branch. After the lead's RELEASE: `run-heavy.sh --light -- python3 scripts/audit-docs.py` and `doc-index.py`, `scope-audit.py --endpoints` before and after, and the route counts quoted here.
+**Measured 2026-11-05 ~14:02 UTC, after the lead's RELEASE** (`run-heavy.sh --over-load "2026-11-05 13:56:37 GMT"`), branch head `19b87d07` plus the regenerated `docs/INDEX.md`; baseline = detached `origin/main` 2f108b1e in a temporary worktree (removed).
+
+| Command | Base (origin/main) | Branch |
+|---|---|---|
+| `scripts/audit-docs.py` (`--light`) | rc 0; failures by check: 2 → 5, 5 → 5, 30 → 71, 32 → 244, 35 → 27, 36 → 497 | rc 1; the same counts, except check 32 → 278 (+34) and check 39 → 1 |
+| `scripts/doc-index.py --check` | not run | rc 1 (stale: the new ledger), then `doc-index.py` wrote `docs/INDEX.md` (+7 lines), committed |
+
+The 34 added check-32 lines all name this slice's working ids (`SL-8361`, `OQ-8363`, `OQ-8364`, `OQ-8365`; `LG-8362`), none minted yet. Check 39 is the INDEX, regenerated after. Checks 22 (cell counts) and the endpoint checks print no failure. The other failing checks (2, 5, 30, 35, 36) are identical at base and are not this slice's.
+
+**Reader route counts** (predicate: `scope-audit.py`'s `declared_endpoints(module)` loaded by path, `/tmp/count8361.py`, per module; before = origin/main 2f108b1e, after = this branch): DATA 39 → 39, MODEL 45 → 45, RATE 45 → 45, OPT 11 → 11, MON 18 → 18, GOV 23 → 23, PLAT 26 → 26; total **207 → 207**. The split rows and the fourth cell change nothing the reader counts. `audit-docs.py`'s `_ENDPOINT_ROW` and `guide.py`'s `_SPEC_ENDPOINT` are the same regex as `scope-audit.py`'s `_ENDPOINT`; `audit-docs.py` ran with no endpoint failure; `guide.py` was read, not run (no test run in this slice).
 
 **Reader analysis (static, from the regexes; to be confirmed by the measurement above).** `audit-docs.py` `_ENDPOINT_ROW`, `scope-audit.py` `_ENDPOINT` and `backend/src/app/demo/guide.py` `_SPEC_ENDPOINT` each match `^\|\s*\`?([A-Z]+(?:\`?/\`?[A-Z]+)*)\`?\s*\|([^|]+)\|` and read only the first two cells, so the fourth cell is unread. The five split rows give the same `(method, path)` pairs as before. The three `\|` path cells (`01` lineage; `06` dossiers and dependencies) are cut at the escaped pipe by all three readers, before and after (RL-1483's #983 defect, untouched here). Check 22 (cell count) requires header and rows to agree: the header, separator and all 207 rows gained one cell in the same commit.
 
