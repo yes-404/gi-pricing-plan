@@ -457,9 +457,8 @@ async def test_a_coded_error_does_not_carry_the_exception_it_replaced() -> None:
     assert _SENTINEL not in str(caught.value)
     assert compiled is not None
 
-    from pricing_core.rating.score import _reraise_engine_failure
-
     from pricing_core.rating.runtime import PurposeEvaluation
+    from pricing_core.rating.score import _reraise_engine_failure
 
     evaluation = PurposeEvaluation(
         decision=None, algorithm=compiled.algorithm, diagnose=lambda _context: None

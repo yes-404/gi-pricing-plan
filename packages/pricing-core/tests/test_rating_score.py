@@ -951,7 +951,9 @@ async def test_a_step_consuming_a_table_and_a_lookup_reports_the_one_that_missed
     compiled = _hand_compiled(
         _table_and_lookup_payload(),
         expense_rows=[{"channel": "direct", "expense_factor": "1.1"}],
-        pins=pins.model_copy(update={"reference_tables": ["reference_table:area@1"]}),
+        pins=Pins.model_validate(
+            {**pins.model_dump(mode="json"), "reference_tables": ["reference_table:area@1"]}
+        ),
         extra_payloads={"reference_table:area@1": _AREA_REF},
     )
     ctx = _ctx(inputs={**_ctx().inputs, "channel": channel, "postcode": postcode})
@@ -1008,7 +1010,7 @@ async def test_a_bad_cell_not_hit_by_the_quote_still_prices() -> None:
 #: `sha256(json.dumps(to_wire(graph, payloads), sort_keys=True))` for `_algorithm_payload()` with
 #: the `motor-expense` rows of `_rate_table_payload()`, measured at the base 662867bb (tree of
 #: R1's SOLO-gate head, before any R2 code): the clean wire is byte-identical (FR-239, A16).
-_CLEAN_WIRE_SHA256 = "TO-BE-MEASURED-AT-BASE-AT-RELEASE"
+_CLEAN_WIRE_SHA256 = "eb5bac4364fe66f353fee30bc38337443a0f8f2519ebc63162e5216b5f229985"
 
 
 def _wire_of(bundle: Bundle) -> dict[str, Any]:
