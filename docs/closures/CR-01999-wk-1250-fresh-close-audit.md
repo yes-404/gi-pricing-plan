@@ -354,3 +354,23 @@ acceptance line.**
   - FD-1768's PR citation: `docs/findings/register.md:392` and `docs/findings/FD-01768-attribution-words-a-purposes-only-change-to-a-sub-graph-mount-as-mount-ports-re-mapped.md:46` (PR #1423, squash `7b8a00cf`), with `status: closed` at `:5` of the essay.
 - **Condition (2), S1 item D's reading on Thu 5 Nov 2026, is OWED.** Its owner is WK-1250 (§4; NFR-489 on a mounted bundle). The reading lands as a further dated delta line here; if it reads unmet, an FD owned by WK-1250 follows.
 - **Status of the proposal:** the verdict stays PROPOSED, as adopted at "2026-11-04 09:57:14 GMT". Condition (1) of 09:57:14 is met; (2) is owed. **The close is still the user's dated line.**
+
+## Delta 2026-11-05 — condition (2), S1 item D's reading on the mounted bundle (exec-nfrs1)
+
+*(2026-11-05; lands the reading this record owed as "condition (2)" in the delta above.)*
+
+Main `dae9637ea6f6a56f6502e9db70392cdfb2f3983d`, tree `715a8fd2e8ddeb27b68414db85929ccac359d1ad`, checked out detached at `~/gi` on the dedicated VM `nfr-bench-1` (GCE e2-standard-8, 8 vCPU, 32 GB; CPU Intel Xeon @ 2.20 GHz, family 6 model 79 stepping 0, flags hash `9674b27761c0`, the same as the shared box on 3 Nov; cpubench x3 py-loop 1.512/1.504/1.547 s, sha256-64MB 0.194/0.192/0.197 s; pgbench -s 10 -c 4 -j 2 -T 20: 1324.96 tps, 3.019 ms; CTAS 1 M rows 2579 ms). Run logs and driver outputs: `~/gi-pricing-plan.local/scratch/nfr-bench-1/s1/` (shared box; not in the repository); on the VM `~/logs/s1/`. Nothing else ran on the VM during a timed item (quiet bar: load1 < 1.0, `pgrep -c pytest` 0, read before each start).
+
+Bring-up lines: plan step 5 (pnpm frozen install) = not run, cause: no node/pnpm on the VM; no S1 item depends on it. The login role `gip_app_login` was missing on the VM's pre-FD-1729 volume: `deploy/postgres/app-login-role.sql` was applied with `-d postgres` (cluster-level, not the template database) and `scripts/provision-app-role.py` set its password (the lead accepted this). The `--serve-dsn` form passed was `postgresql+asyncpg://gip_app_login@127.0.0.1:5432/<item db>` (password not recorded); the owner `--dsn` was `postgresql+asyncpg://gipricing@127.0.0.1:5432/<item db>`. Each item ran on its own `createdb -T gipricing` copy migrated to head `b7e4c2a91d36` (the template stayed at `a4d1f08c3b97`, untouched); server redis db 11. `redis-cli -n 0 dbsize` was 1 at START (a stale `gip:tenant` key from 21 Oct, not written by this session) and is quoted again at END. The VM already held database `gipricing_sl1455_t4_1792592230` from 21 Oct; it was left alone.
+
+Driver D `bench-d-nfr489-mount.py` sha256 `df6e7c9c3216895d175434cf92bd5d26c0335fe7f48621dfee5c2919997513d3` (`--expect-sha256`), `--rates 25,50,100,200 --runs 4 --workers 4` as for item C, DB `nfrs1_d`, bundle with `pins.sub_graphs = [sub_graph:ncd-ladder@4, sub_graph:cancel-refund@1]` (bundle blob 2 073 803 B). 10:29:30–10:42:56Z, load1 0.58 at the quiet bar, 0.61 at start, rc 0, log `itemD-run.log`.
+
+Median p99 ms (runs; over-runs), with GBM (< 50):
+
+| arm | 25 rps | 50 rps | 100 rps |
+|---|---|---|---|
+| explicit-ref | 42.975 (4; 1) | 41.986 (3; 0) PASS | 57.599 (3; 3) |
+| cancellation | 42.181 (4; 1) | 44.874 (3; 0) PASS | 107.504 (3; 3) |
+| default-live | 48.298 (4; 1) | 55.543 (3; 3) | not reached |
+
+Without GBM (< 15) at 25 rps: explicit-ref 44.099, cancellation 39.747, default-live 42.482, over in 4 of 4 runs each. 200 rps was reached by no arm. Errors 0. Verdict: **NFR-489 on the mounted bundle UNMET** (a 25 rps run over in every arm, 100 rps over in every arm that reached it, the no-GBM condition 2.6–3 times its budget); only the 50 rps rung passed, for two arms. **UNMET → FD owed (owner WK-1250)**, as this record's condition (2) said. The mount adds little against item C's plain bundle (explicit-ref 25 rps 42.975 against 40.775). No retry. The status of the proposal is unchanged: PROPOSED; the close is the user's dated line.
