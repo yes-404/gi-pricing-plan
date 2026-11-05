@@ -2,12 +2,12 @@
 id: FD-1704
 family: finding
 title: The factors table is not append-only at the database, so a row edit re-prices every pinned fitted Model with the pin unchanged
-status: active
+status: closed
 created: 2026-10-14
 owner: auditor
 tree: 1e260c1553acf39844939fe12da685ccfb835e54
 corrected_by: []
-relates: [WK-1178, WK-690, SL-1274, RL-1700, RL-1615, FD-1619, FD-1660, FD-1679, FR-43, FR-44, FR-96, FR-87, P2]
+relates: [WK-1178, WK-690, SL-1274, RL-1700, RL-1615, FD-1619, FD-1660, FD-1679, FR-43, FR-44, FR-96, FR-87, P2, SL-1770, LG-1825]
 ---
 
 # FD-1704 — the `factors` table is not append-only at the database
@@ -230,3 +230,5 @@ full `test_artifact_immutability.py` green on the merged tree.
 FR-70 is immutable by route absence only: no route edits the artifact, and nothing at the database or in a test says so, which is the class this finding names for `factors`. The maintainer (by delegation), "2026-10-14 11:06:52 BST" item 2 in `to-lead.md`, ruled: *"FR-70 is NOT in that FD [FD 8027]: immutability by route absence only is FD 8007/O-1's class. It joins that finding's table set (the artifact-family derivation), with one remedy."* The lead relayed it at "2026-10-14 11:07:28 BST" (`from-lead-2026-10-09.md`): "FR-70 instead joins FD 8007/O-1's artifact-immutability set". So FR-70 is added to the set that remedy step 4 (measure the invariant, not the list) derives from the artifact family, and it takes the one remedy of this finding, not a separate one. This addition changes no severity and no owner (MEDIUM, WK-1178). It is an auditor-owned edit before the finding mints; the FR-70 limb has not been line-read here, and WK-1178's plan delta is where its table row is derived.
 
 *(2026-10-14: per the maintainer's (by delegation) "2026-10-14 12:00:14 BST" (`to-lead.md`), the re-cut remedy: "FD 8007 becomes a limb of S-a/S-b (its revoke matters only after S-b). FR-70 rides S-a.")*
+
+***Resolved 2026-11-05*** — closed in place 2026-11-05 by the auditor (aud-fdclose), on the lead's brief under to-lead "2026-11-05 09:40:57 GMT" item 8 (2), the FD-1842 form. Delivered remedy (red first, then one migration; measure the invariant, not the list): SL-1770 (WK-1178 S-a, LG-1825), PR #1350, squash commit 6a771d4892fe042ec53bda10c452d804383bcad2, merged 2026-10-19T08:24:02Z, before the P2 code freeze. `backend/tests/test_artifact_immutability.py` lists `factors` in `APPEND_ONLY_TABLES` (:445) with the grant test (:269), the trigger refusal test `test_a_gip_app_update_on_factors_is_refused_by_the_trigger_not_only_the_grant` (:630), both-triggers tests (:757, :689), and the whole-database tests `test_every_mapped_table_declares_its_immutability` (:707) and `test_the_declarations_cover_every_table_in_the_database` (:722); the migration is `a4d1f08c3b97_artifact_tables_append_only.py`; `test_fr240_governance.py` inserts a version rather than updating; `01-data-management.md` FR-44 carries the clarification. The reds on the base tree are recorded in LG-1825 Task 1. The migration body was not re-read.

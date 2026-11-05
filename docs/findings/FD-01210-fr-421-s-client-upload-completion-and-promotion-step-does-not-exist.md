@@ -2,12 +2,12 @@
 id: FD-1210
 family: finding
 title: FR-421's client-upload completion and promotion step does not exist
-status: active
+status: closed
 created: 2026-09-28
 owner: auditor
 tree: 5ec47dc46ac2f174c5d427f5558a6cb365ff8166
 corrected_by: []
-relates: [FD-1206, WK-1178]
+relates: [FD-1206, WK-1178, SL-1722, LG-1777, RL-1724]
 ---
 
 # FD-1210 — FR-421's client-upload completion and promotion step does not exist
@@ -82,3 +82,5 @@ says the check is absent by design is removed in the same commit.
 yet promotes it, and the `07` §5.1 upload-url row carries a dated amendment. A grep for the old wording
 ("promoted to its content address on completion") in `backend` and `docs/contracts` finds nothing at `d068fb00`.
 The completion step is still unbuilt, so this finding stays **active**.
+
+***Resolved 2026-11-05*** — closed in place 2026-11-05 by the auditor (aud-fdclose), on the lead's brief under to-lead "2026-11-05 09:40:57 GMT" item 8 (2), the FD-1842 form, and on the maintainer's ruling of to-lead "2026-11-05 10:13:12 GMT" (FD-1210 closes by RL-1724 DP-U3 (b)). Delivered remedy: the completion step by WK-1178 SL-1722 (LG-1777), PR #1329, squash commit 39da0e1b4fd6fd65b0eb8a6de0ca0ec562b6e9d8, merged 2026-10-18; RL-1724 rules it (a presigned PUT, then an async `blob.promote` Job on io whose Job result owns the blob). Public-path proof: `backend/tests/test_upload_to_ingest.py::test_a_file_uploaded_through_the_public_api_ingests_to_a_succeeded_version`. The Disposition's fourth limb, "the worker's `_ingest` re-checks ownership too, using the owner table", is declined by RL-1724 `### DP-U3` (b): "**`dataset.ingest`: (b), no worker-side ownership check.**" and "The trigger that `d068fb00` item 3 recorded (\"the worker-side check arrives with the owner record\") was considered and is declined here." The worker's comment now cites it (`backend/src/app/worker/data_handlers.py:122-129`: "A worker-side check was considered when the Blob Upload landed and declined: `RL-1724` DP-U3 (b), because the census already closes the bypass it would guard").

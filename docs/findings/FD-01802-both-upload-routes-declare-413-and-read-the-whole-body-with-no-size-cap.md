@@ -60,3 +60,5 @@ that returns 413 past a stated limit on both routes, or a dated ruling accepting
 Filed under working id 8105.
 
 Widened 2026-10-17 to both upload routes (the maintainer, to-lead 2026-10-17 22:56:37 BST).
+
+*(Dated line, 2026-11-05, docs batch 11, by the auditor, on to-lead "2026-11-05 10:20:55 GMT" (plan A, DP-A1): a fact this record did not read: the proxy. `deploy/lb.conf` has no `client_max_body_size` (`grep -rn client_max_body_size deploy` at this tree: 0 hits), so nginx's default of 1 MiB applies and the proxy answers an over-size body with its own HTML 413 before the application's cap can. Ruled: the cap is a typed setting defaulting to 64 MiB on both routes, and the nginx limit in `deploy/lb.conf` and in the new frontend configuration is the same limit plus a small margin.)*

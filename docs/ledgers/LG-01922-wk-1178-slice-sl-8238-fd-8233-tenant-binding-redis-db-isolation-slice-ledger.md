@@ -37,6 +37,8 @@ Working ids 8238 (SL) and 8239 (LG), unminted. Executed by `exec-fd8233`, base `
 
 (left empty for the lead's gate; owed: prelaunch-check, full code gate, audit-docs, the 13)
 
+**Dated line, 2026-11-05 (docs batch 10), by the auditor, the gate of record and the audit adoption:** the lead's gate heading "2026-10-25 22:21:25 GMT" (END @7d53763c, 13 failed = common seat brief item 1(f)), amended "2026-10-25 22:23:20 GMT" (one named exception) and "2026-10-25 22:26:43 GMT" ("exception (a)–(d) MET @680f7e07 — gate STANDS"); ACK 2026-10-26 01:49:26 GMT. Audit: the adoption is filed under working ids (RS 8240, FD 8233), not the minted RS-1923: to-lead "2026-10-25 22:23:20 GMT — FD 8233 — RS 8240 NOT-CLEAN adopted; B1/B2 fix: gate @7d53763c STANDS with ONE NAMED EXCEPTION"; B1 and B2 were fixed and the gate's named exception was met at 22:26:43 GMT. Authority: to-lead "2026-11-04 20:56:54 GMT" item 7 (e), the stamps staged by lead 30 at 2026-11-04 20:59:03 GMT (each heading re-read by the lead in the channel), and "2026-11-04 20:59:50 GMT" (the eleven closes adopted).**
+
 ### Audit
 
 (not yet)

@@ -52,3 +52,5 @@ At `origin/main` `633c6f34`:
 **Deferred with an owner — WK-1178**, confirmed by the deputy. The fix is new behaviour: the Job path maps a
 `CodedError` (#889's class) to its own code, and FR-403 gets a dated clarification saying so. It is out of #889's scope.
 Event: that mapping and clarification merge with a test that a coded error inside a Job is stored under its own code.
+
+*(Dated line, 2026-11-05, docs batch 11, by the auditor, on to-lead "2026-11-05 09:51:53 GMT" (triage b28ba8e9454c accepted as the proposal of record): carried, owner WK-1178, discharge event the P3 plan review; LOW, slice over 1 h, under the 09:40:57 criteria.)*

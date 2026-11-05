@@ -602,6 +602,10 @@ a date. The freeze gates limit only what may **enter** P2, never when a start ha
 
 *(Dated correction, 2026-11-04, docs batch 9, by the auditor, on to-lead "2026-11-04 16:19:01 GMT" (the maintainer's ruling on the P2 plan-review skeleton, batch 9 item 12): P2's front-matter field `target:` at `:558` read `2026-11-12`, stale against the user's order relayed in to-lead "2026-11-03 15:38:58 GMT" (code freeze Tue 10 Nov, docs freeze Wed 11 Nov, exit demo Wed 18 Nov); it is set to `2026-11-18` in place and its previous value, `2026-11-12`, is recorded here. The re-dated line above stays as written.)*
 
+*(Re-dated 2026-11-05, docs batch 11, by the auditor, quoting the maintainer's entry "2026-11-05 09:58:58 GMT" (`to-lead.md`), which relays the user's decision, verbatim: "move to 12 Thursday, but manage the project to work full speed." **Code freeze: Thu 2026-11-12** (~~Tue 2026-11-10~~); **docs freeze: Fri 2026-11-13** (~~Wed 2026-11-11~~). The P2 exit demo stays **Wed 2026-11-18**, the SL-1913 rehearsal Mon 16 Nov and the section 14 plan review Mon 16 to Tue 17 Nov, all unchanged by that entry. Weekdays read with `date -d`: Thursday, Friday, Wednesday, Monday, Tuesday. The superseded dates are struck here; the 2026-11-03 line above and the 2026-09-29 blockquote stay as written. A search of this file at this tree for a WK-1178 row that names either freeze date (`grep -n -E "Tue 10 Nov|Wed 11 Nov|2026-11-10|2026-11-11" docs/roadmap.md`) returns only the three lines that quote the 2026-11-03 move (`:601`, `:603`, `:3449`), so no WK-1178 row text changes; the freeze for those rows is read from this line.)*
+
+*(Dated line, 2026-11-05, docs batch 11, by the auditor, on to-lead "2026-11-05 13:26:35 GMT" (the user's acceptance given in chat, relayed by delegation): **the G1 count, P2 exit criterion G1 of CR-1212: WK-675, WK-1250 and WK-673 are closed; WK-690 and WK-674 are open on their S1 readings; WK-1178 is the chain.** The acceptances are the user's ("point 2 and 3 accepted"), recorded on CR-1999 and CR-2000; this line is the count, not an acceptance.)*
+
 #### Phase 2 status
 
 *(Added 2026-09-29 on `CR-1247`, and the maintainer's entry "2026-09-29 17:27:28 BST · maintainer (acting on the maintainer's behalf) · ACCEPTANCES: the WK-672 Work close (#906) and plan review 16 (#905), per proposal", §2 row 12: "Accepted: (a). An 'Exit demo' row under P2, owned by the lead, discharging FD-1209." The form is Phase 1b's status table.)*
@@ -693,11 +697,13 @@ From “Workstreams” (line 377): Testing: golden quotes, property assertions, 
 id: WK-673
 family: work
 title: Dislocation with attribution
-status: active
+status: closed
 created: 2026-08-14
 owner: maintainer
 phase: P2
 ```
+
+*(Dated line, 2026-11-05, docs batch 11, by the auditor, on to-lead "2026-11-05 13:26:35 GMT" (the user's acceptance given in chat, relayed by delegation): **WK-673 closed, accepted by the user on [`CR-2000`](closures/CR-02000-wk-673-fresh-close-audit.md)**, relayed by delegation: CLOSE-READY condition met at #1427 (e3c150c4). The `status:` field above reads `closed` from this line (it read `active`).)*
 
 From “Workstreams” (line 383): Dislocation with attribution | FR-263, FR-264, FR-265, FR-266, FR-224, FR-257 limb (2), `06` FR-364, FR-231 (F-W10-2), NFR-495, NFR-496 (applied to this Work's artifacts) — **close audit filed (CR-1981), acceptance owed** *(dated 2026-11-03 by the auditor, on the maintainer's entry "2026-11-03 15:36:59 GMT" item (5) in `to-lead.md`; audited at `c807a59d`.)* — **fresh close audit filed (CR-2000, re-testing CR-1981), acceptance owed** *(dated 2026-11-04 by the auditor, on the maintainer's entry "2026-11-04 08:46:25 GMT" in `to-lead.md`; audited at `db92a7bc`.)*
 
@@ -1095,6 +1101,8 @@ work: WK-674
 corrected_by: []
 relates: [PL-1237, PL-1239, RL-1253]
 ```
+
+*(Dated line, 2026-11-05, docs batch 11, by the auditor, on to-lead "2026-11-05 11:23:52 GMT": F1 reassigned to WK-1178 by register :442, confirmed 2026-11-05; WK-1178 owes F1's harness and reading or its own carry. The 3 drops F1 saw in m-n4-r1 go with it: PL-1237:116's open question moves to WK-1178's row, else it stays on WK-674's row after F1 moves.)*
 
 A deployment is bound to one tenant and refuses to start when its database, blob or broker marker names another; every Job records the platform build it ran on. `PL-1237` Task 1; leaf plan `PL-1239`, its decision points ruled by `RL-1253`. First in the chain: nothing precedes it. *(Closed 2026-09-30 by the auditor: `#933` merged as `aa14e90dd77c7461aa35cc6461557b129959463f` on the maintainer's MERGE-ACK; auditor-933's slice audit: the full audit at `7a63809d` was NOT CLEAN, solely on F1 (the check-31 id gap 1260→1262, a merge-order finding that cleared when #927 merged), closed at `a8d2dfd9`; CLEAN at the deltas `a8d2dfd9` and `7f4468a5`; acceptance verified on `origin/main` at that SHA; `LG-1262` set `closed`. The FR-18 dossier half (`06` FR-376) is carried to WK-680, not delivered here.)*
 
@@ -2333,7 +2341,7 @@ The fix for FD-1421 (HIGH, the maintainer (by delegation), 2026-10-05 13:12:56 B
 id: SL-1455
 family: slice
 title: WK-1178 fix slice — NFR-489: the /score request path meets its p99 budget at 25 to 200 rps
-status: active                  # draft → active → closed | retired (§1.2a)
+status: closed                  # draft → active → closed | retired (§1.2a)
 created: 2026-10-06            # original date 2026-10-04, set at the draft; minted 2026-10-06
 owner: planner                   # cut by the planner (draft); lead dispatches (active)
 tree: 4eb1364428a2861fbc8014957e89924f631dd1ff
@@ -2594,7 +2602,7 @@ The FD-1561 fix (MEDIUM, LATENT; owner WK-1178), on the maintainer's (by delegat
 id: SL-1569
 family: slice
 title: WK-1178 fix slice — a declared decimal output is served as an exact JSON string on every scoring path
-status: active                  # draft → active → closed | retired (§1.2a)
+status: closed                  # draft → active → closed | retired (§1.2a)
 created: 2026-10-10  # original date 2026-10-05, set at the draft; minted 2026-10-10
 owner: planner                   # cut by the planner (draft); lead dispatches (active)
 tree: fb178c360f6fd5b2fdb7ae60eea924811a65492f
@@ -2880,7 +2888,7 @@ On the maintainer's (by delegation) entries "2026-10-14 11:06:52 BST" (item 2: *
 id: SL-1924
 family: slice
 title: WK-1178 fix slice (S4) — FD-1754: a pinned GBM in a model_call refuses every non-IDENTITY Factor type
-status: active                    # draft → active → closed | retired (§1.2a)
+status: closed                    # draft → active → closed | retired (§1.2a)
 created: 2026-10-25
 owner: lead
 tree: 8ac770f545eb66ef3677576e210f147ed85cb401
@@ -3085,7 +3093,7 @@ On the maintainer's entry "2026-10-22 16:22:33 BST" (`to-lead.md`): FD-1850 (MED
 id: SL-1892
 family: slice
 title: WK-1178 delta — FD-1851 close vehicle: a guard test that RESOURCE_BACKED holds only Environment-scoped paths
-status: active                    # draft → active → closed | retired (§1.2a)
+status: closed                    # draft → active → closed | retired (§1.2a)
 created: 2026-10-22
 owner: lead
 tree: 71e481fa5d240ed366cd80c1a8c6cf6cd1d918d5
@@ -3105,7 +3113,7 @@ On the maintainer's entry "2026-10-22 17:21:38 BST" (`to-lead.md`), item 2: the 
 id: SL-1921
 family: slice
 title: WK-1178 fix slice — FD-1920: the tenant-binding tests' Redis db follows GIP_REDIS_URL and avoids the gate dbs
-status: active                    # draft → active → closed | retired (§1.2a)
+status: closed                    # draft → active → closed | retired (§1.2a)
 created: 2026-10-25
 owner: lead
 tree: 102341aade6720dc7b71a1e696cc5b6d8017a2f1
@@ -3147,7 +3155,7 @@ Retired 2026-10-26: re-cut by PL-1927 into S1a (SL-1942) and S1b (PL-1927's S1b 
 id: SL-1942
 family: slice
 title: WK-1178 fix slice (S1a) — FD-1729 part 1: the application connects as a login role, not the owner (PL-1927's S1a, the re-cut of SL-1771)
-status: active                    # draft → active → closed | retired (§1.2a)
+status: closed                    # draft → active → closed | retired (§1.2a)
 created: 2026-10-26
 owner: lead
 tree: 58fdb69f64eecbcd03e65881a88a07f351995272
@@ -3211,7 +3219,7 @@ FD-1951's fix: the application refuses to start on a login role that reaches the
 id: SL-1948
 family: slice
 title: WK-1178 fix slice (S1b) — FD-1729 part 2: the startup refusal, the tamper proof and the exact grant map (PL-1927's S1b)
-status: active                    # draft → active → closed | retired (§1.2a)
+status: closed                    # draft → active → closed | retired (§1.2a)
 created: 2026-10-26
 owner: lead
 tree: 54e0fca083628964aa1227c0ada467d3d7b3a379
@@ -3293,7 +3301,7 @@ The fix of FD-1803 (filed in D21; HIGH, owner WK-1178), planned in PL-1809. `Dec
 id: SL-1888
 family: slice
 title: WK-1178 fix slice — FD-1887: a static guard, every test that reaches the freMTPL2 data carries the data-present guard
-status: active                   # draft → active → closed | retired (§1.2a)
+status: closed                   # draft → active → closed | retired (§1.2a)
 created: 2026-10-25   # drafted 2026-10-22 under working id 8195; minted 2026-10-25 as SL-1888
 owner: executor                  # dispatched by the lead (active)
 tree: 71e481fa5d240ed366cd80c1a8c6cf6cd1d918d5
@@ -3313,19 +3321,23 @@ The remedy of FD-1887 (LOW-MEDIUM, owner WK-1178), ordered by the maintainer's e
 id: SL-1854
 family: slice
 title: WK-1178 fix slice — FD-1838: the deployment switch's channels carry the gate slot's name, so a concurrent subscriber is not counted in the PREPARE quorum
-status: active                   # draft → active → closed | retired (§1.2a)
+status: closed                   # draft → active → closed | retired (§1.2a)
 created: 2026-10-22   # filed under working id 8170 (lead-reserved in eta.md); minted 2026-10-22 as SL-1854
 owner: executor                  # cut by the lead as a Work-plan delta row (Lean P2 L5); lead dispatches (active)
 tree: f3462d8fc1336dc4583fe8a7af92fed399993a55
 phase: P2
 work: WK-1178
 corrected_by: []
-relates: [FD-1838, WK-674, SL-1711]
+relates: [FD-1838, WK-674, SL-1711, LG-1855]
 ```
 
 The fix of FD-1838 (MEDIUM, owner WK-1178), a Work-plan delta row under WK-1178 (Lean P2 L5): PUBLISH's receiver count is the PREPARE quorum (`prepare_round` in `backend/src/app/platform/deployment_switch.py`) and counts subscribers on the whole Redis server, so a second process on the same channel is a receiver that never acknowledges. **Scope, exactly:** one helper `switch_stack(environment, tenant_id)` that builds the stack prefix for both of its callers (`backend/src/app/main.py`, `backend/tests/test_deployment_switch_http.py`) and appends `basename($GIP_GATE_SLOT)` when the variable is set, through `RedisSwitch`'s existing `stack` argument; a process with no slot (production) is unchanged. Red first: a test with a foreign subscriber on the unsuffixed channel. Gate scripts and `scripts/run-small.sh` already export `GIP_GATE_SLOT` and are not changed. The ledger is `LG-1855`.
 
 (Activated 2026-10-22 on the maintainer's (by delegation) entry "2026-10-22 15:43:10 BST — Maintainer: SPEED MEASURES …" item 2 (`to-lead.md`): FD-1838 prioritised, built red-first, the remedy as reserved at "2026-10-21 21:13:34 BST". MERGE-ACK: not yet given.)
+
+*Correction: merged as #1363, squash 6753c495, 2026-10-22T20:41:15Z (gh); correction 2026-11-05 by aud-sl1854 on to-lead "2026-11-05 09:37:04 GMT".*
+
+Closed 2026-11-05 on its slice audit (LG-1855 Audit section, the lead's adoption) and FD-1838's close; to-lead "2026-11-05 09:43:14 GMT" (the maintainer's status line).
 
 #### SL-1928 — WK-1178 fix slice (S2) — FD-1610 limb 2: the feature_map keys a model_call drops are traced, then refused when they feed a required input
 
@@ -3333,7 +3345,7 @@ The fix of FD-1838 (MEDIUM, owner WK-1178), a Work-plan delta row under WK-1178 
 id: SL-1928
 family: slice
 title: WK-1178 fix slice (S2) — FD-1610 limb 2: the feature_map keys a model_call drops are traced, then refused when they feed a required input
-status: active                    # draft → active → closed | retired (§1.2a)
+status: closed                    # draft → active → closed | retired (§1.2a)
 created: 2026-10-26               # drafted 2026-10-25 under working id 8244
 owner: lead
 tree: 3ffdbe3f787c195e43ebd3f8ae6a17143777d2e8
@@ -3373,7 +3385,7 @@ Slice C of `PL-1856` (WK-1178's dated delta on FD-1723's residual limbs). Docs o
 id: SL-1878
 family: slice
 title: WK-1178 fix slice — FD-1852: a dataset-scoped grant reaches the dictionary, rule-set and acknowledge writes (held-anywhere route gate), and a permanent route-scope guard
-status: active                   # draft → active → closed | retired (§1.2a)
+status: closed                   # draft → active → closed | retired (§1.2a)
 created: 2026-10-25                  # drafted 2026-10-22 under working id 8185; minted 2026-10-25 as SL-1878
 owner: planner                   # cut by the planner; lead dispatches (active)
 tree: 71e481fa5d240ed366cd80c1a8c6cf6cd1d918d5
@@ -3490,7 +3502,7 @@ The frontend fixes for the ten carried NFR-463 lows of FD-1974 on the WK-675 sur
 id: SL-2005
 family: slice
 title: WK-1178 slice — FD-2001's fix, scripts/bench-rating.py --http serves the application a least-privilege DSN (--serve-dsn)
-status: active                    # draft → active → closed (§1.2a)
+status: closed                    # draft → active → closed (§1.2a)
 created: 2026-11-04
 owner: lead
 tree: da219505e1a5bde19256d66dad5c0a04dbd4d4c2
@@ -3504,17 +3516,39 @@ relates: [FD-2001, FD-1729, PL-2004, LG-2006, NFR-489, FR-44]
 
 (Minted 2026-11-04 from working id 8317, on the maintainer's GO "2026-11-04 16:42:29 GMT" and the lead's mint order, with the mint tool of record `mint-repoint.py` (sha256 `4d83681a`); plan PL-2004 (working id 8316), ledger LG-2006 (working id 8318); executed on branch `sl-8317-fd2001-serve-dsn`.)
 
+#### SL-2011 — WK-1178 slice — FD-1482 limb (a), RL-1483 item 1: the `Permission` column on every §5.1 REST row of the seven module specs
+
+```yaml
+id: SL-2011
+family: slice
+title: WK-1178 slice — FD-1482 limb (a), RL-1483 item 1, the Permission column on every §5.1 row
+status: closed                    # draft → active → closed (§1.2a)
+created: 2026-11-05
+owner: lead
+tree: f331678f4152c964d06446195d435091e72e027c
+phase: P2
+work: WK-1178
+corrected_by: []
+relates: [FD-1482, RL-1483, LG-2012, OQ-2013, OQ-2014, OQ-2015]
+```
+
+Docs only. Every §5.1 REST table in `docs/specs/01`–`07` gains a fourth column `Permission`, filled on every row; a multi-method row splits to one row per method; `06`'s blockquoted `| Route | Requires |` table is folded into `06` §5.1's column (RL-1483 item 1). The `04` and `05` tables are a named widening of RL-1483's five (ledger LG-2012, Scope). The permissions of routes not yet built are proposals, raised as OQ-2013 (`04`), OQ-2014 (`05`) and OQ-2015 (`06`'s unbuilt routes). Limb (b), the pin, waits on LAST-2's `table_rows` and is not this slice's. FD-1482's closing acts are the auditor's.
+
+(Minted 2026-11-05 from working id 8361, on the rulings to-lead "2026-11-05 12:14:32 GMT" and "2026-11-05 15:59:27 GMT" (4), with the mint tool of record `mint-repoint.py`; ledger LG-2012 (working id 8362), open questions OQ-2013, OQ-2014 and OQ-2015 (working ids 8363, 8364, 8365); the finding raised for it is still working id 8366 and has no id yet; executed on branch `sl-8361-permission-column`, unpushed.)
+
 ### WK-1250 — Sub-graph composition and MTA/cancellation pricing — FR-217's inlining and FR-218's authoring half
 
 ```yaml
 id: WK-1250
 family: work
 title: Sub-graph composition and MTA/cancellation pricing — FR-217's inlining and FR-218's authoring half
-status: active
+status: closed
 created: 2026-09-29
 owner: maintainer
 phase: P2
 ```
+
+*(Dated line, 2026-11-05, docs batch 11, by the auditor, on to-lead "2026-11-05 13:26:35 GMT" (the user's acceptance given in chat, relayed by delegation): **WK-1250 closed, accepted by the user on [`CR-1999`](closures/CR-01999-wk-1250-fresh-close-audit.md)**, relayed by delegation: condition (1) met at #1427 (e3c150c4); condition (2) discharged by the S1 item D reading of 2026-11-05; NFR-489 on the composed path is carried by FD-1836 under WK-674. The `status:` field above reads `closed` from this line (it read `active`).)*
 
 Opened `draft` 2026-09-29 on `CR-1247`, and the maintainer's entry "2026-09-29 17:27:28 BST · maintainer (acting on the maintainer's behalf) · ACCEPTANCES: the WK-672 Work close (#906) and plan review 16 (#905), per proposal", §2 row 10: "Accepted as amended. #907 is the interim fail-closed fix (HIGH). A **new P2 Work** for FR-217's inlining and FR-218's authoring half is opened `draft` by the lead, its map plan by the planner. WK-669 is not reopened; CR-838 is corrected (16:25:49 item 4)." **Scope** (`CR-1247` Proposal 10, option (a)): FR-217's inlining limb, where `compile_bundle` resolves `SubGraphRef.mount_point` and inlines the pinned sub-graph; and FR-218, where the `purpose` mount is declared on the Rating Version and version-pinned, and the interim guard is replaced by the real check. **Sequenced after WK-674 and before WK-675**, so that WK-675's DAG designer authors a sub-graph against a backend that inlines one. *(Amended 2026-09-30 by the lead, on `RL-1263` item 5.)* The "after WK-674" is not a blanket dependency: it names no WK-674 slice or artifact, so under item 5 it is bare sequencing and is lifted (`PL-1278` re-derives it so). What orders WK-1250 against WK-674 is lane and file contention under `RL-1263`: at most two build slices at once, and slices that change the same file serialise. The designer's sub-graph view stays WK-675's. **Predecessors:** FD-1241 (`CR-838` marks FR-217 delivered, but its versioned-artifact, pin and bundle-time inlining limbs are not built); the interim fail-closed fix, #907 (`a78fe98f`, under WK-1178); and FR-218's interim rule, `RL-1242` (#911). **Its map plan is the planner's**, and its activation is the maintainer's, on that map plan. **Minted 2026-09-29** at #916's merge turn, from `doc-id.py next --ref origin/main` at `a380aa7a` (working id 9670).
 
