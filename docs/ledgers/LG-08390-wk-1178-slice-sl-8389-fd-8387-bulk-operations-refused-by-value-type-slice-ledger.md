@@ -66,6 +66,10 @@ The 11 allowed cells are green at base by design (they assert today's behaviour)
 
 **A7 —** see the report (diff checks).
 
+**audit-docs (run-heavy --light, at 39b49133, `audit3.log`):** rc=1, `FAILED (9)`: check 31 gaps 2010→8321, 8323→8345, 8346→8388, 8388→8390 and check 32 on FD-8387 / SL-8389 / LG-8390 / PL-8388 (working ids, pre-mint). Nothing else in the block.
+
+**Spec-reading tests (item 39), `grep -l 'docs/specs' backend/tests tests` lists 12:** DB-free, run at 39b49133 (`spec-readers.log`): `tests/test_audit_docs_ids.py`, `test_doc_id_history_input.py`, `test_doc_id_migrate.py`, `test_doc_id_verify.py`, `test_doc_index.py`, `test_file_census.py`, `test_scope_audit.py`, `backend/tests/test_lineage_census_carveout.py`, `test_severity_population_golden.py`: `3 failed, 695 passed, 1 skipped`, rc=1. The 3 failed are the docs-audit set on the working ids (`test_audit_docs_ids.py::test_the_real_tree_passes_all_ten_checks`, `::test_doc_id_check_exits_0_on_the_real_tree`, `test_doc_index.py::test_an_index_skipping_a_reserved_block_breaks_contiguity`: "live allocation is not contiguous" 2010/8321, 8323/8345, 8346/8388, 8388/8390); clear at the mint. **OWED (DB-backed, window):** `backend/tests/test_objective_submission.py`, `test_rating_version_create_pins.py`, `test_settings_environment.py`.
+
 **T4 / DB window: OWED.** The window `sl8389` is queued behind LAST-1, FD 8366's, G and SL 8377 (brief). Three runs of `-k bulk_operation_value_type_matrix_at_the_route`: red at `0b718b91` (expect 5 failed with 201, 11 passed), green at `b9873496` (16 passed), plant P (11 red, 5 green). Lines to be appended.
 
 ## PRs
