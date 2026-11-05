@@ -1917,7 +1917,7 @@ imported from §4.5 rather than restated — the same catalogue, read two ways.
 | `GET` | `/api/v1/models/comparisons/{id}` | The stored comparison artifact (§4.11) | `model:read` |
 | `POST` | `/api/v1/models/{id}/predict` | **200** Score rows with FR-194's uncertainty (dev/debug scale, row-capped; production scoring is `03`) | `model:read` |
 | `POST` | `/api/v1/models/{id}/submit` | Submit for approval (`06`) — `fitted → review`, `If-Match` required | `model:submit` |
-| `POST` | `/api/v1/models/{id}/archive` | `draft \| fitted \| superseded → archived` (FR-202), `If-Match` required | `model:submit` |
+| `POST` | `/api/v1/models/{id}/archive` | `draft \| fitted \| superseded → archived` (FR-202), `If-Match` required | `model:fit` |
 | `POST` | `/api/v1/custom-objectives` | **201** Create → `draft` (FR-142). An `expression` objective names its `applicability`, because it has no §4.5 template to default from; a create without it is refused 422 `VALIDATION_FAILED` (**added 2026-10-04, `RL-1410` R3**) | `model:fit`; an `expression` objective also requires `custom_objective:author` (FR-367) |
 | `POST` | `/api/v1/custom-objectives/preview` | Stateless live parse and loss-curve preview of an `expression` loss: parse only without a `grid`, derive and evaluate with one; 200 with `ok: false` for a loss that does not parse; 422 `VALIDATION_FAILED` over a bound; 403 without `model:fit` and `custom_objective:author`; 409 `OBJECTIVE_KIND_NOT_ENABLED` while the flag is off; persists and audits nothing (FR-1840; **built 2026-10-21, WK-690 Slice 5, `RL-1616`**) | `model:fit` and `custom_objective:author` |
 | `GET` | `/api/v1/custom-objectives` | The workspace's objectives, cursor-paginated, filterable by `status` and `slug`, each row carrying `usage_count` (FR-167) | `model:read` |
@@ -1940,7 +1940,7 @@ imported from §4.5 rather than restated — the same catalogue, read two ways.
 | `POST` | `/api/v1/peril-structures/{id}/reconcile` | **202** Recompute reconciliation (FR-190) | `model:fit` |
 | `POST` | `/api/v1/peril-structures/{id}/submit` | Submit for approval, `reconciled → review` (FR-192) | `model:submit` |
 
- *(Added 2026-11-05, `RL-1483` item 1, `SL-8361`: the `Permission` column. Each cell is the permission name(s) from `06` §4.1, `authenticated` or `open`; a row with two methods is one row per method. Cells follow `06` §4.1's `Governs` text and FR-367. **`POST /models/{id}/archive` takes `model:submit` because `06` §4.1 and FR-202 name no archive permission and the code checks it; whether archive is `model:submit`, `model:fit` or a new member is open (see `SL-8361`'s ledger).**)*
+ *(Added 2026-11-05, `RL-1483` item 1, `SL-8361`: the `Permission` column. Each cell is the permission name(s) from `06` §4.1, `authenticated` or `open`; a row with two methods is one row per method. Cells follow `06` §4.1's `Governs` text and FR-367. **`POST /models/{id}/archive` takes `model:fit`, ruled 2026-11-05 on the maintainer's entry "2026-11-05 12:14:32 GMT": `06` §4.1 makes `model:fit` the model write right (`RL-1236` DP-A folds `factor:write`, `banding:write` and `grouping:write` into it), and `model:submit` is "submitting a Model … for approval", which archiving is not. The code checks `model:submit`: a spec/code disagreement, recorded in `SL-8361`'s ledger and filed as a finding.**)*
 
 > **Amended 2026-08-22 (WK-661, the audit-remediation slice): three interface rows, and §5.2
 > checked in both directions for the first time.** §5.1's *endpoint* table matched the code
