@@ -31,8 +31,8 @@ relates: [FD-1648, FD-1659, FD-1767, FD-1478, FD-1780, FD-1781, SL-1569, PL-1568
     into `_build_outputs` shared by both paths — ACCEPTED: a guard test on BOTH paths (green at base; it
     is the essay's own discharge event, read to its asserts) and the closing act in the FD-1842 form
     naming 96e1b369; no code owed".
-  - "(2) CONFIRMED: my 09:51:53 "the FD-1569 rule" meant SL-1569's rule … my mis-citation; the plan quotes
-    SL-1569 with that note". So the 09:51:53 ruling on FD-1767 stands with **SL-1569** read for "FD-1569".
+  - "(2) CONFIRMED: my 09:51:53 "the [mis-cited id, here elided so no unresolved id stands] rule" meant SL-1569's rule … my mis-citation; the plan quotes
+    SL-1569 with that note". So the 09:51:53 ruling on FD-1767 stands with **SL-1569** read for the id it printed.
   - "(3) … SEVERITY RAISED TO HIGH for FD-1648 … R's DP RULED NOW so no seat waits: (i) `_format_value`
     writes FIXED-POINT, never an exponent — `format(value, 'f')` after quantising to the table's declared
     dp (or `.normalize()` only when it yields no exponent, with a test for 100, 1000, 0.5, 0.50, 1E+2
@@ -194,7 +194,7 @@ and `operations.py:59` already imports `pricing_core.rating.compile`, so `cell_p
 
 ## Decision points
 
-The three limbs, FD-1767 and "FD-1569" are ruled. **All three below are now ruled too** (the entry "2026-11-05 10:41:08
+The three limbs, FD-1767 and the mis-citation are ruled. **All three below are now ruled too** (the entry "2026-11-05 10:41:08
 GMT"): DP-R1 (a); "THE CONSEQUENCE RULED: limb (iii) OVERRIDES FR-239 for a defective cell"; "a dated clause on FR-239 ("a
 defective cell refuses regardless of hash; a clean bundle's wire is byte-identical") rides R2's PR as the spec change in the
 same commit as the code; no opt-in flag"; the no-dp departure accepted; DP-R2 (a), `RATE_TABLE_CELL_UNPARSEABLE`; DP-R4 (a);
