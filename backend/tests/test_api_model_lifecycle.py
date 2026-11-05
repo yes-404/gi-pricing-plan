@@ -358,8 +358,12 @@ def _archive(
     slug: str,
     headers: dict[str, str],
     reader: dict[str, str],
+    version: int = 1,
 ):
-    etag = api_client.get(f"/api/v1/models/{slug}", headers=reader).headers["etag"]
+    """Archive the model's `version`; the `If-Match` is that version's, not the latest's."""
+    etag = api_client.get(
+        f"/api/v1/models/{slug}", params={"version": version}, headers=reader
+    ).headers["etag"]
     return api_client.post(
         f"/api/v1/models/{model_id}/archive", headers={**headers, "If-Match": etag}
     )
