@@ -817,6 +817,42 @@ async def _refuse_control_factor_keys(
                 )
 
 
+def cell_parses(raw: str) -> bool:
+    """Whether the engine's own parser reads `raw` as a number (FD-1648): `Decimal` is wider.
+
+    `1E+2`, `1.36E-7` and `.5` are decimals the engine refuses; `1.36e-7` and `1_000` it reads.
+    """
+    try:
+        return isinstance(zen.evaluate_expression(raw), (int, float))
+    except (RuntimeError, ValueError):
+        return False
+
+
+def _refuse_unparseable_cells(version: RatingVersion, payloads: dict[str, Any]) -> None:
+    """FR-234 / FR-240 backstop (FD-1648): no pinned table stores a cell the engine cannot read.
+
+    The write-time refusal (`_value_issue`) keeps such a cell out; this catches a version saved
+    before it existed. A table whose cells are a blob (no inline `rows`) has nothing to read here.
+    """
+    assert version.pins is not None
+    for table_ref in version.pins.rate_tables:
+        payload = payloads[str(table_ref)]
+        value = payload.get("value")
+        value_name = value.get("name") if isinstance(value, dict) else None
+        if value_name is None:
+            continue
+        key_names = [key.get("name") for key in payload.get("keys", ()) if isinstance(key, dict)]
+        for row in payload.get("rows") or ():
+            raw = row.get(value_name)
+            if isinstance(raw, str) and not cell_parses(raw):
+                key = tuple(row.get(name) for name in key_names)
+                _raise_named(
+                    "RATE_TABLE_CELL_UNPARSEABLE",
+                    f"{table_ref}: value {raw!r} for key {key} is not a number the rating "
+                    "engine can read (FR-234, FR-240)",
+                )
+
+
 def _refuse_control_factor_model_calls(
     algorithm: RatingAlgorithm, resolved_pins: dict[str, ResolvedArtifact]
 ) -> None:
@@ -1270,6 +1306,7 @@ async def compile_bundle(version: RatingVersion, resolver: ArtifactResolver) -> 
             component_refs.append(ArtifactRef.model_validate(component_ref))
     await _refuse_unapproved_objectives(version, payloads, resolver, component_refs)
     await _refuse_control_factor_keys(version, payloads, resolver)
+    _refuse_unparseable_cells(version, payloads)
     for each in every_inlined:
         _refuse_control_factor_model_calls(each, resolved_pins)
         check_model_call_coverage(each, resolved_pins)

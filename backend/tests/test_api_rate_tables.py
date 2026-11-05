@@ -2183,6 +2183,59 @@ def test_import_refuses_a_non_finite_value_by_name(
     assert _version_count(slug) == before
 
 
+@pytest.mark.req("FR-234")
+@pytest.mark.parametrize("raw", ["1E+2", "1.36E-7", ".5"])
+def test_manual_edit_refuses_a_cell_the_engine_cannot_read_by_name(
+    api_client: TestClient, workspace_id, actuary, raw: str
+) -> None:
+    """FD-1648: a decimal the rating engine's parser refuses is a 422 of its own code naming
+    the key and the submitted text, and no version is written."""
+    slug, _ = _seeded_table(api_client, workspace_id, actuary)
+    before = _version_count(slug)
+
+    response = _post_edit(
+        api_client, slug, actuary, edits=[{"driver_age_band": "17-20", "relativity": raw}]
+    )
+
+    assert response.status_code == 422, response.text
+    assert response.json()["code"] == "RATE_TABLE_CELL_UNPARSEABLE"
+    assert [(e["field"], e["code"], e["message"]) for e in response.json()["errors"]] == [
+        (
+            "edits.0.relativity",
+            "RATE_TABLE_CELL_UNPARSEABLE",
+            f"value {raw!r} for key ('17-20',) is not a number the rating engine can read",
+        )
+    ]
+    assert _version_count(slug) == before
+
+
+@pytest.mark.req("FR-234")
+@pytest.mark.req("FR-235")
+def test_import_refuses_a_cell_the_engine_cannot_read_by_name(
+    api_client: TestClient, workspace_id, actuary
+) -> None:
+    """FD-1648: an imported `1E+2` is a 422 `RATE_TABLE_CELL_UNPARSEABLE` naming the key and
+    the text, for the preview and for the confirm alike, and nothing is written."""
+    slug, _ = _seeded_table(api_client, workspace_id, actuary)
+    before = _version_count(slug)
+    content = b"driver_age_band,relativity\n17-20,1E+2\n21-24,1.41\n25-29,1.12\n"
+
+    for confirm in ("false", "true"):
+        response = api_client.post(
+            f"/api/v1/rate-tables/{slug}@1/import",
+            files={"file": ("import.csv", content, "text/csv")},
+            data={"confirm": confirm},
+            headers=actuary,
+        )
+
+        assert response.status_code == 422, response.text
+        assert response.json()["code"] == "RATE_TABLE_CELL_UNPARSEABLE"
+        assert response.json()["detail"] == (
+            "value '1E+2' for key ('17-20',) is not a number the rating engine can read"
+        )
+    assert _version_count(slug) == before
+
+
 @pytest.mark.req("FR-229")
 def test_rate_table_isolation_on_the_manual_edit_route(
     api_client: TestClient, workspace_id, actuary

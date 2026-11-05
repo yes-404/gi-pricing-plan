@@ -56,7 +56,7 @@ from model_schema.rating import (
     UpliftTableParameters,
 )
 from model_schema.refs import ArtifactRef, slug_is_admitted
-from pricing_core.rating.compile import ValidationIssue
+from pricing_core.rating.compile import ValidationIssue, cell_parses
 
 _APPROVED_OR_BETTER = frozenset({"approved", "live", "retired"})
 
@@ -66,6 +66,7 @@ INCOMPLETE_KEY_DOMAIN = "INCOMPLETE_KEY_DOMAIN"
 NULL_VALUE = "NULL_VALUE"
 OUT_OF_BOUNDS = "OUT_OF_BOUNDS"
 DUPLICATE_KEY = "DUPLICATE_KEY"
+CELL_UNPARSEABLE = "RATE_TABLE_CELL_UNPARSEABLE"
 
 #: W10-3B's named failure codes (03 §5.2, FR-233/235/232). Internal codes: the API
 #: maps them onto 03 §5.1's module error codes at the boundary.
@@ -325,6 +326,14 @@ def _value_issue(
         return ValidationIssue(
             code=OUT_OF_BOUNDS,
             message=_non_finite_message(raw, key_values),
+            field=value.name,
+        )
+    if not cell_parses(raw):
+        return ValidationIssue(
+            code=CELL_UNPARSEABLE,
+            message=(
+                f"value {raw!r} for key {key_values} is not a number the rating engine can read"
+            ),
             field=value.name,
         )
     if value.min is not None and decimal_value < value.min:

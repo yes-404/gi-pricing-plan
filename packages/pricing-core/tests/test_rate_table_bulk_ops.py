@@ -10,8 +10,8 @@ strings everywhere — never JSON floats, and never float through the file (R2).
 from __future__ import annotations
 
 import hashlib
-from datetime import UTC, datetime
 from collections.abc import Callable
+from datetime import UTC, datetime
 from decimal import Decimal
 from io import BytesIO
 from typing import ClassVar
@@ -156,7 +156,7 @@ _CODE = "RATE_TABLE_CELL_UNPARSEABLE"
 
 
 def _stored(raw: str) -> RateTableVersion:
-    """A version whose second row already holds `raw`, a text `Decimal` reads and the engine does not."""
+    """A version whose second row already holds `raw`, which `Decimal` reads and the engine not."""
     return _version(
         rows=[
             {"driver_age_band": "17-20", "relativity": "1.5"},
