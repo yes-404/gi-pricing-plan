@@ -2,7 +2,7 @@
 id: LG-2021
 family: ledger
 title: WK-1178 slice SL-2020 — FD-1648 limbs (i) and (ii): a write never lands a cell the engine cannot read (slice ledger)
-status: active                 # active → closed (§1.2a)
+status: closed                 # active → closed (§1.2a)
 created: 2026-11-05
 owner: executor
 tree: 880a22f9           # sl-8322-r1-rate-table-cells head this was written against (base a459d49a, tree 259f0b25)
@@ -135,3 +135,5 @@ Re-runs on my own detached worktree `aud-slr1` @ `3559a9c1`, DB-free, one file p
 ## PRs
 
 #1436 (opened by the lead after the push of this branch).
+
+*(Closed by a dated line, 2026-11-06, docs batch 12, by the executor, on to-lead "2026-11-05 22:04:05 GMT" item (5) and common brief item 42: the slice merged as #1436 (`5e5c83f7d4a4`, 2026-11-05); the Audit section above (aud-slr1) was adopted and accepted at to-lead "2026-11-05 16:14:12 GMT" with A11 open on run 3, and run 3's PASS is in `### Gate` (rc 0, 1526 s). The `*Adoption:*` placeholder above is superseded by this line.)*

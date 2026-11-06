@@ -2,12 +2,12 @@
 id: FD-1384
 family: finding
 title: A Factor's slug carries no grammar, so the platform stores slugs it cannot reference
-status: active
+status: closed
 created: 2026-10-03              # the mint date (check 31); filed 2026-10-03
 owner: auditor
 tree: 33cbff79ba83dbdf7912c5ddbfc6448008a8a451
 corrected_by: []
-relates: [RL-1383, RL-1361, SL-1377, WK-1178, FR-83, FR-96, FR-209, FR-4]
+relates: [RL-1383, RL-1361, SL-1377, WK-1178, FR-83, FR-96, FR-209, FR-4, FD-1799, SL-1806, SL-2026, PL-2025, LG-2027]
 ---
 
 # FD-1384 — a Factor's slug carries no grammar, so the platform stores slugs it cannot reference
@@ -96,3 +96,5 @@ residue), citing that PR.
 ---
 
 Filed 2026-10-03 as working id 9742; minted 2026-10-03 as FD-1384 (with RL 9743 -> RL-1383, in the same PR).
+
+***Resolved 2026-11-06*** — closed in place 2026-11-06 by the executor, as the closing act of the mint of SL-2026 (WK-1178, LG-2027, PL-2025; ~~this PR; its number, squash commit and merge date are written at the merge's date-of-record~~ #1438, squash `7a3c813b8251`, merged 2026-11-06), on the lead's adoption of aud-slc (`from-lead-2026-10-09.md` "2026-11-05 16:34:01 GMT"), the fix slice for the Factor limb; the sweep's other members were found done. **Factor:** `POST /api/v1/factors` refuses a slug outside `^[a-z0-9][a-z0-9_-]{1,62}$` with 422 `VALIDATION_FAILED` naming `slug`: `FactorCreate.slug` is `FactorSlug` (`model_schema/refs.py`, built from `_FACTOR_SLUG`), the `02` §5.1 row carries the dated sentence, and `docs/contracts/openapi/generated.json` gains the one `pattern` line on `FactorCreate.slug`. **Banding and Grouping:** `BandingProposalRequest.slug` and `GroupingProposalRequest.slug` are `Slug`, refused 422 at POST, by SL-1806 (#1339, `8db3e1e1`; FD-1799). **`RatingVersionCreate`:** found typed, `rating.py:221` `slug: Slug`, no change. **The read stays tolerant** as the Disposition's second limb requires: `Factor.slug` is still `str`, `modelling.py` is untouched, and `test_a_stored_factor_slug_is_not_revalidated_on_read` loads a stored `"Veh Brand"` (FR-209's whole-list failure is not widened). Red first, by cause: at `99120993` a plain-`str` `FactorSlug` admitted all five bad slugs (`5 failed, 12 passed`, `DID NOT RAISE ValidationError`); green `17 passed`. Gate evidence is in LG-2027: pytest `14 failed, 7145 passed, 22 skipped` = item 31's 13 plus the ruled 14th (`test_api_authorisation_sweep.py`, fixed by the fifth `_PATTERN_VALUES` entry `sweep_factor`, the sweep file alone `9 passed` with `POST /api/v1/factors` refused 403), demo rc 0 (1638 s, dislocation #1 597 s). The event this finding named — "refuses out-of-grammar Factor, Banding and Grouping slugs at the write boundary with a named 422 each, citing that PR" — is met by this PR together with #1339. Stored rows are not rewritten (FR-4, FR-96); the 0-violator measurement of 2026-10-03 is unchanged and is not re-measured here.

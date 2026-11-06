@@ -401,7 +401,7 @@ def _with_cells(*raws: str) -> FakeResolver:
 
 @pytest.mark.req("FR-234")
 @pytest.mark.req("FR-240")
-@pytest.mark.parametrize("raw", ["1E+2", "1.36E-7", ".5"])
+@pytest.mark.parametrize("raw", ["1E+2", "1.36E-7", ".5", "true", "false", "1+1"])
 async def test_a_stored_cell_the_engine_cannot_read_does_not_compile(raw: str) -> None:
     """The backstop for a version saved before the write-time refusal existed."""
     with pytest.raises(ValueError, match="RATE_TABLE_CELL_UNPARSEABLE") as refused:
