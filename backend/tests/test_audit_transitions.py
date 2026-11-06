@@ -124,7 +124,7 @@ from model_schema import (
 from model_schema.approvals import VALID_APPROVAL_TRANSITIONS
 from model_schema.datasets import VALID_DATASET_TRANSITIONS
 from model_schema.jobs import VALID_TRANSITIONS as VALID_JOB_TRANSITIONS
-from model_schema.metrics import VALID_METRIC_TRANSITIONS
+from model_schema.metrics import METRIC_CERTIFICATE_CHECKS, VALID_METRIC_TRANSITIONS
 from model_schema.modelling import VALID_MODEL_TRANSITIONS
 from model_schema.objectives import OBJECTIVE_CERTIFICATE_CHECKS, VALID_OBJECTIVE_TRANSITIONS
 from model_schema.perils import VALID_PERIL_STRUCTURE_TRANSITIONS
@@ -165,8 +165,6 @@ def _result(outcome: CertificateOutcome, names: tuple[str, ...]) -> CertificateR
         overall=outcome, sampling=_GRID, checks=checks, library_versions={"numpy": "2.0.0"}
     )
 
-
-_METRIC_CHECKS = ("finiteness", "direction_holds", "scale_behaviour", "smoke_evaluation")
 
 
 @dataclass(frozen=True)
@@ -255,7 +253,7 @@ KINDS = {
         metric_service.submit,
         metric_service.apply_approval_decision,
         "metric_id",
-        _METRIC_CHECKS,
+        METRIC_CERTIFICATE_CHECKS,
     ),
 }
 

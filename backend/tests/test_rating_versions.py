@@ -688,10 +688,14 @@ async def test_a_rejected_rating_version_returns_to_draft_with_a_true_audit_befo
                     AuditEventRow.entity_ref == ref,
                     AuditEventRow.action.like("rating_version.%"),
                     AuditEventRow.action != "rating_version.created",
-                )
+                ).order_by(AuditEventRow.sequence)
             )
         ).all()
-    assert [(b["status"], a["status"]) for b, a in moves] == [("review", "draft")]
+    # Both moves, in order: the submit (`rating_version.submitted`, SL 8377) then the rejection.
+    assert [(b["status"], a["status"]) for b, a in moves] == [
+        ("draft", "review"),
+        ("review", "draft"),
+    ]
 
 
 async def _stale_draft_request(database: Database, workspace_id: UUID, slug: str):
