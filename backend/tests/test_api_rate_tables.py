@@ -16,6 +16,7 @@ import asyncio
 import hashlib
 import io
 from collections.abc import Awaitable, Callable
+from decimal import Decimal
 from uuid import UUID, uuid4
 
 import pytest
@@ -30,6 +31,7 @@ from app.config import Settings
 from app.db.models import (
     FactorRow,
     ModelRow,
+    RateTableCellRow,
     RateTableRow,
     RateTableVersionRow,
 )
@@ -856,6 +858,33 @@ def test_bulk_operation_creates_a_new_version_with_the_operation_record(
     }
     assert body["created_by_import"] is None
     assert body["seeded_from"]["model_ref"] == f"model:{family}@1"
+
+
+def test_bulk_operation_with_a_huge_percentage_is_a_coded_422_not_a_memory_fault(
+    api_client: TestClient, workspace_id, actuary
+) -> None:
+    """SL-2038 N1 (OWED to SL-2041's DB window: not run by SL-2038's seat). A request's
+    `percentage` of `1E+999990` made `_format_value` write ~1 MB per row; the bound (|adjusted
+    exponent| <= 308, FR-21) refuses it first: a 422 `RATE_TABLE_CELL_UNPARSEABLE`, small body."""
+    family = f"mf-{uuid4().hex[:8]}"
+    _seed_approved_model(workspace_id, family, _LEVELS)
+    slug = _table_slug()
+    seeded = api_client.post(
+        f"/api/v1/rate-tables/{slug}/seed-from-model",
+        json=_seed_body(family),
+        headers=actuary,
+    )
+    assert seeded.status_code == 201, seeded.text
+
+    response = api_client.post(
+        f"/api/v1/rate-tables/{slug}@1/bulk-operation",
+        json=_bulk_body("uplift_table", {"percentage": "1E+999990"}),
+        headers=actuary,
+    )
+
+    assert response.status_code == 422, response.text[:300]
+    assert response.json()["code"] == "RATE_TABLE_CELL_UNPARSEABLE"
+    assert len(response.text) < 2000
 
 
 @pytest.mark.req("FR-233")
@@ -2255,3 +2284,90 @@ def test_rate_table_isolation_on_the_manual_edit_route(
 
     assert response.status_code == 404, response.text
     assert response.json()["code"] == _EDIT_MISS_CODE
+
+
+_ROUTE_BODIES: dict[str, dict[str, object]] = {
+    "uplift_table": {"percentage": "0.10"},
+    "uplift_by_filter": {"percentage": "0.10", "filter": {"driver_age_band": ["17-20"]}},
+    "rebase_to_level": {"base_level": {"driver_age_band": ["17-20"]}},
+    "floor_and_cap": {"floor": "3", "cap": "6"},
+}
+_ROUTE_REFUSED = {
+    ("uplift_table", "count"),
+    ("uplift_by_filter", "count"),
+    ("rebase_to_level", "percentage"),
+    ("rebase_to_level", "money_minor"),
+    ("rebase_to_level", "count"),
+}
+_ROUTE_EXPECTED = {
+    "uplift_table": ["2.2", "4.4", "8.8"],
+    "uplift_by_filter": ["2.2", "4", "8"],
+    "rebase_to_level": ["1", "2", "4"],
+    "floor_and_cap": ["3", "4", "6"],
+}
+
+
+def _insert_typed_table(workspace_id: UUID, slug: str, value_type: str) -> None:
+    """A table of the given value type. Written directly: no route creates one that is not
+    `relativity` (`seed_from_model` is the only writer of a new table)."""
+    table_id, version_id = uuid4(), uuid4()
+    _insert_rows(
+        [
+            RateTableRow(
+                id=table_id, workspace_id=workspace_id, slug=slug, current_version=1,
+                created_by=uuid4(),
+            ),
+            RateTableVersionRow(
+                id=version_id, workspace_id=workspace_id, rate_table_id=table_id,
+                version_number=1, storage="rows",
+                definition={
+                    "slug": slug, "version": 1, "rateable": True, "storage": "rows",
+                    "keys": [{"name": "driver_age_band", "type": "string", "banding_ref": None}],
+                    "value": {
+                        "name": "v", "type": value_type, "unit": "u", "min": None, "max": None,
+                    },
+                    "default_row": None,
+                },
+                change_note="direct insert", created_by=uuid4(),
+            ),
+            *[
+                RateTableCellRow(version_id=version_id, key=[band], value=value)
+                for band, value in (("17-20", "2"), ("21-24", "4"), ("25-29", "8"))
+            ],
+        ]
+    )
+
+
+@pytest.mark.req("FR-233")
+@pytest.mark.parametrize("value_type", ["relativity", "percentage", "money_minor", "count"])
+@pytest.mark.parametrize("kind", list(_ROUTE_BODIES))
+def test_bulk_operation_value_type_matrix_at_the_route(
+    api_client: TestClient, workspace_id, actuary, kind: str, value_type: str
+) -> None:
+    """FR-233's matrix through `POST .../bulk-operation`: a refused cell is a 422 and no
+    version; an allowed cell is the same 201 as before the clause."""
+    slug = _table_slug()
+    _insert_typed_table(workspace_id, slug, value_type)
+
+    response = api_client.post(
+        f"/api/v1/rate-tables/{slug}@1/bulk-operation",
+        json=_bulk_body(kind, _ROUTE_BODIES[kind]),
+        headers=actuary,
+    )
+
+    if (kind, value_type) in _ROUTE_REFUSED:
+        assert response.status_code == 422, response.text
+        body = response.json()
+        assert body["code"] == "BULK_OPERATION_NOT_APPLICABLE"
+        assert kind in body["detail"]
+        assert value_type in body["detail"]
+        assert f"rate_table:{slug}@1" in body["detail"]
+        assert _version_count(slug) == 1
+    else:
+        assert response.status_code == 201, response.text
+        body = response.json()
+        assert body["created_by_operation"]["kind"] == kind
+        assert {row["driver_age_band"]: Decimal(row["v"]) for row in body["rows"]} == dict(
+            zip(("17-20", "21-24", "25-29"), map(Decimal, _ROUTE_EXPECTED[kind]), strict=True)
+        )
+        assert _version_count(slug) == 2
