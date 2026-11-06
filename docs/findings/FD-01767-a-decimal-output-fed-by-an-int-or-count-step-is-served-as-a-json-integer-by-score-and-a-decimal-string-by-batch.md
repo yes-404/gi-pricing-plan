@@ -2,7 +2,7 @@
 id: FD-1767
 family: finding
 title: A declared decimal output fed by an int or count step is served as a JSON integer by /score and as a decimal string by batch
-status: active
+status: closed
 created: 2026-10-17
 owner: auditor
 tree: cf509df89dbebff329bb6b319bcc9bcd2a2c2352
@@ -57,3 +57,5 @@ declared output type, as batch does, or that the compiler refuses the widening; 
 is the owner's and is not made here. The event that next discharges it: the merge of the
 WK-1178 slice that makes `/score` serialize by declared type, with a test over an `int` step
 into a `decimal` output on both paths.
+
+***Resolved 2026-11-05*** — closed in place 2026-11-05 by the auditor, as the closing act of the mint of SL-2020 (WK-1178, LG-2021, PL-2019; ~~this PR, its number and squash written at the merge's date-of-record~~ #1436), on the lead's adoption of the SL-2020 audit and the maintainer's ruling "2026-11-05 10:11:39 GMT". **Closed as already delivered, with a guard.** `96e1b369` (SL-1569) moved the declared-type form into `_build_outputs`, which `score_one` and the batch path share, so an `int` or `count` step feeding a declared `decimal` output (the compiler's widening, `_WIDENING`) is the one string `18.00` on both paths; the finding's `18` against `"18"` split no longer exists at base. SL-2020 adds the guard and changes no code for it: `test_an_int_or_count_step_into_a_decimal_output_is_one_string_on_both_paths` (`packages/pricing-core/tests/test_rating_score_batch_outputs.py`, `req("FR-214")`, `int` and `count`) asserts `"18.00"` from `score_one` and in the batch `outputs_json`. It is green at head and, with `packages/pricing-core/src` and `backend/src` taken at base `2f108b1e`, green there too (auditor re-run, `t9_base.log`: `2 passed`), which is what "a guard, not a fix" means. The first draft declared `relativity`/`percentage` and was refused at compile with `RATING_TYPE_MISMATCH`; it declares `decimal` (commit `55ec1bcd`). Gate evidence is in LG-2021 (SOLO gate at `662867bb`).

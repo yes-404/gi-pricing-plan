@@ -16,7 +16,15 @@ from pydantic_core import CoreSchema
 
 from model_schema.input_free import InputFreeError
 
-__all__ = ["ARTIFACT_TYPES", "ArtifactRef", "BlobRef", "ModelRef", "Slug", "slug_is_admitted"]
+__all__ = [
+    "ARTIFACT_TYPES",
+    "ArtifactRef",
+    "BlobRef",
+    "FactorSlug",
+    "ModelRef",
+    "Slug",
+    "slug_is_admitted",
+]
 
 #: Every artifact type that may appear in a reference. Extending this is a spec change:
 #: `docs/contracts/schemas/common/artifact-ref.schema.json` carries the same list.
@@ -60,6 +68,9 @@ def slug_is_admitted(artifact_type: str, slug: str) -> bool:
 
 
 Slug = Annotated[str, Field(pattern=rf"^{_SLUG}$")]
+
+#: A Factor's slug (RL-1383 Ruled item 1): the `factor` grammar, which admits `_`.
+FactorSlug = Annotated[str, Field(pattern=rf"^{_FACTOR_SLUG}$")]
 
 #: A canonical reference to a Model specifically: `model:slug@version` (ID-3).
 #: FR-116's offset ref is one of these — the prefix is part of the pattern, so

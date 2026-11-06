@@ -44,6 +44,8 @@ The full two-half gate: **not yet run** (the lead's grant is owed; queue SL-1260
 
 Static checks at `40de35f5`: `ruff check` clean on the five changed `backend/src` files and the two new tests; `mypy` "Success: no issues found in 245 source files" (run once on the whole project at `5c77f030` while FD-1838's code gate was held: a heavy check beside a gate, disclosed here as a deviation; from then on static checks ran on changed files only). `ruff format --check` flags four of the five source files on code this slice did not touch (pre-existing on `origin/main`); the hunks this slice edits are formatted.
 
+**Dated line, 2026-11-05 (docs batch 10), by the auditor, the gate of record:** the lead's gate heading "2026-10-25 13:17:09 GMT" reads "SL 8185 gate @3bf60a96 STANDS under 1(f)"; pre-ACK "2026-10-25 17:49:11 GMT" (merge-time patch-id = gated); merged "2026-10-25 18:13:54 GMT" (the protocol-slip note is in that entry). Audit: RS-1880 CLEAN with B1–B4, adopted 2026-10-25 (see Audit below). Authority: to-lead "2026-11-04 20:56:54 GMT" item 7 (e), the stamps staged by lead 30 at 2026-11-04 20:59:03 GMT (each heading re-read by the lead in the channel), and "2026-11-04 20:59:50 GMT" (the eleven closes adopted).**
+
 ### Audit
 
 Not yet written (the auditor's).

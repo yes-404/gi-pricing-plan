@@ -319,3 +319,7 @@ anchor and export routes; read `:578-579` as the first two). Unchanged: FR-343 a
 (`backend/src/app/api/me.py:248-251`); `create_rule`'s permission checks
 (`backend/src/app/platform/validation_rules.py:204`, `:211`). `RL-1483` is minted in the same batch (T1) as this record; `PL-1408` (line 510) cites this finding by its working id 9988
 (a filed plan, frozen, not edited here).
+
+*(Dated line, 2026-11-05, docs batch 11, by the auditor, on to-lead "2026-11-05 10:31:31 GMT" (second triage c9e75802158f accepted), items (C)(2) and (C)(5): re-homed to WK-1178; the Decision cell governs over the owner column, and the conditional G1 block on WK-674 clears. Limb 2 (about 11 h; the column about 7 h can land by the docs freeze Fri 13 Nov, the pin test about 3 to 4 h needs FD-1484's `table_rows`) is a named freeze exception, with FD-1381 and FD-1723 limb FR-7.)*
+
+*(Dated line, 2026-11-05, SL-2011 audit (LG-2012), by the auditor, on to-lead "2026-11-05 15:51:04 GMT": limb 2 (a), RL-1483 item 1, the `Permission` column on every §5.1 row, lands in SL-2011. 207 rows in 7 tables = 166 built operations + 3 app-level routes + 38 unbuilt; of the 166, 140 equal the route's `requires()` exactly, 7 carry an "also" clause the handler enforces, 18 are handler-guarded or `authenticated`/`open` with no permission in code, and 1 disagrees (`02` `POST /models/{id}/archive`: spec `model:fit`, code `model:submit`; FD 8366, filed with sl-8368). Limb 2 (b), the pin test, is not landed: it waits on FD 8366, the cell fix (sl-8370) and FD-1484's `table_rows`. FD-1482 stays open.)*

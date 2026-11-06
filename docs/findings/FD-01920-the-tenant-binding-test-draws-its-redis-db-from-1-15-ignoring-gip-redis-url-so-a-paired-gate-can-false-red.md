@@ -2,7 +2,7 @@
 id: FD-1920
 family: finding
 title: The tenant-binding test draws its Redis db from 1-15, ignoring GIP_REDIS_URL, so a paired gate can false-red
-status: active
+status: closed
 created: 2026-10-25   # drafted 2026-10-25 under working id 8233; created = mint date
 owner: auditor
 tree: 680f7e07e2d86a088c781d127a5e7d0a84dbd91f
@@ -48,3 +48,5 @@ uses (5–10); one small fix slice with its own code gate". SL-1921 / LG-1922, b
 ## Disposition
 
 Open, owner WK-1178; **fix before close**: SL-1921 (LG-1922). Closed in place citing the PR when that slice merges. Filed under working id 8233.
+
+***Resolved 2026-11-05*** — closed in place 2026-11-05 by the auditor (aud-fdclose), on the lead's brief under to-lead "2026-11-05 09:40:57 GMT" item 8 (2), the FD-1842 form. Delivered remedy (the test's Redis db follows `GIP_REDIS_URL` when set, else a draw from 5 to 10): SL-1921 (WK-1178, LG-1922), PR #1393, squash commit 08ca880d6397648b40174c42933192db1369b9ac, merged 2026-10-26T01:48:50Z. `backend/tests/test_tenant_binding.py` returns `os.environ.get("GIP_REDIS_URL")` or `5 + secrets.randbelow(6)`; `test_tenant_binding_redis_db.py` asserts the URL's db is used (parametrised over 1, 2, 3, 4, 11, 12, 13) and that an unset URL draws outside the reserved set.

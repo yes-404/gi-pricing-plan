@@ -38,6 +38,8 @@ FD-1851 (LOW) closes as accepted, citing `RL-1848` (Environment-scoped writes ke
 
 (left empty for the lead's gate)
 
+**Dated line, 2026-11-05 (docs batch 10), by the auditor, the gate of record and the audit adoption:** the lead's gate heading to-lead "2026-10-25 17:45:46 GMT" reads "SL 8178 gate @91c5ed06 STANDS under 1(f)"; ACK 2026-10-25 21:01:11 GMT. Audit: RS-1894 B1–B4 adopted (see Audit below). Authority: to-lead "2026-11-04 20:56:54 GMT" item 7 (e), the stamps staged by lead 30 at 2026-11-04 20:59:03 GMT (each heading re-read by the lead in the channel), and "2026-11-04 20:59:50 GMT" (the eleven closes adopted).**
+
 ### Audit
 
 (not yet)
