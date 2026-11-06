@@ -30,6 +30,8 @@ from uuid import UUID
 
 import pytest
 import pytest_asyncio
+from alembic.config import Config
+from alembic.script import ScriptDirectory
 from pydantic import SecretStr
 from sqlalchemy import text
 from sqlalchemy.engine import make_url
@@ -1199,6 +1201,53 @@ def _database_configured() -> bool:
     )
 
 
+def migration_problem(current: set[str], heads: set[str], known: set[str]) -> str | None:
+    """The refusal for a database behind the script heads, or None (FD-1488).
+
+    A revision the scripts do not know is a database *ahead* of this checkout (a slice on an
+    older base using a current copy): DP-H2 (a), a warning at the call site, not this.
+    """
+    behind = current & (known - heads)
+    missing = heads - current
+    if behind or (missing and current <= known):
+        return (
+            f"the test database is at {sorted(current)}, the scripts' heads are {sorted(heads)}: "
+            "run `uv run alembic upgrade head` against this database (FD-1488)"
+        )
+    return None
+
+
+_REPO_ROOT = Path(__file__).resolve().parents[2]
+
+
+@functools.cache
+def _script_revisions() -> tuple[frozenset[str], frozenset[str]]:
+    """(heads, every known revision) of this checkout's migration scripts, read once."""
+    scripts = ScriptDirectory.from_config(Config(str(_REPO_ROOT / "alembic.ini")))
+    known = {revision.revision for revision in scripts.walk_revisions()}
+    return frozenset(scripts.get_heads()), frozenset(known)
+
+
+_migrations_checked = False
+
+
+def _check_migrations_once(current: set[str]) -> None:
+    """Stop the session once, by name, when the database is behind this checkout (FD-1488).
+
+    Reads, never writes (G1): a stale copy stops the run in a second, not 33 minutes in.
+    """
+    heads, known = _script_revisions()
+    problem = migration_problem(current, set(heads), set(known))
+    if problem is not None:
+        pytest.exit(problem, returncode=1)
+    if not current <= known:
+        warnings.warn(
+            f"the test database is ahead of this checkout: {sorted(current - known)} "
+            "is not a revision of these migration scripts (DP-H2)",
+            stacklevel=2,
+        )
+
+
 @pytest_asyncio.fixture
 async def database() -> AsyncIterator[Database]:
     """An engine per test, against a database the migration has already been run on.
@@ -1242,6 +1291,13 @@ async def database() -> AsyncIterator[Database]:
             f"database at {_safe_dsn(test_database_url())} has no migrations applied; "
             "run `uv run alembic upgrade head`",
         )
+    global _migrations_checked
+    if applied and not _migrations_checked:
+        _migrations_checked = True
+        async with db.session() as session:
+            rows = await session.execute(text("SELECT version_num FROM alembic_version"))
+            current = set(rows.scalars())
+        _check_migrations_once(current)
 
     yield db
     await db.dispose()

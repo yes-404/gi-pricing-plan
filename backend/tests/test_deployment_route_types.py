@@ -295,6 +295,64 @@ def ast_problems(sources: dict[str, str], rows: tuple[Row, ...] = ROWS) -> list[
     return problems
 
 
+# --- live-route half (FD-1509) -------------------------------------------------------------
+
+
+def _from_model_schema(cls: Any, name: str) -> bool:
+    return (
+        isinstance(cls, type)
+        and cls.__name__ == name
+        and cls.__module__.split(".")[0] == "model_schema"
+    )
+
+
+def _paged_item(response_model: Any) -> Any:
+    """`Page[Item]`'s item class: a parametrised generic keeps its arguments."""
+    arguments = getattr(response_model, "__pydantic_generic_metadata__", {}).get("args", ())
+    return arguments[0] if arguments else None
+
+
+def route_class_problems(app: Any, rows: tuple[Row, ...] = ROWS) -> list[str]:
+    """Every row whose live route is not typed by the named `model_schema` class.
+
+    The OpenAPI half compares *names*; a local class of the same name publishes the same schema
+    name. The class itself is on the route (`body_field`, `response_model`).
+    """
+    from fastapi import routing
+
+    contexts = {
+        (method, context.path_format): context
+        for context in routing.iter_route_contexts(app.routes)
+        for method in context.methods
+    }
+    problems: list[str] = []
+    for row in rows:
+        where = f"{row.method} {row.path}"
+        context = contexts.get((row.method, row.path))
+        if context is None:
+            problems.append(f"{where}: no live route")
+            continue
+        body = context.body_field
+        if row.request is None:
+            if body is not None:
+                problems.append(f"{where}: the live route takes a body; the table says none")
+        else:
+            annotation = body.field_info.annotation if body is not None else None
+            if not _from_model_schema(annotation, row.request):
+                problems.append(
+                    f"{where}: request class is {annotation!r}, not model_schema's {row.request}"
+                )
+        if row.response is None:
+            continue
+        model = context.response_model
+        item = _paged_item(model) if row.paged else model
+        if not _from_model_schema(item, row.response):
+            problems.append(
+                f"{where}: response class is {item!r}, not model_schema's {row.response}"
+            )
+    return problems
+
+
 def _sources() -> dict[str, str]:
     return {path.name: path.read_text() for path in MODULES}
 
@@ -303,11 +361,15 @@ def _sources() -> dict[str, str]:
 
 
 @pytest.fixture(scope="module")
-def document() -> dict[str, Any]:
+def app() -> Any:
     from app.config import Environment, Settings
     from app.main import create_app
 
-    app = create_app(Settings(environment=Environment.LOCAL, version="test"))
+    return create_app(Settings(environment=Environment.LOCAL, version="test"))
+
+
+@pytest.fixture(scope="module")
+def document(app: Any) -> dict[str, Any]:
     return app.openapi()
 
 
@@ -725,3 +787,33 @@ def test_the_key_set_check_names_an_added_dropped_or_renamed_key() -> None:
         with pytest.raises(AssertionError) as raised:
             _assert_exact(broken, "route")
         assert needle in str(raised.value)
+
+
+@pytest.mark.req("FR-428")
+def test_the_live_routes_are_typed_by_the_model_schema_classes(app: Any) -> None:
+    """FD-1509: the names in the OpenAPI document can match while the classes differ."""
+    assert route_class_problems(app) == []
+
+
+@pytest.mark.req("FR-428")
+def test_a_same_named_local_class_is_refused_by_the_class_check() -> None:
+    """The essay's minimal app: a local `EnvironmentCreate` publishes the same schema name, so
+    `openapi_problems` cannot tell; the live route's class is not a `model_schema` one."""
+    from fastapi import FastAPI
+    from pydantic import BaseModel
+
+    class EnvironmentCreate(BaseModel):
+        slug: str
+
+    local = FastAPI()
+
+    @local.post("/api/v1/environments")
+    async def create(body: EnvironmentCreate) -> EnvironmentCreate:
+        return body
+
+    row = Row("POST", "/api/v1/environments", "EnvironmentCreate", "EnvironmentCreate")
+    problems = route_class_problems(local, rows=(row,))
+    assert any(
+        "request" in p and "EnvironmentCreate" in p and "model_schema" in p for p in problems
+    )
+    assert any("response" in p and "EnvironmentCreate" in p for p in problems)

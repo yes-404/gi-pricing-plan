@@ -108,6 +108,7 @@ from model_schema import (
 )
 from model_schema import Permission as Perm
 from model_schema.rating import ChangeSummaryDraft
+from model_schema.refs import FactorSlug
 from pricing_core.rating.runtime import CompiledBundle
 
 __all__ = ["router"]
@@ -208,7 +209,7 @@ ModelFilterDep = Annotated[ModelFilter, Query()]
 class FactorCreate(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
-    slug: str
+    slug: FactorSlug
     dataset_id: UUID
     type: FactorType = FactorType.IDENTITY
     source_columns: tuple[str, ...]

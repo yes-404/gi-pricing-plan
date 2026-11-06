@@ -54,6 +54,10 @@ _SENTINEL = "SENTINEL-quote-input-d7e3c518"
 
 #: (file, function, kind) -> (how many, what covers it).
 _SINKS: dict[tuple[str, str, str], tuple[int, str]] = {
+    ("backend/src/app/errors.py", "_handle_serialization_error", "str(exc)"): (
+        1, "a substring classifier only: nothing stored, logged or echoed; "
+        "test_decimal_write_bound.py:56 asserts the value is not in the response "
+        "(maintainer's ruling, to-lead 2026-11-06 07:42:30 GMT, RED 1)"),
     ("backend/src/app/api/score.py", "_as_platform_error", "str(exc)"): (
         1, "reached only for a `CodedError` (by class, not text shape): the message has its value "
         "dropped at source: test_quote_input_raise_sites.py "
@@ -237,6 +241,28 @@ _SINKS: dict[tuple[str, str, str], tuple[int, str]] = {
      "error_message key"): (
         1, "test_scoring_handlers.py and test_quote_input_raise_sites.py (the success row's "
         "None; the error row moved to `_batch_error_row`)"),
+    # FD-1507: six sites that bind the exception to a name other than exc/e/err. Each verdict is
+    # read from the raise sites of the exception it handles: none can hold a quote input.
+    ("backend/src/app/platform/deployments.py", "_prepare", "{exc}"): (
+        1, "a `SwitchIncompleteError`, raised only by `deployment_switch.prepare_round` with the "
+        "process ids that did not acknowledge: no quote input reaches the switch"),
+    ("backend/src/app/platform/rating_algorithms.py", "_accepted_feature_map_values", "{exc}"): (
+        1, "a `ValueError` from `consumed_features` of a stored model artifact: fixed texts, "
+        "naming a fit-result field or a model_type, never a quote value"),
+    ("packages/pricing-core/src/pricing_core/modelling/gbm.py", "_compile_custom", "str(exc)"): (
+        1, "an `ObjectiveError` from compiling a Custom Objective's declared source: the "
+        "objective's own text, no quote exists at compile"),
+    ("packages/pricing-core/src/pricing_core/modelling/objectives.py", "_smoke_fit_check",
+     "{exc}"): (
+        1, "a smoke fit over `_smoke_data`'s seeded synthetic rows: the detail names the "
+        "exception type and text of a fit on generated data, never a dataset row"),
+    ("packages/pricing-core/src/pricing_core/rating/compile.py", "_consumed_features", "{exc}"): (
+        1, "a `ValueError` from `consumed_features` of a pinned model's fit result, at compile "
+        "(same texts as rating_algorithms.py): no quote exists at compile"),
+    ("packages/pricing-core/src/pricing_core/rating/runtime.py", "handler", "str(exc)"): (
+        1, "a `_ModelCallRefusal`, raised only at `_predict_model`'s last line, with the step id "
+        "(authored in the graph) and the model_type (from the artifact); read first, A6: the "
+        "refusal text carries no feature value and no quote input (NFR-499)"),
 }
 
 
@@ -246,11 +272,22 @@ def _files() -> list[Path]:
 
 
 def _sinks(source: str, name: str) -> Counter[tuple[str, str, str]]:
+    """Count the failure sinks of one file.
+
+    An exception is recognised by what it is (FD-1507): a name bound by an enclosing
+    `except ... as`, or a parameter named `exc`. Not by the spelling of a variable: `e` as a band
+    edge is not one, and a handler that binds `problem` or `refusal` is.
+    """
     found: Counter[tuple[str, str, str]] = Counter()
 
-    def visit(node: ast.AST, function: str) -> None:
+    def visit(node: ast.AST, function: str, excs: frozenset[str]) -> None:
         if isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef):
             function = node.name
+            parameters = (*node.args.posonlyargs, *node.args.args, *node.args.kwonlyargs)
+            if any(parameter.arg == "exc" for parameter in parameters):
+                excs |= {"exc"}
+        if isinstance(node, ast.ExceptHandler) and node.name:
+            excs |= {node.name}
         if isinstance(node, ast.Call):
             callee = node.func
             called = (
@@ -265,12 +302,12 @@ def _sinks(source: str, name: str) -> Counter[tuple[str, str, str]]:
                 found[(name, function, "JobError")] += 1
             if (
                 called == "str" and node.args and isinstance(node.args[0], ast.Name)
-                and node.args[0].id in ("exc", "e", "err")
+                and node.args[0].id in excs
             ):
                 found[(name, function, "str(exc)")] += 1
         if (
             isinstance(node, ast.FormattedValue) and isinstance(node.value, ast.Name)
-            and node.value.id in ("exc", "e", "err")
+            and node.value.id in excs
         ):
             found[(name, function, "{exc}")] += 1
         if isinstance(node, ast.Assign):
@@ -282,9 +319,9 @@ def _sinks(source: str, name: str) -> Counter[tuple[str, str, str]]:
                 if isinstance(key, ast.Constant) and key.value == "error_message":
                     found[(name, function, "error_message key")] += 1
         for child in ast.iter_child_nodes(node):
-            visit(child, function)
+            visit(child, function, excs)
 
-    visit(ast.parse(source), "<module>")
+    visit(ast.parse(source), "<module>", frozenset())
     return found
 
 
@@ -473,6 +510,20 @@ def test_the_census_sees_an_injected_sink() -> None:
         ("injected.py", "leak_info", "exc_info"): 1,
         ("injected.py", "leak_job", "JobError"): 1,
     }
+    # FD-1507: an exception is recognised by what it is -- bound by an enclosing `except ... as`
+    # (whatever the name), or a parameter named `exc` -- never by the spelling of a variable.
+    renamed = (
+        "def handler_str():\n    try:\n        pass\n    except ValueError as problem:\n"
+        "        return str(problem)\n\n\n"
+        "def handler_text():\n    try:\n        pass\n    except ValueError as failure:\n"
+        "        return f'failed: {failure}'\n"
+    )
+    assert dict(_sinks(renamed, "renamed.py")) == {
+        ("renamed.py", "handler_str", "str(exc)"): 1,
+        ("renamed.py", "handler_text", "{exc}"): 1,
+    }
+    not_an_exception = "def band(low):\n    e = 1\n    return str(e) + f'{e}'\n"
+    assert dict(_sinks(not_an_exception, "edge.py")) == {}
 
 
 class _Quote(BaseModel):

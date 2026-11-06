@@ -741,3 +741,25 @@ def test_a_lone_monotone_bound_sweeps_the_range_intersected_with_the_contract(
                           direction="increasing", **check_kw)], seed=5)
     run, _ = run_regression(bundle, suite, rating_version_ref=_REF, now=_now)
     assert run.property_results[0].status in {"pass", "fail"}  # ran; not refused
+
+
+@pytest.mark.req("FR-261")
+@pytest.mark.parametrize("prop", [
+    _prop("bounded", kind="premium_bounded", lower_minor=0, upper_minor=10**9),
+    _prop("up", kind="monotone", input="driver_age", direction="increasing"),
+], ids=["case_property", "monotone_sweep"])
+def test_a_type_error_from_the_evaluation_is_a_failed_property_not_a_crash(
+    bundle: CompiledBundle, monkeypatch: pytest.MonkeyPatch, prop: Any
+) -> None:
+    """FD-1781: an engine `TypeError` (a wrongly typed value reaching the evaluation) is a
+    refusal like a `ValueError` or `RuntimeError`: the property fails and the run is `fail`,
+    never an exception out of the Job. `NotImplementedError` still propagates."""
+    from pricing_core.rating import properties
+
+    def refuse(*args: Any, **kwargs: Any) -> Any:
+        raise TypeError("x")
+
+    monkeypatch.setattr(properties, "_score_context_sync", refuse)
+    run, _ = run_regression(bundle, _suite([prop]), rating_version_ref=_REF, now=_now)
+    assert [p.status for p in run.property_results] == ["fail"]
+    assert run.overall == "fail"
