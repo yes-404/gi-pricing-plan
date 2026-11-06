@@ -227,3 +227,5 @@ only. **Safe in parallel for building.** Its gate goes after R, A and D; its DB 
 1. **Every cite was read** at `2f108b1e`; `PL-1856`'s moved paths are corrected. 2. **Requirements by id**, no range. 3. **Placeholders:** `_unenforced_total`'s
 body is left to R0's read, with both forms named. 4. **Each limb's red is a mutation or a planted case,** since these tests assert behaviour believed to hold;
 an unmutated red is A2. 5. **Calendar:** 12 Nov 2026 is a Thursday, 11 Nov a Wednesday.
+
+*(Dated line, 2026-11-06, by the executor at the mint, on the lead's calls in to-lead "2026-11-06 00:01:53 GMT" (e): the "after A" ordering the plan assumed had no technical ground and lapsed. G ran single, alone, for the auditor's reason: R4's autouse guard sits under the 50 ms client timeout at load. That is an inference, unmeasured, and cheap to respect. The plan's wording that T1 "fails on the hash" is not met as worded; the requirement is met (LG-2052, Audit). SL-2051 is closed at this PR's audit commit.)*

@@ -2,7 +2,7 @@
 id: FD-1887
 family: finding
 title: A test that reads the freMTPL2 data without the data-present guard passes on a developer box and fails in CI
-status: active
+status: closed
 created: 2026-10-25   # drafted 2026-10-23 under working id 8194; minted 2026-10-25 as FD-1887
 owner: auditor
 tree: ff976406f1bf133cfe040d2c44d383011503988a
@@ -65,3 +65,5 @@ Both are owed, by WK-1178, before the P2 close.
 
 Open, owner WK-1178; **fix before close**: SL-1888 (LG-1889). Closed in place citing the PR when that slice merges.
 Filed under working id 8194.
+
+***Resolved 2026-11-06*** — closed in place 2026-11-06 by the executor, as the closing act of the mint of SL-2051 (WK-1178, LG-2052, PL-2050; this PR; its number, squash commit and merge date are written at the merge's date-of-record), on the lead's adoption of aud-slg (to-lead "2026-11-06 00:01:53 GMT"). The remedy's second step, H1 and H2, is delivered in `tests/test_fremtpl2_data_guard.py`: `_tests_the_data` makes the guard's `.exists()` name the data (`DATA_DIR`, an `ARFF` name, a data-directory alias, or a `fremtpl2` / `.arff` string); `_PATH_BUILDERS` reads `Path(...)`, `os.path.join` and `joinpath` and lowercases the marker; `_import_origins` follows `from ... import x as y`. Four new tests; at the base guard each of the five spellings was passed unflagged (`[]`, run by the auditor through `run-heavy`), and the real-tree test `test_every_test_that_reaches_the_fremtpl2_data_carries_the_guard` stays green (`12 passed`). Two existing checker-test inputs changed (`.exists()` of `DATA_DIR`), no assert touched, ruled to-lead "2026-11-05 12:03:55 GMT". Test-only.

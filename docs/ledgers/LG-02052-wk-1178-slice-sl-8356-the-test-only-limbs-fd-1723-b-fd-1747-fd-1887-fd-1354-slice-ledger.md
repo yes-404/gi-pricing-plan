@@ -2,7 +2,7 @@
 id: LG-2052
 family: ledger
 title: WK-1178 slice G (SL-2051) — the test-only limbs: FD-1723 slice B, FD-1747, FD-1887, FD-1354
-status: active                 # active → closed (§1.2a) — set `closed` only at slice close
+status: closed                 # active → closed (§1.2a)
 created: 2026-11-06   # original date 2026-11-05, working id 8357, minted 2026-11-06
 owner: executor
 tree: 9e2a1b1388bbf390d31995b35418cf4e350103db
@@ -102,9 +102,61 @@ The production limiter did not reset in any run other than by the 2 s key expiry
 
 END 23:55:31 UTC: `-n 11 dbsize` 0; AFTER `-n 0 dbsize` 56; the copy dropped (`pg_database` count 0); bucket `gip-test-blobs-8356` removed through the MinIO API (`mc ls g/` lists no such bucket); template guard `alembic_version=1 environments=3 tenant_marker=1`.
 
+**The solo gate** (the lead's; log `~/gi-pricing-plan.local/scratch/slg-gate/gate/gate.log`, read, not recalled). START `2026-11-06T04:15:36+00:00`, END `2026-11-06T06:08:17+00:00`. Object: branch `sl-8356-g-test-limbs` at `d0307aa0d4eec07d4ac7e9a9d5154575c1cbdcaa`, tree `d521000ae3e6187b3168e4c76dd33a14d6a4c828`, **before** the merge of `origin/main` and before the mint; it ran alone.
+
+| Part | Result |
+|---|---|
+| ruff, mypy, import_linter, req_coverage, contracts | rc=0 each |
+| pytest | rc=1: `13 failed, 7291 passed, 27 skipped, 5 xfailed, 151 warnings in 4842.50s (1:20:42)`; skipped 27 = the baseline |
+| audit_docs | rc=1: only check 31, on the slice's own working ids (the gap between 2043 and 8355; the `created:` order of 8355 against 2043) |
+| item 31 | the 13 FAILED are all in the eight docs-audit files (`test_audit_docs_finding_citations`, `_ids` x2, `_process_core_digest` x2, `_w37_11_ceiling`, `test_doc_index`, `test_register_lint` x3, `test_register_owed`, `test_repository_invariants` x2); no failing file outside them |
+| frontend: install, generate:api, lint, type-check, test, build | rc=0 each |
+| demo (`--journey wf-699`) | rc=0, designed stop with both lines seen, 1558 s; dislocation #1 530 s |
+| D7 | ok: "D7's total and both attribution limbs equal on the 19985-policy sample" |
+| END parts | `python max=1 fe max=0 demo=0 restore rc_kc=0 role rc_role=0 skip rc_skip=0 infra rc_infra=0 template rc_tg=0 db0 rc_db0=0` |
+
+The mint (merge of `origin/main` at `c99a6cd818b1`, then the mint commit) came after this gate. The merge brought main's code (`backend/tests/conftest_db.py`'s read-only session-start migration check among it); the slice is test-only and ran without it. `comm` of the non-docs paths of the slice against main's delta since `b911432a` is empty, but a shared fixture is not proved by a path comparison: **CI's full suite at the merged head is the proof.**
+
 ### Audit
 
-(The auditor's, with the lead's adoption, in the audit's own commit.)
+
+*(Proposal by aud-slg, 2026-11-06, for the lead's adoption. Object: `git worktree` `aud-slg` at detached
+`2b31d9246a03f814bb7c4eeb6371168a01750c70`, tree `58bce6d1cb89b6d20a162ac9e13ffaf0c11cff6e`; the window's code tree is `5d7d3066`
+and only this ledger changed after it (`git diff --name-only 5d7d3066 2b31d924`). Range: `origin/main...2b31d924`, with
+`origin/main` = `5e5c83f7`; plan head `2f108b1e` is an ancestor of `origin/main`
+(`git merge-base --is-ancestor 2f108b1e origin/main` rc 0). Scope derived from PL-2050 A1 to A11, then read to the assert.)*
+
+| Item | Verdict | Read |
+|---|---|---|
+| A1 test-only | MET | `git diff --name-only origin/main...HEAD -- backend/src packages/pricing-core/src packages/model-schema/src frontend deploy scripts` prints nothing. Changed: 6 test files, PL, LG, `docs/INDEX.md`. |
+| A2 unmutated red | MET | T4's first form red unmutated (`GbmSpec` refuses a one-feature group), stopped, ruled "14:05:07 GMT", rewritten as groups (a,b), (c,d). Two FD-1887 checker-test **inputs** changed (`.exists()` of `DATA_DIR`), no assert touched, ruled "12:03:55 GMT". |
+| A3 / A4 T1 (FR-41) | **MET for the requirement; the plan's "fails on the hash" NOT MET as worded; lead to adopt or owe** | The mutation (`list(recipe)[:-1]` stored) reds on `assert stored == _REPLAY_RECIPE`, before `second_hash == first_hash`. On deterministic code a replay with the same steps cannot differ in hash unless the stored steps differ, so the equality assert fires first by construction; the hash assert is the requirement's statement and has the vacuity control (`plain` hash differs). No mutation isolates the hash assert alone: owed only if the lead wants one (it needs an apply path that differs between the first and second ingest, which no real defect has). |
+| A5 T2 (FR-33) | MET, with a recorded deviation | The test does what the plan says (refused key, then `reused is False`, version 1). The plan's mutation "write a failed run" was unworkable as worded (the unit of work rolls back on the raise); the window's committed-run mutation reds `assert True is False`. The test does not assert that the refusal wrote no run row; the retry's `reused is False` is the evidence. |
+| A6 T3 (FR-80) | MET for the dataset-version read; the Model half is not mutated | Red `assert 404 == 200` with `get_version_by_id` refusing `archived`. The "Model fitted on it" is a hand-inserted `ModelRow` (draft), not a fit; its read and the resolve are asserted green but no mutation targets the model read. Old row test stays (G6). |
+| A7 T4 (FR-123) | MET | Both backends; red `a path splits on both groups` x2 with the assignment replaced by `pass` at `gbm.py:867`, `:1020`; `git diff --quiet` rc 0. The "predictions differ" threshold (mean abs > 0.05) is not exercised by the mutation (the path assert fires first). |
+| A8 R4 (FD-1747) | MET | Mutation log `sl8356-w-r4-red2.log`: **4 failed, 4 errors**; each of four tests has a teardown `ERROR ... limiter not enforced: it failed open in this test` beside its `assert 409 == 429` body failure. **LG correction: it says two `409 == 429` body failures; the log has four** (lines 221, 272, 319, 371). The earlier dead-`GIP_REDIS_URL` try errored at start-up with no such line: correctly not counted. Limit: the red is shown on tests that already fail on a fail-open; no test is shown that passes while failing open. |
+| FD-1747 reproduction | MET as a test-side proof; **the LG's production sentence is wider than the evidence** | Logs `sl8356-w-repro-gap25.log` (`assert 409 == 429`, rc 1), `-gap0.log` (rc 0), `-gap25-ttl3600.log` (rc 0), all `head=5d7d3066`, on a harness that pins the clock. The HIGH trigger reads "if the by-run reproduction shows the production limiter, not the test, can reset (a real-clock case this analysis missed)". Every run pinned the clock, so none tested a real clock; "no sign of the HIGH trigger" is true, but the production claim rests on the essay's argument (a 2 s TTL set inside a 1 s window cannot lapse inside it), not on these runs. Adopt: "The reproduction proves the pin is the cause; it does not run the production limiter on a real clock." |
+| A9 FD-1887 | MET | `tests/test_fremtpl2_data_guard.py` 12 passed over the real tree. At base `2f108b1e` each spelling passes unflagged, run by the auditor through `run-heavy` (`scratch/aud-slg/base/probe.py`): lowercase join `[]`, `Path(...)` `[]`, `os.path.join` in a function `[]`, `import ... as` `[]`, `if other.exists(): skip` `[]`. The LG's base red shows only the first failing source of the looped H1 test; the five are now individually shown. |
+| A10 T8 (FD-1354) | MET | All four phrases sit at `metrics.py:122` (two), `:135`, `:152`; plant red `1 failed`; the test file is the only exclusion. `req("FR-157")` is the custom-metric certificate requirement. |
+| A11 gate and records | OWED-TO-GATE | Gate not run (the lead's). GREEN by import closure: changed modules are tests; importers by `import` (not text): `backend/tests/test_lineage_census_carveout.py` imports `test_lineage`, `packages/pricing-core/tests/test_transparency.py` imports `test_gbm`. Both are owed-to-gate beside the six changed files. |
+
+**Common items.** 40: spec-reading predicate `grep -lE 'docs/specs|"docs" */ *"specs"' backend/tests tests` is the gate's; the slice changes no spec row. 41: the slice changes nothing under `scripts/`; `tests/test_fremtpl2_data_guard.py` is not copied by a fixture (`grep -rnE 'copytree|shutil.copy'` hits `tests/test_doc_id_migrate.py`, `test_template_headers.py` and others, none on this file). 42: `git grep -n -E "8356" origin/main -- docs/roadmap.md` prints nothing; the `SL-` row is added at the mint and must read closed by the close commit of this audit. 43: no API request shape changes, no route added; `backend/tests/test_api_authorisation_sweep.py` is owed-to-gate, not run.
+
+**Static checks.** `audit-docs.py` on this tree: 4 failures, all the pre-mint working ids (check 31 gap, check 32 x2 for LG-8357, check 39 stale INDEX); rc 1 expected until the mint.
+
+**NOT MET:** none outright. **Owed or lead's call:** T1's hash-only mutation; FD-1747's production sentence; the LG's "two" -> "four".
+
+**The lead's adoption** (to-lead "2026-11-06 00:01:53 GMT", the four calls; the rows above stand as the auditor wrote them, and these lines are read with them):
+
+(a) **T1, FR-41: met, with a note.** The mutation trips the recipe equality before the hash assert; on deterministic code no real defect isolates the hash assert, so no hash-only mutation is owed. The plan's "fails on the hash" is **not met as worded**; the requirement is met.
+
+(b) **LG line corrected.** R4's red has **four** `assert 409 == 429` body failures, not the two the Gate table's R4 row says (`sl8356-w-r4-red2.log` lines 221, 272, 319, 371). The R4 row above is the earlier entry and is not rewritten; this line is the correction.
+
+(c) **FD-1747 closes** on the wording that proves the test pin: the reproduction proves the pin is the cause; it does not run the production limiter on a real clock. "Production safety rests on the 2 s TTL argument" stays stated as an argument. Every run pinned the clock; no HIGH trigger fires.
+
+(d) **The GREEN set gains** `backend/tests/test_lineage_census_carveout.py` and `packages/pricing-core/tests/test_transparency.py`, the two importers of the changed test files; both ran in the gate's full pytest (below).
+
+(e) **Item 42.** The `SL-2051` row did not exist at `origin/main` (`git grep -n -E "SL-2051|8356" origin/main -- docs/roadmap.md` prints nothing); the mint added it as `active`, and the close commit of this audit sets it `closed`. Read at the merged head after this commit, it reads `closed`.
 
 ### Build log
 
