@@ -441,7 +441,7 @@ async def record_certificate(
     From `draft` or `certified`, a `failed` certificate is **recorded and leaves the metric
     in `draft`** as `custom_metric.certification_failed`, and a re-certification that fails
     also **clears `certificate_id`** — from any later status the run moves nothing and is
-    `custom_metric.certificate_recorded` (PL 8376 DP-1, DP-3);
+    `custom_metric.certificate_recorded` (PL-2059 DP-1, DP-3);
     `objectives.record_certificate`'s reasoning applies unchanged.
     """
     row = await _get_or_404(session, workspace_id=workspace_id, metric_id=metric_id)
@@ -459,7 +459,7 @@ async def record_certificate(
 
     failed = result.overall is CertificateOutcome.FAILED
     # Re-checked here: the route's refusal ran before the Job existed, so a run queued at
-    # `certified` can end after submission (PL 8376 DP-3).
+    # `certified` can end after submission (PL-2059 DP-3).
     moved = before in {MetricStatus.DRAFT.value, MetricStatus.CERTIFIED.value}
     if moved:
         row.status = (MetricStatus.DRAFT if failed else MetricStatus.CERTIFIED).value

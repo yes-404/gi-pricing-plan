@@ -648,7 +648,7 @@ async def record_certificate(
     in `draft`**, as `custom_objective.certification_failed`. From any later status (a run
     that ends after submission) the certificate row is kept, the status and `certificate_id`
     move nothing, and the event is `custom_objective.certificate_recorded` with the result in
-    `after` (PL 8376 DP-1, DP-3). The rest of this paragraph is the `draft` case — recorded
+    `after` (PL-2059 DP-1, DP-3). The rest of this paragraph is the `draft` case — recorded
     because the finding is the answer the run was asked for, and `draft` because a status
     past it is a claim that the derivatives were proven and they were not.
 
@@ -672,7 +672,7 @@ async def record_certificate(
 
     failed = result.overall is CertificateOutcome.FAILED
     # Re-checked here: the route's refusal ran before the Job existed, so a run queued at
-    # `certified` can end after submission (PL 8376 DP-3).
+    # `certified` can end after submission (PL-2059 DP-3).
     moved = before in {ObjectiveStatus.DRAFT.value, ObjectiveStatus.CERTIFIED.value}
     if moved:
         row.status = (ObjectiveStatus.DRAFT if failed else ObjectiveStatus.CERTIFIED).value

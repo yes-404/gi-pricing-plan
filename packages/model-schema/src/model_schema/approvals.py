@@ -78,7 +78,7 @@ class Decide(BaseModel):
 
 
 #: A request is created in `review`, so `draft → review` and `changes_requested → draft` have
-#: no writer and were dropped (PL 8376 DP-12). FR-355's return to `draft` belongs to the
+#: no writer and were dropped (PL-2059 DP-12). FR-355's return to `draft` belongs to the
 #: artifact, whose own map carries it; a resubmission is a new request, so the reviewer's
 #: concerns and their resolution both stay visible.
 VALID_APPROVAL_TRANSITIONS: Final[dict[ApprovalStatus, frozenset[ApprovalStatus]]] = {

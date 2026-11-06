@@ -691,7 +691,7 @@ async def test_a_rejected_rating_version_returns_to_draft_with_a_true_audit_befo
                 ).order_by(AuditEventRow.sequence)
             )
         ).all()
-    # Both moves, in order: the submit (`rating_version.submitted`, SL 8377) then the rejection.
+    # Both moves, in order: the submit (`rating_version.submitted`, SL-2060) then the rejection.
     assert [(b["status"], a["status"]) for b, a in moves] == [
         ("draft", "review"),
         ("review", "draft"),

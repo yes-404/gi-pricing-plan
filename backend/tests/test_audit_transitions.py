@@ -1,7 +1,7 @@
 """FR-7: every declared transition emits its Audit Event (`00` FR-7; `06` FR-368).
 
-SL 8377 / PL 8376, FD-1723's FR-7 limb. T1 first: the two events whose name says a state that
-did not happen, and the certificate that lands under a review (PL 8376 DP-1, DP-3).
+SL-2060 / PL-2059, FD-1723's FR-7 limb. T1 first: the two events whose name says a state that
+did not happen, and the certificate that lands under a review (PL-2059 DP-1, DP-3).
 
 A failed certification run is `<type>.certification_failed`, never `<type>.certified`, from
 `draft` or from `certified`. A run that ends after submission (any status outside `draft` and
@@ -318,7 +318,7 @@ async def test_a_failed_certificate_says_so(
     database: Database, workspace_id: UUID, kind_name: str, before: str
 ) -> None:
     """A failed run is `<type>.certification_failed` with the true `before` and `after`
-    (PL 8376 DP-1): the audit trail never tells a reader a failed run "certified" it."""
+    (PL-2059 DP-1): the audit trail never tells a reader a failed run "certified" it."""
     kind = KINDS[kind_name]
     actor = await _actuary(database, workspace_id)
     row = await kind.create(database, workspace_id, actor)
@@ -351,7 +351,7 @@ async def test_a_late_certificate_moves_nothing(
     result_name: str,
 ) -> None:
     """A run that ends after submission keeps its certificate row, moves nothing, does not
-    repoint `certificate_id`, and is recorded as `<type>.certificate_recorded` (PL 8376 DP-3):
+    repoint `certificate_id`, and is recorded as `<type>.certificate_recorded` (PL-2059 DP-3):
     an approver reviews what was submitted, and a failed run landing under a review is readable."""
     kind = KINDS[kind_name]
     result = kind.passed if result_name == "passed" else kind.failed
@@ -408,7 +408,7 @@ async def test_a_late_certificate_moves_nothing(
 async def test_the_first_of_two_approvals_is_a_decision_not_a_state(
     database: Database, workspace_id: UUID
 ) -> None:
-    """`approval_request.approve` names a decision (PL 8376 DP-2): on the first of two the
+    """`approval_request.approve` names a decision (PL-2059 DP-2): on the first of two the
     request stays in `review`, and the row says how many approvers are recorded."""
     first = _user("a1")
     await _with_role(database, workspace_id, first, "approver")
@@ -458,7 +458,7 @@ async def _events_named(database: Database, workspace_id: UUID, action: str) -> 
 async def test_submitting_a_rating_version_emits_its_event(
     database: Database, workspace_id: UUID
 ) -> None:
-    """`draft → review` is built (PL 8376 DP-6) and owes `rating_version.submitted`, on the
+    """`draft → review` is built (PL-2059 DP-6) and owes `rating_version.submitted`, on the
     version's own ArtifactRef, found by a query on that `entity_ref`."""
     analyst = await _principal(database, workspace_id, "analyst")
     actuary = await _principal(database, workspace_id, "pricing_actuary")
@@ -498,7 +498,7 @@ async def test_executing_a_deployment_request_emits_its_event(
     workspace_id: UUID,
     seat: Any,  # noqa: F811
 ) -> None:
-    """`approved → executed` is built (PL 8376 DP-6) and owes `deployment_request.executed`,
+    """`approved → executed` is built (PL-2059 DP-6) and owes `deployment_request.executed`,
     on the request's own reference."""
     submitter, ref, request = await _request_for_prod(client, database, workspace_id, seat)
     await _approve(client, seat, submitter, request["ref"])
@@ -514,7 +514,7 @@ async def test_executing_a_deployment_request_emits_its_event(
     assert event.after == {"status": "executed"}
 
 
-# -- the table: every declared transition, two legs (PL 8376 T3) ------------------------------
+# -- the table: every declared transition, two legs (PL-2059 T3) ------------------------------
 
 
 @dataclass(frozen=True)
@@ -1721,7 +1721,7 @@ DEPLOYMENT_ROWS = [
 ]
 
 
-# Creation rows (PL 8376 DP-4 (a)): the event that brings a governed Artifact into existence.
+# Creation rows (PL-2059 DP-4 (a)): the event that brings a governed Artifact into existence.
 # `before is None`; the entity reference exists only after `perform`, so the commit leg finds
 # the event by its action alone.
 
@@ -1929,7 +1929,7 @@ ROWS: list[Row] = [
 ]
 
 
-# The two guards and the table's test (PL 8376 T3).
+# The two guards and the table's test (PL-2059 T3).
 
 MAPS: dict[str, dict[Any, frozenset[Any]]] = {
     "approval_request": VALID_APPROVAL_TRANSITIONS,
@@ -1944,15 +1944,15 @@ MAPS: dict[str, dict[Any, frozenset[Any]]] = {
 
 #: Declared, with no writer in P2: the reason is the ruling that carried the edge. Never empty.
 NOT_BUILT: dict[tuple[str, str, str], str] = {
-    ("custom_objective", "draft", "deprecated"): "PL 8376 DP-9, carry C2 (FD-2007)",
-    ("custom_objective", "certified", "deprecated"): "PL 8376 DP-9, carry C2 (FD-2007)",
-    ("custom_objective", "approved", "deprecated"): "PL 8376 DP-9, carry C2 (FD-2007)",
-    ("custom_metric", "draft", "deprecated"): "PL 8376 DP-9, carry C2 (FD-2007)",
-    ("custom_metric", "certified", "deprecated"): "PL 8376 DP-9, carry C2 (FD-2007)",
-    ("custom_metric", "approved", "deprecated"): "PL 8376 DP-9, carry C2 (FD-2007)",
-    ("peril_structure", "draft", "archived"): "PL 8376 DP-10, carry C3 (FD-2007)",
-    ("peril_structure", "reconciled", "archived"): "PL 8376 DP-10, carry C3 (FD-2007)",
-    ("peril_structure", "superseded", "archived"): "PL 8376 DP-10, carry C3 (FD-2007)",
+    ("custom_objective", "draft", "deprecated"): "PL-2059 DP-9, carry C2 (FD-2007)",
+    ("custom_objective", "certified", "deprecated"): "PL-2059 DP-9, carry C2 (FD-2007)",
+    ("custom_objective", "approved", "deprecated"): "PL-2059 DP-9, carry C2 (FD-2007)",
+    ("custom_metric", "draft", "deprecated"): "PL-2059 DP-9, carry C2 (FD-2007)",
+    ("custom_metric", "certified", "deprecated"): "PL-2059 DP-9, carry C2 (FD-2007)",
+    ("custom_metric", "approved", "deprecated"): "PL-2059 DP-9, carry C2 (FD-2007)",
+    ("peril_structure", "draft", "archived"): "PL-2059 DP-10, carry C3 (FD-2007)",
+    ("peril_structure", "reconciled", "archived"): "PL-2059 DP-10, carry C3 (FD-2007)",
+    ("peril_structure", "superseded", "archived"): "PL-2059 DP-10, carry C3 (FD-2007)",
 }
 
 #: Statuses no P2 path may write: a writer built later owes its Audit Event and a row.
@@ -2060,7 +2060,7 @@ async def test_a_declared_transition_writes_its_event_in_its_transaction(
         assert await row.status(env, ctx) == row.after
 
 
-# The four rate-table creations (PL 8376 DP-4 (a), STOP-1 ruled (b) 2026-11-05): their writers
+# The four rate-table creations (PL-2059 DP-4 (a), STOP-1 ruled (b) 2026-11-05): their writers
 # open their own unit of work, so the rollback leg is a fault injected from the test. The seam
 # is `app.platform.rate_tables.audit.record`, the module attribute every writer's event goes
 # through; it is patched inside one test by `monkeypatch`, never autouse. The patched call

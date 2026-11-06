@@ -947,7 +947,7 @@ async def record_fit(
     row.fit_result = fit_result.model_dump(mode="json")
     row.diagnostics_id = diagnostics_row.id
     # Read, not typed: the event says what the row was (`draft` for every path that reaches
-    # here today; a path that did not would be recorded truthfully, PL 8376 / ruling of
+    # here today; a path that did not would be recorded truthfully, PL-2059 / ruling of
     # 2026-11-06 02:27:13 GMT).
     before_status = row.status
     row.status = ModelStatus.FITTED.value

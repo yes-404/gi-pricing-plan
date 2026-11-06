@@ -1,10 +1,10 @@
 ---
-id: PL-8376
+id: PL-2059
 family: plan
 kind: map
-title: WK-1178 — FD-1723's FR-7 limb, the misnamed audit events first, then every declared transition emits its event, SL-8377 — a dated Work-plan delta
-status: draft                   # draft → active → superseded | retired (§1.2a) — L1: draft→active rides the slice's PR
-created: 2026-11-05             # filed under working id 8376
+title: WK-1178 — FD-1723's FR-7 limb, the misnamed audit events first, then every declared transition emits its event, SL-2060 — a dated Work-plan delta
+status: active                  # draft → active → superseded | retired (§1.2a) — L1: draft→active rides the slice's PR
+created: 2026-11-06             # original date 2026-11-05, set at the draft; filed under working id 8376, minted 2026-11-06
 owner: planner
 tree: 850cf225797c8a63065130dc9012a2ef31b5ef55
 phase: P2
@@ -15,14 +15,14 @@ corrected_by: []
 relates: [PL-1856, FD-1723, FD-2007, FR-7, FR-368, FR-369, FR-349, FR-350, FR-351, FR-353, FR-355, FR-146, FR-157, FR-154, FR-163, FR-238, FR-370]
 ---
 
-# PL-8376 — WK-1178: FD-1723's FR-7 limb. The misnamed events first, then every declared transition (SL 8377, a dated Work-plan delta)
+# PL-2059 — WK-1178: FD-1723's FR-7 limb. The misnamed events first, then every declared transition (SL-2060, a dated Work-plan delta)
 
 > **For agentic workers:** a **dated Work-plan delta** under Lean P2 L1 (a'): it `relates:` `PL-1856` and
-> leaves it unedited. It replaces that plan's Slice D, never seated. One slice row, SL 8377. **All fifteen
+> leaves it unedited. It replaces that plan's Slice D, never seated. One slice row, SL-2060. **All fifteen
 > decision points are ruled and closed, and this text carries the rulings.** The status stays `draft` until
 > the mint, and the slice GO stays the maintainer's. The executor's skills are
 > `superpowers:test-driven-development`, `.claude/skills/python-test` and `.claude/skills/spec-change`.
-> PL 8376, SL 8377 and LG 8378 are working ids, reserved by the lead.
+> PL-2059, SL-2060 and LG-2061 were working ids 8376, 8377 and 8378 (reserved by the lead), minted 2026-11-06.
 
 ## Authority
 
@@ -178,7 +178,7 @@ verbatim, and says what it fixes. Options that were not taken are in this file's
   `<type>.certificate_recorded` carries the result, passed or FAILED, in `after`: a failed run landing under a review must be readable, so it
   cannot be swallowed as 'moved nothing'. Whether it should halt the review is the OQ candidate of the same row, not this slice. The behaviour
   change is accepted against 'test only'." So "after submission" reads as any status outside `draft` and `certified`: `review` and `approved` are the two A4 tests.
-  The Job does not fail. **A green red withdraws the guard, `.certificate_recorded` and their clause, and LG 8378 says so.**
+  The Job does not fail. **A green red withdraws the guard, `.certificate_recorded` and their clause, and LG-2061 says so.**
 - **DP-4: does FR-7 cover creation?** "DP-4 (a), dated clause at FR-7, recorded as the OQ's resolution, mirrored; the rest stay census-only." So
   yes, for each type in `00:200` and FR-353's seven, and for the entry into the Approval Request, Deployment Request and Job lifecycles: 15 rows. Question of
   record: *"Does FR-7's 'state transition' include the event that brings a governed Artifact into existence?"* The other creation and recording sites
@@ -252,7 +252,7 @@ The slice:
 - **A3. The first of two is pinned.** The row asserts `approval_request.approve`, `after.status = review`, `approvers_recorded = 1`.
 - **A4. A late certificate moves nothing and is readable (DP-3).** `-k certificate_recorded` collects 8 cases: `review`, `approved` × passed, failed × objective, metric. Each: the certificate
   row exists, status and the row's `certificate_id` are unchanged, and exactly one event `<type>.certificate_recorded` has `before.status == after.status` and `after.overall` equal to the run's result.
-  Red at base. If they are green at base, the row is withdrawn and LG 8378 says so.
+  Red at base. If they are green at base, the row is withdrawn and LG-2061 says so.
 - **A5. The two built transitions have events.** `rating_version.submitted` and `deployment_request.executed`: each red at base, with `entity_ref` the
   version's and the request's own ArtifactRef, and a query by that `entity_ref` returns it.
 - **A6. Every row, two legs.** One case per row of the table above, × `commit` (exactly one event with the row's `action`, `before.status`, `after.status`) and
@@ -262,16 +262,16 @@ The slice:
   import. Mutation: add a planted edge to a copy of one map, and it reds naming the edge. `test_a_not_built_edge_has_no_writer` reds on a planted
   `row.status = ObjectiveStatus.DEPRECATED.value` under `backend/src`.
 - **A8. A deleted event fails its row.** One mutation per writer module: `objectives`, `metrics`, `approvals`, `rating_versions`, `deployments`, `datasets`,
-  `modelling`, `perils`, `validation_rules`, `reference`, `jobs`, deleting one `audit.record(` call. LG 8378 quotes each red, `git diff --quiet -- backend/src`
+  `modelling`, `perils`, `validation_rules`, `reference`, `jobs`, deleting one `audit.record(` call. LG-2061 quotes each red, `git diff --quiet -- backend/src`
   rc 0 after each. Eleven mutations.
-- **A9. The census is printed, by its predicate.** LG 8378 carries `git grep -n -F 'audit.record(' <head> -- backend packages ':!*/tests/*'`, its
+- **A9. The census is printed, by its predicate.** LG-2061 carries `git grep -n -F 'audit.record(' <head> -- backend packages ':!*/tests/*'`, its
   count, the AST count and each site matching no row, with the reason. The list of rows is the table's, and is never derived from this.
 - **A10. A case red with no mutation is a STOP** (`PL-1856` constraint; seat brief item 13), other than A2, A4 and A5's reds at base, which are expected and named.
   Any other: stop, quote it, no assert softened.
 - **A11. Spec and code in one commit.** Each new action name and clause lands in the commit of its code. `git diff --name-only origin/main...HEAD -- docs/contracts
   frontend deploy` prints nothing. `uv run python scripts/generate-contracts.py --check` rc 0.
 - **A12. An expired grant confers nothing (DP-14 (b)).** The clause at FR-349 cites `rbac.py:190` at the slice's base and names `test_break_glass_is_time_boxed_and_expires`. Mutation: delete the two lines of the `expires_at` check
-  in `effective_permissions`, and `-k test_break_glass_is_time_boxed_and_expires` reds on its last assert. LG 8378 quotes the red, `git diff --quiet -- backend/src` rc 0 after. This test run is DB-backed: window 2, both URLs on the copy.
+  in `effective_permissions`, and `-k test_break_glass_is_time_boxed_and_expires` reds on its last assert. LG-2061 quotes the red, `git diff --quiet -- backend/src` rc 0 after. This test run is DB-backed: window 2, both URLs on the copy.
 - **A13. The OQs are mirrored (DP-4, DP-11).** For each of the two ids, `git grep -l <id> -- docs/open-questions.md docs/specs/` names `docs/open-questions.md` and its spec, `00` or `03`. DP-11's is also in `docs/roadmap.md` §10. DP-4's row reads decided and cites the clause at FR-7.
 - **A14. Each carried clause names its owner.** `git grep -n 'carry-forward list' -- docs/specs/02-modelling.md` prints the clauses at FR-154, FR-163 and `02:1664`. `NOT_BUILT` has 9 entries, each with a non-empty reason.
 
@@ -290,7 +290,7 @@ The slice:
 
 - **Seats:** one executor, seated after M in the additions, T1 + T2 first; one auditor. DP-13 needs no decision-maker. Audits take precedence when the cap binds.
 - **Ids, not reserved:** one `FD-` the lead routes for the two misnamed events, the two unevented transitions and, if DP-3's red holds, the certificate write (`PL-1856`: "STOP to the lead, who routes a new FD"; the reds are known in
-  advance, so the FD can precede the slice). The six carries need a record with FD-2007's owner line; the proposal is one `FD-` with six limbs and one register row, and the routing is the lead's. Two `OQ-` ids, both below. PL 8376, SL 8377 and LG 8378 are held.
+  advance, so the FD can precede the slice). The six carries need a record with FD-2007's owner line; the proposal is one `FD-` with six limbs and one register row, and the routing is the lead's. Two `OQ-` ids, both below. PL-2059, SL-2060 and LG-2061 are held.
 - **The two OQs, both in the Write set.** Each is mirrored in `docs/open-questions.md` and its spec's §10.
   - **DP-4's, raised and decided at once, `00` §10.** *"Does FR-7's 'state transition' include the event that brings a governed Artifact into existence?"* Decided by DP-4 (a); the resolution is the dated clause at FR-7, which it cites.
   - **DP-11's, open, `03` §10.** Draft: *"What does a Rating Version's `retired` mean, given that neither `live` nor `retired` is stored and no trigger for `retired` is specified?"* Proposed owner the P2 closure record's carry-forward list, with a row in the `docs/roadmap.md` §10 "Before Phase 3" gate. The ruling names neither; both are the lead's to confirm.
@@ -306,12 +306,12 @@ The slice:
 
 ## Tasks
 
-### SL 8377: the row. Scope: A1 to A14; `00` FR-7, `06` FR-368, FR-349, FR-351, `02` FR-146, FR-157, FR-154, FR-163, `03` FR-238; lane WK-1178; after M, with the chain's additions
+### SL-2060: the row. Scope: A1 to A14; `00` FR-7, `06` FR-368, FR-349, FR-351, `02` FR-146, FR-157, FR-154, FR-163, `03` FR-238; lane WK-1178; after M, with the chain's additions
 
 Worktree `sl-8377-fr7`, from `origin/main` at its seat, not this tree: every line number above is re-derived. The base is re-read first against
 `~/gi-pricing-plan.local/handover/fd1723-d0-enumeration-2026-11-05.md` with the predicate in Evidence.
 
-- [ ] **T1. The misnamed events.** Red first, then green, in a new `backend/tests/test_audit_transitions.py`. The reds: `test_a_failed_certificate_says_so`, both `before`s, both types; `test_a_late_certificate_moves_nothing` under `-k certificate_recorded`, A4's eight. If those eight are green at base, DP-3's limb is withdrawn: drop `moved` and `.certificate_recorded`, and record it in LG 8378.
+- [ ] **T1. The misnamed events.** Red first, then green, in a new `backend/tests/test_audit_transitions.py`. The reds: `test_a_failed_certificate_says_so`, both `before`s, both types; `test_a_late_certificate_moves_nothing` under `-k certificate_recorded`, A4's eight. If those eight are green at base, DP-3's limb is withdrawn: drop `moved` and `.certificate_recorded`, and record it in LG-2061.
 
 ```python
 # platform/objectives.py record_certificate; the same in platform/metrics.py
@@ -374,7 +374,7 @@ MAPS = {
 
 #: Declared, no writer: the reason is the ruling that carried it. Never an empty reason.
 NOT_BUILT: dict[tuple[str, str, str], str] = {
-    ("custom_objective", "draft", "deprecated"): "PL 8376 DP-9",
+    ("custom_objective", "draft", "deprecated"): "PL-2059 DP-9",
     # one line per edge: 9, the carries C2 and C3
 }
 
@@ -409,16 +409,16 @@ async def test_a_declared_transition_writes_its_event_in_its_transaction(row, le
 
   `test_a_not_built_edge_has_no_writer` reads `backend/src/**/*.py` with `pathlib` for `ObjectiveStatus.DEPRECATED`, `MetricStatus.DEPRECATED` and `PerilStructureStatus.ARCHIVED`. A hit fails it, naming the
   file: a writer built later owes its event. Markers on `test_audit.py:62` and `test_deployments.py:542` stay. Commit.
-- [ ] **T4. Prove it.** The eleven mutations, A12's and A7's two plants, each red quoted, reverted, `git diff --quiet` rc 0. The census (A9). Closure-derived GREEN (seat brief item 29), in LG 8378. The docs check. Commit.
+- [ ] **T4. Prove it.** The eleven mutations, A12's and A7's two plants, each red quoted, reverted, `git diff --quiet` rc 0. The census (A9). Closure-derived GREEN (seat brief item 29), in LG-2061. The docs check. Commit.
 - [ ] **T5. Close** as `PL-1856` B3, on the lead's gate grant. Each DP's ruling is cited in the LG, by the entry "2026-11-05 16:39:14 GMT".
 
 ### Write set
 
 `backend/src/app/platform/objectives.py`, `metrics.py`, `rating_versions.py`, `deployments.py`; `packages/model-schema/src/model_schema/rating.py`, `approvals.py`; new
 `backend/tests/test_audit_transitions.py`; `docs/specs/00-overview.md` (`:128`, FR-7, §10), `02-modelling.md` (FR-146, FR-154, FR-157, FR-163, `:1664`), `03-rating-engine.md` (FR-238, `:1044`, §10),
-`06-governance.md` (FR-349, FR-351, FR-368); `docs/open-questions.md` (DP-4's OQ and DP-11's); LG 8378; `docs/roadmap.md` (the SL row, and the §10 gate row of DP-11's OQ); this plan (`status:` only); `docs/INDEX.md`. The FD records are their owners'.
+`06-governance.md` (FR-349, FR-351, FR-368); `docs/open-questions.md` (DP-4's OQ and DP-11's); LG-2061; `docs/roadmap.md` (the SL row, and the §10 gate row of DP-11's OQ); this plan (`status:` only); `docs/INDEX.md`. The FD records are their owners'.
 
-**Dated delta, 2026-11-06 (ruling to-lead "2026-11-06 02:27:13 GMT", after A10 stopped `SL 8377` on `model.fitted`):** `backend/src/app/platform/modelling.py` (`record_fit`'s event) and `backend/tests/test_model_nfrs.py` join this Write set; `docs/specs/02-modelling.md` is already in it and gains a dated correction at §9 and a dated amendment on NFR-484. The Evidence table's reference "949" for the `model.fitted` writer is re-read at `ac123679`: `modelling.py:949` is the `row.status = FITTED` assignment inside `record_fit`; the `audit.record` of `model.fitted` is at `:986`. Row `draft>fitted` of the table now asserts `before.status == "draft"`, as every other transition row does. No status guard is added (out of this slice).
+**Dated delta, 2026-11-06 (ruling to-lead "2026-11-06 02:27:13 GMT", after A10 stopped `SL-2060` on `model.fitted`):** `backend/src/app/platform/modelling.py` (`record_fit`'s event) and `backend/tests/test_model_nfrs.py` join this Write set; `docs/specs/02-modelling.md` is already in it and gains a dated correction at §9 and a dated amendment on NFR-484. The Evidence table's reference "949" for the `model.fitted` writer is re-read at `ac123679`: `modelling.py:949` is the `row.status = FITTED` assignment inside `record_fit`; the `audit.record` of `model.fitted` is at `:986`. Row `draft>fitted` of the table now asserts `before.status == "draft"`, as every other transition row does. No status guard is added (out of this slice).
 
 ### Files shared
 

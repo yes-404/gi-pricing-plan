@@ -230,7 +230,7 @@ async def test_fit_start_and_completion_are_audited_and_creation_carries_no_befo
     `model.fitted` (completion). **The four creates carry no `before`**, and this test asserts
     that they do not; `model.fitted` is not a create (the row exists from `model.reserved`,
     at `draft`), so it carries `before.status == "draft"` and `after.status == "fitted"`
-    (`02` §9's dated correction of 2026-11-06, PL 8376).
+    (`02` §9's dated correction of 2026-11-06, PL-2059).
 
     Asserted rather than fixed, because the fix is a decision and not a keystroke. These
     artifacts are versioned, never edited: `create_factor`, `create_banding` and
