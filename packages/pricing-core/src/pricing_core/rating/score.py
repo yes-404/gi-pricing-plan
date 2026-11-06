@@ -224,8 +224,12 @@ from pricing_core.rating.ladder import (
     rung_output_name,
 )
 from pricing_core.rating.runtime import (
+    CELL_GUARD_PREFIX,
+    MISS_GUARD_PREFIX,
     MODEL_CALL_ERROR_KEY,
+    UNPARSEABLE_CELL,
     CompiledBundle,
+    PurposeEvaluation,
     clamp_keys,
     exact_key,
 )
@@ -514,6 +518,23 @@ def _check_model_call_sentinel(result: Mapping[str, Any]) -> None:
         raise CodedError(str(result[MODEL_CALL_ERROR_KEY]))
 
 
+def _check_unparseable_cells(algorithm: RatingAlgorithm, result: Mapping[str, Any]) -> None:
+    """A rate-table cell the engine cannot parse is a hard error, on every `on_miss` (FD-1648
+    (b), FD-1478; FR-255). `to_wire` writes such a cell as `UNPARSEABLE_CELL`, so the output
+    exists where the engine would omit it, and it reaches `result` whether or not anything
+    consumes it or tolerates it. Runs before `_check_lookup_misses`: a bad cell is not a miss.
+    A message names the step, never the value or the quote."""
+    for step in algorithm.steps:
+        if isinstance(step, RatingTableStep) and any(
+            result.get(str(name)) == UNPARSEABLE_CELL for name in _as_list(step.produces)
+        ):
+            _raise_named(
+                "RATE_TABLE_CELL_UNPARSEABLE",
+                f"table step {step.step_id!r} matched a stored cell the rating engine cannot "
+                "read (FR-255)",
+            )
+
+
 def _check_lookup_misses(algorithm: RatingAlgorithm, result: Mapping[str, Any]) -> None:
     """FR-255 categories 2/3: a `table`/`lookup` step with `on_miss="error"` whose
     `produces` name did not survive evaluation found no matching row — verified live
@@ -547,7 +568,9 @@ def _failing_node(exc: RuntimeError) -> str | None:
     return node if isinstance(node, str) else None
 
 
-def _reraise_engine_failure(algorithm: RatingAlgorithm, exc: RuntimeError) -> NoReturn:
+def _reraise_engine_failure(
+    evaluation: PurposeEvaluation, context: Mapping[str, Any], exc: RuntimeError
+) -> NoReturn:
     """A finding, not merely a fallback: a `table`/`lookup` miss whose `produces` name is
     then referenced by a downstream step crashes `async_evaluate()` itself (the engine's
     own "undefined variable" `NodeError`) **before any `result` is returned**, so
@@ -555,47 +578,42 @@ def _reraise_engine_failure(algorithm: RatingAlgorithm, exc: RuntimeError) -> No
     verified live, reproduced by this module's own test suite. `model_call` failures no
     longer reach here at all (they are sentinelled — see the module docstring).
 
-    **Which code (RL-1313 DP-G4).** The engine's error is JSON and its `nodeId` is the
-    failing step's id, for an expression, a condition and a clamp bound alike. A miss code is
-    reported only when that step *directly consumes* the output of an `on_miss="error"`
-    `table` (`RATE_TABLE_MISS`) or `lookup` (`REFERENCE_LOOKUP_MISS`) step. Any other
-    engine failure — including one whose `nodeId` is missing or unparseable, and the former
-    bare re-raise — is `RATING_EVALUATION_FAILED`, so no untyped `RuntimeError` escapes
-    (FR-255).
-
-    **The stated limit, pinned by `test_the_stated_residual_still_reports_the_miss_code`.**
-    A failing step that itself directly consumes such an output, and fails for another reason,
-    still reports the miss code: the engine's error has the same shape in both cases. That is
-    a wrong diagnosis on a refused quote, never a silent price. Closing it needs the
-    wire-level change that would make the translation itself fail gracefully, which is outside
-    this function.
+    **Which code (FD-1659, FD-1478; FR-255).** The engine's error is JSON and its `nodeId` is
+    the failing step's id, which cannot tell a miss from any other failure of a step that
+    consumes the output: the engine's error has the same shape in both. So the quote is
+    re-run through the diagnostic decision (`evaluation.diagnose`), which carries a guard node
+    after each table or lookup, and the guard's own id says what failed: an unparseable cell
+    (`RATE_TABLE_CELL_UNPARSEABLE`), or a miss of an `on_miss="error"` step
+    (`RATE_TABLE_MISS` / `REFERENCE_LOOKUP_MISS`, for *that* step). Anything else, including
+    no guard firing and a failure with no `nodeId`, is `RATING_EVALUATION_FAILED`, so no
+    untyped `RuntimeError` escapes. The live decision has no guards: a node per table on every
+    quote would sit after the NFR-489 readings, and a quote that scores pays nothing (DP-R1).
     """
-    node = _failing_node(exc)
+    algorithm = evaluation.algorithm
+    diagnosed = evaluation.diagnose(context)
+    guard = _failing_node(diagnosed) if diagnosed is not None else None
+    guarded_step = None
+    code = "RATING_EVALUATION_FAILED"
+    if guard is not None and guard.startswith(CELL_GUARD_PREFIX):
+        guarded_step = guard[len(CELL_GUARD_PREFIX) :]
+        code = "RATE_TABLE_CELL_UNPARSEABLE"
+    elif guard is not None and guard.startswith(MISS_GUARD_PREFIX):
+        guarded_step = guard[len(MISS_GUARD_PREFIX) :]
+        missed = next((s for s in algorithm.steps if s.step_id == guarded_step), None)
+        code = (
+            "RATE_TABLE_MISS" if isinstance(missed, RatingTableStep) else "REFERENCE_LOOKUP_MISS"
+        )
+    node = guarded_step or _failing_node(exc)
     step = next((s for s in algorithm.steps if s.step_id == node), None)
-    consumed = set(_as_list(step.consumes)) if step is not None else set()
-
-    tables = [s for s in algorithm.steps if isinstance(s, RatingTableStep) and s.on_miss == "error"]
-    lookups = [
-        s for s in algorithm.steps if isinstance(s, RatingLookupStep) and s.on_miss == "error"
-    ]
-
-    def consumes_output_of(steps: Sequence[RatingTableStep | RatingLookupStep]) -> bool:
-        return any(consumed & set(_as_list(s.produces)) for s in steps)
-
-    if consumes_output_of(tables):
-        code = "RATE_TABLE_MISS"
-    elif consumes_output_of(lookups):
-        code = "REFERENCE_LOOKUP_MISS"
-    else:
-        code = "RATING_EVALUATION_FAILED"
     _raise_named(
         code,
         f"the engine failed evaluating step {step.step_id if step else None!r} (FR-255); "
-        + (
-            "an on_miss='error' step it consumes most likely found no matching row"
-            if code != "RATING_EVALUATION_FAILED"
-            else "the failure is not a table or lookup miss"
-        )
+        + {
+            "RATE_TABLE_CELL_UNPARSEABLE": "it matched a stored cell the rating engine cannot read",
+            "RATE_TABLE_MISS": "the step found no matching row",
+            "REFERENCE_LOOKUP_MISS": "the step found no matching row",
+            "RATING_EVALUATION_FAILED": "the failure is not a table or lookup miss",
+        }[code]
         + f"; the engine error was a {type(exc).__name__}",
     )
 
@@ -961,6 +979,7 @@ def build_scoring_result(
     # (`RL-1628` condition 1), so a clamp inside a purpose mount is in the ladder.
     algorithm = bundle.evaluation_for(ctx.purpose).algorithm
     _check_model_call_sentinel(result)
+    _check_unparseable_cells(algorithm, result)
     _check_lookup_misses(algorithm, result)
     decline_reasons, clamp_reason_codes = _apply_constraints(algorithm, result)
 
@@ -1036,7 +1055,7 @@ async def score_one(
     try:
         out = await evaluation.decision.async_evaluate(context, {"trace": trace})
     except RuntimeError as exc:
-        _reraise_engine_failure(algorithm, exc)
+        _reraise_engine_failure(evaluation, context, exc)
     eval_ms = (time.perf_counter() - t_eval) * 1000
 
     scored = build_scoring_result(
@@ -1217,7 +1236,7 @@ def _score_context_sync(
             evaluation.decision.evaluate(context)
         )
     except RuntimeError as exc:
-        _reraise_engine_failure(algorithm, exc)
+        _reraise_engine_failure(evaluation, context, exc)
 
     return build_scoring_result(
         bundle, ctx, rating_version_ref, out["result"], out.get("trace") if trace else None
