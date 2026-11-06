@@ -3555,6 +3555,48 @@ relates: [FD-1648, FD-1767, FD-1780, FD-1781, PL-2019, LG-2021]
 
 Every path that writes a rate-table cell value checks it against the rating engine's expression parser before commit and refuses the whole write, naming the first refused cell, with `RATE_TABLE_CELL_UNPARSEABLE` (FR-234, `03` §5.2); compile and score carry the same code as a backstop (FR-240), and a value the platform computes is written in fixed point. `FD-1767`, `FD-1780` and `FD-1781` are closed by it and `FD-1648` gains its line, per `PL-2019` section "R1, SL-2020" (plan of record; the other cut, SL 8345, is R2's). Its ledger is `LG-2021`.
 
+#### SL-2023 — WK-1178 slice — FD-1748 and FD-1800: the FR-1530 test awaits the lazy chunk
+
+```yaml
+id: SL-2023
+family: slice
+title: WK-1178 slice — FD-1748 and FD-1800, the FR-1530 test awaits the lazy chunk
+status: closed                    # draft → active → closed (§1.2a)
+created: 2026-11-05
+owner: lead
+tree: e6cdcd15c72ad85d293d58072a31740bb1cc49bf
+phase: P2
+work: WK-1178
+corrected_by: []
+relates: [FD-1748, FD-1800, FR-1530, PL-2022, LG-2024]
+```
+
+Test only, no spec change. In `frontend/src/views/__tests__/RatingDesignView.test.ts`, the `beforeAll` awaits the dynamic import of `DagDesigner.vue` that the view's `defineAsyncComponent` loads, so a `findBy` waits for the draw and never for the chunk import (FR-1530's test). No timer is changed. `FD-1748` and `FD-1800` close at the merge (the auditor's act), per `PL-2022` section "SL-2023". Its ledger is `LG-2024`.
+
+*(Closed 2026-11-05 by the audit commit of the slice's PR, on the lead's adoption of aud-slf, from-lead "2026-11-05 16:23:45 GMT"; the row read `active` at the mint head a93b1cdf.)*
+
+#### SL-2026 — WK-1178 slice — FD-1384: `FactorCreate.slug` takes the Factor grammar at the write boundary
+
+```yaml
+id: SL-2026
+family: slice
+title: WK-1178 slice — FD-1384, FactorCreate.slug takes the Factor grammar at the write boundary (FR-83)
+status: closed                    # draft → active → closed (§1.2a)
+created: 2026-11-05
+owner: lead
+tree: 07fba0f4065b12c8475fa8727bd195b497b32dc2
+phase: P2
+work: WK-1178
+corrected_by: []
+relates: [FD-1384, FD-1799, RL-1383, FR-83, FR-209, PL-2025, LG-2027]
+```
+
+`POST /api/v1/factors` refuses a slug outside the Factor pattern (`00` §4.3): 422 `VALIDATION_FAILED` naming `slug` (FR-83); a stored slug is never re-validated on read (FR-209). `FactorSlug` is added to `packages/model-schema/src/model_schema/refs.py` and `FactorCreate.slug` in `backend/src/app/api/models.py` takes it; the generated contracts change with it. `FD-1384` closes at the merge (the auditor's act), per `PL-2025` section "SL-2026". Its ledger is `LG-2027`.
+
+(Minted 2026-11-05 from working id 8328, with the mint tool of record `mint-repoint.py`; plan PL-2025 (working id 8327), ledger LG-2027 (working id 8329). `tree` is the gated tree of the slice branch before the merge of `origin/main`.)
+
+*(Closed 2026-11-06 by the audit commit of the slice's PR, on the lead's adoption of aud-slc, `from-lead-2026-10-09.md` "2026-11-05 16:34:01 GMT"; the row was added `active` at the mint head `4452f7a1`, and no row existed at `origin/main` `7761a9d3da4b`.)*
+
 ### WK-1250 — Sub-graph composition and MTA/cancellation pricing — FR-217's inlining and FR-218's authoring half
 
 ```yaml

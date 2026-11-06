@@ -2,12 +2,12 @@
 id: FD-1800
 family: finding
 title: FR-1530 in RatingDesignView.test.ts fails about one run in three on main, with a findBy timeout of the default 1000 ms
-status: active
+status: closed
 created: 2026-10-18   # filed 2026-10-17 under working id 8103; minted 2026-10-18 as FD-1800
 owner: auditor
 tree: 9469721db3d26480824cc1d715da2ec4ca9044d0
 corrected_by: []
-relates: [WK-1178, SL-1740, SL-1547]
+relates: [WK-1178, SL-1740, SL-1547, SL-2023, LG-2024, PL-2022]
 ---
 
 # FD-1800 — FR-1530 in RatingDesignView.test.ts fails about one run in three on main, with a findBy timeout of the default 1000 ms
@@ -80,3 +80,5 @@ Deferred with an owner: WK-1178. Decision on the option is the lead's or an RL's
 picks none. The event that next discharges it: a merged change to the test (or its setup) plus a
 repeated run under load that does not fail (more than the three solo runs above), or a dated
 ruling accepting the absence. Filed under working id 8103.
+
+***Resolved 2026-11-05*** — closed in place 2026-11-05 by the auditor, as the closing act of the mint of SL-2023 (WK-1178, LG-2024, PL-2022; this PR; its number, squash commit and merge date are written at the merge's date-of-record), on the lead's brief under the GO to-lead "2026-11-05 10:36:35 GMT" (DP-F1, DP-F2), with the ruling "2026-11-05 09:51:53 GMT" recorded: The maintainer (by delegation) ruled FD-1800 option (b), the same deterministic wait as FD-1748's ("(3)"), one slice carrying both; its event, "a merged change plus a repeated run under load that does not fail", is met by the 20 runs, so the hypothesis that the chunk is the whole cause held. Delivered remedy: `RatingDesignView.test.ts` `beforeAll` awaits `import("@/components/dag/DagDesigner.vue")`, the chunk the view's `defineAsyncComponent` loads, so `findByLabelText` waits for the draw and never for the import; no timer changed, `RatingDesignView.vue` untouched. Red first, by cause, in LG-2024 R1: with an injected 1200 ms delayed-import mock (not committed) at base `c218fc5a`, FR-1530 failed at 1015 ms with `Unable to find a label with the text of: input step Driver age (s_in_age)`; R2 passes under the same mock (7 of 7). Repeated run under load: 20 consecutive single-file runs, load1 ≥ 6 at each start (7.03 to 14.63), 0 failures, every run `Test Files 1 passed (1)`. Gate evidence is in LG-2024 (the gate's rows are in its Gate section; the MERGE-ACK adds the PR's CI line).

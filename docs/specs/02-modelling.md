@@ -1894,7 +1894,7 @@ imported from §4.5 rather than restated — the same catalogue, read two ways.
 
 | Method | Path | Purpose | Permission |
 |---|---|---|---|
-| `POST` | `/api/v1/factors` | Create/version a Factor (FR-83) *Amended 2026-11-05 (SL-8328, FD-1384, PL-8327): a slug outside the Factor pattern (`00` §4.3) is refused: 422 `VALIDATION_FAILED` naming `slug`. A stored slug is never re-validated on read (FR-209).* | `model:fit` |
+| `POST` | `/api/v1/factors` | Create/version a Factor (FR-83) *Amended 2026-11-05 (SL-2026, FD-1384, PL-2025): a slug outside the Factor pattern (`00` §4.3) is refused: 422 `VALIDATION_FAILED` naming `slug`. A stored slug is never re-validated on read (FR-209).* | `model:fit` |
 | `GET` | `/api/v1/factors?dataset_id=` | List factors with intent, monotonic direction, prohibited flag. Filters by Dataset **id**, as its two siblings below do; an unrecognised query parameter is a 422 naming it, never an unfiltered list | `model:read` |
 | `POST` | `/api/v1/bandings/propose` | Propose boundaries by method against a dataset version (FR-98) *Amended 2026-10-18 (SL-1806, FD-1799): a `slug` that `00` §4.2 ID-3 / §4.3's pattern does not admit is refused **422** `VALIDATION_FAILED`, `errors[].field` `slug`, `errors[].code` `STRING_PATTERN_MISMATCH` (to-lead 2026-10-18 03:02:03 BST item 3).* | `model:fit` |
 | `POST` | `/api/v1/bandings/evaluate` | Recompute band statistics for **edited** boundaries, persisting nothing (FR-102) | `model:fit` |

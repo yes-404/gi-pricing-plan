@@ -1,9 +1,9 @@
 ---
-id: PL-8327
+id: PL-2025
 family: plan
 kind: map
-title: WK-1178 — FactorCreate.slug takes the Factor grammar at the write boundary (FD-1384), SL-8328 — a dated Work-plan delta
-status: draft                   # draft → active → superseded | retired (§1.2a) — L1: draft→active rides the slice's PR
+title: WK-1178 — FactorCreate.slug takes the Factor grammar at the write boundary (FD-1384), SL-2026 — a dated Work-plan delta
+status: active                  # draft → active → superseded | retired (§1.2a) — L1: draft→active rides the slice's PR
 created: 2026-11-05             # filed under working id 8327
 owner: planner
 tree: dae9637ea6f6a56f6502e9db70392cdfb2f3983d
@@ -15,13 +15,14 @@ corrected_by: []
 relates: [FD-1384, FD-1799, RL-1383, SL-1806, FR-4, FR-83, FR-96, FR-209]
 ---
 
-# PL-8327 — WK-1178: `FactorCreate.slug` takes the Factor grammar (SL 8328, a dated Work-plan delta)
+# PL-2025 — WK-1178: `FactorCreate.slug` takes the Factor grammar (SL-2026, a dated Work-plan delta)
 
 > **For agentic workers:** this is a **dated Work-plan delta** under Lean P2 L1 (a')
-> (`.claude/roles/planner.md`, "Lean P2"). It holds one slice row, SL 8328, and edits no filed plan.
+> (`.claude/roles/planner.md`, "Lean P2"). It holds one slice row, SL-2026, and edits no filed plan.
 > The executor's skills are `superpowers:test-driven-development`, `.claude/skills/python-test`,
 > `.claude/skills/python-package`, `.claude/skills/contract-schema`, `spec-change` and `git-hygiene`.
-> PL 8327, SL 8328 and LG 8329 are working ids reserved by the lead. FD-1337, the group's other row,
+> PL-2025, SL-2026 and LG-2027 were drafted under working ids 8327, 8328 and 8329, reserved by the lead, and
+> minted on 2026-11-05 (`mint-repoint.py`). FD-1337, the group's other row,
 > is split out to PL 8339 by the entry "2026-11-05 09:58:58 GMT".
 
 ## Authority
@@ -94,7 +95,7 @@ The slice:
 
 - **A1. The write set.** `git diff --name-only origin/main...HEAD` lists only the Write set below.
 - **A2. Spec text first.** The `02` commit precedes the first code commit.
-- **A3. Red first, by cause.** LG 8329 quotes T1's red: a `201` (or the route's success status) for
+- **A3. Red first, by cause.** LG-2027 quotes T1's red: a `201` (or the route's success status) for
   `""`, `"Veh Brand"`, `"a:b@1"`, a 65-character slug and a one-character slug. T1 reaches the route,
   so it runs in the DB window or the gate; T2 is DB-free.
 - **A4. Green.** T1: each is 422 `VALIDATION_FAILED` and the error's field is `slug`; `veh_brand` and
@@ -141,7 +142,7 @@ The slice:
 
 ## Tasks
 
-### SL 8328 — `FactorCreate.slug`
+### SL-2026 — `FactorCreate.slug`
 
 **The row.** WK-1178 fix slice. One `sonnet` executor. Requirements: `02` FR-83; `00` §4.3 (read);
 FR-209 (read). Register: FD-1384 (MEDIUM), closing at the merge (A9). Depends on: the maintainer's GO; a
@@ -176,8 +177,8 @@ slug is never re-validated on read (FR-209)." Commit alone.
 - `packages/model-schema/tests/` (one file), `backend/tests/test_api_models.py`, any fixture A8 names.
 - `docs/specs/02-modelling.md` (the one row), `docs/contracts/openapi/generated.json` (generated),
   and any generated file `generate-contracts.py` writes for the same change.
-- LG 8329 under `docs/ledgers/`.
-- At the mint: the SL 8328 row in `docs/roadmap.md`, `docs/INDEX.md`, this plan's `status:`, FD-1384's
+- LG-2027 under `docs/ledgers/`.
+- At the mint: the SL-2026 row in `docs/roadmap.md`, `docs/INDEX.md`, this plan's `status:`, FD-1384's
   essay and `docs/findings/register.md` (A9).
 
 ### Files shared with other groups
