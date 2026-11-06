@@ -263,7 +263,7 @@ Failure shape: `Job.error` on a failed Job is a `JobError`, shown here without t
 >
 > **Amended 2026-10-10 (WK-674 Slice 3, `PL-1583`): the `settings` object is replaced by a pointer.** The example above is not rewritten. An Environment's settings are the Environment-setting rows of §4.4, one row per (Environment, key), written by `PUT /api/v1/environments/{slug}/settings` and read with every layer's candidate by `GET`. The example's keys `trace_sampling_rate`, `rate_limit_rps` and `shadow` were example names. The contract is the registry's names: `rating.trace_sample_rate` and `scoring.default_client_rate_limit_rps`. There is no `settings` object inside the Environment.
 
-> **Clarified 2026-11-05 (`RL-8375` row 22, FD-1381).** The example above is now rewritten: it carries the
+> **Clarified 2026-11-05 (`RL-2054` row 22, FD-1381).** The example above is now rewritten: it carries the
 > `slug`, drops `settings` (§4.4 holds the settings) and prints a full 64-hex `bundle_hash`. The two notes
 > above that say "The example above is not rewritten" describe it as printed before this date.
 

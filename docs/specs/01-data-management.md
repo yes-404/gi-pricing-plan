@@ -393,7 +393,7 @@ A rule's thresholds are not overridable at set level either, and for a stronger 
 > (409). Found by building §5.3's rule-set editor against the API and having nothing to
 > bind its enable/disable control to.
 
-> **Clarified 2026-11-05 (`RL-8375` row 4, FD-1381).** The read shape is `entries`, not `rules`:
+> **Clarified 2026-11-05 (`RL-2054` row 4, FD-1381).** The read shape is `entries`, not `rules`:
 > `GET` and `PUT /datasets/{slug}/rule-set` return a `ValidationRuleSet` whose `entries` each
 > embed the whole `rule`, with `enabled` and `severity_override`. The `PUT` *body* is `rules`
 > of `rule_id`, `enabled` and `severity_override`. Neither shape has the `rule_version` the
@@ -608,7 +608,7 @@ key is one target with several columns.
 }
 ```
 
-> **Clarified 2026-11-05 (`RL-8375` row 5, FD-1381).** `overall` is one of `pass`, `pass_with_warnings`,
+> **Clarified 2026-11-05 (`RL-2054` row 5, FD-1381).** `overall` is one of `pass`, `pass_with_warnings`,
 > `fail` or `error` (the invariants below). `evidence_blob` is no longer printed: no field carries it and
 > FR-49 does not list one. `overall` and `counts` stay, because the authored `validation-report.schema.json`
 > requires both, but `GET /validation-reports/{report_id}` does not yet serialise them: they are plain

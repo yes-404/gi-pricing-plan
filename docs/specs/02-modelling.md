@@ -1258,7 +1258,7 @@ derivatives rather than a SymPy-derived form (FR-151). Every other check, and th
 > pinned by test: an absolute error of `1e-08` in the Gamma hessian — two hundred times the
 > noise where that hessian is smallest — is still `failed`.
 
-> **Clarified 2026-11-05 (`RL-8375` row 12, FD-1381).** The example in this section is now nested as
+> **Clarified 2026-11-05 (`RL-2054` row 12, FD-1381).** The example in this section is now nested as
 > built: the identity fields (`id`, `custom_objective_id`, `objective_version`, `certified_at`, `job_id`)
 > sit beside `result`, which holds `checks`, `sampling`, `overall` and `library_versions`. The amendment
 > above describes the example as printed before this date, flat.

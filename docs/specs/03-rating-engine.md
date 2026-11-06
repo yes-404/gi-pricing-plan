@@ -393,7 +393,7 @@ no step produced, and mounted a sub-graph at a step it did not define.)*
 }
 ```
 
-A diff against the previous version or the seed is not a field of the version: it is served by `GET …/diff?against=&portfolio=` (FR-231), against a portfolio the caller names, so an immutable version cannot hold one. *(Clarified 2026-11-05, `RL-8375` row 14, FD-1381: the example printed `diff_vs_previous` and `diff_vs_seed` before this date.)*
+A diff against the previous version or the seed is not a field of the version: it is served by `GET …/diff?against=&portfolio=` (FR-231), against a portfolio the caller names, so an immutable version cannot hold one. *(Clarified 2026-11-05, `RL-2054` row 14, FD-1381: the example printed `diff_vs_previous` and `diff_vs_seed` before this date.)*
 
 Values are stored as decimal strings, never JSON floats (R2).
 

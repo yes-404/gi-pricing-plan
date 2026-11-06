@@ -501,7 +501,7 @@ first printed them.
 }
 ```
 
-> **Dated 2026-11-05 (`RL-8375` row 19, FD-1381; `RL-1522` DP-4 (a)).** The first block validates against
+> **Dated 2026-11-05 (`RL-2054` row 19, FD-1381; `RL-1522` DP-4 (a)).** The first block validates against
 > `model-schema`'s `ApprovalRequest`. The second block is FR-352's full submission, which is **ahead of the
 > code**: `expedited`, `evidence_bundle`, `checklist` and `flags` are not fields of the shape now, and
 > FR-352's checklist and evidence limbs are owned by WK-677. FR-352 is not amended by this note.

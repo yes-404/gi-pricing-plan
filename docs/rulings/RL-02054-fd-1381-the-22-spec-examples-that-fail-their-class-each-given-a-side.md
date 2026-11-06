@@ -1,9 +1,9 @@
 ---
-id: RL-8375
+id: RL-2054
 family: ruling
 title: FD-1381 TRACK A — the 22 spec examples that fail their class, each given a side (10 spec wrong, 9 fragment by design, 1 spec ahead of code, 2 code wrong)
 status: active                 # active → superseded | retired (§1.2a) — a ruling opens active
-created: 2026-11-05            # drafted under working id 8375
+created: 2026-11-06            # original date 2026-11-05, drafted under working id 8375; minted 2026-11-06
 owner: decision-maker
 tree: 850cf225797c8a63065130dc9012a2ef31b5ef55
 phase: P2
@@ -14,11 +14,13 @@ corrected_by: []
 relates: [FD-1381, FD-1281, FD-1374, RL-1522, RL-1301, RL-1311, RL-1263]
 ---
 
-# RL-8375 — FD-1381: the 22 failing spec examples, each with a recorded side
+# RL-2054 — FD-1381: the 22 failing spec examples, each with a recorded side
+
+*Disclosure: drafted under working id 8375; minted as RL-2054 on 2026-11-06, in the TRACK A (SL 8373, T3) mint.*
 
 ## Authority and scope
 
-- **The ruling asked for.** T1 and T2 of PL 8372 (working id; `draft/pl-1381-2026-11-05` @`f3094233`), accepted in
+- **The ruling asked for.** T1 and T2 of PL-2053 (working id; `draft/pl-1381-2026-11-05` @`f3094233`), accepted in
   `to-lead.md` "2026-11-05 16:11:50 GMT": DP-4 (b), *"every one of the 22 gets a recorded side"*. The discharge is
   `FD-1381`'s item 1: the spec example is never matched to the code silently, and where the code is wrong that is its own
   finding.
@@ -152,7 +154,7 @@ Nothing. DP-4's fallback is not used.
 - **T3 (executor):** rows 1 to 14, 16 and 19 to 22, one commit per spec, each citing this ruling. Rows 15, 17 and 18 have no
   text change. A3 holds on this list: every fix is in a §4 section, and none is in `06` §4.1, the section SL 8361 shares.
 - **S4 of SL 8373:** the Mark column. Row 21 is `schema=JobError`.
-- **T3 also:** a dated line on PL 8372 moving its 62 to 63 for row 19's new block (`to-lead.md` "2026-11-05 16:31:45 GMT" (2)), and
+- **T3 also:** a dated line on PL-2053 moving its 62 to 63 for row 19's new block (`to-lead.md` "2026-11-05 16:31:45 GMT" (2)), and
   citing FD 8379 by its working id on row 5.
 
 ## Acceptance — the violation that must become detectable
