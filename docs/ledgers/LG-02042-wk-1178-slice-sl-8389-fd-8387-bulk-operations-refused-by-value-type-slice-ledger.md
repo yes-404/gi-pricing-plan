@@ -2,8 +2,8 @@
 id: LG-2042
 family: ledger
 title: WK-1178 SL-2041 — FD-2032, a bulk operation is refused by value type — slice ledger
-status: active
-created: 2026-11-05
+status: closed   # closed by the audit commit of this PR, 2026-11-06
+created: 2026-11-06   # original date 2026-11-05, set at the draft; working id 8390, minted 2026-11-06
 owner: executor
 tree: b987349621936656fdd73f7f7a1a7dfb989d586f
 phase: P2
@@ -35,11 +35,48 @@ PL-2040 (`docs/plans/PL-2040-…`), SL-2041: T0–T5 (FR-233 amended; FR-228 and
 
 ### Gate
 
-Not the slice's own (A12): rides R2's gate or a gate after R2.
+The pytest reading of record is the paired gate, `scratch/sl8389-gate/gate/gate.log`, on `94cd3e9f` (tree `23408d64`), paired with M: `pytest summary: 13 failed, 7268 passed, 27 skipped, 5 xfailed, 146 warnings in 5270.77s (1:27:50)`; skipped 27 = the baseline; the 13 failed are all in the eight docs-audit files (the item-31 set: `test_audit_docs_finding_citations`, `test_audit_docs_ids`, `test_audit_docs_process_core_digest`, `test_audit_docs_w37_11_ceiling`, `test_doc_index`, `test_register_lint`, `test_register_owed`, `test_repository_invariants`), "failing files outside the eight docs-audit files: [none]"; audit-docs rc 1 on check 31 and 32 of this slice's own working ids only. This gate's own demo stage was **NOT RUN**: OpenML `IncompleteRead(11270521 bytes read, …)` on the freMTPL2 fetch, the journey never started (to-lead "2026-11-06 01:24:04 GMT"); a third-party fetch failure is NOT RUN, not red.
+
+The demo reading is `scratch/sl8389-gate/demo-run2/gate.log`, a demo-only re-run at the same head `94cd3e9f` seeded from the digest cache: `seeded, digests equal (freq a45363e0…, sev 04763201…)`; `END … rc=0 verdict=PASS`; demo 1522 s; dislocation #1 527 s (29 Oct passes 422 / 387 / 383 s). D7: "ok  19985 policies in the sample; rate table edits: +485990825; NCD ladder and expense loading: +3851186; sum +489842011 minor units". **D7's total and both attribution limbs equal on the 19985-policy sample** (the two limbs sum to the total); that is the reading, and it is not a statement that no price moved. That END's python and fe parts read 0 only because the run was demo-only; they are not the gate's.
+
+Worktree data dir: no `.arff` file under `examples/fremtpl2/data` at the mint head (`find`, checked at the mint). R2's cover: R2 rides the same pair (`LG-2039`).
 
 ### Audit
 
-(The auditor's, A14.)
+*(Filed 2026-11-06 in the audit's commit from the draft `scratch/aud-sl8389/` (the LG 8390 audit-section draft), sha256 prefix `8b8cb5ba97f9`, by aud-sl8389, 2026-11-05, proposals only; adopted by the lead: `from-lead-2026-10-09.md` "2026-11-05 23:50:37 GMT". Object: `94cd3e9f24dfad2f0e0c97dd527505b21a621c11`, tree `23408d64ee6592967bc69bed5b7f404b61eb684d`, SL-2041's own delta `git diff f89963ac..94cd3e9f`. R2 not re-audited.)*
+
+**Scope, from FR-233's dated clause and PL-2040 first.** Refuse a bulk operation when the column's value type gives its result no meaning: `rebase_to_level` only on `relativity`; `uplift_table` and `uplift_by_filter` refused on `count`; `floor_and_cap` on all four. 422 `BULK_OPERATION_NOT_APPLICABLE`, naming operation, value type and table; no version created.
+
+**Matrix, my own enumeration** (`RateTableValueType` = relativity, money_minor, percentage, count; `model_schema/rating.py:1178`; 4 types × 4 operations = 16). `_OPERATION_VALUE_TYPES` (`operations.py:757`) = uplift_table, uplift_by_filter: all but count; floor_and_cap: all; rebase_to_level: relativity. Refused = 5, allowed = 11, equal to the spec row and to the tests' separate literal `_REFUSED_CELLS` / `_ROUTE_REFUSED`. Absence refuses (a fifth type is refused until said otherwise; the tests' `_ALL_CELLS` enumerates the enum, so a fifth type fails the allowed branch).
+
+| Cell | Function (T1) | Route (T2) |
+|---|---|---|
+| uplift_table × count | red `DID NOT RAISE` (`t1-red.log`), green | red `assert 201 == 422` (`win-red.log`), green (`win-green.log`) |
+| uplift_by_filter × count | same | same |
+| rebase_to_level × percentage / money_minor / count | same (3 cells) | same (3 cells) |
+| the 11 allowed cells | green at base by design; red under plant P (`t1-plantP.log`, `50 failed, 60 passed`, the 11 allowed matrix cells among them) | red under plant P: `win-plantP.log` `11 failed, 5 passed`; the failed set read by me = floor_and_cap ×4, rebase_to_level-relativity, uplift_by_filter ×3, uplift_table ×3 = exactly the 11 allowed cells |
+
+Route red: 5 failed, each `assert 201 == 422` (read from `win-red.log`, `head=0b718b91`). Route green: `16 passed` at `14ea6467`; the only diff `14ea6467..94cd3e9f` is this ledger.
+
+**Plan items.** A1 write set: met for the delta read (errors.py, operations.py, two test files, 03, 04, LG, plan, INDEX); the roadmap SL row, FD-2032's essay and the register row are not in the tree at the object or at origin/main: they are the mint's (see A13). `backend/src/app/api/`, `platform/`, `frontend/`, `docs/contracts/`, `deploy/`, `examples/`, `pricing_core/rating`: no diff. A2: the FR-233 clause and the code are one commit (`b9873496`) after the tests-only `0b718b91`; the code is in `03` §5.1's owned list (:1150) and `04` §4.4 (:276). A6: `_check_value_type` is the first statement of each operation; two ordering tests (filter-key, parquet) added in `b9873496`. A7: no line removed from either existing test file in the delta; `_format_value`, `_transform_rows`, `_new_version` outside the diff of `operations.py`. A8: the clause carries "moves premiums unless the base rate offsets it"; no behaviour added. A9: `merge-base --is-ancestor d00c155c HEAD` rc 0; `9bd52e2c` (R2) rc 0.
+
+**Replay and re-derive (FR-239).** `created_by_operation` is written (`operations.py:688`) and returned (`platform/rate_tables.py:1350`, `:1464`); nothing reads it back to re-run an operation, and the only dispatcher is the request path (`_dispatch_operation`, `platform/rate_tables.py:1516`). A stored bulk version keeps its cells (FR-233 clause, `00` FR-4); so a stored operation of a now-refused pair has no replay path: same hash, same result. No existing caller applies a refused pair: the one operation in `examples/fremtpl2/journey.py:420` is `uplift_table` on a seeded table, and the only writer of a new table (`seed_from_model`, `operations.py:249`) sets `relativity`; import inherits the table's type. So FD-2032's "latent behind an unbuilt path" reads true: no route creates a non-relativity table (the route tests insert rows directly, `_insert_typed_table`).
+
+**Registered code.** `app/errors.py:375` in `RATING_ERROR_CODES`; one owner line (03 §5.1 :1150); `REBASE_NO_MATCH`'s siblings are likewise not in `00` §5.3 (grep: `03` only), so no `00` row is owed. The route maps it by `_map_operation_error` (`platform/rate_tables.py:129`: an upper-case code with `_` → 422 under that code). No request shape moved (no `api/` diff); the sweep `backend/tests/test_api_authorisation_sweep.py` is the gate's.
+
+**Observations (none a defect).** (a) Parameter validation (`model_validate`) precedes the value-type refusal at the route, so a refused pair with malformed parameters answers `VALIDATION_FAILED`, not the refusal; both 422, no version; A6 does not claim otherwise. (b) The two ordering tests have no red-at-base line: they were added with the fix in `b9873496`; the plant P shows the matrix, not the ordering. (c) Build log has no `ruff format --check` pass for the two test files (pre-existing unformatted, stated in the LG).
+
+**Docs conflict at the merge.** `03` FR-234 row at the object is byte-identical to origin/main's (sha256 prefix `7bf858ef763a` both); FR-233 row is the slice's clause on the base text.
+
+**My runs at 94cd3e9f (run-heavy, DB-free dead-port form, logs `~/gi-pricing-plan.local/scratch/aud-sl8389/logs/`, `head=` first, `rc=` last):** `packages/pricing-core/tests/test_rate_table_bulk_ops.py` `119 passed in 8.02s` rc=0 (`bulk2.log`; the first attempt, `bulk.log`, rc=2 was a collection error `No module named 'openpyxl'` from a venv without `--all-packages`, fixed by `uv sync --all-packages --frozen` in my own worktree). `audit-docs.py` (run-heavy --light) rc=1, `FAILED (20)` (`audit.log`): check 31 gaps 2021->8345, 8346->8388, 8388->8390; check 32 on SL-2041 / FD-2032 / PL-2019 (working ids, pre-mint) **and one that is not a working id: `LG-2042...:82: padded id (the five-digit form of PL-2019) outside a link target`** (RFC-937 §1.1 rule 2), to be written as the integer `PL-2019` before the PR.
+
+**Verdicts proposed.** MET: matrix, refusal order, registration, route 422, red-first on the 5 cells at both levels, plant P on the 11 allowed cells at both levels, FR-239/replay, FD-2032 latent as filed, A7, A8, A9. NOT MET (fix before PR): the padded five-digit `PL-2019` at LG-2042 :82.
+- OWED-TO-GATE: the DB-backed closure members not run in the window (`test_diff_cache`, `test_nfr498_audit_events`, `test_rate_table_diff_portfolio`, `test_rate_tables_service`, `test_rating_version_change_summary_route`, `test_worker_rate_tables`, `test_api_authorisation_sweep.py`); `generate-contracts --check`, `req-coverage`, `audit-docs` (pre-mint working ids) from the gate.
+- OWED-TO-MINT: SL row (read at origin/main and at the object: no `SL-2041` row in `docs/roadmap.md`; it must read closed by the close commit, item 42), FD-2032 essay + register row, INDEX.
+
+**Status at filing (2026-11-06).** The one NOT MET, the five-digit padded form of `PL-2019` at :82, is written `PL-2019` in the mint commit (`git grep -c` for the padded form over this file after the edit: 0). OWED-TO-GATE is discharged by the paired gate under Gate below: the closure's DB-backed members ran inside its pytest (13 failed, every one of the eight docs-audit files, the item-31 set; 7268 passed; 27 skipped, the baseline), `generate-contracts --check` rc 0 and `req-coverage` rc 0 are the gate's own rows. **Item 43, this slice's request-shape reading:** no `backend/src/app/api/` diff, so no request shape moved; `backend/tests/test_api_authorisation_sweep.py` sits in the gate's pytest with no `FAILED` line and no `SKIPPED` line (`grep -c` of the file name over the quiet-mode `pytest.log` = 0), stated as a pass by absence, not a count. **Item 42, the `SL-` row:** read at `origin/main` (`695ad9059e66`): `docs/roadmap.md` has no row for `SL-2038` or `SL-2041` (0 hits for either id or for working ids 8345 and 8389); both rows are added by this PR and read `closed` at this audit commit, as C's `SL-2026` was.
+
+*Adoption: the lead's line, `from-lead-2026-10-09.md` "2026-11-05 23:50:37 GMT": "aud-sl8389 FINAL adopted, released: MET all; one fix at the mint: LG 8390 :82 padded [five-digit form of PL-2019, elided so check 32 does not read the quote] → PL-2019 (not now: gate reads the worktree); item 42 + FD 8387 closing after batch 12 mints it; drafts scratch/aud-sl8389 8b8cb5ba97f9, 4b0d2b82a872." The MERGE-ACK is written at the merge.*
 
 ### Build log
 

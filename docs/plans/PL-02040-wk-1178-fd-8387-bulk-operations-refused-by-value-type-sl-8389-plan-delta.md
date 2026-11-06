@@ -4,7 +4,7 @@ family: plan
 kind: map
 title: WK-1178 — FD-2032's fix, a bulk operation is refused where the column's value type gives its result no meaning, SL-2041 — a dated Work-plan delta
 status: draft                   # draft → active → superseded | retired (§1.2a) — L1: draft→active rides the slice's PR
-created: 2026-11-05             # filed under working id 8388
+created: 2026-11-06   # original date 2026-11-05, set at the draft; working id 8388, minted 2026-11-06
 owner: planner
 tree: cda3c0dc326d4313add551693e3180d3b1e05a11
 phase: P2

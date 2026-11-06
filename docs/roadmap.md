@@ -3605,6 +3605,50 @@ relates: [FD-1384, FD-1799, RL-1383, FR-83, FR-209, PL-2025, LG-2027]
 
 *(Closed 2026-11-06 by the audit commit of the slice's PR, on the lead's adoption of aud-slc, `from-lead-2026-10-09.md` "2026-11-05 16:34:01 GMT"; the row was added `active` at the mint head `4452f7a1`, and no row existed at `origin/main` `7761a9d3da4b`.)*
 
+#### SL-2038 — WK-1178 slice — FD-1648 limb (iii), FD-1659, FD-1478: a bad cell is a hard error, and a refusal says why
+
+```yaml
+id: SL-2038
+family: slice
+title: WK-1178 slice — FD-1648 limb (iii), FD-1659 and FD-1478, a bad cell is a hard error and a refusal says why (FR-255, FR-239)
+status: closed                    # draft → active → closed (§1.2a)
+created: 2026-11-06   # original date 2026-11-05, working id 8345, minted 2026-11-06
+owner: lead
+tree: 23408d64ee6592967bc69bed5b7f404b61eb684d
+phase: P2
+work: WK-1178
+corrected_by: []
+relates: [FD-1648, FD-1659, FD-1478, FD-2043, FR-255, FR-239, PL-2019, LG-2039]
+```
+
+A stored rate-table cell the engine cannot parse is a hard error at score time, `RATE_TABLE_CELL_UNPARSEABLE`, never an omitted output, a miss or a price (FR-239's dated clause; limb (iii) of FD-1648, the last of its three). A failure in a step that consumes a table output is `RATING_EVALUATION_FAILED`, and the miss code is reported only for the step that missed (FR-255, FD-1659, FD-1478). Per `PL-2019` section "R2, SL-2038" (plan of record). Its ledger is `LG-2039`; FD-2043 is born closed by it.
+
+(Minted 2026-11-06 from working id 8345, with the mint tool of record `mint-repoint.py`; ledger `LG-2039` (working id 8346); the plan is R1's `PL-2019`. `tree` is the gated tree of the slice branch before the merge of `origin/main`: the paired gate's object, which also carries SL-2041.)
+
+*(Closed 2026-11-06 by the audit commit of the slice's PR, on the lead's adoption of aud-slr2 (`from-lead-2026-10-09.md`, "2026-11-05 16:47:21 GMT"); no row existed at `origin/main` `695ad9059e66`, and the row is added at the mint with the status the audit commit gives it.)*
+
+#### SL-2041 — WK-1178 slice — FD-2032: a bulk operation is refused where the column's value type gives its result no meaning
+
+```yaml
+id: SL-2041
+family: slice
+title: WK-1178 slice — FD-2032, a bulk operation is refused by value type (FR-233)
+status: closed                    # draft → active → closed (§1.2a)
+created: 2026-11-06   # original date 2026-11-05, working id 8389, minted 2026-11-06
+owner: lead
+tree: 23408d64ee6592967bc69bed5b7f404b61eb684d
+phase: P2
+work: WK-1178
+corrected_by: []
+relates: [FD-2032, FR-233, FR-228, FR-234, PL-2040, LG-2042]
+```
+
+`rebase_to_level` runs only on a `relativity` column; `uplift_table` and `uplift_by_filter` are refused on a `count` column; `floor_and_cap` runs on all four value types (16 cells: 5 refused, 11 allowed). The refusal is 422 `BULK_OPERATION_NOT_APPLICABLE`, naming the operation, the value type and the table; no version is created (FR-233's dated clause; `04` §4.4). Per `PL-2040` (plan of record). Its ledger is `LG-2042`; FD-2032 closes in this slice's PR.
+
+(Minted 2026-11-06 from working id 8389, with the mint tool of record `mint-repoint.py`; plan `PL-2040` (working id 8388), ledger `LG-2042` (working id 8390). `tree` is the gated tree of the slice branch before the merge of `origin/main`.)
+
+*(Closed 2026-11-06 by the audit commit of the slice's PR, on the lead's adoption of aud-sl8389 (`from-lead-2026-10-09.md`, "2026-11-05 23:50:37 GMT"); no row existed at `origin/main` `695ad9059e66`.)*
+
 ### WK-1250 — Sub-graph composition and MTA/cancellation pricing — FR-217's inlining and FR-218's authoring half
 
 ```yaml
