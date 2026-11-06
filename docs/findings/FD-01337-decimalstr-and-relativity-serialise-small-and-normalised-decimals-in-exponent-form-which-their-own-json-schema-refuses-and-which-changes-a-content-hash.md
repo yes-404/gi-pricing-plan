@@ -2,12 +2,12 @@
 id: FD-1337
 family: finding
 title: DecimalStr and Relativity serialise small and normalised decimals in exponent form, which their own JSON Schema refuses, and the spelling changes a content hash
-status: active
+status: closed          # was: active
 created: 2026-09-30
 owner: auditor
 tree: 32f3fa92afad81d1be611b21ae16ff35211eded8
 corrected_by: []
-relates: [WK-1178, FR-10, FR-451]
+relates: [WK-1178, FR-10, FR-451, FR-21, SL-2056, LG-2057, PL-2055]
 ---
 
 # FD-1337 — `DecimalStr` serialises exponent form and preserves spelling, so a value can violate its own schema and change a hash
@@ -16,6 +16,8 @@ relates: [WK-1178, FR-10, FR-451]
 
 **Severity: MEDIUM**, ruled by the maintainer (see *Severity*). **Proposed by the auditor; the disposition is the
 lead's.** FD-1337 was minted from working id 9968 at the records PR.
+
+***Resolved 2026-11-06*** — closed in place 2026-11-06 by the executor, as the closing act of the mint of SL-2056 (WK-1178, LG-2057, PL-2055; this PR; its number, squash commit and merge date are written at the merge's date-of-record), on the GO to-lead "2026-11-05 15:55:35 GMT", DP-L1 (a) and DP-L2 (c) as extended at "2026-11-05 16:14:34 GMT", "16:18:17 GMT" and "16:33:41 GMT", and the lead's adoption of aud-sl8340 (from-lead, "2026-11-05 20:46:10 GMT" and after). Delivered remedy: `DecimalStr`, `Relativity` and (as an alias) `PositionalDecimalStr` serialise with `format(v, "f")`, so every published value matches the type's own pattern; `MonotoneInInput.lower` and `.upper`, the only fields `suite_content_hash` reads, take `CanonicalDecimalStr` (exact context, `traps=[Inexact, InvalidOperation]`, every zero `0`), so equal bounds give one hash and the hash does not depend on the ambient decimal precision. Input is unchanged (`"1E-7"` is still accepted); `docs/contracts/` is unchanged by this slice (`generate-contracts.py --check` rc 0). Red first, by cause, in LG-2057: T1 8 red (`'1E-7'` against the pattern), T2 three hashes for `10`, `1E+1`, `10.0`, T4 4 red, T5 red twice, T6 red on the form without `InvalidOperation`. Re-measure (window 2026-11-05 19:28:53 to 19:50:10 UTC): **no stored instance found on this stack; 3 PostgreSQL databases, 64 tables, 5 rows, 0 exponent-form, `regression_suite_versions` 0 rows; MinIO 7,444 of 35,544 objects read** (the 28,100 unread are in `gip-test-blobs`, out of scope), 19 hits under the key `relativity` in `gip-blobs` compiled bundles (rate-table cell text, FD-1648, not a `DecimalStr` field); controls counted (tracked blobs 3 of 3, PostgreSQL 2 of 3, spelling 3 of 5, MinIO 1 of 2); no version bump. The positional output of an input such as `1E+999999999` (a 1 GB string) was ruled (a) at "2026-11-05 20:46:28 GMT": writing is bounded at an adjusted exponent of 308 and the refusal is a coded 422 `DECIMAL_OUT_OF_RANGE` (FR-21's amendment of that date). One thing the fix does not close: the zero count is over a near-empty corpus. The one finding the slice's last read raised, a `tolerance` past the bound that fails a Job after the compute, is FD-2058 (LOW, born open). Gate and window: LG-2057.
 
 `model_schema.money.DecimalStr` (`packages/model-schema/src/model_schema/money.py:85-91`) and `Relativity`
 (`:94-99`) serialise with `PlainSerializer(str, …)`, and `str()` of a `Decimal` uses exponent form outside

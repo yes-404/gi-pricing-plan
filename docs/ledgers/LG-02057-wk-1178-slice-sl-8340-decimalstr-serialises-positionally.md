@@ -2,7 +2,7 @@
 id: LG-2057
 family: ledger
 title: WK-1178 slice SL-2056 — DecimalStr serialises positionally (PL-2055, FD-1337)
-status: active
+status: closed                 # active → closed (§1.2a)
 created: 2026-11-06   # original date 2026-11-05, working id 8341, minted 2026-11-06
 owner: executor
 tree: 9632320c797cabe58d5907700e83f091700d1a5d
@@ -11,7 +11,7 @@ work: WK-1178
 slice: SL-2056
 plans: [PL-2055]
 corrected_by: []
-relates: [FD-1337, PL-2055, RL-1329, RL-1343, FR-10, FR-21]
+relates: [FD-1337, FD-2058, PL-2055, RL-1329, RL-1343, FR-10, FR-21]
 ---
 
 # LG-2057 — WK-1178 slice SL-2056: `DecimalStr` serialises positionally
@@ -29,7 +29,7 @@ Base `ddec34fe`, merged by sha: C `4abb3798`, R1 `662867bb` (INDEX.md: theirs, r
 
 ### R2 — red first (`9632320c`)
 
-`packages/model-schema/tests/test_money.py`, `uv run --directory <wt> pytest -q packages/model-schema/tests/test_money.py` at `9632320c`: **9 failed, 25 passed**.
+`packages/model-schema/tests/test_money.py`, `uv run --directory "$WT" pytest -q packages/model-schema/tests/test_money.py` at `9632320c`: **9 failed, 25 passed**.
 - T1 (8 cases: `DecimalStr` and `Relativity` x `1E-7`, `1.2E-28`, `1E+2` twice): `AssertionError: 1E-7` — `re.fullmatch('^-?[0-9]+(\.[0-9]+)?$', '1E-7')` is `None`.
 - T2: `AssertionError` over three hashes for `10`, `1E+1`, `10.0` (`sha256:028228ef…`, `sha256:19a11329…`, `sha256:a50acf09…`).
 - T3 control: green (`66000.440` kept).
@@ -102,4 +102,46 @@ Edits made on `cb1b83af` after LAST-1's gate ENDED (08:12:25); **nothing has bee
 
 ## PRs
 
-(none yet — the push, PR and mint are not the executor's in this brief)
+This PR; its number, squash commit and merge date are written at the merge's date-of-record.
+
+## Audit
+
+**Auditor:** aud-sl8340 (sonnet 5.5, medium). **Object:** detached worktree `aud-sl8340` at `71158bddb59cc92ea46788a1c106b651ae2aeae7`, tree `8e4ec35b0038f5c55dd84dc8c2f667a7af65f5d4`, audited 2026-11-05 20:40–20:45 UTC against `origin/main` `cded9f0e`. **Status: PROPOSAL — the lead adopts, amends or rejects.**
+**Range:** `origin/main...HEAD` is 31 files because the branch merged C `4abb3798` and R1 `662867bb` **by sha**; neither is an ancestor of `origin/main` today (`git merge-base --is-ancestor`, both rc 1). The slice's own commits (`git diff --name-only 7df6d270 HEAD`) are 6 files, all in the Write set (`money.py`, `regression.py`, `test_money.py`, `00-overview.md`, LG 8341, INDEX). A PR cut before C and R1 merge carries their commits; after they merge the three-dot shrinks to the Write set.
+
+| Item | Verdict | Evidence (tree `71158bdd`) |
+|---|---|---|
+| A1 write set | MET for the slice's own commits | the 6 files above; A1 read literally on `origin/main...HEAD` is not true until C and R1 merge |
+| A2 spec first | MET | `614a7c2a` (00) precedes `9632320c` (first test) and `71158bdd` (code) |
+| A3 re-measure | MET with two corrections | denominators and controls present; **LG says 7,448 read, 28,100 unread: 7,448 + 28,100 = 35,548, not 35,544.** `done_gtb.log` 6,847 + `done_1711.log` 19 + 578 (`gip-blobs` 564, `aud933` 1, `compiled-for` 2, `score-batch` 11) = **7,444**; 35,544 − 7,444 = 28,100. Write 7,444 (the 4 are the in-flight `xargs` workers if that was the source). The MinIO control is `minio_ctl2.log` (1 of 2 counted); `minio_ctl.log` counted 0 and is an earlier failed run, left in `out/`. Item-37 headers: `decexp_ctl.log` line 1 is `head=` followed by a date, not a sha; `decexp.log` ran at `bb4cf209`, not the audited head |
+| A4 rule applied | MET on what was read | both counts 0; no bump; PG corpus is 3 databases / 64 tables / 5 rows (the 2026-09-30 run: 81 / 3,841), so the zero is over a near-empty corpus, as the LG says; 19 MinIO hits are the `relativity` cell text of compiled bundles (FD-1648), not a `DecimalStr` field; 28,100 `gip-test-blobs` objects unread, out of scope by the lead's ruling |
+| A5 hash sweep | **NOT MET as written** | the LG names 5 sites; `git grep -n -E 'sha256\|_canonical_sha256' 71158bdd -- backend/src packages/model-schema/src packages/pricing-core/src` is 40 files / 204 lines, and the audit-writer sweep the R0 text calls "owed in the window" is not in the Re-measure section. Auditor's own read: 11 writers pass `model_dump(mode="json")` payloads (`backtests.py:245`, `comparison.py:197`, `metrics.py:454`, `modelling.py:940`, `objectives.py:665`, `rating_versions.py:591,723,758,774,786`, `transparency.py:68`); `PerilStructure` (`rating_versions.py:786`) and the approximation check carry `DecimalStr`. A stored event is not re-serialised: `AuditEvent.recompute_hash` hashes the stored `payload` dict (`audit.py:96-118`), so no stored hash moves; a new event differs only for an exponent-form value |
+| A6 red first | MET (LG lines, not re-run) | T1 8 red + T2 red at `9632320c`; T4 4 red; T5 both red twice; T6 red on `traps=[Inexact]` |
+| A7 schema holds | MET | `pytest packages/model-schema/tests/test_money.py` **41 passed** (`aud-sl8340/money.log`, rc 0); own probe: 15 spellings incl. `0`, `-0`, `-0.00`, `0E+3`, `1E+2`, `1.2E-28`, 40 digits, 60 digits all match the pattern and round-trip by value; `localcontext(prec=3)` leaves `123456.789`; canonical is idempotent |
+| A8 spelling and hash | MET | T2/T3 in the 41 passed; `test_regression.py` 27 passed (rc 0) |
+| A9 other hashes unchanged | MET for the slice; test_contracts OWED-TO-GATE | `git diff --stat 7df6d270 HEAD -- docs/contracts` empty (the one-line `generated.json` diff on `origin/main...HEAD` is C's `64525585`); `generate-contracts.py --check`: "58 generated contracts match the models", rc 0 |
+| A10 ladder unchanged | MET | the only edit to an existing test is the `test_money.py:133` docstring |
+| A11 no pandas/float | MET | `format(v, "f")` on `Decimal` only |
+| A12 GREEN + gate | OWED-TO-GATE | the GREEN set is the suite (plan); SOLO full gate not yet run. Import-closure files that import the changed modules and are named, not looped: `backend/tests/test_contracts.py`, `test_rating_versions.py`, `test_regression_runs.py`, `frontend/.../RegressionSuiteView.test.ts`, `pricing-core/tests/test_rating_ordered_input.py`, `test_replay.py`, `test_testing.py`, `test_testing_determinism.py` |
+| A13 FD closing act | drafted | `aud-sl8340/FD-1337-closing-act.md` |
+
+**Findings against the slice**
+1. **N1 — positional expansion is unbounded (new).** Validation still accepts `1E+999999999` (G3) and `DecimalStr`/`Relativity`/`PositionalDecimalStr` now write it positionally: `model_dump(mode="json")` returned a **1,000,000,000-character string in 2.4 s**, and `1E+9999999999999` raised `MemoryError` under a 3 GB address-space limit (`aud-sl8340/probe2.py`); `str()` was compact. `CanonicalDecimalStr` raises `Inexact` for exponents beyond the default `Emax` instead (fail-loud). Before this slice only the ladder's `PositionalDecimalStr` fields (engine outputs) had the shape; now all request-bearing fields do (e.g. `api/peril_structures.py:120`). HTTP reach was **not** probed (no app, DB-free). Proposed: an FD for the lead and the maintainer's severity and fix choice (a validation bound contradicts G3's "input unchanged"). Not a defect in the ruled behaviour; a consequence of it.
+2. **N2 — the FR-21 clause lags the code.** `00-overview.md` says hashed bounds "drop trailing zeros"; it does not say every zero is `0` (T4) or that normalisation is exact, not context-rounded (T5). One dated sentence closes it.
+3. **N3 — `NaN`/`Infinity` via `model_construct` are written as `NaN`/`Infinity`** by every type (`sNaN` alone raises on the canonical type); validation refuses all three. Unchanged from `str()`; T6 covers sNaN only. Note, no action.
+4. **N4 — LG wording:** the R3 paragraph says `traps=[Inexact]`; the code and R2d say `[Inexact, InvalidOperation]`. The patch sha `10093e77…` is the final form (reverse-applies clean to the head).
+5. **audit-docs** at the head (`aud-sl8340/audit-docs.log`, rc 1): FAILED (7), all check 31 (gaps 2006–8321, 8323–8327, 8329–8339, 8341–8345: working ids) and check 32 (`FD 1569` in `PL 8321`, which is R1's plan; `FD 1569` is in neither this tree nor `origin/main`'s INDEX) *[the two ids are written in space form at the mint: in the hyphen form the auditor wrote, neither resolves in this tree's INDEX, so check 32 reads the quotation as a citation]*. No failure on this slice's content.
+
+**Requirement verdicts:** FR-21 (positional, one spelling per hashed value) delivered and tested; FR-10 unaffected. No requirement without evidence except the OWED-TO-GATE rows above.
+**Verdict (proposed): STANDS, subject to** the A3 count correction, the A5 sweep recorded in the LG, N2's sentence, N1 ruled or filed, and the SOLO gate.
+(The PR number and squash commit are written at the merge's date-of-record.)
+
+### Adoption, gate and close (written at the mint, 2026-11-06, by exec-mintl1)
+
+**Adoption.** The lead adopted aud-sl8340's FINAL (from-lead, 2026-11-05 20:46:10 GMT: "LAST-1 stands subject to: 7,444 correction, A5 sweep in the LG, N2 sentence, N1 ruling (positional output of an unbounded exponent), gate"). Each condition is met in this ledger: the 7,444 count, the A5 sweep and N2's sentence (above, 2026-11-05); N1 ruled (a) at "2026-11-05 20:46:28 GMT" (the N1 section); the gate (below). The owed reads were added by the lead's ruling of "2026-11-06 07:42:30 GMT" and adopted at "2026-11-06 07:47:44 GMT" (aud-sl8340w: no poisoned row; one LOW finding, FD-2058).
+
+**Gate (the full gate of LAST-1, paired; lines read from `scratch/sl8340-gate/gate/gate.log` on 2026-11-06).** It ran on head `cb1b83afe7dca94a485bbe404c65480224edc089`, tree `10b078def719fae1888786d8473061a05a4eda99`, 06:10:22 to 08:12:25 UTC, paired with SL 8377's gate in the partner slot. The edits of the "two reds" section and the window of item 7 were made after it, on `ebc45f5f` and `457190a1`. The lines: ruff, mypy, import_linter, req_coverage and contracts rc 0. pytest rc 1: `15 failed, 7321 passed, 27 skipped, 5 xfailed, 154 warnings in 5248.41s (1:27:28)`; the 27 skipped equal the baseline. The 15 FAILED are item 31's 13 (the eight docs-audit files: `test_audit_docs_finding_citations` 1, `test_audit_docs_ids` 2, `test_audit_docs_process_core_digest` 2, `test_audit_docs_w37_11_ceiling` 1, `test_doc_index` 1, `test_register_lint` 3, `test_register_owed` 1, `test_repository_invariants` 2) plus the two ruled reds (`test_api_rate_tables.py::test_bulk_operation_with_a_huge_percentage_is_a_coded_422_not_a_memory_fault` and `test_error_sinks.py::test_every_failure_sink_on_a_quote_input_path_is_accounted_for`), both ruled at "2026-11-06 07:42:30 GMT" and proved green in the window of item 7. audit_docs rc 1 on check 31 only, naming the slice's own working ids. Frontend, all rc 0: install, generate:api, lint, type-check, test, build. Demo seeded (digests equal), `demo.py --journey wf-699` rc 0, 1522 s; dislocation 512 s. `D7 limbs vs baseline ... UNMOVED`: D7's total and both attribution limbs equal on the 19985-policy sample (rate table edits +485990825 == +485990825; NCD ladder and expense loading +3851186 == +3851186; sum +489842011 == +489842011). This says nothing about whether any price moved outside that sample.
+
+**Item 42 (the `SL-` row).** The row for this slice did not exist on `origin/main` `9852f004b3c4`: it was added by the mint as `active`, and this audit commit sets it `closed`. Nothing else was found open.
+
+**FD-1337** is closed by this PR (the closing act below, in `docs/findings/`). **FD-2058** is born open, LOW, owner WK-1178, carried to the P2 closure record's carry-forward list; no fix here. Its essay is `docs/findings/FD-02058-a-tolerance-past-the-write-bound-is-accepted-at-202-and-fails-the-job-after-the-compute.md`.
