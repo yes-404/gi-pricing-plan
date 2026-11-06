@@ -1,10 +1,10 @@
 ---
-id: PL-8355
+id: PL-2050
 family: plan
 kind: map
-title: WK-1178 — slice G, the test-only limbs (FD-1723 slice B, FD-1747 limb 2 and its reproduction, FD-1887 H1 and H2, FD-1354's metrics guard), SL-8356 — a dated Work-plan delta
-status: draft                   # draft → active → superseded | retired (§1.2a) — L1: draft→active rides the slice's PR
-created: 2026-11-05             # filed under working id 8355
+title: WK-1178 — slice G, the test-only limbs (FD-1723 slice B, FD-1747 limb 2 and its reproduction, FD-1887 H1 and H2, FD-1354's metrics guard), SL-2051 — a dated Work-plan delta
+status: active                   # draft → active → superseded | retired (§1.2a) — L1: draft→active rides the slice's PR
+created: 2026-11-06   # original date 2026-11-05, working id 8355, minted 2026-11-06
 owner: planner
 tree: 2f108b1eda22a4835279cee9b4c9e305babe3662
 phase: P2
@@ -15,13 +15,15 @@ corrected_by: []
 relates: [PL-1856, FD-1723, FD-1747, FD-1887, FD-1354, FR-33, FR-41, FR-80, FR-123, FR-452]
 ---
 
-# PL-8355 — WK-1178: slice G, the test-only limbs (SL 8356, a dated Work-plan delta)
+# PL-2050 — WK-1178: slice G, the test-only limbs (SL-2051, a dated Work-plan delta)
+
+*(Minted 2026-11-06 as PL-2050 from working id 8355, with the slice SL-2051 (working id 8356) and ledger LG-2052 (working id 8357), in the SL-2051 PR.)*
 
 > **For agentic workers:** this is a **dated Work-plan delta** under Lean P2 L1 (a')
 > (`.claude/roles/planner.md`, "Lean P2"). It `relates:` `PL-1856` and leaves it unedited; its Slice B, never
-> seated, is carried here with three more rows. One slice row, SL 8356. The executor's skills are
-> `superpowers:test-driven-development`, `.claude/skills/python-test` and `git-hygiene`. PL 8355, SL 8356
-> and LG 8357 are working ids reserved by the lead.
+> seated, is carried here with three more rows. One slice row, SL-2051. The executor's skills are
+> `superpowers:test-driven-development`, `.claude/skills/python-test` and `git-hygiene`. PL-2050, SL-2051
+> and LG-2052 are working ids reserved by the lead.
 
 ## Authority
 
@@ -98,7 +100,7 @@ The slice:
   frontend deploy scripts` prints nothing.
 - **A2. Unmutated red is a STOP.** A new test red with no mutation: the slice stops, the failing line goes to the lead, and no
   assert is softened (`PL-1856` B3). The rest of the slice may continue only on the lead's word.
-- **A3. Each limb has a mutation, applied, run, recorded, reverted.** LG 8357 quotes each red, and `git diff --quiet -- backend/src
+- **A3. Each limb has a mutation, applied, run, recorded, reverted.** LG-2052 quotes each red, and `git diff --quiet -- backend/src
   packages` rc 0 after each. T1 to T4 by `PL-1856` Acceptance 11 to 14, restated below.
 - **A4. FR-41.** T1: bytes `B` with recipe `R` into one Dataset, then `B` with the stored `derived_from["recipe"]` into a second;
   each stored table's blob content hash is equal. Mutation: drop one replayed step; fails on the hash.
@@ -112,7 +114,7 @@ The slice:
   naming "limiter not enforced"; the two deliberate fail-open tests are exempt by name. Mutation: a test run with the store timing out
   reds by that message, not by `409 == 429`. **The reproduction**, by the essay's recipe, in a scratch copy never under the repo, with
   `_KEY_TTL_SECONDS` at its shipped value: `GAP=2.5` RED `assert 409 == 429`, `GAP=0` GREEN, and with 3600 `GAP=2.5` GREEN. All three
-  outputs in LG 8357. **A different result, or any sign that the production limiter resets, is FD-1747's HIGH trigger: STOP.**
+  outputs in LG-2052. **A different result, or any sign that the production limiter resets, is FD-1747's HIGH trigger: STOP.**
 - **A9. FD-1887.** T6, T7 added to the guard's own tests: H2: `if other.exists(): pytest.skip(...)` is not a guard. H1: lowercase
   `fremtpl2` in a join, a `Path(...)` call, `os.path.join` inside a function, and `from … import x as y`, each caught. Each red at
   base by being passed. `test_every_test_that_reaches_the_fremtpl2_data_carries_the_guard` stays green over the real tree, or A2
@@ -146,7 +148,7 @@ The slice:
 
 ## Tasks
 
-### SL 8356 — the test-only limbs
+### SL-2051 — the test-only limbs
 
 **The row.** After R, A and D at the gate. WK-1178. One `sonnet` executor. Requirements: `01` FR-41, FR-33, FR-80; `02` FR-123; `07`
 FR-452 (FD-1747). Depends on: DP-G1 ruled; the GO; the DB window; a gate slot. **Size:** 6.25 h (triage2 6.5 h, less 0.25 h under DP-G1 (a)):
@@ -205,8 +207,8 @@ test's own file, with a comment citing the essay's item.
 - `backend/tests/test_ingestion.py`, `backend/tests/test_lineage.py`, `backend/tests/test_score_rate_limit.py`,
   `packages/pricing-core/tests/test_gbm.py`, `packages/pricing-core/tests/test_metrics.py`, `tests/test_fremtpl2_data_guard.py`.
 - Any test the hardened guard names, only on the lead's ruling (R3).
-- LG 8357 under `docs/ledgers/`.
-- At the mint: the SL 8356 row in `docs/roadmap.md`, `docs/INDEX.md`, this plan's `status:`, the essays and `docs/findings/register.md` (A11).
+- LG-2052 under `docs/ledgers/`.
+- At the mint: the SL-2051 row in `docs/roadmap.md`, `docs/INDEX.md`, this plan's `status:`, the essays and `docs/findings/register.md` (A11).
 
 ### Files shared with other groups
 

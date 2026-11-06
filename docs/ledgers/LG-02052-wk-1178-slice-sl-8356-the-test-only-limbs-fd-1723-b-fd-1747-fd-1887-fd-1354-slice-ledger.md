@@ -1,22 +1,24 @@
 ---
-id: LG-8357
+id: LG-2052
 family: ledger
-title: WK-1178 slice G (SL 8356) — the test-only limbs: FD-1723 slice B, FD-1747, FD-1887, FD-1354
+title: WK-1178 slice G (SL-2051) — the test-only limbs: FD-1723 slice B, FD-1747, FD-1887, FD-1354
 status: active                 # active → closed (§1.2a) — set `closed` only at slice close
-created: 2026-11-05
+created: 2026-11-06   # original date 2026-11-05, working id 8357, minted 2026-11-06
 owner: executor
 tree: 9e2a1b1388bbf390d31995b35418cf4e350103db
 phase: P2
 work: WK-1178
-slice: SL-8356
-plans: [PL-8355]
+slice: SL-2051
+plans: [PL-2050]
 corrected_by: []
-relates: [PL-8355, FD-1723, FD-1747, FD-1887, FD-1354]
+relates: [PL-2050, FD-1723, FD-1747, FD-1887, FD-1354]
 ---
 
-# LG-8357 — WK-1178 slice G (SL 8356): the test-only limbs
+# LG-2052 — WK-1178 slice G (SL-2051): the test-only limbs
 
-**GO:** the plan of record is PL 8355 on `draft/pl-g-2026-11-05` @`228145c6` (DP-G1 ruled (a) in
+*(Minted 2026-11-06 as LG-2052 from working id 8357, with the plan PL-2050 (working id 8355) and the slice SL-2051 (working id 8356), in the SL-2051 PR.)*
+
+**GO:** the plan of record is PL-2050 on `draft/pl-g-2026-11-05` @`228145c6` (DP-G1 ruled (a) in
 to-lead "2026-11-05 11:52:34 GMT"); the executor brief is
 `~/gi-pricing-plan.local/handover/brief-exec-sl8356g-2026-11-05.md` (sha256 prefix `70c16303a1e4`).
 **MERGE-ACK:** (added at merge.)
@@ -25,13 +27,13 @@ to-lead "2026-11-05 11:52:34 GMT"); the executor brief is
 
 ### Scope
 
-PL 8355, "Tasks / SL 8356 — the test-only limbs", R0 to R5. Requirements: `01` FR-41, FR-33, FR-80;
+PL-2050, "Tasks / SL-2051 — the test-only limbs", R0 to R5. Requirements: `01` FR-41, FR-33, FR-80;
 `02` FR-123; `07` FR-452 (FD-1747); FD-1887 H1 and H2; FD-1354 under DP-G1 (a). **No source file
 changes** (A1). Write set: `backend/tests/test_ingestion.py`, `backend/tests/test_lineage.py`,
 `backend/tests/test_score_rate_limit.py`, `packages/pricing-core/tests/test_gbm.py`,
 `packages/pricing-core/tests/test_metrics.py`, `tests/test_fremtpl2_data_guard.py`, and this ledger.
 
-**Dated line (lead ruling, to-lead "2026-11-05 14:05:07 GMT"), PL 8355 T4 / R2:**
+**Dated line (lead ruling, to-lead "2026-11-05 14:05:07 GMT"), PL-2050 T4 / R2:**
 ~~"Build `y` with a real `a * b` term, group `(a,)`, `(b,)`"~~ — `GbmSpec` refuses a group of one feature
 ("an interaction group must name at least two features"), so the test as first written failed at
 `_spec` on both backends with no mutation (A2 STOP, reported, ruled). Now: four features `a b c d`,

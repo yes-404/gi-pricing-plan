@@ -3693,6 +3693,26 @@ Seven independent guard, fixture and small-fix findings of WK-1178, each a red-f
 
 *(Closed 2026-11-06 by the audit commit of the slice's PR, on the lead's adoption of aud-slh (`from-lead-2026-10-09.md`, "2026-11-05 16:51:59 GMT"); the row did not exist at `origin/main` `96481c413092`, and the mint added it as `active`.)*
 
+#### SL-2051 — WK-1178 slice — FD-1723 slice B, FD-1747, FD-1887, FD-1354: the test-only limbs
+
+```yaml
+id: SL-2051
+family: slice
+title: WK-1178 slice — the test-only limbs (FD-1723 slice B, FD-1747, FD-1887, FD-1354)
+status: active                    # draft → active → closed (§1.2a)
+created: 2026-11-06   # original date 2026-11-05, working id 8356, minted 2026-11-06
+owner: lead
+tree: d521000ae3e6187b3168e4c76dd33a14d6a4c828
+phase: P2
+work: WK-1178
+corrected_by: []
+relates: [FD-1723, FD-1747, FD-1887, FD-1354, PL-2050, LG-2052]
+```
+
+Test-only: no source file changes. Six test files gain the missing limbs: the ingestion and lineage tests (FD-1723 slice B), the score rate-limit test (FD-1747), the GBM and metrics tests (FD-1887 H1 and H2, FD-1354's metrics guard) and the freMTPL2 data guard.
+
+(Minted 2026-11-06 from working id 8356, with the mint tool of record `mint-repoint.py`; plan `PL-2050` (working id 8355), ledger `LG-2052` (working id 8357). `tree` is the gated tree of the slice branch before the merge of `origin/main`.)
+
 ### WK-1250 — Sub-graph composition and MTA/cancellation pricing — FR-217's inlining and FR-218's authoring half
 
 ```yaml
