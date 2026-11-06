@@ -337,7 +337,7 @@ def test_a_factor_resolution_refusal_is_the_same_on_both_paths(world: World) -> 
 def test_a_nan_banded_input_is_a_factor_resolution_refusal_on_both_paths(
     world: World, missing: Any
 ) -> None:
-    """FD 8354: a `Decimal('NaN')` reaching a banded input panicked the engine (pyo3
+    """FD-2043: a `Decimal('NaN')` reaching a banded input panicked the engine (pyo3
     `PanicException`) where a float NaN is a `FactorResolutionError`. `veh_age`'s banding
     declares no `null_level`, so a missing value is refused (FR-97), whatever its type."""
     quote = {**QUOTES[0], "veh_age": missing}

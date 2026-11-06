@@ -16,30 +16,30 @@ relates: [FD-1648, FD-1659, FD-1478, PL-2019, FR-255, FR-239]
 
 # LG-2039 — WK-1178 slice SL-2038 (R2): a bad cell is a hard error, and a refusal says why
 
-**GO:** to-lead "2026-11-05 11:39:12 GMT" (R2 now, branch from R1's gated-to-be head 662867bb, not its merge). FD 8354 added by "2026-11-05 11:16:36 GMT" (2).
+**GO:** to-lead "2026-11-05 11:39:12 GMT" (R2 now, branch from R1's gated-to-be head 662867bb, not its merge). FD-2043 added by "2026-11-05 11:16:36 GMT" (2).
 **MERGE-ACK:** (added at merge.)
 
 ## Tasks
 
 ### Scope
 
-`PL-2019` R2 (SL-2038), items A12 to A18. Requirements: `03` FR-255 (clause first), FR-239 (the ruled dated clause, in the code's commit), NFR-489 (read only). FD-1648, FD-1659, FD-1478 close at the audit; FD 8354 (MEDIUM) rides this slice.
+`PL-2019` R2 (SL-2038), items A12 to A18. Requirements: `03` FR-255 (clause first), FR-239 (the ruled dated clause, in the code's commit), NFR-489 (read only). FD-1648, FD-1659, FD-1478 close at the audit; FD-2043 (MEDIUM) rides this slice.
 
-Write set: the plan's R2 write set, plus for FD 8354 `packages/pricing-core/src/pricing_core/modelling/predict.py` and `packages/pricing-core/tests/test_glm_scalar_predict.py` (widened by to-lead "2026-11-05 11:16:36 GMT" (2)); and `backend/src/app/api/score.py` (`_PER_QUOTE_CODES` lives there). Files widened by ruling (to-lead entries): `packages/pricing-core/src/pricing_core/rate_tables/operations.py` and `packages/pricing-core/tests/test_rate_table_bulk_ops.py` ("2026-11-05 16:24:09 GMT" (3), "2026-11-05 16:33:41 GMT"); `packages/pricing-core/src/pricing_core/rating/compile.py` and `packages/pricing-core/tests/test_rating_compile_fr240.py` ("2026-11-05 14:18:33 GMT" (2), "2026-11-05 16:14:12 GMT"); `examples/fremtpl2/journey.py` ("2026-11-05 16:41:58 GMT").
+Write set: the plan's R2 write set, plus for FD-2043 `packages/pricing-core/src/pricing_core/modelling/predict.py` and `packages/pricing-core/tests/test_glm_scalar_predict.py` (widened by to-lead "2026-11-05 11:16:36 GMT" (2)); and `backend/src/app/api/score.py` (`_PER_QUOTE_CODES` lives there). Files widened by ruling (to-lead entries): `packages/pricing-core/src/pricing_core/rate_tables/operations.py` and `packages/pricing-core/tests/test_rate_table_bulk_ops.py` ("2026-11-05 16:24:09 GMT" (3), "2026-11-05 16:33:41 GMT"); `packages/pricing-core/src/pricing_core/rating/compile.py` and `packages/pricing-core/tests/test_rating_compile_fr240.py` ("2026-11-05 14:18:33 GMT" (2), "2026-11-05 16:14:12 GMT"); `examples/fremtpl2/journey.py` ("2026-11-05 16:41:58 GMT").
 
 ### Task list
 
 - **R2.0** FR-255 clause alone: `930e7bd4` (A13). R2.0's async premise: `evaluate` (sync) of the guarded decision from inside `score_one`'s running loop works with a real bundle's `customHandler` (T5/T7 green through `score_one`).
 - **R2.1** reds T5, T6, T7, T12: `1359a77d`.
 - **R2.2-R2.5** sentinel, post-evaluation check `_check_unparseable_cells`, guard nodes, `PurposeEvaluation.diagnose`, `_reraise_engine_failure(evaluation, context, exc)`, with the FR-239 clause: `2447be87`. Fix `62b9b4d7`: `CompiledBundle.diagnose`, since `evaluation_for`'s base fallback built a `PurposeEvaluation` with the no-op diagnose.
-- **FD 8354**: red `3c2810e3`, green `bd494bb6` (`predict.py` `_row_frame`: a non-finite `Decimal` is carried as its float into the one-row frame; the one site both GLM scoring paths and the offset source reach).
+- **FD-2043**: red `3c2810e3`, green `bd494bb6` (`predict.py` `_row_frame`: a non-finite `Decimal` is carried as its float into the one-row frame; the one site both GLM scoring paths and the offset source reach).
 - Test fixes `5db73f7e`: T5's pins validated; T12's constant filled; import order.
 
 **A12, the existing-test changes (exactly three):** (1) `test_the_stated_residual_still_reports_the_miss_code` renamed `test_a_failure_in_a_step_consuming_a_table_is_not_a_miss`, inverted to `RATING_EVALUATION_FAILED` (FD-1478 orders it); (2) the four direct callers of `_reraise_engine_failure` (`test_rating_score.py` x3, `test_safe_error.py` x1) take `(evaluation, {}, exc)` with a stub `diagnose=lambda _: None`; (3) the `test_wf699_journey.py` comment. No assert removed. Additive: `_hand_compiled` gained `expense_rows`, `pins`, `extra_payloads` keywords; one `_check_unparseable_cells` line in `test_quote_input_raise_sites.py`'s count table.
 
 **Departures and notes**
 - T12's base hash is measured (below). T5's first red (`1359a77d`) was a fixture error (`Pins.model_copy` leaves strings); its red by cause is below, taken with the fixture fixed (`5db73f7e`) against the base source.
-- FD 8354's frame-path reference in the test builds its own `pl.DataFrame`, so the `Decimal` case runs the scalar path only (the float case runs both).
+- FD-2043's frame-path reference in the test builds its own `pl.DataFrame`, so the `Decimal` case runs the scalar path only (the float case runs both).
 - `test_rating_number.py`'s docstring still names the closed residual; it is outside the write set and not edited.
 - `_PER_QUOTE_CODES` gains the code, so a bad cell is a 422 where `RATING_EVALUATION_FAILED` is not in that set (unchanged).
 - **Process slip:** the first part of the session ran Bash calls opening with `cd <worktree>` against the brief's NO-CD ban; nothing outside the worktree was written. Thereafter `git -C` and absolute paths.
@@ -84,14 +84,14 @@ Re-runs on `aud-slr2` @ `369c43c7`, DB-free (dead-port URLs), one file per call 
 
 **Status at filing (2026-11-06).** N1 landed as R2's one-file widening (Build log, 16:47 GMT entry); N2 and N3 are the Build log's correction and measurement lines; N4 was ruled at "2026-11-05 16:43:48 GMT" and its bound is the Build log's 20:55 UTC entry; N5 is noted and not claimed. A18's gate is owed no longer: R2 rode the paired gate on SL-2041's object, recorded under `LG-2042` Gate (pytest 13 failed, all in the eight docs-audit files, the item-31 set; 7268 passed; 27 skipped, the baseline). The Build log's 2026-11-05 22:32 GMT entry records R1's growth: R2 bounds the positional growth R1 introduced in `runtime.py` and `score.py` and changes none of R1's lines beyond its own delta.
 
-*Adoption: the lead's line, `from-lead-2026-10-09.md` "2026-11-05 16:47:21 GMT": "aud-slr2 FINAL ADOPTED, released: R2 @369c43c7: A12 by record, A13–A16 MET (hash by own run at base and head), A17 by measure, A18 owed to gate (closure 171 files), N1 ruled at 16:41:58, on exec-sl8345j; N2, N3 LG lines sent to it; N4 ruled 16:43:48; N5 noted. FD 8354 has no row or essay: drafted born-closed. Drafts 3cf278e7a5f1, 6ffbe45958ea; adoption commits at R2's mint." The MERGE-ACK is written at the merge.*
+*Adoption: the lead's line, `from-lead-2026-10-09.md` "2026-11-05 16:47:21 GMT": "aud-slr2 FINAL ADOPTED, released: R2 @369c43c7: A12 by record, A13–A16 MET (hash by own run at base and head), A17 by measure, A18 owed to gate (closure 171 files), N1 ruled at 16:41:58, on exec-sl8345j; N2, N3 LG lines sent to it; N4 ruled 16:43:48; N5 noted. FD-2043 has no row or essay: drafted born-closed. Drafts 3cf278e7a5f1, 6ffbe45958ea; adoption commits at R2's mint." The MERGE-ACK is written at the merge.*
 
 ### Build log
 
 - **Red lines, by cause** (base source 662867bb, tests of `1359a77d`):
   - `9 failed, 44 passed in 18.82s` for T5, T6, T7 (3 cases + batch row), T12 (x2). T6 `test_a_failure_in_a_step_consuming_a_table_is_not_a_miss`: `RATE_TABLE_MISS` where `RATING_EVALUATION_FAILED` is expected. T7: `Actual message: "RATE_TABLE_MISS: the engine failed evaluating step 's_office' (FR-255); an on_miss='error' step it consumes most likely found no matching row"` for consumed; unconsumed and default_tolerant ended in a quote (no raise). T12: `'TO-BE-MEASUR...' != 'eb5bac43...'` (placeholder) and `('s_expense','r0','1.1','1.36E-7') != (..., '"__UNPARSEABLE_CELL__"')`.
   - T5 (fixture fixed): `1 failed, 1 passed`; the_lookup_missed: `RATE_TABLE_MISS: the engine failed evaluating step 's_office' ...` for a lookup miss (the_table_missed passes, as it must: the control).
-  - FD 8354, base source: `1 failed, 1 passed, 38 deselected in 7.43s`; `pyo3_runtime.PanicException: called Result::unwrap() on an Err value: PyErr { type: <class 'TypeError'>, value: TypeError("'str' object cannot be interpreted as an integer") ...}` at `polars/_utils/construction/dataframe.py:719` (`PyDataFrame.from_dicts`), the float NaN case passing.
+  - FD-2043, base source: `1 failed, 1 passed, 38 deselected in 7.43s`; `pyo3_runtime.PanicException: called Result::unwrap() on an Err value: PyErr { type: <class 'TypeError'>, value: TypeError("'str' object cannot be interpreted as an integer") ...}` at `polars/_utils/construction/dataframe.py:719` (`PyDataFrame.from_dicts`), the float NaN case passing.
 - **Green:** the runs under Gate. T12 is a guard, green at base.
 - **A16:** `sha256(json.dumps(to_wire(graph, payloads), sort_keys=True))` for `_algorithm_payload()` with the `motor-expense` rows of `_rate_table_payload()`: base 662867bb source `eb5bac4364fe66f353fee30bc38337443a0f8f2519ebc63162e5216b5f229985` (the module path printed `/tmp/sl8345/base/...`), head source the same. A table with one bad cell differs in that cell's `o0` only (T12b).
 - **A17 (a note, not an NFR reading):** `score_one` on the score fixture, 1000 calls per run, five runs, µs per call, load1 ~17-20 on an 8-vCPU box beside a gate: base 3628-4526 (min 3628) and 8833-12126; head 4289-9523 (min 4289) and 5784-7079. The noise exceeds the difference; the one addition is `_check_unparseable_cells`, a loop over the steps. Cell parse at load: `zen.evaluate_expression` ~1.1 µs a cell (the plan's RUN), not re-measured.
