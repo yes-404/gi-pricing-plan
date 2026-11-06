@@ -461,9 +461,27 @@ Notably absent from Pricing Actuary: ~~every `*:approve` permission~~ `approval:
 
 ```json
 {
+  "id": "0190b5a2-7c3e-7a10-9d21-4f6b8c2e1a01",
+  "workspace_id": "0190b5a2-7c3e-7a10-9d21-4f6b8c2e1a01",
   "artifact_ref": "rating_version:motor-gb@27",
   "artifact_type": "rating_version",
-  "submitted_by": "uuid", "submitted_at": "2026-09-12T14:02:00Z",
+  "submitted_by": "0190b5a2-7c3e-7a10-9d21-4f6b8c2e1a01", "submitted_at": "2026-09-12T14:02:00Z",
+  "change_summary": "AD frequency model refit on 2026H1 data; driver-age relativities softened at young ages; minimum premium raised to £280.",
+  "status": "review",
+  "decisions": [
+    {"approver_id": "0190b5a2-7c3e-7a10-9d21-4f6b8c2e1a01", "decision": "approve", "at": "2026-09-13T10:11:00Z",
+     "comment": "Dislocation is within the agreed envelope; young-driver softening is supported by the refit and the GIPP evidence is clean."}
+  ],
+  "approvers_required": 2, "approvers_recorded": 1
+}
+```
+
+The block above validates as an `ApprovalRequest`. The block below is FR-352's full submission:
+`change_summary`, with the `expedited`, `evidence_bundle`, `checklist` and `flags` keys, as the example
+first printed them.
+
+```json
+{
   "change_summary": "AD frequency model refit on 2026H1 data; driver-age relativities softened at young ages; minimum premium raised to £280.",
   "expedited": false,
   "evidence_bundle": {
@@ -479,15 +497,14 @@ Notably absent from Pricing Actuary: ~~every `*:approve` permission~~ `approval:
     {"item": "GIPP check passing", "checked": true, "by": "uuid", "auto_verified": true},
     {"item": "Reinsurance impact considered", "checked": true, "by": "uuid"}
   ],
-  "flags": [],
-  "status": "review",
-  "decisions": [
-    {"approver_id": "uuid", "decision": "approve", "at": "2026-09-13T10:11:00Z",
-     "comment": "Dislocation is within the agreed envelope; young-driver softening is supported by the refit and the GIPP evidence is clean."}
-  ],
-  "approvers_required": 2, "approvers_recorded": 1
+  "flags": []
 }
 ```
+
+> **Dated 2026-11-05 (`RL-2054` row 19, FD-1381; `RL-1522` DP-4 (a)).** The first block validates against
+> `model-schema`'s `ApprovalRequest`. The second block is FR-352's full submission, which is **ahead of the
+> code**: `expedited`, `evidence_bundle`, `checklist` and `flags` are not fields of the shape now, and
+> FR-352's checklist and evidence limbs are owned by WK-677. FR-352 is not amended by this note.
 
 *Amended 2026-10-05 (WK-1178), on `RL-1522` DP-1 and DP-4.* A decision's value is
 the act: `approve`, `reject` or `request_changes`, as §5.1's decide row and the glossary's
@@ -535,10 +552,10 @@ Generated sections, in order (R3). Each cites the artifacts it drew from.
 
 ```json
 {
-  "id": "01J…",
-  "workspace_id": "uuid",
+  "id": "0190b5a2-7c3e-7a10-9d21-4f6b8c2e1a01",
+  "workspace_id": "0190b5a2-7c3e-7a10-9d21-4f6b8c2e1a01",
   "at": "2026-09-13T10:11:00.482Z",
-  "actor": {"kind": "user", "id": "uuid", "display": "a.actuary@insurer.example"},
+  "actor": {"kind": "user", "id": "0190b5a2-7c3e-7a10-9d21-4f6b8c2e1a01", "display": "a.actuary@insurer.example"},
   "source": "ui",
   "action": "rating_version.approved",
   "entity_ref": "rating_version:motor-gb@27",
@@ -547,8 +564,8 @@ Generated sections, in order (R3). Each cites the artifacts it drew from.
   "justification": "Dislocation within the agreed envelope; GIPP clean.",
   "trace_id": "4bf92f3577b34da6a3ce929d0e0e4736",
   "job_id": null,
-  "prev_event_hash": "sha256:…",
-  "event_hash": "sha256:…"
+  "prev_event_hash": "sha256:3b8e3b8e3b8e3b8e3b8e3b8e3b8e3b8e3b8e3b8e3b8e3b8e3b8e3b8e3b8e3b8e",
+  "event_hash": "sha256:9f2c9f2c9f2c9f2c9f2c9f2c9f2c9f2c9f2c9f2c9f2c9f2c9f2c9f2c9f2c9f2c"
 }
 ```
 
@@ -761,3 +778,4 @@ Mirrored into [`open-questions.md`](../open-questions.md).
 | **OQ-1486** | **OPEN** — **Is a Validation Rule Set a Governed Artifact?** §2 (`:64`) lists Validation Rule, but not Rule Set. `replace_rule_set` publishes each set version `approved` with no review, so a new version can drop member rules or re-point the Reference Dataset Version unreviewed. Raised 2026-09-30 by the decision-maker (`RL-1485`). Mirrored in `docs/open-questions.md`. *Amended 2026-10-05 before mint (currency only, at `47d770e8`): the cites above are at `65b33479`; at `47d770e8` they are `validation_rules.py:549` (`replace_rule_set`), `:654` (`status=APPROVED`), `models.py:1247` and `validation.py:400-432`. `RL-1407` (#1109) has since ruled that a rule set runs only approved, existing members (FD-1414; delivered by `SL-1409`, not yet in the code); that does not review a change of composition, and the options are not re-weighed here (`RL-1485` J2).* Status: **open** (owner WK-1178). |
 | **OQ-2015** | **OPEN** — **Which permission does each of `06`'s unbuilt §5.1 routes need?** The routes are `GET`/`POST /roles`, `POST /role-assignments`, `POST /break-glass`, `POST /attestations`, `POST /audit/anchor`, the dossier routes, `POST /regulatory-exports` and the two artifact reads. Their `Permission` cells are the proposal; the pin reads only built routes; decided before the route is built, by the phase that builds it. Options and recommendation: [`open-questions.md`](../open-questions.md) OQ-2015. Owner: the Work that builds each route (WK-676, WK-677, WK-680, WK-681). |
 | **OQ-1726** | **OPEN** — **Who may read the audit log: which roles hold `audit:read`?** §5's permission table (`:287`) defines `audit:read` as "Reading the audit log" and names no holders; FR-346 requires only the Auditor. At `8eaf6d5f`, `BUILTIN_ROLES` gives it to `approver`, `deployer`, `auditor` and `admin` (`packages/model-schema/src/model_schema/permissions.py:145-148`, through `READ_PERMISSIONS` `:82-91`), but not to `analyst` or `pricing_actuary`. An event body carries the actor's id and display name, free-text justifications and the changed state (FR-369; FR-375 keeps secrets and full quote inputs out). Options: (a) all workspace roles, (b) a restricted set, (c) role-scoped reading. Raised 2026-10-14 (working id 8032; minted as OQ-1726 in the D17 batch mint PR), drafted by the planner as the maintainer's (by delegation) entry "2026-10-14 11:34:03 BST" item 1 permits. *2026-10-14: per the maintainer's (by delegation) "2026-10-14 11:45:50 BST" item 1 — "OQ 8032: KEEP, as minter-d17 drafted it on the TRUE holder set … I rule on it when D17 lands"; and "2026-10-14 12:05:33 BST" — "audit:read CLOSED BY RUN (analyst-only 403; analyst+approver 200), with no FD. OQ 8032 stands on the four-role set."* Mirrored in `docs/open-questions.md`. Status: **open** (decided before the P2 phase close; today's behaviour stands until then). |
+| **OQ-2036** | **OPEN** — **Should a write to a model (archive, and the other model write routes) require per-object ownership or a creator check, rather than the workspace-wide rights P2 grants?** Raised 2026-11-05 (working id 8397; P3), on the maintainer's entry "2026-11-05 14:06:02 GMT" (FD 8366, SURFACED 2): an analyst or an actuary holding `model:fit` can archive a colleague's draft or fitted model workspace-wide, because P2's model is **coarse rights** (`RL-1236` DP-A) and no requirement says otherwise. The entry rules it **not a finding**: an OQ candidate for P3, "per-object ownership on model writes", **spec only**. At `2f108b1e` `archive()` accepts draft, fitted and superseded and refuses approved, review and archived with 409 on state (`modelling.py:1208-1224`), and checks no owner. The options and the recommendation are in [`open-questions.md`](../open-questions.md). No requirement changes while this is open. |

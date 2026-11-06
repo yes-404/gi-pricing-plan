@@ -106,6 +106,7 @@ _PER_QUOTE_CODES: Final[frozenset[str]] = frozenset(
     {
         "INPUT_CONTRACT_VIOLATION",
         "RATE_TABLE_MISS",
+        "RATE_TABLE_CELL_UNPARSEABLE",  # FD-1648 (b): a stored cell the engine cannot read
         "REFERENCE_LOOKUP_MISS",
         "MODEL_CALL_FAILED",
         "RATING_TYPE_MISMATCH",  # RL-1567: an int or count output's value is not integral
