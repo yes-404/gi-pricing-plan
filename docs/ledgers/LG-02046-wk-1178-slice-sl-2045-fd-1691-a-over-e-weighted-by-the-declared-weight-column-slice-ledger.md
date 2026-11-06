@@ -1,22 +1,22 @@
 ---
-id: LG-8360
+id: LG-2046
 family: ledger
-title: WK-1178 slice SL-8359 — FD-1691, A/E weighted by the declared weight column (slice ledger)
+title: WK-1178 slice SL-2045 — FD-1691, A/E weighted by the declared weight column (slice ledger)
 status: active                 # active → closed (§1.2a)
-created: 2026-11-05             # filed under working id 8360
+created: 2026-11-06   # original date 2026-11-05, working id 8360, minted 2026-11-06
 owner: executor
 tree: 38459124248d9969aa8679859f8637595814b981   # sl-8359-m-weighted-ae, the last code/test commit this was written against (base 9c4e703a104adfb9dcf0189896d5d64b800e98e3)
-slice: SL-8359
+slice: SL-2045
 phase: P2
 work: WK-1178
-plans: [PL-8358]
+plans: [PL-2044]
 corrected_by: []
-relates: [FD-1691, OQ-1692, PL-8358, FR-171, FR-183, FR-184, FR-186]
+relates: [FD-1691, OQ-1692, PL-2044, FR-171, FR-183, FR-184, FR-186]
 ---
 
-# LG-8360 — WK-1178 slice SL-8359: A/E weighted by the declared weight column
+# LG-2046 — WK-1178 slice SL-2045: A/E weighted by the declared weight column
 
-**GO / definition of record:** to-lead "2026-11-05 11:55:25 GMT" (corrects and strikes the `_weights` clause of "2026-11-05 11:50:05 GMT"); plan PL 8358 at `9c4e703a`; brief sha256 prefix `53784750564c`; R0 accepted to-lead "2026-11-05 12:03:55 GMT".
+**GO / definition of record:** to-lead "2026-11-05 11:55:25 GMT" (corrects and strikes the `_weights` clause of "2026-11-05 11:50:05 GMT"); plan PL-2044 at `9c4e703a`; brief sha256 prefix `53784750564c`; R0 accepted to-lead "2026-11-05 12:03:55 GMT".
 **MERGE-ACK:** (added at merge.)
 
 ## Tasks
