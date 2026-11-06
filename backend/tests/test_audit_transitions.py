@@ -1964,7 +1964,7 @@ _UNBUILT_WRITES = (
 _SRC = Path(__file__).resolve().parents[1] / "src"
 
 
-def _declared() -> set[tuple[str, str, str]]:
+def _declared_edges() -> set[tuple[str, str, str]]:
     return {(n, a.value, b.value) for n, m in MAPS.items() for a, to in m.items() for b in to}
 
 
@@ -1976,7 +1976,7 @@ def _rowed() -> set[tuple[str, str, str]]:
 def test_every_declared_edge_has_a_row_or_a_reason() -> None:
     """The list comes from the maps, never from the call sites (FD-1723): an edge is either
     asserted by a row or named here with the ruling that left it unbuilt."""
-    declared, rowed = _declared(), _rowed()
+    declared, rowed = _declared_edges(), _rowed()
     assert declared - rowed == set(NOT_BUILT)
     assert not set(NOT_BUILT) & rowed
     assert all(reason.strip() for reason in NOT_BUILT.values())
