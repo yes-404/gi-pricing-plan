@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import uuid
+from pathlib import Path
 
 import numpy as np
 import pytest
@@ -230,3 +231,35 @@ def test_a_metric_missing_a_parameter_with_no_default_is_refused(
     assert "no default" in message
     for parameter in _REQUIRED[template]:
         assert repr(parameter.name) in message
+
+
+# FD-1354: `certify_metric` writes measured numbers into each check's `detail`, so the
+# text moves with the data. `objectives.py` normalises its details to status only for the
+# same reason; these three sites do not (metrics.py, the `direction_holds`,
+# `scale_behaviour` and `smoke_evaluation` details). Until they do, a test that pinned
+# the wording would pass on one platform and fail on another, unseen.
+_MEASURED_DETAIL_PHRASES = (
+    "value at f=log",
+    "one unit away",
+    "value changes by a factor",
+    "constant population of 1,000",
+)
+
+
+@pytest.mark.req("FR-157")
+def test_no_test_pins_a_metric_certificates_measured_text() -> None:
+    """The guard FD-1354 asked for: no other test file may hold a measured phrase.
+
+    This file is excluded because it names the phrases to look for.
+    """
+    repo = Path(__file__).resolve().parents[3]
+    roots = [repo / "backend" / "tests", repo / "tests", *repo.glob("packages/*/tests")]
+    pins = [
+        f"{path.relative_to(repo)}: {phrase!r}"
+        for root in roots
+        for path in sorted(root.rglob("*.py"))
+        if path.resolve() != Path(__file__).resolve()
+        for phrase in _MEASURED_DETAIL_PHRASES
+        if phrase in path.read_text(encoding="utf-8")
+    ]
+    assert not pins, "a test pins a certificate's measured text (FD-1354): " + "; ".join(pins)

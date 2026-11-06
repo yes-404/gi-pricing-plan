@@ -3671,6 +3671,50 @@ A/E for a diagnostic partition is Σw·y / Σw·μ, where w is the model's decla
 
 *(Closed 2026-11-06 by the audit commit of the slice's PR, on the lead's adoption of aud-slm (`from-lead-2026-10-09.md`, "2026-11-05 18:17:38 GMT"); no row existed at `origin/main` `b911432a82a2` before this PR's mint, which added it as `active`.)*
 
+#### SL-2048 — WK-1178 slice — FD-1488, FD-1507, FD-1509, FD-1749, FD-1228, FD-1662, FD-1493: guards, fixtures and small fixes
+
+```yaml
+id: SL-2048
+family: slice
+title: WK-1178 slice — guards, fixtures and small fixes (FD-1488, FD-1507, FD-1509, FD-1749, FD-1228, FD-1662, FD-1493)
+status: closed                    # draft → active → closed (§1.2a)
+created: 2026-11-06   # original date 2026-11-05, working id 8334, minted 2026-11-06
+owner: lead
+tree: f4d8fb252f99e327e7dd17e2d9ace78ffd5bb474
+phase: P2
+work: WK-1178
+corrected_by: []
+relates: [FD-1488, FD-1507, FD-1509, FD-1749, FD-1228, FD-1662, FD-1493, PL-2047, LG-2049]
+```
+
+Seven independent guard, fixture and small-fix findings of WK-1178, each a red-first commit pair: the migration-state refusal in `backend/tests/conftest_db.py` (FD-1488), the error-sink census's bound-name rule (FD-1507, NFR-499), the route-class check over the live app (FD-1509), the worktree teardown (FD-1749), the seed-reproducibility marker (FD-1228), `check_environment` over a `Mapping` with `scripts/demo.py` under mypy (FD-1662), and the OIDC decode refusal for malformed and deeply nested tokens (FD-1493). The plan is `PL-2047`; the ledger is `LG-2049`.
+
+(Minted 2026-11-06 from working id 8334, with the mint tool of record `mint-repoint.py`; plan `PL-2047` (working id 8333), ledger `LG-2049` (working id 8335). `tree` is the tree of the slice branch before the merge of `origin/main`.)
+
+*(Closed 2026-11-06 by the audit commit of the slice's PR, on the lead's adoption of aud-slh (`from-lead-2026-10-09.md`, "2026-11-05 16:51:59 GMT"); the row did not exist at `origin/main` `96481c413092`, and the mint added it as `active`.)*
+
+#### SL-2051 — WK-1178 slice — FD-1723 slice B, FD-1747, FD-1887, FD-1354: the test-only limbs
+
+```yaml
+id: SL-2051
+family: slice
+title: WK-1178 slice — the test-only limbs (FD-1723 slice B, FD-1747, FD-1887, FD-1354)
+status: closed                    # draft → active → closed (§1.2a)
+created: 2026-11-06   # original date 2026-11-05, working id 8356, minted 2026-11-06
+owner: lead
+tree: d521000ae3e6187b3168e4c76dd33a14d6a4c828
+phase: P2
+work: WK-1178
+corrected_by: []
+relates: [FD-1723, FD-1747, FD-1887, FD-1354, PL-2050, LG-2052]
+```
+
+Test-only: no source file changes. Six test files gain the missing limbs: the ingestion and lineage tests (FD-1723 slice B), the score rate-limit test (FD-1747), the GBM and metrics tests (FD-1887 H1 and H2, FD-1354's metrics guard) and the freMTPL2 data guard.
+
+(Minted 2026-11-06 from working id 8356, with the mint tool of record `mint-repoint.py`; plan `PL-2050` (working id 8355), ledger `LG-2052` (working id 8357). `tree` is the gated tree of the slice branch before the merge of `origin/main`.)
+
+*(Closed 2026-11-06 by the audit commit of the slice's PR, on the lead's adoption of aud-slg and his four calls (to-lead "2026-11-06 00:01:53 GMT"); no row existed at `origin/main` `c99a6cd818b1` before this PR's mint, which added it as `active`.)*
+
 ### WK-1250 — Sub-graph composition and MTA/cancellation pricing — FR-217's inlining and FR-218's authoring half
 
 ```yaml

@@ -217,7 +217,18 @@ substituted for either. interpret/EBM covers transparent ML.
 omit when adding a path to the config; ruff runs at line length 100 over everything except
 the vendored files.
 
+**Outside the mypy gate, by declaration (FD-1662, DP-H4, 2026-11-05).** `pyproject.toml`'s
+`[tool.mypy] files` is the gate; `scripts/demo.py` is now in it (two errors, fixed). The rest
+of `scripts/` and `backend/tests/` are **not**: `mypy scripts` reported 231 errors and
+`mypy backend/tests` 1983 when the triage measured them (at `fc4401dc`; the predicate is
+each command run as named). A per-tree baseline that may only shrink would be a new tool in a freeze week, so the two
+trees are declared outside the gate rather than half-claimed by `CLAUDE.md` §3; a file moves
+in by being made clean and added to `files`.
+
 ## Verified
+
+2026-11-05 — **mypy scope declared (FD-1662, DP-H4).** `uv run mypy` rc 0 over 253 source
+files with `scripts/demo.py` added, at tree `b4f4f7e24efeea0ebfc84282fe8e94c88492a943` (the commit before this line).
 
 2026-09-19 — **the annotated `docs/` tree replaced by `RFC-937` §1.4's.** W37-7 Task 5,
 `PL-1070`; §5.4's `repo-architecture` row. The old subtree was pre-migration throughout: a

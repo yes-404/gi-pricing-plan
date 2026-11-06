@@ -2,12 +2,12 @@
 id: FD-1509
 family: finding
 title: A local class that reuses a published name passes the OpenAPI half of the deployment route-types test
-status: active
+status: closed
 created: 2026-10-08            # original date 2026-10-05, set at the draft; minted 2026-10-08
 owner: auditor
 tree: 47d770e8fcbd2410fa101019ed8cf3aae69a1baa
 corrected_by: []
-relates: [WK-1178, WK-674, PL-1392, SL-1256, LG-1405, FR-428, FD-1335]
+relates: [WK-1178, WK-674, PL-1392, SL-1256, LG-1405, FR-428, FD-1335, SL-2048, LG-2049, PL-2047]
 ---
 
 # FD-1509 — the OpenAPI half of the route-types test compares names, so a same-named local class passes it
@@ -127,6 +127,8 @@ FD-1366). Proposed remedy, for the plan to decide:
    the import-kept variant must fail the AST half or the new check; the shipped routes must pass.
 3. PL-1392 Acceptance 14's red-first sentence stays as filed: a filed plan is frozen at its date (CLAUDE.md §2), so the
    correction is a record (this finding and LG-1405's run B), not an edit of the plan.
+
+***Resolved 2026-11-06*** — closed in place 2026-11-06 by the auditor, as the closing act of the audit of SL-2048 (WK-1178, LG-2049, PL-2047; this PR; its number, squash commit and merge date are written at the merge's date-of-record), on the lead's brief under the GO "2026-11-05 10:31:31 GMT" (plans C and H accepted, DP-H1 to DP-H5 ruled; `to-lead.md`, a local channel file), on the order of "2026-11-05 09:58:58 GMT". Delivered remedy: the route-types test has a class half. `route_class_problems(app, rows)` in `backend/tests/test_deployment_route_types.py` reads each `ROWS` row's live route (`body_field.field_info.annotation`, `response_model`, a `Page[Item]` through `__pydantic_generic_metadata__`) and requires the class named by the row with `__module__` in `model_schema`; the `app` fixture is now shared by the OpenAPI half. Red first: `846e71b0`, a mutation proof (the class check stubbed to `[]`, the essay's step 1 blindness), `1 failed, 18 passed, 1 error`; green `c896d015`. T5 on the essay's minimal app (a local `EnvironmentCreate`) is refused; the shipped routes pass. The import-kept variant is caught by the live check and not by the AST half, as the essay's step 2 and the maintainer's corrected reason say. At the audit head `19 passed, 1 error` (the error is a DB-backed test, owed to the gate). Gate evidence: the gate: pytest `13 failed, 7224 passed, 27 skipped, 5 xfailed in 4949.99s` alone, the 13 being the item-31 docs-audit set, every other python and frontend stage rc 0, demo seeded rc 0 (LG-2049).
 
 ## Severity (the maintainer's (by delegation))
 

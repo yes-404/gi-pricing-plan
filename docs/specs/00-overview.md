@@ -317,21 +317,26 @@ Every persisted entity carries the envelope below (defined once in `model-schema
 
 ```json
 {
-  "id": "uuid",
-  "workspace_id": "uuid",
-  "slug": "string, ^[a-z0-9][a-z0-9-]{1,62}$",
+  "id": "0190b5a2-7c3e-7a10-9d21-4f6b8c2e1a01",
+  "workspace_id": "0190b5a2-7c3e-7a10-9d21-4f6b8c2e1a01",
+  "slug": "motor-gb-quote-bind",
   "version": 1,
-  "status": "string (entity-specific enum)",
-  "currency": "ISO 4217, e.g. GBP — the workspace's single currency (OQ-542)",
-  "created_at": "timestamptz",
-  "created_by": "uuid (user)",
-  "updated_at": "timestamptz",
-  "archived_at": "timestamptz|null",
-  "parent_id": "uuid|null",
-  "labels": {"string": "string"},
-  "description": "string|null"
+  "status": "draft",
+  "currency": "GBP",
+  "created_at": "2026-08-14T09:00:00Z",
+  "created_by": "0190b5a2-7c3e-7a10-9d21-4f6b8c2e1a01",
+  "updated_at": "2026-08-14T09:00:00Z",
+  "archived_at": null,
+  "parent_id": null,
+  "labels": {"line": "motor"},
+  "description": null
 }
 ```
+
+The values above are literal so that the block is a valid `ArtifactEnvelope`. `slug` matches
+`^[a-z0-9][a-z0-9-]{1,62}$`; `status` is an entity-specific enum; `currency` is an ISO 4217 code
+and the workspace's single currency (OQ-542); `archived_at`, `parent_id` and `description` are the
+nullable fields.
 
 > **A Factor's slug, noted 2026-10-03 (`RL-1383`).** The `slug` pattern above holds for
 > every entity except a Factor, whose slug is `^[a-z0-9][a-z0-9_-]{1,62}$`: it may contain
