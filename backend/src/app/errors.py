@@ -653,7 +653,7 @@ async def _handle_serialization_error(
 ) -> JSONResponse:
     """FR-21: a value past the write bound is a coded 422; any other serialisation fault is a 500.
 
-    Validation takes any exponent, so a caller can submit a value that no response can carry.
+    Validation takes any exponent, so a caller can submit a value that cannot be written.
     The problem names no value (NFR-499).
     """
     # The match is on pydantic's message text because pydantic_core does not chain `__cause__`
@@ -670,7 +670,7 @@ async def _handle_serialization_error(
             title="Decimal out of range",
             status=status.HTTP_422_UNPROCESSABLE_ENTITY,
             code="DECIMAL_OUT_OF_RANGE",
-            detail="An exact decimal in the response has an exponent beyond 308 in either "
+            detail="An exact decimal has an exponent beyond 308 in either "
             "direction and cannot be written.",
             instance=request.url.path,
             trace_id=current_trace_id(),
