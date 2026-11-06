@@ -864,8 +864,12 @@ def test_bulk_operation_with_a_huge_percentage_is_a_coded_422_not_a_memory_fault
     api_client: TestClient, workspace_id, actuary
 ) -> None:
     """SL-2038 N1 (OWED to SL-2041's DB window: not run by SL-2038's seat). A request's
-    `percentage` of `1E+999990` made `_format_value` write ~1 MB per row; the bound (|adjusted
-    exponent| <= 308, FR-21) refuses it first: a 422 `RATE_TABLE_CELL_UNPARSEABLE`, small body."""
+    `percentage` of `1E+999990` made `_format_value` write ~1 MB per row. The bound that fires
+    is the writer's (|adjusted exponent| <= 308, FR-21) at api/rate_tables.py:217, where
+    `body.parameters.model_dump(mode="json")` writes the parameter before the platform call, so
+    the request never reaches `_format_value`: a 422 `DECIMAL_OUT_OF_RANGE` (a `percentage` is
+    not a cell, so RATE_TABLE_CELL_UNPARSEABLE, 03 §4.2, does not apply), a small body, and no
+    new version (maintainer's ruling, to-lead 2026-11-06 07:42:30 GMT, RED 2)."""
     family = f"mf-{uuid4().hex[:8]}"
     _seed_approved_model(workspace_id, family, _LEVELS)
     slug = _table_slug()
@@ -883,8 +887,40 @@ def test_bulk_operation_with_a_huge_percentage_is_a_coded_422_not_a_memory_fault
     )
 
     assert response.status_code == 422, response.text[:300]
+    assert response.json()["code"] == "DECIMAL_OUT_OF_RANGE"
+    assert len(response.text) < 2000
+    assert api_client.get(f"/api/v1/rate-tables/{slug}@2", headers=actuary).status_code == 404
+
+
+@pytest.mark.req("FR-234")
+def test_bulk_operation_whose_computed_cell_passes_the_bound_is_a_cell_422(
+    api_client: TestClient, workspace_id, actuary
+) -> None:
+    """SL-2038 N1, the computed-cell limb through the route (maintainer's ruling, to-lead
+    2026-11-06 07:42:30 GMT, ADDITION). `percentage` `9E+308` has adjusted exponent 308, so the
+    writer bound admits it; the cell `1.92 * (1 + 9E+308)` has adjusted exponent 309, so
+    `_format_value` refuses the computed cell: `RATE_TABLE_CELL_UNPARSEABLE`, small body, and no
+    new version."""
+    family = f"mf-{uuid4().hex[:8]}"
+    _seed_approved_model(workspace_id, family, _LEVELS)
+    slug = _table_slug()
+    seeded = api_client.post(
+        f"/api/v1/rate-tables/{slug}/seed-from-model",
+        json=_seed_body(family),
+        headers=actuary,
+    )
+    assert seeded.status_code == 201, seeded.text
+
+    response = api_client.post(
+        f"/api/v1/rate-tables/{slug}@1/bulk-operation",
+        json=_bulk_body("uplift_table", {"percentage": "9E+308"}),
+        headers=actuary,
+    )
+
+    assert response.status_code == 422, response.text[:300]
     assert response.json()["code"] == "RATE_TABLE_CELL_UNPARSEABLE"
     assert len(response.text) < 2000
+    assert api_client.get(f"/api/v1/rate-tables/{slug}@2", headers=actuary).status_code == 404
 
 
 @pytest.mark.req("FR-233")

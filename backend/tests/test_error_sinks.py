@@ -54,6 +54,10 @@ _SENTINEL = "SENTINEL-quote-input-d7e3c518"
 
 #: (file, function, kind) -> (how many, what covers it).
 _SINKS: dict[tuple[str, str, str], tuple[int, str]] = {
+    ("backend/src/app/errors.py", "_handle_serialization_error", "str(exc)"): (
+        1, "a substring classifier only: nothing stored, logged or echoed; "
+        "test_decimal_write_bound.py:56 asserts the value is not in the response "
+        "(maintainer's ruling, to-lead 2026-11-06 07:42:30 GMT, RED 1)"),
     ("backend/src/app/api/score.py", "_as_platform_error", "str(exc)"): (
         1, "reached only for a `CodedError` (by class, not text shape): the message has its value "
         "dropped at source: test_quote_input_raise_sites.py "
