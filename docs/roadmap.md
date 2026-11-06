@@ -3575,6 +3575,26 @@ Test only, no spec change. In `frontend/src/views/__tests__/RatingDesignView.tes
 
 *(Closed 2026-11-05 by the audit commit of the slice's PR, on the lead's adoption of aud-slf, from-lead "2026-11-05 16:23:45 GMT"; the row read `active` at the mint head a93b1cdf.)*
 
+#### SL-2026 — WK-1178 slice — FD-1384: `FactorCreate.slug` takes the Factor grammar at the write boundary
+
+```yaml
+id: SL-2026
+family: slice
+title: WK-1178 slice — FD-1384, FactorCreate.slug takes the Factor grammar at the write boundary (FR-83)
+status: active                    # draft → active → closed (§1.2a)
+created: 2026-11-05
+owner: lead
+tree: 07fba0f4065b12c8475fa8727bd195b497b32dc2
+phase: P2
+work: WK-1178
+corrected_by: []
+relates: [FD-1384, FD-1799, RL-1383, FR-83, FR-209, PL-2025, LG-2027]
+```
+
+`POST /api/v1/factors` refuses a slug outside the Factor pattern (`00` §4.3): 422 `VALIDATION_FAILED` naming `slug` (FR-83); a stored slug is never re-validated on read (FR-209). `FactorSlug` is added to `packages/model-schema/src/model_schema/refs.py` and `FactorCreate.slug` in `backend/src/app/api/models.py` takes it; the generated contracts change with it. `FD-1384` closes at the merge (the auditor's act), per `PL-2025` section "SL-2026". Its ledger is `LG-2027`.
+
+(Minted 2026-11-05 from working id 8328, with the mint tool of record `mint-repoint.py`; plan PL-2025 (working id 8327), ledger LG-2027 (working id 8329). `tree` is the gated tree of the slice branch before the merge of `origin/main`.)
+
 ### WK-1250 — Sub-graph composition and MTA/cancellation pricing — FR-217's inlining and FR-218's authoring half
 
 ```yaml

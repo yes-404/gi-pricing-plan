@@ -1,20 +1,20 @@
 ---
-id: LG-8329
+id: LG-2027
 family: ledger
-title: WK-1178 slice SL-8328 — FactorCreate.slug takes the Factor grammar at the write boundary (PL-8327, FD-1384)
+title: WK-1178 slice SL-2026 — FactorCreate.slug takes the Factor grammar at the write boundary (PL-2025, FD-1384)
 status: active
 created: 2026-11-05
 owner: executor
 tree: a3046f64bdbe6a2a4f19c574d5589a3dcc043fa8
 phase: P2
 work: WK-1178
-slice: SL-8328
-plans: [PL-8327]
+slice: SL-2026
+plans: [PL-2025]
 corrected_by: []
-relates: [FD-1384, RL-1383, SL-1806, PL-8327]
+relates: [FD-1384, RL-1383, SL-1806, PL-2025]
 ---
 
-# LG-8329 — WK-1178 slice SL-8328: `FactorCreate.slug` takes the Factor grammar
+# LG-2027 — WK-1178 slice SL-2026: `FactorCreate.slug` takes the Factor grammar
 
 **GO:** the order in to-lead "2026-11-05 09:58:58 GMT" (the slice plan) and "2026-11-05 10:31:31 GMT" (plans C and H accepted); brief `brief-exec-slices-ch-2026-11-05.md`, row exec-sl8328c.
 **MERGE-ACK:** (added at merge)
@@ -23,7 +23,7 @@ relates: [FD-1384, RL-1383, SL-1806, PL-8327]
 
 ### Scope
 
-PL-8327, "SL 8328 — `FactorCreate.slug`": `POST /api/v1/factors` refuses a slug outside the
+PL-2025, "SL-2026 — `FactorCreate.slug`": `POST /api/v1/factors` refuses a slug outside the
 Factor pattern (`00` §4.3, RL-1383) with 422 `VALIDATION_FAILED` naming `slug`. Reads unchanged
 (FR-209). Requirements: `02` FR-83; FR-209 (read). Register: FD-1384.
 
