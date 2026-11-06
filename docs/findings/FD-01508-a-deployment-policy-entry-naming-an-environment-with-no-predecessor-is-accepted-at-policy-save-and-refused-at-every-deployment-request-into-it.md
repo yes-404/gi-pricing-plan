@@ -136,6 +136,8 @@ If (1) is chosen, a red test belongs at the policy route (a PUT naming a predece
 no policy row), and `_gated_environment` at `test_deployments.py:781` is the helper that needs to change, since it
 currently relies on the save being accepted.
 
+*(Dated line, 2026-11-06, CR 8315's PR, by the executor, on to-lead "2026-11-05 12:02:53 GMT": the event is met. Option (2), LEAVE AS RULED for P2: the request-time refusal is the behaviour and the row is LOW. The status does not change (to-lead "2026-11-06 09:58:14 GMT" (2) refused `retired`: a retired row loses the owed design point). **§14 proposal, named:** refuse-at-save is the better design and goes to the §14 review as a proposed P3 spec amendment to `06` FR-364 and `07` FR-429: a later phase's capability is a spec change only.)*
+
 ## What this finding does NOT claim
 
 - It does not claim the request-time refusal is wrong. `RL-1404` D2 rules it right, and `03` §4.12 says so.

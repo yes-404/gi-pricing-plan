@@ -2,7 +2,7 @@
 id: LG-2017
 family: ledger
 title: WK-674 slice SL-1689 — the frontend image and service (FR-432's last limb, FD-1661) and FD-1816, the roll leaves a stopped pre-roll container (slice ledger)
-status: active                 # active → closed (§1.2a)
+status: closed                 # active → closed (§1.2a)
 created: 2026-11-05            # filed under working id 8320
 owner: executor
 tree: 81b0bb869439efd929e2599da9373fac19039eda   # the mint head's tree (the commit the mint ran on; refreshed at the mint, A13)
@@ -260,3 +260,5 @@ span is 18:17:05 to 18:24:07 UTC; the doc-index run beside the demo, about 19:17
 ## PRs
 
 PR #1435.
+
+*(Dated line, 2026-11-06, CR 8315's PR, by the executor, on to-lead "2026-11-06 09:54:01 GMT" (4): item 42 extended — a closed slice's LG status closes with its row; `SL-1689` read `closed` and this ledger `active` after #1435 and the audit, so the status is closed here. The body is not edited.)*

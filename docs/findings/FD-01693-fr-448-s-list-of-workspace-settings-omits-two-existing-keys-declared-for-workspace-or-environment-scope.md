@@ -2,7 +2,7 @@
 id: FD-1693
 family: finding
 title: FR-448's list of workspace settings omits two existing keys declared for workspace or Environment scope
-status: active
+status: closed
 created: 2026-10-12
 owner: auditor
 tree: 50bbdd96b2154cb4eb79ccf91658191e51ab8906
@@ -35,3 +35,5 @@ and from `RL-1687`'s T2 note and its "Raised to the lead" bullet on FR-448. Ever
 ## Disposition
 
 **Owner WK-674**, the Work whose Slice 4 (`SL-1258`) applies `RL-1687`'s T2 to FR-448. Remedy: a dated clause on FR-448 naming `scoring.default_client_rate_limit_rps` and `rating.trace_sample_rate`, with `rating.trace_sample_rate` distinguished from `observability.trace_sample_rate`, applied through `.claude/skills/spec-change`. It is not part of `RL-1687`'s T2, by the maintainer's instruction. Event that next confirms or discharges it: FR-448's cell naming both keys, checked by `grep -c 'scoring.default_client_rate_limit_rps' docs/specs/07-platform.md` printing at least 1 inside FR-448's cell. Filed by the minter from the entries, 2026-10-12.
+
+***Resolved 2026-11-06*** — closed in place by the executor: FR-448's cell names both keys, on to-lead "2026-11-05 12:02:53 GMT". <PR and squash at the read-back.>
