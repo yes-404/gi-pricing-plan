@@ -2,7 +2,7 @@
 id: LG-2061
 family: ledger
 title: WK-1178 slice SL-2060 — FD-1723's FR-7 limb, every declared transition emits its audit event (slice ledger)
-status: active                 # active → closed (§1.2a)
+status: closed                 # active → closed (§1.2a); closed 2026-11-06 by the audit commit of the slice's PR
 created: 2026-11-06             # original date 2026-11-05, set at the draft; filed under working id 8378, minted 2026-11-06
 owner: executor
 tree: 921d9270cd2a8f7afb232e13ad2f0aeadbe595c2   # sl-8377-fr7-events, the T2 writer commit this was first written against (base ac123679f741c02ec86504b1b017b923a93b4151)
@@ -35,13 +35,45 @@ The slice's row is SL-2060 in `PL-2059` ("SL-2060: the row. Scope: A1 to A14"), 
 
 ### Gate
 
-(Written by the gate holder, not by this executor.)
+Full gate of SL-2060, paired with LAST-1 (SL-2056), lines read from `scratch/sl8377-gate/gate/gate.log` on 2026-11-06, range `origin/main...sl-8377-fr7-events`, END 2026-11-06T08:38:35+00:00 rc=1: ruff rc 0, mypy rc 0, import_linter rc 0, req_coverage rc 0, contracts rc 0, audit_docs rc 1 (item 31's working-id lines). pytest rc 1: `14 failed, 7447 passed, 27 skipped, 5 xfailed, 151 warnings in 5299.37s (1:28:19)`; 27 skipped = baseline. The 14 failed are item 31's 13 (the eight docs-audit files: `test_audit_docs_finding_citations`, `_ids` x2, `_process_core_digest` x2, `_w37_11_ceiling`, `test_doc_index`, `test_register_lint` x3, `test_register_owed`, `test_repository_invariants` x2) plus the ruled 14th, `backend/tests/test_application_role.py::test_declared_lives_in_the_application`, fixed after the gate by the `_declared` rename. Frontend: install, generate:api, lint, type-check, test, build all rc 0. Demo `wf-699` rc 0, 1564 s, dislocation #1 517 s; D7 `ok 19985 policies in the sample; rate table edits: +485990825; NCD ladder and expense loading: +3851186; sum +489842011`: D7's total and both attribution limbs equal on the 19985-policy sample the paired LAST-1 gate printed. Template guard start and end `alembic_version=1 environments=3 tenant_marker=1`, redis db 0 = 56 both ends.
 
-DB-free checks on this executor's side, tree `921d9270`: `ruff check backend` rc 0; `audit-docs.py` (`--light`, `env -C` the worktree) FAILED (2): `check 31: gap in the full allocation between 2010 and 8376` (the working ids), `check 39: docs/INDEX.md is stale against a fresh regeneration (2194 governed record(s))` (the mint's, ruled by the lead).
+Earlier DB-free checks, tree `921d9270`: `ruff check backend` rc 0; `audit-docs.py` (`--light`, `env -C` the worktree) FAILED (2): `check 31: gap in the full allocation between 2010 and 8376` (the working ids), `check 39: docs/INDEX.md is stale against a fresh regeneration (2194 governed record(s))` (the mint's, ruled by the lead).
 
 ### Audit
 
-(The auditor's.)
+**Auditor:** aud-sl8377 (Sonnet 5.5, medium). **Object:** `origin/main...HEAD` at 684efcc026be834b4eb62c6153483ade7a96aaa0, tree daf3490c4161bd7d616900ef6201b550e67f8310; `ac123679` is an ancestor; the plan's dated delta is in the tree. **Proposal (the lead adopts):** NOT CLEAN on one defect, F1 below; every other limb of PL-2059 A1 to A14 is met or owed to the gate as stated.
+
+| Limb | Finding |
+|---|---|
+| A1 | First code commit of `git log --reverse --no-merges origin/main..HEAD` is `8cefe0f3`, T1's reds. Met. |
+| A2 to A5 | Read to the assert. The red at base of record is a mixed tree (source `a175b786`, test file `e4c283f5`); `git diff --stat ac123679 a175b786 -- backend/src packages` is empty, so the source is the base's, and `e4c283f5` changes only the certificate battery of the test data. The honest red of `a175b786`'s own file for the four objective late cases was a validation error (FR-158), disclosed in the ledger. Enough, not reproducible from one commit. |
+| A6 | `pytest --collect-only -q backend/tests/test_audit_transitions.py` (this tree, DB-free): 161 collected; the table test collects 136 + 8 rate-table cases = 144. 143 green plus the model case green after `41775aeb`: from the ledger (DB window), not re-run here. |
+| A7 | The two guards ran green here, DB-free: `2 passed`. Mutation evidence is the ledger's. |
+| A8 | Each of the eleven writer functions holds exactly one `audit.record` call except `deployments.deploy` (two); the ledger's first try hit `deployment.created` and was redone on `deployment_request.executed`. The other ten name the only call in their function. Results are the ledger's. |
+| A9 | Census 85 lines / 84 AST sites, ledger. Met. |
+| A11 | `git diff --name-only origin/main...HEAD -- docs/contracts frontend deploy` prints nothing; `generate-contracts.py --check` rc 0, "58 generated contracts match the models". Met. |
+| A12 | Ledger, window 2. Not re-run (DB). |
+| A13 | OQ-2062 in `docs/open-questions.md:50` and `00:618`; OQ-2063 at `open-questions.md:169` and `03:1642`. DP-11's `docs/roadmap.md` §10 row was not in the audited tree (the brief banned roadmap edits); added at the mint as a second "Before Phase 3" row for OQ-2063. |
+| A14 | `carry-forward list` at `02:254`, `:263`, `:1673`; `NOT_BUILT` has 9 entries, each non-empty. Met. |
+
+**The five parts of model.fitted:** (1) `record_fit` reads `before_status = row.status` before the assignment, not typed, and `after` carries `status`; (2) `test_model_nfrs.py` has `model.fitted` out of the loop, the four creates pinned, the docstring giving the reason; (3) `02` §9 gets a dated correction with the 2026-08-22 text untouched (the diff adds one line); (4) NFR-484 carries a dated amendment; (5) the PL delta is in the tree. The other four events are real creates, read by me: `factor.created` (modelling.py:267), `banding.created` and `grouping.created` (transformations.py), `model.reserved` (modelling.py:580) each add a new row at a new version.
+
+**The 144 and the coverage.** The eight `VALID_.*TRANSITIONS` maps by `git grep -n -E '^VALID_[A-Z_]*TRANSITIONS\b' HEAD -- backend packages ':!*/tests/*'`; status writers by `git grep -n -E '\.(status|state)\s*=[^=]' HEAD -- backend/src`. Every writer file is in the table except `outbox.py:133` (delivery queue, not a governed Artifact; D0 U8). The spec's lifecycle arrows (`docs/specs`) name datasets, ratings, objectives, metrics, perils, models, jobs, rules, reference tables, approvals and deployment requests: all in the table. Limit, stated: the guard reads the eight maps only; the Validation Rule, Reference Table and Deployment Request edges are hand-listed rows, so a new edge in `validation_rules.py` or `deployments.py` trips no guard.
+
+**Findings**
+- **F1 (HIGH, a gate red).** `backend/tests/test_rating_versions.py:689-693`, `test_a_rejected_rating_version_returns_to_draft_with_a_true_audit_before`, calls `rating_service.submit_for_review` and then selects `action.like("rating_version.%")` excluding only `rating_version.created`; it asserts `== [("review","draft")]`. `rating_versions.submit_for_review` now writes `rating_version.submitted` (draft to review), so the list is two entries. The plan's "No consumer breaks" greps `action` readers in `src` and `_decision_moves`, and missed this test (common item 44). DB-backed; I read it, I did not run it. Fix in the slice: exclude `.submitted` (or assert the two moves). The slice's GREEN set in the ledger does not list it.
+- **F2 (MEDIUM, audit-docs).** `audit-docs.py --light` on this tree prints `FAILED (7)`, one of them `check 32: docs/specs/00-overview.md:614: short-padded id (the plan-id specimen)` (OQ-555's row, byte-identical at main, `cmp` same). At tools-main `7a3c813b` the same line is in the DISCLOSED block and the run ends `All checks passed`. DISCLOSED counts 850 here against 849 there. Cause not isolated; the file is touched by the slice. The other six are the expected check 31, check 32 (LG-2061 twice, OQ-2062, OQ-2063) and check 39.
+- **F3 (LOW).** `_METRIC_CHECKS` in the test repeats `model_schema.metrics.METRIC_CERTIFICATE_CHECKS` by hand (names equal today); import it.
+- **F4 (note).** A2 asks a red "under the mutation that restores the old string"; the ledger gives the red at base instead. Same code state; accept.
+
+**Other asks.** FR-351 (item 12): the changed line keeps the old words-list sentence and the new dated clause says it is stale for `peril_structure`; the rule is append and mark, so no change is owed. the plan-id specimen at that line at `00:614`: pre-existing, same bytes at origin/main. FR-239: `record_certificate` no longer moves a status for a late certificate and the approval/rating maps lost edges no code consumes (`approvals._require_transition` is the only reader; `changes_requested` and `draft` were never targets); no stored artifact's hash input changes. SL row (item 42): working id 8377, now SL-2060, was not yet in `docs/roadmap.md` at this tree; the mint writes it and the close commit of this audit closes it.
+
+**GREEN by import closure:** over ~15 files, OWED-TO-GATE: `backend/tests/test_rating_versions.py` (F1), `test_api_approvals.py`, `test_approvals.py`, `test_deployments.py`, `test_api_authorisation_sweep.py` (item 43, no request shape touched), `test_custom_objectives*.py`, `test_custom_metrics.py`, `test_objective_submission.py`. **Paired gate safety:** DB-free here; the slice changes no fixture, path-loaded script or `scripts/` import, and `test_audit_transitions.py` uses only the per-test DB; I find nothing making a paired gate unsafe. Item 41: `git diff --name-only origin/main...HEAD -- scripts` prints 0 files, so no test that copies `scripts/` (`git grep -l -E 'shutil\.(copy|copytree)' HEAD -- backend/tests tests` lists 7, among them `tests/test_doc_id_migrate.py`) sees a changed input. Item 39: the spec-reading tests (`tests/test_audit_docs_ids.py`, `tests/test_doc_index.py` and the docs-audit set) read the changed specs; not run here, owed to the gate.
+
+**Dispositions at the mint (2026-11-06, exec-mint8377).** F1 fixed (above, Build log): the test pins both moves. F3 fixed: the hand copy is deleted and `METRIC_CERTIFICATE_CHECKS` imported. F2 is a note, not a defect: the population-over-ceiling rule fired on the slice's own two unminted OQ rows; the mint resolves them and the file returns to its ceiling of 1, proved by `audit-docs.py` rc 0 at the mint head (below). F4 accepted.
+
+**SL row (item 42).** At `origin/main` `9b18810ae6af` no `SL-2060` row existed (not `active`: absent); the mint adds it and the audit commit closes it, so the row reads `closed` at this PR's head.
+
 
 ### Build log
 
@@ -67,6 +99,7 @@ DB-free checks on this executor's side, tree `921d9270`: `ruff check backend` rc
     - `draft → review` (approvals): the one writer of an `approval_requests` row is `approvals.py:304`, which sets `status=ApprovalStatus.REVIEW.value`; no migration, `scripts/demo.py`, seed or script inserts or updates one (`reset-unbacked-rule-approvals.py:88` sets a `validation_rule` row to `review`, not an approval request). No row is stored at `draft`.
     - `changes_requested → draft` (approvals): no insert path reaches `draft`, so a row leaves `review` only through the decision path (`approvals.py:613`); a stored `changes_requested` row has no outbound edge, which is the intended terminal. No migration or script sets it.
     - `draft → approved` (rating): the only `rating_versions` writers are `rating_versions.py:299` (status `DRAFT`) and the three bench scripts (`bench-compiled-for.py:103`, `bench-rating.py:779`, `bench-score-batch.py:103`), all `draft` and none moved to `approved` by a script, migration or `demo.py`; the `"approved"` strings in `bench-rating.py` are a stub resolver's return value, not a stored row.
+    - **Limit of this read:** it covers the seed path and the code only (`backend/src backend/migrations scripts`); there is no deployed data to read, so a row stored in a database outside this tree is not seen.
 
 ## PRs
 
