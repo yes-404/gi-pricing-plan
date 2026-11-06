@@ -2,7 +2,7 @@
 id: PL-2053
 family: plan
 kind: map
-title: WK-1178 — FD-1381, every JSON example in docs/specs carries a marker and every class-marked example passes model_validate, SL-8373 — a dated Work-plan delta
+title: WK-1178 — FD-1381, every JSON example in docs/specs carries a marker and every class-marked example passes model_validate, SL 8373 — a dated Work-plan delta
 status: draft                   # draft → active → superseded | retired (§1.2a) — L1: draft→active rides the slice's PR
 created: 2026-11-06             # original date 2026-11-05, filed under working id 8372; minted 2026-11-06
 owner: planner
