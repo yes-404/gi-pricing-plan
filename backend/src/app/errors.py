@@ -17,12 +17,14 @@ from typing import Any, Final
 from fastapi import FastAPI, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from pydantic_core import PydanticSerializationError
 from sqlalchemy.exc import DBAPIError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.observability.logging import get_logger
 from app.observability.trace import current_trace_id
 from model_schema import FieldError, ProblemDetail
+from model_schema.money import DecimalMagnitudeError
 from pricing_core.safe_error import safe_validation_message
 
 __all__ = [
@@ -433,7 +435,14 @@ RATING_ERROR_CODES: Final[frozenset[str]] = frozenset(
 
 #: Codes raised by the shared request machinery rather than owned by one module.
 _GENERIC_ERROR_CODES: Final[frozenset[str]] = frozenset(
-    {"VALIDATION_FAILED", "NOT_FOUND", "METHOD_NOT_ALLOWED", "INTERNAL_ERROR"}
+    {
+        "VALIDATION_FAILED",
+        "NOT_FOUND",
+        "METHOD_NOT_ALLOWED",
+        "INTERNAL_ERROR",
+        # FR-21; owned by `00` §5.3's block (audit-docs check 10 reads it there).
+        "DECIMAL_OUT_OF_RANGE",
+    }
 )
 
 _KNOWN_CODES: Final[frozenset[str]] = (
@@ -639,10 +648,41 @@ async def _handle_unexpected(request: Request, exc: Exception) -> JSONResponse:
     return problem_response(unexpected_problem(request.url.path))
 
 
+async def _handle_serialization_error(
+    request: Request, exc: PydanticSerializationError
+) -> JSONResponse:
+    """FR-21: a value past the write bound is a coded 422; any other serialisation fault is a 500.
+
+    Validation takes any exponent, so a caller can submit a value that cannot be written.
+    The problem names no value (NFR-499).
+    """
+    # The match is on pydantic's message text because pydantic_core does not chain `__cause__`
+    # through FastAPI's serialiser (`__cause__` is None; only the type name and message survive).
+    # Fragile by that known cause, not by choice; pinned by `test_decimal_write_bound.py`.
+    if not (
+        isinstance(exc.__cause__, DecimalMagnitudeError)
+        or f"{DecimalMagnitudeError.__name__}:" in str(exc)
+    ):
+        return await _handle_unexpected(request, exc)
+    return problem_response(
+        ProblemDetail(
+            type=_type_uri("DECIMAL_OUT_OF_RANGE"),
+            title="Decimal out of range",
+            status=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            code="DECIMAL_OUT_OF_RANGE",
+            detail="An exact decimal has an exponent beyond 308 in either "
+            "direction and cannot be written.",
+            instance=request.url.path,
+            trace_id=current_trace_id(),
+        )
+    )
+
+
 def install_error_handlers(app: FastAPI) -> None:
     """Register the handlers that make every error path produce a `ProblemDetail`."""
     app.add_exception_handler(PlatformError, _handle_platform_error)  # type: ignore[arg-type]
     app.add_exception_handler(RequestValidationError, _handle_validation_error)  # type: ignore[arg-type]
     app.add_exception_handler(StarletteHTTPException, _handle_http_exception)  # type: ignore[arg-type]
     app.add_exception_handler(DBAPIError, _handle_database_error)  # type: ignore[arg-type]
+    app.add_exception_handler(PydanticSerializationError, _handle_serialization_error)  # type: ignore[arg-type]
     app.add_exception_handler(Exception, _handle_unexpected)

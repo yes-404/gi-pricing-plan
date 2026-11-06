@@ -2,12 +2,12 @@
 id: FD-1228
 family: finding
 title: test_ebm.py's reproducibility test is marked FR-140, a transparency requirement, so FR-11 gets no EBM determinism evidence
-status: active
+status: closed
 created: 2026-09-29
 owner: auditor
 tree: 6a8b8e7011e472586be559587561dde0479d491f
 corrected_by: []
-relates: [WK-1178]
+relates: [WK-1178, SL-2048, LG-2049, PL-2047]
 ---
 
 # FD-1228 — test_ebm.py's reproducibility test is marked FR-140, a transparency requirement, so FR-11 gets no EBM determinism evidence
@@ -56,3 +56,6 @@ An EBM fit is model fitting, so the EBM's determinism test is evidence for `FR-1
 GLM or GBM clause `NFR-481` names; whether `NFR-481` should name the EBM is not decided here), and establish `FR-140`'s real evidence, that is, which test shows the term shape functions
 are exported as tables with no approximation. Event: that change merges, and the auditor reads each `FR-140` marker in `test_ebm.py` against the requirement's text and re-runs
 `scripts/req-coverage.py`.
+
+***Resolved 2026-11-06*** — closed in place 2026-11-06 by the auditor, as the closing act of the audit of SL-2048 (WK-1178, LG-2049, PL-2047; this PR; its number, squash commit and merge date are written at the merge's date-of-record), on the lead's brief under the GO "2026-11-05 10:31:31 GMT" (plans C and H accepted, DP-H1 to DP-H5 ruled; `to-lead.md`, a local channel file), on the order of "2026-11-05 09:58:58 GMT". Delivered remedy: `packages/pricing-core/tests/test_ebm.py` `test_the_fit_is_reproducible_under_the_spec_seed` is marked `FR-11` (determinism: identical inputs and pinned versions reproduce identical outputs, with an explicit persisted seed), not `FR-140`. No behaviour changed, so the proof is `scripts/req-coverage.py` before and after (`b1140b0f`): `FR-11 1 → 2 test file(s)`, `FR-140 36 → 35`, no other line differs; the audit reproduced the after state at head `ca63dd15` (`FR-11 2`, `FR-140 35`, rc 0). The event's second limb (the auditor reads each `FR-140` marker against the requirement's text): `:193`, `:223`, `:255`, `:294`, `:333` give FR-140 evidence (tables, no approximation, scoring from the exported tables, resolution from the artifact alone); **`:391` and `:398` (monotone constraints refused by name) and `:448` (fit seconds and library versions) do not**, and stay as they are: FD-2030 records them (the lead picks). Gate evidence: the gate: pytest `13 failed, 7224 passed, 27 skipped, 5 xfailed in 4949.99s` alone, the 13 being the item-31 docs-audit set, every other python and frontend stage rc 0, demo seeded rc 0 (LG-2049).
+

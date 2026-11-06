@@ -2,12 +2,12 @@
 id: FD-1493
 family: finding
 title: oidc verify's broad except reports a malformed token as "signing key unavailable"
-status: active
+status: closed
 created: 2026-10-08            # original date 2026-10-05, set at the draft; minted 2026-10-08
 owner: auditor
 tree: 99afcde215c0817c5ac4db55332ab7a69e4752a0
 corrected_by: []
-relates: [WK-1178]
+relates: [WK-1178, SL-2048, LG-2049, PL-2047]
 ---
 
 # FD-1493 — `OidcVerifier.verify`'s broad `except` reports a malformed token as "signing key unavailable"
@@ -83,3 +83,6 @@ key-resolution failures. Pin it with a test: a deeply nested token gets a 401 an
 red first. The remedy is not built.
 
 **Re-read at `origin/main` 809a3794, 2026-10-05:** the code above is unchanged, at `oidc.py:99-107` (the `try` at :99, the `except Exception` at :101, the raise at :107); no test in `backend/tests/test_auth_oidc.py` names `RecursionError`, a nested token or "signing key unavailable"; `uv.lock` now resolves pyjwt 2.15.0 (#1123 merged), so the 2.15.0 column of the table is the one that applies on main. The reproduction itself was not re-run (docs only, no test run). The pyjwt 2.14.0 `jwks_client.py:280` cite was not re-read (2.14.0 is no longer installed).
+
+***Resolved 2026-11-06*** — closed in place 2026-11-06 by the auditor, as the closing act of the audit of SL-2048 (WK-1178, LG-2049, PL-2047; this PR; its number, squash commit and merge date are written at the merge's date-of-record), on the lead's brief under the GO "2026-11-05 10:31:31 GMT" (plans C and H accepted, DP-H1 to DP-H5 ruled; `to-lead.md`, a local channel file), on the order of "2026-11-05 09:58:58 GMT". Delivered remedy: `OidcVerifier.verify` catches `(DecodeError, RecursionError)` ahead of the broad `except Exception` and rejects with its own reason, `malformed token`, and its own log line (the exception type only, same `error_type` key); a JWKS fetch failure or unknown `kid` (`PyJWKClientError`, not a `DecodeError` in pyjwt 2.15.0) still reaches the broad catch with `signing key unavailable: …`. Red first: `aec3f2ea`, T7 (random bytes) and T8 (a signed 50 000-deep payload under the valid `kid`) gave `'signing key unavailable: DecodeError' != 'malformed token'`, `2 failed, 11 passed`; T9 (unknown `kid`) is the control, green before and after; green `ec4c4240`, `13 passed`. The audit retargeted the new `except` and got the same two failures with T9 still green. The 401 is unchanged: the reason is never returned to the caller (`test_rejection_reasons_are_not_returned_to_the_caller`). On pyjwt 2.15.0 T8's error is a `DecodeError` (`jwt/api_jwt.py:299` converts the `RecursionError`), so the `RecursionError` arm is for the older line and is not exercised here. Gate evidence: the gate: pytest `13 failed, 7224 passed, 27 skipped, 5 xfailed in 4949.99s` alone, the 13 being the item-31 docs-audit set, every other python and frontend stage rc 0, demo seeded rc 0 (LG-2049).
+
