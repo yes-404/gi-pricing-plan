@@ -133,6 +133,7 @@ files = [
     "backend/src",
     "tests",
     "examples/fremtpl2",
+    "scripts/demo.py",
     ".claude/skills/balance-watch/scripts",
     ".claude/skills/reporter-cycle/scripts",
     ".claude/skills/watcher-runtime-state/scripts",
