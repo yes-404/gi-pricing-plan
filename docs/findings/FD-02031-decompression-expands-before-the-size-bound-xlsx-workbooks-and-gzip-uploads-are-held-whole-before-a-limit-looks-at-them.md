@@ -7,7 +7,7 @@ created: 2026-11-06   # original date 2026-11-05, set at the draft; working id 8
 owner: lead
 tree: e75e0f1a   # read, not run; origin/main when drafted is cded9f0e1953f2db6a6a1375892257a1a4822fc3
 corrected_by: []
-relates: [FR-450, SL-8325, WK-1178]
+relates: [FR-450, WK-1178]
 ---
 
 # FD-2031 — decompression expands before the size bound (DP-A3)
@@ -34,4 +34,4 @@ Memory at any size; no reproduction was run. This was read at `e75e0f1a`, not ru
 
 ## Disposition
 
-Open, owner WK-1178. Event that next discharges it: a merged change that bounds the expansion (streamed decompression with a running cap; a workbook entry-size check) with a red-first test of a small file that expands past the cap, or a dated ruling accepting the absence. Filed as working id 8386.
+Open, owner WK-1178. Event that next discharges it: a merged change that bounds the expansion (streamed decompression with a running cap; a workbook entry-size check) with a red-first test of a small file that expands past the cap, or a dated ruling accepting the absence. Related, not yet minted (space form): SL 8325. Filed as working id 8386.

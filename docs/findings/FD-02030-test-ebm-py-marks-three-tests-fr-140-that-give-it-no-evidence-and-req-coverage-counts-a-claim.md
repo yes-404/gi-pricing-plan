@@ -7,7 +7,7 @@ created: 2026-11-06   # original date 2026-11-05, set at the draft; working id 8
 owner: lead
 tree: ca63dd15   # the head the auditor read; origin/main when drafted is cded9f0e1953f2db6a6a1375892257a1a4822fc3
 corrected_by: []
-relates: [FD-1228, SL-8334, LG-8335, PL-8333, FR-140, FR-122, WK-1178]
+relates: [FD-1228, FR-140, FR-122, WK-1178]
 ---
 
 # FD-2030 — `test_ebm.py` `:391`, `:398` and `:448` are marked FR-140
@@ -37,4 +37,4 @@ Re-tag `:391` and `:398` to FR-122 (or the requirement the WK-661 note in `02-mo
 
 ## Disposition
 
-Open, owner WK-1178; event that next discharges it: the re-tag merging with the coverage before/after, or a dated acceptance recorded on FD-1228. Source: `scratch/aud-slh/FD-new-ebm-markers.md` (aud-slh, 2026-11-05), filed as working id 8385.
+Open, owner WK-1178; event that next discharges it: the re-tag merging with the coverage before/after, or a dated acceptance recorded on FD-1228. Related, not yet minted (space form, so they do not resolve): SL 8334, LG 8335, PL 8333. Source: `scratch/aud-slh/FD-new-ebm-markers.md` (aud-slh, 2026-11-05), filed as working id 8385.

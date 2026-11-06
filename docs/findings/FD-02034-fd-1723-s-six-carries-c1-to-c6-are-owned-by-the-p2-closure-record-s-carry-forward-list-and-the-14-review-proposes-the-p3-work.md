@@ -7,7 +7,7 @@ created: 2026-11-06   # original date 2026-11-05, set at the draft; working id 8
 owner: lead
 tree: ac123679   # PL 8376's head; origin/main when drafted is cded9f0e1953f2db6a6a1375892257a1a4822fc3
 corrected_by: []
-relates: [FD-1723, FD-2007, PL-8376, SL-8377, WK-1178]
+relates: [FD-1723, FD-2007, WK-1178]
 ---
 
 # FD-2034 — the six carries of PL 8376 (FD-1723's FR-7 audit events)
@@ -35,4 +35,4 @@ PL 8376 @ `ac123679`, the carry table and the DPs it cites, quoted above; the ru
 
 ## Disposition
 
-Open, owner the P2 closure record's carry-forward list; the §14 review proposes the P3 Work. **Homes proposed by the maintainer (to-lead "2026-11-05 22:04:05 GMT" item 3):** C2 and C3 together in one new P3 Work for the unreached lifecycle states (the ruling of "2026-11-05 16:39:14 GMT" meant "the P3 Work" of the carries as a class); C1, C4 and C6 to WK-679; C5 to WK-676 with FR-350, the right home for "not started". The §14 review proposes these; they are not yet rows. Event that next discharges each limb: the P3 Work's slice for it merging, or a dated acceptance. Two further items of the same plan are **not** carried here: DP-11's `retired` OQ is in SL 8377's Write set (owner the P2 carry-forward list, gate "Before Phase 3"), and the failed-certificate question is OQ-2037. Filed as working id 8395.
+Open, owner the P2 closure record's carry-forward list; the §14 review proposes the P3 Work. **Homes proposed by the maintainer (to-lead "2026-11-05 22:04:05 GMT" item 3):** C2 and C3 together in one new P3 Work for the unreached lifecycle states (the ruling of "2026-11-05 16:39:14 GMT" meant "the P3 Work" of the carries as a class); C1, C4 and C6 to WK-679; C5 to WK-676 with FR-350, the right home for "not started". The §14 review proposes these; they are not yet rows. Event that next discharges each limb: the P3 Work's slice for it merging, or a dated acceptance. Two further items of the same plan are **not** carried here: DP-11's `retired` OQ is in SL 8377's Write set (owner the P2 carry-forward list, gate "Before Phase 3"), and the failed-certificate question is OQ-2037. Related, not yet minted (space form): PL 8376, SL 8377. Filed as working id 8395.
