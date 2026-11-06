@@ -6361,6 +6361,7 @@
             "title": "Prohibited Reason"
           },
           "slug": {
+            "pattern": "^[a-z0-9][a-z0-9_-]{1,62}$",
             "title": "Slug",
             "type": "string"
           },
