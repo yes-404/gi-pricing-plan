@@ -142,7 +142,7 @@ and only this ledger changed after it (`git diff --name-only 5d7d3066 2b31d924`)
 
 **Common items.** 40: spec-reading predicate `grep -lE 'docs/specs|"docs" */ *"specs"' backend/tests tests` is the gate's; the slice changes no spec row. 41: the slice changes nothing under `scripts/`; `tests/test_fremtpl2_data_guard.py` is not copied by a fixture (`grep -rnE 'copytree|shutil.copy'` hits `tests/test_doc_id_migrate.py`, `test_template_headers.py` and others, none on this file). 42: `git grep -n -E "8356" origin/main -- docs/roadmap.md` prints nothing; the `SL-` row is added at the mint and must read closed by the close commit of this audit. 43: no API request shape changes, no route added; `backend/tests/test_api_authorisation_sweep.py` is owed-to-gate, not run.
 
-**Static checks.** `audit-docs.py` on this tree: 4 failures, all the pre-mint working ids (check 31 gap, check 32 x2 for LG-8357, check 39 stale INDEX); rc 1 expected until the mint.
+**Static checks.** `audit-docs.py` on this tree: 4 failures, all the pre-mint working ids (check 31 gap, check 32 x2 for LG 8357, check 39 stale INDEX); rc 1 expected until the mint.
 
 **NOT MET:** none outright. **Owed or lead's call:** T1's hash-only mutation; FD-1747's production sentence; the LG's "two" -> "four".
 
