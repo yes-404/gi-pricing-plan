@@ -120,16 +120,23 @@ the image the commit it was built from (FR-18):
 
 ```bash
 export GIP_BUILD=$(git rev-parse HEAD)
-docker compose -f deploy/docker-compose.yml --profile app build
+docker compose -f deploy/docker-compose.yml --profile app build api
+docker build -f deploy/frontend.Dockerfile -t gi-pricing-frontend:$GIP_BUILD .
 docker compose -f deploy/docker-compose.yml --profile app up -d --wait --scale api=2 lb
 ```
+
+  `frontend` is built with `docker build`, not `compose build`: the buildx on this box is below the
+  0.17.0 that `compose build` needs. A bare `--profile app up` starts `frontend`, so build its image
+  first.
 
 - **Rolling `api` to a new image is health-gated** (NFR-531). A plain `up --scale api=2`
   recreates every replica at once, so none is healthy until the new ones pass their healthcheck.
   Run `GIP_BUILD=<new> deploy/roll-api.sh [-t <seconds>] <project> <compose-file>...`. `lb`
   re-resolves `api` every second and retries the next upstream, so it needs no change.
   `roll-api.sh` fails loud, and a failed roll before the old replicas are stopped returns to the
-  pre-roll replicas, removing the new ones.
+  pre-roll replicas, removing the new ones. A pre-roll replica that is already stopped counts as
+  an old one: a failed roll leaves it in place, and a successful roll removes it with the others
+  (FD-1816).
 - **`migrate`** is a one-shot step (FR-435). `api` and `worker` wait for it to exit 0; nothing
   migrates at application start.
   Take a database backup before you run `migrate` against a database that holds production
@@ -143,6 +150,10 @@ docker compose -f deploy/docker-compose.yml --profile app up -d --wait --scale a
 - **`scheduler`** is the Celery beat process (FR-432, FR-413, FR-406): the outbox relay is a beat
   schedule entry, so without it a committed Job stays `queued`. It is one process and never
   scaled; its schedule file is under `/tmp`, because the image's working directory is not writable.
+- **`frontend`** is the built SPA on nginx (FR-432), built from `deploy/frontend.Dockerfile` with
+  the repository root as the context. It serves `/` with a history fallback and proxies `/api/`
+  to `lb`, so the browser stays same-origin. It publishes `127.0.0.1:${GIP_WEB_PORT:-5173}`, the
+  port the local realm admits; stop the Vite dev server first, or set `GIP_WEB_PORT`.
 - **Shutdown** (FD-1211): each process finalizes the interpreter on SIGTERM, then the container is
   replaced.
 - **Production identity provider:** `deploy/keycloak/` is a reference you operate (FR-437).

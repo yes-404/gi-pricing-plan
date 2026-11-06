@@ -185,6 +185,90 @@ async def test_the_same_key_and_unchanged_source_returns_the_original_version(
     assert second.version.id == first_id
 
 
+_REPLAY_RECIPE = [
+    {"step": "normalise_case", "params": {"columns": ["policy_id"], "case": "lower"}},
+    {"step": "map_values", "params": {"column": "policy_id", "mapping": {"p1": "first"}}},
+]
+
+
+@pytest.mark.req("FR-41")
+async def test_the_stored_recipe_replayed_over_the_same_bytes_gives_the_same_tables(
+    database: Database, blob_store: BlobStore, workspace_id
+) -> None:
+    """FR-41: the recipe is stored as its steps, and the steps are enough to rebuild the table.
+
+    Ingest the bytes with a recipe, read the recipe back off the version, ingest the same bytes
+    again into another Dataset with *that*: the stored table's content hash is the same. A
+    stored recipe that lost or reordered a step would give a different table, and a version
+    whose recipe cannot reproduce it is not reproducible at all.
+    """
+    actor = await _analyst(database, workspace_id)
+    first_dataset = await _dataset(database, workspace_id, actor)
+    second_dataset = await _dataset(database, workspace_id, actor)
+
+    async with database.unit_of_work() as session:
+        first = await ingest_upload(
+            session, blob_store,
+            workspace_id=workspace_id, actor=actor, dataset_id=first_dataset,
+            data=CSV, filename="exposure.csv", recipe=_REPLAY_RECIPE,
+        )
+        stored = list(first.version.derived_from["recipe"])
+        first_hash = first.version.tables[0]["blob"]["sha256"]
+    assert stored == _REPLAY_RECIPE
+
+    async with database.unit_of_work() as session:
+        second = await ingest_upload(
+            session, blob_store,
+            workspace_id=workspace_id, actor=actor, dataset_id=second_dataset,
+            data=CSV, filename="exposure.csv", recipe=stored,
+        )
+        second_hash = second.version.tables[0]["blob"]["sha256"]
+    assert second_hash == first_hash
+
+    async with database.unit_of_work() as session:
+        plain = await ingest_upload(
+            session, blob_store,
+            workspace_id=workspace_id, actor=actor, dataset_id=second_dataset,
+            data=CSV, filename="exposure.csv",
+        )
+    # The hash comparison above is only evidence if the recipe changed the table at all.
+    assert plain.version.tables[0]["blob"]["sha256"] != first_hash
+
+
+@pytest.mark.req("FR-33")
+async def test_a_key_whose_run_failed_is_released_and_the_next_run_ingests(
+    database: Database, blob_store: BlobStore, workspace_id
+) -> None:
+    """FR-33: a failed run does not hold its idempotency key.
+
+    A recipe that cannot be applied refuses the upload and writes no run. The same key with a
+    working recipe then ingests as a new version, `reused is False`; a failed run that
+    `_find_run` returned would hand back a version that was never created.
+    """
+    actor = await _analyst(database, workspace_id)
+    dataset_id = await _dataset(database, workspace_id, actor)
+
+    with pytest.raises(PlatformError) as refused:
+        async with database.unit_of_work() as session:
+            await ingest_upload(
+                session, blob_store,
+                workspace_id=workspace_id, actor=actor, dataset_id=dataset_id,
+                data=CSV, filename="exposure.csv", idempotency_key="load-retry",
+                recipe=[{"step": "no_such_step"}],
+            )
+    assert refused.value.code == "VALIDATION_FAILED"
+
+    async with database.unit_of_work() as session:
+        retried = await ingest_upload(
+            session, blob_store,
+            workspace_id=workspace_id, actor=actor, dataset_id=dataset_id,
+            data=CSV, filename="exposure.csv", idempotency_key="load-retry",
+            recipe=_REPLAY_RECIPE,
+        )
+    assert retried.reused is False
+    assert retried.version.version == 1
+
+
 @pytest.mark.req("FR-33")
 async def test_the_same_key_with_changed_data_creates_a_new_version(
     database: Database, blob_store: BlobStore, workspace_id
