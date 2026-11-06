@@ -1,10 +1,10 @@
 ---
-id: PL-8333
+id: PL-2047
 family: plan
 kind: map
-title: WK-1178 — guards, fixtures and small fixes (FD-1488, FD-1507, FD-1509, FD-1749, FD-1228, FD-1662, FD-1493), SL-8334 — a dated Work-plan delta
-status: draft                   # draft → active → superseded | retired (§1.2a) — L1: draft→active rides the slice's PR
-created: 2026-11-05             # filed under working id 8333
+title: WK-1178 — guards, fixtures and small fixes (FD-1488, FD-1507, FD-1509, FD-1749, FD-1228, FD-1662, FD-1493), SL-2048 — a dated Work-plan delta
+status: active                   # draft → active → superseded | retired (§1.2a) — L1: draft→active rides the slice's PR
+created: 2026-11-06   # original date 2026-11-05, working id 8333, minted 2026-11-06
 owner: planner
 tree: dae9637ea6f6a56f6502e9db70392cdfb2f3983d
 phase: P2
@@ -15,12 +15,14 @@ corrected_by: []
 relates: [FD-1488, FD-1507, FD-1509, FD-1749, FD-1228, FD-1662, FD-1493, PL-1392, FR-11, FR-140, NFR-499]
 ---
 
-# PL-8333 — WK-1178: guards, fixtures and small fixes (SL 8334, a dated Work-plan delta)
+# PL-2047 — WK-1178: guards, fixtures and small fixes (SL-2048, a dated Work-plan delta)
+
+*(Minted 2026-11-06 as PL-2047 from working id 8333, with the slice SL-2048 (working id 8334) and ledger LG-2049 (working id 8335), in the SL-2048 PR.)*
 
 > **For agentic workers:** this is a **dated Work-plan delta** under Lean P2 L1 (a')
-> (`.claude/roles/planner.md`, "Lean P2"). It holds one slice row, SL 8334, and edits no filed plan.
+> (`.claude/roles/planner.md`, "Lean P2"). It holds one slice row, SL-2048, and edits no filed plan.
 > The executor's skills are `superpowers:test-driven-development`, `.claude/skills/python-test`,
-> `.claude/skills/fastapi-service`, `dev-commands` and `git-hygiene`. PL 8333, SL 8334 and LG 8335 are
+> `.claude/skills/fastapi-service`, `dev-commands` and `git-hygiene`. PL-2047, SL-2048 and LG-2049 are
 > working ids reserved by the lead.
 
 ## Authority
@@ -135,7 +137,7 @@ The slice:
 
 - **A1. The write set.** `git diff --name-only origin/main...HEAD` lists only the Write set below. The
   only product file is `backend/src/app/auth/oidc.py`, plus `scripts/demo.py`'s annotation.
-- **A2. Red first, by cause, per finding.** LG 8335 quotes each of T1 to T9's red from the slice's
+- **A2. Red first, by cause, per finding.** LG-2049 quotes each of T1 to T9's red from the slice's
   named base, except T5 and T6, which are mutation proofs and quote their break. FD-1662's red is the
   two mypy lines. FD-1228 has no behaviour: its proof is `req-coverage.py` before and after.
 - **A3. FD-1488.** T1 (pure) green. **A stamped proof in the DB window:** a `createdb -T` copy, `alembic
@@ -199,7 +201,7 @@ The slice:
 
 ## Tasks
 
-### SL 8334 — guards, fixtures and small fixes
+### SL-2048 — guards, fixtures and small fixes
 
 **The row.** Sixth in the 09:58:58 order (R, C, T, A, H, D, F, after WK-674's pair). WK-1178 fix slice.
 One `sonnet` executor. Register: the seven, closing at the merge (A13). Depends on: DP-H1 to DP-H5 ruled;
@@ -294,8 +296,8 @@ template check is the first thing to read.
   `packages/pricing-core/tests/test_ebm.py`.
 - `backend/src/app/auth/oidc.py`, `scripts/demo.py`, `pyproject.toml`.
 - `.claude/skills/repo-architecture/SKILL.md` (DP-H4).
-- LG 8335 under `docs/ledgers/`.
-- At the mint: the SL 8334 row in `docs/roadmap.md`, `docs/INDEX.md`, this plan's `status:`, the seven
+- LG-2049 under `docs/ledgers/`.
+- At the mint: the SL-2048 row in `docs/roadmap.md`, `docs/INDEX.md`, this plan's `status:`, the seven
   essays and `docs/findings/register.md` (A13).
 
 ### Files shared with other groups

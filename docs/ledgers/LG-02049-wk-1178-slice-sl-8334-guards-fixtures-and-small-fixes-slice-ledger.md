@@ -1,20 +1,22 @@
 ---
-id: LG-8335
+id: LG-2049
 family: ledger
-title: WK-1178 slice SL-8334 — guards, fixtures and small fixes (FD-1488, FD-1507, FD-1509, FD-1749, FD-1228, FD-1662, FD-1493) (slice ledger)
+title: WK-1178 slice SL-2048 — guards, fixtures and small fixes (FD-1488, FD-1507, FD-1509, FD-1749, FD-1228, FD-1662, FD-1493) (slice ledger)
 status: active                 # active → closed (§1.2a)
-created: 2026-11-05            # filed under working id 8335
+created: 2026-11-06   # original date 2026-11-05, working id 8335, minted 2026-11-06
 owner: executor
 tree: ec4c4240c6c20d3b75490a9cdeb9a88fe05efab4   # sl-8334-h-guards, the code head this was written against (base e8a597700687aff394e13da0035f10d2419ce893)
-slice: SL-8334
+slice: SL-2048
 phase: P2
 work: WK-1178
-plans: [PL-8333]
+plans: [PL-2047]
 corrected_by: []
-relates: [FD-1488, FD-1507, FD-1509, FD-1749, FD-1228, FD-1662, FD-1493, PL-8333, FR-11, FR-140, NFR-499]
+relates: [FD-1488, FD-1507, FD-1509, FD-1749, FD-1228, FD-1662, FD-1493, PL-2047, FR-11, FR-140, NFR-499]
 ---
 
-# LG-8335 — WK-1178 slice SL-8334: guards, fixtures and small fixes
+# LG-2049 — WK-1178 slice SL-2048: guards, fixtures and small fixes
+
+*(Minted 2026-11-06 as LG-2049 from working id 8335, with the plan PL-2047 (working id 8333) and the slice SL-2048 (working id 8334), in the SL-2048 PR.)*
 
 **GO:** to-lead "2026-11-05 10:31:31 GMT" (plans C and H accepted; DP-H1 to DP-H5 ruled: stop by name with no auto-upgrade; a database ahead of the branch passes with a warning; no widening of sink shapes; the rest declared outside mypy; `check=True`, no prune; FD-1507's rule is handler-bound or a parameter named `exc`; FD-1662 re-measured at 2 errors, no carry), on the order of "2026-11-05 09:58:58 GMT".
 **MERGE-ACK:** (added at merge.)
@@ -23,7 +25,7 @@ relates: [FD-1488, FD-1507, FD-1509, FD-1749, FD-1228, FD-1662, FD-1493, PL-8333
 
 ### Scope
 
-PL 8333 (a dated Work-plan delta), "SL 8334 — guards, fixtures and small fixes". Seven findings, seven independent commits pairs (G5): FD-1488 (R1), FD-1507 (R2), FD-1509 (R3), FD-1749 (R4), FD-1228 (R5), FD-1662 (R6), FD-1493 (R7). Requirements touched: NFR-499 (the census and the oidc handler), FR-11 and FR-140 (R5), FR-428 (R3's tests keep their markers). Write set as the plan states; the only product files are `backend/src/app/auth/oidc.py` and `scripts/demo.py`'s annotation.
+PL-2047 (a dated Work-plan delta), "SL-2048 — guards, fixtures and small fixes". Seven findings, seven independent commits pairs (G5): FD-1488 (R1), FD-1507 (R2), FD-1509 (R3), FD-1749 (R4), FD-1228 (R5), FD-1662 (R6), FD-1493 (R7). Requirements touched: NFR-499 (the census and the oidc handler), FR-11 and FR-140 (R5), FR-428 (R3's tests keep their markers). Write set as the plan states; the only product files are `backend/src/app/auth/oidc.py` and `scripts/demo.py`'s annotation.
 
 ### Task list
 
