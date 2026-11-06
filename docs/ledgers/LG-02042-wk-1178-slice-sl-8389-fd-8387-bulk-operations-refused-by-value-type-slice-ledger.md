@@ -1,29 +1,29 @@
 ---
-id: LG-8390
+id: LG-2042
 family: ledger
-title: WK-1178 SL 8389 — FD 8387, a bulk operation is refused by value type — slice ledger
+title: WK-1178 SL-2041 — FD-2032, a bulk operation is refused by value type — slice ledger
 status: active
 created: 2026-11-05
 owner: executor
 tree: b987349621936656fdd73f7f7a1a7dfb989d586f
 phase: P2
 work: WK-1178
-slice: SL-8389
-plans: [PL-8388]
+slice: SL-2041
+plans: [PL-2040]
 corrected_by: []
-relates: [PL-8388, FD-8387, SL-8389, FR-233]
+relates: [PL-2040, FD-2032, SL-2041, FR-233]
 ---
 
-# LG-8390 — WK-1178 SL 8389: a bulk operation is refused by value type
+# LG-2042 — WK-1178 SL-2041: a bulk operation is refused by value type
 
-**GO:** to-lead "2026-11-05 17:46:39 GMT" — "Maintainer: exec-sl8389 GO, brief 18705d626d4e, PL 8388 @d00c155c, new branch and worktree from R2 @cda3c0dc, unpushed; displaces nothing."
+**GO:** to-lead "2026-11-05 17:46:39 GMT" — "Maintainer: exec-sl8389 GO, brief 18705d626d4e, PL-2040 @d00c155c, new branch and worktree from R2 @cda3c0dc, unpushed; displaces nothing."
 **MERGE-ACK:** (added at merge.)
 
 ## Tasks
 
 ### Scope
 
-PL 8388 (`docs/plans/PL-08388-…`), SL 8389: T0–T5 (FR-233 amended; FR-228 and FR-234 read). Matrix: 16 cells, 5 refused (`uplift_table` and `uplift_by_filter` on `count`; `rebase_to_level` on `percentage`, `money_minor`, `count`), 11 allowed. Branch `sl-8389-refusal-by-type` from R2 `cda3c0dc326d4313add551693e3180d3b1e05a11` (`sl-8345-r2-cell-hard-error`, no origin ref), plan draft head `d00c155cf4af810e721a79b1e781a0c8c91031db` merged at T0.
+PL-2040 (`docs/plans/PL-2040-…`), SL-2041: T0–T5 (FR-233 amended; FR-228 and FR-234 read). Matrix: 16 cells, 5 refused (`uplift_table` and `uplift_by_filter` on `count`; `rebase_to_level` on `percentage`, `money_minor`, `count`), 11 allowed. Branch `sl-8389-refusal-by-type` from R2 `cda3c0dc326d4313add551693e3180d3b1e05a11` (`sl-8345-r2-cell-hard-error`, no origin ref), plan draft head `d00c155cf4af810e721a79b1e781a0c8c91031db` merged at T0.
 
 ### Task list
 
@@ -66,7 +66,7 @@ The 11 allowed cells are green at base by design (they assert today's behaviour)
 
 **A7 —** see the report (diff checks).
 
-**audit-docs (run-heavy --light, at 39b49133, `audit3.log`):** rc=1, `FAILED (9)`: check 31 gaps 2010→8321, 8323→8345, 8346→8388, 8388→8390 and check 32 on FD-8387 / SL-8389 / LG-8390 / PL-8388 (working ids, pre-mint). Nothing else in the block.
+**audit-docs (run-heavy --light, at 39b49133, `audit3.log`):** rc=1, `FAILED (9)`: check 31 gaps 2010→8321, 8323→8345, 8346→8388, 8388→8390 and check 32 on FD-2032 / SL-2041 / LG-2042 / PL-2040 (working ids, pre-mint). Nothing else in the block.
 
 **Spec-reading tests (item 39), `grep -l 'docs/specs' backend/tests tests` lists 12:** DB-free, run at 39b49133 (`spec-readers.log`): `tests/test_audit_docs_ids.py`, `test_doc_id_history_input.py`, `test_doc_id_migrate.py`, `test_doc_id_verify.py`, `test_doc_index.py`, `test_file_census.py`, `test_scope_audit.py`, `backend/tests/test_lineage_census_carveout.py`, `test_severity_population_golden.py`: `3 failed, 695 passed, 1 skipped`, rc=1. The 3 failed are the docs-audit set on the working ids (`test_audit_docs_ids.py::test_the_real_tree_passes_all_ten_checks`, `::test_doc_id_check_exits_0_on_the_real_tree`, `test_doc_index.py::test_an_index_skipping_a_reserved_block_breaks_contiguity`: "live allocation is not contiguous" 2010/8321, 8323/8345, 8346/8388, 8388/8390); clear at the mint. **OWED (DB-backed, window):** `backend/tests/test_objective_submission.py`, `test_rating_version_create_pins.py`, `test_settings_environment.py`.
 
@@ -74,12 +74,12 @@ The 11 allowed cells are green at base by design (they assert today's behaviour)
 
 **Six owed spec-readers, run under the lead's side-run word (to-lead "2026-11-05 18:11:52 GMT" (2)), one file per call, DB-free, at e3644fc7 (`sr-*.log`):** `test_contracts.py` 177 passed, 2 skipped rc=0; `test_route_scope_guard.py` 10 passed rc=0; `tests/test_doc_id.py` 145 passed rc=0; `tests/test_permission_parity.py` 16 passed rc=0; `tests/test_repository_invariants.py` 2 failed, 9 passed rc=1 (`test_money_discipline_is_enforced_by_the_docs_audit`, `test_journey_citations_are_audited_in_ci`: both assert `audit-docs.py` is clean on the real tree, so they carry its pre-mint failures; item 31's docs-audit set, clear at the mint); `backend/tests/test_demo_guide.py` 1 failed, 10 passed, 1 error rc=1, both `ConnectionRefusedError 127.0.0.1:1` (needs PostgreSQL): **OWED to the window**, not a pass.
 
-**Re-merge onto R1 + R2 (2026-11-05, lead's order 22:30:30):** R1 landed on main as a squash (`5e5c83f7`); R2 (`sl-8345`) was re-merged by R1's final head `9c558846` (equal trees to main, `-s ours` with main) and is now `9bd52e2c`. SL 8389 merged it as `982dafa5` (tree `3f91f82fbf0085d6833158e35ae89f5a121e7a2f`); the only conflicts were docs: `docs/INDEX.md` (theirs, regenerated) and `docs/specs/03-rating-engine.md` (FR-233 row ours, FR-234 row theirs, which differs from the base only in R1's re-spelled working ids). `operations.py`, `errors.py` and both test files auto-merged. No test was run on the merged head (HOLD); the red/green lines above are at `0b718b91` / `b9873496` and are to be re-read at the merged head: **OWED**.
+**Re-merge onto R1 + R2 (2026-11-05, lead's order 22:30:30):** R1 landed on main as a squash (`5e5c83f7`); R2 (`sl-8345`) was re-merged by R1's final head `9c558846` (equal trees to main, `-s ours` with main) and is now `9bd52e2c`. SL-2041 merged it as `982dafa5` (tree `3f91f82fbf0085d6833158e35ae89f5a121e7a2f`); the only conflicts were docs: `docs/INDEX.md` (theirs, regenerated) and `docs/specs/03-rating-engine.md` (FR-233 row ours, FR-234 row theirs, which differs from the base only in R1's re-spelled working ids). `operations.py`, `errors.py` and both test files auto-merged. No test was run on the merged head (HOLD); the red/green lines above are at `0b718b91` / `b9873496` and are to be re-read at the merged head: **OWED**.
 
 **Greens at the merged heads (2026-11-05 23:21 word, run-heavy, DB-free dead-port form, one file per call; logs `r2-*.log`, `m-*.log`, `docs-*.log`, `head=` first, `rc=` last):**
 - R2 `sl-8345` @9bd52e2c: `test_rate_table_bulk_ops` 101 passed rc=0; `test_rating_compile_fr240` 31 passed rc=0; `test_quote_input_raise_sites` 19 passed rc=0; `test_glm_scalar_predict` 39 passed, 4 skipped rc=0; `test_rating_score` 53 passed rc=0; `test_safe_error` 18 passed rc=0.
-- SL 8389 @43156978: `test_rate_table_bulk_ops` 119 passed rc=0 (R2's 101 + SL 8389's 16 matrix + 2 ordering); `test_rate_table_operations` 60 passed rc=0; `test_rating_compile_fr240` 31 rc=0; `test_quote_input_raise_sites` 19 rc=0; `test_rating_score` 53 rc=0; `test_safe_error` 18 rc=0; `test_glm_scalar_predict` 39 passed, 4 skipped rc=0; `packages/model-schema/tests/test_money.py` 20 passed rc=0; `test_decimal_schema_pattern.py` 17 passed rc=0.
-- Docs: `sl-8345` @9bd52e2c: `doc-index --check` rc=1 (INDEX stale, 2208 records), `audit-docs --light` rc=1, FAILED (12): check 32 on LG-8346 / SL-8345 / PL-8321 plus one padded `PL-02019` that was my LG line (fixed, `f89963ac`), check 39. `sl-8389` @fe586f35 (after the INDEX regeneration): `doc-index --check` rc=0; `audit-docs --light` rc=1, FAILED (15): check 31 gaps 2021→8345, 8346→8388, 8388→8390; check 32 on SL-8389 / FD-8387 (LG-8390, PL-8388) and `PL-8321` in LG-8346 (R1 re-minted PL 8321 as PL-2019; R2's LG still cites the working id, re-pointed at R2's mint). All working ids, pre-mint.
+- SL-2041 @43156978: `test_rate_table_bulk_ops` 119 passed rc=0 (R2's 101 + SL-2041's 16 matrix + 2 ordering); `test_rate_table_operations` 60 passed rc=0; `test_rating_compile_fr240` 31 rc=0; `test_quote_input_raise_sites` 19 rc=0; `test_rating_score` 53 rc=0; `test_safe_error` 18 rc=0; `test_glm_scalar_predict` 39 passed, 4 skipped rc=0; `packages/model-schema/tests/test_money.py` 20 passed rc=0; `test_decimal_schema_pattern.py` 17 passed rc=0.
+- Docs: `sl-8345` @9bd52e2c: `doc-index --check` rc=1 (INDEX stale, 2208 records), `audit-docs --light` rc=1, FAILED (12): check 32 on LG-2039 / SL-2038 / PL-2019 plus one padded `PL-2019` that was my LG line (fixed, `f89963ac`), check 39. `sl-8389` @fe586f35 (after the INDEX regeneration): `doc-index --check` rc=0; `audit-docs --light` rc=1, FAILED (15): check 31 gaps 2021→8345, 8346→8388, 8388→8390; check 32 on SL-2041 / FD-2032 (LG-2042, PL-2040) and `PL-2019` in LG-2039 (R1 re-minted PL-2019 as PL-2019; R2's LG still cites the working id, re-pointed at R2's mint). All working ids, pre-mint.
 
 **T4 / DB window `sl8389` — 2026-11-05 23:27:33 GMT to 23:34:49 GMT (lead's word after sl8328f's END 23:24:46; no gate running, exec-mintf's DB-free files beside).** Driver `~/gi-pricing-plan.local/scratch/sl8389-win.sh`; copy `gipricing_sl8389`, redis db 12, bucket `gip-test-blobs-sl8389`, `GIP_GATE_SLOT=/tmp/slots/window-sl8389` read from the process environ in each log. START: load1 2.28, avail 18 G, template guard `alembic_version=1 environments=3 tenant_marker=1`, db 0 = 56, db 12 = 0, `PUBSUB gip:switch:*` empty. END: db 12 = 0, db 0 = 56, copy count 0, bucket removed, template guard `alembic_version=1 environments=3 tenant_marker=1` rc 0. No `test_deployment_switch*`. Logs `win-*.log`.
 - **A3 route red @0b718b91 (tests-only), `-k bulk_operation_value_type_matrix_at_the_route`:** `5 failed, 11 passed, 81 deselected` rc=1; all 5 `assert 201 == 422` (uplift_table-count, uplift_by_filter-count, rebase_to_level-{percentage,money_minor,count}).

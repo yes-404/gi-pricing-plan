@@ -1,8 +1,8 @@
 ---
-id: PL-8388
+id: PL-2040
 family: plan
 kind: map
-title: WK-1178 — FD 8387's fix, a bulk operation is refused where the column's value type gives its result no meaning, SL 8389 — a dated Work-plan delta
+title: WK-1178 — FD-2032's fix, a bulk operation is refused where the column's value type gives its result no meaning, SL-2041 — a dated Work-plan delta
 status: draft                   # draft → active → superseded | retired (§1.2a) — L1: draft→active rides the slice's PR
 created: 2026-11-05             # filed under working id 8388
 owner: planner
@@ -12,17 +12,18 @@ work: WK-1178
 supersedes: []
 superseded_by: ~
 corrected_by: []
-relates: [PL-1927, FD-8387, SL-8389, LG-8390, FR-233, FR-228, FR-234]
+relates: [PL-1927, FD-2032, SL-2041, LG-2042, FR-233, FR-228, FR-234]
 ---
 
-# PL 8388 — WK-1178: FD 8387's fix. A bulk operation is refused by value type (SL 8389, a dated Work-plan delta)
+# PL-2040 — WK-1178: FD-2032's fix. A bulk operation is refused by value type (SL-2041, a dated Work-plan delta)
 
 > **For agentic workers:** this is a **dated Work-plan delta** under Lean P2 L1 (a')
 > (`.claude/roles/planner.md`, "Lean P2"): a new `PL-` that `relates:` WK-1178's plan,
-> `PL-1927`, and leaves it unedited. It holds one slice row, SL 8389. The executor's skills are
+> `PL-1927`, and leaves it unedited. It holds one slice row, SL-2041. The executor's skills are
 > `superpowers:test-driven-development`, `.claude/skills/spec-change` and
-> `.claude/skills/python-test`. Working ids: FD 8387, PL 8388, SL 8389, LG 8390, reserved by the
-> lead. Nothing from 8391 is this plan's.
+> `.claude/skills/python-test`. FD-2032, PL-2040, SL-2041 and LG-2042 were drafted under working
+> ids 8387, 8388, 8389 and 8390, reserved by the lead, and minted on 2026-11-06 (`mint-repoint.py`).
+> Nothing from 8391 is this plan's.
 
 **Architecture:** one declared matrix in `pricing_core/rate_tables/operations.py`, read first in
 each of the four operations. The refusal is a code-named `ValueError`, which the existing
@@ -39,7 +40,7 @@ on a `relativity` column, and the spec says so at FR-233.
 
 ## Authority
 
-- **The finding.** FD 8387, HIGH, owner WK-1178. Filed by the maintainer's entry
+- **The finding.** FD-2032, HIGH, owner WK-1178. Filed by the maintainer's entry
   "2026-11-05 17:20:30 GMT", raised by "2026-11-05 17:29:19 GMT" (`to-lead.md`). HIGH is for the
   type of error, not a live incident (same entry).
 - **The ruling, every clause of 17:29:19 taken as a closed decision here:** "uplift and uplift by
@@ -187,7 +188,7 @@ inserts its table directly (T2), and it is a limit the FD essay should state.
 
 | DP | Question | Options | Recommendation |
 |---|---|---|---|
-| DP-1 | Who files FD 8387's essay and register row? No ref holds them: `git for-each-ref` shows no branch with the id, and the closing act needs a record to close. | (a) **The slice's auditor** writes essay and register row in the single commit that also carries the closing act and the LG Audit section, from the DM's draft and the two entries. (b) The lead's batch 12 files them first, and the slice closes them after re-merging. | **(a).** `FD-` is the auditor's family, the record and its closure then land in one PR, and the slice waits on no batch. (b) stands if batch 12 is already staged. |
+| DP-1 | Who files FD-2032's essay and register row? No ref holds them: `git for-each-ref` shows no branch with the id, and the closing act needs a record to close. | (a) **The slice's auditor** writes essay and register row in the single commit that also carries the closing act and the LG Audit section, from the DM's draft and the two entries. (b) The lead's batch 12 files them first, and the slice closes them after re-merging. | **(a).** `FD-` is the auditor's family, the record and its closure then land in one PR, and the slice waits on no batch. (b) stands if batch 12 is already staged. |
 | DP-2 | Does the slice get a DB window, for the route reds? | (a) **One window**, granted by the lead, on the terms in "DB window" below. (b) The route tests are first run by the gate, so no route red exists before green. | **(a).** The ruling says "through the route", and A3 needs the route's red. (b) would lose the red. |
 
 ## Acceptance Standard
@@ -202,14 +203,14 @@ merges, read `origin/main...HEAD` as `<R2>...HEAD`.
 2. **No requirement range.** `grep -nE '(N?FR)-[0-9]+ *(-|to|–) *(N?FR-)?[0-9]+' <this file>` prints
    no line that stands for a set of ids.
 
-The slice, SL 8389:
+The slice, SL-2041:
 
 - **A1. The write set.** `git diff --name-only <R2>...HEAD` lists only
   `packages/pricing-core/src/pricing_core/rate_tables/operations.py`,
   `backend/src/app/errors.py`, `packages/pricing-core/tests/test_rate_table_bulk_ops.py`,
   `backend/tests/test_api_rate_tables.py`, `docs/specs/03-rating-engine.md`,
-  `docs/specs/04-optimisation.md`, LG 8390, this plan, `docs/INDEX.md`, `docs/roadmap.md` (the SL
-  row), FD 8387's essay and `docs/findings/register.md`, plus the 63 docs-only paths of
+  `docs/specs/04-optimisation.md`, LG-2042, this plan, `docs/INDEX.md`, `docs/roadmap.md` (the SL
+  row), FD-2032's essay and `docs/findings/register.md`, plus the 63 docs-only paths of
   `2f108b1e..bdad1322` that T0's merge brings, listed by name in the LG. Nothing under `frontend/`,
   `docs/contracts/` or `deploy/`, no migration, and `backend/src/app/api/` and
   `backend/src/app/platform/` unchanged.
@@ -217,7 +218,7 @@ The slice, SL 8389:
   FR-233 clause before, or as, the commit that adds the refusal. `git grep -n
   BULK_OPERATION_NOT_APPLICABLE -- docs/specs` shows FR-233, the `03` §5.1 owned-code list and `04`
   §4.4.
-- **A3. Red first on the 5 refused cells, at both levels, by cause.** LG 8390 quotes, for each of
+- **A3. Red first on the 5 refused cells, at both levels, by cause.** LG-2042 quotes, for each of
   the 5 cells in T1 and in T2, the red at the tests-only commit: T1 `DID NOT RAISE`; T2 an assertion
   whose actual status is 201. A fixture, import or `NameError` is not the red. T2's reds name the DB
   window.
@@ -250,18 +251,18 @@ The slice, SL 8389:
 - **A11. The GREEN set** is derived by import closure (item 29), commands and list in the LG, for
   `operations.py`. `errors.py`'s closure is the whole backend, so the LG says so, and the gate's full
   suite is the decisive green for it.
-- **A12. The gate, both halves,** at a head that contains SL 8389, every rc quoted: R2's gate if SL
+- **A12. The gate, both halves,** at a head that contains SL-2041, every rc quoted: R2's gate if SL
   8389's FINAL is accepted before that gate starts, else a gate after R2, in the next free slot. No
   gate of its own otherwise. `generate-contracts.py --check` rc 0 (no contract diff),
   `req-coverage.py` rc 0, `audit-docs.py` rc 0 after the mint. The END read lists any window beside
   it.
-- **A13. FD 8387's closing act, in the FD-1842 form, in the slice's own PR, by the slice's auditor,
+- **A13. FD-2032's closing act, in the FD-1842 form, in the slice's own PR, by the slice's auditor,
   in one commit.** Essay `status: closed` with a `***Resolved <date>***` paragraph (closing act of
-  the mint of SL 8389; WK-1178, LG 8390, PL 8388; "this PR, its number and squash written at the
-  merge's date-of-record"; the delivered remedy; the reds in LG 8390), and register row resolved. The
+  the mint of SL-2041; WK-1178, LG-2042, PL-2040; "this PR, its number and squash written at the
+  merge's date-of-record"; the delivered remedy; the reds in LG-2042), and register row resolved. The
   PR number, full squash sha and `mergedAt` are written at the next docs batch, as FD-1842's were.
   `docs/INDEX.md` regenerated after it (item 17).
-- **A14. The LG Audit section.** LG 8390's `### Audit` is the auditor's: scope from FR-233 and this
+- **A14. The LG Audit section.** LG-2042's `### Audit` is the auditor's: scope from FR-233 and this
   plan first, every matrix cell a row with its evidence, verdicts proposed, and the lead's adoption
   line before the record is filed. It rides the same commit as A13.
 
@@ -275,21 +276,21 @@ The slice, SL 8389:
   its neighbours do.
 - **No shape is hand-written twice.** `RateTableValueType` is imported, never restated as strings in
   code. The tests' matrix is a separate literal on purpose: it is what the code is checked against.
-- **R2 is never delayed for this slice.** Any wait is SL 8389's.
+- **R2 is never delayed for this slice.** Any wait is SL-2041's.
 - **No test is removed or weakened** (the common seat brief, item 13). `git stash` is banned; plant P
   is an edit and a `git checkout -- <file>`.
 - **Money and decimals:** parameters stay decimal strings; tests compare `Decimal`, never float.
 
 ## Tasks
 
-### SL 8389 — FD 8387's fix: a bulk operation is refused by value type
+### SL-2041 — FD-2032's fix: a bulk operation is refused by value type
 
-**The row.** Order 1 in this delta, stacked on R2 (SL 8345).
+**The row.** Order 1 in this delta, stacked on R2 (SL-2038).
 
 - **Scope:** T0 to T5 below.
 - **Requirements:** FR-233 (`03` §3.3, amended); FR-228 (`03` §3.3, read: the four value types);
   FR-234 (`03` §3.3, read: the result validation that still runs).
-- **Register:** FD 8387 (HIGH, owner WK-1178) closes in the slice's PR (A13).
+- **Register:** FD-2032 (HIGH, owner WK-1178) closes in the slice's PR (A13).
 - **Depends on:** DP-1 and DP-2 ruled; the maintainer's GO on this row.
 - **Size:** 1 slice, about **4.5 h**: T0–T1 0.75 h, T2–T3 1.5 h, the window 0.5 h, T4–T5 and the LG
   0.75 h, the audit 1 h. A gate is outside the figure: R2's, or one after it. One `sonnet`
@@ -487,8 +488,8 @@ because `_load_cells` (`rate_tables.py:1189`) reads with no `ORDER BY`.
 - [ ] `docs/specs/03-rating-engine.md` §3.3, append to FR-233's row (the clause's date is the commit's
   date; working ids are re-pointed at the mint):
 
-  > *(Amended 2026-11-05, WK-1178, SL 8389, FD 8387 (HIGH), on the maintainer's entries "2026-11-05
-  > 17:20:30 GMT" and "2026-11-05 17:29:19 GMT" and plan PL 8388: **a bulk operation is refused when
+  > *(Amended 2026-11-05, WK-1178, SL-2041, FD-2032 (HIGH), on the maintainer's entries "2026-11-05
+  > 17:20:30 GMT" and "2026-11-05 17:29:19 GMT" and plan PL-2040: **a bulk operation is refused when
   > the column's declared value type gives its result no meaning.** `rebase_to_level` runs only on a
   > `relativity` column. `uplift_table` and `uplift_by_filter` are refused on a `count` column.
   > `floor_and_cap` runs on all four types. The refusal is **422** `BULK_OPERATION_NOT_APPLICABLE`,
@@ -499,18 +500,18 @@ because `_load_cells` (`rate_tables.py:1189`) reads with no `ORDER BY`.
   > that one cell.)*
 
 - [ ] `docs/specs/03-rating-engine.md` §5.1: in the owned-code list after `REBASE_ZERO_REFERENCE`
-  (`:1148`), add `BULK_OPERATION_NOT_APPLICABLE` with *(registered 2026-11-05, WK-1178, SL 8389, FD
+  (`:1148`), add `BULK_OPERATION_NOT_APPLICABLE` with *(registered 2026-11-05, WK-1178, SL-2041, FD
   8387: **422** from `POST /api/v1/rate-tables/{slug}@{version}/bulk-operation` (FR-233); the detail
   names the operation, the value type and the table)*. After the note at `:1220-1227`, add one dated
   line: the bulk operations' named refusals gained this code; the note's "All ten" is its date's
   count.
 - [ ] `docs/specs/04-optimisation.md` §4.4, after the `rebase_to_level` bullet: "*(Amended 2026-11-05,
-  SL 8389, FD 8387: `03` FR-233 refuses `rebase_to_level` on any column but `relativity`, and both
+  SL-2041, FD-2032: `03` FR-233 refuses `rebase_to_level` on any column but `relativity`, and both
   uplifts on `count`, with `BULK_OPERATION_NOT_APPLICABLE`.)*"
 - [ ] `backend/src/app/errors.py`, in the W10-3C block, after `"REBASE_ZERO_REFERENCE",`:
 
 ```python
-        # FR-233 as amended (SL 8389, FD 8387): the column's value type gives the operation no
+        # FR-233 as amended (SL-2041, FD-2032): the column's value type gives the operation no
         # meaning.
         "BULK_OPERATION_NOT_APPLICABLE",
 ```
@@ -599,7 +600,7 @@ progress line, quoted; (h) START and END name the gate and its stage; (i) the at
 
 **T5 — the record.**
 
-- [ ] LG 8390 under `docs/ledgers/`, in `docs/_templates/LG.md`'s form: Scope quotes this row; Task
+- [ ] LG-2042 under `docs/ledgers/`, in `docs/_templates/LG.md`'s form: Scope quotes this row; Task
   list; Gate; Build log with A3's and A4's lines, every log `head=` first and `rc=` last; `### Audit`
   left to the auditor (A14). Red and green lines go in the LG before the audit.
 - [ ] A9's check, A10's runs, A11's derivation.
@@ -623,7 +624,7 @@ progress line, quoted; (h) START and END name the gate and its stage; (i) the at
 ## Hand-off (not this plan's writes)
 
 - DP-1, DP-2 and the GO on the row are the maintainer's (by delegation) to rule.
-- The SL 8389 roadmap row and the mint are the lead's; LG 8390 is the executor's; FD 8387's essay
+- The SL-2041 roadmap row and the mint are the lead's; LG-2042 is the executor's; FD-2032's essay
   (DP-1 (a)), its closing act and the LG Audit section are the auditor's.
 - `PL-1927` is not edited.
 

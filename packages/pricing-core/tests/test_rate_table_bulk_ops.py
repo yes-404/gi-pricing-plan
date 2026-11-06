@@ -153,7 +153,7 @@ class TestFormatValueIsFixedPoint:
 
 
 class TestFormatValueIsBoundedBeforeItIsBuilt:
-    """SL 8345 N1 (to-lead "2026-11-05 20:50:01 GMT"): fixed-point text grows with the exponent,
+    """SL-2038 N1 (to-lead "2026-11-05 20:50:01 GMT"): fixed-point text grows with the exponent,
     so `_format_value` refuses |adjusted exponent| > 308 (FR-21, FR-273: the engine carries
     float64), zero's exponent included, BEFORE the text is built, with the cell code. A refusal
     names the bound, never the value."""
@@ -311,7 +311,7 @@ class TestFormatValueGoldens:
 
 class TestFormatValueIsExact:
     """`_format_value` writes the cell text, so it must not round to the ambient context's 28
-    digits: a value wider than that is written in full (SL 8345 / LG 8346, R2)."""
+    digits: a value wider than that is written in full (SL-2038 / LG-2039, R2)."""
 
     @pytest.mark.req("FR-234")
     @pytest.mark.parametrize(

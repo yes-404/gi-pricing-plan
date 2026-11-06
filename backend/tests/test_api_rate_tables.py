@@ -863,7 +863,7 @@ def test_bulk_operation_creates_a_new_version_with_the_operation_record(
 def test_bulk_operation_with_a_huge_percentage_is_a_coded_422_not_a_memory_fault(
     api_client: TestClient, workspace_id, actuary
 ) -> None:
-    """SL 8345 N1 (OWED to SL 8389's DB window: not run by SL 8345's seat). A request's
+    """SL-2038 N1 (OWED to SL-2041's DB window: not run by SL-2038's seat). A request's
     `percentage` of `1E+999990` made `_format_value` write ~1 MB per row; the bound (|adjusted
     exponent| <= 308, FR-21) refuses it first: a 422 `RATE_TABLE_CELL_UNPARSEABLE`, small body."""
     family = f"mf-{uuid4().hex[:8]}"

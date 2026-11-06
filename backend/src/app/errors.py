@@ -370,7 +370,7 @@ RATING_ERROR_CODES: Final[frozenset[str]] = frozenset(
         "REBASE_NO_MATCH",
         "REBASE_AMBIGUOUS",
         "REBASE_ZERO_REFERENCE",
-        # FR-233 as amended (SL 8389, FD 8387): the column's value type gives the operation no
+        # FR-233 as amended (SL-2041, FD-2032): the column's value type gives the operation no
         # meaning.
         "BULK_OPERATION_NOT_APPLICABLE",
         "IMPORT_KEY_MISMATCH",

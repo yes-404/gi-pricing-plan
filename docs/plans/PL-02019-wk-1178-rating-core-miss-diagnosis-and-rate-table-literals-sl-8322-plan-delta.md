@@ -441,7 +441,7 @@ only if `_PER_QUOTE_CODES` lives there; `packages/pricing-core/tests/test_rating
 `test_quote_input_raise_sites.py` if a count moves; `backend/tests/test_wf699_journey.py`; `docs/specs/03-rating-engine.md`; LG 8346.
 At the mint: the SL 8345 row, `docs/INDEX.md`, this plan's `status:`, the three essays and `docs/findings/register.md` (A18).
 
-*(2026-11-05 16:47 GMT, exec-sl8345j, to-lead "2026-11-05 16:41:58 GMT": R2's Write set is widened by `examples/fremtpl2/journey.py` (B3's refused-quote code, FD-1659), after the auditor's finding; with the earlier widenings by ruling named in LG 8346's Scope.)*
+*(2026-11-05 16:47 GMT, exec-sl8345j, to-lead "2026-11-05 16:41:58 GMT": R2's Write set is widened by `examples/fremtpl2/journey.py` (B3's refused-quote code, FD-1659), after the auditor's finding; with the earlier widenings by ruling named in LG-2039's Scope.)*
 
 ### Files shared with other groups
 

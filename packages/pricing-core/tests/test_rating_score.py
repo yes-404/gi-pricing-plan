@@ -903,7 +903,7 @@ async def test_a_residual_evaluation_failure_is_not_a_table_miss(
 
 @pytest.mark.req("FR-255")
 async def test_a_failure_in_a_step_consuming_a_table_is_not_a_miss() -> None:
-    """FD-1478 case 2 (RL-1313 DP-G4's stated limit, closed by SL 8345): a failing step that
+    """FD-1478 case 2 (RL-1313 DP-G4's stated limit, closed by SL-2038): a failing step that
     itself directly consumes an `on_miss="error"` output, and fails for another reason, is
     `RATING_EVALUATION_FAILED`: the table found its row. Case 1, a genuine miss, stays
     `RATE_TABLE_MISS` (`test_a_rate_table_miss_is_refused_with_the_right_code`)."""
