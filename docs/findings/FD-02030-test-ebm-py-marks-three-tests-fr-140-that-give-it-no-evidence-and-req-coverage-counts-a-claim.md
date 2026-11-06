@@ -1,16 +1,18 @@
 ---
-id: FD-8385
+id: FD-2030
 family: finding
 title: test_ebm.py marks three tests FR-140 that give it no evidence, and req-coverage counts a claim
 status: active
-created: 2026-11-05   # working id 8385, minted at the batch 12 mint
+created: 2026-11-06   # original date 2026-11-05, set at the draft; working id 8385, minted 2026-11-06
 owner: lead
 tree: ca63dd15   # the head the auditor read; origin/main when drafted is cded9f0e1953f2db6a6a1375892257a1a4822fc3
 corrected_by: []
 relates: [FD-1228, SL-8334, LG-8335, PL-8333, FR-140, FR-122, WK-1178]
 ---
 
-# FD-8385 — `test_ebm.py` `:391`, `:398` and `:448` are marked FR-140
+# FD-2030 — `test_ebm.py` `:391`, `:398` and `:448` are marked FR-140
+
+*(Minted 2026-11-06 as FD-2030 from working id 8385, in the docs batch 12 PR.)*
 
 ## Finding
 

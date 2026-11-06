@@ -1,16 +1,18 @@
 ---
-id: FD-8386
+id: FD-2031
 family: finding
 title: Decompression expands before the size bound - XLSX workbooks and gzip uploads are held whole before a limit looks at them
 status: active
-created: 2026-11-05   # working id 8386, minted at the batch 12 mint
+created: 2026-11-06   # original date 2026-11-05, set at the draft; working id 8386, minted 2026-11-06
 owner: lead
 tree: e75e0f1a   # read, not run; origin/main when drafted is cded9f0e1953f2db6a6a1375892257a1a4822fc3
 corrected_by: []
 relates: [FR-450, SL-8325, WK-1178]
 ---
 
-# FD-8386 — decompression expands before the size bound (DP-A3)
+# FD-2031 — decompression expands before the size bound (DP-A3)
+
+*(Minted 2026-11-06 as FD-2031 from working id 8386, in the docs batch 12 PR.)*
 
 ## Finding
 

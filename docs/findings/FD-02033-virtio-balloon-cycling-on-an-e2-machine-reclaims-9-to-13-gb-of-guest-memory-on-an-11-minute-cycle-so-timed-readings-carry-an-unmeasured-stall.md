@@ -1,16 +1,18 @@
 ---
-id: FD-8393
+id: FD-2033
 family: finding
 title: virtio_balloon cycling on an e2 machine reclaims 9 to 13 GB of guest memory on an 11-minute cycle, so timed readings carry an unmeasured stall
 status: active
-created: 2026-11-05   # working id 8393, minted at the batch 12 mint
+created: 2026-11-06   # original date 2026-11-05, set at the draft; working id 8393, minted 2026-11-06
 owner: lead
 tree: cded9f0e1953f2db6a6a1375892257a1a4822fc3   # origin/main when drafted; the evidence is a live host read, not a tree
 corrected_by: []
 relates: [WK-1178, FD-2007]
 ---
 
-# FD-8393 — virtio_balloon cycling on an e2 machine
+# FD-2033 — virtio_balloon cycling on an e2 machine
+
+*(Minted 2026-11-06 as FD-2033 from working id 8393, in the docs batch 12 PR.)*
 
 ## Finding
 

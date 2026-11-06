@@ -1,20 +1,22 @@
 ---
-id: FD-8383
+id: FD-2028
 family: finding
 title: The bulk rate-table operations run at the ambient 28 digits and no spec clause states a decimal-places or rounding policy for a rate cell
 status: active
-created: 2026-11-05   # working id 8383, minted at the batch 12 mint
+created: 2026-11-06   # original date 2026-11-05, set at the draft; working id 8383, minted 2026-11-06
 owner: lead
 tree: cded9f0e1953f2db6a6a1375892257a1a4822fc3   # origin/main when drafted; the measurements ran on cda3c0dc of sl-8345-r2-cell-hard-error
 corrected_by: []
-relates: [WK-1178, OQ-8396, FD-1783, OQ-1784]
+relates: [WK-1178, OQ-2035, FD-1783, OQ-1784]
 ---
 
-# FD-8383 — the bulk rate-table operations run at the ambient 28 digits; no spec clause states a dp or rounding policy for a rate cell
+# FD-2028 — the bulk rate-table operations run at the ambient 28 digits; no spec clause states a dp or rounding policy for a rate cell
+
+*(Minted 2026-11-06 as FD-2028 from working id 8383, in the docs batch 12 PR.)*
 
 ## Finding
 
-**MEDIUM, owner WK-1178. No fix in R2; no code before the decision (to-lead "2026-11-05 16:33:41 GMT" item 2).** `uplift_table`, `uplift_by_filter` and `rebase_to_level` (`packages/pricing-core/src/pricing_core/rate_tables/operations.py`) compute `old * factor` and `old / reference` in the **ambient** decimal context (28 significant digits, half-even; no `localcontext`, no `quantize`; production runs the default context and none is set in `rate_tables`). A result wider than 28 digits is rounded inside the arithmetic and the rounded text is stored. `floor_and_cap` does no arithmetic. `docs/specs/03-rating-engine.md` and `04-optimisation.md` state no dp or rounding policy for a rate cell at all: FR-233 gives the four operations and that each records its parameters, nothing more. That is a design choice the specs leave open, and an actuarial one (CLAUDE.md §0); it is raised as **OQ-8396**, not decided here.
+**MEDIUM, owner WK-1178. No fix in R2; no code before the decision (to-lead "2026-11-05 16:33:41 GMT" item 2).** `uplift_table`, `uplift_by_filter` and `rebase_to_level` (`packages/pricing-core/src/pricing_core/rate_tables/operations.py`) compute `old * factor` and `old / reference` in the **ambient** decimal context (28 significant digits, half-even; no `localcontext`, no `quantize`; production runs the default context and none is set in `rate_tables`). A result wider than 28 digits is rounded inside the arithmetic and the rounded text is stored. `floor_and_cap` does no arithmetic. `docs/specs/03-rating-engine.md` and `04-optimisation.md` state no dp or rounding policy for a rate cell at all: FR-233 gives the four operations and that each records its parameters, nothing more. That is a design choice the specs leave open, and an actuarial one (CLAUDE.md §0); it is raised as **OQ-2035**, not decided here.
 
 **Today's behaviour, stated:** exact to the ambient precision, then a coded refusal (`RATE_TABLE_CELL_UNPARSEABLE`) when the rounded text has more than 28 decimal places or a mantissa the engine cannot read.
 
@@ -34,4 +36,4 @@ Measured by the data-modelling seat on `cda3c0dc`, DB-free, with the real operat
 
 ## Disposition
 
-Open, owner WK-1178. **The decision is the user's** (it sets how rates are rounded): OQ-8396 carries the options and a recommendation to the §14 review of Mon 16 Nov 2026; if undecided, the P2 closure record carries it by name. Rulings: to-lead "2026-11-05 16:33:41 GMT" and "2026-11-05 17:20:30 GMT" (sizing corrected to step 1, MEDIUM stands). Related, not the same: FD-1783 / OQ-1784 ask for a declared precision at a fit's materialisation. Filed as working id 8383.
+Open, owner WK-1178. **The decision is the user's** (it sets how rates are rounded): OQ-2035 carries the options and a recommendation to the §14 review of Mon 16 Nov 2026; if undecided, the P2 closure record carries it by name. Rulings: to-lead "2026-11-05 16:33:41 GMT" and "2026-11-05 17:20:30 GMT" (sizing corrected to step 1, MEDIUM stands). Related, not the same: FD-1783 / OQ-1784 ask for a declared precision at a fit's materialisation. Filed as working id 8383.

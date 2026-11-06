@@ -1,16 +1,18 @@
 ---
-id: FD-8387
+id: FD-2032
 family: finding
 title: Rebase and uplift on a money_minor or count column write a ratio or a fraction into a column in minor units, and nothing consults the value type
 status: active
-created: 2026-11-05   # working id 8387, minted at the batch 12 mint
+created: 2026-11-06   # original date 2026-11-05, set at the draft; working id 8387, minted 2026-11-06
 owner: lead
 tree: cded9f0e1953f2db6a6a1375892257a1a4822fc3   # origin/main; measurements ran on cda3c0dc of sl-8345-r2-cell-hard-error
 corrected_by: []
-relates: [WK-1178, FR-228, FR-233, OQ-8396, FD-8383]
+relates: [WK-1178, FR-228, FR-233, OQ-2035, FD-2028]
 ---
 
-# FD-8387 — refusal by value type: a bulk operation on a column whose type gives the result no meaning
+# FD-2032 — refusal by value type: a bulk operation on a column whose type gives the result no meaning
+
+*(Minted 2026-11-06 as FD-2032 from working id 8387, in the docs batch 12 PR.)*
 
 ## Finding
 

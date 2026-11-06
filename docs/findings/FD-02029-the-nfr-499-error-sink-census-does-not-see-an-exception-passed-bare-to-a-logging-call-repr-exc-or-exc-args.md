@@ -1,16 +1,18 @@
 ---
-id: FD-8384
+id: FD-2029
 family: finding
 title: The NFR-499 error-sink census does not see an exception passed bare to a logging call, repr(exc) or exc.args
 status: active
-created: 2026-11-05   # working id 8384, minted at the batch 12 mint
+created: 2026-11-06   # original date 2026-11-05, set at the draft; working id 8384, minted 2026-11-06
 owner: lead
 tree: bdad1322   # the tree of the lead's check below; origin/main when drafted is cded9f0e1953f2db6a6a1375892257a1a4822fc3
 corrected_by: []
 relates: [FD-1507, NFR-499, WK-1178]
 ---
 
-# FD-8384 — the census finds `str(exc)` and `{exc}`, not the other ways an exception's text is stored or logged
+# FD-2029 — the census finds `str(exc)` and `{exc}`, not the other ways an exception's text is stored or logged
+
+*(Minted 2026-11-06 as FD-2029 from working id 8384, in the docs batch 12 PR.)*
 
 ## Finding
 
