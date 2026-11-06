@@ -193,9 +193,11 @@ def _concrete(path: str) -> str:
     return filled
 
 
-#: The three patterns the contract uses where the schema carries no `examples`: the slug
-#: grammar (`_SLUG`, `refs.py`), a SHA-256 digest and a peril code. A fourth is a decision,
-#: not a default.
+#: The five patterns the contract uses where the schema carries no `examples`: the slug
+#: grammar (`_SLUG`, `refs.py`), a SHA-256 digest, a peril code, `DecimalStr`, and the
+#: factor slug (`_FACTOR_SLUG`, `refs.py`; the underscore is what that grammar exists for).
+#: A sixth is a decision, not a default; the fifth was ruled by the maintainer's
+#: "2026-11-05 22:25:29 GMT" `to-lead.md` entry (C's 14th), not added to UNSATISFIABLE.
 _PATTERN_VALUES: dict[str, str] = {
     "^[a-z0-9][a-z0-9-]{1,62}$": "sweep-slug",
     "^[0-9a-f]{64}$": "0" * 64,
@@ -203,6 +205,7 @@ _PATTERN_VALUES: dict[str, str] = {
     # `DecimalStr` (model_schema.money): `DislocationSpec`'s band edges and mover threshold, a
     # fourth pattern ruled added by the maintainer's 2026-10-10 02:43:18 entry (WK-673 Slice 4).
     "^-?[0-9]+(\\.[0-9]+)?$": "1",
+    "^[a-z0-9][a-z0-9_-]{1,62}$": "sweep_factor",
 }
 
 

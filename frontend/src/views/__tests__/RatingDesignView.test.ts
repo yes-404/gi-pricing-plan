@@ -20,13 +20,16 @@ vi.mock("@/api/ratingAlgorithms", () => ({
   validateRatingAlgorithm: () => Promise.resolve({ issues: [] }),
 }));
 
-beforeAll(() => {
+beforeAll(async () => {
   // A browser API happy-dom lacks (Vue Flow itself is NOT stubbed here).
   globalThis.ResizeObserver ??= class {
     observe(): void {}
     unobserve(): void {}
     disconnect(): void {}
   };
+  // The chunk the view's `defineAsyncComponent` loads, so a `findBy` waits for the draw and
+  // never for the import (FD-1748, FD-1800). Deterministic: no timer is changed.
+  await import("@/components/dag/DagDesigner.vue");
 });
 
 const RATING = {

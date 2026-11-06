@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import asyncio
 import dataclasses
+import hashlib
 import json
 import socket
 import subprocess
@@ -34,12 +35,12 @@ from test_rating_runtime import (
 )
 
 from model_schema import OffsetSpec
-from model_schema.rating import RatingVersion, SubGraphRef
+from model_schema.rating import Pins, RatingVersion, SubGraphRef
 from model_schema.refs import ArtifactRef
 from model_schema.scoring import QuoteContext, QuoteContextOptions
-from pricing_core.rating.compile import ArtifactResolver, ResolvedArtifact, compile_bundle
-from pricing_core.rating.runtime import CompiledBundle, load_bundle
-from pricing_core.rating.score import score_one
+from pricing_core.rating.compile import ArtifactResolver, Bundle, ResolvedArtifact, compile_bundle
+from pricing_core.rating.runtime import CompiledBundle, PurposeEvaluation, load_bundle, to_wire
+from pricing_core.rating.score import _score_context_sync, score_one
 
 _RATING_VERSION_REF = ArtifactRef(type="rating_version", slug="score-fixture", version=1)
 
@@ -835,24 +836,46 @@ async def test_a_masked_division_in_a_condition_or_bound_is_refused_at_compile(
         await _compile_with(_with_step(step_id, **fields))
 
 
-def _hand_compiled(payload: dict[str, Any]) -> CompiledBundle:
-    """A bundle built without `compile_bundle`, since after this slice these cannot be saved."""
+def _hand_bundle(
+    payload: dict[str, Any],
+    *,
+    expense_rows: list[dict[str, str]] | None = None,
+    pins: Pins | None = None,
+    extra_payloads: dict[str, dict[str, Any]] | None = None,
+) -> Bundle:
+    """A `Bundle` built by hand, past `compile_bundle`'s checks. `expense_rows` replaces the
+    `motor-expense` table's rows: a stored cell the compile backstop would refuse (FD-1648)."""
     from model_schema.rating import RatingAlgorithm
-    from pricing_core.rating.compile import Bundle, bundle_hash, to_jdm
+    from pricing_core.rating.compile import bundle_hash, to_jdm
 
     resolver = _FakeResolver()
+    if expense_rows is not None:
+        resolver._payloads["rate_table:motor-expense@1"]["rows"] = expense_rows
     algorithm = RatingAlgorithm.model_validate(payload)
-    pins = _version().pins
+    pins = pins or _version().pins
     assert pins is not None
     graph = to_jdm(algorithm)
     payloads = {"rating_algorithm:score-fixture@1": payload,
                 **{str(ref): resolver._payloads[str(ref)]
-                   for ref in (*pins.rate_tables, *pins.models)}}
-    return load_bundle(Bundle(
+                   for ref in (*pins.rate_tables, *pins.models)},
+                **(extra_payloads or {})}
+    return Bundle(
         algorithm_ref="rating_algorithm:score-fixture@1", graph=graph, resolved_payloads=payloads,
         pins=pins, content_hash=bundle_hash(graph, pins),
         compiled_at=datetime(2026, 8, 29, 12, 0, 0),
-    ))
+    )
+
+
+def _hand_compiled(
+    payload: dict[str, Any],
+    *,
+    expense_rows: list[dict[str, str]] | None = None,
+    pins: Pins | None = None,
+    extra_payloads: dict[str, dict[str, Any]] | None = None,
+) -> CompiledBundle:
+    return load_bundle(
+        _hand_bundle(payload, expense_rows=expense_rows, pins=pins, extra_payloads=extra_payloads)
+    )
 
 
 _ZERO_FLOOR = {
@@ -879,17 +902,149 @@ async def test_a_residual_evaluation_failure_is_not_a_table_miss(
 
 
 @pytest.mark.req("FR-255")
-async def test_the_stated_residual_still_reports_the_miss_code() -> None:
-    """RL-1313 DP-G4's stated limit, pinned so a change to it is visible: a failing step that
-    itself directly consumes an `on_miss="error"` output reports the miss code (the engine's
-    error has the same shape as a genuine miss). FD working id 9888 owns the fix."""
+async def test_a_failure_in_a_step_consuming_a_table_is_not_a_miss() -> None:
+    """FD-1478 case 2 (RL-1313 DP-G4's stated limit, closed by SL-2038): a failing step that
+    itself directly consumes an `on_miss="error"` output, and fails for another reason, is
+    `RATING_EVALUATION_FAILED`: the table found its row. Case 1, a genuine miss, stays
+    `RATE_TABLE_MISS` (`test_a_rate_table_miss_is_refused_with_the_right_code`)."""
     payload = _with_step(
         "s_office",
         expr="risk_premium_minor * expense_factor * (1 / (expense_factor - expense_factor))",
     )
     compiled = _hand_compiled(payload)
-    with pytest.raises(ValueError, match=r"^RATE_TABLE_MISS:"):
+    with pytest.raises(ValueError, match=r"^RATING_EVALUATION_FAILED:"):
         await score_one(compiled, _ctx())
+
+
+def _table_and_lookup_payload() -> dict[str, Any]:
+    """`s_office` consumes the `motor-expense` table's output AND a lookup's (FD-1659)."""
+    payload = _algorithm_payload()
+    payload["input_contract"].append({"name": "postcode", "type": "string", "nullable": False})
+    steps: list[dict[str, Any]] = payload["steps"]
+    steps.insert(0, {"step_id": "s_in_postcode", "type": "input", "label": "Postcode",
+                     "input_name": "postcode", "on_missing": "error", "produces": "postcode"})
+    steps.insert(1, {"step_id": "s_area", "type": "lookup", "label": "Area factor",
+                     "reference_table_ref": "reference_table:area@1", "key_expr": ["postcode"],
+                     "as_at": "effective_date", "on_miss": "error", "consumes": ["postcode"],
+                     "produces": "area_factor"})
+    office = next(st for st in steps if st["step_id"] == "s_office")
+    office["expr"] = "risk_premium_minor * expense_factor * number(area_factor)"
+    office["consumes"] = ["risk_premium_minor", "expense_factor", "area_factor"]
+    return payload
+
+
+_AREA_REF = {"rows": [{"key": "N1", "payload": {"area_factor": "1.5"},
+                       "effective_from": "2020-01-01", "effective_to": None}]}
+
+
+@pytest.mark.req("FR-255")
+@pytest.mark.parametrize(("channel", "postcode", "code"), [
+    pytest.param("broker", "N1", "RATE_TABLE_MISS", id="the_table_missed"),
+    pytest.param("direct", "ZZ", "REFERENCE_LOOKUP_MISS", id="the_lookup_missed"),
+])
+async def test_a_step_consuming_a_table_and_a_lookup_reports_the_one_that_missed(
+    channel: str, postcode: str, code: str
+) -> None:
+    """FD-1659: the code names what failed, not the first kind the failing step consumes."""
+    pins = _version().pins
+    assert pins is not None
+    compiled = _hand_compiled(
+        _table_and_lookup_payload(),
+        expense_rows=[{"channel": "direct", "expense_factor": "1.1"}],
+        pins=Pins.model_validate(
+            {**pins.model_dump(mode="json"), "reference_tables": ["reference_table:area@1"]}
+        ),
+        extra_payloads={"reference_table:area@1": _AREA_REF},
+    )
+    ctx = _ctx(inputs={**_ctx().inputs, "channel": channel, "postcode": postcode})
+    with pytest.raises(ValueError, match=rf"^{code}:"):
+        await score_one(compiled, ctx)
+
+
+_BAD_CELL_ROWS = [
+    {"channel": "direct", "expense_factor": "1.36E-7"},
+    {"channel": "broker", "expense_factor": "1.25"},
+]
+_UNCONSUMED = {"expr": "risk_premium_minor", "consumes": ["risk_premium_minor"]}
+_TOLERANT = {"expr": "risk_premium_minor * (expense_factor == null ? 1 : 2)"}
+
+
+def _bad_cell_bundle(case: str) -> CompiledBundle:
+    if case == "unconsumed":
+        return _hand_compiled(_with_step("s_office", **_UNCONSUMED), expense_rows=_BAD_CELL_ROWS)
+    if case == "default_tolerant":
+        payload = _with_step("s_office", **_TOLERANT)
+        for step in payload["steps"]:
+            if step["step_id"] == "s_expense":
+                step["on_miss"] = "default"
+        return _hand_compiled(payload, expense_rows=_BAD_CELL_ROWS)
+    return _hand_compiled(_algorithm_payload(), expense_rows=_BAD_CELL_ROWS)
+
+
+@pytest.mark.req("FR-255")
+@pytest.mark.parametrize("case", ["consumed", "unconsumed", "default_tolerant"])
+async def test_an_unparseable_cell_is_a_hard_error(case: str) -> None:
+    """FD-1648 (b), FD-1478: a stored cell the engine cannot parse, hit by a quote, is
+    `RATE_TABLE_CELL_UNPARSEABLE` whatever `on_miss` says and whether or not anything consumes
+    the output: never `RATE_TABLE_MISS`, never an omitted output, never a quote. (A bundle
+    hand-compiled: `compile_bundle` refuses such a version.)"""
+    with pytest.raises(ValueError, match=r"^RATE_TABLE_CELL_UNPARSEABLE:"):
+        await score_one(_bad_cell_bundle(case), _ctx())
+
+
+@pytest.mark.req("FR-255")
+def test_an_unparseable_cell_is_a_hard_error_on_a_batch_row() -> None:
+    """The synchronous path `score_batch` takes row by row refuses the same way."""
+    with pytest.raises(ValueError, match=r"^RATE_TABLE_CELL_UNPARSEABLE:"):
+        _score_context_sync(_bad_cell_bundle("consumed"), _ctx(), _RATING_VERSION_REF)
+
+
+@pytest.mark.req("FR-255")
+async def test_a_bad_cell_not_hit_by_the_quote_still_prices() -> None:
+    """Limb (iii) refuses a quote that hits the cell, not every quote on the bundle."""
+    out = await score_one(_bad_cell_bundle("consumed"), _ctx(inputs={**_ctx().inputs,
+                                                                     "channel": "broker"}))
+    assert out.outputs["payable_premium_minor"] is not None
+
+
+#: `sha256(json.dumps(to_wire(graph, payloads), sort_keys=True))` for `_algorithm_payload()` with
+#: the `motor-expense` rows of `_rate_table_payload()`, measured at the base 662867bb (tree of
+#: R1's SOLO-gate head, before any R2 code): the clean wire is byte-identical (FR-239, A16).
+_CLEAN_WIRE_SHA256 = "eb5bac4364fe66f353fee30bc38337443a0f8f2519ebc63162e5216b5f229985"
+
+
+def _wire_of(bundle: Bundle) -> dict[str, Any]:
+    return to_wire(bundle.graph, bundle.resolved_payloads)
+
+
+@pytest.mark.req("FR-239")
+def test_a_clean_table_has_a_byte_identical_wire() -> None:
+    wire = _wire_of(_hand_bundle(_algorithm_payload()))
+    assert hashlib.sha256(json.dumps(wire, sort_keys=True).encode()).hexdigest() == (
+        _CLEAN_WIRE_SHA256
+    )
+
+
+@pytest.mark.req("FR-239")
+def test_a_table_with_one_bad_cell_differs_in_that_cell_only() -> None:
+    clean = _wire_of(_hand_bundle(_algorithm_payload()))
+    bad = _wire_of(_hand_bundle(_algorithm_payload(), expense_rows=_BAD_CELL_ROWS))
+    differing = [
+        (a["id"], ra["_id"], ra["o0"], rb["o0"])
+        for a, b in zip(clean["nodes"], bad["nodes"], strict=True)
+        for ra, rb in zip(
+            a.get("content", {}).get("rules", []), b.get("content", {}).get("rules", []),
+            strict=True,
+        )
+        if ra != rb
+    ]
+    assert differing == [("s_expense", "r0", "1.1", json.dumps("__UNPARSEABLE_CELL__"))]
+    assert {n["id"] for n in clean["nodes"]} == {n["id"] for n in bad["nodes"]}
+
+
+def _undiagnosed(algorithm: Any) -> PurposeEvaluation:
+    """An evaluation whose diagnostic decision finds no guard to fire (FR-255)."""
+    return PurposeEvaluation(decision=None, algorithm=algorithm, diagnose=lambda _context: None)
 
 
 @pytest.mark.req("FR-255")
@@ -906,7 +1061,7 @@ def test_no_engine_failure_escapes_as_a_bare_runtime_error(engine_error: str) ->
 
     algorithm = RatingAlgorithm.model_validate(_algorithm_payload())
     with pytest.raises(ValueError, match=r"^RATING_EVALUATION_FAILED:"):
-        _reraise_engine_failure(algorithm, RuntimeError(engine_error))
+        _reraise_engine_failure(_undiagnosed(algorithm), {}, RuntimeError(engine_error))
 
 
 @pytest.mark.req("FR-255")
@@ -917,7 +1072,7 @@ def test_an_engine_failure_with_no_table_or_lookup_to_blame_is_coded() -> None:
 
     algorithm = RatingAlgorithm.model_validate(_with_step("s_expense", on_miss="default"))
     with pytest.raises(ValueError, match=r"^RATING_EVALUATION_FAILED:"):
-        _reraise_engine_failure(algorithm, RuntimeError("boom"))
+        _reraise_engine_failure(_undiagnosed(algorithm), {}, RuntimeError("boom"))
 
 
 @pytest.mark.req("NFR-499")
@@ -932,7 +1087,7 @@ def test_an_engine_error_text_never_reaches_the_raised_message() -> None:
     for nodeid in ("s_decl_cap", sentinel):
         engine_error = f'{{"type":"NodeError","source":"{sentinel}","nodeId":"{nodeid}"}}'
         with pytest.raises(ValueError, match=r"^RATING_EVALUATION_FAILED:") as raised:
-            _reraise_engine_failure(algorithm, RuntimeError(engine_error))
+            _reraise_engine_failure(_undiagnosed(algorithm), {}, RuntimeError(engine_error))
         assert sentinel not in str(raised.value)
 
 

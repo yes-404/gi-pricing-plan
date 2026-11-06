@@ -59,3 +59,43 @@ def test_a_reference_that_can_be_built_can_be_re_read():
         ArtifactRef(type="factor", slug="veh brand", version=1)
     with pytest.raises(ValidationError):
         ArtifactRef(type="widget", slug="x-y", version=1)
+
+
+_BAD_FACTOR_SLUGS = ["", "Veh Brand", "a:b@1", "a" * 65, "a"]
+_GOOD_FACTOR_SLUGS = ["veh_brand", "driver-age-1a2b"]
+
+
+@pytest.mark.req("FR-83")
+@pytest.mark.parametrize("slug", [*_BAD_FACTOR_SLUGS, *_GOOD_FACTOR_SLUGS])
+def test_a_factor_create_refuses_a_slug_outside_the_factor_grammar(slug):
+    """`FactorSlug` admits exactly what the parser's `factor` grammar admits (FD-1384)."""
+    from pydantic import TypeAdapter
+
+    from model_schema.refs import FactorSlug, slug_is_admitted
+
+    admitted = slug_is_admitted("factor", slug)
+    assert admitted == (slug in _GOOD_FACTOR_SLUGS)  # the table is the grammar's
+    adapter = TypeAdapter(FactorSlug)
+    if admitted:
+        assert adapter.validate_python(slug) == slug
+    else:
+        with pytest.raises(ValidationError):
+            adapter.validate_python(slug)
+
+
+@pytest.mark.req("FR-209")
+def test_a_stored_factor_slug_is_not_revalidated_on_read():
+    """The read model stays tolerant: a stored slug outside the grammar still loads."""
+    from model_schema import Factor
+
+    stored = Factor.model_validate(
+        {
+            "id": "0197a3c0-0000-7000-8000-000000000001",
+            "slug": "Veh Brand",
+            "dataset_id": "0197a3c0-0000-7000-8000-000000000002",
+            "version": 1,
+            "type": "identity",
+            "source_columns": ["veh_brand"],
+        }
+    )
+    assert stored.slug == "Veh Brand"

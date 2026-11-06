@@ -339,6 +339,8 @@ RATING_ERROR_CODES: Final[frozenset[str]] = frozenset(
         "RATING_VERSION_IMMUTABLE",
         # Rate tables (W10-2), enumerated in 03 §5.1.
         "RATE_TABLE_MISS",
+        # FR-234, FR-240 (FD-1648, SL-2020): a rate-table cell the engine's parser cannot read.
+        "RATE_TABLE_CELL_UNPARSEABLE",
         # Scoring: an engine failure that is not a table or lookup miss (RL-1313 DP-G4, FR-255).
         "RATING_EVALUATION_FAILED",
         # FR-240 (RL-1329): a clamp the premium ladder cannot place, refused at save and at compile.
@@ -368,6 +370,9 @@ RATING_ERROR_CODES: Final[frozenset[str]] = frozenset(
         "REBASE_NO_MATCH",
         "REBASE_AMBIGUOUS",
         "REBASE_ZERO_REFERENCE",
+        # FR-233 as amended (SL-2041, FD-2032): the column's value type gives the operation no
+        # meaning.
+        "BULK_OPERATION_NOT_APPLICABLE",
         "IMPORT_KEY_MISMATCH",
         "IMPORT_TYPE_MISMATCH",
         "IMPORT_PARSE_ERROR",
