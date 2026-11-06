@@ -227,8 +227,10 @@ async def test_fit_start_and_completion_are_audited_and_creation_carries_no_befo
     completion … with before/after state"*. Every one of those five events exists and is
     audited: `factor.created`, `banding.created`, `grouping.created`, `model.reserved`
     (fit start, written in the request so a queued Job is already accounted for) and
-    `model.fitted` (completion). **None of them carries a `before`**, and this test asserts
-    that they do not.
+    `model.fitted` (completion). **The four creates carry no `before`**, and this test asserts
+    that they do not; `model.fitted` is not a create (the row exists from `model.reserved`,
+    at `draft`), so it carries `before.status == "draft"` and `after.status == "fitted"`
+    (`02` §9's dated correction of 2026-11-06, PL 8376).
 
     Asserted rather than fixed, because the fix is a decision and not a keystroke. These
     artifacts are versioned, never edited: `create_factor`, `create_banding` and
@@ -296,7 +298,6 @@ async def test_fit_start_and_completion_are_audited_and_creation_carries_no_befo
         ("banding.created", "slug"),
         ("grouping.created", "slug"),
         ("model.reserved", "spec_hash"),
-        ("model.fitted", "rows"),
     ):
         events = await _events(database, workspace_id, action)
         assert len(events) == 1, f"{action} emitted {len(events)} events"
@@ -310,3 +311,10 @@ async def test_fit_start_and_completion_are_audited_and_creation_carries_no_befo
             f"{action} now carries a before state — NFR-484's create-only gap has been "
             "closed, and `02` §9's verdict on it needs updating rather than this assertion"
         )
+
+    # `model.fitted` is a transition, not a create: the prior state exists and is recorded.
+    (fitted_event,) = await _events(database, workspace_id, "model.fitted")
+    assert fitted_event.before == {"status": ModelStatus.DRAFT.value}
+    assert fitted_event.after is not None
+    assert fitted_event.after["status"] == ModelStatus.FITTED.value
+    assert "rows" in fitted_event.after

@@ -946,6 +946,10 @@ async def record_fit(
 
     row.fit_result = fit_result.model_dump(mode="json")
     row.diagnostics_id = diagnostics_row.id
+    # Read, not typed: the event says what the row was (`draft` for every path that reaches
+    # here today; a path that did not would be recorded truthfully, PL 8376 / ruling of
+    # 2026-11-06 02:27:13 GMT).
+    before_status = row.status
     row.status = ModelStatus.FITTED.value
     row.job_id = job_id
     await session.flush()
@@ -954,7 +958,11 @@ async def record_fit(
     # a coefficient vector, a booster, and an EBM's exported tables. A shared subset — rows
     # and model type — would record the three events identically and leave a reader unable
     # to tell them apart.
-    after: dict[str, object] = {"model_type": fit_result.model_type, "rows": fit_result.rows}
+    after: dict[str, object] = {
+        "status": row.status,
+        "model_type": fit_result.model_type,
+        "rows": fit_result.rows,
+    }
     if isinstance(fit_result, GlmFitResult):
         intercept = fit_result.intercept
         after |= {
@@ -985,6 +993,7 @@ async def record_fit(
         source=JobSource.SYSTEM if job_id else JobSource.API,
         action="model.fitted",
         entity_ref=f"model:{row.model_family_slug}@{row.version}",
+        before={"status": before_status},
         after=after,
     )
     return row

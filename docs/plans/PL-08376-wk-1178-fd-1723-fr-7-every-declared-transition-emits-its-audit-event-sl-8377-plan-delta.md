@@ -418,6 +418,8 @@ async def test_a_declared_transition_writes_its_event_in_its_transaction(row, le
 `backend/tests/test_audit_transitions.py`; `docs/specs/00-overview.md` (`:128`, FR-7, §10), `02-modelling.md` (FR-146, FR-154, FR-157, FR-163, `:1664`), `03-rating-engine.md` (FR-238, `:1044`, §10),
 `06-governance.md` (FR-349, FR-351, FR-368); `docs/open-questions.md` (DP-4's OQ and DP-11's); LG 8378; `docs/roadmap.md` (the SL row, and the §10 gate row of DP-11's OQ); this plan (`status:` only); `docs/INDEX.md`. The FD records are their owners'.
 
+**Dated delta, 2026-11-06 (ruling to-lead "2026-11-06 02:27:13 GMT", after A10 stopped `SL 8377` on `model.fitted`):** `backend/src/app/platform/modelling.py` (`record_fit`'s event) and `backend/tests/test_model_nfrs.py` join this Write set; `docs/specs/02-modelling.md` is already in it and gains a dated correction at §9 and a dated amendment on NFR-484. The Evidence table's reference "949" for the `model.fitted` writer is re-read at `ac123679`: `modelling.py:949` is the `row.status = FITTED` assignment inside `record_fit`; the `audit.record` of `model.fitted` is at `:986`. Row `draft>fitted` of the table now asserts `before.status == "draft"`, as every other transition row does. No status guard is added (out of this slice).
+
 ### Files shared
 
 Named row by row under **The chain's collisions**. In short: `03:138-139` with R2, an adjacent line; `docs/open-questions.md` with M and SL 8361, by append; every other chain path is read-only here or clear; `docs/INDEX.md` and `docs/roadmap.md` by re-merge.
