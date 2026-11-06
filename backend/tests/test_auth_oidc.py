@@ -7,15 +7,18 @@ would skip exactly the part that decides whether a forged token is accepted.
 
 from __future__ import annotations
 
+import base64
 import http.server
 import json
+import os
 import threading
 import time
 from collections.abc import Iterator
 
 import jwt
 import pytest
-from cryptography.hazmat.primitives.asymmetric import rsa
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.asymmetric import padding, rsa
 
 from app.auth.oidc import ALLOWED_ALGORITHMS, OidcVerifier, TokenRejectedError
 from app.config import Settings
@@ -215,3 +218,39 @@ def test_rejection_reasons_are_not_returned_to_the_caller(
         assert reason.value not in body
         assert "signature" not in (problem.detail or "").lower()
         assert "expired" not in (problem.detail or "").lower()
+
+
+@pytest.mark.req("FR-387")
+def test_a_token_of_random_bytes_is_named_malformed(verifier: OidcVerifier) -> None:
+    """FD-1493: an undecodable token is a malformed token, not a signing-key failure."""
+    with pytest.raises(TokenRejectedError) as refused:
+        verifier.verify(os.urandom(48).hex())
+    assert refused.value.reason == "malformed token"
+
+
+@pytest.mark.req("FR-387")
+def test_a_deeply_nested_token_is_named_malformed(
+    verifier: OidcVerifier, rsa_key: rsa.RSAPrivateKey
+) -> None:
+    """FD-1493: a payload nested past the JSON parser's recursion limit, signed with the
+    fixture's key under the valid `kid`, is rejected as malformed (`RecursionError`)."""
+    depth = 50_000
+    header = base64.urlsafe_b64encode(json.dumps({"alg": "RS256", "kid": KID}).encode())
+    payload = base64.urlsafe_b64encode(("[" * depth + "0" + "]" * depth).encode())
+    signing_input = header.rstrip(b"=") + b"." + payload.rstrip(b"=")
+    signature = rsa_key.sign(signing_input, padding.PKCS1v15(), hashes.SHA256())
+    token = signing_input + b"." + base64.urlsafe_b64encode(signature).rstrip(b"=")
+    with pytest.raises(TokenRejectedError) as refused:
+        verifier.verify(token.decode())
+    assert refused.value.reason == "malformed token"
+
+
+@pytest.mark.req("FR-387")
+def test_an_unknown_kid_keeps_its_signing_key_reason(
+    verifier: OidcVerifier, rsa_key: rsa.RSAPrivateKey
+) -> None:
+    """Control for FD-1493: the broad catch still names a key-resolution failure."""
+    token = jwt.encode({"sub": "x"}, rsa_key, algorithm="RS256", headers={"kid": "no-such-key"})
+    with pytest.raises(TokenRejectedError) as refused:
+        verifier.verify(token)
+    assert refused.value.reason.startswith("signing key unavailable: ")

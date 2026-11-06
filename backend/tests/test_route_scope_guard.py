@@ -559,7 +559,7 @@ def test_the_spec_names_a_dataset_scope_only_for_routes_declared_dataset() -> No
         for text in spec.read_text().splitlines():
             m = row.match(text)
             if m and pattern.search(m.group(3)):
-                matched.append((m.group(1), re.sub(r"\{[^}]*\}", "{}", m.group(2))))
+                matched.append((m.group(1), re.sub(r"\{[^}]*\}", "{}", m.group(2).split("?")[0])))
     assert matched, "the cross-check matched no spec row: its pattern is stale"
     declared = {
         (method, re.sub(r"\{[^}]*\}", "{}", path)): scope

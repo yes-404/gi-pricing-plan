@@ -177,3 +177,5 @@ This finding is the main-tree confirmation, now at all four rates.
    recorded.
 3. **Event that discharges this row:** the remedy merges and SL-1259 records the NFR-489 verdict on its
    measurement, or the maintainer amends or carries NFR-489 by a dated line.
+
+*(Dated line, 2026-11-05, docs batch 11, by the auditor, on to-lead "2026-11-05 11:23:52 GMT" item (c): FD-1411 stays HIGH, owner WK-674, tied to FD-1836's resolution.)*

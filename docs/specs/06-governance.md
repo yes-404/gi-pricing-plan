@@ -281,7 +281,7 @@ Notably absent from Pricing Actuary: ~~every `*:approve` permission~~ `approval:
 > | `rating:read` | Reading Rating Algorithms, Sub-graphs, Regression Suites, Rate Tables, Rating Versions and scoring traces, and an Environment's Deployment history (`03` §4.12; `GET /api/v1/environments/{env}/deployments`, WK-674 Slice 2). *(Amended 2026-10-04, `RL-1404`: a Deployment is a rating record; the Environment's own record is `settings:read`'s.)* |  |
 > | `rating:write` | Writing Rating Algorithms and Rate Tables, and creating a Rating Version (`RL-1236` DP-A) |  |
 > | `rating:submit` | Submitting a Rating Version for approval (the mapped note below) |  |
-> | `rating:compile` | Compiling a Rating Version to its Bundle |  |
+> | `rating:compile` | Compiling a Rating Version to its Bundle, and running its Regression Suite against that bundle. *(Amended 2026-11-05, `SL-2011`, on the maintainer's entry "2026-11-05 12:14:32 GMT": the capability is the same person's; `rating:write` writes suites and `rating:read` reads runs, each the wrong verb for a run.)* |  |
 > | `approval:decide` | Deciding an approval request. Which roles may decide which artifact type is §4.2's `approver_roles` (`RL-1236` DP-C, the note below) |  |
 > | `deployment:promote` | Deploying an approved Rating Version to an Environment (`03` FR-267; R1, FR-347; `RL-1232` DP-6) |  |
 > | `audit:read` | Reading the audit log |  |
@@ -461,9 +461,27 @@ Notably absent from Pricing Actuary: ~~every `*:approve` permission~~ `approval:
 
 ```json
 {
+  "id": "0190b5a2-7c3e-7a10-9d21-4f6b8c2e1a01",
+  "workspace_id": "0190b5a2-7c3e-7a10-9d21-4f6b8c2e1a01",
   "artifact_ref": "rating_version:motor-gb@27",
   "artifact_type": "rating_version",
-  "submitted_by": "uuid", "submitted_at": "2026-09-12T14:02:00Z",
+  "submitted_by": "0190b5a2-7c3e-7a10-9d21-4f6b8c2e1a01", "submitted_at": "2026-09-12T14:02:00Z",
+  "change_summary": "AD frequency model refit on 2026H1 data; driver-age relativities softened at young ages; minimum premium raised to £280.",
+  "status": "review",
+  "decisions": [
+    {"approver_id": "0190b5a2-7c3e-7a10-9d21-4f6b8c2e1a01", "decision": "approve", "at": "2026-09-13T10:11:00Z",
+     "comment": "Dislocation is within the agreed envelope; young-driver softening is supported by the refit and the GIPP evidence is clean."}
+  ],
+  "approvers_required": 2, "approvers_recorded": 1
+}
+```
+
+The block above validates as an `ApprovalRequest`. The block below is FR-352's full submission:
+`change_summary`, with the `expedited`, `evidence_bundle`, `checklist` and `flags` keys, as the example
+first printed them.
+
+```json
+{
   "change_summary": "AD frequency model refit on 2026H1 data; driver-age relativities softened at young ages; minimum premium raised to £280.",
   "expedited": false,
   "evidence_bundle": {
@@ -479,15 +497,14 @@ Notably absent from Pricing Actuary: ~~every `*:approve` permission~~ `approval:
     {"item": "GIPP check passing", "checked": true, "by": "uuid", "auto_verified": true},
     {"item": "Reinsurance impact considered", "checked": true, "by": "uuid"}
   ],
-  "flags": [],
-  "status": "review",
-  "decisions": [
-    {"approver_id": "uuid", "decision": "approve", "at": "2026-09-13T10:11:00Z",
-     "comment": "Dislocation is within the agreed envelope; young-driver softening is supported by the refit and the GIPP evidence is clean."}
-  ],
-  "approvers_required": 2, "approvers_recorded": 1
+  "flags": []
 }
 ```
+
+> **Dated 2026-11-05 (`RL-2054` row 19, FD-1381; `RL-1522` DP-4 (a)).** The first block validates against
+> `model-schema`'s `ApprovalRequest`. The second block is FR-352's full submission, which is **ahead of the
+> code**: `expedited`, `evidence_bundle`, `checklist` and `flags` are not fields of the shape now, and
+> FR-352's checklist and evidence limbs are owned by WK-677. FR-352 is not amended by this note.
 
 *Amended 2026-10-05 (WK-1178), on `RL-1522` DP-1 and DP-4.* A decision's value is
 the act: `approve`, `reject` or `request_changes`, as §5.1's decide row and the glossary's
@@ -535,10 +552,10 @@ Generated sections, in order (R3). Each cites the artifacts it drew from.
 
 ```json
 {
-  "id": "01J…",
-  "workspace_id": "uuid",
+  "id": "0190b5a2-7c3e-7a10-9d21-4f6b8c2e1a01",
+  "workspace_id": "0190b5a2-7c3e-7a10-9d21-4f6b8c2e1a01",
   "at": "2026-09-13T10:11:00.482Z",
-  "actor": {"kind": "user", "id": "uuid", "display": "a.actuary@insurer.example"},
+  "actor": {"kind": "user", "id": "0190b5a2-7c3e-7a10-9d21-4f6b8c2e1a01", "display": "a.actuary@insurer.example"},
   "source": "ui",
   "action": "rating_version.approved",
   "entity_ref": "rating_version:motor-gb@27",
@@ -547,8 +564,8 @@ Generated sections, in order (R3). Each cites the artifacts it drew from.
   "justification": "Dislocation within the agreed envelope; GIPP clean.",
   "trace_id": "4bf92f3577b34da6a3ce929d0e0e4736",
   "job_id": null,
-  "prev_event_hash": "sha256:…",
-  "event_hash": "sha256:…"
+  "prev_event_hash": "sha256:3b8e3b8e3b8e3b8e3b8e3b8e3b8e3b8e3b8e3b8e3b8e3b8e3b8e3b8e3b8e3b8e",
+  "event_hash": "sha256:9f2c9f2c9f2c9f2c9f2c9f2c9f2c9f2c9f2c9f2c9f2c9f2c9f2c9f2c9f2c9f2c"
 }
 ```
 
@@ -560,36 +577,44 @@ Generated sections, in order (R3). Each cites the artifacts it drew from.
 
 ### 5.1 REST API
 
-| Method | Path | Purpose |
-|---|---|---|
-| `GET` | `/api/v1/me` | Current principal, roles, effective permissions |
-| `GET` | `/api/v1/me/workspaces` | The principal's own memberships, unscoped — the list first selection chooses from (FR-396) |
-| `POST` | `/api/v1/me/workspace` | Audits a switch into both chains; an absent `Workspace-Id` is `left=None`, the first selection (FR-396) |
-| `GET`/`POST` | `/api/v1/roles` | List / create roles (FR-344) |
-| `POST` | `/api/v1/role-assignments` | Assign a scoped role (FR-345) |
-| `POST` | `/api/v1/break-glass` | Time-boxed elevation with reason (FR-349) |
-| `GET`/`PUT` | `/api/v1/approval-policy` | Read / update the workspace policy (FR-354) |
-| `POST` | `/api/v1/approval-requests` | Submit an artifact; validates evidence and checklist (FR-352) *(Clarified 2026-10-05, `RL-1524` DP-2: a Rating Version is submitted through its own route, `POST /api/v1/rating-versions/{id}/submit` (`03` FR-260 (1)), which moves it to `review` and opens its request. This route refuses a Rating Version that is not in `review` with `APPROVAL_SUBJECT_NOT_IN_REVIEW` (FR-351).)* |
-| `GET` | `/api/v1/approval-requests?assigned_to=me&status=review` | Approvals inbox (FR-358) |
-| `GET` | `/api/v1/approval-requests/{id}` | Request with resolved evidence inline |
-| `POST` | `/api/v1/approval-requests/{id}/decide` | `approve` / `reject` / `request_changes` + comment (FR-353/355) |
-| `POST` | `/api/v1/approval-requests/{id}/withdraw` | Withdraw before deployment (FR-357) |
+| Method | Path | Purpose | Permission |
+|---|---|---|---|
+| `GET` | `/api/v1/me` | Current principal, roles, effective permissions | `authenticated` |
+| `GET` | `/api/v1/me/workspaces` | The principal's own memberships, unscoped — the list first selection chooses from (FR-396) | `authenticated` |
+| `POST` | `/api/v1/me/workspace` | Audits a switch into both chains; an absent `Workspace-Id` is `left=None`, the first selection (FR-396) | `authenticated` |
+| `GET` | `/api/v1/roles` | List roles (FR-344) | `admin:manage_roles` |
+| `POST` | `/api/v1/roles` | Create a role (FR-344) | `admin:manage_roles` |
+| `POST` | `/api/v1/role-assignments` | Assign a scoped role (FR-345) | `admin:manage_roles` |
+| `POST` | `/api/v1/break-glass` | Time-boxed elevation with reason (FR-349) | `admin:break_glass` |
+| `GET` | `/api/v1/approval-policy` | Read the workspace policy (FR-354) | `authenticated` |
+| `PUT` | `/api/v1/approval-policy` | Update the workspace policy (FR-354) | `admin:manage_roles` |
+| `POST` | `/api/v1/approval-requests` | Submit an artifact; validates evidence and checklist (FR-352) *(Clarified 2026-10-05, `RL-1524` DP-2: a Rating Version is submitted through its own route, `POST /api/v1/rating-versions/{id}/submit` (`03` FR-260 (1)), which moves it to `review` and opens its request. This route refuses a Rating Version that is not in `review` with `APPROVAL_SUBJECT_NOT_IN_REVIEW` (FR-351).)* | `authenticated` |
+| `GET` | `/api/v1/approval-requests?assigned_to=me&status=review` | Approvals inbox (FR-358) | `authenticated` |
+| `GET` | `/api/v1/approval-requests/{id}` | Request with resolved evidence inline | `authenticated` |
+| `POST` | `/api/v1/approval-requests/{id}/decide` | `approve` / `reject` / `request_changes` + comment (FR-353/355) | `approval:decide` |
+| `POST` | `/api/v1/approval-requests/{id}/withdraw` | Withdraw before deployment (FR-357) | `approval:decide` |
+| `POST` | `/api/v1/attestations` | Record a periodic review (FR-361) | `approval:decide` |
+| `GET` | `/api/v1/audit?actor=&entity=&action=&from=&to=&q=` | Query the audit log (FR-371) | `audit:read` |
+| `GET` | `/api/v1/audit/verify?from=&to=` | Verify the hash chain (FR-372) | `audit:read` |
+| `POST` | `/api/v1/audit/anchor` | Export a signed chain head for external anchoring (FR-373) | `audit:read` |
+| `GET` | `/api/v1/audit/export` | Export CSV/JSON *(Amended 2026-10-17, SL-1709, FD-1684: **200** `text/csv` for `format=csv` (the default), or JSON Lines, `application/x-ndjson`, one audit event per line, for `format=json`.)* | `audit:read` |
+| `POST` | `/api/v1/dossiers` | **202** Generate a dossier for an artifact (FR-376) | `audit:read` |
+| `GET` | `/api/v1/dossiers/{id}?format=html\|pdf\|bundle` | Render / export (FR-379) | `audit:read` |
+| `POST` | `/api/v1/dossiers/{id}/commentary` | Add/update an attributed Commentary Block (FR-377) | `approval:decide` |
+| `POST` | `/api/v1/regulatory-exports` | **202** Point-in-time evidence archive (FR-382) | `audit:read` |
+| `GET` | `/api/v1/artifacts/{ref}/history` | Uniform history view (FR-383) | `audit:read` |
+| `GET` | `/api/v1/artifacts/{ref}/dependencies?direction=up\|down` | Blast radius (FR-384) | `audit:read` |
+
+ *(Added 2026-11-05, `RL-1483` item 1, `SL-2011`: the `Permission` column. Each cell is the permission name(s) from `06` §4.1, `authenticated` or `open`; a row with two methods is one row per method. The approval-request and approval-policy cells are the former `Route | Requires` table (below). **The cells of the routes not yet built (`GET`/`POST /roles`, `POST /role-assignments`, `POST /break-glass`, `POST /attestations`, `POST /audit/anchor`, the dossier routes, `POST /regulatory-exports` and the two artifact reads) are the proposal for routes that do not exist; the pin reads built routes only, and `OQ-2015` decides them before each route is built.**)*
 
 *(Dated note, 2026-10-12, on the maintainer's (by delegation) entry "2026-10-12 01:30:34 BST — SL-1527 condition 4" in `to-lead.md`, which decides `CR-823` Q2(a) (`docs/closures/CR-00823-plan-review-5-at-wk-664-s-close.md`, lines 55 to 58) as that record recommends: the three routes `GET`/`POST /api/v1/roles`, `POST /api/v1/role-assignments` and `POST /api/v1/break-glass` above are **spec-ahead-of-phase**. They are owned by `WK-676` (Phase 3, "Full scoped RBAC, custom roles, break-glass", which owns FR-342 to FR-349), and none is built in Phase 2: the machinery exists at the service layer only (`rbac.py`). A caller who copies this table gets a 404 on those three until `WK-676` delivers them. Finding: `FD-1658` (working id 9801; a product identifier is the spec's, this id is the findings family's). No membership route is specified here (FR-350 is Phase 3), so there is no second finding.)*
+
+*(Dated note, 2026-11-05, `RL-1483` item 1, `SL-2011`: the blockquoted `| Route | Requires |` table that stood here since 2026-08-15 is **folded into the `Permission` column above**: one declaration, not two. Its six rows are the cells of the approval-request and approval-policy rows; nothing in them changed. The prose below is that note's reasoning, kept because it explains the `authenticated` cells.)*
 
 > **Permissions on this table, stated 2026-08-15 after an independent audit.** Four of
 > these six require **authentication only**, and nothing said so — a route sweep found them
 > answering a principal holding no roles at all, which read as a hole until the handlers
 > were read.
->
-> | Route | Requires |
-> |---|---|
-> | `POST /approval-requests` | authenticated |
-> | `GET /approval-requests` | authenticated |
-> | `GET /approval-requests/{id}` | authenticated |
-> | `GET /approval-policy` | authenticated |
-> | `POST …/decide`, `POST …/withdraw` | `approval:decide` |
-> | `PUT /approval-policy` | `admin:manage_roles` |
 >
 > **Submitting is asking.** The module owning the artifact has already decided whether this
 > principal could create it; gating the ask as well would stop an analyst who built a model
@@ -601,17 +626,6 @@ Generated sections, in order (R3). Each cites the artifacts it drew from.
 > and none of them decides anything. The deciding routes carry `approval:decide`, and
 > FR-353's separation of duties is enforced in three independent layers, database
 > constraint included.
-| `POST` | `/api/v1/attestations` | Record a periodic review (FR-361) |
-| `GET` | `/api/v1/audit?actor=&entity=&action=&from=&to=&q=` | Query the audit log (FR-371) |
-| `GET` | `/api/v1/audit/verify?from=&to=` | Verify the hash chain (FR-372) |
-| `POST` | `/api/v1/audit/anchor` | Export a signed chain head for external anchoring (FR-373) |
-| `GET` | `/api/v1/audit/export` | Export CSV/JSON *(Amended 2026-10-17, SL-1709, FD-1684: **200** `text/csv` for `format=csv` (the default), or JSON Lines, `application/x-ndjson`, one audit event per line, for `format=json`.)* |
-| `POST` | `/api/v1/dossiers` | **202** Generate a dossier for an artifact (FR-376) |
-| `GET` | `/api/v1/dossiers/{id}?format=html\|pdf\|bundle` | Render / export (FR-379) |
-| `POST` | `/api/v1/dossiers/{id}/commentary` | Add/update an attributed Commentary Block (FR-377) |
-| `POST` | `/api/v1/regulatory-exports` | **202** Point-in-time evidence archive (FR-382) |
-| `GET` | `/api/v1/artifacts/{ref}/history` | Uniform history view (FR-383) |
-| `GET` | `/api/v1/artifacts/{ref}/dependencies?direction=up\|down` | Blast radius (FR-384) |
 
 **Error codes owned by this module:** `PERMISSION_DENIED`, `SCOPE_DENIED`,
 `SUBMITTER_CANNOT_APPROVE`, `AUTHOR_CANNOT_APPROVE`, `APPROVAL_AUTHOR_UNRESOLVED`,
@@ -762,4 +776,6 @@ Mirrored into [`open-questions.md`](../open-questions.md).
 | **OQ-639** | ~~Does `06` §3.3's per-artifact evidence table or `06` §4.2's `ApprovalPolicy` defaults decide what a submission actually requires?~~ **DECIDED 2026-08-18: §3.3 is a floor per artifact type and §4.2 may only add to it — FR-364**, with the floor restated in §4.2 so a reader of the defaults sees it, refused at policy save, and applied as a union at submission. The enforced floor is §3.3's checkable projection; the uncheckable remainder is named with an owner. |
 | **OQ-632** | ~~Does an `expression` Custom Objective (Phase 2, `02` FR-150) need an authoring permission distinct from `model:fit`?~~ **DECIDED 2026-08-18: yes — `custom_objective:author`, granted by no built-in role's default set — FR-367**, discharging FR-366's trigger before WK-690 rather than at it. Template selection stays `model:fit`; submission stays `model:submit`. |
 | **OQ-1486** | **OPEN** — **Is a Validation Rule Set a Governed Artifact?** §2 (`:64`) lists Validation Rule, but not Rule Set. `replace_rule_set` publishes each set version `approved` with no review, so a new version can drop member rules or re-point the Reference Dataset Version unreviewed. Raised 2026-09-30 by the decision-maker (`RL-1485`). Mirrored in `docs/open-questions.md`. *Amended 2026-10-05 before mint (currency only, at `47d770e8`): the cites above are at `65b33479`; at `47d770e8` they are `validation_rules.py:549` (`replace_rule_set`), `:654` (`status=APPROVED`), `models.py:1247` and `validation.py:400-432`. `RL-1407` (#1109) has since ruled that a rule set runs only approved, existing members (FD-1414; delivered by `SL-1409`, not yet in the code); that does not review a change of composition, and the options are not re-weighed here (`RL-1485` J2).* Status: **open** (owner WK-1178). |
+| **OQ-2015** | **OPEN** — **Which permission does each of `06`'s unbuilt §5.1 routes need?** The routes are `GET`/`POST /roles`, `POST /role-assignments`, `POST /break-glass`, `POST /attestations`, `POST /audit/anchor`, the dossier routes, `POST /regulatory-exports` and the two artifact reads. Their `Permission` cells are the proposal; the pin reads only built routes; decided before the route is built, by the phase that builds it. Options and recommendation: [`open-questions.md`](../open-questions.md) OQ-2015. Owner: the Work that builds each route (WK-676, WK-677, WK-680, WK-681). |
 | **OQ-1726** | **OPEN** — **Who may read the audit log: which roles hold `audit:read`?** §5's permission table (`:287`) defines `audit:read` as "Reading the audit log" and names no holders; FR-346 requires only the Auditor. At `8eaf6d5f`, `BUILTIN_ROLES` gives it to `approver`, `deployer`, `auditor` and `admin` (`packages/model-schema/src/model_schema/permissions.py:145-148`, through `READ_PERMISSIONS` `:82-91`), but not to `analyst` or `pricing_actuary`. An event body carries the actor's id and display name, free-text justifications and the changed state (FR-369; FR-375 keeps secrets and full quote inputs out). Options: (a) all workspace roles, (b) a restricted set, (c) role-scoped reading. Raised 2026-10-14 (working id 8032; minted as OQ-1726 in the D17 batch mint PR), drafted by the planner as the maintainer's (by delegation) entry "2026-10-14 11:34:03 BST" item 1 permits. *2026-10-14: per the maintainer's (by delegation) "2026-10-14 11:45:50 BST" item 1 — "OQ 8032: KEEP, as minter-d17 drafted it on the TRUE holder set … I rule on it when D17 lands"; and "2026-10-14 12:05:33 BST" — "audit:read CLOSED BY RUN (analyst-only 403; analyst+approver 200), with no FD. OQ 8032 stands on the four-role set."* Mirrored in `docs/open-questions.md`. Status: **open** (decided before the P2 phase close; today's behaviour stands until then). |
+| **OQ-2036** | **OPEN** — **Should a write to a model (archive, and the other model write routes) require per-object ownership or a creator check, rather than the workspace-wide rights P2 grants?** Raised 2026-11-05 (working id 8397; P3), on the maintainer's entry "2026-11-05 14:06:02 GMT" (FD 8366, SURFACED 2): an analyst or an actuary holding `model:fit` can archive a colleague's draft or fitted model workspace-wide, because P2's model is **coarse rights** (`RL-1236` DP-A) and no requirement says otherwise. The entry rules it **not a finding**: an OQ candidate for P3, "per-object ownership on model writes", **spec only**. At `2f108b1e` `archive()` accepts draft, fitted and superseded and refuses approved, review and archived with 409 on state (`modelling.py:1208-1224`), and checks no owner. The options and the recommendation are in [`open-questions.md`](../open-questions.md). No requirement changes while this is open. |

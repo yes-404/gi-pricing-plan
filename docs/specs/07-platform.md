@@ -229,17 +229,15 @@ the platform version it ran on, so that a figure reproduced later is attributabl
 build that produced it. It is set when the worker moves the Job to `running`, as the
 worker's version and build joined by `+`, and it is null while the Job is `queued`.
 
-Failure shape:
+Failure shape: `Job.error` on a failed Job is a `JobError`, shown here without the enclosing Job:
 
 ```json
 {
-  "error": {
-    "code": "GLM_DID_NOT_CONVERGE",
-    "message": "GLM failed to converge after 200 iterations.",
-    "retryable": false,
-    "detail": {"factors_suspected": ["vehicle_group_rated"], "max_gradient": 4.1e-3},
-    "trace_id": "4bf92f3577b34da6a3ce929d0e0e4736"
-  }
+  "code": "GLM_DID_NOT_CONVERGE",
+  "message": "GLM failed to converge after 200 iterations.",
+  "retryable": false,
+  "detail": {"factors_suspected": ["vehicle_group_rated"], "max_gradient": 4.1e-3},
+  "trace_id": "4bf92f3577b34da6a3ce929d0e0e4736"
 }
 ```
 
@@ -247,15 +245,13 @@ Failure shape:
 
 ```json
 {
+  "slug": "prod",
   "name": "prod",
   "description": "Production quoting",
   "promotion_order": 3,
   "requires_prior_environment": "uat",
   "live_deployments": [{"rating_version_ref": "rating_version:motor-gb@27",
-                        "deployed_at": "2026-10-01T06:00:00Z", "bundle_hash": "sha256:…"}],
-  "settings": {"trace_sampling_rate": 0.01, "rate_limit_rps": 500,
-               "shadow": {"enabled": true, "candidate_ref": "rating_version:motor-gb@28",
-                          "traffic_fraction": 0.05}}
+                        "deployed_at": "2026-10-01T06:00:00Z", "bundle_hash": "sha256:9f2c9f2c9f2c9f2c9f2c9f2c9f2c9f2c9f2c9f2c9f2c9f2c9f2c9f2ca1b2c3d4"}]
 }
 ```
 
@@ -266,6 +262,10 @@ Failure shape:
 > - **`settings` is not in this slice's shape.** The `settings` object lands with WK-674 Slice 3 (`OQ-1235`, decided by `RL-1311`). `requires_prior_environment` is the predecessor that FR-429's predicate reads; the seeds carry `null`, `dev` and `uat`.
 >
 > **Amended 2026-10-10 (WK-674 Slice 3, `PL-1583`): the `settings` object is replaced by a pointer.** The example above is not rewritten. An Environment's settings are the Environment-setting rows of §4.4, one row per (Environment, key), written by `PUT /api/v1/environments/{slug}/settings` and read with every layer's candidate by `GET`. The example's keys `trace_sampling_rate`, `rate_limit_rps` and `shadow` were example names. The contract is the registry's names: `rating.trace_sample_rate` and `scoring.default_client_rate_limit_rps`. There is no `settings` object inside the Environment.
+
+> **Clarified 2026-11-05 (`RL-2054` row 22, FD-1381).** The example above is now rewritten: it carries the
+> `slug`, drops `settings` (§4.4 holds the settings) and prints a full 64-hex `bundle_hash`. The two notes
+> above that say "The example above is not rewritten" describe it as printed before this date.
 
 ### 4.3 `ServiceAccount` / API key
 
@@ -332,32 +332,36 @@ named by the maintainer's ruling (2026-10-16 09:46:32). `s3_upload_id` is the `u
 
 ### 5.1 REST API
 
-| Method | Path | Purpose |
-|---|---|---|
-| `GET` | `/api/v1/jobs?status=&kind=&submitted_by=` | List jobs |
-| `GET` | `/api/v1/jobs/{id}` | Job detail with progress and result |
-| `GET` | `/api/v1/jobs/{id}/logs` | Job logs (paged, streamable) |
-| `POST` | `/api/v1/jobs/{id}/cancel` | Cooperative cancellation (FR-401) |
-| `GET` | `/api/v1/jobs/{id}/events` | SSE stream of progress updates |
-| `GET`/`POST` | `/api/v1/environments` | List / create environments |
-| `PUT` | `/api/v1/environments/{slug}/settings` | Update environment settings (audited; `admin:manage_settings`) *(amended 2026-10-10, WK-674 Slice 3: `{name}` is the slug, §4.2's 2026-10-03 note)* |
-| `GET` | `/api/v1/environments/{slug}/settings` | Effective environment settings with every layer's candidate *(appended 2026-10-10, WK-674 Slice 3)* |
-| `PATCH` | `/api/v1/environments/{slug}` | Change an environment's display name or description; the slug is immutable (`admin:manage_environments`) |
-| `POST` | `/api/v1/environments/{slug}/retire` | Retire an environment; refused 409 `VALIDATION_FAILED` while a Deployment is live in it, a `deployment` approval policy entry names it (for a workspace with no stored policy, `DEFAULT_POLICY`'s `prod` entry), or an unrevoked Service Account key names it; the row and its slug are kept *(amended 2026-10-04, WK-674 Slice 2: the unrevoked-key refusal named)* |
-| `POST` | `/api/v1/service-accounts` | Create a service account + key (key shown once) |
-| `POST` | `/api/v1/service-accounts/{id}/rotate` | Rotate with an overlap window; the body names the Environment whose key is rotated *(amended 2026-10-10, WK-674 Slice 3, DP-S3E-2 (a))* |
-| `DELETE` | `/api/v1/service-accounts/{id}/keys/{prefix}` | Revoke |
-| `GET`/`PUT` | `/api/v1/settings` | Read effective settings with sources; update workspace settings |
-| `POST` | `/api/v1/blobs/upload-url` | Presigned multipart upload (FR-421). **Amended 2026-09-28 (WK-1178, #869's ingest finding):** the object lands on a staging key, ~~and nothing yet moves it to its content address or creates its `blobs` row: the completion step FR-421 implies has no endpoint. So an upload made through this URL cannot yet be ingested or downloaded as a blob. The completion step, and the owner it would record, are unbuilt and are a spec change of their own.~~ *(struck 2026-10-16, `SL-1722`, `RL-1724`: superseded by the amendment below.)* **Amended 2026-10-16 (WK-1178, `SL-1722`, FR-1776, `RL-1724`):** the request records a Blob Upload and the response also carries its `id`; `POST /api/v1/blobs/uploads/{id}/complete` (the next row) moves the staged object to its content address and records its owner. The 2026-09-28 sentences saying nothing does so, and that such an upload cannot be ingested or downloaded, are superseded. |
-| `POST` | `/api/v1/blobs/uploads/{id}/complete` | **202** Complete a Blob Upload → Job `blob.promote` (FR-1776, FR-421). The Job's result, `JobResult(kind="blob")`, names the digest and is its owner in the caller's workspace. `404` for another workspace's Blob Upload or a missing one; `409 VALIDATION_FAILED` past the completion deadline; a repeat returns the first Job. Requires `dataset:write`. *(appended 2026-10-16, WK-1178, `RL-1724`)* |
-| `GET` | `/api/v1/blobs/{sha256}` | Download (permission-checked, redirect to presigned URL). **Amended 2026-09-28 (WK-1178, the deputy's blob-route ruling of that day, #865's blob-route finding):** `dataset:read` alone was never enough, because `blobs` has no workspace column. A blob is served only if an owner in the caller's workspace references it — a Dataset Version's table, or a Job's `JobResult(kind="blob")` — and never if a quote-input store references it (a scoring trace now; WK-672 Slice 3's case store when it lands), whose bodies are read through their own workspace-scoped APIs. This is the obligation `03` NFR-499 carries as clarified by RL-917. Every refusal is the same `404` a missing blob gets, so the route does not confirm that a digest exists. |
-| `GET` | `/healthz` | Liveness — is the process alive? (FR-444) |
-| `GET` | `/readyz` | Readiness — database, Redis, blob store reachability (FR-444) |
-| `GET` | `/version` | Image tag, commit, schema version (FR-444) |
-| `GET` | `/api/v1/auth/config` | The OIDC issuer and client id the browser login needs, unauthenticated (FR-394) |
-| `GET` | `/openapi.json` | Generated OpenAPI 3.1 (FR-451) |
-| `GET` | `/metrics` | Prometheus metrics (FR-443) |
-| `GET` | `/api/v1/demo/guide` | What is testable today, derived (FR-409). **404 unless `dev_auth_enabled`** |
+| Method | Path | Purpose | Permission |
+|---|---|---|---|
+| `GET` | `/api/v1/jobs?status=&kind=&submitted_by=` | List jobs | `job:read` |
+| `GET` | `/api/v1/jobs/{id}` | Job detail with progress and result | `job:read` |
+| `GET` | `/api/v1/jobs/{id}/logs` | Job logs (paged, streamable) | `job:read` |
+| `POST` | `/api/v1/jobs/{id}/cancel` | Cooperative cancellation (FR-401) | `job:cancel` |
+| `GET` | `/api/v1/jobs/{id}/events` | SSE stream of progress updates | `job:read` |
+| `GET` | `/api/v1/environments` | List environments | `settings:read` |
+| `POST` | `/api/v1/environments` | Create an environment | `admin:manage_environments` |
+| `PUT` | `/api/v1/environments/{slug}/settings` | Update environment settings (audited; `admin:manage_settings`) *(amended 2026-10-10, WK-674 Slice 3: `{name}` is the slug, §4.2's 2026-10-03 note)* | `admin:manage_settings` |
+| `GET` | `/api/v1/environments/{slug}/settings` | Effective environment settings with every layer's candidate *(appended 2026-10-10, WK-674 Slice 3)* | `settings:read` |
+| `PATCH` | `/api/v1/environments/{slug}` | Change an environment's display name or description; the slug is immutable (`admin:manage_environments`) | `admin:manage_environments` |
+| `POST` | `/api/v1/environments/{slug}/retire` | Retire an environment; refused 409 `VALIDATION_FAILED` while a Deployment is live in it, a `deployment` approval policy entry names it (for a workspace with no stored policy, `DEFAULT_POLICY`'s `prod` entry), or an unrevoked Service Account key names it; the row and its slug are kept *(amended 2026-10-04, WK-674 Slice 2: the unrevoked-key refusal named)* | `admin:manage_environments` |
+| `POST` | `/api/v1/service-accounts` | Create a service account + key (key shown once) | `admin:manage_service_accounts` |
+| `POST` | `/api/v1/service-accounts/{id}/rotate` | Rotate with an overlap window; the body names the Environment whose key is rotated *(amended 2026-10-10, WK-674 Slice 3, DP-S3E-2 (a))* | `admin:manage_service_accounts` |
+| `DELETE` | `/api/v1/service-accounts/{id}/keys/{prefix}` | Revoke | `admin:manage_service_accounts` |
+| `GET` | `/api/v1/settings` | Read effective settings with sources | `settings:read` |
+| `PUT` | `/api/v1/settings` | Update workspace settings | `admin:manage_settings` |
+| `POST` | `/api/v1/blobs/upload-url` | Presigned multipart upload (FR-421). **Amended 2026-09-28 (WK-1178, #869's ingest finding):** the object lands on a staging key, ~~and nothing yet moves it to its content address or creates its `blobs` row: the completion step FR-421 implies has no endpoint. So an upload made through this URL cannot yet be ingested or downloaded as a blob. The completion step, and the owner it would record, are unbuilt and are a spec change of their own.~~ *(struck 2026-10-16, `SL-1722`, `RL-1724`: superseded by the amendment below.)* **Amended 2026-10-16 (WK-1178, `SL-1722`, FR-1776, `RL-1724`):** the request records a Blob Upload and the response also carries its `id`; `POST /api/v1/blobs/uploads/{id}/complete` (the next row) moves the staged object to its content address and records its owner. The 2026-09-28 sentences saying nothing does so, and that such an upload cannot be ingested or downloaded, are superseded. | `dataset:write` |
+| `POST` | `/api/v1/blobs/uploads/{id}/complete` | **202** Complete a Blob Upload → Job `blob.promote` (FR-1776, FR-421). The Job's result, `JobResult(kind="blob")`, names the digest and is its owner in the caller's workspace. `404` for another workspace's Blob Upload or a missing one; `409 VALIDATION_FAILED` past the completion deadline; a repeat returns the first Job. Requires `dataset:write`. *(appended 2026-10-16, WK-1178, `RL-1724`)* | `dataset:write` |
+| `GET` | `/api/v1/blobs/{sha256}` | Download (permission-checked, redirect to presigned URL). **Amended 2026-09-28 (WK-1178, the deputy's blob-route ruling of that day, #865's blob-route finding):** `dataset:read` alone was never enough, because `blobs` has no workspace column. A blob is served only if an owner in the caller's workspace references it — a Dataset Version's table, or a Job's `JobResult(kind="blob")` — and never if a quote-input store references it (a scoring trace now; WK-672 Slice 3's case store when it lands), whose bodies are read through their own workspace-scoped APIs. This is the obligation `03` NFR-499 carries as clarified by RL-917. Every refusal is the same `404` a missing blob gets, so the route does not confirm that a digest exists. | `dataset:read`, and the blob's workspace-visibility rule |
+| `GET` | `/healthz` | Liveness — is the process alive? (FR-444) | `open` |
+| `GET` | `/readyz` | Readiness — database, Redis, blob store reachability (FR-444) | `open` |
+| `GET` | `/version` | Image tag, commit, schema version (FR-444) | `open` |
+| `GET` | `/api/v1/auth/config` | The OIDC issuer and client id the browser login needs, unauthenticated (FR-394) | `open` |
+| `GET` | `/openapi.json` | Generated OpenAPI 3.1 (FR-451) | `open` |
+| `GET` | `/metrics` | Prometheus metrics (FR-443) | `open` |
+| `GET` | `/api/v1/demo/guide` | What is testable today, derived (FR-409). **404 unless `dev_auth_enabled`** | `authenticated` (404 unless `dev_auth_enabled`) |
+
+ *(Added 2026-11-05, `RL-1483` item 1, `SL-2011`: the `Permission` column. Each cell is the permission name(s) from `06` §4.1, `authenticated` or `open`; a row with two methods is one row per method. Cells follow `06` §4.1's `Governs` text. The health, version, metrics, OpenAPI and OIDC-config routes are `open`.)*
 
 > **Amended 2026-08-27, at WK-664's close (plan review 5, proposal 2.4).** The three routes were
 > previously joined in one path cell, which a spec-reconciler pass read as declaring none of
@@ -499,7 +503,8 @@ the `ProgressCallback` protocol, defined in `pricing-core` and *implemented* her
 | **OIDC (Keycloak or similar)** | User authentication | Authorisation code + PKCE for an SPA, token refresh, claim mapping, running a local provider in compose |
 | **OpenTelemetry** | Distributed tracing across API → queue → worker | Context propagation through Celery, span attributes, sampling |
 | **Prometheus / Grafana** | Metrics and dashboards | Histogram buckets for p99 latency, queue-depth alerting |
-| **Docker Compose / Helm** | Local stack and production packaging | Compose parity with production (R2), independently scalable pools, image signing and SBOM generation |
+| **Docker Compose / Helm** | Local stack and production packaging | Compose parity with production (R2), independently scalable pools, image signing and SBOM generation; the `frontend` image builds the SPA in a `node:22-alpine` stage (the frontend toolchain, not a new dependency) and serves it from `nginx` |
+| **nginx** | The `lb` round-robin over `api` replicas, and the `frontend` image's static server with its `/api/` proxy (FR-432; one image, `nginx:1.27-alpine`, for both) | Upstream re-resolution through Docker DNS for rolling replacement (NFR-531), SPA history fallback, same-origin proxying |
 | **GitHub Actions** | CI with path filters | Per-component pipelines, generated-artifact drift checks (FR-451) |
 
 New skills this spec adds to `skills-map.md`: Celery cancellation and resource budgeting;

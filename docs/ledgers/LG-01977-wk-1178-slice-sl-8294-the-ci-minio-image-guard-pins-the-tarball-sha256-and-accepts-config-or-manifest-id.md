@@ -57,6 +57,8 @@ CI reds: `python.yml` runs 41664932828, 41667830664, 41668093472.
 
 Other checks are in the Build log.
 
+**Dated line, 2026-11-05 (docs batch 10), by the auditor, the gate of record:** CI was the gate (FD-1975 hotfix form). No gate ruling exists. The PR's python run (minio stage plus the full suite) was green per to-lead "2026-11-03 15:56:18 GMT"; the grant is "2026-11-03 16:26:15 GMT"; the ACK is "2026-11-03 16:58:06 GMT" (python 41674256256, docs 41674256251, history-policy 41674256228). No audit is recorded: SL-1976 stays a close-audit input. Authority: to-lead "2026-11-04 20:56:54 GMT" item 7 (f), stamps staged by lead 30 at 2026-11-04 20:59:03 GMT.**
+
 ### Audit
 
 (Written by the auditor.)

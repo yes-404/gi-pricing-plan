@@ -95,3 +95,5 @@ error text. This finding does not decide whether one should.
 **Deferred with an owner — WK-1178**, confirmed by the deputy. The fix is the same sanitiser `FD-1217` adds in `pricing-core`,
 with the level given **by position, not by value** (for example "level 3 of factor `x`"). It is not in #889's scope.
 Event: that sanitiser applied to these paths.
+
+*(Dated line, 2026-11-05, docs batch 11, by the auditor, on to-lead "2026-11-05 09:51:53 GMT" (triage b28ba8e9454c accepted as the proposal of record): carried, owner WK-1178, discharge event the P3 plan review; LOW, slice over 1 h, under the 09:40:57 criteria.)*

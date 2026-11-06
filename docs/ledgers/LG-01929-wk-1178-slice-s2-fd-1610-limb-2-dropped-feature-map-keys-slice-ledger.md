@@ -35,6 +35,8 @@ S2-D1 / (d), (c), spec lines, contracts regeneration, and S2-C0 (the exposure me
 
 (left for the lead's gate)
 
+**Dated line, 2026-11-05 (docs batch 10), by the auditor, the gate of record:** the lead's gate heading "2026-10-26 00:45:02 GMT" reads "S2 GATE END @42e237d5 — STANDS under 1(f)"; the PR grant "2026-10-26 03:02:59 GMT" (gate cover by patch-id against 42e237d5); merge verified "2026-10-26 03:44:34 GMT". No separate live-ACK heading was found for #1395. Audit: RS-1930 adopted CLEAN (see Audit below). Authority: to-lead "2026-11-04 20:56:54 GMT" item 7 (e), the stamps staged by lead 30 at 2026-11-04 20:59:03 GMT (each heading re-read by the lead in the channel), and "2026-11-04 20:59:50 GMT" (the eleven closes adopted).**
+
 ### Audit
 
 RS-1930 (aud-s2, @331cd7f0) proposed CLEAN, ADOPTED CLEAN by the lead; accepted at to-lead 2026-10-25 22:51:27 GMT. The record is `docs/research/RS-01930-s2-fd-1610-limb-2-slice-audit-dropped-inputs-and-model-call-required-input-absent.md`, folded blob-identical from aud-s2 @331cd7f0. Its notes, as ruled at that entry:
