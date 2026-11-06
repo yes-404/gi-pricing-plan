@@ -38,3 +38,5 @@ Re-tag `:391` and `:398` to FR-122 (or the requirement the WK-661 note in `02-mo
 ## Disposition
 
 Open, owner WK-1178; event that next discharges it: the re-tag merging with the coverage before/after, or a dated acceptance recorded on FD-1228. Related, not yet minted (space form, so they do not resolve): SL 8334, LG 8335, PL 8333. Source: `scratch/aud-slh/FD-new-ebm-markers.md` (aud-slh, 2026-11-05), filed as working id 8385.
+
+*(Dated line, 2026-11-06, docs batch 13, by the executor, on exec-minth's note once SL-2048 merged (#1446): the merged text above names "PL 8333" (line 36), and "SL 8334, LG 8335, PL 8333" (line 40) in space form because those ids were unminted when this record was filed. **They are PL-2047, SL-2048 and, for the ledger, LG-2049.** The sentences above are left as merged.)*

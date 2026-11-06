@@ -3463,6 +3463,8 @@ One full run of `PL-1544` §"Rehearsal checklist", rows 0 to 9 as written there 
 
 *(Dated 2026-11-06, docs batch 12, by the executor, on to-lead "2026-11-06 01:24:04 GMT" item (4): **this slice's seat seeds the demo host by digest** from `~/gi-pricing-plan.local/data/fremtpl2/` before Mon 16 Nov 2026, and **the rehearsal runs with OpenML treated as absent**; `fetch` stays the fallback and its sha256 pin the check (`fetch.py` accepts a present file only if `_digest` equals the pin, so a seeded copy cannot be different data). **The demo's public fetch (P10) stops being a process row and is closed by this line**; it supersedes the 2026-11-05 line above on that point only (the owner it names, the rehearsal's seat, is the one that seeds). Evidence: the demo of 2026-11-06 01:20 failed at the fetch, `fetch.py` `IncompleteRead` after 122441 of about 36 MB, and `api.openml.org` did not answer in 25 s at 01:22; ruled NOT RUN (a third party), not RED.)*
 
+*(Dated 2026-11-06, docs batch 13, by the executor, on to-lead "2026-11-06 01:24:04 GMT" item (3) and the lead's log of 2026-11-06 04:15:32: **the gate template now carries the digest seed**, and its first full gate proof is H's (`~/gi-pricing-plan.local/scratch/slh-gate/gate/gate.log`, END 04:14:47, seeded demo PASS in 1523 s). The seed block was proved red on a corrupted copy and on a changed pin before it was used (lead's log, 2026-11-06 01:28:00; `scratch/gate-template/gate-template.sh`). This adds to the 2026-11-06 line above and changes none of it: the rehearsal's own seeding of the demo host stays this slice's seat's.)*
+
 #### SL-1976 — WK-1178 hotfix slice — the CI MinIO image guard pins the tarball sha256 and accepts the config or the manifest Id (FD-1975)
 
 ```yaml
