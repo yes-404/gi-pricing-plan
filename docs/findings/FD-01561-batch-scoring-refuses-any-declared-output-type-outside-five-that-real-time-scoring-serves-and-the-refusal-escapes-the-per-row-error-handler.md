@@ -2,12 +2,12 @@
 id: FD-1561
 family: finding
 title: Batch scoring refuses any declared output type outside five that real-time scoring serves, and the refusal escapes the per-row error handler
-status: active
+status: closed
 created: 2026-10-10  # original date 2026-10-05, set at the draft; minted 2026-10-10
 owner: auditor
 tree: 5fe56b87e55b0a29399f96f0af2e7c2e2ef9b72a
 corrected_by: []
-relates: [WK-1178, FR-214, FR-227, FR-253, FR-254, FR-255, FD-1333, RL-1343, RL-923]
+relates: [WK-1178, FR-214, FR-227, FR-253, FR-254, FR-255, FD-1333, RL-1343, RL-923, SL-1566, LG-1643, SL-1569, LG-1896]
 ---
 
 # FD-1561 — `_coerce_output_value` raises for `int`, `count`, `relativity` and `percentage`, which `/score` serves
@@ -194,3 +194,5 @@ reserved NOW". DP-1 and DP-2, quoted verbatim:
   **PL-1568 / SL-1569** (space form), discharges it (DP-2 (ii)). `FD-1333`'s divergence therefore persists for
   those two types until then.
 - **DP-3:** the error code is the class name.
+
+***Resolved 2026-11-05*** — closed in place 2026-11-05 by the auditor (aud-fdclose), on the lead's brief under to-lead "2026-11-05 09:40:57 GMT" item 8 (2), the FD-1842 form. Delivered remedy (the Disposition as ruled: (1) the row escape first, (2) the four types with their JSON forms, (3) one place so `/score` and `outputs_json` stay one function of the declared type): SL-1566 (WK-1178, LG-1643), PR #1286, squash commit cad75a7ec3704ce86bc9f3fb31614d55031badbd, merged 2026-10-11T22:42:51Z, and its residue, the real-time `/score` half for relativity and percentage, by SL-1569 (LG-1896), PR #1387, squash commit 96e1b369bc024db65f41e118e7a63e310a679cb3, merged 2026-10-25T21:42:49Z. At main, `pricing_core/rating/score.py` wraps `_ladder_json` and `_outputs_json` in a second `try` whose `except Exception` is the row's error row (:1277-1284), test `test_a_row_whose_serialisation_raises_is_an_error_row_and_the_batch_continues` (`test_rating_score_batch_outputs.py`) asserts the bad row is an error row with no value and the other three rows are unchanged; `_coerce_output_value` (:1075) serves int and count as JSON integers (a non-integral value is a row error) and relativity and percentage as decimal strings, tests `test_a_non_integral_value_for_an_integer_output_is_an_error_row` and `test_relativity_and_percentage_take_the_decimal_string_form_never_a_float`. The tests' remaining asserts were read by name and docstring, not every line.

@@ -2,7 +2,7 @@
 id: FD-1872
 family: finding
 title: The switch slot-namespace test names real gate slots, so a paired gate's subscriber is counted in its PREPARE quorum
-status: active
+status: closed
 created: 2026-10-23   # drafted 2026-10-23 under working id 8199; minted 2026-10-23 as FD-1872
 owner: auditor
 tree: 4e399fd01e8de2fe55d2f128b0e09ee2b2735c6a
@@ -56,3 +56,5 @@ parametrized `other-slot` case is the permanent stand-in for a paired gate. Test
 
 Open, owner WK-1178; **fix before close**: SL-1873 (LG-1874). Closed in place citing the PR when that slice merges.
 Filed under working id 8199.
+
+***Resolved 2026-11-05*** — closed in place 2026-11-05 by the auditor (aud-fdclose), on the lead's brief under to-lead "2026-11-05 09:40:57 GMT" item 8 (2), the FD-1842 form. Delivered remedy (a per-run `/tmp/slots/test-<8 hex>` at each hit; the parametrised `other-slot` case as the permanent stand-in for a paired gate; test only): SL-1873 (WK-1178, LG-1874), PR #1370, squash commit 01a28e6d5571ed8f8d478760fc11aa2015326840, merged 2026-10-25T15:30:47Z. `backend/tests/test_deployment_switch_slot_namespace.py` builds its slot from `uuid4().hex[:8]` (:41) and parametrises `plain` and `other-slot` (:58).

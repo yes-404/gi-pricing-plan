@@ -1,9 +1,9 @@
 ---
-id: PL-8321
+id: PL-2019
 family: plan
 kind: map
-title: WK-1178 — the rating-core group, a rate-table cell the engine can read and an exact refusal (FD-1648 HIGH, FD-1659, FD-1767, FD-1478, FD-1780, FD-1781), SL-8322 and SL-8345 — a dated Work-plan delta
-status: draft                   # draft → active → superseded | retired (§1.2a) — L1: draft→active rides the slice's PR
+title: WK-1178 — the rating-core group, a rate-table cell the engine can read and an exact refusal (FD-1648 HIGH, FD-1659, FD-1767, FD-1478, FD-1780, FD-1781), SL-2020 and SL 8345 — a dated Work-plan delta
+status: active                   # draft → active → superseded | retired (§1.2a) — L1: draft→active rides the slice's PR
 created: 2026-11-05             # filed under working id 8321
 owner: planner
 tree: dae9637ea6f6a56f6502e9db70392cdfb2f3983d
@@ -15,7 +15,7 @@ corrected_by: []
 relates: [FD-1648, FD-1659, FD-1767, FD-1478, FD-1780, FD-1781, SL-1569, PL-1568, RL-1313, RL-1343, RL-1567, FR-214, FR-222, FR-234, FR-239, FR-255, FR-261, NFR-489]
 ---
 
-# PL-8321 — WK-1178: the rating-core group (SL 8322 and SL 8345, a dated Work-plan delta)
+# PL-2019 — WK-1178: the rating-core group (SL-2020 and SL 8345, a dated Work-plan delta)
 
 > **For agentic workers:** this is a **dated Work-plan delta** under Lean P2 L1 (a')
 > (`.claude/roles/planner.md`, "Lean P2"). It holds two slice rows and edits no filed plan. The
@@ -31,8 +31,8 @@ relates: [FD-1648, FD-1659, FD-1767, FD-1478, FD-1780, FD-1781, SL-1569, PL-1568
     into `_build_outputs` shared by both paths — ACCEPTED: a guard test on BOTH paths (green at base; it
     is the essay's own discharge event, read to its asserts) and the closing act in the FD-1842 form
     naming 96e1b369; no code owed".
-  - "(2) CONFIRMED: my 09:51:53 "the FD-1569 rule" meant SL-1569's rule … my mis-citation; the plan quotes
-    SL-1569 with that note". So the 09:51:53 ruling on FD-1767 stands with **SL-1569** read for "FD-1569".
+  - "(2) CONFIRMED: my 09:51:53 "the [mis-cited id, here elided so no unresolved id stands] rule" meant SL-1569's rule … my mis-citation; the plan quotes
+    SL-1569 with that note". So the 09:51:53 ruling on FD-1767 stands with **SL-1569** read for the id it printed.
   - "(3) … SEVERITY RAISED TO HIGH for FD-1648 … R's DP RULED NOW so no seat waits: (i) `_format_value`
     writes FIXED-POINT, never an exponent — `format(value, 'f')` after quantising to the table's declared
     dp (or `.normalize()` only when it yields no exponent, with a test for 100, 1000, 0.5, 0.50, 1E+2
@@ -67,7 +67,7 @@ The three limbs size at **14.25 h** (below), over the ~14 h line, so R splits as
 
 | Slice | Ledger | Carries | h |
 |---|---|---|---|
-| **R1, SL 8322** | LG 8323 | Limbs (i) and (ii), compile's backstop, the goldens, FD-1767, FD-1780, FD-1781, the spec's FR-234 clause | 7.75 |
+| **R1, SL-2020** | LG-2021 | Limbs (i) and (ii), compile's backstop, the goldens, FD-1767, FD-1780, FD-1781, the spec's FR-234 clause | 7.75 |
 | **R2, SL 8345** | LG 8346 | Limb (iii), FD-1648 (b), FD-1478, FD-1659, the spec's FR-255 clause | 6.5 |
 
 | Limb | h |
@@ -194,7 +194,7 @@ and `operations.py:59` already imports `pricing_core.rating.compile`, so `cell_p
 
 ## Decision points
 
-The three limbs, FD-1767 and "FD-1569" are ruled. **All three below are now ruled too** (the entry "2026-11-05 10:41:08
+The three limbs, FD-1767 and the mis-citation are ruled. **All three below are now ruled too** (the entry "2026-11-05 10:41:08
 GMT"): DP-R1 (a); "THE CONSEQUENCE RULED: limb (iii) OVERRIDES FR-239 for a defective cell"; "a dated clause on FR-239 ("a
 defective cell refuses regardless of hash; a clean bundle's wire is byte-identical") rides R2's PR as the spec change in the
 same commit as the code; no opt-in flag"; the no-dp departure accepted; DP-R2 (a), `RATE_TABLE_CELL_UNPARSEABLE`; DP-R4 (a);
@@ -211,7 +211,7 @@ A12's inversion OK. The table is kept as the record of the options.
 ## Acceptance Standard
 
 Each item is checked by a command a fresh reviewer can run from the repository root on the named slice's merge tree.
-Items 1 and 2 apply to this plan. **A1 to A11 are R1 (SL 8322). A12 to A18 are R2 (SL 8345).**
+Items 1 and 2 apply to this plan. **A1 to A11 are R1 (SL-2020). A12 to A18 are R2 (SL 8345).**
 
 1. **This delta passes the docs checks on its branch.** `python3 scripts/audit-docs.py` prints no failing line except
    check 31 / check 32 lines naming working ids 8321, 8322, 8323, 8345 or 8346. After each mint, `audit-docs.py` and
@@ -219,12 +219,12 @@ Items 1 and 2 apply to this plan. **A1 to A11 are R1 (SL 8322). A12 to A18 are R
 2. **No requirement range.** `grep -nE '(N?FR)-[0-9]+ *(-|to|–) *(N?FR-)?[0-9]+' <this file>` prints no line that stands
    for a set of ids.
 
-**R1, SL 8322:**
+**R1, SL-2020:**
 
 - **A1. The write set.** `git diff --name-only origin/main...HEAD` lists only R1's Write set. Nothing under `frontend/`,
   `scripts/`, `deploy/` or `docs/contracts/`.
 - **A2. Spec text first.** The `03` commit precedes the first code commit.
-- **A3. Red first, by cause.** LG 8323 quotes T1 to T4, T10 and T11's reds from the slice's named base. A `NameError`,
+- **A3. Red first, by cause.** LG-2021 quotes T1 to T4, T10 and T11's reds from the slice's named base. A `NameError`,
   import or fixture failure is not the red.
 - **A4. Limb (i).** T1 and T2 green: `_format_value` on 100, 1000, 0.5, 0.50 and 1E+2 gives `100`, `1000`, `0.5`, `0.5`,
   `100`, and a fitted `1.36e-7` is written `0.000000136`. `git grep -n -E 'str\(Decimal|\.normalize\(\)' --
@@ -297,7 +297,7 @@ Items 1 and 2 apply to this plan. **A1 to A11 are R1 (SL 8322). A12 to A18 are R
 
 ## Tasks
 
-### R1, SL 8322 — a write never lands a cell the engine cannot read
+### R1, SL-2020 — a write never lands a cell the engine cannot read
 
 **The row.** First after SL-1689. WK-1178. One `sonnet` executor. Requirements: `03` FR-234, FR-214 (guard), FR-222,
 FR-261. Register: FD-1767, FD-1780, FD-1781 close; FD-1648 gains its line. **Size 7.75 h.** Depends on: the GO; a gate slot.
@@ -370,7 +370,7 @@ fire `frontend.yml`.
 `packages/pricing-core/src/pricing_core/`; `backend/src/app/platform/rate_tables.py`, `backend/src/app/errors.py`;
 `test_rate_table_operations.py`, `test_rate_table_bulk_ops.py`, the compile test home, `test_rating_score_batch_outputs.py`,
 `test_rating_column_collision.py`, `test_testing.py` under `packages/pricing-core/tests/`; `backend/tests/test_api_rate_tables.py`;
-`docs/specs/03-rating-engine.md`; LG 8323. At the mint: the SL 8322 row, `docs/INDEX.md`, FD essays and `docs/findings/register.md`
+`docs/specs/03-rating-engine.md`; LG-2021. At the mint: the SL-2020 row, `docs/INDEX.md`, FD essays and `docs/findings/register.md`
 (A11). **This plan's `status:` moves at R2's mint.**
 
 ### R2, SL 8345 — a bad cell is a hard error, and a refusal says why
