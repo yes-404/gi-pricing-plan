@@ -1,20 +1,22 @@
 ---
-id: LG-8341
+id: LG-2057
 family: ledger
-title: WK-1178 slice SL-8340 — DecimalStr serialises positionally (PL-8339, FD-1337)
+title: WK-1178 slice SL-2056 — DecimalStr serialises positionally (PL-2055, FD-1337)
 status: active
-created: 2026-11-05
+created: 2026-11-06   # original date 2026-11-05, working id 8341, minted 2026-11-06
 owner: executor
 tree: 9632320c797cabe58d5907700e83f091700d1a5d
 phase: P2
 work: WK-1178
-slice: SL-8340
-plans: [PL-8339]
+slice: SL-2056
+plans: [PL-2055]
 corrected_by: []
-relates: [FD-1337, PL-8339, RL-1329, RL-1343, FR-10, FR-21]
+relates: [FD-1337, PL-2055, RL-1329, RL-1343, FR-10, FR-21]
 ---
 
-# LG-8341 — WK-1178 slice SL-8340: `DecimalStr` serialises positionally
+# LG-2057 — WK-1178 slice SL-2056: `DecimalStr` serialises positionally
+
+*(Minted 2026-11-06 as LG-2057 from working id 8341, with the plan PL-2055 (working id 8339), the slice SL-2056 (working id 8340) and the finding FD-2058 (working id 8400), in the SL-2056 PR.)*
 
 **GO:** to-lead "2026-11-05 15:55:35 GMT"; DP-L1 to DP-L3 ruled "2026-11-05 10:36:35 GMT"; brief `brief-exec-sl8340-2026-11-05.md` (sha256 prefix 0577549ad10b).
 **MERGE-ACK:** (added at merge)
@@ -34,7 +36,7 @@ Base `ddec34fe`, merged by sha: C `4abb3798`, R1 `662867bb` (INDEX.md: theirs, r
 
 ### R2b — DP-L2 extended (to-lead "2026-11-05 16:14:34 GMT"), red first (`9a0a1ffe`)
 
-A signed or exponent zero is the value 0: T4 `test_every_spelling_of_zero_gives_the_hash_of_zero`, `-0`, `-0.00`, `-0E+3`, `0E+3` each against `0`. Red on the committed tree without the draft: **4 failed**. The ruling also lets the window run two TEMP-table controls (`decexp_ctl.py`'s PG part, `regspell_ctl.py`) in a writable session on the `postgres` db, `CREATE TEMP TABLE` only, and extends the stored-instance predicate to negative-zero spellings; a stored `-0` changes its hash, and the STOP applies. PL-8339 is a filed plan, frozen at its date, so this record carries the dated line on its "no write" (G2/Needs) rather than an edit to it.
+A signed or exponent zero is the value 0: T4 `test_every_spelling_of_zero_gives_the_hash_of_zero`, `-0`, `-0.00`, `-0E+3`, `0E+3` each against `0`. Red on the committed tree without the draft: **4 failed**. The ruling also lets the window run two TEMP-table controls (`decexp_ctl.py`'s PG part, `regspell_ctl.py`) in a writable session on the `postgres` db, `CREATE TEMP TABLE` only, and extends the stored-instance predicate to negative-zero spellings; a stored `-0` changes its hash, and the STOP applies. PL-2055 is a filed plan, frozen at its date, so this record carries the dated line on its "no write" (G2/Needs) rather than an edit to it.
 
 ### R2c — no rounding to the ambient precision (to-lead "2026-11-05 16:18:17 GMT"), red first (`496723cf`)
 
@@ -96,7 +98,7 @@ Edits made on `cb1b83af` after LAST-1's gate ENDED (08:12:25); **nothing has bee
 6. **Commit order, the owed read (to-lead "2026-11-06 07:47:44 GMT", adopted):** By request-bearing field, every `DecimalStr` / `CanonicalDecimalStr` field persists through a `model_dump(mode="json")` inside the transaction before commit (bulk-operation `created_by_operation`, approval-policy row and audit, dislocation job spec, `POST /bandings` body, peril-structure perils, regression-suite hash then content), so the writer raises before the commit and the unit of work rolls back. Predicate: `git grep -n -E '\.model_dump\(' cb1b83af -- backend/src packages/*/src | grep -v 'mode="json"'` = 21 lines, none reaches a stored column with a writer-type field; no `Relativity` field exists outside `money.py`. The enumeration's regex missed three names, covered by this read: `band_edges_pct`, `abs_change_pct_quantiles`, and the `PositionalDecimalStr` sites (the alias of `DecimalStr`, `money.py`, so the same writer). One exception, NOT a poisoned row: `POST /peril-structures/{id}/reconcile` carries `tolerance` into the Job as `str(tolerance)` (`perils.py` `reconcile_payload`), so a tolerance past 308 commits a Job and answers 202; the writer fires in the worker's `store()`, the Job fails and nothing is written. Read, unprobed; the DB-free probe (item 7) follows the demos.
 
 7. **Window and probe results (exec-sl8340f, 2026-11-06, head `ebc45f5f`, tree `67f15052`).** DB window `sl8340f` 08:39:34 to 08:44:09 UTC, no gate beside it; template guard `alembic_version=1 environments=3 tenant_marker=1` at both ends, `redis -n 0 dbsize` 56 at both ends, redis `-n 12` 0 at both ends, copy `gipricing_sl8340f` gone, bucket removed. Script `scratch/sl8340f-win.sh`, logs `scratch/sl8340f-*.log`. Runs, each rc 0: `test_error_sinks.py` 13 passed; `test_api_rate_tables.py` 99 passed, including the huge-percentage test (RED 2) and the `9E+308` computed-cell route test (a 422 `RATE_TABLE_CELL_UNPARSEABLE`, no `@2`; green, so item 3's route limb is proved at HTTP); `test_decimal_write_bound.py` 5 passed; `test_api_authorisation_sweep.py` 9 passed; `test_errors.py` 16 passed. `ruff check .` rc 0. Red-first for the no-new-version assert: a planted `bulk_operation` that commits a version before the raising call made the huge-percentage test FAIL (`GET …@2` answered 200); the plant was reverted and `git status` was clean.
-   **Probe (DB-free, unit call; `scratch/sl8340f-probe/probe_tol.py`):** the reconcile store path with tolerance `1E+400`: payload `1E+400`; `Reconciliation` constructs; `model_dump(mode="json")` (the line `record_reconciliation` runs) raises `PydanticSerializationError`; the error text the worker stores via `safe_job_error_text` is `'PydanticSerializationError'`. Asserted: no `1E+400`, no digit run, no `400` in it. Control: the same script on `str(exc)` fails the digit-run assert. **Clean, NFR-499 not touched.** FD-8400 drafted at `scratch/aud-sl8340w/fd-8400.md`, LOW, WK-1178, carried to the P2 closure list; no fix in this slice.
+   **Probe (DB-free, unit call; `scratch/sl8340f-probe/probe_tol.py`):** the reconcile store path with tolerance `1E+400`: payload `1E+400`; `Reconciliation` constructs; `model_dump(mode="json")` (the line `record_reconciliation` runs) raises `PydanticSerializationError`; the error text the worker stores via `safe_job_error_text` is `'PydanticSerializationError'`. Asserted: no `1E+400`, no digit run, no `400` in it. Control: the same script on `str(exc)` fails the digit-run assert. **Clean, NFR-499 not touched.** FD-2058 drafted at `scratch/aud-sl8340w/fd-8400.md`, LOW, WK-1178, carried to the P2 closure list; no fix in this slice.
 
 ## PRs
 

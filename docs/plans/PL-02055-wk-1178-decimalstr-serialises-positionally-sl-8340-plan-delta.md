@@ -1,10 +1,10 @@
 ---
-id: PL-8339
+id: PL-2055
 family: plan
 kind: map
-title: WK-1178 — DecimalStr serialises positionally, so a value cannot violate its own schema and a governed hash does not follow spelling (FD-1337), SL-8340 — a dated Work-plan delta
-status: draft                   # draft → active → superseded | retired (§1.2a) — L1: draft→active rides the slice's PR
-created: 2026-11-05             # filed under working id 8339
+title: WK-1178 — DecimalStr serialises positionally, so a value cannot violate its own schema and a governed hash does not follow spelling (FD-1337), SL-2056 — a dated Work-plan delta
+status: active                  # draft → active → superseded | retired (§1.2a) — L1: draft→active rides the slice's PR
+created: 2026-11-06   # original date 2026-11-05, working id 8339, minted 2026-11-06
 owner: planner
 tree: dae9637ea6f6a56f6502e9db70392cdfb2f3983d
 phase: P2
@@ -15,13 +15,13 @@ corrected_by: []
 relates: [FD-1337, RL-1329, RL-1343, FR-10, FR-21]
 ---
 
-# PL-8339 — WK-1178: `DecimalStr` serialises positionally (SL 8340, a dated Work-plan delta)
+# PL-2055 — WK-1178: `DecimalStr` serialises positionally (SL-2056, a dated Work-plan delta)
 
 > **For agentic workers:** this is a **dated Work-plan delta** under Lean P2 L1 (a')
-> (`.claude/roles/planner.md`, "Lean P2"). It holds one slice row, SL 8340, and edits no filed plan.
+> (`.claude/roles/planner.md`, "Lean P2"). It holds one slice row, SL-2056 (working id 8340), and edits no filed plan.
 > The executor's skills are `superpowers:test-driven-development`, `.claude/skills/python-test`,
 > `.claude/skills/python-package`, `.claude/skills/contract-schema`, `.claude/skills/contract-guard`,
-> `spec-change` and `git-hygiene`. PL 8339, SL 8340 and LG 8341 are working ids reserved by the lead.
+> `spec-change` and `git-hygiene`. PL-2055, SL-2056 and LG-2057 were working ids 8339, 8340 and 8341, reserved by the lead and minted 2026-11-06.
 
 ## Authority
 
@@ -118,7 +118,7 @@ The slice:
 
 - **A1. The write set.** `git diff --name-only origin/main...HEAD` lists only the Write set below.
 - **A2. Spec first.** The `00` commit precedes the first code commit.
-- **A3. The re-measure, in LG 8341, before the code commit:** tracked blobs (`decexp.py`, `decexp2.py`), the
+- **A3. The re-measure, in LG-2057, before the code commit:** tracked blobs (`decexp.py`, `decexp2.py`), the
   PostgreSQL databases and MinIO, at named times, each with its **denominator** (files; databases and tables;
   buckets and objects) and its **planted positive control seen to count** (a zero over an empty corpus is
   not a zero). Two counts: quoted exponent-form values; and, under DP-L2 (c), `lower` or `upper` values
@@ -126,12 +126,12 @@ The slice:
 - **A4. The rule is applied.** If both counts are 0: no version bump, and the LG and the commit say so,
   citing A3. **If either is above 0 the slice stops for the maintainer's ruling** (10:36:35), which supersedes the
   automatic bump of 2026-09-30 by naming the stop first.
-- **A5. The hash sweep.** LG 8341 lists every `sha256` site in `backend/src` and `packages/*/src`
+- **A5. The hash sweep.** LG-2057 lists every `sha256` site in `backend/src` and `packages/*/src`
   (`git grep -n -E 'sha256|_canonical_sha256' -- backend/src packages/model-schema/src
   packages/pricing-core/src`), and whether a `DecimalStr` reaches it. The audit-event writers are
   swept, as ruled: each `audit.record` passing a dumped `DecimalStr`-bearing shape, or a statement of which
   paths were measured.
-- **A6. Red first, by cause.** LG 8341 quotes T1's red (`'1E-7'` against the schema's pattern) and T2's (two
+- **A6. Red first, by cause.** LG-2057 quotes T1's red (`'1E-7'` against the schema's pattern) and T2's (two
   equal values, two hashes).
 - **A7. The schema holds.** T1 green: for `0.0000001`, `1.2E-28`, `1E+2`, `Decimal(100).normalize()`, `10`,
   `66000.440`, every field type's dump matches the published pattern. A Hypothesis property over decimals
@@ -178,7 +178,7 @@ The slice:
 
 ## Tasks
 
-### SL 8340 — positional `DecimalStr`
+### SL-2056 — positional `DecimalStr`
 
 **The row.** Last-1 in the 09:58:58 order. WK-1178. One `sonnet` executor. Requirements: `00` FR-10, FR-21.
 Register: FD-1337 (MEDIUM), closing at the merge (A13). Depends on: the GO; the window;
@@ -241,8 +241,8 @@ diff: `python`, `docs`, `history-policy`, and `frontend` only if a filter matche
 - `packages/model-schema/src/model_schema/money.py`, `packages/model-schema/src/model_schema/regression.py`.
 - `packages/model-schema/tests/test_money.py`.
 - `docs/specs/00-overview.md` (FR-21).
-- LG 8341 under `docs/ledgers/`.
-- At the mint: the SL 8340 row in `docs/roadmap.md`, `docs/INDEX.md`, this plan's `status:`, FD-1337's essay and
+- LG-2057 under `docs/ledgers/`.
+- At the mint: the SL-2056 row in `docs/roadmap.md`, `docs/INDEX.md`, this plan's `status:`, FD-1337's essay and
   `docs/findings/register.md` (A13).
 
 ### Files shared with other groups

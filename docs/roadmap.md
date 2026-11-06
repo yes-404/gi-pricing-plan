@@ -3715,6 +3715,26 @@ Test-only: no source file changes. Six test files gain the missing limbs: the in
 
 *(Closed 2026-11-06 by the audit commit of the slice's PR, on the lead's adoption of aud-slg and his four calls (to-lead "2026-11-06 00:01:53 GMT"); no row existed at `origin/main` `c99a6cd818b1` before this PR's mint, which added it as `active`.)*
 
+#### SL-2056 — WK-1178 slice — FD-1337: `DecimalStr` serialises positionally
+
+```yaml
+id: SL-2056
+family: slice
+title: WK-1178 slice — DecimalStr serialises positionally (FD-1337)
+status: active                    # draft → active → closed (§1.2a)
+created: 2026-11-06   # original date 2026-11-05, working id 8340, minted 2026-11-06
+owner: lead
+tree: 6aff3e770b8797cc4fa4a4e92780557636748680
+phase: P2
+work: WK-1178
+corrected_by: []
+relates: [FD-1337, PL-2055, LG-2057, FR-10, FR-21]
+```
+
+An exact decimal serialises in positional notation, never with an exponent, so every value `DecimalStr` and `Relativity` publish matches the pattern of its own JSON Schema; the two bounds `suite_content_hash` reads serialise one spelling per value; writing is bounded at an adjusted exponent of 308 and the refusal is a coded 422 `DECIMAL_OUT_OF_RANGE`. The plan is `PL-2055`; the ledger is `LG-2057`; the finding it closes is `FD-1337`.
+
+(Minted 2026-11-06 from working id 8340, with the mint tool of record `mint-repoint.py`; plan `PL-2055` (working id 8339), ledger `LG-2057` (working id 8341). `tree` is the tree of the slice branch before the merge of `origin/main`.)
+
 ### WK-1250 — Sub-graph composition and MTA/cancellation pricing — FR-217's inlining and FR-218's authoring half
 
 ```yaml
