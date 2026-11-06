@@ -3655,7 +3655,7 @@ relates: [FD-2032, FR-233, FR-228, FR-234, PL-2040, LG-2042]
 id: SL-2045
 family: slice
 title: WK-1178 slice — FD-1691, A/E weighted by the declared weight column (FR-171, FR-184)
-status: active                    # draft → active → closed (§1.2a)
+status: closed                    # draft → active → closed (§1.2a)
 created: 2026-11-06   # original date 2026-11-05, working id 8359, minted 2026-11-06
 owner: lead
 tree: 1c6be07fe6171fc3beaf91f7096d37244524b363
@@ -3668,6 +3668,8 @@ relates: [FD-1691, OQ-1692, FR-171, FR-183, FR-184, FR-186, PL-2044, LG-2046]
 A/E for a diagnostic partition is Σw·y / Σw·μ, where w is the model's declared weight column, else 1: the claim count for a severity model; 1 for a frequency model, whose μ already carries exposure; exposure only when a pure-premium model declares it as its weight column (FR-171, FR-183, FR-184; OQ-1692, decided 2026-11-05). The comparison's A/E takes the same weight (FR-186). Per `PL-2044` (plan of record). Its ledger is `LG-2046`; FD-1691 closes in this slice's PR.
 
 (Minted 2026-11-06 from working id 8359, with the mint tool of record `mint-repoint.py`; plan `PL-2044` (working id 8358), ledger `LG-2046` (working id 8360). `tree` is the gated tree of the slice branch before the merge of `origin/main`.)
+
+*(Closed 2026-11-06 by the audit commit of the slice's PR, on the lead's adoption of aud-slm (`from-lead-2026-10-09.md`, "2026-11-05 18:17:38 GMT"); no row existed at `origin/main` `b911432a82a2` before this PR's mint, which added it as `active`.)*
 
 ### WK-1250 — Sub-graph composition and MTA/cancellation pricing — FR-217's inlining and FR-218's authoring half
 
