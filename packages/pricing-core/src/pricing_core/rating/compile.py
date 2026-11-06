@@ -19,7 +19,7 @@ import json
 import re
 from collections.abc import Callable, Mapping, Sequence
 from datetime import UTC, datetime
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 from typing import Any, NoReturn, Protocol
 
 import zen
@@ -821,11 +821,15 @@ def cell_parses(raw: str) -> bool:
     """Whether the engine's own parser reads `raw` as a number (FD-1648): `Decimal` is wider.
 
     `1E+2`, `1.36E-7` and `.5` are decimals the engine refuses; `1.36e-7` and `1_000` it reads.
+    The engine evaluates an *expression*, so `raw` must also be a decimal literal (`1+1` and
+    `true` are not) and the result a non-bool number (`bool` is an `int`).
     """
     try:
-        return isinstance(zen.evaluate_expression(raw), (int, float))
-    except (RuntimeError, ValueError):
+        Decimal(raw)
+        result = zen.evaluate_expression(raw)
+    except (InvalidOperation, RuntimeError, ValueError):
         return False
+    return isinstance(result, (int, float)) and not isinstance(result, bool)
 
 
 def _refuse_unparseable_cells(version: RatingVersion, payloads: dict[str, Any]) -> None:

@@ -58,6 +58,7 @@ from pricing_core.modelling.diagnostics import (
     _theta_of,
     _weighting,
     _weights,
+    ae_weights,
     deviance,
 )
 from pricing_core.modelling.errors import ModellingError
@@ -138,7 +139,7 @@ def compare_models(
         baseline_ref=baseline_ref,
         split_ref=split_ref,
         holdout_rows=holdout.height,
-        metrics=_metrics(candidates, actual, exposure, predicted, scheme),
+        metrics=_metrics(candidates, holdout, actual, exposure, predicted, scheme),
         double_lift=tuple(
             _double_lift(
                 baseline_ref=baseline_ref,
@@ -252,6 +253,7 @@ def _family(spec: GlmSpec | GbmSpec) -> tuple[str, float]:
 
 def _metrics(
     candidates: Sequence[ComparisonCandidate],
+    holdout: pl.DataFrame,
     actual: npt.NDArray[np.float64],
     exposure: npt.NDArray[np.float64],
     predicted: Mapping[str, npt.NDArray[np.float64]],
@@ -267,11 +269,13 @@ def _metrics(
     by_ref: dict[str, dict[str, float | None]] = {}
     for candidate in candidates:
         mu = predicted[candidate.ref]
-        expected = float(np.sum(mu))
+        # The same `ae_weights` the Diagnostics page uses (OQ-1692, DP-M2): one number on both.
+        ae_w = ae_weights(candidate.spec, holdout)
+        expected = float(np.sum(ae_w * mu))
         gini, gini_normalised = _gini(actual, mu, exposure)
         family, power = _family(candidate.spec)
         by_ref[candidate.ref] = {
-            "ae_overall": (float(np.sum(actual)) / expected) if expected > 0 else None,
+            "ae_overall": (float(np.sum(ae_w * actual)) / expected) if expected > 0 else None,
             "gini": gini,
             "gini_normalised": gini_normalised,
             "holdout_deviance": deviance(
