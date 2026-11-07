@@ -2,12 +2,12 @@
 id: FD-1802
 family: finding
 title: Both upload routes (rate-table import, source preview) declare 413 and read the whole body with no size cap
-status: active
+status: closed
 created: 2026-10-18   # filed 2026-10-17 under working id 8105; minted 2026-10-18 as FD-1802
 owner: auditor
 tree: 9469721db3d26480824cc1d715da2ec4ca9044d0
 corrected_by: []
-relates: [WK-1178, FD-1803]
+relates: [WK-1178, FD-1803, SL-2075, LG-2076, PL-2074, FD-2031]
 ---
 
 # FD-1802 — Both upload routes declare 413 and read the whole body with no size cap
@@ -62,3 +62,5 @@ Filed under working id 8105.
 Widened 2026-10-17 to both upload routes (the maintainer, to-lead 2026-10-17 22:56:37 BST).
 
 *(Dated line, 2026-11-05, docs batch 11, by the auditor, on to-lead "2026-11-05 10:20:55 GMT" (plan A, DP-A1): a fact this record did not read: the proxy. `deploy/lb.conf` has no `client_max_body_size` (`grep -rn client_max_body_size deploy` at this tree: 0 hits), so nginx's default of 1 MiB applies and the proxy answers an over-size body with its own HTML 413 before the application's cap can. Ruled: the cap is a typed setting defaulting to 64 MiB on both routes, and the nginx limit in `deploy/lb.conf` and in the new frontend configuration is the same limit plus a small margin.)*
+
+***Resolved 2026-11-07*** — closed in place 2026-11-07 as the closing act of the mint of SL-2075 (WK-1178, LG-2076, PL-2074; this PR; its number, squash commit and merge date are written at the merge's date-of-record), in the FD-1842 form. Delivered remedy: one request-body limit on both upload routes, the typed setting `max_upload_body_mib` (`GIP_MAX_UPLOAD_BODY_MIB`, default 64 MiB), enforced by `BodyLimitMiddleware` (`backend/src/app/api/body_limit.py`) before any body is read when the length is declared and on passing the limit when it is not, answering the declared 413 `PAYLOAD_TOO_LARGE` as an RFC 9457 problem with the request's `trace_id`; the proxy limit in `deploy/lb.conf` and `deploy/frontend.nginx.conf` is the same limit plus 1 MiB (`65m`), so the proxy never answers first. Red first, by cause, in LG-2076: `test_api_body_limit.py` red at `ebe2527a` (`3 failed, 2 passed`, `assert 200 == 413`), green at `d2490e18`; the proxy test red at `a029e461` (`deploy/lb.conf sets no client_max_body_size`), green at `0ecf4935`; A7's runtime limb passed at `8cf89fdc` (`1 passed in 132.19 s`: a 2 MiB body is not a 413, limit + 1 byte is the API's 413 `application/json`). What DP-A3 left out is not delivered here: XLSX decompression expansion and gzip's expand-first are bounded by neither limit, and are filed as FD-2031 (LOW, owner WK-1178). Gate evidence is in LG-2076: the SOLO gate at `28f15e11`, 14 pytest failures = item 31's 13 docs-audit failures plus the census entry in `test_worker_raise_sites.py` that the mint's first commit `14571939` adds.
