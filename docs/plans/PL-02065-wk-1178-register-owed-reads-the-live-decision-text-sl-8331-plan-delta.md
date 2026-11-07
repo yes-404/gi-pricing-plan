@@ -1,10 +1,10 @@
 ---
-id: PL-8330
+id: PL-2065
 family: plan
 kind: map
-title: WK-1178 — register-owed.py reads the live decision text, not the superseded opening kept below it (FD-1916), SL-8331 — a dated Work-plan delta
-status: draft                   # draft → active → superseded | retired (§1.2a) — L1: draft→active rides the slice's PR
-created: 2026-11-05             # filed under working id 8330
+title: WK-1178 — register-owed.py reads the live decision text, not the superseded opening kept below it (FD-1916), SL-2066 — a dated Work-plan delta
+status: active                   # draft → active → superseded | retired (§1.2a) — L1: draft→active rides the slice's PR
+created: 2026-11-07   # original date 2026-11-05, working id 8330, minted 2026-11-07
 owner: planner
 tree: dae9637ea6f6a56f6502e9db70392cdfb2f3983d
 phase: P2
@@ -15,13 +15,15 @@ corrected_by: []
 relates: [FD-1916, FD-1820, FD-1165, CR-1247]
 ---
 
-# PL-8330 — WK-1178: `register-owed.py` reads the live decision text (SL 8331, a dated Work-plan delta)
+# PL-2065 — WK-1178: `register-owed.py` reads the live decision text (SL-2066, a dated Work-plan delta)
+
+*(Minted 2026-11-07 as PL-2065 from working id 8330, in the SL-2069 batch (T folded: SL-2066 with SL-2069), with the mint tool of record `mint-repoint.py`. Plans PL-2065 (8330) and PL-2068 (8342), slices SL-2066 (8331) and SL-2069 (8343), ledgers LG-2067 (8332) and LG-2070 (8344) minted together, in that order.)*
 
 > **For agentic workers:** this is a **dated Work-plan delta** under Lean P2 L1 (a')
-> (`.claude/roles/planner.md`, "Lean P2"). It holds one slice row, SL 8331, and edits no filed plan.
+> (`.claude/roles/planner.md`, "Lean P2"). It holds one slice row, SL-2066, and edits no filed plan.
 > The executor's skills are `superpowers:test-driven-development`, `.claude/skills/python-test` and
-> `git-hygiene`. PL 8330, SL 8331 and LG 8332 are working ids reserved by the lead. FD-1484, the
-> group's other row, is split out to PL 8342 by the entry "2026-11-05 09:58:58 GMT".
+> `git-hygiene`. PL-2065, SL-2066 and LG-2067 are working ids reserved by the lead. FD-1484, the
+> group's other row, is split out to PL-2068 by the entry "2026-11-05 09:58:58 GMT".
 
 ## Authority
 
@@ -76,13 +78,13 @@ merge tree. Items 1 and 2 apply to this plan; A1 to A7 apply to the slice.
 The slice:
 
 - **A1. The write set.** `git diff --name-only origin/main...HEAD` lists `scripts/register-owed.py`,
-  `tests/test_register_owed.py`, LG 8332, and the mint's files (Write set). Nothing else.
-- **A2. Red first, by cause.** LG 8332 quotes, from the slice's named base, T1 failing because row 1
+  `tests/test_register_owed.py`, LG-2067, and the mint's files (Write set). Nothing else.
+- **A2. Red first, by cause.** LG-2067 quotes, from the slice's named base, T1 failing because row 1
   matched `review`, and T2 failing because row 1 matched `WK-B`. T3 and T4 are controls: green at base
   and head.
 - **A3. Green.** `tests/test_register_owed.py` passes in full through
   `~/gi-pricing-plan.local/handover/run-small.sh`.
-- **A4. The real register.** LG 8332 quotes `register-owed.py review` before and after, at named trees,
+- **A4. The real register.** LG-2067 quotes `register-owed.py review` before and after, at named trees,
   with the owed and excluded counts, and lists each row that left. For each, it quotes the row's live
   text up to the marker, showing the live owner (the essay's "each … shown to carry its live owner
   before the marker"). **No row that names §14 before the marker has left.** The line of the event, a
@@ -115,7 +117,7 @@ gate-2 flock (common seat brief, item 6).
 
 ## Tasks
 
-### SL 8331 — `_live_text`
+### SL-2066 — `_live_text`
 
 **The row.** WK-1178 fix slice. One `sonnet` executor. Register: FD-1916 (LOW), closing at the merge
 (A7). Depends on: the maintainer's GO; LAST-2's branch and gate. **Size:** 1 h. SOLO gate about 2.5 h, not counted.
@@ -151,7 +153,7 @@ def _live_text(decision: str) -> str:
 `_matches_review`: `_REVIEW_MARKER.search(_live_text(row.fields[4]))`. `_matches_work_id`:
 `pattern.search(_live_text(decision))`, `work_item` unchanged.
 
-**R3 — the real register.** A4's before-and-after, in LG 8332, at named trees, through the gate-2 flock.
+**R3 — the real register.** A4's before-and-after, in LG-2067, at named trees, through the gate-2 flock.
 
 **G — the gate.** **Folded onto LAST-2's branch and gate** (the entry "2026-11-05 10:36:35 GMT": "LAST-2 @15592cd7 (FD-1484, T
 folded)"). One gate covers both; this plan and its SL and LG stay separate records. CI: `python`, `docs`, `history-policy`.
@@ -159,8 +161,8 @@ folded)"). One gate covers both; this plan and its SL and LG stay separate recor
 ### Write set
 
 - `scripts/register-owed.py`, `tests/test_register_owed.py`.
-- LG 8332 under `docs/ledgers/`.
-- At the mint: the SL 8331 row in `docs/roadmap.md`, `docs/INDEX.md`, this plan's `status:`, FD-1916's
+- LG-2067 under `docs/ledgers/`.
+- At the mint: the SL-2066 row in `docs/roadmap.md`, `docs/INDEX.md`, this plan's `status:`, FD-1916's
   essay and `docs/findings/register.md` (A7).
 
 ### Files shared with other groups
