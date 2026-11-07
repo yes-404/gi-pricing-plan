@@ -1,20 +1,22 @@
 ---
-id: LG-8344
+id: LG-2070
 family: ledger
-title: WK-1178 slice SL-8343 — FD-1484, one table-row parser, table_rows.py (slice ledger)
+title: WK-1178 slice SL-2069 — FD-1484, one table-row parser, table_rows.py (slice ledger)
 status: active                 # active → closed (§1.2a)
-created: 2026-11-05            # filed under working id 8344
+created: 2026-11-07   # original date 2026-11-05, working id 8344, minted 2026-11-07
 owner: executor
 tree: 966f817fa707322b32e6e733e9cc88bc6318511d   # the tree of commit afe1ee99 (sl-8343-table-row-parser, the code head this was written against; base c8d8522758859d23fac5542815ccaa59c5a4b087). Corrected 2026-11-05 17:12 GMT: the field held the commit id.
-slice: SL-8343
+slice: SL-2069
 phase: P2
 work: WK-1178
-plans: [PL-8342]
+plans: [PL-2068]
 corrected_by: []
-relates: [FD-1484, PL-8342, PL-8330, LG-8332]
+relates: [FD-1484, PL-2068, PL-2065, LG-2067]
 ---
 
-# LG-8344 — WK-1178 slice SL-8343: one table-row parser
+# LG-2070 — WK-1178 slice SL-2069: one table-row parser
+
+*(Minted 2026-11-07 as LG-2070 from working id 8344, in the SL-2069 batch (T folded: SL-2066 with SL-2069), with the mint tool of record `mint-repoint.py`. Plans PL-2065 (8330) and PL-2068 (8342), slices SL-2066 (8331) and SL-2069 (8343), ledgers LG-2067 (8332) and LG-2070 (8344) minted together, in that order.)*
 
 **GO:** to-lead "2026-11-05 09:58:58 GMT" (FD-1484 coded and merged before Thu 12 Nov); "2026-11-05 10:36:35 GMT" (all nine plans accepted; DP-P1 (a) row by row; DP-P2 (a) keep `\|` as written; T folded onto this branch and gate).
 **MERGE-ACK:** (added at merge.)
@@ -23,7 +25,7 @@ relates: [FD-1484, PL-8342, PL-8330, LG-8332]
 
 ### Scope
 
-PL 8342, "SL 8343 — one row parser". No requirement id: tooling. Register: FD-1484. The slice also carries PL 8330's commits (SL 8331, LG 8332), folded onto this branch and gate by the 10:36:35 entry. The branch is `sl-8343-table-row-parser`; its base is the PL 8342 head `c8d85227`, and the PL 8330 draft head `7b5aa255` was brought in as a merge (`d6481cba`), never a rebase.
+PL-2068, "SL-2069 — one row parser". No requirement id: tooling. Register: FD-1484. The slice also carries PL-2065's commits (SL-2066, LG-2067), folded onto this branch and gate by the 10:36:35 entry. The branch is `sl-8343-table-row-parser`; its base is the PL-2068 head `c8d85227`, and the PL-2065 draft head `7b5aa255` was brought in as a merge (`d6481cba`), never a rebase.
 
 ### Task list
 
@@ -88,8 +90,8 @@ Every one of the 16 failures is the same cause, named by the assert text: `audit
 
 ### Build log
 
-- 2026-11-05: worktree `.claude/worktrees/sl-8343` from `c8d85227`; PL 8330's `7b5aa255` merged (`d6481cba`), the only conflict being `docs/INDEX.md`, where both plan rows were kept.
-- 2026-11-05: R1–R4, T4 and the ruff fixes as the task list; the SL 8331 commits are in LG 8332.
+- 2026-11-05: worktree `.claude/worktrees/sl-8343` from `c8d85227`; PL-2065's `7b5aa255` merged (`d6481cba`), the only conflict being `docs/INDEX.md`, where both plan rows were kept.
+- 2026-11-05: R1–R4, T4 and the ruff fixes as the task list; the SL-2066 commits are in LG-2067.
 - 2026-11-05 19:58 GMT: correction to aud-sl8343's "no script or test copies `scripts/` out of the tree" (not in this ledger; it is in the audit's reading): `tests/test_doc_id_migrate.py` does, in two fixtures -- `_migrate_module_with_source_mutation` (`test_class6_keys_on_the_generated_set_not_reproducibility`) and `test_migrate_leaves_no_pycache_in_a_snapshot_carrying_its_own_scripts` -- and exec-sl8370b found both red by `FileNotFoundError` on `table_rows.py`, because `scripts/_docid.py` loads `packages/model-schema/src/model_schema/table_rows.py` by path. Ruling: lead's to-lead "2026-11-05 19:54:56 GMT", option (a): the snapshot fixtures copy the parser too (`_copy_scripts_snapshot`); no fallback in `_docid.py`, no move of the parser.
 
 ## PRs

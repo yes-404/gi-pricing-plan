@@ -1,20 +1,22 @@
 ---
-id: LG-8332
+id: LG-2067
 family: ledger
-title: WK-1178 slice SL-8331 — FD-1916, register-owed.py reads the live decision text (slice ledger)
+title: WK-1178 slice SL-2066 — FD-1916, register-owed.py reads the live decision text (slice ledger)
 status: active                 # active → closed (§1.2a)
-created: 2026-11-05            # filed under working id 8332
+created: 2026-11-07   # original date 2026-11-05, working id 8332, minted 2026-11-07
 owner: executor
 tree: 966f817fa707322b32e6e733e9cc88bc6318511d   # the tree of commit afe1ee99 (sl-8343-table-row-parser, the code head this was written against; base c8d8522758859d23fac5542815ccaa59c5a4b087). Corrected 2026-11-05 17:12 GMT: the field held the commit id.
-slice: SL-8331
+slice: SL-2066
 phase: P2
 work: WK-1178
-plans: [PL-8330]
+plans: [PL-2065]
 corrected_by: []
-relates: [FD-1916, PL-8330, LG-8344]
+relates: [FD-1916, PL-2065, LG-2070]
 ---
 
-# LG-8332 — WK-1178 slice SL-8331: `register-owed.py` reads the live decision text
+# LG-2067 — WK-1178 slice SL-2066: `register-owed.py` reads the live decision text
+
+*(Minted 2026-11-07 as LG-2067 from working id 8332, in the SL-2069 batch (T folded: SL-2066 with SL-2069), with the mint tool of record `mint-repoint.py`. Plans PL-2065 (8330) and PL-2068 (8342), slices SL-2066 (8331) and SL-2069 (8343), ledgers LG-2067 (8332) and LG-2070 (8344) minted together, in that order.)*
 
 **GO:** to-lead "2026-11-05 09:58:58 GMT"; "2026-11-05 10:36:35 GMT" (all nine plans accepted; T folded onto the FD-1484 branch and gate).
 **MERGE-ACK:** (added at merge.)
@@ -23,12 +25,12 @@ relates: [FD-1916, PL-8330, LG-8344]
 
 ### Scope
 
-PL 8330, "SL 8331 — `_live_text`". No requirement id: tooling. Register: FD-1916. The commits ride `sl-8343-table-row-parser`; one gate covers both slices (LG 8344).
+PL-2065, "SL-2066 — `_live_text`". No requirement id: tooling. Register: FD-1916. The commits ride `sl-8343-table-row-parser`; one gate covers both slices (LG-2070).
 
 ### Task list
 
 1. **R1 — red first.** `731df717`: `tests/test_register_owed.py`, T1 `test_review_mode_ignores_a_superseded_opening`, T2 `test_work_mode_ignores_a_superseded_opening`; T3 and T4 are controls. Committed alone.
-2. **R2 — green.** `b9214ae6`: `scripts/register-owed.py`: `_SUPERSEDED_OPENING` once, `_live_text`, used by `_matches_review` and `_matches_work_id` (the work-item cell is unchanged). `_is_resolved` is unchanged and `scripts/register-lint.py` is untouched by this slice (its change is SL 8343's).
+2. **R2 — green.** `b9214ae6`: `scripts/register-owed.py`: `_SUPERSEDED_OPENING` once, `_live_text`, used by `_matches_review` and `_matches_work_id` (the work-item cell is unchanged). `_is_resolved` is unchanged and `scripts/register-lint.py` is untouched by this slice (its change is SL-2069's).
 
 ### Gate
 
@@ -38,7 +40,7 @@ Runs on the executor's tree through `run-heavy.sh --over-load "2026-11-05 13:58:
 
 - T1: `assert [<_register_owed_under_test.Match object ...>] == []`, `Left contains one more item`: row 1 matched `review`.
 - T2: the same assert shape: row 1 matched `WK-B`.
-- `3 failed, 13 passed`: T1, T2 and `test_check_29_wiring_is_undisturbed` (red on base because `audit-docs.py` exits 1 on the working-id gaps and the stale INDEX, as in LG 8344). T3 and T4 are green at base.
+- `3 failed, 13 passed`: T1, T2 and `test_check_29_wiring_is_undisturbed` (red on base because `audit-docs.py` exits 1 on the working-id gaps and the stale INDEX, as in LG-2070). T3 and T4 are green at base.
 
 **Green, slice tree:** `tests/test_register_owed.py`: `15 passed, 1 failed in 61.13s`; the one failure is `test_check_29_wiring_is_undisturbed`, for the audit-docs cause above.
 

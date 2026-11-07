@@ -1,10 +1,10 @@
 ---
-id: PL-8342
+id: PL-2068
 family: plan
 kind: map
-title: WK-1178 — one stdlib table-row parser, so an escaped pipe no longer hides a declared endpoint or stops the phase report (FD-1484), SL-8343 — a dated Work-plan delta
-status: draft                   # draft → active → superseded | retired (§1.2a) — L1: draft→active rides the slice's PR
-created: 2026-11-05             # filed under working id 8342
+title: WK-1178 — one stdlib table-row parser, so an escaped pipe no longer hides a declared endpoint or stops the phase report (FD-1484), SL-2069 — a dated Work-plan delta
+status: active                   # draft → active → superseded | retired (§1.2a) — L1: draft→active rides the slice's PR
+created: 2026-11-07   # original date 2026-11-05, working id 8342, minted 2026-11-07
 owner: planner
 tree: dae9637ea6f6a56f6502e9db70392cdfb2f3983d
 phase: P2
@@ -15,13 +15,15 @@ corrected_by: []
 relates: [FD-1484, CR-823, RL-982]
 ---
 
-# PL-8342 — WK-1178: one table-row parser (SL 8343, a dated Work-plan delta)
+# PL-2068 — WK-1178: one table-row parser (SL-2069, a dated Work-plan delta)
+
+*(Minted 2026-11-07 as PL-2068 from working id 8342, in the SL-2069 batch (T folded: SL-2066 with SL-2069), with the mint tool of record `mint-repoint.py`. Plans PL-2065 (8330) and PL-2068 (8342), slices SL-2066 (8331) and SL-2069 (8343), ledgers LG-2067 (8332) and LG-2070 (8344) minted together, in that order.)*
 
 > **For agentic workers:** this is a **dated Work-plan delta** under Lean P2 L1 (a')
-> (`.claude/roles/planner.md`, "Lean P2"). It holds one slice row, SL 8343, and edits no filed plan.
+> (`.claude/roles/planner.md`, "Lean P2"). It holds one slice row, SL-2069, and edits no filed plan.
 > The executor's skills are `superpowers:test-driven-development`, `.claude/skills/python-test`,
-> `.claude/skills/python-package`, `.claude/skills/docs-audit` and `git-hygiene`. PL 8342, SL 8343 and
-> LG 8344 are working ids reserved by the lead.
+> `.claude/skills/python-package`, `.claude/skills/docs-audit` and `git-hygiene`. PL-2068, SL-2069 and
+> LG-2070 are working ids reserved by the lead.
 
 ## Authority
 
@@ -98,7 +100,7 @@ by the planner**, read-only (`/tmp/plan-slices/p6.py`; `doc-index.py` through th
 ## Decision points
 
 **Both ruled** (the entry "2026-11-05 10:36:35 GMT"): DP-P1 (a), row by row; DP-P2 (a); the Wed 12:00 fallback is R3 alone. That
-entry also says "T folded": T's commits ride this branch and this gate (PL 8330). The table is kept as the record.
+entry also says "T folded": T's commits ride this branch and this gate (PL-2065). The table is kept as the record.
 
 | DP | Question | Options | Recommendation |
 |---|---|---|---|
@@ -124,7 +126,7 @@ The slice:
 
 - **A1. The write set.** `git diff --name-only origin/main...HEAD` lists only the Write set below. `.github/`
   is not in it.
-- **A2. Red first, by cause.** LG 8344 quotes, from the slice's named base: `parsed 352 of 362` (or the count
+- **A2. Red first, by cause.** LG-2070 quotes, from the slice's named base: `parsed 352 of 362` (or the count
   at the base, named); `declared_endpoints` 39 and 23; the demo guide's declared count; and T1 to T4's reds.
 - **A3. The parser.** T1: a table of rows, escaped pipe in the first, middle and last cell, a code span, an
   empty cell, no trailing pipe: cells as `_split_row` gives them.
@@ -174,7 +176,7 @@ DB-free if its fixture is; else the gate proves it.
 
 ## Tasks
 
-### SL 8343 — one row parser
+### SL-2069 — one row parser
 
 **The row.** Last-2 in the 09:58:58 order. WK-1178. One `sonnet` executor. Requirements: none by id: tooling; the
 figures it corrects are §13 evidence. Register: FD-1484 (MEDIUM), closing at the merge (A11). Depends on: the GO; a gate slot. **Size:** 8 h. SOLO gate about 2.5 h, not counted. Merged before Thu 12 Nov 2026;
@@ -245,14 +247,14 @@ CI from the three-dot diff: `python`, `docs`, `history-policy`.
 - `tests/test_audit_docs_ids.py`, `tests/test_findings_ids.py`, `tests/test_permission_parity.py`,
   `backend/tests/test_contracts.py`, one new test under `tests/` (T4).
 - Any spec row DP-P1 rules.
-- LG 8344 under `docs/ledgers/`.
-- At the mint: the SL 8343 row in `docs/roadmap.md`, `docs/INDEX.md`, this plan's `status:`, FD-1484's essay and
+- LG-2070 under `docs/ledgers/`.
+- At the mint: the SL-2069 row in `docs/roadmap.md`, `docs/INDEX.md`, this plan's `status:`, FD-1484's essay and
   `docs/findings/register.md` (A11).
 
 ### Files shared with other groups
 
 **T:** `register-owed.py` reads `register_lint.parse_register`; T edits `register-owed.py` only, and this slice
-`register-lint.py`. No textual collision. **T is folded here** (10:36:35): this branch carries PL 8330's commits and one gate covers both. **C:**
+`register-lint.py`. No textual collision. **T is folded here** (10:36:35): this branch carries PL-2065's commits and one gate covers both. **C:**
 `backend/tests/test_contracts.py` is read by C's contract change, one line here. **H:** `tests/` different files.
 **Every plan's mint touches `docs/INDEX.md`**, which `doc-index.py` regenerates: re-merge after R3 changes nothing
 in its output by A8. **Serial with nobody for building; the gate is serial, last.**
