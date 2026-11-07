@@ -1,0 +1,44 @@
+{
+  "slug": "motor-gb",
+  "version": 14,
+  "input_contract": [
+    {"name": "driver_age", "type": "int", "nullable": false, "min": 17, "max": 99,
+     "description": "Age of main driver at policy inception"},
+    {"name": "postcode_outcode", "type": "string", "nullable": false, "pattern": "^[A-Z]{1,2}[0-9][A-Z0-9]?$"},
+    {"name": "effective_date", "type": "date", "nullable": false},
+    {"name": "purpose", "type": "enum",
+     "domain": ["new_business", "renewal", "mid_term_adjustment", "cancellation", "what_if"]}
+  ],
+  "outputs": [
+    {"name": "payable_premium_minor", "type": "money_minor", "required": true},
+    {"name": "premium_ladder", "type": "ladder", "required": true},
+    {"name": "peril_risk_premium", "type": "map<string, money_minor>", "required": false},
+    {"name": "decline_reasons", "type": "array<string>", "required": false}
+  ],
+  "steps": [
+    {"step_id": "s_input_age", "type": "input", "label": "Driver age",
+     "input_name": "driver_age", "on_missing": "error", "produces": "driver_age"},
+    {"step_id": "s_area", "type": "lookup", "label": "Rating area from outcode",
+     "reference_table_ref": "reference_table:ons-postcode-directory@7",
+     "key_expr": ["postcode_outcode"], "as_at": "effective_date",
+     "on_miss": "error", "produces": "rating_area"},
+    {"step_id": "s_rp", "type": "model_call", "label": "Technical risk premium",
+     "peril_structure_ref": "peril_structure:motor-gb-2026h2@2", "mode": "exact",
+     "feature_map": {"driver_age": "driver_age", "rating_area": "rating_area"},
+     "produces": ["risk_premium_minor", "peril_risk_premium"]},
+    {"step_id": "s_expense", "type": "table", "label": "Expense loading",
+     "rate_table_ref": "rate_table:motor-expense@3", "key_expr": ["distribution_channel"],
+     "on_miss": "default", "produces": "expense_factor"},
+    {"step_id": "s_office", "type": "expression", "label": "Office premium",
+     "expr": "risk_premium_minor * expense_factor * commission_factor * profit_factor",
+     "result_type": "money_minor", "produces": "office_premium_minor"},
+    {"step_id": "s_minprem", "type": "constraint", "label": "Minimum premium",
+     "condition": "office_premium_minor >= min_premium_minor",
+     "on_violation": "clamp", "clamp_bounds": {"min": "min_premium_minor"},
+     "reason_code": "MIN_PREMIUM_APPLIED", "produces": "office_premium_minor"},
+    {"step_id": "s_out", "type": "output", "label": "Payable premium",
+     "output_name": "payable_premium_minor",
+     "rounding": {"mode": "half_even", "dp": 0}, "consumes": "payable_premium_pre_round"}
+  ],
+  "sub_graphs": [{"ref": "sub_graph:ncd-ladder@4", "mount_point": "s_ncd"}]
+}

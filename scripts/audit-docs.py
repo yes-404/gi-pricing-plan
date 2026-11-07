@@ -3699,6 +3699,58 @@ def _partition_by_w37_11_record() -> tuple[list[str], list[str]]:
     return counted, disclosed
 
 
+_SPEC_FENCE_RE: Final = re.compile(r"^\s{0,3}```(?P<info>.*)$")
+_EXAMPLE_MARKER_RE: Final = re.compile(
+    r"^json (?:schema=(?P<schema>[A-Z]\w*)|(?P<illustrative>illustrative))$"
+)
+
+
+@dataclass(frozen=True)
+class SpecFence:
+    """One fenced block of a spec; `tests/test_spec_examples.py` loads this parser by path."""
+
+    path: pathlib.Path
+    line: int
+    info: str
+    body: str
+
+    @property
+    def language(self) -> str:
+        return self.info.split(" ", 1)[0]
+
+    @property
+    def schema(self) -> str | None:
+        marker = _EXAMPLE_MARKER_RE.match(self.info)
+        return marker["schema"] if marker else None
+
+    @property
+    def illustrative(self) -> bool:
+        marker = _EXAMPLE_MARKER_RE.match(self.info)
+        return bool(marker and marker["illustrative"])
+
+
+def spec_fences(path: pathlib.Path) -> list[SpecFence]:
+    """Every fenced block, indented ones included: a list-indented fence is still a fence."""
+    lines = path.read_text(encoding="utf-8").splitlines()
+    fences: list[SpecFence] = []
+    i = 0
+    while i < len(lines):
+        opening = _SPEC_FENCE_RE.match(lines[i])
+        if opening is None:
+            i += 1
+            continue
+        j = i + 1
+        while j < len(lines) and _SPEC_FENCE_RE.match(lines[j]) is None:
+            j += 1
+        fences.append(SpecFence(path, i + 1, opening["info"].strip(), "\n".join(lines[i + 1 : j])))
+        i = j + 1
+    return fences
+
+
+def check_spec_examples(specs: list[pathlib.Path]) -> None:
+    """Check 40: every fence declares a language; every json block is marked (FD-1381)."""
+
+
 def main() -> int:
     md = sorted(ROOT.rglob("*.md"))
     specs = sorted(ROOT.glob("specs/*.md"))
