@@ -583,3 +583,22 @@ Authority: to-lead "2026-11-04 10:21:30 GMT" (RULING (a): merge before the Tue 1
 ## PRs
 
 None yet.
+
+## Addendum 2026-11-07 — nfr-bench-1 session 2: item G, NFR-485 at 5 M × 60, both arms MET (exec-nfrs2)
+
+**Verdict: NFR-485 (fitting a 5 M × 60 dataset stays within 32 GB) MET on both arms**, on a non-spec host (8 vCPU) — a reading from a host narrower than NFR-456's 16-core worker, recorded as such.
+
+- **Run head** `6f958137b227f1a9499a4ab00caf40f79ba2439c` (tree `a995b876dd07bbc8e6b5d8712fd085178ba77e91`) = `origin/main` at session start, detached by sha on the VM; SL-1736 (#1429, `c796e4c0`) is contained in it. The instrument and the system under test are the same tree. Instrument hashes re-read ON THE VM before any item: `scripts/measure-p2-nfr-sweep.py` sha256 `093928d1ca4f2718525d1ec2765ec8ebb29cab230e468fef8a3c0d5f9d3e2eba`, `scripts/bench-model.py` sha256 `03e834b5ffa6502a16d8b9f66ae0de576f04e11aaf71dfaaa4bbb74ef1db02c3` (both equal the values of record).
+- **Host:** GCE `e2-standard-8` (`nfr-bench-1`), 8 vCPU, 32.9 GB, **AMD EPYC 7B12** (cpu family 23, model 49, stepping 0, flags hash `b8fe983b3fd2`) — **not** the Broadwell Xeon (model 79, flags hash `9674b27761c0`) the 21 Oct build and S1 ran on; cpubench ×3 on this host py-loop-20M 0.984 / 0.961 / 0.984 s, sha256-64MB 0.042 / 0.042 / 0.042 s (S1: 1.51 s / 0.19 s). So these figures are not like-for-like with S1's.
+- **Commands** (one arm per process, `python -u`, stdout and stderr to the log, log `head=` first line and `rc=` last): `systemd-run --user --scope -p MemoryMax=30G uv run --directory <wt> python -u scripts/bench-model.py --only glm --rows 5000000 --factors 60 --peak hwm`, and the same with `--only gbm … --rounds 500`. **Deviation from the brief's form, recorded:** plain `systemd-run --scope` needs interactive authentication on the VM; `--user` was used and its cgroup limit read back as `memory.max` = 32212254720 (30 GiB) before the run.
+- **Quiet bar** before each arm: load1 < 1.0 and `pgrep -c pytest` = 0 (glm: 0.77; gbm: 0.50 after 2 waiting reads 3.71, 1.36). Balloon counters (`/proc/vmstat`) `balloon_inflate` 0 / `balloon_deflate` 0 before and after each arm; `/proc/pressure/memory` `some`/`full` totals moved 348→348 and 344→344 (glm) and 348→349 / 344→344 (gbm).
+
+| arm | rows × factors | fit wall | VmHWM (kernel) | MemoryMax 30 GiB | against 32 GiB |
+|---|---|---|---|---|---|
+| glm | 5 000 000 × 60 | 37.21 s (217.28 s cpu) | **23,935,090,688 B** (22,826 MiB) | not hit | within |
+| gbm, 500 trees | 5 000 000 × 60 | 154.83 s (994.00 s cpu) | **8,118,091,776 B** (7,742 MiB) | not hit | within |
+
+- The gbm fit is on `frame.head(int(rows * 0.75))` = **3,750,000 rows** (`bench_gbm`), not 5 M; the harness's `VmHWM` is the whole process (it includes the 5 M-row synthetic frame and the diagnostics phase that follows the fit). The gbm process ran 4063 s wall in total (fit 154.83 s + NFR-488 diagnostics 3875.41 s over 623 scoring passes + artifact size; synthesis the rest); NFR-486's artifact 0.14 MB of 50 MB. The fit-time and NFR-488 lines are observations here, not verdicts.
+- Logs (copied to the shared box): `~/gi-pricing-plan.local/scratch/nfr-bench-1/s2/G-glm.log`, `G-gbm.log`.
+
+- **Bring-up (session 2, plan §4 refresh, 17:28 to 17:30 UTC; logs `bringup-1-tree.log` … `bringup-5-provision.log`):** `ssh nfr-bench-1` up 13 min at 17:28:03 UTC (load 0.00, 30 GB free, `df` 42 G free of 49 G); checkout detached by sha, `git diff --stat origin/main -- deploy` empty; `uv sync --all-packages --frozen` rc 0; **pnpm frozen install not run: no node/pnpm on the VM** (parity step, no item here measures the frontend); stores up (images `redis:7-alpine` f84b0c467801, `postgres:16-alpine` 81bd698b4594, `minio/minio:latest` 69b2ec208575, healthy); `redis-cli -n 0 dbsize` = 1 at START (the stale 21 Oct key) and = 1 at END, nothing run here wrote it; db 11 = 0 at START and END. The login role was present (`\du gip_app_login`) and `deploy/postgres/app-login-role.sql` re-applied (idempotent) — which cleared the role's password; `scripts/provision-app-role.py --allow-default-password` restored it before the first DB-backed item (item I addendum, attempt 1). CPU and pgbench: `pgbench -i -s 10` + `-c 4 -j 2 -T 20` 1484.5 tps, 2.694 ms latency; CTAS 1 M rows 2.179 s (shared box 3 Nov: 1105.5 tps, 3.618 ms, 3062 ms; S1 Broadwell host not re-quoted here). One database other than the template pre-existed (`gipricing_sl1455_t4_1792592230`, from 21 Oct); not touched.
