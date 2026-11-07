@@ -19,7 +19,7 @@ import hashlib
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import datetime
-from decimal import Decimal, InvalidOperation
+from decimal import Context, Decimal, Inexact, InvalidOperation
 from io import BytesIO, StringIO
 from itertools import product
 from typing import Literal
@@ -29,6 +29,7 @@ from openpyxl import Workbook, load_workbook  # type: ignore[import-untyped]
 from openpyxl.utils.exceptions import InvalidFileException  # type: ignore[import-untyped]
 
 from model_schema.modelling import Factor, FactorIntent, GlmFitResult, Model, RelativityLevel
+from model_schema.money import MAX_POSITIONAL_EXPONENT
 from model_schema.rating import (
     BulkOperation,
     BulkOperationResult,
@@ -56,7 +57,7 @@ from model_schema.rating import (
     UpliftTableParameters,
 )
 from model_schema.refs import ArtifactRef, slug_is_admitted
-from pricing_core.rating.compile import ValidationIssue
+from pricing_core.rating.compile import ValidationIssue, cell_parses
 
 _APPROVED_OR_BETTER = frozenset({"approved", "live", "retired"})
 
@@ -66,6 +67,7 @@ INCOMPLETE_KEY_DOMAIN = "INCOMPLETE_KEY_DOMAIN"
 NULL_VALUE = "NULL_VALUE"
 OUT_OF_BOUNDS = "OUT_OF_BOUNDS"
 DUPLICATE_KEY = "DUPLICATE_KEY"
+CELL_UNPARSEABLE = "RATE_TABLE_CELL_UNPARSEABLE"
 
 #: W10-3B's named failure codes (03 §5.2, FR-233/235/232). Internal codes: the API
 #: maps them onto 03 §5.1's module error codes at the boundary.
@@ -75,6 +77,7 @@ FLOOR_ABOVE_CAP = "FLOOR_ABOVE_CAP"
 REBASE_NO_MATCH = "REBASE_NO_MATCH"
 REBASE_AMBIGUOUS = "REBASE_AMBIGUOUS"
 REBASE_ZERO_REFERENCE = "REBASE_ZERO_REFERENCE"
+BULK_OPERATION_NOT_APPLICABLE = "BULK_OPERATION_NOT_APPLICABLE"
 IMPORT_KEY_MISMATCH = "IMPORT_KEY_MISMATCH"
 IMPORT_TYPE_MISMATCH = "IMPORT_TYPE_MISMATCH"
 IMPORT_PARSE_ERROR = "IMPORT_PARSE_ERROR"
@@ -163,7 +166,8 @@ def extract_relativity_table(
         for level in levels:
             if level.relativity is None:
                 continue
-            rows.append({entry: level.level, value_name: str(Decimal(str(level.relativity)))})
+            text = format(Decimal(str(level.relativity)), "f")
+            rows.append({entry: level.level, value_name: text})
     return rows
 
 
@@ -324,6 +328,14 @@ def _value_issue(
         return ValidationIssue(
             code=OUT_OF_BOUNDS,
             message=_non_finite_message(raw, key_values),
+            field=value.name,
+        )
+    if not cell_parses(raw):
+        return ValidationIssue(
+            code=CELL_UNPARSEABLE,
+            message=(
+                f"value {raw!r} for key {key_values} is not a number the rating engine can read"
+            ),
             field=value.name,
         )
     if value.min is not None and decimal_value < value.min:
@@ -680,8 +692,35 @@ def _new_version(
 
 
 def _format_value(value: Decimal) -> str:
-    """A decimal string with trailing zeros dropped — never a float (R2)."""
-    return str(value.normalize())
+    """Fixed point, trailing zeros dropped: never a float (R2), never an exponent (FD-1648).
+
+    `RateTableValue` declares no dp, so this normalises and formats (the entry
+    "2026-11-05 10:11:39 GMT", limb (i)).
+
+    The cell text is stored, so it is exact: `normalize` runs in a context sized to the
+    value's own digits (it cannot round) rather than the ambient 28. `Inexact` is trapped
+    as a guard: inside the default Context exponent range (+/-999999) the sized precision
+    means `normalize` cannot round; outside it (exponents past +/-999999) `Inexact` is raised
+    and the trap refuses, fail-closed.
+    `InvalidOperation` stays trapped so a signaling NaN raises as it did under the ambient
+    context. `Infinity` and a quiet `NaN`
+    pass through as `Infinity` / `NaN`, as they always did.
+
+    The text of a fixed-point value grows with its exponent (`1E+999990` is a megabyte, and
+    `_transform_rows` writes every row before `_validate_result` reads one), so the adjusted
+    exponent is bounded first, zero's included (`0E-999999999` is the same gigabyte): the same
+    `MAX_POSITIONAL_EXPONENT` the model-schema decimals use, refused before any text exists.
+    A special value's `adjusted()` is 0, so it is not caught here."""
+    if not -MAX_POSITIONAL_EXPONENT <= value.adjusted() <= MAX_POSITIONAL_EXPONENT:
+        raise ValueError(
+            f"{CELL_UNPARSEABLE}: a computed cell whose adjusted exponent is beyond "
+            f"{MAX_POSITIONAL_EXPONENT} either way is no value the rating engine can read "
+            "(FR-21, FR-273)"
+        )
+    if value.is_zero():
+        return "0"
+    exact = Context(prec=max(len(value.as_tuple().digits), 1), traps=[Inexact, InvalidOperation])
+    return format(value.normalize(exact), "f")
 
 
 def _transform_rows(
@@ -712,6 +751,27 @@ def _check_filter_key(table: RateTableVersion, filter: KeyFilter) -> None:
         )
 
 
+_ALL_VALUE_TYPES = frozenset(RateTableValueType)
+
+#: FR-233: the value types each bulk operation has a meaning on. Absence refuses, so a value
+#: type added later is refused until someone says otherwise.
+_OPERATION_VALUE_TYPES: Mapping[str, frozenset[RateTableValueType]] = {
+    "uplift_table": _ALL_VALUE_TYPES - {RateTableValueType.COUNT},
+    "uplift_by_filter": _ALL_VALUE_TYPES - {RateTableValueType.COUNT},
+    "floor_and_cap": _ALL_VALUE_TYPES,
+    "rebase_to_level": frozenset({RateTableValueType.RELATIVITY}),
+}
+
+
+def _check_value_type(table: RateTableVersion, kind: str) -> None:
+    """FR-233: refuse before anything else reads the table."""
+    if table.value.type not in _OPERATION_VALUE_TYPES[kind]:
+        raise ValueError(
+            f"{BULK_OPERATION_NOT_APPLICABLE}: {kind} has no meaning on a "
+            f"{table.value.type.value} column of rate_table:{table.slug}@{table.version}"
+        )
+
+
 def _row_matches(row: CellRow, filter: KeyFilter) -> bool:
     return all(row[key] in values for key, values in filter.items())
 
@@ -731,6 +791,7 @@ def uplift_table(
     The result is validated against the declared bounds before it persists
     (FR-234), and the version records the operation (04 §4.4).
     """
+    _check_value_type(table, "uplift_table")
     rows = _rows_of(table)
     factor = Decimal(1) + percentage
     new_rows, changed = _transform_rows(rows, table.value.name, lambda old: old * factor)
@@ -752,6 +813,7 @@ def uplift_by_filter(
     table: RateTableVersion, *, percentage: Decimal, filter: KeyFilter
 ) -> RateTableVersion:
     """FR-233: uplift only the cells matching the filter, new immutable version."""
+    _check_value_type(table, "uplift_by_filter")
     rows = _rows_of(table)
     _check_filter_key(table, filter)
     factor = Decimal(1) + percentage
@@ -794,6 +856,7 @@ def floor_and_cap(
     The floor is enforced at operation time (03 §5.2), not shape-enforced: a version
     may still carry values outside the declared bounds if an earlier save allowed it.
     """
+    _check_value_type(table, "floor_and_cap")
     if floor > cap:
         raise ValueError(f"{FLOOR_ABOVE_CAP}: floor {floor} is above cap {cap}")
     rows = _rows_of(table)
@@ -822,7 +885,11 @@ def rebase_to_level(
     The reference row's value becomes exactly 1 and everything else is expressed
     relative to it. Every cell is re-stringified (the ratio), so even a row whose
     value equals the reference keeps a normalized rendering.
+
+    It runs only on a `relativity` column, and it moves premiums unless the base rate
+    offsets it (FR-233).
     """
+    _check_value_type(table, "rebase_to_level")
     rows = _rows_of(table)
     _check_filter_key(table, base_level)
     matching = [row for row in rows if _row_matches(row, base_level)]

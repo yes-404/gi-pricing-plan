@@ -229,17 +229,15 @@ the platform version it ran on, so that a figure reproduced later is attributabl
 build that produced it. It is set when the worker moves the Job to `running`, as the
 worker's version and build joined by `+`, and it is null while the Job is `queued`.
 
-Failure shape:
+Failure shape: `Job.error` on a failed Job is a `JobError`, shown here without the enclosing Job:
 
 ```json
 {
-  "error": {
-    "code": "GLM_DID_NOT_CONVERGE",
-    "message": "GLM failed to converge after 200 iterations.",
-    "retryable": false,
-    "detail": {"factors_suspected": ["vehicle_group_rated"], "max_gradient": 4.1e-3},
-    "trace_id": "4bf92f3577b34da6a3ce929d0e0e4736"
-  }
+  "code": "GLM_DID_NOT_CONVERGE",
+  "message": "GLM failed to converge after 200 iterations.",
+  "retryable": false,
+  "detail": {"factors_suspected": ["vehicle_group_rated"], "max_gradient": 4.1e-3},
+  "trace_id": "4bf92f3577b34da6a3ce929d0e0e4736"
 }
 ```
 
@@ -247,15 +245,13 @@ Failure shape:
 
 ```json
 {
+  "slug": "prod",
   "name": "prod",
   "description": "Production quoting",
   "promotion_order": 3,
   "requires_prior_environment": "uat",
   "live_deployments": [{"rating_version_ref": "rating_version:motor-gb@27",
-                        "deployed_at": "2026-10-01T06:00:00Z", "bundle_hash": "sha256:…"}],
-  "settings": {"trace_sampling_rate": 0.01, "rate_limit_rps": 500,
-               "shadow": {"enabled": true, "candidate_ref": "rating_version:motor-gb@28",
-                          "traffic_fraction": 0.05}}
+                        "deployed_at": "2026-10-01T06:00:00Z", "bundle_hash": "sha256:9f2c9f2c9f2c9f2c9f2c9f2c9f2c9f2c9f2c9f2c9f2c9f2c9f2c9f2ca1b2c3d4"}]
 }
 ```
 
@@ -266,6 +262,10 @@ Failure shape:
 > - **`settings` is not in this slice's shape.** The `settings` object lands with WK-674 Slice 3 (`OQ-1235`, decided by `RL-1311`). `requires_prior_environment` is the predecessor that FR-429's predicate reads; the seeds carry `null`, `dev` and `uat`.
 >
 > **Amended 2026-10-10 (WK-674 Slice 3, `PL-1583`): the `settings` object is replaced by a pointer.** The example above is not rewritten. An Environment's settings are the Environment-setting rows of §4.4, one row per (Environment, key), written by `PUT /api/v1/environments/{slug}/settings` and read with every layer's candidate by `GET`. The example's keys `trace_sampling_rate`, `rate_limit_rps` and `shadow` were example names. The contract is the registry's names: `rating.trace_sample_rate` and `scoring.default_client_rate_limit_rps`. There is no `settings` object inside the Environment.
+
+> **Clarified 2026-11-05 (`RL-2054` row 22, FD-1381).** The example above is now rewritten: it carries the
+> `slug`, drops `settings` (§4.4 holds the settings) and prints a full 64-hex `bundle_hash`. The two notes
+> above that say "The example above is not rewritten" describe it as printed before this date.
 
 ### 4.3 `ServiceAccount` / API key
 

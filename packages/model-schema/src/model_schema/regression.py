@@ -24,7 +24,7 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from model_schema.input_free import InputFreeError
-from model_schema.money import DecimalStr, MoneyMinor
+from model_schema.money import CanonicalDecimalStr, MoneyMinor
 from model_schema.refs import ArtifactRef, BlobRef, Slug
 from model_schema.scoring import QuoteContext, ScoringOutcome
 
@@ -101,8 +101,8 @@ class MonotoneInInput(BaseModel):
     input: str = Field(min_length=1)
     direction: Literal["increasing", "decreasing"]
     strict: bool = False
-    lower: DecimalStr | None = None
-    upper: DecimalStr | None = None
+    lower: CanonicalDecimalStr | None = None
+    upper: CanonicalDecimalStr | None = None
 
     @model_validator(mode="after")
     def _ordered_range(self) -> Self:

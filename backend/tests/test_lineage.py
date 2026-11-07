@@ -475,6 +475,70 @@ async def test_an_archived_version_stays_readable_and_referenceable(
     assert row.status == DatasetStatus.ARCHIVED
 
 
+@pytest.fixture
+def auditor(workspace_id, principal, grant) -> dict[str, str]:
+    asyncio.get_event_loop().run_until_complete(grant("auditor"))
+    return _headers(principal.id, workspace_id)
+
+
+@pytest.mark.req("FR-80")
+def test_an_auditor_reads_an_archived_version_and_its_model_over_the_api(
+    api_client: TestClient, workspace_id, auditor, database
+) -> None:
+    """FR-80 over the API, which the row test above does not reach.
+
+    The row test proves the archive is soft. This proves the read path does not filter it
+    out: an Auditor reads the archived version, and a Model fitted on it still names a version
+    that resolves.
+    """
+    from app.db.models import ModelRow
+    from model_schema import GlmSpec, OffsetSpec
+
+    loop = asyncio.get_event_loop()
+    analyst = loop.run_until_complete(_with_role(database, workspace_id, "analyst"))
+    _, version_id = loop.run_until_complete(_version(database, workspace_id, analyst))
+    slug = f"fr80-{new_uuid7().hex[-8:]}"
+
+    async def _archive_and_fit() -> None:
+        async with database.unit_of_work() as session:
+            await datasets.archive_version(
+                session, workspace_id=workspace_id, actor=analyst, version_id=version_id,
+                reason="superseded by the 2026H2 extract",
+            )
+        spec = GlmSpec(
+            model_family_slug=slug,
+            dataset_version_id=version_id,
+            response_column="claim_count",
+            offset=OffsetSpec(kind="log_column", column="exposure_years"),
+        )
+        async with database.unit_of_work() as session:
+            session.add(
+                ModelRow(
+                    workspace_id=workspace_id,
+                    model_family_slug=slug,
+                    version=1,
+                    status="draft",
+                    dataset_version_id=version_id,
+                    spec=spec.model_dump(mode="json"),
+                    spec_hash=f"v3:sha256:{new_uuid7().hex}{new_uuid7().hex}",
+                )
+            )
+
+    loop.run_until_complete(_archive_and_fit())
+
+    read = api_client.get(f"/api/v1/dataset-versions/{version_id}", headers=auditor)
+    assert read.status_code == 200, read.text
+    assert read.json()["status"] == "archived"
+
+    model = api_client.get(f"/api/v1/models/{slug}", headers=auditor)
+    assert model.status_code == 200, model.text
+    assert model.json()["dataset_version_id"] == str(version_id)
+    resolved = api_client.get(
+        f"/api/v1/dataset-versions/{model.json()['dataset_version_id']}", headers=auditor
+    )
+    assert resolved.status_code == 200, resolved.text
+
+
 @pytest.mark.req("FR-80")
 async def test_an_archived_version_cannot_be_fitted_on(
     database: Database, workspace_id

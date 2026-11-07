@@ -438,8 +438,10 @@ async def record_certificate(
 ) -> tuple[CustomMetricRow, MetricCertificateRow]:
     """Persist a certificate and move the metric's status (FR-157).
 
-    A `failed` certificate is **recorded and leaves the metric in `draft`**, and a
-    re-certification that fails also **clears `certificate_id`** —
+    From `draft` or `certified`, a `failed` certificate is **recorded and leaves the metric
+    in `draft`** as `custom_metric.certification_failed`, and a re-certification that fails
+    also **clears `certificate_id`** — from any later status the run moves nothing and is
+    `custom_metric.certificate_recorded` (PL-2059 DP-1, DP-3);
     `objectives.record_certificate`'s reasoning applies unchanged.
     """
     row = await _get_or_404(session, workspace_id=workspace_id, metric_id=metric_id)
@@ -456,16 +458,23 @@ async def record_certificate(
     session.add(certificate)
 
     failed = result.overall is CertificateOutcome.FAILED
-    row.status = (MetricStatus.DRAFT if failed else MetricStatus.CERTIFIED).value
-    row.certificate_id = None if failed else certificate.id
+    # Re-checked here: the route's refusal ran before the Job existed, so a run queued at
+    # `certified` can end after submission (PL-2059 DP-3).
+    moved = before in {MetricStatus.DRAFT.value, MetricStatus.CERTIFIED.value}
+    if moved:
+        row.status = (MetricStatus.DRAFT if failed else MetricStatus.CERTIFIED).value
+        row.certificate_id = None if failed else certificate.id
     await session.flush()
+    outcome = (
+        ("certification_failed" if failed else "certified") if moved else "certificate_recorded"
+    )
 
     await audit.record(
         session,
         workspace_id=workspace_id,
         actor=actor,
         source=JobSource.SYSTEM if job_id else JobSource.API,
-        action="custom_metric.certified",
+        action=f"custom_metric.{outcome}",
         entity_ref=f"custom_metric:{row.slug}@{row.version}",
         before={"status": before},
         after={
@@ -559,7 +568,6 @@ async def submit(
         justification=change_summary,
     )
     return row, request
-
 
 
 async def apply_approval_decision(
@@ -661,9 +669,7 @@ async def usage(
                 select(ModelRow)
                 .where(
                     ModelRow.workspace_id == workspace_id,
-                    ModelRow.spec["eval_metrics"].op("@>")(
-                        cast([{"ref": ref}], JSONB)
-                    ),
+                    ModelRow.spec["eval_metrics"].op("@>")(cast([{"ref": ref}], JSONB)),
                 )
                 .order_by(ModelRow.model_family_slug, ModelRow.version)
             )

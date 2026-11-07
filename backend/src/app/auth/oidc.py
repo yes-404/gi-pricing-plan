@@ -24,7 +24,7 @@ from typing import Any, Final
 
 import jwt
 from jwt import PyJWKClient
-from jwt.exceptions import InvalidTokenError
+from jwt.exceptions import DecodeError, InvalidTokenError
 
 from app.config import Settings
 from app.observability.logging import get_logger
@@ -98,6 +98,11 @@ class OidcVerifier:
 
         try:
             signing_key = self._jwk_client().get_signing_key_from_jwt(token)
+        except (DecodeError, RecursionError) as exc:
+            # A token that does not parse (or nests past the JSON parser's limit) is malformed,
+            # which is not a key-resolution failure: name it as what it is (FD-1493).
+            _log.warning("malformed token", extra={"error_type": type(exc).__name__})
+            raise TokenRejectedError("malformed token") from exc
         except Exception as exc:
             # A JWKS fetch failure and an unknown `kid` both land here. Neither is
             # distinguishable to the caller, and the operator gets the type in the log.
