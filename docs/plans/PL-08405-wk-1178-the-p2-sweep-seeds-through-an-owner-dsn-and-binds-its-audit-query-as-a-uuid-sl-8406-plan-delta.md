@@ -381,3 +381,37 @@ Code: none with LAST-2 or SL 8373 (Gate form). Records: `docs/INDEX.md` with bot
 6. **No range of requirement ids.** Estimates are marked: the hours, W's 45 min and the gate's 2.5 h.
 7. **The plan rules nothing:** six DPs, each with a recommendation; the gate form is a reading, and the
    word is the maintainer's.
+
+## Dated delta, Sat 7 Nov 2026 (task W and A7): the accepted size is 100000 rows for one-way and storage
+
+This section is appended. No sentence above it is edited: Task W and A7 still read "2000" as written, and
+this delta is the record that the 2000-row green could not exist.
+
+**Ruling.** To-lead "2026-11-07 21:03:10 GMT" (the maintainer, by delegation): "A7 one-way and storage:
+ACCEPT 100000 rows as A7's size, by dated delta on PL 8405 task W and A7". The reason it quotes: "at 2000
+and 20000 rows the SEED's own fit raises DegenerateFitError ("9 level(s) below the relativity floor 0.01")
+at R0 and at the head alike, before any code under test; at 100000 the red/green splits exactly on the two
+defects". A7's `cells-diff --only rows-10000 --seeded-jobs 10` stays at its size and is MET.
+
+**The size now accepted.** `one-way --fremtpl2-rows 100000 --wide-rows 2000` and
+`storage --fremtpl2-rows 100000` (the one-way `--wide-rows` stays 2000). Task W's
+`--fremtpl2-rows 2000` for the same two arms is superseded by this line, not edited.
+
+**Evidence.** Logs are in `~/gi-pricing-plan.local/scratch/sl-8406/`; each is SHA-first and rc-last.
+R0 is `2e609db4832ac428e9877d4335de6e32f71b529c`; the head the window ran on is
+`86b63e54ed40e41f3318c7ce276c33563f130268` (not this branch's later tip).
+
+- **At 2000 rows, the seed's fit raises before any code under test.** The line is, verbatim to the colon:
+  `model.DegenerateFitError: the fit is degenerate: 9 level(s) below the relativity floor 0.01: area[F] = 1.36e-07, region[R23] = 1.16e-07, region[R42] = 5.7e-08, ...`
+  - at R0: `w-a7red-oneway.log:103` and `w-a7red-storage.log:103`, both rc=1.
+  - at the head: `w-a7green-storage.log:103`, rc=1. A one-way run at 2000 rows at the head was not logged
+    (no `w-a7green-oneway.log`); its seed path is the same one `w-a7red-oneway.log` shows failing.
+- **At 20000 rows it still raises, with one level.** `w-probe-storage-20000.log:103` (head, `storage`, rc=1):
+  `model.DegenerateFitError: the fit is degenerate: 1 level(s) below the relativity floor 0.01: region[R43] = 2.15e-06. The seed holds too few rows for these levels to carry a claim; seed more rows ...`
+  There is no 20000-row log at R0. The ruling's "both ends" is quoted here for 2000 only, at R0 and at the head.
+- **At 100000 rows the red/green splits on the two defects.**
+  - R0 red: `w-bigred-oneway.log:120` `asyncpg.exceptions.InsufficientPrivilegeError: permission denied for table workspaces`;
+    `w-bigred-storage.log:115` `TypeError: expected str, got UUID`. Both rc=1.
+  - head green: `w-biggreen-oneway.log` rc=0; `w-biggreen-storage.log` rc=0; `w-probe-storage-100000.log` rc=0.
+- **Process note carried from the ruling:** a plan's run size is proved by one run before it is written as
+  the acceptance size. A7's 2000 was not.
