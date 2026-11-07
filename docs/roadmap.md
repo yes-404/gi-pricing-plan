@@ -3767,7 +3767,7 @@ Every declared state transition of a governed Artifact emits its Audit Event: th
 id: SL-2066
 family: slice
 title: WK-1178 slice — FD-1916: `register-owed.py` reads the live decision text
-status: active                    # draft → active → closed (§1.2a)
+status: closed                    # draft → active → closed (§1.2a)
 created: 2026-11-07   # original date 2026-11-05, working id 8331, minted 2026-11-07
 owner: lead
 tree: 8570b813c8d6162f7b1107df311c38a999343603
@@ -3781,13 +3781,15 @@ relates: [FD-1916, PL-2065, LG-2067]
 
 (Minted 2026-11-07 from working id 8331, with the mint tool of record `mint-repoint.py`; plan `PL-2065`, ledger `LG-2067`. `tree` is the tree of the slice branch (`sl-8343-table-row-parser` @`723e5fca`) before the merge of `origin/main`. The slice's PR carries T, the first of two slices on one branch and one gate.)
 
+*(Closed 2026-11-07 by the audit commit of the slice's PR, on the lead's adoption of aud-sl8343 (`from-lead-2026-10-09.md`, "2026-11-05 17:08:05 GMT"); no row existed at `origin/main` `3c3ee5cbc182` before this PR's mint, which added it as `active`. Item 42: the row at `origin/main` was found absent, not `active`.)*
+
 #### SL-2069 — WK-1178 slice — FD-1484: one table-row parser, `table_rows.py`
 
 ```yaml
 id: SL-2069
 family: slice
 title: WK-1178 slice — FD-1484: one table-row parser, `table_rows.py`
-status: active                    # draft → active → closed (§1.2a)
+status: closed                    # draft → active → closed (§1.2a)
 created: 2026-11-07   # original date 2026-11-05, working id 8343, minted 2026-11-07
 owner: lead
 tree: 8570b813c8d6162f7b1107df311c38a999343603
@@ -3800,6 +3802,8 @@ relates: [FD-1484, PL-2068, LG-2070, SL-2066]
 One stdlib table-row parser (`packages/model-schema/src/model_schema/table_rows.py`) replaces the pipe-splitting readers in the checkers and `guide.py`, so a cell holding an escaped pipe is no longer cut short and a declared endpoint is no longer invisible. The plan is `PL-2068`; the ledger is `LG-2070`.
 
 (Minted 2026-11-07 from working id 8343, with the mint tool of record `mint-repoint.py`; plan `PL-2068`, ledger `LG-2070`. `tree` is the tree of the slice branch (`sl-8343-table-row-parser` @`723e5fca`) before the merge of `origin/main`. The slice's PR carries T folded, the second of two slices on one branch and one gate.)
+
+*(Closed 2026-11-07 by the audit commit of the slice's PR, on the lead's adoption of aud-sl8343 (`from-lead-2026-10-09.md`, "2026-11-05 17:08:05 GMT"); no row existed at `origin/main` `3c3ee5cbc182` before this PR's mint, which added it as `active`. Item 42: the row at `origin/main` was found absent, not `active`.)*
 
 ### WK-1250 — Sub-graph composition and MTA/cancellation pricing — FR-217's inlining and FR-218's authoring half
 
