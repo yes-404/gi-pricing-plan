@@ -3742,6 +3742,31 @@ def spec_fences(path: pathlib.Path) -> list[SpecFence]:
 
 def check_spec_examples(specs: list[pathlib.Path]) -> None:
     """Check 40: every fence declares a language; every json block is marked (FD-1381)."""
+    total = schema = illustrative = unmarked = 0
+    for spec in specs:
+        for block in spec_fences(spec):
+            where = f"{block.path.name}:{block.line}"
+            if not block.language:
+                fail(f"check 40: {where}: a fence declares no language")
+                continue
+            if block.language != "json":
+                continue
+            total += 1
+            if block.schema:
+                schema += 1
+                try:
+                    json.loads(block.body)
+                except ValueError as exc:
+                    fail(f"check 40: {where}: schema={block.schema} does not parse: {exc}")
+            elif block.illustrative:
+                illustrative += 1
+            else:
+                unmarked += 1
+                fail(f"check 40: {where}: json block has no schema= or illustrative marker")
+    notes.append(
+        f"check 40: {total} json blocks: {schema} schema, {illustrative} illustrative, "
+        f"{unmarked} unmarked"
+    )
 
 
 def main() -> int:
@@ -4259,6 +4284,9 @@ def main() -> int:
 
     # 29. every docs/findings/register.md Decision cell conforms to its own header grammar
     check_register_grammar()
+
+    # 40. every spec fence declares a language; every json block declares its class (FD-1381)
+    check_spec_examples(specs)
 
     # Last, after every check has had its say: the governed W37-11 residue ceiling
     # decides which of the failures above are disclosed rather than counted.

@@ -57,6 +57,12 @@ rc=1
 
 The cause is the empty check recording no failure (`assert []`), not an import or fixture error. The skip is the empty `MARKED` parametrisation (no block is marked yet). The fixture test passes already (it needs no check); its mutation proof (T8) is S4's. `ruff check .` rc 0, `mypy` "Success: no issues found in 254 source files" at this tree.
 
+**Check 32 read (2026-11-07, plain audit-docs, gate-2 flock):** the ~884 lines plain \`audit-docs.py\` prints are the DISCLOSED section ("DISCLOSED (849, at or under the W37-11 residue ceiling)"), not failures. At base 3c3ee5cb a detached comparison printed "All checks passed." with the same disclosed lines (244 check-32, 497 check-36, 71 check-30, 27 check-35); at b5c21895 FAILED (2) were check 31 (allocation gap) and check 32 (SL-8373 does not resolve in the INDEX), both this slice's own working ids. Plain is the gate's mode; used from here on. Logs: \`scratch/sl-8373-spec-examples/audit-plain*.log\`.
+
+**Merge of LAST-2:** \`git merge --no-ff origin/main\` (c602a539, #1454): auto-merged \`scripts/audit-docs.py\`, conflict only in \`docs/INDEX.md\` (taken theirs, regenerated, \`doc-index.py --check\` rc 0). Merge commit b3079458.
+
+**S3** (A7, A9): the check body from the plan, called after \`check_register_grammar()\` at the tail of \`main()\`; lines wrapped for E501. Tree b3079458+S3. \`run-small\` on \`tests/test_spec_examples.py\`: "7 passed, 1 skipped in 0.96s", rc=0 (T4 to T6 green). \`ruff check .\` rc 0; \`mypy\` "Success: no issues found in 256 source files". Plain audit-docs now FAILED (69): check 31, check 32 (own ids) and 67 check-40 lines on the real specs, as the plan requires before S4 ("check 40: 63 json blocks: 0 schema, 0 illustrative, 63 unmarked"; 4 bare fences: 00:14, 00:79, 00:269, 00:365).
+
 ## PRs
 
 (none; no PR in this seat)
