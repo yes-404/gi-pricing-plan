@@ -88,7 +88,19 @@ revert proof: git diff --stat =[]
 rc=0
 ```
 
-The "unset" mutation reds as `sqlalchemy ArgumentError` from `make_url(None)` inside the test, not by the guard's own assertion: with the clause gone the function has nothing to return for `None`. The mismatch test is three parametrised cases, so the single clause reds three.
+The "unset" line above is superseded (the maintainer, to-lead "2026-11-07 19:35:11 GMT": A5 needs the guard's own refusal, a crash is not it). It reded as `sqlalchemy ArgumentError` from `make_url(None)`, a crash. `test_dsn_guard_refuses_an_unset_owner_dsn` now reads a raise as "no refusal" and asserts the refusal's message text (`GIP_MIGRATION_DATABASE_URL is not set`, `same -T copy as GIP_DATABASE_URL`). Re-proof at head `1a3924664bb0` with the new test, `unset` clause removed from `dsn_failure`:
+
+```
+head=1a3924664bb0794d09d3afd91e183d950315bb66 MUTATED(unset clause removed)
+E       AssertionError: the guard must return a refusal for an unset owner DSN
+E       assert None is not None
+FAILED tests/test_measure_p2_nfr_sweep.py::test_dsn_guard_refuses_an_unset_owner_dsn
+1 failed, 72 passed in 7.29s
+rc=1
+revert: git diff --stat -- scripts = []
+```
+
+Green after the revert: `head=1a3924664bb0794d09d3afd91e183d950315bb66` / `73 passed in 6.83s` / `rc=0`. `ruff check .` rc 0; `ruff format --check` on the test file rc 0. The mismatch test is three parametrised cases, so the single clause reds three.
 
 ### Other A-items, at head `1a18754a`
 

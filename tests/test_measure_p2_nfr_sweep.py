@@ -446,9 +446,16 @@ def test_dsn_guard_accepts_an_app_and_an_owner_on_one_copy() -> None:
 
 
 def test_dsn_guard_refuses_an_unset_owner_dsn() -> None:
-    failure = m.dsn_failure(APP_DSN, None)
-    assert failure is not None
-    assert "GIP_MIGRATION_DATABASE_URL" in failure
+    # The guard's own refusal is the thing under test: a crash on `None` (what removing the
+    # clause gives, from `make_url(None)`) is not a refusal, so it is read as "no refusal" and
+    # fails on the assertion below, not as an error.
+    try:
+        failure = m.dsn_failure(APP_DSN, None)
+    except Exception:  # any raise is "the guard did not refuse"
+        failure = None
+    assert failure is not None, "the guard must return a refusal for an unset owner DSN"
+    assert "GIP_MIGRATION_DATABASE_URL is not set" in failure
+    assert "same -T copy as GIP_DATABASE_URL" in failure
 
 
 def test_dsn_guard_refuses_the_template_database() -> None:
