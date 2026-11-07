@@ -39,7 +39,24 @@ Existing fixtures: `test_model_lifecycle.py` and `test_model_nfrs.py` call `serv
 
 ### Gate
 
-Not run by the executor (the gate is the lead's). Targeted runs only, in the granted DB window, `-k archiv` on `backend/tests/test_api_model_lifecycle.py`; see the Build log. Not run: `test_model_lifecycle.py` (service-level archive tests, DB-backed) and the rest of the file; `audit-docs`, `req-coverage`, `generate-contracts --check` (the `archive_model` docstring was left untouched on purpose, since route docstrings feed the generated OpenAPI).
+The full two-half gate ran on the lead's slot under item 31, on the branch head `42009e0d15a918e4d869597cec1a57fe39d9e182` (tree `0f095cd9faa559e6c5f8baac81152c36f6a918a5`), range `origin/main...sl-8368-archive-permission`, START 2026-11-07T20:17:33Z, END 2026-11-07T22:29:14Z, `rc=1` (the END line of `~/gi-pricing-plan.local/scratch/sl8368-gate/gate/gate.log`). Range files at that head: `backend/src/app/api/models.py`, `backend/src/app/platform/modelling.py`, `backend/tests/test_api_model_lifecycle.py`, `docs/INDEX.md`, this ledger and `docs/specs/02-modelling.md`. The gate head predates the re-merge of `origin/main` `e12dc849` and the mint, which are docs only (the re-merge brought main's code in; the code-adjacent tests of the slice are the gate's own full suite).
+
+| Stage (file in `gate/`) | rc | Result |
+|---|---|---|
+| ruff (`ruff.rc`) | 0 | `All checks passed!` |
+| mypy (`mypy.rc`) | 0 | `Success: no issues found in 253 source files` |
+| import-linter (`import_linter.rc`) | 0 | |
+| generate-contracts --check (`contracts.rc`) | 0 | `58 generated contracts match the models` |
+| req-coverage (`req_coverage.rc`) | 0 | |
+| audit-docs (`audit_docs.rc`) | 1 | Own ids only, by the lead's reading (from-lead "2026-11-07 22:29:47 GMT"): check 31 three lines (`gap … between 2064 and 8366`, `gap … between 8366 and 8368`, `id 8369 is created: 2026-11-05, earlier than id 2064's 2026-11-06`) and check 25 one line (this ledger cites finding `FD 8366`, which resolved nowhere before the mint). Counts of every `  - check N:` line in that log, by `grep -E '^  - check [0-9]+:'`: check 2: 5; 5: 5; 25: 1; 30: 71; 31: 3; 32: 244; 35: 27; 36: 497. The post-mint run at the minted head is in the Build log below. |
+| pytest (`pytest.rc`) | 1 | `13 failed, 7512 passed, 27 skipped, 5 xfailed, 156 warnings in 4737.18s (1:18:57)` |
+| pnpm install / generate:api / lint / type-check / test / build | 0 each | vitest `Test Files  138 passed (138)`, `Tests  919 passed (919)` |
+| demo `--journey wf-699 --no-compose` | 0 | PASS, `demo seconds` 1457; D7 `sum +489842011 minor units` |
+| template guard / db 0 | | start and end `alembic_version=1 environments=3 tenant_marker=1`; `redis db 0 dbsize` 56 at start and end; keycloak bind source under tools-main |
+
+**The 13 failing tests, by name, are item 31's set exactly** (eight docs-audit files; no other failure): `test_audit_docs_finding_citations.py::test_a_finding_resolved_only_by_a_closure_record_is_not_flagged`; `test_audit_docs_ids.py::test_the_real_tree_passes_all_ten_checks`, `::test_doc_id_check_exits_0_on_the_real_tree`; `test_audit_docs_process_core_digest.py::test_an_unrelated_file_edit_is_the_negative_control_and_stays_green`, `::test_the_committed_digest_currently_matches_the_committed_spec`; `test_audit_docs_w37_11_ceiling.py::test_audit_docs_end_to_end_exit_0_then_1_then_0_on_an_injected_residue`; `test_doc_index.py::test_an_index_skipping_a_reserved_block_breaks_contiguity`; `test_register_lint.py::test_check_29_is_wired_into_the_docs_gate`, `::test_check_29_note_carries_the_residue_line`, `::test_phase1b_residue_count_matches_check_29s_own_count`; `test_register_owed.py::test_check_29_wiring_is_undisturbed`; `test_repository_invariants.py::test_money_discipline_is_enforced_by_the_docs_audit`, `::test_journey_citations_are_audited_in_ci`. The gate STANDS under item 31 by the maintainer's reading (to-lead after 22:29: "FD 8366's gate stands … Mint FD 8366, PR"; the lead's END read is from-lead "2026-11-07 22:29:47 GMT"). The skipped count is 27 at this tree (the lead: baseline 27, the head predates A's merge).
+
+**Dislocation #1: 495 s, marked "side-run beside".** The lead's docs checks (doc-index regen and `--check`, audit-docs, register-lint, about one minute) ran on another branch at about 22:11:40–22:12:40 GMT, beside this gate's demo, which started 22:04:54 (from-lead "2026-11-07 22:12:40 GMT", BREACH). The reading is excluded from the quiet baseline; a PASS stands with that stated. For reference the gate log's own line: `dislocation #1 | 495 s (29 Oct passes: 422 / 387 / 383 s; this box 21:17:05 baseline 552 / 558 s)`.
 
 ### Audit
 
@@ -86,4 +103,4 @@ Mint-time notes (2026-11-07, executor, appended to the adopted audit; the table 
 
 ## PRs
 
-(none — the slice ends unpushed.)
+This PR; its number, squash commit and merge date are written at the merge's date-of-record.
