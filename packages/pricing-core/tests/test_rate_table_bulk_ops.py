@@ -13,7 +13,8 @@ import hashlib
 import random
 from collections.abc import Callable
 from datetime import UTC, datetime
-from decimal import Decimal, InvalidOperation
+from decimal import ROUND_DOWN, ROUND_HALF_EVEN, Decimal, InvalidOperation, localcontext
+from fractions import Fraction
 from io import BytesIO
 from typing import ClassVar
 
@@ -869,3 +870,145 @@ class TestBulkOperationValueType:
         )
         with pytest.raises(ValueError, match=r"^BULK_OPERATION_NOT_APPLICABLE: "):
             uplift_table(table, percentage=Decimal("0.10"))
+
+
+def _round_once(exact: Fraction) -> Decimal:
+    """FR 8412's rule computed independently: exact rational, rounded half-even with integers
+    to the smaller of 28 significant digits and 28 decimal places."""
+    if exact == 0:
+        return Decimal(0)
+    magnitude = abs(exact)
+    adjusted = len(str(magnitude.numerator)) - len(str(magnitude.denominator))
+    if magnitude < Fraction(10) ** adjusted:
+        adjusted -= 1
+    exponent = max(-28, adjusted - 27)
+    scaled = magnitude / Fraction(10) ** exponent
+    quotient, remainder = divmod(scaled.numerator, scaled.denominator)
+    if 2 * remainder > scaled.denominator or (2 * remainder == scaled.denominator and quotient % 2):
+        quotient += 1
+    sign = 1 if exact < 0 else 0
+    return Decimal((sign, tuple(int(d) for d in str(quotient)), exponent))
+
+
+def _one_cell(value: str) -> RateTableVersion:
+    return _version(
+        rows=[{"driver_age_band": "17-20", "relativity": value}],
+        value=_value(min=None, max=None),
+    )
+
+
+_CALLER_CONTEXTS = (
+    (28, ROUND_HALF_EVEN),
+    (400, ROUND_HALF_EVEN),
+    (5, ROUND_HALF_EVEN),
+    (10, ROUND_DOWN),
+)
+
+
+class TestABulkOperationRoundsOnceInAStatedContext:
+    """FR 8412 (OQ-2035 option D, to-lead "2026-11-07 23:22:37 GMT"): the exact result, rounded
+    once, half-even, to the smaller of 28 significant digits and 28 decimal places, in a context
+    the operation states and never the caller's."""
+
+    @pytest.mark.req("FR-8412")
+    def test_a_rebase_below_one_tenth_is_stored_not_refused(self) -> None:
+        rows = [
+            {"driver_age_band": "17-20", "relativity": "0.05"},
+            {"driver_age_band": "21-24", "relativity": "1"},
+            {"driver_age_band": "25-29", "relativity": "1.5"},
+        ]
+        result = rebase_to_level(
+            _version(rows=rows, value=_value(min=None, max=None)),
+            base_level={"driver_age_band": ["25-29"]},
+        )
+        assert _cells(result) == [
+            {"driver_age_band": "17-20", "relativity": "0.0333333333333333333333333333"},
+            {"driver_age_band": "21-24", "relativity": "0.6666666666666666666666666667"},
+            {"driver_age_band": "25-29", "relativity": "1"},
+        ]
+
+    @pytest.mark.req("FR-8412")
+    def test_the_stored_text_does_not_depend_on_the_callers_context(self) -> None:
+        percentage = Decimal("0.123456789012345678901234567890")
+        expected = [{"driver_age_band": "17-20", "relativity": "3.370370367037037036703703704"}]
+        for prec, rounding in _CALLER_CONTEXTS:
+            with localcontext() as ambient:
+                ambient.prec = prec
+                ambient.rounding = rounding
+                assert _cells(uplift_table(_one_cell("3"), percentage=percentage)) == expected
+                assert (
+                    _cells(
+                        uplift_by_filter(
+                            _one_cell("3"),
+                            percentage=percentage,
+                            filter={"driver_age_band": ["17-20"]},
+                        )
+                    )
+                    == expected
+                )
+        for prec, rounding in _CALLER_CONTEXTS:
+            with localcontext() as ambient:
+                ambient.prec = prec
+                ambient.rounding = rounding
+                rebased = rebase_to_level(
+                    _version(
+                        rows=[
+                            {"driver_age_band": "17-20", "relativity": "0.1"},
+                            {"driver_age_band": "21-24", "relativity": "3"},
+                        ],
+                        value=_value(min=None, max=None),
+                    ),
+                    base_level={"driver_age_band": ["21-24"]},
+                )
+                assert _cells(rebased)[0]["relativity"] == "0.0333333333333333333333333333"
+
+    @pytest.mark.req("FR-8412")
+    def test_the_factor_is_not_rounded_before_the_product(self) -> None:
+        """DP-2, ruled (i): one rounding. Today rounds 1 + percentage to 28 digits first and
+        stores 2.240172837290617283729061729."""
+        result = uplift_table(
+            _one_cell("1.994"), percentage=Decimal("0.123456789012345678901234567890")
+        )
+        assert _cells(result)[0]["relativity"] == "2.240172837290617283729061728"
+
+    @pytest.mark.req("FR-8412")
+    def test_every_result_is_the_exact_result_rounded_once(self) -> None:
+        rng = random.Random(2035)
+        mismatches = []
+        for _ in range(2000):
+            digits = rng.randint(1, 20)
+            old = Decimal(rng.randint(1, 10**digits - 1)).scaleb(-rng.randint(digits, digits + 8))
+            if rng.random() < 0.5:
+                percentage = Decimal(rng.randint(0, 10**30)).scaleb(-rng.randint(2, 32))
+                got = _cells(uplift_table(_one_cell(format(old, "f")), percentage=percentage))
+                want = _round_once(Fraction(old) * (1 + Fraction(percentage)))
+            else:
+                reference = Decimal(rng.randint(1, 10**6)).scaleb(-rng.randint(0, 6))
+                table = _version(
+                    rows=[
+                        {"driver_age_band": "17-20", "relativity": format(old, "f")},
+                        {"driver_age_band": "21-24", "relativity": format(reference, "f")},
+                    ],
+                    value=_value(min=None, max=None),
+                )
+                got = _cells(rebase_to_level(table, base_level={"driver_age_band": ["21-24"]}))
+                want = _round_once(Fraction(old) / Fraction(reference))
+            if Decimal(got[0]["relativity"]) != want:
+                mismatches.append((old, got[0]["relativity"], want))
+        assert mismatches == []
+
+    @pytest.mark.req("FR-8412")
+    def test_a_money_minor_uplift_holds_the_fraction(self) -> None:
+        """The entry's (a): no rounding to whole minor units at the operation."""
+        table = _version(
+            rows=[{"driver_age_band": "17-20", "relativity": "12345"}],
+            value=RateTableValue(
+                name="relativity",
+                type=RateTableValueType.MONEY_MINOR,
+                unit="pence",
+                min=None,
+                max=None,
+            ),
+        )
+        result = uplift_table(table, percentage=Decimal("0.0375"))
+        assert _cells(result)[0]["relativity"] == "12807.9375"
