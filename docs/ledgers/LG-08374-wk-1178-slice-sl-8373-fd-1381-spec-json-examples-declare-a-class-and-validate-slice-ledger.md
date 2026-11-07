@@ -41,6 +41,7 @@ Not run (S5, at SL 8381's head).
 ### Build log
 
 **Deviation, 2026-11-07:** the brief limits S1/S2's `scripts/audit-docs.py` edit to S1's docstring line; the plan's S2 text requires the stub above `def main` (the plan says LAST-2 has no hunk there). The stub is what makes T4 to T6 red by cause. Reported to the lead.
+**2026-11-07:** S2's stub in audit-docs.py precedes LAST-2's merge; lead 31's ruling, from-lead 2026-11-07. Touch no other line of audit-docs.py; a conflict there at the LAST-2 merge is a STOP, reported verbatim.
 **Deviation, 2026-11-07:** the plan's test and parser code was reformatted for `ruff check .` (E501, PT018, I001) and `mypy --strict` (annotations, `assert spec.loader is not None`); behaviour unchanged.
 
 **S2 red** (log `~/gi-pricing-plan.local/scratch/sl-8373-spec-examples/s2-red.log`, tree d0b1f999f6b27f639e1a90af75ae79552d0aadad plus the S2 working-tree files, DB-free, run-small):
