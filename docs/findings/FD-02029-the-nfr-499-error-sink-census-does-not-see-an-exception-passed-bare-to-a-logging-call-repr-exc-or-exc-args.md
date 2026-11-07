@@ -35,3 +35,5 @@ Extend `_sinks` with the three shapes; list each hit in `_SINKS` with a verdict 
 ## Disposition
 
 Open, owner WK-1178; event that next discharges it: that extension merging with its verdicts, or a dated ruling accepting the narrower census. Filed by the auditor of SL 8334 (`scratch/aud-slh/FD-new-census-shapes.md`) as working id 8384.
+
+*(Dated line, 2026-11-06, docs batch 13, by the executor, on exec-minth's note once SL-2048 merged (#1446): the merged text above names "PL 8333" (line 19) and "SL 8334" (line 37) in space form because those ids were unminted when this record was filed. **They are PL-2047 and SL-2048.** The sentences above are left as merged.)*
