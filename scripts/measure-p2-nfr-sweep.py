@@ -34,7 +34,10 @@ import time
 from collections.abc import Callable
 from datetime import datetime
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from uuid import UUID
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -528,6 +531,11 @@ class _Env:
         )
 
 
+async def _grant(env: _Env, workspace_id: UUID) -> dict[str, Any]:
+    """Grant the demo principals in `workspace_id` (PL 8405, DP-5)."""
+    return await _import_seed().grant_demo_principals(env.database, workspace_id)
+
+
 async def _timed_get(
     client: Any, url: str, headers: dict[str, str], **params: Any
 ) -> tuple[int, Any]:
@@ -601,7 +609,7 @@ async def _fremtpl2(env: _Env, rows: int | None, reuse: bool) -> tuple[Any, Any,
         await seed.run(rows)
     info = json.loads((seed.DATA_DIR / "last-seed.json").read_text())
     workspace_id = UUID(info["workspace_id"])
-    principals = await seed.grant_demo_principals(env.database, workspace_id)
+    principals = await _grant(env, workspace_id)
     async with env.database.session() as session:
         dataset_id = (
             await session.execute(
@@ -656,9 +664,8 @@ async def _one_way(args: argparse.Namespace) -> int:
         corpora.append((f"freMTPL2 prepared version ({best_rows} rows)", workspace_id, actor, best))
 
         # (ii) the wide synthetic version: 80 columns x 1 000 000 rows, ingested as parquet
-        seed = _import_seed()
         wide_ws = new_uuid7()
-        wide_actor = (await seed.grant_demo_principals(env.database, wide_ws))["analyst"]
+        wide_actor = (await _grant(env, wide_ws))["analyst"]
         async with env.database.unit_of_work() as session:
             dataset = await dataset_service.create_dataset(
                 session,
@@ -763,6 +770,37 @@ async def _one_way(args: argparse.Namespace) -> int:
 # --- NFR-470: storage overhead and deduplication -----------------------------------------------
 
 
+#: NFR-470's per-version queries, keyed by the names its reading prints. Each binds one `:v`, a
+#: version id (a UUID).
+STORAGE_VERSION_QUERIES: dict[str, str] = {
+    "dataset_versions_row": "select pg_column_size(t.*) from dataset_versions t where id = :v",
+    "validation_reports": (
+        "select coalesce(sum(pg_column_size(t.*)), 0) from validation_reports t "
+        "where dataset_version_id = :v"
+    ),
+    "profiles": (
+        "select coalesce(sum(pg_column_size(t.*)), 0) from profiles t where dataset_version_id = :v"
+    ),
+    "ingestion_runs_rows": (
+        "select coalesce(sum(pg_column_size(t.*)), 0) from ingestion_runs t "
+        "where dataset_version_id = :v"
+    ),
+    "ingestion_runs_source_bytes_read": (
+        "select coalesce(sum(bytes_read), 0) from ingestion_runs where dataset_version_id = :v"
+    ),
+    "audit_events_rows": (
+        "select coalesce(sum(pg_column_size(t.*)), 0) from audit_events t "
+        "where entity_ref like '%' || cast(:v as text) || '%'"
+    ),
+}
+
+
+async def _version_scalar(session: Any, query: str, version_id: UUID) -> int:
+    from sqlalchemy import text
+
+    return int((await session.execute(text(query), {"v": version_id})).scalar_one())
+
+
 async def _storage(args: argparse.Namespace) -> int:
     from sqlalchemy import text
 
@@ -811,37 +849,22 @@ async def _storage(args: argparse.Namespace) -> int:
             new_bytes = sum(b for d, (b, m) in sizes.items() if m == parquet and d not in seen)
             seen.update(sizes)
 
-            async def scalar(query: str, version_id: Any = version_id) -> int:
-                return int((await session.execute(text(query), {"v": version_id})).scalar_one())
+            async def scalar(name: str, version_id: UUID = version_id) -> int:
+                return await _version_scalar(session, STORAGE_VERSION_QUERIES[name], version_id)
 
             own = {
-                "dataset_versions_row": await scalar(
-                    "select pg_column_size(t.*) from dataset_versions t where id = :v"
-                ),
-                "validation_reports": await scalar(
-                    "select coalesce(sum(pg_column_size(t.*)), 0) from validation_reports t "
-                    "where dataset_version_id = :v"
-                ),
-                "profiles": await scalar(
-                    "select coalesce(sum(pg_column_size(t.*)), 0) from profiles t "
-                    "where dataset_version_id = :v"
-                ),
+                "dataset_versions_row": await scalar("dataset_versions_row"),
+                "validation_reports": await scalar("validation_reports"),
+                "profiles": await scalar("profiles"),
                 "non_parquet_blobs": other_blobs,
             }
             overhead = int(sum(own.values()))
             excluded = {
-                "ingestion_runs_rows": await scalar(
-                    "select coalesce(sum(pg_column_size(t.*)), 0) from ingestion_runs t "
-                    "where dataset_version_id = :v"
-                ),
+                "ingestion_runs_rows": await scalar("ingestion_runs_rows"),
                 "ingestion_runs_source_bytes_read": await scalar(
-                    "select coalesce(sum(bytes_read), 0) from ingestion_runs "
-                    "where dataset_version_id = :v"
+                    "ingestion_runs_source_bytes_read"
                 ),
-                "audit_events_rows": await scalar(
-                    "select coalesce(sum(pg_column_size(t.*)), 0) from audit_events t "
-                    "where entity_ref like '%' || cast(:v as text) || '%'"
-                ),
+                "audit_events_rows": await scalar("audit_events_rows"),
             }
             ratio = (payload + overhead) / payload if payload else None
             _emit(
@@ -891,10 +914,9 @@ async def _cells_diff(args: argparse.Namespace) -> int:
     from model_schema import JobKind, JobResult, JobStatus, new_uuid7
     from model_schema.refs import ArtifactRef
 
-    seed = _import_seed()
     env = _Env()
     workspace_id = new_uuid7()
-    actor = (await seed.grant_demo_principals(env.database, workspace_id))["actuary"]
+    actor = (await _grant(env, workspace_id))["actuary"]
     headers = env.headers(actor.id, workspace_id)
     selected = [r for r in CELLS_DIFF_RUNS if args.only in (None, r[0])]
     p95: dict[str, float] = {}
