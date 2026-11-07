@@ -18,6 +18,8 @@ import pytest
 from fastapi import Depends, FastAPI
 from fastapi.routing import APIRoute, APIRouter, iter_route_contexts
 
+from model_schema.table_rows import split_row
+
 ROOT = Path(__file__).resolve().parents[1]
 SPEC = ROOT / "docs" / "specs" / "06-governance.md"
 
@@ -59,7 +61,7 @@ def _table(section: str, header: str) -> list[list[str]]:
     for line in lines[at + 2 :]:  # skip the header and the |---| line
         if not line.startswith("|"):
             break
-        rows.append([cell.strip() for cell in line.strip("|").split("|")])
+        rows.append(split_row(line))
     return rows
 
 

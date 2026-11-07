@@ -39,14 +39,31 @@ from __future__ import annotations
 
 import argparse
 import ast
+import importlib.util
 import json
 import pathlib
 import re
 import sys
 import tomllib
+import types
 from collections import defaultdict
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
+
+
+def _load_table_rows() -> types.ModuleType:
+    """`table_rows.py` by path: the docs gate runs under a bare `python3` (FD-1484)."""
+    path = ROOT / "packages" / "model-schema" / "src" / "model_schema" / "table_rows.py"
+    spec = importlib.util.spec_from_file_location("_table_rows", path)
+    assert spec is not None
+    assert spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+_table_rows = _load_table_rows()
 SPECS = ROOT / "docs" / "specs"
 
 _REQUIREMENT = re.compile(r"^\| \*\*((?:FR|NFR)-\d+)\*\*")
@@ -63,9 +80,6 @@ _MODULE_CODE = re.compile(r"\*\*Module code:\*\* `([A-Z]+)`")
 _SECTION = re.compile(r"^(#{2,3}) (\d+(?:\.\d+)?)\.?\s+(.+)")
 _NFR_HEADING = re.compile(r"^#{2,3} \d+(?:\.\d+)?\.?\s+Non-functional requirements")
 _MARKER = re.compile(r'@pytest\.mark\.req\("([^"]+)"\)')
-# `| \`GET\` | \`/api/v1/datasets\` | ... |` — the §5.1 interface tables. The method cell
-# may hold several (`GET`/`PUT`), and paths carry `{placeholders}`.
-_ENDPOINT = re.compile(r"^\|\s*`?([A-Z]+(?:`?/`?[A-Z]+)*)`?\s*\|([^|]+)\|")
 #: Every backticked token in the path cell. The cell may hold **several** paths —
 #: `07` §5.1's health row is ``| `GET` | `/healthz`, `/readyz`, `/version` | …``. Capturing
 #: one backticked token matched that row not at all, so three published, working endpoints
@@ -238,12 +252,12 @@ def declared_endpoints(module: str) -> set[tuple[str, str]]:
     if spec is not None:
         text = spec.read_text(encoding="utf-8")
         for line in text.splitlines():
-            match = _ENDPOINT.match(line)
-            if not match:
+            row = _table_rows.endpoint_row(line)
+            if row is None:
                 continue
-            paths = [p for p in _PATH_IN_CELL.findall(match.group(2)) if p.startswith("/")]
+            paths = [p for p in _PATH_IN_CELL.findall(row[1]) if p.startswith("/")]
             for path in paths:
-                for method in re.split(r"`?/`?", match.group(1)):
+                for method in re.split(r"`?/`?", row[0]):
                     declared.add((method.strip("`"), _normalise_path(path)))
     return declared
 

@@ -293,15 +293,6 @@ def check_register_grammar() -> None:
     notes.append(f"check 29: {register_lint.residue_line(register, rows)}")
 
 
-
-
-#: `| \`GET\` | \`/api/v1/datasets\` | … |` — a §5.1 REST API row. The method cell may hold
-#: several (\`GET\`/\`PUT\`); the path cell may hold several paths. Deliberately the same
-#: shape `scope-audit.py` uses, because the two scripts read the same tables and a second
-#: parser would eventually disagree with the first about what the spec declares.
-_ENDPOINT_ROW = re.compile(r"^\|\s*`?([A-Z]+(?:`?/`?[A-Z]+)*)`?\s*\|([^|]+)\|")
-
-
 def _path_segments(path: str) -> tuple[str, ...]:
     """A path as comparable segments, with `{placeholders}` collapsed.
 
@@ -353,7 +344,7 @@ def check_open_question_columns() -> None:
         match = _OQ_ROW.match(line)
         if not match:
             continue
-        cells = [c.strip() for c in line.strip().strip("|").split("|")]
+        cells = _docid.table_rows.split_row(line)
         if len(cells) < 3:
             fail(f"check 15: open-questions.md:{number}: {match.group(1)} has too few columns")
             continue
@@ -394,7 +385,7 @@ def check_open_question_mirror_status(specs: list[pathlib.Path]) -> None:
         match = _OQ_ROW.match(line)
         if not match:
             continue
-        cells = [c.strip() for c in line.strip().strip("|").split("|")]
+        cells = _docid.table_rows.split_row(line)
         status = cells[-1].replace("*", "").replace("~", "").strip().lower()
         register[match.group(1)] = status.split()[0] if status else ""
 
@@ -578,7 +569,7 @@ def check_notes(defined: set[str], questions: set[str], adrs: set[int]) -> None:
         row = re.match(r"^\| \[NT-(\d{4})\]\(([^)]+)\)", line)
         if not row:
             continue
-        cells = [c.strip() for c in line.strip().strip("|").split("|")]
+        cells = _docid.table_rows.split_row(line)
         indexed[row.group(1)] = (row.group(2), cells[3] if len(cells) > 3 else "")
     for number, path in sorted(seen.items()):
         if number not in indexed:
@@ -636,13 +627,15 @@ def check_table_rows(md: list[pathlib.Path]) -> None:
                 # first, which is the false positive that makes a check like this ignorable.
                 header_cells = None
                 continue
-            cells = len(re.findall(r"(?<!\\)\|", line)) - 1
+            cells = _docid.table_rows.cell_count(line)
             if header_cells is None:
                 header_cells = cells
                 continue
             if cells != header_cells:
                 where = f"{f.relative_to(REPO)}:{lineno}"
-                offenders = re.findall(r"`[^`]*(?<!\\)\|[^`]*`", line)
+                offenders = re.findall(
+                    rf"`[^`]*{_docid.table_rows.UNESCAPED_PIPE.pattern}[^`]*`", line
+                )
                 detail = f" — unescaped pipe in {offenders[0]}" if offenders else ""
                 fail(
                     f"check 22: table row has {cells} cells, its header has {header_cells} "
@@ -4114,11 +4107,11 @@ def main() -> int:
     declared_paths: dict[tuple[str, tuple[str, ...]], str] = {}
     for f in specs:
         for line in f.read_text(encoding="utf-8").splitlines():
-            row = _ENDPOINT_ROW.match(line)
-            if not row:
+            row = _docid.table_rows.endpoint_row(line)
+            if row is None:
                 continue
-            for path in (p for p in re.findall(r"`([^`]+)`", row.group(2)) if p.startswith("/")):
-                for method in re.split(r"`?/`?", row.group(1)):
+            for path in (p for p in re.findall(r"`([^`]+)`", row[1]) if p.startswith("/")):
+                for method in re.split(r"`?/`?", row[0]):
                     key = (method.strip("`"), _path_segments(path))
                     declared_paths.setdefault(key, f.name)
 
@@ -4205,7 +4198,7 @@ def main() -> int:
             if on and re.match(r"^#{2,4} ", line):
                 break
             if on and line.startswith("|"):
-                cells = [c.strip() for c in line.strip().strip("|").split("|")]
+                cells = _docid.table_rows.split_row(line)
                 if cells and cells[0] != "View":
                     rows.append(cells)
         return rows

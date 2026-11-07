@@ -92,11 +92,24 @@ docs gate carries both without a second gate-command line.
 """
 from __future__ import annotations
 
+import importlib.util
 import pathlib
 import re
 import sys
 
 REPO = pathlib.Path(__file__).resolve().parent.parent
+
+# The one table-row splitter (FD-1484), loaded by path: the docs gate runs under a bare
+# `python3`, where importing `model_schema` fails.
+_table_rows_spec = importlib.util.spec_from_file_location(
+    "_table_rows",
+    REPO / "packages" / "model-schema" / "src" / "model_schema" / "table_rows.py",
+)
+assert _table_rows_spec is not None
+assert _table_rows_spec.loader is not None
+_table_rows = importlib.util.module_from_spec(_table_rows_spec)
+sys.modules[_table_rows_spec.name] = _table_rows
+_table_rows_spec.loader.exec_module(_table_rows)
 
 
 def _first_file(*candidates: pathlib.Path) -> pathlib.Path:
@@ -123,7 +136,7 @@ DISPOSITIONS = ("fix before close", "accept", "carry forward", "split verdict")
 VERDICTS = ("delivered but untested", "deferred with an owner", "reassigned", "not started")
 STATUS_PREFIXES = ("resolved", "fixed")
 
-_UNESCAPED_PIPE = re.compile(r"(?<!\\)\|")
+_UNESCAPED_PIPE = _table_rows.UNESCAPED_PIPE
 _SEP_ROW = re.compile(r"^\|\s*-+\s*\|")
 _EMPHASIS = re.compile(r"^[\*_`\s]+")
 _DATE = re.compile(r"\b\d{4}-\d{2}-\d{2}\b")
@@ -163,11 +176,8 @@ class Row:
 
 
 def _split_row(line: str) -> list[str]:
-    """Split a markdown table row on unescaped `|`, restoring escaped `\\|` afterwards."""
-    placeholder = "\x00"
-    tmp = line.replace("\\|", placeholder)
-    fields = [f.strip() for f in tmp.strip().strip("|").split("|")]
-    return [f.replace(placeholder, "\\|") for f in fields]
+    """Split a markdown table row on unescaped `|`, keeping an escaped `\\|` as written."""
+    return _table_rows.split_row(line)
 
 
 def parse_register(path: pathlib.Path) -> tuple[list[Row], list[str]]:

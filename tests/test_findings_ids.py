@@ -41,6 +41,8 @@ import sys
 
 import pytest
 
+from model_schema.table_rows import split_row
+
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 
 
@@ -154,7 +156,7 @@ def duplicated_register_ids(register_text: str) -> list[str]:
     for line in register_text.splitlines():
         if not line.startswith("|") or line.count("|") < 2:
             continue
-        seen += _CITED_ID.findall(line.split("|")[1])
+        seen += _CITED_ID.findall(split_row(line)[0])
     counted = collections.Counter(seen)
     return sorted(f"{fid} claimed by {n} rows" for fid, n in counted.items() if n > 1)
 
