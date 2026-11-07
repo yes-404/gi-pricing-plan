@@ -835,7 +835,7 @@ STORAGE_VERSION_QUERIES: dict[str, str] = {
     ),
     "audit_events_rows": (
         "select coalesce(sum(pg_column_size(t.*)), 0) from audit_events t "
-        "where entity_ref like '%' || cast(:v as text) || '%'"
+        "where entity_ref like '%' || cast(cast(:v as uuid) as text) || '%'"
     ),
 }
 
