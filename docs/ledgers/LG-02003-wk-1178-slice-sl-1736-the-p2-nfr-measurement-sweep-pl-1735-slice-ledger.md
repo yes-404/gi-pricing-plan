@@ -641,3 +641,20 @@ None yet.
 - **`one-way` — `rc=1` after 50 s:** corpus (i), the freMTPL2 version, seeded; corpus (ii), the wide synthetic version, fails at `scripts/measure-p2-nfr-sweep.py` line 661 (`seed.grant_demo_principals(env.database, wide_ws)`) → `seed.py` line 364 `ensure_workspace`: `InsufficientPrivilegeError: permission denied for table workspaces`. Same root cause as item I (FD-1729's least-privilege login role cannot write `workspaces`; the owner is refused by `create_app`). No latency figure printed. Log `J-oneway.log`.
 - **`storage` — `rc=1` after 56 s:** seeds and ingests version 1, then dies in `_storage` (line 841) → `scalar()` (line 815) `session.execute(text(query), {"v": version_id})`: `asyncpg.exceptions.DataError: invalid input for query argument $1: UUID('01a1b75a-840f-7909-9e9f-70ec5b8b94…') (expected str, got UUID)`. An instrument bug (a `UUID` passed to an untyped raw `text()` parameter), reached on the `audit_events_rows` query. No byte accounting printed. Log `J-storage.log`.
 - No flag was used to drop a corpus or skip a limb: that would not be the form PL-1735's Task names. Neither defect was edited around (brief ban). Logs: `~/gi-pricing-plan.local/scratch/nfr-bench-1/s2/J-*.log`.
+
+## Addendum 2026-11-07 — nfr-bench-1 session 2: item K, the contention factor (PL-1735 Task 0): three ALONE runs only, NO factor — the B arm is not run (exec-nfrs2)
+
+**Verdict: VOID — no factor, no band.** `contention summarize` needs interleaved A / B pairs; this session ran the three A (ALONE) runs and **no B run**. The interim band **0.43** (PL-1735 DP-1) therefore still applies. A3's P1 commit (constants from the measured factor) has nothing to take from this session.
+
+- **Why no B:** a B (contended) run is valid only at load1 in [1.0, 2.0) at its start and < 2.0 at its end (`CONTENDED_LOAD_START`, `CONTENDED_LOAD_END_BELOW`), i.e. beside other work. The VM is dedicated and carries nothing else, and the brief bans anything beside a timed item. Making the load would mean this seat deciding what "contended" means (a synthetic stressor), which is a design choice PL-1735's Task 0 does not make; it was put to the lead (interim message, this session) with a proposal (two busy-loop processes started about 60 s before each B run, stopped by pid after it), and no answer had arrived when the VM was powered off. The seat did not run B on its own initiative.
+- **Form:** `uv run --directory <wt> python -u scripts/measure-p2-nfr-sweep.py contention run --role A --out /home/puzhenhao1989/logs/s2/K-contention.jsonl`, three times, each through the quiet bar (load1 < 1.0, `pytest` 0). The fixed benchmark is `bench-model.py --only proposals` at its defaults (678 013 rows, `--levels 10000`, `--groups 20`) — freMTPL2 `.arff` copied to the VM for it (sha256 equal to `fetch.py`; VCS-ignored; nothing committed). `--help` for `contention run` read on the VM: `--role {A,B} --out OUT`.
+- **Run head** `6f958137b227f1a9499a4ab00caf40f79ba2439c`, tree `a995b876dd07bbc8e6b5d8712fd085178ba77e91` (the `tree` field each record carries); instrument hash `scripts/measure-p2-nfr-sweep.py` `093928d1ca4f2718525d1ec2765ec8ebb29cab230e468fef8a3c0d5f9d3e2eba`, `scripts/bench-model.py` `03e834b5ffa6502a16d8b9f66ae0de576f04e11aaf71dfaaa4bbb74ef1db02c3` (re-read on the VM). Host `e2-standard-8`, 8 vCPU, AMD EPYC 7B12 (item-G addendum).
+
+| run | started (UTC) | load1 start → end | wall s | cpu s | valid |
+|---|---|---|---|---|---|
+| A1 | 2026-11-07T18:54:37 | 0.82 → 0.93 | 4.55 | 5.03 | yes |
+| A2 | 2026-11-07T18:55:04 | 0.78 → 0.83 | 4.75 | 5.24 | yes |
+| A3 | 2026-11-07T18:55:19 | 0.83 → 0.87 | 4.57 | 5.08 | yes |
+
+- The benchmark takes about 4.6 s here; the 2026-08-22 pair that produced 2.33 was 8.58 s at load 1.6 on a 4-core Xeon (PL-1735 DP-1 provenance). That is a different host and not a like-for-like A. Balloon counters 0 / 0 and pressure totals 349 / 344 before and after the first run.
+- Logs: `~/gi-pricing-plan.local/scratch/nfr-bench-1/s2/K-A1.log`, `K-A2.log`, `K-A3.log`, `K-contention.jsonl`.
