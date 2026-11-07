@@ -1855,6 +1855,8 @@ From “Workstreams” (line 386): **`expression` custom objectives** — SymPy 
 
 **2026-09-28 — the start gate is MET** (item E3 in the deputy's OQ-stream entry; Maintainer decision by delegation (deputy, on the maintainer's instruction of 2026-09-28 11:24 BST), 2026-09-28 11:33:12 BST). The gate above says this work must not start before the certification machinery it fronts (FR-151) has run for a phase. That machinery shipped in WK-661 (`CR-754`, closed 2026-08-22). It has since run for a phase: P1b was accepted closed on 2026-08-27 (`CR-822`). **WK-690 must add `sympy`**: `grep -c -i sympy uv.lock` prints 0 at `12431a88`. It lands together with the `docs/skills-map.md` update that the dependency requires (`CLAUDE.md` §10). The first slice is the parser, brought to `02` §4.6's profiles (item E2, filed in the Track E spec PR).
 
+*(Dated line, 2026-11-07, docs batch 16, by the executor, on CR 8314's refresh (F2) and the maintainer's carry ruling (`to-lead.md` "2026-11-07 20:28:26 GMT"): **FR-207's WK-690 limb is moved out of this Work**: its two `custom_objective_ref` residuals are Phase 3's, owner the maintainer, on `RL-1362` DP-S3-5 and `02` FR-207's staging rule. CR 8314 states the move in its "Moved out of WK-690" paragraph and its deliverable table ("reassigned"). The slice and Work rows above that cite FR-207 (SL-1273's title among them) are history and are not edited.)*
+
 
 #### SL-1271 — Slice 1: the parser brought to §4.6's four profiles, with its limits and the sympy pin (FR-144, FR-145, FR-36, NFR-483, `01` §4.5 `expression` check, `02` §4.6)
 
@@ -1941,13 +1943,15 @@ Minted as `SL-1274` at #943's merge turn, 2026-09-30, with `python3 scripts/doc-
 
 (Closed 2026-10-18 as a Slice by fix4-1274's closing acts (LG-1817 minted from working id 8062), on the pre-PR audit of LG-1817 (auditor-1274, "## Audit", 2026-10-18 18:18:08 BST; head `ebcb6eaa`): F-C1, F-C2 and F-C3 are answered in LG-1817, F-C2's migration hazard (a bare NotNullViolation on `f2b6d90a4c17`'s downgrade) is fixed red-first at `68eb62a7` and proved in the round-trip window written in LG-1817, on the maintainer's "2026-10-18 18:20:40 BST" (`to-lead.md`). MERGE-ACK: not yet given.)
 
+(Dated line, 2026-11-07, docs batch 16, by the executor, on CR 8314's refresh (F3) and the maintainer's carry ruling (`to-lead.md` "2026-11-07 20:28:26 GMT"): "MERGE-ACK: not yet given." above is superseded by the record. The PR is #1344, squash merge `d87dd25971f5c7abddbf63da6cfee247a5daa51a` (committed 2026-10-18 19:08:06 +01:00), and the MERGE-ACK is the maintainer's "2026-10-18 19:07:51 BST — Maintainer: MERGE-ACK #1344 (SL-1274 / LG-1817: WK-690 S4, expression Factors through the platform)" (`to-lead.md`). The status `closed` stands; no sentence above is edited.)
+
 #### SL-1275 — Slice 5: the authoring view, and `WF-702` Route B end to end (`02` §5.3)
 
 ```yaml
 id: SL-1275
 family: slice
 title: Slice 5: the authoring view, and `WF-702` Route B end to end (`02` §5.3)
-status: active                   # draft → active → closed | retired (§1.2a)
+status: closed                   # draft → active → closed | retired (§1.2a)
 created: 2026-09-30
 owner: planner                   # cut in the map plan (draft); lead dispatches (active)
 tree: dee49f781fd23f9df2e72161885c77fa17a6f1ab
@@ -1963,6 +1967,8 @@ Minted as `SL-1275` at #943's merge turn, 2026-09-30, with `python3 scripts/doc-
 (Activated 2026-10-21 on the maintainer's entry "2026-10-21 15:03:33 BST — Maintainer: GOs on the 15:02:44 work queue" (`to-lead.md`), item 4. `PL-1268` and `PL-1665` are `active`; `PL-1621` stands as `PL-1665` amends it. The slice's one ledger is `LG-1839` (working id reserved by the lead in eta.md; minted at the merge turn). Executor seat `exec-1275`, branch `sl-1275-wk690-s5-authoring-view`.)
 
 (Built and gated 2026-10-22; **stays `active`** on the maintainer's B4 ruling ("2026-10-22 00:57:13 BST": merge-then-measure, precedent SL-1367 Acc 10). Slice audit `RS-1844` NOT-CLEAN, resolved by R1–R3; re-audit `RS-1845` CLEAN for the delta; the code gate re-ran at `96354f9c` (ledger `LG-1839` item 13). **Carried, owner WK-690:** the `PL-1665` 5.7 measurement (3c, 3d) in a TRUE ALONE window, which closes the slice; `features.expression_objectives_enabled` stays default OFF; FR-1840's 3d budget stays provisional until measured. Also carried to WK-690: FD-1842 (`grammar_refusal` `RecursionError` on the create path, MEDIUM).)
+
+(Closed 2026-11-07, docs batch 16, by the executor, on CR 8314's refresh (F1) and the maintainer's carry ruling (`to-lead.md` "2026-11-07 20:28:26 GMT"): the one condition the paragraph above left open, the `PL-1665` 5.7 measurement, was taken at `dae9637e` on 2026-11-05 (10:15:20 to 10:18:52 UTC; `LG-1839`'s addendum and its dated line of docs batch 11 carry the load and the command): 3d PASS, 3c UNMET, carried by name as FD-2009 (working id 8352, owner WK-690). The row's `status:` is flipped to `closed` here; the paragraphs above are not edited. `LG-1839` stays `active` until S3's readings land; its close follows S3.)
 
 #### SL-1622 — WK-690 fix row: FD-1349, FD-1492 and FD-1512 fixed before close, and FD-1294's discharge line
 

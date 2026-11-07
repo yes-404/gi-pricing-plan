@@ -443,3 +443,5 @@ Named row by row under **The chain's collisions**. In short: `03:138-139` with R
 6. **Calendar**, from `date`: Wed 11, Thu 12, Fri 13, Wed 18 Nov.
 7. **No range of requirement ids**, and nothing estimated is stated as measured: hours, window lengths and the DP-3 fault are marked.
 8. **The plan rules nothing:** fifteen DPs, closed by the maintainer's entry, each quoted. Two readings are the planner's and are marked: "after submission" as any status outside `draft` and `certified`, and the proposed owner and gate of DP-11's OQ.
+
+*(Dated note, 2026-11-07, docs batch 16, by the executor: the row at line 146, `A SL 8325 @e75e0f1a`, names the slice minted as **SL-2075** (PL-2074, LG-2076, #1456). The plan is frozen at its date and line 146 is not edited.)*
