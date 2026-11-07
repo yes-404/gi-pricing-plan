@@ -1082,7 +1082,7 @@ owner: maintainer
 phase: P2
 ```
 
-From “Workstreams” (line 384): Deployment: environments, atomic switchover, rollback, shadow — **and the tenancy mechanics ADR-710 requires** | FR-267, FR-268, FR-269, FR-270, FR-271, FR-272; `07` FR-428, FR-429, FR-430, FR-431, and added 2026-08-15 by OQ-540's decision: **FR-436** (a deployment refuses to start against another tenant's database) and **FR-18** (a Job records the platform build, because version skew between tenants is now permanent). Any earlier `Job` migration should carry FR-18's column rather than wait for this *(Corrected 2026-09-29 by the lead, per `PL-1237`'s Scope note, amended by the maintainer's answer Q843-2: "The roadmap WK-674 row edit is the lead's, after the map is accepted." Added: `07` **FR-437** (the reference identity provider, `07:153`), **FR-412**'s memory half (`07:101`) and **FR-415**'s worker service (`07:104`); and `CR-1212`'s **FR-434**, **FR-435**, **NFR-531**, **NFR-534**, **NFR-489**, **NFR-490**, **NFR-502**, **NFR-493**'s linearity limb and **NFR-496**'s prod-sampling limb. **The F1 obligation:** the Work is done only when the switchover meets the F1 acceptance test on the deployment path this Work builds, not on a loopback mirror (`PL-1237` Goal).)*
+From “Workstreams” (line 384): Deployment: environments, atomic switchover, rollback, shadow — **and the tenancy mechanics ADR-710 requires** | FR-267, FR-268, FR-269, FR-270, FR-271, FR-272; `07` FR-428, FR-429, FR-430, FR-431, and added 2026-08-15 by OQ-540's decision: **FR-436** (a deployment refuses to start against another tenant's database) and **FR-18** (a Job records the platform build, because version skew between tenants is now permanent). Any earlier `Job` migration should carry FR-18's column rather than wait for this *(Corrected 2026-09-29 by the lead, per `PL-1237`'s Scope note, amended by the maintainer's answer Q843-2: "The roadmap WK-674 row edit is the lead's, after the map is accepted." Added: `07` **FR-437** (the reference identity provider, `07:153`), **FR-412**'s memory half (`07:101`) and **FR-415**'s worker service (`07:104`); and `CR-1212`'s **FR-434**, **FR-435**, **NFR-531**, **NFR-534**, **NFR-489**, **NFR-490**, **NFR-502**, **NFR-493**'s linearity limb and **NFR-496**'s prod-sampling limb. **The F1 obligation:** the Work is done only when the switchover meets the F1 acceptance test on the deployment path this Work builds, not on a loopback mirror (`PL-1237` Goal).)* — **close audit filed (CR-2071), interim, acceptance owed** *(dated 2026-11-06 by the executor, on to-lead "2026-11-06 09:54:01 GMT": PROPOSED not ready at `9852f004`; the Work stays `active` and the close is the user's dated line)*
 
 **2026-10-09 — the Work-plan delta for Slices 4 to 6 is PL-1537** (draft), the Lean P2 L5 delta written after the 2026-10-08 re-plan: it sets Slices 4, 5 and 6 as rows with their write sets, FR-452's management-API limb in Slice 4, NFR-501 placed in Slice 5 and Slice 6 named rung 5. Recorded in the docs batch D1.
 
@@ -1247,6 +1247,8 @@ Atomic switchover and rollback on the Slice 4 path, with the rollback's audit li
 
 *Dated 2026-10-12 by the planner: the Work-plan deltas for this slice are `PL-1537` row 2 and `PL-1620` (D0.1 to D0.3, D5.1 to D5.5; minted in D11, #1275). `PL-1620` DP-S5-a is ruled (a) by `RL-1614`. This row's status and fields are unchanged.*
 *Dated 2026-10-19 by the executor (PL-1766 Hand-off item 2): this slice's Work-plan delta is `PL-1766` (Slice 5 before its GO, SL-1455 as a formal dependency, the S4 premises and five decision points); like the planner's line above, it is recorded on this row and changes no field of it.*
+
+*(Dated 2026-11-06, CR-2071's PR, by the executor, on to-lead "2026-11-05 12:02:53 GMT" and to-lead "2026-11-06 09:58:14 GMT" (3): NFR-497's 99.95 % availability target is re-homed to WK-687; the degradation mechanism stays delivered. `PL-1237` ("Verdicts the plan does not give", NFR-497): "deferred with an owner — WK-687 (operational monitoring, Phase 4)"; its `03` §9 table row puts the NFR in Slice 5, which is this row.)*
 
 #### SL-1260 — Slice 6: date-based routing and shadow scoring (FR-270, FR-271, FR-272 audit and NFR-498 for routing and shadow)
 
@@ -3805,6 +3807,28 @@ One stdlib table-row parser (`packages/model-schema/src/model_schema/table_rows.
 
 *(Closed 2026-11-07 by the audit commit of the slice's PR, on the lead's adoption of aud-sl8343 (`from-lead-2026-10-09.md`, "2026-11-05 17:08:05 GMT"); no row existed at `origin/main` `3c3ee5cbc182` before this PR's mint, which added it as `active`. Item 42: the row at `origin/main` was found absent, not `active`.)*
 
+#### SL-2075 — WK-1178 slice — FD-1802 / FD-1746: the upload body limit and the purge audit's before state
+
+```yaml
+id: SL-2075
+family: slice
+title: WK-1178 slice — FD-1802 / FD-1746: the upload body limit and the purge audit's before state
+status: closed                    # draft → active → closed (§1.2a)
+created: 2026-11-07   # original date 2026-11-05, working id 8325, minted 2026-11-07
+owner: lead
+tree: b655490eb27d546d68e94c96b7735a6d575f686b
+phase: P2
+work: WK-1178
+corrected_by: []
+relates: [FD-1802, FD-1746, PL-2074, LG-2076]
+```
+
+A stated request-body limit on both upload routes (`backend/src/app/api/body_limit.py`, a typed setting, nginx at the limit plus a small margin) and a purge audit event that carries its before state (version ids and statuses). The plan is `PL-2074`; the ledger is `LG-2076`.
+
+(Minted 2026-11-07 from working id 8325, with the mint tool of record `mint-repoint.py`; plan `PL-2074` (working id 8324), ledger `LG-2076` (working id 8326). `tree` is the tree of the slice branch (`sl-8325-a-upload-limit` @`14571939`) before the merge of `origin/main`.)
+
+*(Closed 2026-11-07 by the audit commit of the slice's PR, on the lead's adoption of the gate (`gate.log` END `2026-11-07T20:16:50+00:00`, standing modulo the census fix); no row existed at `origin/main` `cdf3871c` before this PR's mint, which added it as `active`. Item 42: the PR sets the row `closed` here. This PR; its number, squash commit and merge date are written at the merge's date-of-record.)*
+
 ### WK-1250 — Sub-graph composition and MTA/cancellation pricing — FR-217's inlining and FR-218's authoring half
 
 ```yaml
@@ -4340,6 +4364,8 @@ From “Workstreams” (line 498): Monitoring: monitors, drift, A/E, demand, rat
 
 *(Dated 2026-10-14 by the planner, a transcription for the lead, on the maintainer's (by delegation) entry "2026-10-14 11:52:51 BST — PL 8030/SL 8031 DPs ruled; SL-1543 fixture fix accepted; NEW candidate: the recipe cast silently nulls unparseable values (re lead 11:51:03 / 11:52:02)", item (3): "FR-441/442 → WK-687 (P4) accepted, since no observability Work exists.")*
 
+
+*(Dated 2026-11-06, CR-2071's PR, by the executor, on to-lead "2026-11-05 12:02:53 GMT" and to-lead "2026-11-06 09:58:14 GMT" (3): NFR-497's 99.95 % monthly availability target is re-homed to this Work from WK-674 (register F41; `PL-1237`: "deferred with an owner — WK-687"). A monthly availability figure can only be measured by the monitoring this Work builds. The degradation mechanism stays delivered, in WK-674.)*
 
 ### WK-688 — Alerting lifecycle and routing
 

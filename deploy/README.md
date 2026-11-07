@@ -145,6 +145,12 @@ docker compose -f deploy/docker-compose.yml --profile app up -d --wait --scale a
 - **`api`** has no dependency on `worker` (FR-434): `up api lb` starts the scoring API with no
   compute worker present (NFR-534). `lb` is the stated topology: one nginx, round-robin over the
   `api` replicas through Docker DNS (`deploy/lb.conf`).
+- **Upload body limit** (FR-450): the API refuses a request body past `GIP_MAX_UPLOAD_BODY_MIB`
+  (default 64) on the two upload routes with an RFC 9457 `413`. `client_max_body_size` in
+  `deploy/lb.conf` and in `deploy/frontend.nginx.conf` is that limit plus 1 MiB (`65m`), so the
+  proxy never answers first: nginx's default of 1 MiB would return its own HTML `413`. A tested
+  default is held to both files; **a deployer who raises `GIP_MAX_UPLOAD_BODY_MIB` raises both
+  nginx values to the new limit plus 1 MiB**, and nothing in the stack does it for them.
 - **`worker`** runs Celery with a container `mem_limit`; a Job's own `resource_budget.memory_gb`
   is checked inside the process and fails the Job naming the budget (FR-412, FR-415).
 - **`scheduler`** is the Celery beat process (FR-432, FR-413, FR-406): the outbox relay is a beat
