@@ -387,7 +387,11 @@ def test_the_seed_runs_on_the_owner_database_and_never_on_the_app_database(
     from types import SimpleNamespace
     from uuid import uuid4
 
-    app_database, owner_database = object(), object()
+    class Handle:
+        async def dispose(self) -> None:
+            pass
+
+    app_database, owner_database = Handle(), Handle()
     seen: list[object] = []
 
     async def grant_demo_principals(database: object, workspace_id: object) -> dict[str, str]:
@@ -403,7 +407,7 @@ def test_the_seed_runs_on_the_owner_database_and_never_on_the_app_database(
 
     assert seen == [owner_database], (
         "the seed was handed "
-        + ("the APP database" if seen == [app_database] else f"{seen!r}")
+        + ("the APP database" if seen == [app_database] else repr(seen))
         + ", not the owner database"
     )
 

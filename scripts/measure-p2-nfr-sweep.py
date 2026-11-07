@@ -41,6 +41,10 @@ if TYPE_CHECKING:
 
 ROOT = Path(__file__).resolve().parent.parent
 
+#: The shared development database every `-T` copy is made from; no DSN a database arm runs on
+#: may name it (PL 8405, DP-2).
+TEMPLATE_DATABASE = "gipricing"
+
 # =============================================================================================
 # Pre-registered constants. P0 = the commit that first carries this block; the ledger cites it.
 # =============================================================================================
@@ -514,6 +518,17 @@ class _Env:
         register_data_handlers()
         register_rate_table_handlers()
         self.settings = load_settings(dev_auth_enabled=True)
+        # FD 8403: the application's login role may not create a workspace or its members, so
+        # the seed alone runs on the owner's connection (`seed.py`'s FD-1729 split); everything
+        # `create_app` and the measured paths touch stays on the application's.
+        if self.settings.migration_database_url is None:
+            raise SystemExit(
+                "GIP_MIGRATION_DATABASE_URL is not set: the sweep seeds the demo workspace and "
+                "its members as the schema owner (the application's login role cannot)"
+            )
+        self.owner_database = Database(
+            self.settings.model_copy(update={"database_url": self.settings.migration_database_url})
+        )
         self.database = Database(self.settings)
         self.blob_store = BlobStore(self.settings)
         self.app = create_app(self.settings)
@@ -531,9 +546,39 @@ class _Env:
         )
 
 
+def dsn_failure(app_url: str, owner_url: str | None) -> str | None:
+    """The 29 Oct rules, made mechanical (PL 8405, DP-2 (a)): why this pair of DSNs may not run
+    a database arm, or `None`. The owner writes, so it must be named, must not be the template,
+    and must reach the same database as the application's login role under another user."""
+    from sqlalchemy.engine import make_url
+
+    if owner_url is None:
+        return (
+            "GIP_MIGRATION_DATABASE_URL is not set: name the schema owner's DSN on the same "
+            "-T copy as GIP_DATABASE_URL"
+        )
+    app, owner = make_url(app_url), make_url(owner_url)
+    if owner.database == TEMPLATE_DATABASE:
+        return f"the owner DSN names the template database {TEMPLATE_DATABASE!r}: use a -T copy"
+    if (app.host, app.port, app.database) != (owner.host, owner.port, owner.database):
+        return (
+            "the app and owner DSNs must name the same host, port and database: "
+            f"{app.host}:{app.port}/{app.database} vs {owner.host}:{owner.port}/{owner.database}"
+        )
+    if app.username == owner.username:
+        return (
+            f"the app and owner DSNs name the same user {app.username!r}: the owner is not the app"
+        )
+    return None
+
+
 async def _grant(env: _Env, workspace_id: UUID) -> dict[str, Any]:
-    """Grant the demo principals in `workspace_id` (PL 8405, DP-5)."""
-    return await _import_seed().grant_demo_principals(env.database, workspace_id)
+    """Grant the demo principals in `workspace_id`, as the owner (PL 8405, DP-5). The owner's
+    connection lives for this call alone."""
+    try:
+        return await _import_seed().grant_demo_principals(env.owner_database, workspace_id)
+    finally:
+        await env.owner_database.dispose()
 
 
 async def _timed_get(
@@ -1285,6 +1330,17 @@ def main() -> int:
         return _profile_child(args.parquet)
     import asyncio
 
+    _bootstrap_paths()
+    from app.config import load_settings
+
+    settings = load_settings(dev_auth_enabled=True)
+    owner = settings.migration_database_url
+    failure = dsn_failure(
+        settings.database_url.get_secret_value(),
+        owner.get_secret_value() if owner is not None else None,
+    )
+    if failure is not None:
+        raise SystemExit(failure)
     handler = {"one-way": _one_way, "storage": _storage, "cells-diff": _cells_diff}[args.command]
     return asyncio.run(handler(args))
 
