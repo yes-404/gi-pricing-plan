@@ -27,7 +27,8 @@ function report(...results: RuleResult[]): ValidationReport {
     finished_at: "2026-08-15T09:00:01Z",
     results,
     empty_layers: [],
-  } as ValidationReport;
+    // `overall` and `counts` are the response's derived outcome (FD 8379); nothing under test reads them.
+  } as unknown as ValidationReport;
 }
 
 const ACK = { user_id: crypto.randomUUID(), at: "2026-08-15T09:05:00Z", justification: "ok" };

@@ -128,7 +128,10 @@ GENERATED_SHAPES: dict[str, str] = {
     # four divergences had accumulated unseen. With these published, no shape in the
     # contract corpus is a hand-authored promise no code is checked against.
     "dataset-version": "DatasetVersion",
-    "validation-report": "ValidationReport",
+    # Moved 2026-11-07 (FD 8379, SL 8381): this contract has always described the REPORT
+    # RESPONSE (it requires `overall` and `counts`), so the generated side is the response-side
+    # `ValidationReportView`. The stored body stays `ValidationReport`, without those two keys.
+    "validation-report": "ValidationReportView",
     # Added 2026-08-25 (W6b-10, browser auth). No hand-authored Phase-0 counterpart —
     # FR-394 names the shape's contents, so this is its first written form.
     "oidc-auth-config": "OidcAuthConfig",
