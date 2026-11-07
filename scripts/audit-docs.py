@@ -106,6 +106,9 @@ entirely.
      doc-index.py --check` CI step); a merged PR's title names its `SL-` and the slice's
      ledger records the PR — needs GitHub PR context this tree-snapshot tool does not have,
      so noted rather than checked here.
+ 40. Every fence in docs/specs/ declares a language, and every `json` block declares
+     `schema=<Class>` or `illustrative` and parses when classed (FD-1381). Validation
+     against model-schema is tests/test_spec_examples.py's, so this script stays stdlib.
 
 Usage: python3 scripts/audit-docs.py
 """
