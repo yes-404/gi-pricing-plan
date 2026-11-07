@@ -3,7 +3,7 @@ id: PL-2074
 family: plan
 kind: map
 title: WK-1178 — the data and upload boundary, a stated request-body limit on both upload routes and a purge audit event with its before state (FD-1802, FD-1746), SL-2075 — a dated Work-plan delta
-status: draft                   # draft → active → superseded | retired (§1.2a) — L1: draft→active rides the slice's PR
+status: active                  # draft → active → superseded | retired (§1.2a) — L1: draft→active rides the slice's PR
 created: 2026-11-07             # original date 2026-11-05, set at the draft under working id 8324; minted 2026-11-07
 owner: planner
 tree: dae9637ea6f6a56f6502e9db70392cdfb2f3983d

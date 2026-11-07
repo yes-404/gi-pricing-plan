@@ -2,10 +2,10 @@
 id: LG-2076
 family: ledger
 title: WK-1178 slice SL-2075 — FD-1802 the upload body limit, FD-1746 the purge audit's before state (slice ledger)
-status: active                 # active → closed (§1.2a)
+status: closed                 # active → closed (§1.2a)
 created: 2026-11-07             # original date 2026-11-05, set at the draft under working id 8326; minted 2026-11-07
 owner: executor
-tree: 0000000000000000000000000000000000000000   # set at the last build-log entry
+tree: b655490eb27d546d68e94c96b7735a6d575f686b   # the slice branch's tree at its last build-log entry (14571939), before the merge of origin/main
 slice: SL-2075
 phase: P2
 work: WK-1178
@@ -36,7 +36,24 @@ PL-2074, "SL-2075 — the upload body limit and the purge before state", R0 to R
 
 ### Gate
 
-(The SOLO gate is the lead's.)
+**The full code gate, both halves, SOLO, gate-1** (`~/gi-pricing-plan.local/scratch/sl8325-gate/gate/gate.log`; START 2026-11-07T18:00:41+00:00 at head `28f15e114fba0d8b10412ba870d3138453f6d05e`, tree `e31042d59ef20f9f38d2bf8c5145e74e1923472a`, branch `sl-8325-a-upload-limit`; `END 2026-11-07T20:16:50+00:00 1.62 1.54 1.88 (date l1 l5 l15) rc=1`). Read from the gate's own logs, not recalled:
+
+| Stage | Result |
+|---|---|
+| ruff, mypy, import-linter | `ruff.rc` 0, `mypy.rc` 0, `import_linter.rc` 0 |
+| `generate-contracts.py --check`, `req-coverage.py` | `contracts.rc` 0, `req_coverage.rc` 0 |
+| pytest | `pytest.rc` 1: `14 failed, 7523 passed, 28 skipped, 5 xfailed, 156 warnings in 4879.32s (1:21:19)` |
+| `audit-docs.py` | `audit_docs.rc` 1, `FAILED (2)`: `check 31: gap in the full allocation between 2064 and 8324`; `check 31: id 8324 is created: 2026-11-05, earlier than id 2064's 2026-11-06`. Both name this slice's own working id 8324: the mint (PL-2074, SL-2075, LG-2076) is what clears them |
+| frontend | `pnpm generate:api`, `lint`, `type-check`, `build` rc 0; `pnpm test --maxWorkers=2` rc 0, `Test Files 138 passed (138)`, `Tests 919 passed (919)` |
+| demo | `demo.py --journey wf-699 --no-compose` rc 0 (PASS 1428 s); `D7 ok`, `sum +489842011 minor units`; A6 infra diff rc 0; shared stack restored from tools-main rc 0; template guard at END `alembic_version=1 environments=3 tenant_marker=1`; redis db 0 dbsize 56 (start 56) |
+
+**The 14 failures, by name, against item 31's set** (`grep '^FAILED' pytest.log`): the 13 of item 31 are `tests/test_audit_docs_finding_citations.py::test_a_finding_resolved_only_by_a_closure_record_is_not_flagged`, `tests/test_audit_docs_ids.py` x2 (`test_the_real_tree_passes_all_ten_checks`, `test_doc_id_check_exits_0_on_the_real_tree`), `tests/test_audit_docs_process_core_digest.py` x2, `tests/test_audit_docs_w37_11_ceiling.py::test_audit_docs_end_to_end_exit_0_then_1_then_0_on_an_injected_residue`, `tests/test_doc_index.py::test_an_index_skipping_a_reserved_block_breaks_contiguity`, `tests/test_register_lint.py` x3, `tests/test_register_owed.py::test_check_29_wiring_is_undisturbed`, `tests/test_repository_invariants.py` x2. The 14th is `backend/tests/test_worker_raise_sites.py::test_every_quote_input_coded_raise_site_in_the_backend_is_accounted_for`: **not** in item 31's set, a real defect of this slice, below.
+
+**The 14th failure and the missed item 11 (a closure finding of this slice).** `AssertionError: a quote-input PlatformError/_raise_named site was added, moved, or now interpolates a new expression ... Left contains 1 more item: {('backend/src/app/api/body_limit.py', '__call__', '<dynamic>'): frozenset({'_TITLE', 'status.HTTP_413_CONTENT_TOO_LARGE', 'too_large_detail(self.max_bytes)'})}` (`pytest.log`, the `_ test_every_quote_input_coded_raise_site_in_the_backend_is_accounted_for _` block). Cause: the slice added a coded raise site in `body_limit.py` and its small runs never included `test_worker_raise_sites.py` and `test_quote_input_raise_sites.py`, which common seat brief item 11 requires for a slice that adds a quote-input raise site. Fixed as its own commit `14571939`, ahead of the re-merge: the key is listed in `_SITES` with the reason "the 413 title constant, the status, and the configured byte limit; no quote input". GREEN by `run-small.sh` at that commit, the two files together: `22 passed`, rc 0; `uv run ruff check .` rc 0; `uv run mypy` `Success: no issues found in 254 source files`, rc 0. No full re-gate (the C form): CI at the merged head; the gate's frontend and demo readings stand, since they passed at END.
+
+**SKIPPED 28 v 27.** The gate's own row: `pytest skipped | FAIL: 28 (!= 27 baseline ...)`. The skip count rose by one because `backend/tests/test_deploy_stack_runtime.py` now holds 14 tests where it held 13 (the 14th is this slice's own `test_an_upload_past_the_limit_through_lb_is_the_apis_413_and_not_nginxs`, gated on `GIP_DEPLOY_TESTS=1`, so it skips in a gate without it). Its proof is PART 2's window above: head `8cf89fdc`, `1 passed in 132.19 s`. The baseline of 28 is from this slice's merge: CI and later gates count 28.
+
+**The gate stands** modulo the census fix in the mint, on the maintainer's word recorded in `to-lead.md` after 20:16 on 2026-11-07 ("The gate stands modulo the census fix in the mint", as quoted by lead 31 at the mint seat's spawn), under item 31 for the 13 docs-audit failures and the lead's ruling for the 14th (the AMENDMENT to the mint brief, 2026-11-07 19:52:20 GMT).
 
 ### Audit
 
@@ -91,4 +108,4 @@ PL-2074, "SL-2075 — the upload body limit and the purge before state", R0 to R
 
 ## PRs
 
-(Owed at the PR: number, title, merge commit. Branch `sl-8325-a-upload-limit`, unpushed at this entry.)
+(This PR; its number, squash commit and merge date are written at the merge's date-of-record. Branch `sl-8325-a-upload-limit`.)
