@@ -121,3 +121,20 @@ Driver `bench-b-pl1665-57.py` sha256 `c68de47cb777b79c6ee3be7265cdd0674ca9aa5b55
 - **Split of the single process** (the harness's own timed lines): NFR-476 gbm fit 154.83 s wall / 994.00 s cpu / peak RSS 8,119 MB; NFR-488 gbm diagnostics 3875.41 s wall / 25,381.67 s cpu / peak RSS 7,634 MB over 623 scoring passes (60 permutation, 560 partial-dependence grid points; 0.0402 fits per pass, within 0.06); the remainder of the 4063 s process wall (32.8 s) is synthesis of the 5 M-row frame, factor-set construction, artifact size and interpreter start-up. NFR-486 artifact 0.14 MB of 50 MB. VmHWM 7,742 MiB.
 - **Against session 1's item A:** S1's fit-limb run was killed by the seat's own `timeout 2400` on the whole process on the Broadwell host and printed no fit line. This run's whole process took 4063 s, of which the fit was 154.83 s, so a 2400 s kill is consistent with a process dominated by the diagnostics phase; that consistency is not a measurement of S1's fit time, and the two hosts differ (item-G addendum). This reading does not retract S1's record; it adds the fit time S1 could not print. The harness progress line (SL 8348) was not on the run head and the run did not need it (the `NFR-476 gbm fit` timed line printed).
 - Log: `~/gi-pricing-plan.local/scratch/nfr-bench-1/s2/G-gbm.log`.
+
+
+## Addendum 2026-11-07 — nfr-bench-1 session 2: item M, NFR-476's EXPRESSION limb: OVER — median ratio 1.502 against 1.25 (exec-nfrs2)
+
+**Verdict: NFR-476 expression limb UNMET on this host — median expression / builtin ratio 1.502 over 3 pairs, spread [1.501, 1.529], against ≤ 1.25 (`EXPRESSION_OVERHEAD_LIMIT`, `scripts/bench-model.py`) → FD owed (owner WK-690, per the plan's row A).** The ratio is far outside the "within 5 points of the bound" zone in which the harness claims no verdict, and the three pairs agree within 0.03. A reading from an 8-vCPU host (AMD EPYC 7B12, item-G addendum), a lower bound on a non-spec host; a ratio is less host-bound than a wall time, but no claim is made that it would hold on 16 cores.
+
+- **Command** (`python -u`, alone, quiet bar, under `timeout 5400`): `uv run --directory <wt> python -u scripts/bench-model.py --only expression --rows 5000000 --factors 60 --rounds 500 --pairs 3`; head `6f958137b227f1a9499a4ab00caf40f79ba2439c` (tree `a995b876dd07bbc8e6b5d8712fd085178ba77e91`), instrument hash `scripts/bench-model.py` `03e834b5ffa6502a16d8b9f66ae0de576f04e11aaf71dfaaa4bbb74ef1db02c3` (re-read on the VM). Start 2026-11-07T19:14:26Z, end 19:30:00Z, wall 934 s; load1 0.58 at the harness's `machine:` line; balloon counters 0 / 0 before and after.
+- **The pairs ran IN ONE PROCESS** (the harness's design, `bench_expression_limb`, `scripts/bench-model.py:432–487` as cited by the lead on 2026-11-04), with 8 vCPU. The ratio is not near the bound, so no process-isolation note is needed.
+
+| pair | builtin | expression | ratio | load1 |
+|---|---|---|---|---|
+| 1 | 119.06 s | 178.70 s | 1.501 | 0.77 → 6.50 |
+| 2 | 119.10 s | 178.88 s | 1.502 | 6.50 → 6.20 |
+| 3 | 117.15 s | 179.15 s | 1.529 | 6.20 → 4.83 |
+
+- Median 1.502; peak RSS across the run 8,631 MB. The load figures are the process's own (8 threads on 8 vCPU, nothing else on the VM). `bench_expression_limb` shows no `head()`/split on the frame in its visible lines; the rows fitted were not separately read from the log.
+- Log: `~/gi-pricing-plan.local/scratch/nfr-bench-1/s2/M-expression.log`.
