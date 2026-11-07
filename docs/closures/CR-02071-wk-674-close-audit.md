@@ -1,10 +1,10 @@
 ---
-id: CR-8315
+id: CR-2071
 family: closure
 kind: work                     # work | phase | review — no other value (§1.2)
 title: WK-674 Work close audit — Deployment, environments, atomic switchover, rollback, shadow and tenancy
 status: active                  # write-once; this is the only value this family ever takes
-created: 2026-11-05   # the brief reserved 2026-11-09; its dated line of 2026-11-05 seated it today
+created: 2026-11-07   # original date 2026-11-05 (the brief reserved 2026-11-09; its dated line of 2026-11-05 seated it today), set at the draft; minted 2026-11-07
 owner: auditor                  # work/phase kind; lead for `kind: review`
 tree: 9852f004b3c4abee3d5ad442f10281eaad4ce790
 phase: P2
@@ -13,10 +13,12 @@ corrected_by: []
 relates: [PL-1237, PL-1537, PL-1620, PL-1688, PL-2016, PL-1766, RL-921, RL-1232, RL-1252, SL-1255, SL-1302, SL-1256, SL-1257, SL-1345, SL-1258, SL-1259, SL-1260, SL-1689, SL-1711, SL-1813, SL-1968, SL-1992, LG-1760, LG-1824, LG-1993, LG-2017, FD-1211, FD-1411, FD-1482, FD-1508, FD-1661, FD-1693, FD-1816, FD-1836, FD-2018]
 ---
 
-# CR-8315 — WK-674 Work close audit
+# CR-2071 — WK-674 Work close audit
 
-*Working id CR 8315, reserved by the lead. **INTERIM RECORD, NOT READY:** the auditor seat aud-wk674b
-refreshed this record as an **interim record**, filed in CR 8315's PR by the executor exec-cr8315 with its id minted at the mint (to-lead "2026-11-06 09:54:01 GMT" (2) and "2026-11-06 09:58:14 GMT"), on 2026-11-06 from 09:43 UTC (`date -u`) against `origin/main`, under
+*Disclosure: drafted under working id 8315; minted as CR-2071 on 2026-11-07, in the CR-2071 mint PR (merge 79 base c602a539).*
+
+*Working id 8315 (now CR-2071), reserved by the lead. **INTERIM RECORD, NOT READY:** the auditor seat aud-wk674b
+refreshed this record as an **interim record**, filed in CR-2071's PR by the executor exec-cr8315 with its id minted at the mint (to-lead "2026-11-06 09:54:01 GMT" (2) and "2026-11-06 09:58:14 GMT"), on 2026-11-06 from 09:43 UTC (`date -u`) against `origin/main`, under
 `brief-aud-wk674b-2026-11-06.md` (sha256 prefix `4aa1e77e7725`). The text it refreshes is
 `7d65135d` (tree `236197c6`), which the seat aud-wk674 wrote on 2026-11-05 from 11:08 UTC. The instruction is the lead's brief `brief-aud-wk674-2026-11-09.md`
 (sha256 prefix `8b3572fe0ef3`), its dated line of 2026-11-05 11:07:59 GMT, and the maintainer's entry
@@ -445,7 +447,7 @@ The rows keep the line numbers `7d65135d` cites.
 | `:85` | F41 | carried, WK-674; **ruled RE-HOME** to WK-687 | **owed**: dated lines on `:85` and the two roadmap rows, this PR |
 | `:86` | F43 L1 | carried, WK-674; **ruled DISCHARGE** | **owed**: the dated line, **and a dated line on FR-250's own text** (`03` :167, the 409 refusal branch kept), this PR |
 
-*(Dated line, 2026-11-07, by the auditor, on the maintainer's entry "2026-11-07 17:30:13 GMT" (CONFIRMED: CR 8315 maps `PL-1237`'s "Slice 5" to SL-1259): F41's "two roadmap rows" (12:02:53) are SL-1259's row and WK-687's row, and their dated lines are `docs/roadmap.md` `:1251` and `:4302`. `PL-1237` names the slice only as "Slice 5": `PL-1237:193` reads "(NFR-502 and NFR-501, Slice 5), F41 (NFR-497, the close), F43 (FR-250 L1, Slice 2), F48". The roadmap names that slice SL-1259: `docs/roadmap.md:1228` reads "#### SL-1259 — Slice 5: atomic switchover, rollback and the measurements …", and SL-1259's own header at `docs/roadmap.md:1241` reads "relates: [PL-1237]". Line numbers read at this branch's head; neither source is edited.)*
+*(Dated line, 2026-11-07, by the auditor, on the maintainer's entry "2026-11-07 17:30:13 GMT" (CONFIRMED: CR-2071 maps `PL-1237`'s "Slice 5" to SL-1259): F41's "two roadmap rows" (12:02:53) are SL-1259's row and WK-687's row, and their dated lines are `docs/roadmap.md` `:1251` and `:4302`. `PL-1237` names the slice only as "Slice 5": `PL-1237:193` reads "(NFR-502 and NFR-501, Slice 5), F41 (NFR-497, the close), F43 (FR-250 L1, Slice 2), F48". The roadmap names that slice SL-1259: `docs/roadmap.md:1228` reads "#### SL-1259 — Slice 5: atomic switchover, rollback and the measurements …", and SL-1259's own header at `docs/roadmap.md:1241` reads "relates: [PL-1237]". Line numbers read at this branch's head; neither source is edited.)*
 
 Removed from the owed list, with the reason. **Resolved at this tree, Decision cell read to its end:** F48, F54, FD-1211, FD-1320,
 FD-1330, FD-1336, FD-1393, FD-1650, FD-1661, FD-1713, FD-1816, FD-1823, FD-1970. **Not WK-674's:** F35, FD-1197, FD-1199
@@ -486,16 +488,16 @@ Every id in §5b's owed list has a resolution above. Findings with no register r
 - **FD candidate A, WITHDRAWN 2026-11-05:** ruled by "11:23:52 GMT" (3)(a), no FD.
 - **FD candidate B, WITHDRAWN 2026-11-05:** ruled by "11:23:52 GMT" (3)(b): the NFR-489 amendment is a
   §14 proposal (b) after S2 item N's profile. Remedy or budget is the user's word.
-- **FD candidate C: RULED FILE, LOW, owner WK-674's docs acts ("12:02:53 GMT"): FILED as FD 8401, and resolved in this PR.** WF-701 C4 and H4 claim a
+- **FD candidate C: RULED FILE, LOW, owner WK-674's docs acts ("12:02:53 GMT"): FILED as FD-2072, and resolved in this PR.** WF-701 C4 and H4 claim a
   notification that FR-272 defers (§5c). `:66` and `:119` read so at `9852f004`. Dated lines on **both** steps ride this PR (to-lead "2026-11-06 09:58:14 GMT" (4)), so no new row is owed by WK-674.
 - **FD candidate D: RULED no FD;** dated lines on FD-1836 and item N. Item N's is in the S2 brief; FD-1836's is owed.
-- **The doc-index finding: RULED FILE, LOW, in this record's mint ("12:02:53 GMT"): FILED as FD 8402, owner WK-1178 ("09:58:14 GMT" (5)):** `execution` derives from a CR's existence,
+- **The doc-index finding: RULED FILE, LOW, in this record's mint ("12:02:53 GMT"): FILED as FD-2073, owner WK-1178 ("09:58:14 GMT" (5)):** `execution` derives from a CR's existence,
   not its verdict. The 2026-10-26 process row is the same defect at WK-675.
 - **NEW: `LG-2017` read `active` after the merge and audit.** Item 42 reached the row only. **Ruled "09:54:01 GMT" (4): item 42 extends to the
   LG:** a closed slice's LG status closes with its row. One line in the next batch.
 
 **Closing acts owed, all in this record's PR unless named:** (1) the six ruled lines of §5b, with the spec clauses on FR-448 and FR-250; (2) FD-1836's line on the ~5 ms rise and its event's
-dated line; (3) candidate C (FD 8401) and the doc-index FD (FD 8402) filed; (4) the regenerated INDEX. **In the next docs batch:** `LG-2017` `closed`.
+dated line; (3) candidate C (FD-2072) and the doc-index FD (FD-2073) filed; (4) the regenerated INDEX. **In the next docs batch:** `LG-2017` `closed`.
 
 **Retry counters:** `none recorded` for WK-674's slices in `write_runtime_state.py show`, read
 2026-11-05; **not re-read at this refresh**.
@@ -546,7 +548,7 @@ Whether this Work closes while NFR-489 is red is the user's word. **The close it
 | 6 | NFR-493, NFR-494, NFR-501, O4, F1, NFR-490's second limb | WK-1178, register `:439` to `:445` | its harness or its carry |
 | 7 | FR-432's seed clause | `SL-1913`, WK-1178 | Mon 16 Nov |
 | 8 | FD-1508, FD-1693, F-W9-1, F38, F41, F43 lines; FR-448 and FR-250 clauses; FD-1836's lines | this PR | applied in this PR |
-| 9 | FD 8401 (WF-701 C4 and H4, with the dated lines on both steps) and FD 8402 (doc-index, owner WK-1178): filed | this PR | done in this PR |
+| 9 | FD-2072 (WF-701 C4 and H4, with the dated lines on both steps) and FD-2073 (doc-index, owner WK-1178): filed | this PR | done in this PR |
 | 10 | `LG-2017` `closed`, a one-line close | this PR (to-lead "2026-11-06 09:58:14 GMT"; item 42 extended) | applied in this PR |
 | 11 | **Owed: freeze-tree gate** (Acceptance 11): main at the last code merge, every command rc 0 including item 31's eight files | the lead | at the code freeze, Thu 12 Nov, before S3 |
 | 12 | `audit-docs`, `doc-index`, `register-lint` on this record; `register-owed.py WK-674` re-run on the PR's own tree | the auditor, at the mint | a no-gate gap |

@@ -1,18 +1,20 @@
 ---
-id: FD-8402
+id: FD-2073
 family: finding
 title: scripts/doc-index.py derives a leaf plan's execution as closed from a work CR's existence, not its verdict
 status: active
-created: 2026-11-06   # working id 8402, drafted 2026-11-06 (aud-wk674b), filed by exec-cr8315
+created: 2026-11-07   # original date 2026-11-06, set at the draft (working id 8402, aud-wk674b, filed by exec-cr8315); minted 2026-11-07
 owner: auditor
 tree: 9b18810ae6af807d6c1c4f3bae5556b4ab02c96d
 corrected_by: []
-relates: [WK-1178, CR-8315, CR-1952]
+relates: [WK-1178, CR-2071, CR-1952]
 ---
 
-# FD-8402 — doc-index derives a plan's `execution: closed` from a closure record's existence
+# FD-2073 — doc-index derives a plan's `execution: closed` from a closure record's existence
 
-*(Filed 2026-11-06 from working id 8402, in the PR of CR 8315, as ruled by to-lead "2026-11-05 12:02:53 GMT" and `to-lead` "2026-11-06 09:58:14 GMT" (5): owner WK-1178.)*
+*Disclosure: drafted under working id 8402; minted as FD-2073 on 2026-11-07, in the CR-2071 mint PR.*
+
+*(Filed 2026-11-06 from working id 8402, in the PR of CR-2071, as ruled by to-lead "2026-11-05 12:02:53 GMT" and `to-lead` "2026-11-06 09:58:14 GMT" (5): owner WK-1178.)*
 
 ## Finding
 

@@ -1,18 +1,20 @@
 ---
-id: FD-8401
+id: FD-2072
 family: finding
 title: WF-701 C4 and H4 claim a notification that 03 FR-272 defers to WK-688
 status: closed
-created: 2026-11-06   # working id 8401, drafted 2026-11-06 (aud-wk674b), filed by exec-cr8315
+created: 2026-11-07   # original date 2026-11-06, set at the draft (working id 8401, aud-wk674b, filed by exec-cr8315); minted 2026-11-07
 owner: auditor
 tree: 9b18810ae6af807d6c1c4f3bae5556b4ab02c96d
 corrected_by: []
-relates: [WK-674, FR-272, NFR-494, FR-268, RL-1252, CR-8315]
+relates: [WK-674, FR-272, NFR-494, FR-268, RL-1252, CR-2071]
 ---
 
-# FD-8401 — WF-701 C4 and H4 claim a notification that FR-272 defers
+# FD-2072 — WF-701 C4 and H4 claim a notification that FR-272 defers
 
-*(Filed 2026-11-06 from working id 8401, in the PR of CR 8315, as ruled by to-lead "2026-11-05 12:02:53 GMT" ("FD CANDIDATES: C ... FILE, LOW, owner WK-674's docs acts") and `to-lead` "2026-11-06 09:58:14 GMT" (4).)*
+*Disclosure: drafted under working id 8401; minted as FD-2072 on 2026-11-07, in the CR-2071 mint PR.*
+
+*(Filed 2026-11-06 from working id 8401, in the PR of CR-2071, as ruled by to-lead "2026-11-05 12:02:53 GMT" ("FD CANDIDATES: C ... FILE, LOW, owner WK-674's docs acts") and `to-lead` "2026-11-06 09:58:14 GMT" (4).)*
 
 ## Finding
 
@@ -20,7 +22,7 @@ relates: [WK-674, FR-272, NFR-494, FR-268, RL-1252, CR-8315]
 
 ## Evidence
 
-Both lines at `9b18810a`; `git diff --stat 2f108b1e 9b18810a -- docs/workflows` is empty (CR-8315 §5c).
+Both lines at `9b18810a`; `git diff --stat 2f108b1e 9b18810a -- docs/workflows` is empty (CR-2071 §5c).
 
 ## Severity
 
