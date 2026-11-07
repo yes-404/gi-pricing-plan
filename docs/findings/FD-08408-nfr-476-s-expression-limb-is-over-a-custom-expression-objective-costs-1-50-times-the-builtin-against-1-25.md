@@ -7,12 +7,12 @@ created: 2026-11-07   # working id 8408, to be minted in the PR of docs batch 15
 owner: lead
 tree: a995b876dd07bbc8e6b5d8712fd085178ba77e91   # the tree the measurement ran at (head 6f958137b227)
 corrected_by: []
-relates: [WK-690, WK-1178, LG-1839, LG-2003, CR-8314, NFR-476]
+relates: [WK-690, WK-1178, LG-1839, LG-2003, NFR-476]
 ---
 
 # FD-8408 — NFR-476's expression limb is over: a custom expression objective costs 1.50 times the builtin against 1.25
 
-*(Working id FD 8408, MEDIUM, owner WK-690. Ruled in to-lead "2026-11-07 19:37:24 GMT" (M), whose id was corrected in "2026-11-07 19:38:16 GMT". CR 8314 reads this finding. It is minted in docs batch 15 at the step before the PR.)*
+*(Working id FD 8408, MEDIUM, owner WK-690. Ruled in to-lead "2026-11-07 19:37:24 GMT" (M), whose id was corrected in "2026-11-07 19:38:16 GMT". WK-690's fresh close audit (branch docs/wk690-fresh-close-2026-11-06) reads this finding. It is minted in docs batch 15 at the step before the PR.)*
 
 ## Finding
 
@@ -36,4 +36,6 @@ Not read: the rows fitted were not separately read from the log, and the cause o
 
 ## Disposition
 
-MEDIUM, owner WK-690 (to-lead "2026-11-07 19:37:24 GMT" (M), id as corrected at "2026-11-07 19:38:16 GMT"). CR 8314 reads it. The remedy-or-budget decision is not made here: either the expression path is made cheaper or NFR-476's 25 % is re-decided, and the second is the maintainer's.
+MEDIUM, owner WK-690 (to-lead "2026-11-07 19:37:24 GMT" (M), id as corrected at "2026-11-07 19:38:16 GMT"). WK-690's fresh close audit (branch docs/wk690-fresh-close-2026-11-06) reads it. The remedy-or-budget decision is not made here: either the expression path is made cheaper or NFR-476's 25 % is re-decided, and the second is the maintainer's.
+
+**Named carry** (to-lead "2026-11-07 20:28:26 GMT" (3), by delegation): carried into the P2 closure record by name, owner WK-690, read on AMD EPYC 7B12, 8 vCPU, S2 2026-11-07; §14 proposes the P3 Work that measures on the spec host first and fixes second.
