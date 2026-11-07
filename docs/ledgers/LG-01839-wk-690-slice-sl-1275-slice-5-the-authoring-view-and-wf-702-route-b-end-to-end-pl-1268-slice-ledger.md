@@ -138,3 +138,5 @@ Driver `bench-b-pl1665-57.py` sha256 `c68de47cb777b79c6ee3be7265cdd0674ca9aa5b55
 
 - Median 1.502; peak RSS across the run 8,631 MB. The load figures are the process's own (8 threads on 8 vCPU, nothing else on the VM). `bench_expression_limb` shows no `head()`/split on the frame in its visible lines; the rows fitted were not separately read from the log.
 - Log: `~/gi-pricing-plan.local/scratch/nfr-bench-1/s2/M-expression.log`.
+
+*(Dated line, 2026-11-07, docs batch 16, by the executor, on CR 8314's refresh (F1) and the maintainer's carry ruling (`to-lead.md` "2026-11-07 20:28:26 GMT"): this ledger **stays `active` until S3's readings land; its close follows S3** (the lead's word 2026-11-07: batch 15 adds S2's L and M lines here and S3 may record L here). Condition (2), "closes only on the 5.7 measurement", is met by Item B at `dae9637e` (2026-11-05; the load and command are in the dated line of docs batch 11 above). The measured result is not clean: 3d PASS, 3c UNMET, carried by name (FD-2009, working id 8352, owner WK-690). `SL-1275`'s roadmap row closes in this batch. Sections above are not edited.)*
