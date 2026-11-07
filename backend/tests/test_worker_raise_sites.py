@@ -107,6 +107,12 @@ def _census() -> dict[_Key, frozenset[str]]:
 #: (file, function, code) -> (the expressions its message and arguments interpolate, why each is
 #: input-free). A quote-input code's message states a count, a threshold or a ref, never a value.
 _SITES: dict[_Key, tuple[frozenset[str], str]] = {
+    ("backend/src/app/api/body_limit.py", "__call__", _DYNAMIC): (
+        frozenset({
+            "_TITLE", "status.HTTP_413_CONTENT_TOO_LARGE", "too_large_detail(self.max_bytes)",
+        }),
+        "the 413 title constant, the status, and the configured byte limit; no quote input",
+    ),
     ("backend/src/app/api/score.py", "_as_platform_error", _DYNAMIC): (
         frozenset({
             "_PER_QUOTE_STATUS", "code.replace('_', ' ').title()", "detail or None",

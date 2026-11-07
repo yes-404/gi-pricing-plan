@@ -560,13 +560,14 @@ async def test_an_archived_version_cannot_be_fitted_on(
 
 
 @pytest.mark.req("FR-81")
+@pytest.mark.req("NFR-472")
 async def test_a_subject_purge_is_admin_only_and_recorded(
     database: Database, owner_database: Database, workspace_id
 ) -> None:
     """FR-81: the purge is recorded even though the data is gone — especially because
     it is. An erasure with no record is indistinguishable from data that was never there."""
     analyst = await _with_role(database, workspace_id, "analyst")
-    dataset_id, _ = await _version(database, workspace_id, analyst)
+    dataset_id, version_id = await _version(database, workspace_id, analyst)
 
     # `purge_subject` has no application caller: both calls (the refusal and the purge) run
     # as the owner; the setup and the purge/audit reads below stay on the login role.
@@ -592,19 +593,20 @@ async def test_a_subject_purge_is_admin_only_and_recorded(
                 select(SubjectPurgeRow).where(SubjectPurgeRow.dataset_id == dataset_id)
             )
         ).scalars().all()
-        actions = [
-            e.action
-            for e in (
-                await session.execute(
-                    select(AuditEventRow).where(
-                        AuditEventRow.workspace_id == workspace_id
-                    )
-                )
-            ).scalars()
-        ]
+        events = (
+            await session.execute(
+                select(AuditEventRow).where(AuditEventRow.workspace_id == workspace_id)
+            )
+        ).scalars().all()
+        actions = [e.action for e in events]
     assert len(purges) == 1
     assert purges[0].reason == "DSAR 2026-114"
     assert "dataset.subject_purged" in actions
+    # NFR-472: the event carries the state before the erasure -- the affected versions' ids and
+    # statuses, in version order, and nothing the purge erased; `after` is unchanged (FD-1746).
+    (purged,) = [e for e in events if e.action == "dataset.subject_purged"]
+    assert purged.before == {"versions": [{"id": str(version_id), "status": "draft"}]}
+    assert purged.after == {"subject_token": "a" * 32, "versions_affected": 1}
 
 
 @pytest.mark.req("FR-81")
