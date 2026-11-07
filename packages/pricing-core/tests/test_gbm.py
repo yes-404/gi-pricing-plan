@@ -669,6 +669,122 @@ def test_a_declared_interaction_group_reaches_the_backend(backend: str) -> None:
     assert fit.result.feature_order == ("area", "driv_age")
 
 
+_CROSS_FACTORS = [_factor(name, name) for name in "abcd"]
+_GROUPS = (("a", "b"), ("c", "d"))
+
+
+def _cross_group_data(n: int, seed: int) -> pl.DataFrame:
+    """A Poisson book whose whole signal is an `a * c` interaction, across the two groups.
+
+    There is no main effect of any feature, so a booster that may not combine `a` with `c`
+    has nothing to fit but the intercept, and one that may combine them predicts very
+    differently. (`GbmSpec` refuses a group of one feature, so each group names two.)
+    """
+    rng = np.random.default_rng(seed)
+    a, b, c, d = (rng.uniform(-1.0, 1.0, n) for _ in range(4))
+    exposure = rng.uniform(0.5, 1.0, n)
+    eta = np.log(exposure) - 1.0 + 1.2 * np.sign(a) * np.sign(c)
+    return pl.DataFrame(
+        {
+            "exposure_years": exposure,
+            "a": a,
+            "b": b,
+            "c": c,
+            "d": d,
+            "claim_count": rng.poisson(np.exp(eta)).astype(float),
+        }
+    )
+
+
+def _split_paths(backend: str, booster: bytes, feature_order: tuple[str, ...]) -> list[set[str]]:
+    """The set of features split on along every root-to-leaf path of every tree."""
+    paths: list[set[str]] = []
+
+    def name(split: object) -> str:
+        return feature_order[split] if isinstance(split, int) else str(split)
+
+    if backend == "xgboost":
+        import json
+
+        import xgboost as xgb
+
+        loaded = xgb.Booster()
+        loaded.load_model(bytearray(booster))
+        by_index = {f"f{i}": feature for i, feature in enumerate(feature_order)}
+
+        def walk_xgb(node: dict[str, Any], above: frozenset[str]) -> None:
+            children = node.get("children")
+            if not children:
+                paths.append(set(above))
+                return
+            split = str(node["split"])
+            here = above | {by_index.get(split, split)}
+            for child in children:
+                walk_xgb(child, here)
+
+        for tree in loaded.get_dump(dump_format="json"):
+            walk_xgb(json.loads(tree), frozenset())
+    else:
+        import lightgbm as lgb
+
+        def walk_lgb(node: dict[str, Any], above: frozenset[str]) -> None:
+            if "left_child" not in node:
+                paths.append(set(above))
+                return
+            here = above | {name(node["split_feature"])}
+            walk_lgb(node["left_child"], here)
+            walk_lgb(node["right_child"], here)
+
+        for tree in lgb.Booster(model_str=booster.decode()).dump_model()["tree_info"]:
+            walk_lgb(tree["tree_structure"], frozenset())
+    return paths
+
+
+@pytest.mark.req("FR-123")
+@pytest.mark.parametrize("backend", BACKENDS)
+def test_a_constrained_booster_has_no_cross_group_split(backend: str) -> None:
+    """The constraint's effect, read from the trees, not from the library accepting it.
+
+    `test_a_declared_interaction_group_reaches_the_backend` uses a group that is the whole
+    feature set, so it cannot fail if the constraint never reaches the backend. Here the
+    groups `(a, b)` and `(c, d)` forbid every root-to-leaf path that splits on a feature of each,
+    on data whose only signal is an `a * c` interaction. The unconstrained fit must contain such
+    a path (else the walker proves nothing) and must predict differently on a holdout.
+    """
+    train = _cross_group_data(6_000, 20261105)
+    holdout = _cross_group_data(2_000, 20261106)
+    hyper = {"max_depth": 4, "eta": 0.2, "num_boost_round": 60}
+    constrained_spec = _spec(
+        backend,
+        hyperparameters=hyper,
+        interaction_constraints=_GROUPS,
+        factors=tuple(f.id for f in _CROSS_FACTORS),
+    )
+    free_spec = _spec(
+        backend, hyperparameters=hyper, factors=tuple(f.id for f in _CROSS_FACTORS)
+    )
+    constrained = fit_gbm(train, constrained_spec, _CROSS_FACTORS)
+    free = fit_gbm(train, free_spec, _CROSS_FACTORS)
+
+    order = constrained.result.feature_order
+    assert order == ("a", "b", "c", "d")
+    constrained_paths = _split_paths(backend, constrained.booster_bytes, order)
+    free_paths = _split_paths(backend, free.booster_bytes, order)
+
+    def crosses(path: set[str]) -> bool:
+        return bool(path & set(_GROUPS[0])) and bool(path & set(_GROUPS[1]))
+
+    assert any(crosses(p) for p in free_paths), "the unconstrained fit never crosses the groups"
+    assert constrained_paths
+    assert not [p for p in constrained_paths if crosses(p)], "a path splits on both groups"
+
+    mu_constrained = predict_gbm(
+        constrained.result, constrained.booster_bytes, holdout, _CROSS_FACTORS
+    ).to_numpy()
+    mu_free = predict_gbm(free.result, free.booster_bytes, holdout, _CROSS_FACTORS).to_numpy()
+    assert float(np.mean(np.abs(mu_constrained - mu_free))) > 0.05
+
+
 # --------------------------------------------------------------------------------------
 # FR-174 — GBM diagnostics
 # --------------------------------------------------------------------------------------

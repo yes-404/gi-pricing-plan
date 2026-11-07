@@ -2,7 +2,7 @@
 id: FD-1747
 family: finding
 title: The score rate-limit test pins the limiter's clock beside a real-time 2-second Redis expiry, so a stall of more than 2 seconds between requests resets the counter and the 4th request is admitted
-status: active
+status: closed
 created: 2026-10-17 # original date 2026-10-14, set at the filing; minted 2026-10-17
 owner: auditor
 tree: beee5ebedcfebc03c1658728442827960975392a
@@ -191,3 +191,5 @@ Standing, until fixed (the maintainer's (by delegation) entry "2026-10-14 14:30:
 on exactly this test with exactly this assert may be re-run **once**; any other failure may not.
 The event that next discharges it: the WK-1178 slice in P2 that lands the red-first test and the
 fixture change, with the by-run reproduction printed here.
+
+***Resolved 2026-11-06*** — closed in place 2026-11-06 by the executor, as the closing act of the mint of SL-2051 (WK-1178, LG-2052, PL-2050; this PR; its number, squash commit and merge date are written at the merge's date-of-record), on the lead's adoption of aud-slg (to-lead "2026-11-06 00:01:53 GMT"). Limb 1 was merged earlier (`d657736b`: the fixture pins `_KEY_TTL_SECONDS` to 3600, and `test_an_admitted_request_leaves_a_key_with_a_bounded_expiry` and `test_an_expired_key_is_gone_and_the_next_admit_counts_one` keep the expiry covered). Limb 2: an autouse fixture in `backend/tests/test_score_rate_limit.py` fails any test across which `gip_rate_limit_unenforced_total` moved, naming "limiter not enforced", the two deliberate fail-open tests exempt by name; the mutation (a `RateLimiter` on a dead store) gave 4 failed and 4 errors, each error carrying that message beside an `assert 409 == 429` body failure (four bodies; LG-2052 corrects its own earlier "two"). **By-run reproduction, printed as the essay ordered** (harness outside the repo, limit 3 rps, clock pinned, the 4th request sent after `GAP` real seconds, tree `5d7d3066`): `_KEY_TTL_SECONDS` shipped (2), `GAP=2.5` gave `AssertionError: assert 409 == 429`, `1 failed`; `GAP=0` gave `1 passed`; `GAP=2.5` with `_KEY_TTL_SECONDS` 3600 gave `1 passed`. The cause is the pinned clock beside the real 2 s expiry, as the mechanism said. **Scope of the evidence:** every run pinned the clock, so the reproduction proves the pin is the cause; it does not run the production limiter on a real clock. Production safety rests on the essay's argument (a 2 s TTL set inside a 1 s window cannot lapse inside it), which stays stated as an argument. The re-rate trigger ("the production limiter, not the test, can reset") did not fire. Test-only; no source changed.

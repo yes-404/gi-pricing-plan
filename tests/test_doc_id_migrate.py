@@ -156,6 +156,22 @@ def pristine_b(tmp_path: pathlib.Path) -> pathlib.Path:
 _PRE_MIGRATION_SHA: Final = "fbb5555b45f9b22ef8bc5571865ee8d9a86b62e8"
 
 
+def _remove_worktree(repo: pathlib.Path, worktree: pathlib.Path, tmp: pathlib.Path) -> None:
+    """Teardown of `pre_migration_root` (FD-1749): a failed `git worktree remove` is loud.
+
+    The removal runs with `check=True`, so a failure raises `CalledProcessError` out of the
+    fixture instead of leaving a registered worktree behind in the shared `.git` unseen; the
+    temporary directory is removed either way. A stale registration is reported, never cleaned.
+    """
+    try:
+        subprocess.run(
+            ["git", "worktree", "remove", "--force", str(worktree)],
+            cwd=repo, check=True, capture_output=True, text=True,
+        )
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+
+
 @pytest.fixture(scope="session")
 def pre_migration_root() -> Any:
     """A `git worktree add --detach` checkout of `_PRE_MIGRATION_SHA`, real content the
@@ -187,11 +203,7 @@ def pre_migration_root() -> Any:
     try:
         yield worktree
     finally:
-        subprocess.run(
-            ["git", "worktree", "remove", "--force", str(worktree)],
-            cwd=ROOT, check=False, capture_output=True, text=True,
-        )
-        shutil.rmtree(tmp, ignore_errors=True)
+        _remove_worktree(ROOT, worktree, tmp)
 
 
 def _tree_files(root: pathlib.Path) -> dict[str, bytes]:
@@ -465,6 +477,24 @@ def test_class6_a_hand_edited_readme_fails_and_names_the_file(
     assert "docs/INDEX.md" in classification.per_class["6-generated-artifact"]
 
 
+def _copy_scripts_snapshot(root: pathlib.Path, *, ignore_pycache: bool = False) -> None:
+    """`scripts/` plus what `scripts/_docid.py` loads by path from outside it
+    (`packages/model-schema/src/model_schema/table_rows.py`, FD-1484), copied into a
+    snapshot `root` -- so a snapshot holds everything `migrate()` loads from its own
+    `REPO_ROOT`, not only the `scripts/` tree.
+    """
+    import shutil
+
+    shutil.copytree(
+        ROOT / "scripts",
+        root / "scripts",
+        ignore=shutil.ignore_patterns("__pycache__") if ignore_pycache else None,
+    )
+    rel = pathlib.Path("packages/model-schema/src/model_schema/table_rows.py")
+    (root / rel).parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy(ROOT / rel, root / rel)
+
+
 def _migrate_module_with_source_mutation(
     tmp_path: pathlib.Path, old: str, new: str, *, name: str
 ) -> types.ModuleType:
@@ -489,7 +519,7 @@ def _migrate_module_with_source_mutation(
     )
     source = source.replace(old, new, 1)
     root = tmp_path / name
-    shutil.copytree(ROOT / "scripts", root / "scripts")
+    _copy_scripts_snapshot(root)
     shutil.copytree(ROOT / "docs" / "_templates", root / "docs" / "_templates")
     (root / "scripts" / "doc-id.py").write_text(source, encoding="utf-8")
     return _load_by_path(
@@ -829,10 +859,7 @@ def test_migrate_leaves_no_pycache_in_a_snapshot_carrying_its_own_scripts(
 
     root = tmp_path / "snap"
     shutil.copytree(FIXTURE_CORPUS, root)
-    shutil.copytree(
-        ROOT / "scripts", root / "scripts",
-        ignore=shutil.ignore_patterns("__pycache__"),
-    )
+    _copy_scripts_snapshot(root, ignore_pycache=True)
     _run_git(["init", "--initial-branch=main", "--quiet"], cwd=root)
     _run_git(["config", "user.email", "test@example.com"], cwd=root)
     _run_git(["config", "user.name", "Test"], cwd=root)
@@ -9309,3 +9336,20 @@ def test_cli_migrate_refuses_an_already_migrated_tree(
         capture_output=True, text=True, check=True,
     ).stdout
     assert status == "", f"the refusal must come before any write:\n{status}"
+
+
+def test_a_failed_worktree_removal_is_loud_and_the_temporary_directory_is_still_gone(
+    tmp_path: pathlib.Path,
+) -> None:
+    """FD-1749: the removal's failure raises, and the tmp directory is removed regardless.
+
+    On a throwaway repository, never the real one: the path below is not a worktree of it.
+    """
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    subprocess.run(["git", "init", "-q", str(repo)], check=True, capture_output=True)
+    tmp = tmp_path / "pre-migration-root-x"
+    (tmp / "worktree").mkdir(parents=True)
+    with pytest.raises(subprocess.CalledProcessError):
+        _remove_worktree(repo, tmp / "worktree", tmp)
+    assert not tmp.exists()

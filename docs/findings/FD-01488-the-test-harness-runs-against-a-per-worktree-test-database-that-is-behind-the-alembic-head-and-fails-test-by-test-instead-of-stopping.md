@@ -2,12 +2,12 @@
 id: FD-1488
 family: finding
 title: The test harness runs against a per-worktree test database that is behind the alembic head, and fails test by test instead of stopping
-status: active
+status: closed
 created: 2026-10-08            # original date 2026-10-05, set at the draft; minted 2026-10-08
 owner: auditor
 tree: 83ea509023d6d705d6f78fe74b7124fdf1375739
 corrected_by: []
-relates: [WK-1178, SL-1409]
+relates: [WK-1178, SL-1409, SL-2048, LG-2049, PL-2047]
 ---
 
 # FD-1488 — the test harness runs on a database behind the alembic head and fails test by test
@@ -82,7 +82,11 @@ Owner **WK-1178**. **Proposed severity: MEDIUM** (the maintainer sets it). **Pro
 decision:** fix before close with an owner: WK-1178, by the remedy above; the lead gives
 the verdict. Until the fix lands, the "alembic current == heads" gate-checklist line applies.
 
+***Resolved 2026-11-06*** — closed in place 2026-11-06 by the auditor, as the closing act of the audit of SL-2048 (WK-1178, LG-2049, PL-2047; this PR; its number, squash commit and merge date are written at the merge's date-of-record), on the lead's brief under the GO "2026-11-05 10:31:31 GMT" (plans C and H accepted, DP-H1 to DP-H5 ruled; `to-lead.md`, a local channel file), on the order of "2026-11-05 09:58:58 GMT". Delivered remedy: DP-H1 (a), stop once and by name, never upgrade. `backend/tests/conftest_db.py` gains `migration_problem(current, heads, known)`, `_script_revisions()` (the script directory read once a session, `functools.cache`) and `_check_migrations_once(current)`; the `database` fixture runs the check once per session, after its `applied` check, and `pytest.exit`s with `the test database is at […], the scripts' heads are […]: run \`uv run alembic upgrade head\` against this database (FD-1488)`. It reads `alembic_version` and the script directory and writes nothing (G1), as the login role (G2). DP-H2 (a): a revision the checkout's scripts do not know is a database *ahead* of the branch and passes with a `UserWarning`. Red first, by cause, in LG-2049: `b96ea7da` (stub returning `None`) gave `2 failed, 2 passed` (`assert None is not None`), green `970d4b62`, `6 passed` in `test_conftest_db_migration.py`; the audit added two single-edit mutations (cache removed → the read-once test fails; `pytest.exit` removed → the stop test fails). Stamped proof in a granted DB window on a `createdb -T` copy (START 11:01:49, END 11:06:48 GMT, `test_workspaces.py`): one revision back → `Exit`, rc 1, in 25 s; restamped → `2 passed`; unknown revision → `UserWarning` and `2 passed`; both zeros at END. Not retired by this record: the "alembic current == heads" gate-checklist line in `dev-commands` and the executor role file (PL-2047 Hand-off: a separate record). Gate evidence: the gate: pytest `13 failed, 7224 passed, 27 skipped, 5 xfailed in 4949.99s` alone, the 13 being the item-31 docs-audit set, every other python and frontend stage rc 0, demo seeded rc 0 (LG-2049).
+
 ## Not this finding
 
 SL-1409's three real failures (the registry test, the authorisation sweep's line pins,
 `test_doc_id_migrate` in a worktree) are the slice's, per the 14:10:08 entry.
+
+*(Dated line, 2026-11-05, docs batch 11, by the auditor, on to-lead "2026-11-05 09:51:53 GMT" (triage b28ba8e9454c accepted as the proposal of record), item (4): severity RULED MEDIUM, as proposed.)*

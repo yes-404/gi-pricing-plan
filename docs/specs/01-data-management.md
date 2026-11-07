@@ -223,9 +223,12 @@ vocabulary; every entity also carries the `ArtifactEnvelope` from `00-overview.m
 
 ```json
 {
+  "id": "0190b5a2-7c3e-7a10-9d21-4f6b8c2e1a01",
+  "workspace_id": "0190b5a2-7c3e-7a10-9d21-4f6b8c2e1a01",
+  "created_at": "2026-08-14T09:00:00Z",
   "slug": "motor-gb-quote-bind",
   "name": "Motor GB — quote & bind",
-  "owner_id": "uuid",
+  "owner_id": "0190b5a2-7c3e-7a10-9d21-4f6b8c2e1a01",
   "line_of_business": "motor",
   "territory": "GB",
   "currency": "GBP",
@@ -236,8 +239,9 @@ vocabulary; every entity also carries the `ArtifactEnvelope` from `00-overview.m
     "driver_age":       {"description": "Age of main driver at inception", "semantic_type": "continuous", "unit": "years"},
     "vehicle_group":    {"description": "ABI group 1-50", "semantic_type": "ordinal", "reference_table": "abi-vehicle-group"}
   },
-  "validation_rule_set_id": "uuid",
-  "latest_version": 12
+  "validation_rule_set_id": "0190b5a2-7c3e-7a10-9d21-4f6b8c2e1a01",
+  "latest_version": 12,
+  "latest_version_status": "validated"
 }
 ```
 
@@ -328,6 +332,8 @@ A rule is a tagged union on `layer` + `check`:
 
 ```json
 {
+  "id": "0190b5a2-7c3e-7a10-9d21-4f6b8c2e1a01",
+  "version": 2,
   "slug": "exposure-positive",
   "layer": "actuarial_sanity",
   "check": "range",
@@ -338,18 +344,38 @@ A rule is a tagged union on `layer` + `check`:
   "tolerance": {"max_violating_rows": 0, "max_violating_exposure_fraction": 0.0},
   "message": "Exposure must be > 0 and ≤ 1.05 policy-years per exposure row.",
   "rationale": "Zero/negative exposure breaks the frequency offset; > 1.05 indicates a period-splitting bug.",
-  "owner": "pricing-actuary@example.com",
   "status": "approved"
 }
 ```
 
 ```json
 {
+  "id": "0190b5a2-7c3e-7a10-9d21-4f6b8c2e1a01",
   "slug": "motor-gb-standard",
   "version": 4,
-  "dataset_id": "uuid",
-  "rules": [{"rule_id": "uuid", "rule_version": 2, "enabled": true, "severity_override": null}],
-  "reference_dataset_version_id": "uuid",
+  "dataset_id": "0190b5a2-7c3e-7a10-9d21-4f6b8c2e1a01",
+  "entries": [
+    {
+      "rule": {
+        "id": "0190b5a2-7c3e-7a10-9d21-4f6b8c2e1a01",
+        "version": 2,
+        "slug": "exposure-positive",
+        "layer": "actuarial_sanity",
+        "check": "range",
+        "severity": "fail",
+        "target": {"table": "policy_exposure", "column": "exposure_years"},
+        "params": {"min_exclusive": 0, "max_inclusive": 1.05},
+        "scope": {"filter": null, "skip_on_derived": false},
+        "tolerance": {"max_violating_rows": 0, "max_violating_exposure_fraction": 0.0},
+        "message": "Exposure must be > 0 and ≤ 1.05 policy-years per exposure row.",
+        "rationale": "Zero/negative exposure breaks the frequency offset; > 1.05 indicates a period-splitting bug.",
+        "status": "approved"
+      },
+      "enabled": true,
+      "severity_override": null
+    }
+  ],
+  "reference_dataset_version_id": "0190b5a2-7c3e-7a10-9d21-4f6b8c2e1a01",
   "status": "approved"
 }
 ```
@@ -366,6 +392,12 @@ A rule's thresholds are not overridable at set level either, and for a stronger 
 > unreachable. A downgrade attempt is refused with `RULE_SEVERITY_DOWNGRADE_FORBIDDEN`
 > (409). Found by building §5.3's rule-set editor against the API and having nothing to
 > bind its enable/disable control to.
+
+> **Clarified 2026-11-05 (`RL-2054` row 4, FD-1381).** The read shape is `entries`, not `rules`:
+> `GET` and `PUT /datasets/{slug}/rule-set` return a `ValidationRuleSet` whose `entries` each
+> embed the whole `rule`, with `enabled` and `severity_override`. The `PUT` *body* is `rules`
+> of `rule_id`, `enabled` and `severity_override`. Neither shape has the `rule_version` the
+> example printed before this date, and the example above is now the read shape.
 
 ### 4.4 Built-in rule catalogue
 
@@ -549,32 +581,39 @@ key is one target with several columns.
 
 ```json
 {
-  "dataset_version_id": "uuid",
-  "rule_set_id": "uuid",
+  "id": "0190b5a2-7c3e-7a10-9d21-4f6b8c2e1a01",
+  "dataset_version_id": "0190b5a2-7c3e-7a10-9d21-4f6b8c2e1a01",
+  "rule_set_id": "0190b5a2-7c3e-7a10-9d21-4f6b8c2e1a01",
   "rule_set_version": 4,
-  "job_id": "uuid",
+  "job_id": "0190b5a2-7c3e-7a10-9d21-4f6b8c2e1a01",
   "started_at": "2026-08-14T09:12:00Z",
   "finished_at": "2026-08-14T09:14:37Z",
-  "overall": "pass | pass_with_warnings | fail | error",
+  "overall": "pass_with_warnings",
   "counts": {"pass": 41, "warn": 3, "fail": 0, "error": 0, "skipped": 1},
   "results": [
     {
-      "rule_id": "uuid", "rule_slug": "psi-driver-age", "rule_version": 2,
+      "rule_id": "0190b5a2-7c3e-7a10-9d21-4f6b8c2e1a01", "rule_slug": "psi-driver-age", "rule_version": 2,
       "layer": "distributional", "severity": "warn", "outcome": "warn",
       "measured": {"psi": 0.148}, "threshold": {"warn_above": 0.10, "fail_above": 0.25},
       "affected_rows": null, "affected_exposure_fraction": null,
       "detail": "Driver age distribution shifted; largest contribution from band 17-21 (+2.1pp).",
       "offending_sample": [{"column": "driver_age"}],
-      "evidence_blob": "blob:sha256:… (bucketed distribution table)",
       "acknowledgement": {
-        "user_id": "uuid", "at": "2026-08-14T10:02:11Z",
+        "user_id": "0190b5a2-7c3e-7a10-9d21-4f6b8c2e1a01", "at": "2026-08-14T10:02:11Z",
         "justification": "Expected: new young-driver telematics product launched 2026-04."
       }
     }
   ],
-  "reference_dataset_version_id": "uuid"
+  "reference_dataset_version_id": "0190b5a2-7c3e-7a10-9d21-4f6b8c2e1a01"
 }
 ```
+
+> **Clarified 2026-11-05 (`RL-2054` row 5, FD-1381).** `overall` is one of `pass`, `pass_with_warnings`,
+> `fail` or `error` (the invariants below). `evidence_blob` is no longer printed: no field carries it and
+> FR-49 does not list one. `overall` and `counts` stay, because the authored `validation-report.schema.json`
+> requires both, but `GET /validation-reports/{report_id}` does not yet serialise them: they are plain
+> properties of the model. That is FD 8379 (working id; owner WK-1178), and until it lands this block is the
+> spec's statement and not what the route returns.
 
 > **Amended 2026-08-26 (W6b-18).** The example previously printed `"offending_sample": []`, which settled nothing about the item encoding (OQ-567, decided 2026-08-26: (b)). The item shape is written out: one object per offending row, property keys are column names, values are the cell value as a string or null — `None` is distinct from `""`. A composite key is one item with several properties. A column-level check emits `{"column": <name>}`.
 
@@ -808,11 +847,11 @@ required this since Phase 0, and the response was the only documented `01` respo
 
 ```json
 {
-  "version_id": "uuid",
-  "built_from": {"parent_version_id": "uuid", "operation": "sample", "parameters": {}},
+  "version_id": "0190b5a2-7c3e-7a10-9d21-4f6b8c2e1a01",
+  "built_from": {"parent_version_id": "0190b5a2-7c3e-7a10-9d21-4f6b8c2e1a01", "operation": "sample", "parameters": {}},
   "depends_on_this": {
-    "derived_versions": [{"version_id": "uuid", "version": 3, "operation": "split"}],
-    "models": [{"model_id": "uuid", "slug": "motor-freq-2026", "status": "approved"}],
+    "derived_versions": [{"version_id": "0190b5a2-7c3e-7a10-9d21-4f6b8c2e1a01", "version": 3, "operation": "split"}],
+    "models": [{"model_id": "0190b5a2-7c3e-7a10-9d21-4f6b8c2e1a01", "slug": "motor-freq-2026", "status": "approved"}],
     "rating_versions": [],
     "monitoring_baselines": []
   }
@@ -849,47 +888,50 @@ required this since Phase 0, and the response was the only documented `01` respo
 
 ### 5.1 REST API
 
-| Method | Path | Purpose |
-|---|---|---|
-| `POST` | `/api/v1/sources` | Register a Source (FR-26) |
-| `GET` | `/api/v1/sources` | List sources (credentials redacted) |
-| `POST` | `/api/v1/sources/{id}/preview` | Read first N rows + inferred schema without creating a version |
-| `POST` | `/api/v1/datasets` | Create a Dataset (metadata + data dictionary) |
-| `GET` | `/api/v1/datasets` | List / filter datasets, each with `latest_version`, `latest_version_status` and `last_validated_at` (FR-55). *(amended 2026-08-25, W6b-3: **and `last_validated_version`.** FR-55's own 2026-08-23 amendment records that it landed as three derived fields rather than two — "the list states which" cannot be satisfied by a bare date — but this row was written when the decision named two and was never brought forward. The endpoint has served four since W32-3. Code and published contract were right; this row was the stale side.)* |
-| `GET` | `/api/v1/datasets/{slug}` | Dataset detail incl. `latest_version`. *(amended 2026-08-25, W6b-3: **and `latest_version_status`, `last_validated_at`, `last_validated_version`.** The detail route runs the same two aggregates the list does, over one id, deliberately — `backend/src/app/api/datasets.py` states why: "a detail page that showed nothing where the list showed a date would be its own defect (FR-55)". So it serves the same derived set, and this row named one of four.)* |
-| `PUT` | `/api/v1/datasets/{slug}/dictionary` | Update the Data Dictionary (audited) |
-| `PATCH` | `/api/v1/datasets/{dataset_id}` | Change the owner — Admin or the current owner, audited as `dataset.owner_changed` (FR-82) |
-| `GET` | `/api/v1/datasets/{slug}/versions` | Version timeline, newest first, cursor-paginated |
-| `POST` | `/api/v1/datasets/{slug}/versions` | **202** Start an Ingestion Run → Job (FR-27). **Amended 2026-09-28 (WK-1178, the deputy's DP-P1 ruling of that day, #869's ingest finding):** the `blob` digest is accepted only if the caller's workspace can read it by the rule `07` §5.1 states for `GET /api/v1/blobs/{sha256}`: an owner in that workspace references it (a Dataset Version's table, or a Job's `JobResult(kind="blob")`), and no quote-input store does. Any other digest, including one that is not in the blob store at all, is refused with the same `404` a missing blob gets, before a Job exists. `blobs` has no workspace column, so a well-formed digest proves nothing about who may read it. **Amended 2026-10-16 (WK-1178, `SL-1722`, `RL-1724`):** a client obtains an admissible digest through `07` FR-1776: request an upload URL, upload, complete the Blob Upload, and read the digest from the completing Job's result, which is the owner the rule above admits. The client never names a digest before the platform has computed it. |
-| `GET` | `/api/v1/datasets/{slug}/versions/{version}` | Dataset Version detail |
-| `PATCH` | `/api/v1/datasets/{slug}/versions/{version}/schema` | Correct the inferred schema while `draft` (FR-29) |
-| `GET` | `/api/v1/dataset-versions/{id}` | Dataset Version detail **by id** — the resource the nine routes below hang off |
-| `POST` | `/api/v1/dataset-versions/{id}/validate` | **202** Run validation → Job (FR-42) |
-| `GET` | `/api/v1/dataset-versions/{id}/validation-reports` | Report history |
-| `GET` | `/api/v1/validation-reports/{id}` | Full report |
-| `POST` | `/api/v1/validation-reports/{id}/results/{rule_id}/acknowledge` | Acknowledge a warn, with justification (FR-46) |
-| `POST` | `/api/v1/dataset-versions/{id}/transition` | `{"to": "validated" \| "archived"}` — enforces §4.6 invariants |
-| `GET` | `/api/v1/dataset-versions/{id}/profile` | Profile artifact (FR-60) |
-| `GET` | `/api/v1/dataset-versions/{id}/one-ways?column=` | One-way summary for a column (FR-61) |
-| `GET` | `/api/v1/dataset-versions/{id}/compare?against={id}` | Profile comparison / PSI (FR-63) |
-| `POST` | `/api/v1/dataset-versions/{id}/derive` | **202** A declared derivation (FR-73). Only `split` is materialised; the Job fails with `DERIVATION_NOT_MATERIALISED` for the rest (FR-78) |
-| `POST` | `/api/v1/dataset-versions/{id}/splits` | **201** Record a named split over parts already derived (FR-76) |
-| `GET` | `/api/v1/dataset-versions/{id}/splits` | Splits recorded on this version, for a Model Spec to cite (FR-76) |
-| `GET` | `/api/v1/dataset-versions/{id}/lineage?direction=up\|down` | Lineage graph (FR-75), shaped by §4.9. *Typed 2026-08-23 (backlog item 6): the handler returned `dict[str, Any]`, so the contract published an untyped object and the generated client type was `Record<string, unknown>` — a hand-shaped response in a repository whose first architecture rule is that shapes are not hand-written. Three code defects go with it, owner `W6b-13`: the `direction` filter tests for `descendants`/`ancestors`, keys nothing has ever produced, so it filters nothing; `depends_on_this` is a flat list today and becomes §4.9's named object, which is a breaking wire change that is safe only because `getLineage` is exported and called by no view; and the existing FR-75 test reads `upstream["built_from"]["parent_version_id"]` and iterates `depends_on_this` as a list, so it does not survive the typing and must be rewritten in the same commit — it is the only FR-75 evidence marker the coverage script sees.* *Reassigned 2026-08-25 (WK-664 decision maker, slice-map P3): the lineage work and the three defects named above move from `W6b-13` to `W6b-12` — the clause above names the remainder as it stood on 2026-08-23 and is kept verbatim rather than rewritten. Two clarifications travel with the reassignment: `DatasetLineage` is spec-only — §4.9 is its definition, and no wire shape exists to hand-write — and typing the handler is `W6b-12`'s primary work, not a fourth defect.* |
-| `GET` | `/api/v1/dataset-versions/{id}/rejected` | Quarantined rows (paged) (FR-32) |
-| `GET` | `/api/v1/validation-rules` | The workspace's rules, cursor-paginated and filterable by `builtin` — §4.4's catalogue and the workspace's own (FR-68) |
-| `POST` | `/api/v1/validation-rules` | Create a custom rule → `draft` (FR-50) |
-| `POST` | `/api/v1/validation-rules/{id}/dry-run` | **202** Execute against a chosen version |
-| `POST` | `/api/v1/validation-rules/{id}/submit` | Submit for approval |
-| `POST` | `/api/v1/validation-rules/{id}/approve` | Approve a rule in review — never its author (§4.5 step 3) |
-| `GET`/`PUT` | `/api/v1/datasets/{slug}/rule-set` | Read / replace the Rule Set (creates a new rule-set version) |
-| `POST` | `/api/v1/reference-tables` | Declare a Reference Table (`admin:manage_settings`) |
-| `GET` | `/api/v1/reference-tables` | List declared Reference Tables |
-| `POST` | `/api/v1/reference-tables/{slug}/versions` | Load a new Reference Table Version (FR-69) |
-| `GET` | `/api/v1/reference-tables/{slug}/versions` | The version timeline, with each version's covered period |
-| `POST` | `/api/v1/reference-tables/{slug}/versions/{version}/publish` | `draft → published`; a version is pinnable only once published (FR-70) |
-| `GET` | `/api/v1/reference-tables/{slug}/versions/{version}/rows?as_at=` | Rows of a **pinned** version, optionally as at a date (FR-70) |
-| `GET` | `/api/v1/reference-tables/{slug}/lookup?key=&as_at=` | Point lookup for debugging (FR-71) |
+| Method | Path | Purpose | Permission |
+|---|---|---|---|
+| `POST` | `/api/v1/sources` | Register a Source (FR-26) | `dataset:write` |
+| `GET` | `/api/v1/sources` | List sources (credentials redacted) | `dataset:read` |
+| `POST` | `/api/v1/sources/{id}/preview` | Read first N rows + inferred schema without creating a version | `dataset:write` |
+| `POST` | `/api/v1/datasets` | Create a Dataset (metadata + data dictionary) | `dataset:write` |
+| `GET` | `/api/v1/datasets` | List / filter datasets, each with `latest_version`, `latest_version_status` and `last_validated_at` (FR-55). *(amended 2026-08-25, W6b-3: **and `last_validated_version`.** FR-55's own 2026-08-23 amendment records that it landed as three derived fields rather than two — "the list states which" cannot be satisfied by a bare date — but this row was written when the decision named two and was never brought forward. The endpoint has served four since W32-3. Code and published contract were right; this row was the stale side.)* | `dataset:read` |
+| `GET` | `/api/v1/datasets/{slug}` | Dataset detail incl. `latest_version`. *(amended 2026-08-25, W6b-3: **and `latest_version_status`, `last_validated_at`, `last_validated_version`.** The detail route runs the same two aggregates the list does, over one id, deliberately — `backend/src/app/api/datasets.py` states why: "a detail page that showed nothing where the list showed a date would be its own defect (FR-55)". So it serves the same derived set, and this row named one of four.)* | `dataset:read` |
+| `PUT` | `/api/v1/datasets/{slug}/dictionary` | Update the Data Dictionary (audited) | `dataset:write`, scoped to the named Dataset |
+| `PATCH` | `/api/v1/datasets/{dataset_id}` | Change the owner — Admin or the current owner, audited as `dataset.owner_changed` (FR-82) | `dataset:read`, and the caller is the current owner or holds `admin:manage_roles` (FR-82) |
+| `GET` | `/api/v1/datasets/{slug}/versions` | Version timeline, newest first, cursor-paginated | `dataset:read` |
+| `POST` | `/api/v1/datasets/{slug}/versions` | **202** Start an Ingestion Run → Job (FR-27). **Amended 2026-09-28 (WK-1178, the deputy's DP-P1 ruling of that day, #869's ingest finding):** the `blob` digest is accepted only if the caller's workspace can read it by the rule `07` §5.1 states for `GET /api/v1/blobs/{sha256}`: an owner in that workspace references it (a Dataset Version's table, or a Job's `JobResult(kind="blob")`), and no quote-input store does. Any other digest, including one that is not in the blob store at all, is refused with the same `404` a missing blob gets, before a Job exists. `blobs` has no workspace column, so a well-formed digest proves nothing about who may read it. **Amended 2026-10-16 (WK-1178, `SL-1722`, `RL-1724`):** a client obtains an admissible digest through `07` FR-1776: request an upload URL, upload, complete the Blob Upload, and read the digest from the completing Job's result, which is the owner the rule above admits. The client never names a digest before the platform has computed it. | `dataset:write`, and read access to the named blob |
+| `GET` | `/api/v1/datasets/{slug}/versions/{version}` | Dataset Version detail | `dataset:read` |
+| `PATCH` | `/api/v1/datasets/{slug}/versions/{version}/schema` | Correct the inferred schema while `draft` (FR-29) | `dataset:write` |
+| `GET` | `/api/v1/dataset-versions/{id}` | Dataset Version detail **by id** — the resource the nine routes below hang off | `dataset:read` |
+| `POST` | `/api/v1/dataset-versions/{id}/validate` | **202** Run validation → Job (FR-42) | `dataset:validate` |
+| `GET` | `/api/v1/dataset-versions/{id}/validation-reports` | Report history | `dataset:read` |
+| `GET` | `/api/v1/validation-reports/{id}` | Full report | `dataset:read` |
+| `POST` | `/api/v1/validation-reports/{id}/results/{rule_id}/acknowledge` | Acknowledge a warn, with justification (FR-46) | `dataset:acknowledge_warning`, scoped to the Dataset |
+| `POST` | `/api/v1/dataset-versions/{id}/transition` | `{"to": "validated" \| "archived"}` — enforces §4.6 invariants | `dataset:validate` |
+| `GET` | `/api/v1/dataset-versions/{id}/profile` | Profile artifact (FR-60) | `dataset:read` |
+| `GET` | `/api/v1/dataset-versions/{id}/one-ways?column=` | One-way summary for a column (FR-61) | `dataset:read` |
+| `GET` | `/api/v1/dataset-versions/{id}/compare?against={id}` | Profile comparison / PSI (FR-63) | `dataset:read` |
+| `POST` | `/api/v1/dataset-versions/{id}/derive` | **202** A declared derivation (FR-73). Only `split` is materialised; the Job fails with `DERIVATION_NOT_MATERIALISED` for the rest (FR-78) | `dataset:write` |
+| `POST` | `/api/v1/dataset-versions/{id}/splits` | **201** Record a named split over parts already derived (FR-76) | `dataset:write` |
+| `GET` | `/api/v1/dataset-versions/{id}/splits` | Splits recorded on this version, for a Model Spec to cite (FR-76) | `dataset:read` |
+| `GET` | `/api/v1/dataset-versions/{id}/lineage?direction=up\|down` | Lineage graph (FR-75), shaped by §4.9. *Typed 2026-08-23 (backlog item 6): the handler returned `dict[str, Any]`, so the contract published an untyped object and the generated client type was `Record<string, unknown>` — a hand-shaped response in a repository whose first architecture rule is that shapes are not hand-written. Three code defects go with it, owner `W6b-13`: the `direction` filter tests for `descendants`/`ancestors`, keys nothing has ever produced, so it filters nothing; `depends_on_this` is a flat list today and becomes §4.9's named object, which is a breaking wire change that is safe only because `getLineage` is exported and called by no view; and the existing FR-75 test reads `upstream["built_from"]["parent_version_id"]` and iterates `depends_on_this` as a list, so it does not survive the typing and must be rewritten in the same commit — it is the only FR-75 evidence marker the coverage script sees.* *Reassigned 2026-08-25 (WK-664 decision maker, slice-map P3): the lineage work and the three defects named above move from `W6b-13` to `W6b-12` — the clause above names the remainder as it stood on 2026-08-23 and is kept verbatim rather than rewritten. Two clarifications travel with the reassignment: `DatasetLineage` is spec-only — §4.9 is its definition, and no wire shape exists to hand-write — and typing the handler is `W6b-12`'s primary work, not a fourth defect.* | `dataset:read` |
+| `GET` | `/api/v1/dataset-versions/{id}/rejected` | Quarantined rows (paged) (FR-32) | `dataset:read` |
+| `GET` | `/api/v1/validation-rules` | The workspace's rules, cursor-paginated and filterable by `builtin` — §4.4's catalogue and the workspace's own (FR-68) | `dataset:read` |
+| `POST` | `/api/v1/validation-rules` | Create a custom rule → `draft` (FR-50) | `dataset:write` for a declarative check; `admin:manage_settings` instead for a `sql` check (§4.5 step 5) |
+| `POST` | `/api/v1/validation-rules/{id}/dry-run` | **202** Execute against a chosen version | `dataset:write` |
+| `POST` | `/api/v1/validation-rules/{id}/submit` | Submit for approval | `dataset:write` |
+| `POST` | `/api/v1/validation-rules/{id}/approve` | Approve a rule in review — never its author (§4.5 step 3) | `approval:decide` |
+| `GET` | `/api/v1/datasets/{slug}/rule-set` | Read the Rule Set | `dataset:read` |
+| `PUT` | `/api/v1/datasets/{slug}/rule-set` | Replace the Rule Set (creates a new rule-set version) | `dataset:write` |
+| `POST` | `/api/v1/reference-tables` | Declare a Reference Table (`admin:manage_settings`) | `admin:manage_settings` |
+| `GET` | `/api/v1/reference-tables` | List declared Reference Tables | `dataset:read` |
+| `POST` | `/api/v1/reference-tables/{slug}/versions` | Load a new Reference Table Version (FR-69) | `admin:manage_settings` |
+| `GET` | `/api/v1/reference-tables/{slug}/versions` | The version timeline, with each version's covered period | `dataset:read` |
+| `POST` | `/api/v1/reference-tables/{slug}/versions/{version}/publish` | `draft → published`; a version is pinnable only once published (FR-70) | `admin:manage_settings` |
+| `GET` | `/api/v1/reference-tables/{slug}/versions/{version}/rows?as_at=` | Rows of a **pinned** version, optionally as at a date (FR-70) | `dataset:read` |
+| `GET` | `/api/v1/reference-tables/{slug}/lookup?key=&as_at=` | Point lookup for debugging (FR-71) | `dataset:read` |
+
+ *(Added 2026-11-05, `RL-1483` item 1, `SL-2011`: the `Permission` column. Each cell is the permission name(s) from `06` §4.1, `authenticated` or `open`; a row with two methods is one row per method. Cells follow `06` §4.1's `Governs` text and this module's own FRs (FR-82, FR-46, `01` §4.5 step 5).)*
 
 > **Three reference read routes added 2026-08-15 (WK-663).** §5.3 asks the `/reference` view
 > for a table list, a version timeline and an effective-date viewer, and §5.1 declared none

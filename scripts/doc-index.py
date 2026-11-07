@@ -469,13 +469,6 @@ _BOLD_ID_ROW = re.compile(
 # to reach `docs/INDEX.md`, not only the ones a table-row pattern happens to see.
 _BULLET_ID_ROW = re.compile(r"^-\s*\*\*(FR|NFR|DEP|OQ)-(\d+)\*\*\s*[—-]?\s*(.*)$")
 
-# An unescaped `|` — the same "split on unescaped `|`" grammar
-# `scripts/register-lint.py`'s `parse_register` already uses for the register's row shape
-# (`_discover_register`'s own docstring cites it), applied here to the remainder of a
-# bold-id row so a literal `\|` inside a cell's prose (money-discipline requirements carry
-# several, e.g. "float \| None") is not read as a column boundary.
-_UNESCAPED_PIPE = re.compile(r"(?<!\\)\|")
-
 # `audit-docs.py` check 1's own link shape (`[text](target#frag)`), narrowed to a group
 # around the target so a rebase can rewrite it in place. Deliberately excludes a
 # fragment-only link (`(#foo)` — the required-non-empty target group cannot match one), so
@@ -528,9 +521,9 @@ def scan_bold_id_rows(path: Path, root: Path) -> list[Record]:
     (`docs/specs/*.md`) are two-column — `| **FR-283** | <description> |`, no separate
     title/status cells — while `open-questions.md` and this slice's own fixture corpus use
     more. The row's id is always captured from the leading cell; everything after it is
-    split on an *unescaped* `|` (`_UNESCAPED_PIPE`) into as many cells as the row actually
-    has, and the first two (if present) become `title`/`status`. A prior version of this
-    function required a fixed 4-column shape and only matched a real two-column row by
+    split on an *unescaped* `|` (`_docid.table_rows.UNESCAPED_PIPE`) into as many cells as the
+    row actually has, and the first two (if present) become `title`/`status`. A prior version
+    of this function required a fixed 4-column shape and only matched a real two-column row by
     accident, when its description happened to contain a stray, un-escaped literal `|` —
     every row without one (the overwhelming majority) silently produced no `Record` at all,
     which is `doc-id.py check`'s RFC-937 §7(b) noncontiguous-id failure: a requirement
@@ -554,7 +547,8 @@ def scan_bold_id_rows(path: Path, root: Path) -> list[Record]:
             rest = rest.strip()
             if rest.endswith("|"):
                 rest = rest[:-1].strip()
-            cells = [c.strip() for c in _UNESCAPED_PIPE.split(rest)] if rest else []
+            split = _docid.table_rows.UNESCAPED_PIPE.split
+            cells = [c.strip() for c in split(rest)] if rest else []
             title = cells[0] if cells else ""
             status = cells[1] if len(cells) > 1 else ""
         else:
@@ -1058,7 +1052,7 @@ def _parse_register(path: Path) -> tuple[list[RegisterRow], int]:
     data_lines = [line for line in lines[sep_idx + 1 :] if line.strip().startswith("|")]
     rows: list[RegisterRow] = []
     for line in data_lines:
-        cells = [c.strip() for c in line.strip().strip("|").split("|")]
+        cells = _docid.table_rows.split_row(line)
         if len(cells) != 5:
             continue  # not well-formed — excluded from `rows`, still in `data_lines`
         finding_id, concerns, work_item, phase, decision = cells

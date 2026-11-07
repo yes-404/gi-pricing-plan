@@ -79,6 +79,7 @@ from model_schema.rating import (
 from model_schema.refs import ArtifactRef, BlobRef
 from pricing_core.modelling import FactorResolutionError
 from pricing_core.rate_tables.operations import (
+    CELL_UNPARSEABLE,
     NULL_VALUE,
     OUT_OF_BOUNDS,
     EditIssue,
@@ -118,6 +119,8 @@ _VALIDATION_CODES = {
     "NULL_VALUE": "RATE_TABLE_INCOMPLETE",
     "OUT_OF_BOUNDS": "RATE_TABLE_INCOMPLETE",
     "DUPLICATE_KEY": "RATE_TABLE_KEY_DUPLICATE",
+    # FR-234, FD-1648: one code for write, compile and score (PL-2019 DP-R2).
+    "RATE_TABLE_CELL_UNPARSEABLE": "RATE_TABLE_CELL_UNPARSEABLE",
 }
 
 DiffAgainst = Literal["previous", "seed"]
@@ -984,9 +987,17 @@ def _edit_failure(issues: Sequence[EditIssue], value_name: str) -> PlatformError
         )
         for issue in issues
     )
-    values_only = all(issue.code in (NULL_VALUE, OUT_OF_BOUNDS) for issue in issues)
+    values_only = all(
+        issue.code in (NULL_VALUE, OUT_OF_BOUNDS, CELL_UNPARSEABLE) for issue in issues
+    )
+    unreadable = any(issue.code == CELL_UNPARSEABLE for issue in issues)
+    code = (
+        CELL_UNPARSEABLE
+        if unreadable
+        else "RATE_TABLE_INCOMPLETE" if values_only else "VALIDATION_FAILED"
+    )
     return PlatformError(
-        "RATE_TABLE_INCOMPLETE" if values_only else "VALIDATION_FAILED",
+        code,
         "Manual edit refused",
         422,
         f"{len(errors)} edit failure(s); each is a field error.",

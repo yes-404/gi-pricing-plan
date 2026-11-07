@@ -17,6 +17,7 @@ from __future__ import annotations
 import sys
 from collections.abc import Mapping
 from dataclasses import dataclass
+from decimal import Decimal
 from pathlib import Path
 from typing import Any
 from uuid import uuid4
@@ -319,6 +320,32 @@ def test_a_factor_resolution_refusal_is_the_same_on_both_paths(world: World) -> 
         with pytest.raises(FactorResolutionError) as scalar_error:
             world.scalar(quote)
         assert str(scalar_error.value) == str(frame_error.value), label
+
+
+@pytest.mark.req("FR-87")
+@pytest.mark.parametrize(
+    "missing",
+    [
+        float("nan"),
+        Decimal("NaN"),
+        Decimal("sNaN"),
+        Decimal("Infinity"),
+        Decimal("-Infinity"),
+    ],
+    ids=["float_nan", "decimal_nan", "decimal_snan", "decimal_inf", "decimal_neg_inf"],
+)
+def test_a_nan_banded_input_is_a_factor_resolution_refusal_on_both_paths(
+    world: World, missing: Any
+) -> None:
+    """FD-2043: a `Decimal('NaN')` reaching a banded input panicked the engine (pyo3
+    `PanicException`) where a float NaN is a `FactorResolutionError`. `veh_age`'s banding
+    declares no `null_level`, so a missing value is refused (FR-97), whatever its type."""
+    quote = {**QUOTES[0], "veh_age": missing}
+    with pytest.raises(FactorResolutionError):
+        world.scalar(quote)  # every GLM scoring path, `_GlmScorer` and its offset included
+    if isinstance(missing, float):  # the reference builds its own frame: polars' panic is its
+        with pytest.raises(FactorResolutionError):
+            world.frame(quote)
 
 
 # --- the demo model: its goldens and every seed portfolio row ----------------------------------
