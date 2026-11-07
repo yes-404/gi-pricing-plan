@@ -3813,6 +3813,28 @@ One stdlib table-row parser (`packages/model-schema/src/model_schema/table_rows.
 
 *(Closed 2026-11-07 by the audit commit of the slice's PR, on the lead's adoption of aud-sl8343 (`from-lead-2026-10-09.md`, "2026-11-05 17:08:05 GMT"); no row existed at `origin/main` `3c3ee5cbc182` before this PR's mint, which added it as `active`. Item 42: the row at `origin/main` was found absent, not `active`.)*
 
+#### SL-2075 — WK-1178 slice — FD-1802 / FD-1746: the upload body limit and the purge audit's before state
+
+```yaml
+id: SL-2075
+family: slice
+title: WK-1178 slice — FD-1802 / FD-1746: the upload body limit and the purge audit's before state
+status: closed                    # draft → active → closed (§1.2a)
+created: 2026-11-07   # original date 2026-11-05, working id 8325, minted 2026-11-07
+owner: lead
+tree: b655490eb27d546d68e94c96b7735a6d575f686b
+phase: P2
+work: WK-1178
+corrected_by: []
+relates: [FD-1802, FD-1746, PL-2074, LG-2076]
+```
+
+A stated request-body limit on both upload routes (`backend/src/app/api/body_limit.py`, a typed setting, nginx at the limit plus a small margin) and a purge audit event that carries its before state (version ids and statuses). The plan is `PL-2074`; the ledger is `LG-2076`.
+
+(Minted 2026-11-07 from working id 8325, with the mint tool of record `mint-repoint.py`; plan `PL-2074` (working id 8324), ledger `LG-2076` (working id 8326). `tree` is the tree of the slice branch (`sl-8325-a-upload-limit` @`14571939`) before the merge of `origin/main`.)
+
+*(Closed 2026-11-07 by the audit commit of the slice's PR, on the lead's adoption of the gate (`gate.log` END `2026-11-07T20:16:50+00:00`, standing modulo the census fix); no row existed at `origin/main` `cdf3871c` before this PR's mint, which added it as `active`. Item 42: the PR sets the row `closed` here. This PR; its number, squash commit and merge date are written at the merge's date-of-record.)*
+
 ### WK-1250 — Sub-graph composition and MTA/cancellation pricing — FR-217's inlining and FR-218's authoring half
 
 ```yaml
