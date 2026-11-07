@@ -1,18 +1,18 @@
 ---
-id: FD-8408
+id: FD-2077
 family: finding
 title: NFR-476's expression limb is over: a custom expression objective costs 1.50 times the builtin against 1.25
 status: active
-created: 2026-11-07   # working id 8408, to be minted in the PR of docs batch 15
+created: 2026-11-07   # working id 8408, drafted 2026-11-07 (batch 15); minted as FD-2077 on 2026-11-07
 owner: lead
 tree: a995b876dd07bbc8e6b5d8712fd085178ba77e91   # the tree the measurement ran at (head 6f958137b227)
 corrected_by: []
 relates: [WK-690, WK-1178, LG-1839, LG-2003, NFR-476]
 ---
 
-# FD-8408 — NFR-476's expression limb is over: a custom expression objective costs 1.50 times the builtin against 1.25
+# FD-2077 — NFR-476's expression limb is over: a custom expression objective costs 1.50 times the builtin against 1.25
 
-*(Working id FD 8408, MEDIUM, owner WK-690. Ruled in to-lead "2026-11-07 19:37:24 GMT" (M), whose id was corrected in "2026-11-07 19:38:16 GMT". WK-690's fresh close audit (branch docs/wk690-fresh-close-2026-11-06) reads this finding. It is minted in docs batch 15 at the step before the PR.)*
+*(Drafted under working id FD 8408, minted as FD-2077 on 2026-11-07 in docs batch 15; MEDIUM, owner WK-690. Ruled in to-lead "2026-11-07 19:37:24 GMT" (M), whose id was corrected in "2026-11-07 19:38:16 GMT". WK-690's fresh close audit (branch docs/wk690-fresh-close-2026-11-06) reads this finding.)*
 
 ## Finding
 
