@@ -6,11 +6,11 @@ title: WK-690 fresh Work close audit — expression custom objectives (re-tests 
 status: active                  # write-once; this is the only value this family ever takes
 created: 2026-11-05   # drafted 2026-11-05 under working id 8314
 owner: auditor                  # work/phase kind; lead for `kind: review`
-tree: 2f108b1eda22a4835279cee9b4c9e305babe3662
+tree: cdf3871c50a2025cc7bfafd2057c80174a637667   # refreshed 2026-11-07; drafted at 2f108b1eda22a4835279cee9b4c9e305babe3662
 phase: P2
 work: WK-690
 corrected_by: []
-relates: [CR-1980, CR-1212, CR-754, PL-1268, PL-1621, PL-1665, PL-1996, RL-1265, RL-1362, RL-1616, SL-1275, SL-1994, LG-1839, LG-1995, FD-1751, FD-1842]
+relates: [CR-1980, CR-1212, CR-754, PL-1268, PL-1621, PL-1665, PL-1996, RL-1265, RL-1362, RL-1616, SL-1275, SL-1994, LG-1839, LG-1995, LG-2003, FD-1751, FD-1842, FD-2007, FD-2009]
 ---
 
 # CR-8314 — WK-690 fresh Work close audit
@@ -39,6 +39,166 @@ cut from that commit. The form is `CR-2000`'s.
 **The two S1 findings are working ids here.** FD 8350 (NFR-476) and FD 8352 (FR-1840 3c) are filed by
 batch 11 and are on no branch at this writing (`git grep` on `origin/docs/fdclose-2026-11-05` at
 `41890138` finds neither). They enter `relates:` at the mint.
+*(Dated line, 2026-11-07: batch 11 (#1433, `bdad1322`) minted them. FD 8350 is FD-2007 and FD 8352 is
+FD-2009; each essay's front matter reads "drafted 2026-11-05 under working id 8350" (8352). The body
+below keeps the working ids it was written with.)*
+
+## Refresh 2026-11-07 — at `cdf3871c`, on nfr-bench-1 S2's readings
+
+*Dated 2026-11-07 from 20:10 UTC (`date -u`) by the auditor seat aud-cr8314r (Opus 5.5). Brief:
+`brief-aud-cr8314r-2026-11-07.md` (sha256 `9efa2e6e982e…`), the refresh of `brief-aud-wk690c-2026-11-06.md`.
+Authority: the maintainer's entries "2026-11-07 17:31:27 GMT" (the platform ruling), "2026-11-07
+18:49:24 GMT", "2026-11-07 19:37:24 GMT" and its correction "2026-11-07 19:38:16 GMT" in
+`to-lead.md`. The seating entry that the brief cites "after 20:07:42 GMT" was not in `to-lead.md` at
+20:21 UTC; the last entry was 20:07:42. This section supersedes the body below wherever they differ.
+The body stays as it was written at `2f108b1e`.*
+
+**Object.** `origin/main` `cdf3871c50a2025cc7bfafd2057c80174a637667` (tree `6574b54675e8…`, merge 80),
+merged `--no-ff` into this branch (only `docs/INDEX.md` conflicted: taken theirs, regenerated, rc 0).
+S2's records are read from `origin/docs/nfrbench-s2-wk1178-2026-11-07` at
+`9dad98aec9f678d8116aef87aea1a56857db2f0c`, which is not on main at this writing. They are not merged
+into this branch. Docs batch 15 (`docs/batch15-2026-11-07`, local ref `b74683b9`) holds only the merge of
+`9dad98ae` and main at this writing. So **FD 8408 has no essay on any ref yet** and is cited by its
+working id from the 19:37:24 and 19:38:16 entries.
+
+**The platform line.** Each S2 verdict below carries the 17:31:27 ruling's sentence: **AMD EPYC 7B12;
+not like-for-like with S1; 8 vCPU; a lower bound on a non-spec host.**
+
+**The S2 readings' tree.** S2 ran at `6f958137b227f1a9499a4ab00caf40f79ba2439c` (LG-2003 item G, "Run
+head"), an ancestor of `cdf3871c` (`git merge-base --is-ancestor`, rc 0). `git diff --name-only 6f958137
+cdf3871c -- packages backend/src scripts/bench-model.py uv.lock` prints only `backend/src/app/demo/guide.py`
+and `packages/model-schema/src/model_schema/table_rows.py` with its test. Neither is on the fit or
+expression path, so S2's readings stand at main.
+
+### D1. Scope, re-derived at `309595bc` (the merge of `cdf3871c`) before any evidence
+
+The §0 predicate, run at both trees with the section bound read from each tree's `^### WK-` headings,
+prints **60 ids at `2f108b1e` and 60 at the merged head**. `comm -3` of the two prints nothing. The
+seven `work: WK-690` plans are unchanged. **The deliverable set is the same 24 ids.** `scope-audit.py`
+was run with `python3` (stdlib only), each run through the gate-2 flock, with logs that open `head=309595bc…`
+and close `rc=`, in `~/gi-pricing-plan.local/scratch/docs-wk690-fresh-close-2026-11-06/r-*.log`:
+
+| Run (same `--sections NONE --extra` lists as §0) | In scope | Marked | No marker | rc |
+|---|---|---|---|---|
+| MODEL | 18 | 16 (89%) | NFR-476, NFR-480 | 1 |
+| GOV | 2 | 1 (50%) | FR-366 | 1 |
+| PLAT | 2 | 2 | — | 0 |
+| DATA | 1 | 1 | — | 0 |
+| RATE | 1 | 1 | — | 0 |
+| **Total** | **24** | **21** | **3** | |
+
+`req-coverage.py`: rc 0. `scope-audit.py MODEL --endpoints`: "published : 45 (100%)", "every declared
+endpoint is published in the contract", and rc 1 from the default requirements section, as at `2f108b1e`.
+
+**§1's re-read predicate, over `2f108b1e..cdf3871c`.** Two of the fifteen paths moved, both by
+WK-1178 slices. Neither changes a WK-690 assert:
+- `diagnostics.py` (+30 −7, SL-2045, #1445, `96481c41`, the weighted A/E). FD-1751's guards are still
+  present, at new line numbers: `:696` (monotonicity), `:1108` (permutation), `:1540` (partial
+  dependence), all `EXPRESSION_FACTOR`.
+- `backend/src/app/platform/objectives.py` (+15 −4, SL-2060, #1451, `6f958137`). This is the certification
+  transition's Audit Event (`custom_objective.certification_failed` / `certificate_recorded`, PL-2059
+  DP-1, DP-3). It does not touch `custom_objective:author` (FR-366, FR-367).
+
+The one workflow change is in `WF-701` (C4, H4). `WF-702` is unchanged, so §5c stands.
+
+### D2. S2's readings, each cited by record and commit
+
+| Item | Record, commit | Reading | PROPOSED |
+|---|---|---|---|
+| **L: NFR-476 fit limb** | LG-1839 addendum, `184d960205c5`; folded into item G's gbm arm (LG-2003, `7f078775`) | **fit 154.83 s wall (994.00 s cpu) against 1200 s, on 3,750,000 rows** (`bench_gbm` fits `frame.head(int(rows * 0.75))` of the 5 M frame); peak RSS 8,119 MB in the fit. The whole process ran 4063 s: NFR-488 diagnostics 3875.41 s over 623 scoring passes, plus 32.8 s of the rest. Not repeated without `--peak hwm`. **AMD EPYC 7B12; not like-for-like with S1; 8 vCPU; a lower bound on a non-spec host.** Ruled "L MET (154.83 s on 3.75 M rows, folded into G)" (19:37:24) | **Not WK-690's limb** (§4, unchanged). It is evidence for FD-2007's P3 proposal, not a pass of NFR-476 (11:23:52 (2)). FD-2007 stays carried by the P2 closure record's list and does not block |
+| **M: NFR-476 expression limb**, WK-690's own | LG-1839 addendum, `2a8adfa08dab`; head `6f958137`, `bench-model.py` sha256 `03e834b5…` | `--only expression --rows 5000000 --factors 60 --rounds 500 --pairs 3`, one process, 934 s. Pairs: 119.06/178.70 s (1.501), 119.10/178.88 s (1.502), 117.15/179.15 s (1.529). **Median 1.502, spread [1.501, 1.529], against ≤ 1.25.** The ratio is not within 5 points of the bound. **AMD EPYC 7B12; not like-for-like with S1; 8 vCPU; a lower bound on a non-spec host.** Ruled "M OVER (median ratio 1.502 v 1.25)" (19:37:24) | **UNMET → FD 8408 (MEDIUM, owner WK-690)**, per 19:37:24 as corrected by 19:38:16. This limb is now **measured**, so the "unmeasured, deferred" verdict of §4/§5 is superseded. **It blocks** under the 09:51:05 rule: a fix or a named carry |
+| The diagnostics cost | LG-1839 L addendum; LG-2003 G | 3875 s of diagnostics after a 155 s fit, in a 4063 s process | The 18:49:24 entry rules "a dated line on FD 8350 and FD 8352" (FD-2007, FD-2009). **Neither line is on main or on batch 15's ref at this writing**: owed, docs only (D4 F10) |
+| G (NFR-485), H (NFR-467) | LG-2003, `7f078775`, `33aacaa7` | G MET both arms (GLM VmHWM 23.9 GB, GBM 8.1 GB); H MET (2 M rows 4.70 s, 10 M 16.52 s v 300 s, memory ratio 2.375 < 5). **AMD EPYC 7B12; not like-for-like with S1; 8 vCPU; a lower bound on a non-spec host** (18:49:24) | **Not WK-690's** requirements (WK-1178, SL-1736). They are context only: L's run is G's gbm arm |
+
+**What M does to the earlier near-bound readings.** LG-1350's 1 M × 60 × 100 medians were 1.273 and 1.255,
+with no verdict (§4). The full shape reads 1.502. The overhead grows with shape on this evidence. Whether the
+implementation or NFR-476's ≤ 1.25 budget is wrong is a `CLAUDE.md` §0 question. This audit does not answer it.
+
+### D3. The unevidenced requirements, with PROPOSED verdicts (supersedes §5 where they differ)
+
+| Id | Missing | PROPOSED §13 verdict |
+|---|---|---|
+| NFR-476 expression limb | a full-shape ratio ≤ 1.25: **measured 1.502, UNMET** | **deferred with an owner: WK-690**, FD 8408; the event is a fix, or a named carry ruled before the user's line. **Blocks** |
+| NFR-476 fit limb | a fit time on the 16-core host | **reassigned**: the P2 closure record's carry-forward list (FD-2007, register `:446`); S2 L is evidence |
+| FR-1840 3c, p99 limb | the isolation | **deferred with an owner: WK-690**, FD-2009 (register `:447`); the event is the §14 round's ruling. No ruling found in `to-lead.md` after 2026-11-05. **Blocks** |
+| NFR-480 | no marker; measured, met, 1.174 s against 180 s (CR-1980 §4) | **delivered**, evidenced outside the instrument |
+| FR-366 | no marker; the live half is asserted under the FR-166 and FR-367 markers (CR-1980 §5) | **delivered**, evidenced outside the instrument |
+| FR-207 (WK-690's limb), FR-147/148 on a real `where()`, FR-174/175/177 expression-Factor limb | as §5 | as §5, unchanged |
+
+### D4. The docs closing acts, re-read at `cdf3871c`
+
+| Act | At `cdf3871c` | Status |
+|---|---|---|
+| F1: SL-1275 row and LG-1839 `closed` | SL-1275 `status: active` (`roadmap.md` SL-1275 block); LG-1839 `status: active`; S2's L and M addenda are on `9dad98ae` only | **open**. Proposed order: after batch 15 lands L and M, so the ledger closes once |
+| F2: FR-207's move in the WK-690 section | unchanged | **open** |
+| F3: SL-1274 row "MERGE-ACK: not yet given." | still the last words of `roadmap.md:1942` | **open** |
+| F6: `PL-1996` `status: draft` | still `draft` | **open** |
+| F7: LG-1839's "prints at completion" | batch 11 dated lines | **discharged** (FD-2007 essay; to-lead 11:12:59) |
+| F9: the carry line for the fit limb | on main: register `:446`, "Filed as working id 8350; minted FD-2007", with the 11:23:52 (2) dated carry line | **discharged** |
+| **F10 (new)**: the 18:49:24 diagnostics dated lines on FD-2007 and FD-2009 | on neither ref | **owed**, docs only |
+| **F11 (new)**: FD 8408's register row and essay | on no ref | **owed**: batch 15 (19:37:24 (b)) |
+
+### D5. The owed list, generated at a committed revision
+
+```text
+Generated by `python3 scripts/register-owed.py WK-690` against `309595bc (`docs/wk690-fresh-close-2026-11-06`)`.
+Mode: work item 'WK-690'. 5 owed row(s), 6 matched but excluded as opening with a resolution marker
+- The `factors` table is not append-only at the database … (FD-1704's row)
+- The two per-factor GBM diagnostics read the first source column of a Factor … (FD-1751's row)
+- The grammar refusal's structure walk raises RecursionError on a deeply nested loss … (FD-1842)
+- NFR-476's fit time is unmeasured … (FD-2007) (work item: 'P2 closure record', phase: '2')
+- FR-1840's preview isolation is unmet … (FD-2009) (work item: 'WK-690', phase: '2')
+Excluded as opening with a resolution marker — verify:
+- FD-1195, FD-1294, FD-1349, FD-1492, FD-1511, FD-1512
+```
+
+*(Titles shortened. The log `r-owed-WK690.log` holds the full output, rc 0, porcelain 0 at the run.)*
+`register-owed.py review` at the same revision prints **16 owed rows**, 1 excluded. It printed 31 at
+`2f108b1e`; the reader changed with SL-2066 (#1454, `c602a539`, "register-owed reads the live decision
+text").
+
+**Read by hand:** FD-1704 is WK-1178's (F5, the text-mention match). FD-1751 is guarded and carried
+(§R 2, 2a). FD-1842 is discharged by #1425: `register.md:412` reads `***Resolved 2026-11-04***`
+mid-cell. FD-2007 is owned by the P2 closure record; it matches only because its text names CR 8314
+and WK-690 (F5 again). **FD-2009 is WK-690's own and open.** **Corrected owed list: FD-2009 now, and
+FD 8408 when batch 15 files its row.** Both are MEDIUM and owned by WK-690, and neither has a
+fix-or-carry ruling.
+
+### D6. Replan check, refreshed (`CLAUDE.md` §14, `RFC-1248`)
+
+1. **Completion: no.** The predicate is 60 = 60 and the deliverable set is unchanged (D1).
+2. **Omission: yes.** Nothing yet carries a remedy for FD 8408 or FD-2009. The S3 order (19:37:24 (a))
+   has no WK-690 item.
+3. **Skills and research: no.** The capped-run capture lesson was filed by batch 11, and S2 added none
+   for WK-690.
+4. **Drift: yes.** NFR-476's expression budget reads 1.502 at full shape against 1.273 and 1.255 near the
+   bound (D2). The spec and the code disagree at full shape, and which is wrong is §0's question.
+5. **Shape: no, not yet.** It fires if FD 8408 or FD-2009 is carried to P3.
+
+`register-owed.py review` at `309595bc`: **16 owed rows** (D5).
+
+**Triggers:** an exit criterion at risk is **fired**: G1 needs WK-690 closed by the user's line, and
+two WK-690-owned MEDIUM findings have no route. A finding that moves a slice or a phase is **not fired
+yet**; a carry of either to P3 fires it. A phase boundary or Work scope moved: **not fired**. A replan
+decided: **not fired**.
+
+**PROPOSED:** no separate full review. The Mon 16 §14 review (11:23:52 (3)(f)) takes FD 8408 and FD-2009
+as named inputs. The fix-or-carry ruling for each is asked for before the Thu 12 freeze, because a code
+fix after the freeze cannot reach the exit demo. **The verdict is the lead's.**
+
+### D7. PROPOSED verdict, refreshed
+
+**NOT CLOSE-READY at `cdf3871c` + S2's records at `9dad98ae`.** The close is blocked by:
+
+1. **FD 8408**: NFR-476's expression limb, measured and UNMET (1.502 against 1.25). This replaces block 1
+   of the Verdict below, which read "unmeasured".
+2. **FD-2009** (was FD 8352): FR-1840 3c, MEDIUM. Unchanged, with no ruling yet.
+3. **Docs closing acts**: F1, F2, F3, F6 (open), with F10 and F11 (new). F7 and F9 are discharged.
+
+FD-2007 does not block. S2's L reading (154.83 s on 3.75 M rows) is evidence for its P3 proposal.
+**No fresh gate is owed by this reading** (11:58:05: the CLOSE-READY audit runs its own SOLO gate on its
+tree). This audit ran no test and no gate. Every verdict here is a proposal. **The close is the user's
+dated line.**
 
 ## §R. Re-test of CR-1980's findings
 
@@ -419,6 +579,9 @@ No id is written here; each is the lead's to file.
 review before the P2 exit demo is fixed. Decide after item M. **The verdict is the lead's.**
 
 ## Verdict
+
+*(Dated line, 2026-11-07: superseded by the Refresh section's D7 at `cdf3871c`. Block 1 is now FD 8408,
+measured and UNMET, no longer unmeasured.)*
 
 PROPOSED: **NOT CLOSE-READY at `2f108b1e` + S1 records.** CR-1980's own blocks are discharged or
 carried: FD-1842 fixed, FD-1751 guarded and carried, 5.7 measured, a fresh gate standing on a tree with
