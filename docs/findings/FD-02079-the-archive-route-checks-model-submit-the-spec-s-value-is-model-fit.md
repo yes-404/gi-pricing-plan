@@ -24,7 +24,7 @@ The defect is a mis-assigned permission, not a missing guard: the route was guar
 
 - `models.py` `archive_model` and `modelling.py` `archive` both read `MODEL_SUBMIT`; `submit_for_review` (`modelling.py`, the other `Permission.MODEL_SUBMIT` site, off this path) is correctly `model:submit`. The route reaches one dependency and one service check: the ruling's "one permission constant" holds.
 - Roles, `packages/model-schema/src/model_schema/permissions.py` `BUILTIN_ROLES`: `analyst` holds `model:fit`; `pricing_actuary` = analyst + `model:submit`; the other four hold neither. No built-in role loses archive under the fix; `analyst` gains it.
-- Found by SL-2011's column (cell vs code) and then by the pin (`backend/tests/test_route_permission_pin.py`, SL-8370), which is red on it until the fix merges.
+- Found by SL-2011's column (cell vs code) and then by the pin (`backend/tests/test_route_permission_pin.py`, SL 8370), which is red on it until the fix merges.
 
 ## Dated note (2026-11-05, on the maintainer's "2026-11-05 14:07:26 GMT"): the superseded trace
 
