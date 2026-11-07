@@ -530,7 +530,7 @@ def test_the_section_4_2_policies_array_validates_as_policy_entries() -> None:
 
     text = (Path(__file__).parents[2] / "docs/specs/06-governance.md").read_text()
     section = text[text.index("### 4.2 `ApprovalPolicy`") :]
-    block = re.search(r"```json\n(.*?)\n```", section, re.DOTALL)
+    block = re.search(r"```json[^\n]*\n(.*?)\n```", section, re.DOTALL)
     assert block is not None
     for entry in json.loads(block.group(1))["policies"]:
         ApprovalPolicyEntry.model_validate(entry)

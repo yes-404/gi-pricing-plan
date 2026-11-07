@@ -247,7 +247,7 @@ engine is exact; the binding is not, and the binding is what the platform talks 
 
 ### 4.1 `RatingAlgorithm`
 
-```json
+```json schema=RatingAlgorithm
 {
   "slug": "motor-gb",
   "version": 14,
@@ -371,7 +371,7 @@ no step produced, and mounted a sub-graph at a step it did not define.)*
 
 ### 4.2 `RateTable` / `RateTableVersion`
 
-```json
+```json schema=RateTableVersion
 {
   "slug": "motor-driver-age-relativity",
   "version": 6,
@@ -499,7 +499,7 @@ Values are stored as decimal strings, never JSON floats (R2).
 
 ### 4.3 `RatingVersion`
 
-```json
+```json illustrative
 {
   "slug": "motor-gb",
   "version": 27,
@@ -548,7 +548,7 @@ Where the algorithm has no Regression Suite, `evidence.golden_quotes` takes the 
 not-checked form instead, never an empty result list that reads as "0 mismatches"
 (FR-260, amended 2026-09-28):
 
-```json
+```json schema=GoldenQuoteNotChecked
 {"status": "not_checked", "regression_suite": "none", "message": "no golden quotes were checked", "reason": "no_suite_for_algorithm"}
 ```
 
@@ -575,7 +575,7 @@ submit gate (FR-260) and never edited after.
 
 ### 4.4 `QuoteContext` and `ScoringResult`
 
-```json
+```json schema=QuoteContext
 {
   "quote_id": "external-ref-or-uuid",
   "purpose": "new_business",
@@ -587,7 +587,7 @@ submit gate (FR-260) and never edited after.
 }
 ```
 
-```json
+```json illustrative
 {
   "outcome": "quoted | declined | error",
   "rating_version_ref": "rating_version:motor-gb@27",
@@ -624,7 +624,7 @@ breakdown — `docs/rulings/RL-00931-correct-the-example-do-not-build-the-breakd
 
 ### 4.5 `Trace`
 
-```json
+```json illustrative
 {
   "rating_version_ref": "rating_version:motor-gb@27",
   "bundle_hash": "sha256:…",
@@ -657,7 +657,7 @@ breakdown — `docs/rulings/RL-00931-correct-the-example-do-not-build-the-breakd
 
 *(Amended 2026-10-08, WK-673 Slice 3, `RL-1394` DP-S1-5: the order count.)* Under `order_dependent`, S's lower bound is taken over exactly 2 orders, the declared order and its reverse, so `orders_sampled` is 2. S and R are exact ratios of integers rounded once to 6 decimal places, half-even; where D is 0 each is null.
 
-```json
+```json illustrative
 {
   "baseline_ref": "rating_version:motor-gb@26",
   "candidate_ref": "rating_version:motor-gb@27",
@@ -723,7 +723,7 @@ breakdown — `docs/rulings/RL-00931-correct-the-example-do-not-build-the-breakd
 
 ### 4.7 `RegressionSuite` and `GoldenQuote`
 
-```json
+```json illustrative
 {
   "slug": "motor-gb-core",
   "version": 4,
@@ -880,7 +880,7 @@ WK-672 Slice 2, `PL-1189`: the citation moved from `regression-suite.schema.json
 generated `model-schema` artifact and the run definition moved, unchanged, to its own
 hand-authored file.)*
 
-```json
+```json schema=RegressionRun
 {
   "suite_ref": "regression_suite:motor-gb-core@3",
   "suite_content_hash": "sha256:5b1f3a0c7d2e94a86c01d4f7e3b9a2c5d8e6f0a1b3c4d5e6f708192a3b4c5d6e",
@@ -937,7 +937,7 @@ with the types they carry on `RegressionRun` above. It has no `golden_results`,
 
 **Request.** One Quote Context and two Rating Version references, so the two sides cannot drift into two different quotes. A `context` that carries its own `options.rating_version_ref` is refused (422): `base` and `comparison` name the versions.
 
-```json
+```json schema=ScoreCompareRequest
 {
   "context": {"purpose": "new_business", "quoted_at": "2026-08-30T09:00:00Z",
               "effective_date": "2026-09-01", "inputs": {"premium_in": 1000}},
@@ -948,7 +948,7 @@ with the types they carry on `RegressionRun` above. It has no `golden_results`,
 
 **Response.** Both `ScoringResult`s, each traced, and the diff of their traces:
 
-```json
+```json illustrative
 {
   "base": {"...": "a traced ScoringResult"},
   "comparison": {"...": "a traced ScoringResult"},
@@ -979,7 +979,7 @@ with the types they carry on `RegressionRun` above. It has no `golden_results`,
 
 A Sub-graph Version is a stored, immutable fragment of a Rating Algorithm, addressed as `sub_graph:<slug>@<version>`. It is **not a Governed Artifact** (`RL-1309` DP-1): it has no status and no approval lifecycle of its own. Its change reaches approval inside the Rating Version that pins it, and every version carries a required, non-empty `change_note`.
 
-```json
+```json schema=SubGraph
 {
   "slug": "ncd-ladder",
   "version": 4,
@@ -1000,7 +1000,7 @@ A Sub-graph Version is a stored, immutable fragment of a Rating Algorithm, addre
 - **Inlining and namespacing** *(added 2026-10-09, WK-1250 Slice 2, RL-1571 (2026-10-10, re-pointed: RL 9586 was minted as RL-1571 in D5; the 11:47:04 follow-up))*. At compile, a pinned mount is inlined at its `mount_point` (FR-217). Every fragment `step_id`, and every fragment name that is not a mapped port, becomes `<mount_point>__<name>`: `__`, not `/`, because `/` is FR-244's division operator. A mapped input port's name becomes the parent value it is mapped to, and a mapped output port's name becomes the parent name it is mapped to. Names are renamed by FR-244 token in every field that holds one (`consumes`, `produces`, `key_expr`, `expr`, `condition`, the values of `clamp_bounds` and ~~the values of~~ `feature_map`), never by substring. *(Corrected 2026-10-10, the maintainer's (by delegation) entry headed "2026-10-10 23:46:57 BST — RULING (mispricing): the inliner renames feature_map KEYS, never values — option (A), fixed INSIDE SL-1541" in `to-lead.md`, WK-1178 SL-1541: a `feature_map`'s KEYS are graph value names and are renamed; its VALUES are the Model's feature names (FR-222) and are never renamed. The struck words "the values of" before `feature_map` read wrongly; `RL-1571` is frozen and is not edited.)* A `mount_point` matches `^[A-Za-z][A-Za-z0-9_]*$` and contains no `__`. ~~Mounted under §4.1's example, this fragment's step `s_ncd` becomes `s_ncd__s_ncd`; it consumes the parent's `ncd_years` and produces the parent's `ncd_factor`.~~ *(Corrected 2026-10-11, in the D11 docs batch, on dm-wk690's routing as relayed by the lead at "2026-10-11 11:36:23 BST" in `from-lead-2026-10-09.md`: §4.1's example mounts nothing. `RL-1519` removed its mount (its table row "`mount_point: "s_ncd"` names no step": "The mount is removed (`"sub_graphs": []`)"), and the example now ends at `"sub_graphs": []`, so there is no mounted `s_ncd` to become `s_ncd__s_ncd`. The renaming rule above is unchanged; only its worked example is withdrawn. `s_ncd` is the step id **inside** §4.11's `ncd-ladder` fragment.)* Compile refuses an unmapped or undeclared port (`RATING_GRAPH_UNRESOLVED_REF`), an incompatible input type (`RATING_TYPE_MISMATCH`), a mount whose sub-graph is not pinned (`RATING_VERSION_UNPINNED`), and a `mount_point` that breaks the pattern, clashes, or produces a namespaced name equal to a parent name, step id or engine-derived key (`VALIDATION_FAILED`). A mount whose fragment writes its own input port is refused (`VALIDATION_FAILED`); revisit if an algorithm needs it *(ruled 2026-10-09, WK-1250 Slice 2)*.
 - **Purpose mounts** *(added 2026-10-16, WK-1250 Slice 3, RL-1628; DP-S3-1 (d))*. A mount's `purposes` selects the purposes it is inlined for; with none, it is unconditional. A purpose mount maps an input port and an output port to the **same** parent name, so in that purpose's graph it re-produces the name (§4.1). The shape, as an entry of `sub_graphs`:
 
-  ```json
+  ```json schema=SubGraphRef
   {"ref": "sub_graph:motor-cancellation@1", "mount_point": "s_cancel",
    "purposes": ["cancellation"],
    "inputs": {"annual_payable": "payable_premium_pre_round", "days_on_risk": "days_on_risk"},
@@ -1018,7 +1018,7 @@ A Sub-graph Version is a stored, immutable fragment of a Rating Algorithm, addre
 
 A Deployment binds one `approved` Rating Version to one Environment at a point in time. It is a record, not a Governed Artifact: it has no status and no approval lifecycle of its own. Approval attaches to the **Deployment Request** that precedes it, below.
 
-```json
+```json schema=Deployment
 {
   "id": "6f1c0e52-8a43-4d3b-9b0e-2f6a7c1d9e10",
   "workspace_id": "0c6e8f0a-5d21-4b7e-8d62-1a9b3c4d5e6f",

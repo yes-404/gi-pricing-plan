@@ -221,7 +221,7 @@ vocabulary; every entity also carries the `ArtifactEnvelope` from `00-overview.m
 
 ### 4.1 `Dataset`
 
-```json
+```json schema=Dataset
 {
   "id": "0190b5a2-7c3e-7a10-9d21-4f6b8c2e1a01",
   "workspace_id": "0190b5a2-7c3e-7a10-9d21-4f6b8c2e1a01",
@@ -257,7 +257,7 @@ the single answer to whether the data is fittable *(OQ-565, decided 2026-08-19)*
 
 ### 4.2 `DatasetVersion`
 
-```json
+```json illustrative
 {
   "id": "uuid",
   "workspace_id": "uuid",
@@ -330,7 +330,7 @@ the single answer to whether the data is fittable *(OQ-565, decided 2026-08-19)*
 
 A rule is a tagged union on `layer` + `check`:
 
-```json
+```json schema=ValidationRule
 {
   "id": "0190b5a2-7c3e-7a10-9d21-4f6b8c2e1a01",
   "version": 2,
@@ -348,7 +348,7 @@ A rule is a tagged union on `layer` + `check`:
 }
 ```
 
-```json
+```json schema=ValidationRuleSet
 {
   "id": "0190b5a2-7c3e-7a10-9d21-4f6b8c2e1a01",
   "slug": "motor-gb-standard",
@@ -579,7 +579,7 @@ key is one target with several columns.
 
 ### 4.6 `ValidationReport`
 
-```json
+```json illustrative
 {
   "id": "0190b5a2-7c3e-7a10-9d21-4f6b8c2e1a01",
   "dataset_version_id": "0190b5a2-7c3e-7a10-9d21-4f6b8c2e1a01",
@@ -644,7 +644,7 @@ checked at promotion (FR-46), not baked into `overall`.
 
 ### 4.7 `Profile`
 
-```json
+```json illustrative
 {
   "id": "uuid",
   "dataset_version_id": "uuid",
@@ -791,7 +791,7 @@ checked at promotion (FR-46), not baked into `overall`.
 
 A **table** declares what it is keyed by; a **version** holds effective-dated rows.
 
-```json
+```json illustrative
 {
   "table": {
     "slug": "ons-postcode-directory",
@@ -845,7 +845,7 @@ refused with `REFERENCE_VERSION_NOT_PINNED` rather than falling back.
 required this since Phase 0, and the response was the only documented `01` response with no
 §4 subsection, which is how it stayed an untyped `dict[str, Any]` through six slices.)*
 
-```json
+```json schema=DatasetLineage
 {
   "version_id": "0190b5a2-7c3e-7a10-9d21-4f6b8c2e1a01",
   "built_from": {"parent_version_id": "0190b5a2-7c3e-7a10-9d21-4f6b8c2e1a01", "operation": "sample", "parameters": {}},

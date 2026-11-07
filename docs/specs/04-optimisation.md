@@ -132,7 +132,7 @@ Terms from `00-overview.md` §2.4 are used unchanged. Additional terms owned her
 
 ### 4.1 `OptimisationRun`
 
-```json
+```json illustrative
 {
   "slug": "motor-gb-2026q4-profit-lean",
   "portfolio_dataset_version_id": "uuid",
@@ -171,7 +171,7 @@ Terms from `00-overview.md` §2.4 are used unchanged. Additional terms owned her
 
 ### 4.2 `OptimisationResult`
 
-```json
+```json illustrative
 {
   "optimisation_run_id": "uuid",
   "expected": {
@@ -210,7 +210,7 @@ Terms from `00-overview.md` §2.4 are used unchanged. Additional terms owned her
 
 ### 4.3 `GippCheck`
 
-```json
+```json illustrative
 {
   "rating_version_ref": "rating_version:motor-gb@27",
   "renewal_population_dataset_version_id": "uuid",
@@ -251,7 +251,7 @@ The record of a bulk operation on a rate table, carried by the version it create
 (`03` §4.2 `created_by_operation`). FR-233 requires the parameters, not just the
 resulting cells, to be recorded; this record is what "recorded" means.
 
-```json
+```json illustrative
 {
   "kind": "uplift_table | uplift_by_filter | floor_and_cap | rebase_to_level",
   "parameters": {

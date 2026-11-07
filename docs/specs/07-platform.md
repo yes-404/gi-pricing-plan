@@ -190,7 +190,7 @@ The substrate every other module stands on:
 
 ### 4.1 `Job`
 
-```json
+```json illustrative
 {
   "id": "uuid",
   "workspace_id": "uuid",
@@ -231,7 +231,7 @@ worker's version and build joined by `+`, and it is null while the Job is `queue
 
 Failure shape: `Job.error` on a failed Job is a `JobError`, shown here without the enclosing Job:
 
-```json
+```json schema=JobError
 {
   "code": "GLM_DID_NOT_CONVERGE",
   "message": "GLM failed to converge after 200 iterations.",
@@ -243,7 +243,7 @@ Failure shape: `Job.error` on a failed Job is a `JobError`, shown here without t
 
 ### 4.2 `Environment`
 
-```json
+```json schema=Environment
 {
   "slug": "prod",
   "name": "prod",
@@ -269,7 +269,7 @@ Failure shape: `Job.error` on a failed Job is a `JobError`, shown here without t
 
 ### 4.3 `ServiceAccount` / API key
 
-```json
+```json illustrative
 {
   "slug": "quote-engine-prod",
   "environments": ["prod"],
@@ -287,7 +287,7 @@ The key value itself appears exactly once, in the creation response (FR-389).
 
 ### 4.4 `Setting` resolution
 
-```json
+```json schema=SettingResolution
 {
   "key": "validation.psi_warn_threshold",
   "effective_value": 0.10,

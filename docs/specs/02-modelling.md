@@ -418,7 +418,7 @@ Schemas in `docs/contracts/schemas/`. All entities carry `ArtifactEnvelope` (`00
 
 ### 4.1 `Factor`
 
-```json
+```json schema=Factor
 {
   "id": "0190b5a2-7c3e-7a10-9d21-4f6b8c2e1a01",
   "slug": "driver_age_banded",
@@ -474,7 +474,7 @@ this pattern (`00` ID-3). The `Factor` type does not yet refuse a slug outside i
 
 ### 4.2 `Banding`
 
-```json
+```json illustrative
 {
   "id": "uuid",
   "slug": "driver-age-actuarial-v2",
@@ -542,7 +542,7 @@ empty on the next.
 
 ### 4.3 `Grouping`
 
-```json
+```json schema=Grouping
 {
   "id": "0190b5a2-7c3e-7a10-9d21-4f6b8c2e1a01",
   "slug": "vehicle-group-to-rating-group",
@@ -618,7 +618,7 @@ and is `null` under limited fluctuation.
 
 Common block:
 
-```json
+```json illustrative
 {
   "model_family_slug": "motor-ad-frequency",
   "dataset_version_id": "uuid",
@@ -688,7 +688,7 @@ cap are different models, and must not collide on `spec_hash`.
 
 `GlmSpec` adds the fields below to the common block. The example also carries the common fields the arm needs to be valid on its own: `model_family_slug`, `dataset_version_id` and `response_column`, and the `offset` a Poisson spec must declare (FR-111).
 
-```json
+```json schema=GlmSpec
 {
   "model_family_slug": "motor-ad-frequency",
   "dataset_version_id": "0190b5a2-7c3e-7a10-9d21-4f6b8c2e1a01",
@@ -727,7 +727,7 @@ cap are different models, and must not collide on `spec_hash`.
 
 `GlmCvSpec` is the block `cv` carries when `select_by` is `"cv"`:
 
-```json
+```json schema=GlmCvSpec
 {
   "method": "random",
   "folds": 5,
@@ -758,7 +758,7 @@ cap are different models, and must not collide on `spec_hash`.
 
 `TweediePowerSpec` is the block `tweedie` carries when estimation is requested:
 
-```json
+```json schema=TweediePowerSpec
 {
   "p_grid": [1.05, 1.15, 1.25, 1.35, 1.45, 1.55, 1.65, 1.75, 1.85, 1.95]
 }
@@ -778,7 +778,7 @@ cap are different models, and must not collide on `spec_hash`.
 
 `GbmSpec` adds (`model_type` is `xgboost` or `lightgbm` — see the amendment below):
 
-```json
+```json illustrative
 {
   "objective": {"kind": "builtin", "name": "count:poisson"},
   "monotone_constraints": "derived_from_factors",
@@ -900,7 +900,7 @@ cap are different models, and must not collide on `spec_hash`.
 
 `EbmSpec` adds the fields below to the common block (`model_type` is `"ebm"`). The example also carries the common fields the arm needs to be valid on its own: `model_family_slug`, `dataset_version_id` and `response_column`:
 
-```json
+```json schema=EbmSpec
 {
   "model_family_slug": "motor-ad-frequency",
   "dataset_version_id": "0190b5a2-7c3e-7a10-9d21-4f6b8c2e1a01",
@@ -1099,7 +1099,7 @@ Rules enforced by the parser (FR-145):
 
 Example `expression` objective — under-pricing penalised twice as hard, on a log link:
 
-```json
+```json schema=CustomObjective
 {
   "id": "0190b5a2-7c3e-7a10-9d21-4f6b8c2e1a01",
   "version": 1,
@@ -1147,7 +1147,7 @@ needs `hessian_strategy` and a second Approver (FR-152). It also has a **kink** 
 
 Produced by `POST /custom-objectives/{id}/certify`; required for submission (FR-146).
 
-```json
+```json schema=ObjectiveCertificate
 {
   "id": "0190b5a2-7c3e-7a10-9d21-4f6b8c2e1a01",
   "custom_objective_id": "0190b5a2-7c3e-7a10-9d21-4f6b8c2e1a01", "objective_version": 1,
@@ -1284,7 +1284,7 @@ derivatives rather than a SymPy-derived form (FR-151). Every other check, and th
 
 ### 4.8 `Model`
 
-```json
+```json illustrative
 {
   "model_family_slug": "motor-ad-frequency",
   "version": 7,
@@ -1444,7 +1444,7 @@ derivatives rather than a SymPy-derived form (FR-151). Every other check, and th
 
 `fit_result` for an EBM carries the shape functions themselves:
 
-```json
+```json schema=EbmFitResult
 {
   "model_type": "ebm",
   "objective": "rmse",
@@ -1490,7 +1490,7 @@ generated contract instead. This example is **validated against `GbmFitResult` r
 hand-written**, and it names every field the type declares — nothing is elided, because a
 field absent from the only example on the page is a field a reader concludes is optional:
 
-```json
+```json schema=GbmFitResult
 {
   "model_type": "xgboost",
   "booster_blob": {
@@ -1553,7 +1553,7 @@ backends; `best_iteration` is what `predict_gbm` passes as `iteration_range` /
 
 ### 4.9 `TransparencyArtifact`
 
-```json
+```json schema=TransparencyArtifact
 {
   "id": "0190b5a2-7c3e-7a10-9d21-4f6b8c2e1a01",
   "created_at": "2026-08-14T09:00:00Z",
@@ -1619,7 +1619,7 @@ backends; `best_iteration` is what `predict_gbm` passes as `iteration_range` /
 
 ### 4.10 `PerilStructure`
 
-```json
+```json illustrative
 {
   "slug": "motor-gb-2026h2",
   "version": 2,
@@ -1709,7 +1709,7 @@ type since Phase 0 and **no section defined it** — so this is the shape's firs
 rather than a description of an existing one, and `model-comparison.schema.json` is generated
 from it.
 
-```json
+```json illustrative
 {
   "id": "uuid",
   "computed_at": "2026-08-17T15:20:11Z",
@@ -1782,7 +1782,7 @@ required evidence for a Model approval where a predecessor exists.
 0 and **no section defined what it produces** — so this is the shape's first written form,
 and `backtest.schema.json` is generated from it.
 
-```json
+```json illustrative
 {
   "id": "uuid",
   "model_id": "uuid",
@@ -1887,7 +1887,7 @@ backtests must mint a fresh `(model, version)` pair per test, which
 
 ### 4.13 `CustomMetric`
 
-```json
+```json schema=CustomMetric
 {
   "id": "0190b5a2-7c3e-7a10-9d21-4f6b8c2e1a01", "slug": "capped-gamma-nll", "version": 2,
   "kind": "template", "template": "capped_gamma",
