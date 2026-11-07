@@ -561,3 +561,5 @@ No gate ran on this docs track. The audit above, the eight docs-audit files and 
 **Lead's adoption (from-lead, 2026-11-05 18:02:39 GMT, verbatim):** "aud-t3 ADOPTED, released: TRACK A @fd5e5d81: nothing NOT MET; 20 blocks validate, row 5 fails only on overall + counts as ruled; 8 spec-reading files pass; 2 fail on the working-id gap, re-read at the mint (test_audit_docs_ids's message unread by the auditor: read at the mint); 3 DB-backed owed to CI. Drafts scratch/aud-t3/. Mint after #1434."
 
 **Mint record (2026-11-06):** working ids 8372 and 8375 became PL-2053 and RL-2054, minted contiguously after LG-2052 on origin/main 0510d2c4e5e1. FD 8379 is not filed on this head and stays a working id in space form. SL 8373 and LG 8374 stay reserved. This PR's number, squash commit and merge date are written at the merge's date-of-record.
+
+*(Dated note, 2026-11-07, docs batch 16, by the executor: the row at line 150, `A SL 8325`, names the slice minted as **SL-2075** (PL-2074, LG-2076, #1456). The plan is frozen at its date and line 150 is not edited.)*
