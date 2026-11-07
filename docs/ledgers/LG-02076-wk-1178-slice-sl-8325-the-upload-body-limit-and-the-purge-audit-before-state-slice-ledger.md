@@ -1,20 +1,22 @@
 ---
-id: LG-8326
+id: LG-2076
 family: ledger
-title: WK-1178 slice SL-8325 — FD-1802 the upload body limit, FD-1746 the purge audit's before state (slice ledger)
+title: WK-1178 slice SL-2075 — FD-1802 the upload body limit, FD-1746 the purge audit's before state (slice ledger)
 status: active                 # active → closed (§1.2a)
-created: 2026-11-05
+created: 2026-11-07             # original date 2026-11-05, set at the draft under working id 8326; minted 2026-11-07
 owner: executor
 tree: 0000000000000000000000000000000000000000   # set at the last build-log entry
-slice: SL-8325
+slice: SL-2075
 phase: P2
 work: WK-1178
-plans: [PL-8324]
+plans: [PL-2074]
 corrected_by: []
-relates: [FD-1802, FD-1746, PL-8324, FR-450, FR-235, NFR-472, FR-81]
+relates: [FD-1802, FD-1746, PL-2074, FR-450, FR-235, NFR-472, FR-81]
 ---
 
-# LG-8326 — WK-1178 slice SL-8325: the upload body limit and the purge audit's before state
+# LG-2076 — WK-1178 slice SL-2075: the upload body limit and the purge audit's before state
+
+*(Minted 2026-11-07 as LG-2076 from working id 8326, in the SL-2075 mint, with the mint tool of record `mint-repoint.py`; plan PL-2074 (8324), slice SL-2075 (8325) and ledger LG-2076 (8326) minted together, in that order.)*
 
 **GO:** to-lead "2026-11-05 10:20:55 GMT" (PLAN A @d7af4f25; DP-A1 64 MiB as a typed setting, nginx = limit + a small margin; DP-A2 dated clause on FR-450 and `PAYLOAD_TOO_LARGE`; DP-A3 XLSX expansion and gzip expand-first out; DP-A4 purge `before` = version ids and statuses).
 **MERGE-ACK:** (added at merge.)
@@ -23,7 +25,7 @@ relates: [FD-1802, FD-1746, PL-8324, FR-450, FR-235, NFR-472, FR-81]
 
 ### Scope
 
-PL-8324, "SL 8325 — the upload body limit and the purge before state", R0 to R3 and G. Requirements: `07` FR-450, FR-445 (read); `03` FR-235; `01` NFR-472, FR-81 (read). Register: FD-1802, FD-1746. **Departure from the plan, by the ruling:** the plan's G4 says one constant and no setting; DP-A1 as ruled makes the limit the typed setting `max_upload_body_mib` (`GIP_MAX_UPLOAD_BODY_MIB`, default 64) in `backend/src/app/config.py`, and `backend/tests/test_api_body_limit.py` holds its default. Those two files are outside the plan's Write set and are named here as the brief allows. The setting's name differs from the plan's revised wording (`Settings.max_request_body_bytes`): the spec commit `be64d5d5` names `GIP_MAX_UPLOAD_BODY_MIB` (a MiB field), and the lead ruled (to-lead, after `be64d5d5`) to keep it. **Second departure:** T6 is not a new test in `test_data_nfrs.py`. `purge_subject` runs as the owner, so a new test would need an entry in `conftest_db.OWNER_FIXTURE_USERS` (outside the Write set). T6 extends the purge test already listed there, `backend/tests/test_lineage.py::test_a_subject_purge_is_admin_only_and_recorded`, which carries an added `NFR-472` marker; reported to the lead at 11:00 for a ruling.
+PL-2074, "SL-2075 — the upload body limit and the purge before state", R0 to R3 and G. Requirements: `07` FR-450, FR-445 (read); `03` FR-235; `01` NFR-472, FR-81 (read). Register: FD-1802, FD-1746. **Departure from the plan, by the ruling:** the plan's G4 says one constant and no setting; DP-A1 as ruled makes the limit the typed setting `max_upload_body_mib` (`GIP_MAX_UPLOAD_BODY_MIB`, default 64) in `backend/src/app/config.py`, and `backend/tests/test_api_body_limit.py` holds its default. Those two files are outside the plan's Write set and are named here as the brief allows. The setting's name differs from the plan's revised wording (`Settings.max_request_body_bytes`): the spec commit `be64d5d5` names `GIP_MAX_UPLOAD_BODY_MIB` (a MiB field), and the lead ruled (to-lead, after `be64d5d5`) to keep it. **Second departure:** T6 is not a new test in `test_data_nfrs.py`. `purge_subject` runs as the owner, so a new test would need an entry in `conftest_db.OWNER_FIXTURE_USERS` (outside the Write set). T6 extends the purge test already listed there, `backend/tests/test_lineage.py::test_a_subject_purge_is_admin_only_and_recorded`, which carries an added `NFR-472` marker; reported to the lead at 11:00 for a ruling.
 
 ### Task list
 

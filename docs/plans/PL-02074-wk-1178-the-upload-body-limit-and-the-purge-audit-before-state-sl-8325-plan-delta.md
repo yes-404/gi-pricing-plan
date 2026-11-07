@@ -1,10 +1,10 @@
 ---
-id: PL-8324
+id: PL-2074
 family: plan
 kind: map
-title: WK-1178 — the data and upload boundary, a stated request-body limit on both upload routes and a purge audit event with its before state (FD-1802, FD-1746), SL-8325 — a dated Work-plan delta
+title: WK-1178 — the data and upload boundary, a stated request-body limit on both upload routes and a purge audit event with its before state (FD-1802, FD-1746), SL-2075 — a dated Work-plan delta
 status: draft                   # draft → active → superseded | retired (§1.2a) — L1: draft→active rides the slice's PR
-created: 2026-11-05             # filed under working id 8324
+created: 2026-11-07             # original date 2026-11-05, set at the draft under working id 8324; minted 2026-11-07
 owner: planner
 tree: dae9637ea6f6a56f6502e9db70392cdfb2f3983d
 phase: P2
@@ -15,13 +15,15 @@ corrected_by: []
 relates: [FD-1802, FD-1746, SL-1736, SL-1547, FR-81, FR-235, FR-450, NFR-472]
 ---
 
-# PL-8324 — WK-1178: the upload body limit and the purge audit's before state (SL 8325, a dated Work-plan delta)
+# PL-2074 — WK-1178: the upload body limit and the purge audit's before state (SL-2075, a dated Work-plan delta)
+
+*(Minted 2026-11-07 as PL-2074 from working id 8324, in the SL-2075 mint, with the mint tool of record `mint-repoint.py`; plan PL-2074, slice SL-2075 and ledger LG-2076 minted together, in that order.)*
 
 > **For agentic workers:** this is a **dated Work-plan delta** under Lean P2 L1 (a')
-> (`.claude/roles/planner.md`, "Lean P2"). It holds one slice row, SL 8325, and edits no filed plan.
+> (`.claude/roles/planner.md`, "Lean P2"). It holds one slice row, SL-2075, and edits no filed plan.
 > The executor's skills are `superpowers:test-driven-development`, `.claude/skills/python-test`,
-> `.claude/skills/fastapi-service`, `spec-change` and `git-hygiene`. PL 8324, SL 8325 and the ledger
-> LG 8326 are working ids reserved by the lead.
+> `.claude/skills/fastapi-service`, `spec-change` and `git-hygiene`. PL-2074, SL-2075 and the ledger
+> LG-2076 were minted 2026-11-07 from the working ids 8324, 8325 and 8326 the lead reserved.
 
 ## Authority
 
@@ -92,7 +94,7 @@ were read in tools-main's `.venv/lib/python3.12/site-packages`, the locked versi
   `client_max_body_size`, and `git grep -n -i client_max_body_size origin/main -- deploy` prints
   nothing, so nginx's built-in default of 1 MiB applies (nginx's documented default; **not run
   here**). On the compose path, an upload over 1 MiB gets nginx's HTML 413 from `lb` today, not an RFC
-  9457 problem and not the API. The authored `deploy/frontend.nginx.conf` of `PL 8319` has the same
+  9457 problem and not the API. The authored `deploy/frontend.nginx.conf` of PL-2016 (cited as `PL 8319` at the draft; re-pointed 2026-11-07 by a dated note, PL-2016:26) has the same
   gap. A limit the proxy undercuts is not the stated limit.
 - **The 413 that exists.** `formats.py:42` `MAX_DECOMPRESSED_BYTES` = 2 GiB; `_refuse_if_oversized`
   raises 413 `REJECT_RATE_EXCEEDED` (`:61-68`), and its text says "Ingest it from an object store
@@ -151,7 +153,7 @@ Each item is checked by a command a fresh reviewer can run from the repository r
 merge tree. Items 1 and 2 apply to this plan; A1 to A12 apply to the slice.
 
 1. **This delta passes the docs checks on its branch.** `python3 scripts/audit-docs.py` prints no
-   failing line except check 31 / check 32 lines naming working ids 8324, 8325 or 8326. After the
+   failing line except check 31 / check 32 lines naming this delta's own working ids (PL-2074, SL-2075, LG-2076 before the 2026-11-07 mint). After the
    mint, `audit-docs.py` and `doc-index.py --check` exit 0.
 2. **No requirement range.** `grep -nE '(N?FR)-[0-9]+ *(-|to|–) *(N?FR-)?[0-9]+' <this file>` prints
    no line that stands for a set of ids.
@@ -164,7 +166,7 @@ The slice:
 - **A2. Spec text first.** The spec commit precedes the first code commit, and states 64 MiB as the default of a
   setting. `git grep -n -E '67108864|64 MiB|65m' -- docs/specs backend/src deploy` shows the spec, the setting, and
   the two nginx files, each citing the spec.
-- **A3. Red first, by cause.** LG 8326 quotes the red lines of T1 to T5, from the slice's named base.
+- **A3. Red first, by cause.** LG-2076 quotes the red lines of T1 to T5, from the slice's named base.
 - **A4. The limit, declared length.** T1: a request declaring a `Content-Length` over the limit on
   each route answers 413, code `PAYLOAD_TOO_LARGE`, with `trace_id`, and the handler is not entered.
   **The two ruled ordering proofs:** the sentinel `receive` shows no body read before the refusal (the cap sits before
@@ -224,18 +226,18 @@ The slice:
   11`, `12` or `13`, never db 0 (live). Runs T6 red and green, and A9's two planted breaks. It ends
   with the two quoted zeros (common seat brief, items 22 and 23).
 - **A build window**, for A7 only, about 30 min, serial with D's and after D's merge, on `gip-s4-runtime`,
-  images by `docker build` and `up --no-build`. Needs `df -h /` read first (the 5 GB floor of PL 8319).
+  images by `docker build` and `up --no-build`. Needs `df -h /` read first (the 5 GB floor of PL-2016, cited as `PL 8319` at the draft; re-pointed 2026-11-07).
   **If no window is free by Tue 10,** A7's runtime limb is reported to the lead rather than dropped.
 - **NFR VM:** nothing.
 
 ## Tasks
 
-### SL 8325 — the upload body limit and the purge before state
+### SL-2075 — the upload body limit and the purge before state
 
 **The row.** Fourth in the 09:58:58 order after D, R, C and T. WK-1178 fix slice. One `sonnet`
 executor (the charter's model line governs).
 
-- **Scope (what LG 8326 quotes):** R0 to R3 and G below.
+- **Scope (what LG-2076 quotes):** R0 to R3 and G below.
 - **Requirements:** `07` FR-450, FR-445 (read); `03` FR-235; `01` NFR-472, FR-81 (read).
 - **Register:** FD-1802 and FD-1746 (both MEDIUM), closing at the merge (A11).
 - **Depends on:** the maintainer's GO; the windows and the gate slot; **D merged**, since this slice merges after D
@@ -342,8 +344,8 @@ which the gate covers. No migration, no contract regeneration. CI set from the t
   `backend/tests/test_deploy_stack.py`.
 - `deploy/lb.conf`, `deploy/frontend.nginx.conf`, `deploy/README.md`.
 - `docs/specs/07-platform.md`, `docs/specs/03-rating-engine.md`, `docs/specs/01-data-management.md`.
-- LG 8326 under `docs/ledgers/`.
-- At the mint: the SL 8325 row in `docs/roadmap.md`, `docs/INDEX.md`, this plan's `status:`, the two
+- LG-2076 under `docs/ledgers/`.
+- At the mint: the SL-2075 row in `docs/roadmap.md`, `docs/INDEX.md`, this plan's `status:`, the two
   essays and `docs/findings/register.md` (A11).
 
 ### Files shared with other groups
@@ -356,7 +358,7 @@ rows. **Safe in parallel:** R, C, T, H, F for building; D for building, serial f
 ## Hand-off (not this plan's writes)
 
 - The GO: the maintainer. The windows and the gate slot: the lead.
-- The SL 8325 row and mint: the lead. The LG: the executor. A11: the slice's auditor.
+- The SL-2075 row and mint: the lead. The LG: the executor. A11: the slice's auditor.
 - Anything in `examples/` or the demo that posts a preview over the ruled limit: none is known, and
   `scripts/demo.py` is not in the write set. If the gate's demo stage hits it, that is a stop and a
   report, not a raised limit.

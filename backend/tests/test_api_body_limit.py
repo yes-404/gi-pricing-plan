@@ -77,7 +77,7 @@ async def test_a_declared_length_over_the_limit_is_refused_before_the_handler() 
 
 @pytest.mark.req("FR-450")
 async def test_a_declared_length_over_the_limit_reads_no_body_before_the_refusal() -> None:
-    """The ordering proof (PL 8324 A4): the cap sits before body consumption.
+    """The ordering proof (PL-2074 A4): the cap sits before body consumption.
 
     Green at its base by design (the middleware already checks `Content-Length` first); the
     break that turns it red is a `receive()` ahead of that check.
@@ -109,7 +109,7 @@ async def test_a_declared_length_over_the_limit_reads_no_body_before_the_refusal
 
 @pytest.mark.req("FR-450")
 async def test_the_refusals_trace_header_is_the_problems_trace_id() -> None:
-    """Trace propagation survives the cap (PL 8324 A4): `x-trace-id` equals `trace_id`."""
+    """Trace propagation survives the cap (PL-2074 A4): `x-trace-id` equals `trace_id`."""
     entered: list[int] = []
     body, content_type = _multipart(LIMIT + 1)
     async with _client(_app(entered)) as client:
