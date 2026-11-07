@@ -150,8 +150,10 @@ async def test_identical_tables_across_versions_are_stored_once(
 async def test_every_dataset_transition_emits_an_audit_event_with_before_and_after(
     database: Database, workspace_id
 ) -> None:
-    """NFR-472: transitions, acknowledgements, dictionary edits, rule-set changes and
-    purges each emit an Audit Event with before and after state."""
+    """NFR-472, the transition class. Acknowledgements: `test_validation_reports.py`.
+    Dictionary edits and rule-set changes: `test_api_datasets.py`. Purges:
+    `test_lineage.py::test_a_subject_purge_is_admin_only_and_recorded` asserts the
+    purge event's `before`."""
     actor = await _analyst(database, workspace_id)
     async with database.unit_of_work() as session:
         dataset = await datasets.create_dataset(
