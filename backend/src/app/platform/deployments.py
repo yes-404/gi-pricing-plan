@@ -612,6 +612,16 @@ async def deploy(
         ).scalar_one_or_none()
         if executed is None:
             raise _not_approved(body.deployment_request_ref, "has been executed")
+        await audit.record(
+            session,
+            workspace_id=workspace_id,
+            actor=actor,
+            source=JobSource.API,
+            action="deployment_request.executed",
+            entity_ref=str(_request_ref(request_row)),
+            before={"status": DeploymentRequestStatus.APPROVED.value},
+            after={"status": DeploymentRequestStatus.EXECUTED.value},
+        )
 
     previous = (
         await session.execute(

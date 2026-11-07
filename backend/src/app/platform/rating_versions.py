@@ -486,6 +486,20 @@ async def submit_for_review(
     row.status = RatingVersionStatus.REVIEW.value
     row.approval_request_id = request.id
     await session.flush()
+    await audit.record(
+        session,
+        workspace_id=workspace_id,
+        actor=actor,
+        source=JobSource.API,
+        action="rating_version.submitted",
+        entity_ref=f"rating_version:{ref.slug}@{ref.version}",
+        before={"status": RatingVersionStatus.DRAFT.value},
+        after={
+            "status": RatingVersionStatus.REVIEW.value,
+            "approval_request_id": str(request.id),
+        },
+        justification=change_summary,
+    )
     return row, request
 
 
