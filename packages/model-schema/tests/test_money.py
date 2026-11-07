@@ -130,7 +130,7 @@ def test_relativity_refuses_a_float_too():
 
 
 def test_positional_decimal_str_never_serialises_in_scientific_notation():
-    """`DecimalStr` gives `1E-7`, `1.2E-28` and `1E+1`, which break its own pattern."""
+    """The type never gives `1E-7`, `1.2E-28` or `1E+1`, which break its own pattern (FD-1337)."""
     from model_schema.money import PositionalDecimalStr
 
     class Holder(BaseModel):
@@ -159,3 +159,205 @@ def test_positional_decimal_str_refuses_a_float_and_keeps_the_string_schema():
     prop = Holder.model_json_schema()["properties"]["value"]
     assert prop["type"] == "string"
     assert prop["pattern"] == r"^-?[0-9]+(\.[0-9]+)?$"
+
+
+# --- FD-1337 (FR-21): an exact decimal serialises inside its own schema ------------------
+
+_EXACT_DECIMALS = [
+    Decimal("0.0000001"),
+    Decimal("1.2E-28"),
+    Decimal("1E+2"),
+    Decimal(100).normalize(),
+    Decimal(10),
+    Decimal("66000.440"),
+]
+
+
+@pytest.mark.req("FR-21")
+@pytest.mark.parametrize("value", _EXACT_DECIMALS, ids=[str(v) for v in _EXACT_DECIMALS])
+@pytest.mark.parametrize("kind", [DecimalStr, Relativity], ids=["DecimalStr", "Relativity"])
+def test_every_exact_decimal_serialises_inside_its_own_schema(value, kind):
+    """A dump that matches the pattern the type publishes; `'1E-7'` does not."""
+    import re
+
+    class Holder(BaseModel):
+        value: kind  # type: ignore[valid-type]
+
+    pattern = Holder.model_json_schema()["properties"]["value"]["pattern"]
+    dumped = Holder(value=value).model_dump(mode="json")["value"]
+    assert re.fullmatch(pattern, dumped), dumped
+    assert Decimal(dumped) == value
+
+
+def _suite_with_bounds(lower: Decimal, upper: Decimal):
+    from model_schema.regression import RegressionSuiteContent
+
+    return RegressionSuiteContent.model_validate(
+        {
+            "algorithm_slug": "motor-gb",
+            "golden_quotes": [],
+            "properties": [
+                {
+                    "name": "monotone-in-age",
+                    "check": {
+                        "kind": "monotone",
+                        "input": "driver_age",
+                        "direction": "increasing",
+                        "strict": False,
+                        "lower": lower,
+                        "upper": upper,
+                    },
+                }
+            ],
+            "generation": {"cases": 5000, "seed": 1, "strategy": "input_contract_sampling"},
+        }
+    )
+
+
+@pytest.mark.req("FR-21")
+def test_equal_bounds_give_one_suite_hash():
+    """`10`, `1E+1` and `10.0` are one value, so one `suite_content_hash`."""
+    from model_schema.regression import suite_content_hash
+
+    hashes = {
+        suite_content_hash(_suite_with_bounds(lower, Decimal("100")))
+        for lower in (Decimal("10"), Decimal("1E+1"), Decimal("10.0"))
+    }
+    assert len(hashes) == 1, hashes
+
+
+@pytest.mark.req("FR-21")
+def test_a_field_outside_a_governed_hash_keeps_its_spelling():
+    """Control: only the hashed bounds drop trailing zeros; `66000.440` stays."""
+
+    class Holder(BaseModel):
+        value: DecimalStr
+
+    assert Holder(value=Decimal("66000.440")).model_dump(mode="json") == {"value": "66000.440"}
+
+
+@pytest.mark.req("FR-21")
+@pytest.mark.parametrize("zero", ["-0", "-0.00", "-0E+3", "0E+3"])
+def test_every_spelling_of_zero_gives_the_hash_of_zero(zero):
+    """DP-L2 extended 2026-11-05: a signed or exponent zero is the value 0, so one hash."""
+    from model_schema.regression import suite_content_hash
+
+    assert suite_content_hash(_suite_with_bounds(Decimal(zero), Decimal("100"))) == (
+        suite_content_hash(_suite_with_bounds(Decimal("0"), Decimal("100")))
+    )
+
+
+_BIG = "123456789012345678901234567890123456"  # 36 digits: wider than the default context (28)
+
+
+@pytest.mark.req("FR-21")
+def test_a_hashed_bound_is_never_rounded_to_the_context_precision():
+    """Ruled 2026-11-05 16:18:17: two 38-digit bounds ending .10 and .20 stay distinct, and
+    trailing zeros are still dropped (`.10` and `.100` are one value)."""
+    from model_schema.regression import suite_content_hash
+
+    def digest(text):
+        return suite_content_hash(_suite_with_bounds(Decimal(text), Decimal("1" + "0" * 40)))
+
+    assert digest(f"{_BIG}.10") != digest(f"{_BIG}.20")
+    assert digest(f"{_BIG}.10") == digest(f"{_BIG}.100")
+
+
+@pytest.mark.req("FR-21")
+def test_a_hashed_bound_does_not_depend_on_the_ambient_decimal_context():
+    """One case under `localcontext(prec=5)`: the same value gives the same hash."""
+    from decimal import localcontext
+
+    from model_schema.regression import suite_content_hash
+
+    def digest():
+        return suite_content_hash(_suite_with_bounds(Decimal("123456.7890"), Decimal("999999")))
+
+    expected = digest()
+    with localcontext() as ctx:
+        ctx.prec = 5
+        assert digest() == expected
+
+
+@pytest.mark.req("FR-21")
+def test_a_signalling_nan_that_skips_validation_is_not_written_as_a_number():
+    """Validation refuses `sNaN`; `model_construct` does not. The normaliser must raise, not
+    write `NaN` (to-lead 2026-11-05 16:33:41: `traps=[Inexact, InvalidOperation]`)."""
+    from decimal import InvalidOperation
+
+    from pydantic_core import PydanticSerializationError
+
+    from model_schema.money import CanonicalDecimalStr
+
+    class Holder(BaseModel):
+        value: CanonicalDecimalStr
+
+    with pytest.raises((InvalidOperation, PydanticSerializationError)):
+        Holder.model_construct(value=Decimal("sNaN")).model_dump(mode="json")
+
+
+# --- FR-21: a bound on WRITING (T7, N1 ruled (a), to-lead 2026-11-05 20:46:28) -----------------
+
+_T7_SCRIPT = """
+import json, resource, sys
+resource.setrlimit(resource.RLIMIT_AS, (1 << 29, 1 << 29))  # 512 MiB: a gigabyte string cannot fit
+from decimal import Decimal
+from pydantic import BaseModel
+from model_schema.money import CanonicalDecimalStr, DecimalStr, Relativity
+
+out = {}
+for name, tp in (("DecimalStr", DecimalStr), ("Relativity", Relativity),
+                 ("CanonicalDecimalStr", CanonicalDecimalStr)):
+    class Holder(BaseModel):
+        v: tp
+    for text in ("1E+999999999", "1E-400"):
+        try:
+            Holder(v=text).model_dump(mode="json")
+            out[name + " " + text] = "WROTE"
+        except BaseException as exc:  # MemoryError is what the unbounded writer raises
+            out[name + " " + text] = type(exc).__name__ + ": " + str(exc)[:60]
+print(json.dumps(out))
+"""
+
+
+@pytest.mark.req("FR-21")
+def test_an_exponent_past_308_is_refused_when_written_without_taking_the_memory():
+    """T7. Run in a child with a 512 MiB address-space limit and a timeout, so the unbounded
+    writer fails this test by `MemoryError` rather than by taking the machine's gigabytes."""
+    import json
+    import subprocess
+    import sys
+
+    done = subprocess.run(
+        [sys.executable, "-I", "-c", _T7_SCRIPT],
+        capture_output=True,
+        text=True,
+        timeout=120,
+        check=False,
+    )
+    assert done.returncode == 0, done.stderr[-500:]
+    outcomes = json.loads(done.stdout)
+    assert len(outcomes) == 6
+    assert all(v.startswith("PydanticSerializationError") for v in outcomes.values()), outcomes
+
+
+@pytest.mark.req("FR-21")
+@pytest.mark.parametrize("text", ["1E+308", "-1E+308", "1E-308", "9.9E+308", "123.456"])
+def test_an_exponent_inside_the_bound_is_written_positionally(text):
+    class Holder(BaseModel):
+        v: DecimalStr
+
+    assert Holder(v=text).model_dump(mode="json")["v"] == format(Decimal(text), "f")
+
+
+@pytest.mark.req("FR-21")
+@pytest.mark.parametrize("text", ["1E+309", "-1E+309", "1E-309", "1.5E-400"])
+def test_an_exponent_one_past_the_bound_is_refused_both_ways(text):
+    from pydantic_core import PydanticSerializationError
+
+    class Holder(BaseModel):
+        v: DecimalStr
+
+    assert Holder(v=text).v == Decimal(text)  # validation takes any exponent (G3)
+    with pytest.raises(PydanticSerializationError):
+        Holder(v=text).model_dump(mode="json")

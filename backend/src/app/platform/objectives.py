@@ -644,7 +644,11 @@ async def record_certificate(
 ) -> tuple[CustomObjectiveRow, ObjectiveCertificateRow]:
     """Persist a certificate and move the objective's status (FR-MODEL-42, 46).
 
-    A `failed` certificate is **recorded and leaves the objective in `draft`** — recorded
+    From `draft` or `certified`, a `failed` certificate is **recorded and leaves the objective
+    in `draft`**, as `custom_objective.certification_failed`. From any later status (a run
+    that ends after submission) the certificate row is kept, the status and `certificate_id`
+    move nothing, and the event is `custom_objective.certificate_recorded` with the result in
+    `after` (PL-2059 DP-1, DP-3). The rest of this paragraph is the `draft` case — recorded
     because the finding is the answer the run was asked for, and `draft` because a status
     past it is a claim that the derivatives were proven and they were not.
 
@@ -667,16 +671,23 @@ async def record_certificate(
     session.add(certificate)
 
     failed = result.overall is CertificateOutcome.FAILED
-    row.status = (ObjectiveStatus.DRAFT if failed else ObjectiveStatus.CERTIFIED).value
-    row.certificate_id = None if failed else certificate.id
+    # Re-checked here: the route's refusal ran before the Job existed, so a run queued at
+    # `certified` can end after submission (PL-2059 DP-3).
+    moved = before in {ObjectiveStatus.DRAFT.value, ObjectiveStatus.CERTIFIED.value}
+    if moved:
+        row.status = (ObjectiveStatus.DRAFT if failed else ObjectiveStatus.CERTIFIED).value
+        row.certificate_id = None if failed else certificate.id
     await session.flush()
+    outcome = (
+        ("certification_failed" if failed else "certified") if moved else "certificate_recorded"
+    )
 
     await audit.record(
         session,
         workspace_id=workspace_id,
         actor=actor,
         source=JobSource.SYSTEM if job_id else JobSource.API,
-        action="custom_objective.certified",
+        action=f"custom_objective.{outcome}",
         entity_ref=f"custom_objective:{row.slug}@{row.version}",
         before={"status": before},
         after={
