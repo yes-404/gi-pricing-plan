@@ -13,7 +13,7 @@ import pytest
 import model_schema
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
-ILLUSTRATIVE_CEILING = 31  # the count at the head; it may only fall.
+ILLUSTRATIVE_CEILING = 30  # the count at the head; it may only fall.
 _JSON_FENCE = re.compile(r"^\s*```json\b")
 
 

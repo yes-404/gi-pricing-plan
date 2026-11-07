@@ -579,7 +579,7 @@ key is one target with several columns.
 
 ### 4.6 `ValidationReport`
 
-```json illustrative
+```json schema=ValidationReportView
 {
   "id": "0190b5a2-7c3e-7a10-9d21-4f6b8c2e1a01",
   "dataset_version_id": "0190b5a2-7c3e-7a10-9d21-4f6b8c2e1a01",
@@ -589,7 +589,7 @@ key is one target with several columns.
   "started_at": "2026-08-14T09:12:00Z",
   "finished_at": "2026-08-14T09:14:37Z",
   "overall": "pass_with_warnings",
-  "counts": {"pass": 41, "warn": 3, "fail": 0, "error": 0, "skipped": 1},
+  "counts": {"pass": 0, "warn": 1, "fail": 0, "error": 0, "skipped": 0},
   "results": [
     {
       "rule_id": "0190b5a2-7c3e-7a10-9d21-4f6b8c2e1a01", "rule_slug": "psi-driver-age", "rule_version": 2,
@@ -614,6 +614,13 @@ key is one target with several columns.
 > requires both, but `GET /validation-reports/{report_id}` does not yet serialise them: they are plain
 > properties of the model. That is FD 8379 (working id; owner WK-1178), and until it lands this block is the
 > spec's statement and not what the route returns.
+
+> **Amended 2026-11-07 (FD 8379, WK-1178, SL 8381).** The note above is discharged: `GET /validation-reports/{report_id}`
+> now returns `overall` and `counts`. The block is the **response**, `ValidationReportView`, and is validated as such
+> (`schema=ValidationReportView`); the stored body is `ValidationReport`, the same object without `overall` and
+> `counts`, which are derived from `results`, checked against them, and never stored (NFR-469). The example's counts
+> now agree with its one result: they were `{"pass": 41, "warn": 3, ...}` beside one `warn` result, which the
+> view refuses.
 
 > **Amended 2026-08-26 (W6b-18).** The example previously printed `"offending_sample": []`, which settled nothing about the item encoding (OQ-567, decided 2026-08-26: (b)). The item shape is written out: one object per offending row, property keys are column names, values are the cell value as a string or null — `None` is distinct from `""`. A composite key is one item with several properties. A column-level check emits `{"column": <name>}`.
 
