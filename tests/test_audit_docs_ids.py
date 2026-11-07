@@ -43,6 +43,8 @@ from typing import Final
 
 import pytest
 
+from model_schema.table_rows import UNESCAPED_PIPE
+
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 SCRIPT = ROOT / "scripts" / "audit-docs.py"
 FIXTURES = ROOT / "tests" / "fixtures" / "docs-ids"
@@ -2448,7 +2450,7 @@ def _f92_work_item_cell(register_path: pathlib.Path) -> str:
     """
     for line in register_path.read_text(encoding="utf-8").splitlines():
         if line.startswith("|") and _F92_ROW_MARKER in line:
-            return re.split(r"(?<!\\)\|", line)[_WORK_ITEM_CELL].strip()
+            return UNESCAPED_PIPE.split(line)[_WORK_ITEM_CELL].strip()
     raise AssertionError(f"no F92 row found in {register_path}")
 
 
@@ -2497,7 +2499,7 @@ def test_a_disagreeing_register_cell_is_detected(
     lines = register.read_text(encoding="utf-8").splitlines(keepends=True)
     for i, line in enumerate(lines):
         if line.startswith("|") and _F92_ROW_MARKER in line:
-            cells = re.split(r"(?<!\\)\|", line)
+            cells = audit._docid.table_rows.UNESCAPED_PIPE.split(line)
             cells[_WORK_ITEM_CELL] = " W37-10 "
             lines[i] = "|".join(cells)
             break
