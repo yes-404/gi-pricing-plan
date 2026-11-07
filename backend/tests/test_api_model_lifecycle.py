@@ -303,7 +303,7 @@ def test_submitting_requires_the_submit_permission(
     assert refused.status_code == 403, refused.text
 
 
-# -- Archive is a model write, not a submission (FD 8366, SL 8368) -------------------------
+# -- Archive is a model write, not a submission (FD-2079, SL-2080) -------------------------
 
 
 def _caller_with(workspace_id: UUID, permissions: set[str]) -> dict[str, str]:
@@ -410,7 +410,7 @@ def test_archiving_requires_model_fit_and_not_model_submit(
     api_client: TestClient, workspace_id
 ) -> None:
     """`06` §4.1 DP-A: `model:fit` is the Model write right; `model:submit` is for putting a
-    model in front of an approver, which archiving is not (FD 8366). A caller with fit and
+    model in front of an approver, which archiving is not (FD-2079). A caller with fit and
     without submit archives; one with submit and without fit is refused."""
     actor, model_id, slug, _ = _fitted(workspace_id)
     reader = _headers(actor.id, workspace_id)
