@@ -30,4 +30,4 @@ LOW: a journey document, no behaviour.
 
 Which side is wrong is `CLAUDE.md` §0's question; the specification (FR-272 as amended by `RL-1252`) is the later decision, so the journey is the side that is fixed. A dated line on each of C4 and H4, citing `RL-1252` and naming WK-688, lands in the same PR as this record (the maintainer, "2026-11-06 09:58:14 GMT" (4): "fix it where it is known"). The step text is not edited. No row is owed by WK-674.
 
-***Resolved 2026-11-06*** — closed in place by the executor: the dated lines are on both steps, in this PR. this PR; its number, squash commit and merge date are written at the merge's date-of-record
+***Resolved 2026-11-06*** — closed in place by the executor: the dated lines are on both steps, in this PR. This PR; its number, squash commit and merge date are written at the merge's date-of-record

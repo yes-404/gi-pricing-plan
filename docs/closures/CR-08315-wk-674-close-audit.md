@@ -445,6 +445,8 @@ The rows keep the line numbers `7d65135d` cites.
 | `:85` | F41 | carried, WK-674; **ruled RE-HOME** to WK-687 | **owed**: dated lines on `:85` and the two roadmap rows, this PR |
 | `:86` | F43 L1 | carried, WK-674; **ruled DISCHARGE** | **owed**: the dated line, **and a dated line on FR-250's own text** (`03` :167, the 409 refusal branch kept), this PR |
 
+*(Dated line, 2026-11-07, by the auditor, on the maintainer's entry "2026-11-07 17:30:13 GMT" (CONFIRMED: CR 8315 maps `PL-1237`'s "Slice 5" to SL-1259): F41's "two roadmap rows" (12:02:53) are SL-1259's row and WK-687's row, and their dated lines are `docs/roadmap.md` `:1251` and `:4302`. `PL-1237` names the slice only as "Slice 5": `PL-1237:193` reads "(NFR-502 and NFR-501, Slice 5), F41 (NFR-497, the close), F43 (FR-250 L1, Slice 2), F48". The roadmap names that slice SL-1259: `docs/roadmap.md:1228` reads "#### SL-1259 — Slice 5: atomic switchover, rollback and the measurements …", and SL-1259's own header at `docs/roadmap.md:1241` reads "relates: [PL-1237]". Line numbers read at this branch's head; neither source is edited.)*
+
 Removed from the owed list, with the reason. **Resolved at this tree, Decision cell read to its end:** F48, F54, FD-1211, FD-1320,
 FD-1330, FD-1336, FD-1393, FD-1650, FD-1661, FD-1713, FD-1816, FD-1823, FD-1970. **Not WK-674's:** F35, FD-1197, FD-1199
 (`retired`), FD-1246, FD-1283, FD-1333, FD-1356, FD-1482 (WK-1178, `:314`).
