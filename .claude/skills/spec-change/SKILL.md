@@ -17,6 +17,12 @@ traceability chain that nobody notices for months.
 
 ## The rules that are easy to break
 
+**Every JSON example declares what it is, on its fence.** ` ```json schema=<Class>` names a class in
+`model_schema.__all__`, and the block must pass `<Class>.model_validate` in full. ` ```json illustrative`
+marks a fragment or a shape `model-schema` does not define; the block is listed, never validated.
+An `illustrative` mark on a block that contradicts an existing class is a silent pick (`CLAUDE.md` §0).
+Every fence in `docs/specs/` declares a language.
+
 **Requirement IDs are append-only.** Never renumber. Never insert `42a`/`42b` — that is not
 the convention and the audit will not see them. Find the current maximum and append:
 
@@ -145,6 +151,9 @@ explicit status enums. Avoid "the system should handle…". Small illustrative s
 encouraged; full implementations are not.
 
 ## Verified
+
+2026-11-07 — the JSON-example marker rule added (`FD-1381`, `PL-2053`): check 40 of
+`scripts/audit-docs.py` and `tests/test_spec_examples.py` enforce it. Tree `3c3ee5cb`.
 
 2026-08-29 — the `def`/`async def` verification rule added after the second of two
 `03-rating-engine.md` §5.2 signatures was found declared wrong the same way in one day

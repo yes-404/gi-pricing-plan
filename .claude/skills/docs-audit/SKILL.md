@@ -140,6 +140,7 @@ pass below found the gap — the same drift this skill exists to prevent, in its
 | # | Check | The defect it catches |
 |---|---|---|
 | 25 | Every `(F<n>)` / `(F-W<n>-<n>)` finding id cited in `docs/research/`, `docs/plans/` or `docs/notes/` resolves against `docs/findings/register.md`, an archived phase register, **or a work-item closure record** (`docs/audit/work/*/README.md`, `docs/closures/INDEX.md#closure-recordsmd`) | A citation to a withdrawn or not-yet-filed finding — `(F42)`, `(F45)` — reads as a real reference and nothing complains |
+| 40 | Every fence in `docs/specs/` declares a language; every `json` block declares ` ```json schema=<Class>` or ` ```json illustrative`, and a class-marked block parses (`FD-1381`). Validation in full against `model_schema` is `tests/test_spec_examples.py`'s, so the script stays stdlib | An unmarked example that drifts from `model-schema` while the gate stays green; a fence indented under a list item that a start-of-line reading never sees |
 
 **Resolves against three sources, not one — a register-only first version fired on correct
 behaviour, ruled wrong 2026-08-30.** `docs/findings/register.md`'s own header states its
