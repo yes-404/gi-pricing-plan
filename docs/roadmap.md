@@ -3835,6 +3835,50 @@ A stated request-body limit on both upload routes (`backend/src/app/api/body_lim
 
 *(Closed 2026-11-07 by the audit commit of the slice's PR, on the lead's adoption of the gate (`gate.log` END `2026-11-07T20:16:50+00:00`, standing modulo the census fix); no row existed at `origin/main` `cdf3871c` before this PR's mint, which added it as `active`. Item 42: the PR sets the row `closed` here. This PR; its number, squash commit and merge date are written at the merge's date-of-record.)*
 
+#### SL-2085 — WK-1178 slice — FD-1381: every JSON example in `docs/specs` declares a class and is validated (check 40)
+
+```yaml
+id: SL-2085
+family: slice
+title: WK-1178 slice — FD-1381: every JSON example in `docs/specs` declares a class and is validated (check 40)
+status: closed                    # draft → active → closed (§1.2a)
+created: 2026-11-08   # original date 2026-11-05, working id 8373, minted 2026-11-08
+owner: lead
+tree: 6515b9542bc2c6f7e24d490a6a2bc70cb05558c1
+phase: P2
+work: WK-1178
+corrected_by: []
+relates: [FD-1381, PL-2053, RL-2054, LG-2086]
+```
+
+Check 40 of `scripts/audit-docs.py` and `tests/test_spec_examples.py`: every `json` fence in `docs/specs` carries `schema=<Model>` or `illustrative`, a class-marked block validates in full against `model-schema`, and the `illustrative` set can only shrink (`ILLUSTRATIVE_CEILING`). The plan is `PL-2053`; the ledger is `LG-2086`.
+
+(Minted 2026-11-08 from working id 8373, in the SL-2085 / SL-2088 mint PR; plan `PL-2053`, ledger `LG-2086`. `tree` is the tree of the gated head `7ef66d7baf08` of `sl-8381-report-response`, the one branch and one gate of both slices, before this PR's merge of `origin/main`.)
+
+*(Closed 2026-11-08 by the audit commit of the slice's PR, on the lead's adoption of aud-sl8381 (`from-lead-2026-10-09.md`, "2026-11-07 23:17:41 GMT") and of the gate (`gate.log` END `2026-11-08T01:07:00+00:00`, `rc=1`, standing under item 31 with one fix, `ba471a5e`). Item 42: no `SL-2085` row existed at `origin/main` `7dc10140` before this PR's mint, which added it as `closed`. This PR; its number, squash commit and merge date are written at the merge's date-of-record.)*
+
+#### SL-2088 — WK-1178 slice — FD-2090: the report response carries `overall` and `counts`, the stored body unchanged
+
+```yaml
+id: SL-2088
+family: slice
+title: WK-1178 slice — FD-2090: the report response carries `overall` and `counts`, the stored body unchanged
+status: closed                    # draft → active → closed (§1.2a)
+created: 2026-11-08   # original date 2026-11-05, working id 8381, minted 2026-11-08
+owner: lead
+tree: 6515b9542bc2c6f7e24d490a6a2bc70cb05558c1
+phase: P2
+work: WK-1178
+corrected_by: []
+relates: [FD-2090, PL-2087, LG-2089]
+```
+
+`GET /api/v1/validation-reports/{report_id}` returns `ValidationReportView` (`overall` and `counts`, derived from `results` and checked against them), defined once in `packages/model-schema/src/model_schema/validation.py`; the stored `ValidationReport` body keeps its bytes. The plan is `PL-2087`; the ledger is `LG-2089`.
+
+(Minted 2026-11-08 from working id 8381, in the SL-2085 / SL-2088 mint PR; plan `PL-2087`, ledger `LG-2089`. `tree` is the tree of the gated head `7ef66d7baf08` of `sl-8381-report-response`, the one branch and one gate of both slices, before this PR's merge of `origin/main`.)
+
+*(Closed 2026-11-08 by the audit commit of the slice's PR, on the lead's adoption of aud-sl8381 (`from-lead-2026-10-09.md`, "2026-11-07 23:17:41 GMT") and of the gate (`gate.log` END `2026-11-08T01:07:00+00:00`, `rc=1`, standing under item 31 with one fix, `ba471a5e`). Item 42: no `SL-2088` row existed at `origin/main` `7dc10140` before this PR's mint, which added it as `closed`. This PR; its number, squash commit and merge date are written at the merge's date-of-record.)*
+
 #### SL-2084 — WK-1178 slice — OQ-2035 option D: a bulk operation rounds its exact result once, in a stated context, and records that context
 
 ```yaml

@@ -2,7 +2,7 @@
 id: LG-2086
 family: ledger
 title: WK-1178 slice SL-2085 — FD-1381's check, every JSON example in docs/specs declares a class or illustrative and is validated (slice ledger)
-status: active
+status: closed                 # active → closed (§1.2a)
 created: 2026-11-08  # original date 2026-11-07, set at the draft under working id 8374; minted 2026-11-08
 owner: executor
 tree: d0b1f999f6b27f639e1a90af75ae79552d0aadad
@@ -18,7 +18,7 @@ relates: [FD-1381, PL-2053, RL-2054]
 
 *Disclosure: drafted under working id 8374; minted as LG-2086 on 2026-11-08, in the SL-2085 / SL-2088 mint PR.*
 
-**GO:** to-lead "2026-11-07 18:29:31 GMT" (Maintainer): "SL-2085 SEAT: YES, exec-sl8373 on brief af5502c1265c, ... S1 + S2 now ...; S3 (the audit-docs.py check) and S4 (the marks) only after LAST-2 is merged on main and into the branch, else push after S2 and stop; S5's gate at SL-2088's head (16:46:26) ...; no PR, mint or gate in this seat; DB-free; audit-docs under gate-2's flock".
+**GO:** to-lead "2026-11-07 18:29:31 GMT" (Maintainer): "SL 8373 SEAT: YES, exec-sl8373 on brief af5502c1265c, ... S1 + S2 now ...; S3 (the audit-docs.py check) and S4 (the marks) only after LAST-2 is merged on main and into the branch, else push after S2 and stop; S5's gate at SL 8381's head (16:46:26) ...; no PR, mint or gate in this seat; DB-free; audit-docs under gate-2's flock".
 **MERGE-ACK:** (added at merge.)
 
 ## Tasks
@@ -37,11 +37,11 @@ Row SL-2085 of PL-2053 (Steps S1 to S5; acceptance A5 to A14). Base `origin/main
 
 ### Gate
 
-Not run (S5, at SL-2088's head).
+S5 — The SOLO gate of SL-2085 + SL-2088 (item 5 of PL-2053, A14): `sl8381-gate.sh` on gate-1 at head `7ef66d7baf089c06151e445b7cfb7b760d99c579` (tree `6515b9542bc2c6f7e24d490a6a2bc70cb05558c1`, branch `sl-8381-report-response`), START `2026-11-07T22:31:50+00:00`, `END 2026-11-08T01:07:00+00:00 … rc=1` (logs in `~/gi-pricing-plan.local/scratch/sl8381-gate/gate/`: `gate.log`, `pytest.log`, every `*.rc`). Stages: ruff rc 0, mypy rc 0, import-linter rc 0, req-coverage rc 0, contracts rc 0, audit-docs rc 1 (the working-id lines, item 31's class). Pytest `14 failed, 7593 passed, 28 skipped, 5 xfailed, 156 warnings in 4766.14s (1:19:26)`, rc 1. The 14 FAILED, by name: the 13 of item 31's docs-audit files — `test_audit_docs_finding_citations.py::test_a_finding_resolved_only_by_a_closure_record_is_not_flagged`, `test_audit_docs_ids.py::test_the_real_tree_passes_all_ten_checks`, `test_audit_docs_ids.py::test_doc_id_check_exits_0_on_the_real_tree`, `test_audit_docs_process_core_digest.py::test_an_unrelated_file_edit_is_the_negative_control_and_stays_green`, `test_audit_docs_process_core_digest.py::test_the_committed_digest_currently_matches_the_committed_spec`, `test_audit_docs_w37_11_ceiling.py::test_audit_docs_end_to_end_exit_0_then_1_then_0_on_an_injected_residue`, `test_doc_index.py::test_an_index_skipping_a_reserved_block_breaks_contiguity`, `test_register_lint.py::test_check_29_is_wired_into_the_docs_gate`, `test_register_lint.py::test_check_29_note_carries_the_residue_line`, `test_register_lint.py::test_phase1b_residue_count_matches_check_29s_own_count`, `test_register_owed.py::test_check_29_wiring_is_undisturbed`, `test_repository_invariants.py::test_money_discipline_is_enforced_by_the_docs_audit`, `test_repository_invariants.py::test_journey_citations_are_audited_in_ci` — and ONE outside them, `packages/model-schema/tests/test_input_free_raises.py::test_every_raise_path_renders_authored_text_in_a_422`. The gate's row: `item 31 | pytest FAILED=14; failing files outside the eight docs-audit files: [packages/model-schema/tests/test_input_free_raises.py ]`. Skipped: the gate's row reads `FAIL: 28 (!= 27 baseline: D's runtime tests present in the gated tree; above or below)`; 28 is the post-A baseline (the baseline moved to 28 after A), so that row's constant, 27, is the stale one, not the tree. Frontend: `pnpm install --frozen-lockfile` rc 0, `generate:api` rc 0, `lint` rc 0, `type-check` rc 0, `test` rc 0 (`Test Files  138 passed (138)`, `Tests  919 passed (919)`), `build` rc 0. Demo `demo.py --journey wf-699 --no-compose` rc 0 (PASS, 1457 s); dislocation #1 548 s; D7 `ok  19985 policies in the sample; … sum +489842011 minor units`; infra before/after diff rc 0; template guard at start and end `alembic_version=1 environments=3 tenant_marker=1`; redis db 0 dbsize 56 (start 56); the gate's DBs and buckets removed. For this slice (SL-2085) the failing set is item 31's docs-audit class; the one test outside it is SL-2088's (see LG-2089), fixed at `ba471a5e` after the gate. The mint (this PR) sets check 40 to read `63 json blocks: 33 schema, 30 illustrative, 0 unmarked` at the gated head (A9).
 
 ### Audit
 
-**Adopted** from-lead "2026-11-07 23:17:41 GMT" (lead 31, aud-sl8381 FINAL ADOPTED): the lead's verdicts on the auditor's proposals; the section below is the adopted draft `scratch/aud-sl8381/LG-8374-audit-section.md`, folded here at the mint (seat-brief-common item 34).
+**Adopted** from-lead "2026-11-07 23:17:41 GMT" (lead 31, aud-sl8381 FINAL ADOPTED): the lead's verdicts on the auditor's proposals; the section below is the adopted draft the LG 8374 audit-section file in `scratch/aud-sl8381/`, folded here at the mint (seat-brief-common item 34).
 
 Auditor aud-sl8381 (Sonnet 5.5, medium). Object: read-only `origin/sl-8381-report-response` @7ef66d7baf089c06151e445b7cfb7b760d99c579 (the gated head, which holds S1 to S4). Range for SL-2085: `origin/main...7ef66d7b` restricted to its write set (`e12dc849` is `origin/main` at my read); S1 to S4 are `d0b1f999..b2636e85`. Scratch worktree `~/gi-pricing-plan.local/scratch/aud-sl8381/wt`, DB-free. Plan: PL-2053 A5 to A14.
 

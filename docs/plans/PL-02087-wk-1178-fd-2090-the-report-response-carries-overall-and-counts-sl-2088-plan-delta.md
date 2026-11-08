@@ -3,7 +3,7 @@ id: PL-2087
 family: plan
 kind: map
 title: WK-1178 — FD-2090's fix, GET /validation-reports/{id} carries overall and counts through a response-side shape while the stored body stays byte-identical, SL-2088 — a dated Work-plan delta
-status: draft                   # draft → active → superseded | retired (§1.2a) — L1: draft→active rides the slice's PR
+status: active                  # draft → active → superseded | retired (§1.2a) — L1: draft→active rides the slice's PR
 created: 2026-11-08  # original date 2026-11-05, set at the draft under working id 8380; minted 2026-11-08
 owner: planner
 tree: 850cf225797c8a63065130dc9012a2ef31b5ef55
