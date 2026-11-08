@@ -104,3 +104,5 @@ Mint-time notes (2026-11-07, executor, appended to the adopted audit; the table 
 ## PRs
 
 This PR; its number, squash commit and merge date are written at the merge's date-of-record.
+
+*(Dated note, 2026-11-08, docs batch 19, by the executor, on the maintainer (by delegation) ACK of merge 85, to-lead "2026-11-07 23:41:47 GMT": lines 51 and 57 cite `FD 8366`, which is minted as **FD-2079** (#1460). The ledger is append-only and its text is not edited.)*
