@@ -3553,6 +3553,8 @@ Docs only. Every §5.1 REST table in `docs/specs/01`–`07` gains a fourth colum
 
 (Minted 2026-11-05 from working id 8361, on the rulings to-lead "2026-11-05 12:14:32 GMT" and "2026-11-05 15:59:27 GMT" (4), with the mint tool of record `mint-repoint.py`; ledger LG-2012 (working id 8362), open questions OQ-2013, OQ-2014 and OQ-2015 (working ids 8363, 8364, 8365); the finding raised for it is still working id 8366 and has no id yet; executed on branch `sl-8361-permission-column`, unpushed.)
 
+*(Dated note, 2026-11-08, docs batch 19, by the executor, on to-lead "2026-11-07 23:41:47 GMT": the finding this line calls working id 8366 is minted as FD-2079 (SL-2080, #1460). The line is not edited.)*
+
 #### SL-2020 — WK-1178 slice — FD-1648 limbs (i) and (ii): a write never lands a rate-table cell the engine cannot read
 
 ```yaml
