@@ -1,4 +1,4 @@
-"""The stored `ValidationReport` body keeps its bytes (FD 8379, SL 8381; `01` §4.6).
+"""The stored `ValidationReport` body keeps its bytes (FD-2090, SL-2088; `01` §4.6).
 
 The stored body **is** the artifact (`ValidationReportRow`), so the outcome the response
 carries (`overall`, `counts`) is never written into it. The fixture is a body captured

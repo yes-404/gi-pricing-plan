@@ -27,7 +27,7 @@ function report(...results: RuleResult[]): ValidationReport {
     finished_at: "2026-08-15T09:00:01Z",
     results,
     empty_layers: [],
-    // `overall` and `counts` are the response's derived outcome (FD 8379); nothing under test reads them.
+    // `overall` and `counts` are the response's derived outcome (FD-2090); nothing under test reads them.
   } as unknown as ValidationReport;
 }
 

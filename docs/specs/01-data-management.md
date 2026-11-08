@@ -612,10 +612,10 @@ key is one target with several columns.
 > `fail` or `error` (the invariants below). `evidence_blob` is no longer printed: no field carries it and
 > FR-49 does not list one. `overall` and `counts` stay, because the authored `validation-report.schema.json`
 > requires both, but `GET /validation-reports/{report_id}` does not yet serialise them: they are plain
-> properties of the model. That is FD 8379 (working id; owner WK-1178), and until it lands this block is the
+> properties of the model. That is FD-2090 (working id; owner WK-1178), and until it lands this block is the
 > spec's statement and not what the route returns.
 
-> **Amended 2026-11-07 (FD 8379, WK-1178, SL 8381).** The note above is discharged: `GET /validation-reports/{report_id}`
+> **Amended 2026-11-07 (FD-2090, WK-1178, SL-2088).** The note above is discharged: `GET /validation-reports/{report_id}`
 > now returns `overall` and `counts`. The block is the **response**, `ValidationReportView`, and is validated as such
 > (`schema=ValidationReportView`); the stored body is `ValidationReport`, the same object without `overall` and
 > `counts`, which are derived from `results`, checked against them, and never stored (NFR-469). The example's counts

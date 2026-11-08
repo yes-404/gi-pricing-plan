@@ -1,10 +1,10 @@
 ---
-id: PL-8380
+id: PL-2087
 family: plan
 kind: map
-title: WK-1178 — FD-8379's fix, GET /validation-reports/{id} carries overall and counts through a response-side shape while the stored body stays byte-identical, SL-8381 — a dated Work-plan delta
+title: WK-1178 — FD-2090's fix, GET /validation-reports/{id} carries overall and counts through a response-side shape while the stored body stays byte-identical, SL-2088 — a dated Work-plan delta
 status: draft                   # draft → active → superseded | retired (§1.2a) — L1: draft→active rides the slice's PR
-created: 2026-11-05             # filed under working id 8380
+created: 2026-11-08  # original date 2026-11-05, set at the draft under working id 8380; minted 2026-11-08
 owner: planner
 tree: 850cf225797c8a63065130dc9012a2ef31b5ef55
 phase: P2
@@ -12,27 +12,29 @@ work: WK-1178
 supersedes: []
 superseded_by: ~
 corrected_by: []
-relates: [FD-8379, SL-8381, LG-8382, FR-42, FR-49, FR-451, NFR-469]
+relates: [FD-2090, SL-2088, LG-2089, FR-42, FR-49, FR-451, NFR-469]
 ---
 
-# PL-8380 — WK-1178: FD 8379's fix. The report response carries `overall` and `counts`; the stored body does not change (SL 8381, a dated Work-plan delta)
+# PL-2087 — WK-1178: FD-2090's fix. The report response carries `overall` and `counts`; the stored body does not change (SL-2088, a dated Work-plan delta)
+
+*Disclosure: drafted under working id 8380; minted as PL-2087 on 2026-11-08, in the SL-2085 / SL-2088 mint PR.*
 
 > **For agentic workers:** a **dated Work-plan delta** under Lean P2 L1 (a'): a new `PL-` that
-> edits no earlier plan. It holds one code slice, SL 8381. **The maintainer ruled DP-1 to DP-5 at the entry
-> "2026-11-05 16:46:26 GMT"; they are closed decisions here. Seat after SL 8373's T3, as stacked.**
+> edits no earlier plan. It holds one code slice, SL-2088. **The maintainer ruled DP-1 to DP-5 at the entry
+> "2026-11-05 16:46:26 GMT"; they are closed decisions here. Seat after SL-2085's T3, as stacked.**
 > Two readings of that ruling are raised under Decision points and are not assumed. The executor's
 > skills are
 > `superpowers:test-driven-development`, `.claude/skills/python-test`,
 > `.claude/skills/contract-schema`, `.claude/skills/contract-guard` and `.claude/skills/spec-change`.
-> PL 8380, SL 8381, LG 8382 and FD 8379 are working ids, reserved by the lead. PL 8372, SL 8373 and
+> PL-2087, SL-2088, LG-2089 and FD-2090 are working ids, reserved by the lead. PL 8372, SL-2085 and
 > RL 8375 are named in prose only: they are still on draft branches, so `relates:` gains them at
 > the mint.
 
 ## Authority
 
 - **The finding and the constraint.** The maintainer's entry "2026-11-05 16:31:45 GMT" (1) in
-  `~/gi-pricing-plan.local/channel/to-lead.md`, read whole: "FD 8379 CONFIRMED, MEDIUM, OWNER
-  WK-1178 … FIX BEFORE FREEZE, own slice, own commits and LG, riding SL 8373's gate: no extra gate;
+  `~/gi-pricing-plan.local/channel/to-lead.md`, read whole: "FD-2090 CONFIRMED, MEDIUM, OWNER
+  WK-1178 … FIX BEFORE FREEZE, own slice, own commits and LG, riding SL-2085's gate: no extra gate;
   if the Wed 11 12:00 line can't hold, it is carried with the P2 closure record by name. THE
   CONSTRAINT, not a preference: the stored body IS the artifact (models.py:1234): stored bytes stay
   unchanged and old bodies still read, proved by a round-trip test on a pre-fix body, red first;
@@ -49,7 +51,7 @@ relates: [FD-8379, SL-8381, LG-8382, FR-42, FR-49, FR-451, NFR-469]
   "Noticed, not ruled": `validation-report.schema.json:59` still declares `evidence_blob`, and T3
   does not edit it.
 - **The chain this rides.** PL 8372 on `draft/pl-1381-2026-11-05` @`f3094233`, accepted at the
-  maintainer's entry "2026-11-05 16:11:50 GMT". Its DP-5 (a): SL 8373 queues behind M and gates before
+  maintainer's entry "2026-11-05 16:11:50 GMT". Its DP-5 (a): SL-2085 queues behind M and gates before
   Wed 11 Nov 12:00 if the margin shows; otherwise it stays the named exception and merges after the
   code freeze as a tooling-only change.
 - **The seating.** The lead's brief `brief-plan-fd8379-2026-11-05.md`. Dates of record: code freeze
@@ -60,7 +62,7 @@ relates: [FD-8379, SL-8381, LG-8382, FR-42, FR-49, FR-451, NFR-469]
 
 `GET /api/v1/validation-reports/{report_id}` returns the outcome `01` §4.6 states, `overall` and
 `counts`, through one shape defined in `model-schema`. `ValidationReport`, the stored artifact, keeps
-its fields and its bytes. The merge discharges FD 8379 and takes `01` §4.6 from `illustrative` to
+its fields and its bytes. The merge discharges FD-2090 and takes `01` §4.6 from `illustrative` to
 `schema=`.
 
 ## The choice: a response-side shape
@@ -161,13 +163,13 @@ spiked; the contract comparison unrun is T1's first read."
 
 | DP | Question | Ruling, verbatim | What it binds here |
 |---|---|---|---|
-| DP-1 | How SL 8381 orders against SL 8373, and how it rides one gate | "stacked on SL 8373's S4 head, one gate at SL 8381's head; A14's "re-merged head" reads as SL 8381's head by dated line. Accepted because SL 8373's head is an ancestor of what is gated and CI runs at each PR. If the gate reds in SL 8381's own paths: fix and re-gate there if ≤ one gate-length before the Wed 11 12:00 line; else SL 8373 takes its own gate, and FD 8379 carries by name: an extra gate at that point is my word, given now." | That A14 is **PL 8372's** A14; this plan's is the FD closing act. **Dated line, 2026-11-05, on that ruling: PL 8372's A14 "on the re-merged head" reads as SL 8381's head.** PL 8372 is not this plan's to edit, so its holder takes the same line (Hand-off). The stated reason is a condition: A13 proves the ancestry. Steps 18 and 19 and the table at the end of Tasks carry the red branch |
+| DP-1 | How SL-2088 orders against SL-2085, and how it rides one gate | "stacked on SL-2085's S4 head, one gate at SL-2088's head; A14's "re-merged head" reads as SL-2088's head by dated line. Accepted because SL-2085's head is an ancestor of what is gated and CI runs at each PR. If the gate reds in SL-2088's own paths: fix and re-gate there if ≤ one gate-length before the Wed 11 12:00 line; else SL-2085 takes its own gate, and FD-2090 carries by name: an extra gate at that point is my word, given now." | That A14 is **PL 8372's** A14; this plan's is the FD closing act. **Dated line, 2026-11-05, on that ruling: PL 8372's A14 "on the re-merged head" reads as SL-2088's head.** PL 8372 is not this plan's to edit, so its holder takes the same line (Hand-off). The stated reason is a condition: A13 proves the ancestry. Steps 18 and 19 and the table at the end of Tasks carry the red branch |
 | DP-2 | The published name | "accepted: `ValidationReportView`; the stored contract `validation-report` unchanged; the OpenAPI move stated in its PR." | The route's component is `ValidationReportView`, and `validation.ts:4` moves. The PR body states the move (A17). See **Reading 1** |
 | DP-3 | "Red first" on the pre-fix-body test | "the planted @computed_field, reverted, both runs in the LG, ACCEPTED as the round-trip test's red: and it is not the only red: A's response limb has a natural one: GET report at base lacks `overall`: that test is red at base and stated. Green-at-base by design is said so in the LG." | T3 and T5 are green at the base by design, and the LG says so; M1 is their red; both runs are in the LG (A3). T4 is the response limb's natural red at the base, and the LG states it (A2) |
 | DP-4 | The DB limbs, T4 and T5 | "accepted, one window under 14:40:19 + (d), (j): own GIP_GATE_SLOT; fallback, gate lane." | One window, Step 14, on Needs' conditions (A18). The fallback is T4 and T5 in the gate's pytest, with what that leaves unrun stated in the LG |
 | DP-5 | The authored contract's other limbs | "accepted, all three: the missing guard row is why this stayed green, so it comes with a planted red." | The three: `empty_layers` declared; `:76` corrected; the guard row. The planted red is M2, Step 13 (A16). `evidence_blob` at `:59` stays, as RL 8375 notes. "01:559 by dated line accepted": Step 15 |
 
-The rest of the entry: "Seat after SL 8373's T3, as stacked. Mint in merge order: SL 8373 first."
+The rest of the entry: "Seat after SL-2085's T3, as stacked. Mint in merge order: SL-2085 first."
 
 **Raised, not assumed. Neither changes a task until it is answered; both go to the maintainer through
 the lead.**
@@ -199,10 +201,10 @@ merge tree. Items 1 and 2 apply to this plan. A1 to A18 apply to the slice.
 2. **No requirement range.** `grep -nE '(N?FR)-[0-9]+ *(-|to|–) *(N?FR-)?[0-9]+' <this file>` prints
    no line that stands for a set of ids.
 
-The slice, SL 8381:
+The slice, SL-2088:
 
-- **A1. The write set.** `git diff --name-only <SL 8373 tip>...HEAD` lists only this plan's Write set
-  before SL 8373's squash, and `git diff --name-only origin/main...HEAD` after this slice's re-merge.
+- **A1. The write set.** `git diff --name-only <SL-2085 tip>...HEAD` lists only this plan's Write set
+  before SL-2085's squash, and `git diff --name-only origin/main...HEAD` after this slice's re-merge.
 - **A2. Red first, by its cause.** The LG holds R1's runs. T1 fails with `the contract declares fields
   the model lacks: ['counts', 'overall']`; T2 with an `AssertionError` naming `overall` missing from
   the route's `required`; T4 with `KeyError: 'overall'` on the response body, which is the natural
@@ -223,7 +225,7 @@ The slice, SL 8381:
   minimal form read through `ValidationReport.model_validate`, and a dumped `ValidationReportView`
   is refused by it with `extra_forbidden` (T6).
 - **A7. Never written.** T5 passes at the head: after `store_report` and `load_report_view`, the
-  row's `body` has neither `overall` nor `counts`. `git diff <SL 8373 tip>...HEAD --
+  row's `body` has neither `overall` nor `counts`. `git diff <SL-2085 tip>...HEAD --
   backend/src/app/db/models.py backend/migrations` is empty, and `platform/validation.py:114` is
   unchanged.
 - **A8. The response is right.** T4 passes: the route returns `overall` and `counts` agreeing with
@@ -248,18 +250,18 @@ The slice, SL 8381:
   `uv run pytest tests/test_spec_examples.py` passes with the `01` block's id present. Under the
   mutation "the block's `counts.warn` becomes 2", that id fails; reverted.
 - **A13. One gate, on the tree that lands.** No gate of this slice's own, except on DP-1's red branch.
-  S5's SOLO gate on SL 8381's head holds every rc, and T1 to T6 are in its passed set by name.
-  `git merge-base --is-ancestor <SL 8373 tip> <gated head>` exits 0, the condition of DP-1's acceptance,
-  and SL 8373's PR opens from that same tip. After SL 8373's squash and this
-  slice's re-merge, `git diff <gated head> HEAD` is empty, or lists only files SL 8373's squash and
+  S5's SOLO gate on SL-2088's head holds every rc, and T1 to T6 are in its passed set by name.
+  `git merge-base --is-ancestor <SL-2085 tip> <gated head>` exits 0, the condition of DP-1's acceptance,
+  and SL-2085's PR opens from that same tip. After SL-2085's squash and this
+  slice's re-merge, `git diff <gated head> HEAD` is empty, or lists only files SL-2085's squash and
   the re-merge account for, read by the auditor. Anything else follows the common seat brief, items
   5 and 21.
 - **A14. FD closing act, in the FD-1842 form.** In the slice's own PR, by the slice's auditor at the
-  mint: FD 8379's essay is written and minted, with its `status: closed`, its dated `***Resolved
+  mint: FD-2090's essay is written and minted, with its `status: closed`, its dated `***Resolved
   YYYY-MM-DD***` line naming the slice, LG and plan and the delivered remedy, and its row in
   `docs/findings/register.md`. **The essay is not this plan's and no seat before the auditor writes
   it.**
-- **A15. The LG's Audit section.** LG 8382 has its five sections, and its Audit section holds the
+- **A15. The LG's Audit section.** LG-2089 has its five sections, and its Audit section holds the
   auditor's verdict on A1 to A14 and A16 to A18 with `origin/main...` ranges named, never a tip alone (`CLAUDE.md`
   §13). The red and green lines are in the LG before the audit.
 - **A16. The guard row's planted red** (DP-5). With `"validation-report"` in the parametrize list at the
@@ -267,7 +269,7 @@ The slice, SL 8381:
   M2 is reverted, `generate-contracts.py --check` exits 0, and `git diff --stat` is empty. Both runs are
   in the LG. T1's red at the base (A2) does not discharge this: M2 is the row catching the defect on a
   repaired tree.
-- **A17. The OpenAPI move is stated** (DP-2). `gh pr view <n> --json body` on SL 8381's PR states that
+- **A17. The OpenAPI move is stated** (DP-2). `gh pr view <n> --json body` on SL-2088's PR states that
   the route's component moved from `ValidationReport` to `ValidationReportView` in
   `docs/contracts/openapi/generated.json`, and that `ValidationReport` left that file.
 - **A18. The window** (DP-4). The LG holds Step 14's START and END lines with every quoted value in
@@ -286,7 +288,7 @@ The slice, SL 8381:
 - **G5. A failing test is never weakened** (common seat brief, item 13).
 - **G6. Requirement and section ids are permanent** (`CLAUDE.md` §5). §4.6 keeps its number and heading.
 - **G7. No range of ids in any file this plan writes.**
-- **G8. Line numbers are re-derived at each base.** This plan's are `bdad1322`'s. SL 8373's base
+- **G8. Line numbers are re-derived at each base.** This plan's are `bdad1322`'s. SL-2085's base
   holds TRACK A's text, so `01`'s line numbers will differ.
 - **G9. Money is untouched.** `counts` are integers of rule outcomes.
 - **G10. Redis names its db.** Every Redis use names `-n <db>`, and a seat's db is 11, 12 or 13
@@ -299,7 +301,7 @@ The slice, SL 8381:
 ## Needs
 
 - **Seats:** one executor, model per the role file; one auditor. No decision-maker: the DPs are ruled.
-- **Ids:** PL 8380, SL 8381, LG 8382, FD 8379 are held. No others.
+- **Ids:** PL-2087, SL-2088, LG-2089, FD-2090 are held. No others.
 - **DB: one window, about 15 min, for T4 and T5: two test files (DP-4).** The brief quotes each of
   these. From "2026-11-05 14:40:19 GMT" (2), with (d) and (j) as "2026-11-05 15:49:09 GMT" (A) rules them:
   - (a) A `-T` copy with both URLs on it, name unique to the window; createdb with mkdb's retry;
@@ -320,23 +322,23 @@ The slice, SL 8381:
   - (j) No switch test. Neither file is a `test_deployment_switch*.py`.
   **Fallback, "gate lane":** T4 and T5 first run in S5's gate pytest. Step 14 says what that leaves.
 - **Docker, compose, NFR VM:** nothing else.
-- **Gate:** none of its own. It rides SL 8373's S5 (about 2.5 h, PL 8372 Needs), at SL 8381's head (DP-1).
-  **The failure path holds one more:** a re-gate here, or SL 8373's own gate. The maintainer gave that
+- **Gate:** none of its own. It rides SL-2085's S5 (about 2.5 h, PL 8372 Needs), at SL-2088's head (DP-1).
+  **The failure path holds one more:** a re-gate here, or SL-2085's own gate. The maintainer gave that
   word in the ruling, and it needs no second ask.
 - **Size:** **about 5.25 h of executor time**, gate not counted: R1 1 h, R2 1.5 h, M2 0.25 h, the window
   0.5 h, R3 0.5 h, the frontend line and the green set 0.5 h, LG and re-merge 1 h. **Auditor about 1.5 h**,
-  with FD 8379's essay and closing act.
-- **Earliest start:** "Seat after SL 8373's T3, as stacked." T3 is TRACK A's task in PL 8372, and it
-  gives §4.6's text. The branch is cut at SL 8373's S4 head (DP-1), so a seat placed before that head
+  with FD-2090's essay and closing act.
+- **Earliest start:** "Seat after SL-2085's T3, as stacked." T3 is TRACK A's task in PL 8372, and it
+  gives §4.6's text. The branch is cut at SL-2085's S4 head (DP-1), so a seat placed before that head
   exists re-derives G8's lines and cuts no branch until it does. **The line:** if S5 cannot
-  finish before Wed 11 Nov 2026 12:00 with this slice on it, the slice does not ride, and FD 8379 is
+  finish before Wed 11 Nov 2026 12:00 with this slice on it, the slice does not ride, and FD-2090 is
   carried with the P2 closure record by name.
 
 ## Tasks
 
-### SL 8381: the report response carries `overall` and `counts`. Its row: scope A1 to A18; lane WK-1178; seated after SL 8373's T3, based on its S4, before its S5
+### SL-2088: the report response carries `overall` and `counts`. Its row: scope A1 to A18; lane WK-1178; seated after SL-2085's T3, based on its S4, before its S5
 
-**Files:** see Write set. **Base:** SL 8373's S4 head, DP-1 as ruled. Branch `sl-8381-report-response`.
+**Files:** see Write set. **Base:** SL-2085's S4 head, DP-1 as ruled. Branch `sl-8381-report-response`.
 Every literal below was read at `bdad1322`. Where a test sample differs from the neighbouring test,
 mirror the neighbour.
 
@@ -368,7 +370,7 @@ mirror the neighbour.
   and `overall`. Run T3; T5's run under M1 is at Step 14. Record the red. Revert; quote the empty `git diff
   --stat`. A mutation whose edit does not apply aborts the run.
 - [ ] **Step 5: commit** the fixture and the tests, alone: `test(data): the report response and the
-  stored form (SL 8381 R1)`. T1, T2 and T4 are red at this commit, so it is not pushed as a PR head.
+  stored form (SL-2088 R1)`. T1, T2 and T4 are red at this commit, so it is not pushed as a PR head.
 
 **R2: green, one commit, regeneration included.**
 
@@ -448,7 +450,7 @@ class ValidationReportView(_ReportFields):
   sentence naming §4.6's outcome. `load_report` is untouched. `backend/src/app/api/validation.py:146`:
   `-> ValidationReportView`, and the import at `:56`.
 - [ ] **Step 9: the contract.** `scripts/generate-contracts.py:131`:
-  `"validation-report": "ValidationReportView"`, with a dated comment naming FD 8379. In the authored
+  `"validation-report": "ValidationReportView"`, with a dated comment naming FD-2090. In the authored
   `docs/contracts/schemas/validation-report.schema.json`, as DP-5 ruled: declare `empty_layers`, correct
   the invariant at `:76` to "… and at least one result is `warn`; acknowledgement is checked at
   promotion (FR-46), not here", and add a dated `$comment` saying the document describes the response
@@ -468,7 +470,7 @@ class ValidationReportView(_ReportFields):
   is imported widely, so the closure is run file-by-file where it is DB-free, and the gate is the
   decisive green for the rest.
 - [ ] **Step 12: commit** source, tests, regeneration and alias as one:
-  `fix(data): the report response carries overall and counts; the stored body is unchanged (FD 8379)`.
+  `fix(data): the report response carries overall and counts; the stored body is unchanged (FD-2090)`.
 - [ ] **Step 13: mutation M2, uncommitted: the guard row's planted red (DP-5, A16).** At the head, set
   `scripts/generate-contracts.py`'s row back to `"validation-report": "ValidationReport"` and run
   `uv run python scripts/generate-contracts.py`. T1, through `run-small.sh`, must fail with `the contract
@@ -490,37 +492,37 @@ class ValidationReportView(_ReportFields):
   ` ```json schema=ValidationReportView`. Set the block's `counts` to its own results, one `warn`:
   `{"pass": 0, "warn": 1, "fail": 0, "error": 0, "skipped": 0}`. Add the dated line the maintainer
   accepted ("01:559 by dated line accepted"; the line number is `bdad1322`'s, G8) under the block,
-  naming FD 8379: the block is the response, `ValidationReportView`; the stored body is
+  naming FD-2090: the block is the response, `ValidationReportView`; the stored body is
   `ValidationReport`, the same object without `overall` and `counts`; the example's counts now agree
   with its one result. Follow `.claude/skills/spec-change`.
 - [ ] **Step 16: the ceiling.** `tests/test_spec_examples.py`: `ILLUSTRATIVE_CEILING` falls by one, to
   30 (A12), in the same commit. Run `python3 scripts/audit-docs.py`, and `run-small.sh` on the file;
   apply A12's mutation; revert.
-- [ ] **Step 17: commit:** `docs(specs): 01 §4.6 validates as ValidationReportView (FD 8379)`.
+- [ ] **Step 17: commit:** `docs(specs): 01 §4.6 validates as ValidationReportView (FD-2090)`.
 
 **G: the gate.**
 
-- [ ] **Step 18: hand-off to S5.** S5's re-merge lands on SL 8373's own tip, and SL 8381 merges that tip,
-  so that tip stays an ancestor of the gated head (A13). Then the one SOLO gate at SL 8381's head, both
+- [ ] **Step 18: hand-off to S5.** S5's re-merge lands on SL-2085's own tip, and SL-2088 merges that tip,
+  so that tip stays an ancestor of the gated head (A13). Then the one SOLO gate at SL-2088's head, both
   halves (`CLAUDE.md` §11). T1 to T6 must be in its passed set by name, with DP-4's window read under
   Needs (i) if the gate shares its times. The docs checks fail only on working ids until the mint
-  (item 31). **A red in SL 8381's own paths, the Write set, follows DP-1's red branch** (the table
+  (item 31). **A red in SL-2088's own paths, the Write set, follows DP-1's red branch** (the table
   below). Any other red is not in that ruling, and goes to the lead.
-- [ ] **Step 19: the landing.** "Mint in merge order: SL 8373 first." SL 8373's mint and PR come first,
-  from its own tip, and SL 8381's ids stay working ids until that has merged. SL 8381 re-merges
-  `origin/main`, A13's diff is read, the auditor files the LG's Audit section and FD 8379's essay and
-  closing act (A14, A15), the mint runs, and SL 8381's PR opens, its body stating the OpenAPI move
+- [ ] **Step 19: the landing.** "Mint in merge order: SL-2085 first." SL-2085's mint and PR come first,
+  from its own tip, and SL-2088's ids stay working ids until that has merged. SL-2088 re-merges
+  `origin/main`, A13's diff is read, the auditor files the LG's Audit section and FD-2090's essay and
+  closing act (A14, A15), the mint runs, and SL-2088's PR opens, its body stating the OpenAPI move
   (A17). `frontend.yml` fires on this PR.
 
 **The ordering if the two come apart.**
 
-| Case | What happens to the mark | What happens to FD 8379 |
+| Case | What happens to the mark | What happens to FD-2090 |
 |---|---|---|
-| SL 8373's S5 runs with this slice, before the line | `illustrative` at S4, flipped by R3 before the gate; on `main` it arrives `schema=` one PR after SL 8373 | Closed in SL 8381's PR |
-| **DP-1's red branch, first limb.** The gate reds in SL 8381's own paths, and a re-gate can end before the line (Reading 2) | As the first row, once the re-gate at SL 8381's head passes | Closed in SL 8381's PR |
-| **DP-1's red branch, second limb.** The gate reds in SL 8381's own paths, and it cannot | SL 8373 takes its own gate at its own tip and lands with the block `illustrative`, ceiling 31. PL 8372's A14 reads as written. The maintainer's word is already given | Carried with the P2 closure record by name |
-| This slice is not ready at S5, and the line can still hold | SL 8373 lands with the block `illustrative`, ceiling 31. SL 8381 needs a gate of its own, which the ruling grants only on a red: **it goes back to the maintainer** | Open until then |
-| The line fails | The block stays `illustrative`, naming FD 8379, and the ceiling stays 31 | Carried with the P2 closure record by name |
+| SL-2085's S5 runs with this slice, before the line | `illustrative` at S4, flipped by R3 before the gate; on `main` it arrives `schema=` one PR after SL-2085 | Closed in SL-2088's PR |
+| **DP-1's red branch, first limb.** The gate reds in SL-2088's own paths, and a re-gate can end before the line (Reading 2) | As the first row, once the re-gate at SL-2088's head passes | Closed in SL-2088's PR |
+| **DP-1's red branch, second limb.** The gate reds in SL-2088's own paths, and it cannot | SL-2085 takes its own gate at its own tip and lands with the block `illustrative`, ceiling 31. PL 8372's A14 reads as written. The maintainer's word is already given | Carried with the P2 closure record by name |
+| This slice is not ready at S5, and the line can still hold | SL-2085 lands with the block `illustrative`, ceiling 31. SL-2088 needs a gate of its own, which the ruling grants only on a red: **it goes back to the maintainer** | Open until then |
+| The line fails | The block stays `illustrative`, naming FD-2090, and the ceiling stays 31 | Carried with the P2 closure record by name |
 
 ### Write set
 
@@ -536,8 +538,8 @@ class ValidationReportView(_ReportFields):
   `docs/contracts/openapi/generated.json`.
 - `frontend/src/api/validation.ts` (one line).
 - `docs/specs/01-data-management.md` (§4.6 only), `tests/test_spec_examples.py` (one constant).
-- LG 8382 under `docs/ledgers/`; at the mint the SL row under `### WK-1178` in `docs/roadmap.md`,
-  `docs/INDEX.md`, this plan's `status:`, and FD 8379's essay and `docs/findings/register.md` (A14).
+- LG-2089 under `docs/ledgers/`; at the mint the SL row under `### WK-1178` in `docs/roadmap.md`,
+  `docs/INDEX.md`, this plan's `status:`, and FD-2090's essay and `docs/findings/register.md` (A14).
 
 ### Files shared
 
@@ -546,9 +548,9 @@ at the heads named, 2026-11-05 about 16:39Z. Hunks read with `-U0`.
 
 | Slice | Paths shared | Reading |
 |---|---|---|
-| SL 8373 | `01` §4.6's fence, `tests/test_spec_examples.py` | **The base, not a clash.** S4 writes the mark and the constant; R3 changes them after it |
+| SL-2085 | `01` §4.6's fence, `tests/test_spec_examples.py` | **The base, not a clash.** S4 writes the mark and the constant; R3 changes them after it |
 | TRACK A, T3 | `01` §4.6's block | Merged before S4. R3's `counts` edit is on T3's text, and a block T3 did not leave as RL 8375 row 5 says is a STOP |
-| LAST-2 SL 8343 @`5748acc7`, SL 8370 @`953ac45b` | `backend/tests/test_contracts.py` | `:27` and `:264`. T1 and T2 are at `:722-:736` and a new function. No hunk in common. Both are in SL 8373's chain, so the base holds them or the re-merge does |
+| LAST-2 SL 8343 @`5748acc7`, SL 8370 @`953ac45b` | `backend/tests/test_contracts.py` | `:27` and `:264`. T1 and T2 are at `:722-:736` and a new function. No hunk in common. Both are in SL-2085's chain, so the base holds them or the re-merge does |
 | SL 8361 @`7f4ce407`, SL 8370, A SL 8325 @`e75e0f1a` | `01` | Hunks at `:852-:892` and `:856`, §5.1. §4.6 is at `:548-:600`. No hunk in common |
 | C SL 8328 @`ccba2207`, SL 8340 @`bb4cf209` | `docs/contracts/openapi/generated.json` | One line each. A conflict is resolved by regenerating, never by hand |
 | R2 SL 8345 @`369c43c7`, M SL 8359 @`38459124`, R1 SL 8322, H, F, P, G, D | none | Zero of the listed paths in each diff |
@@ -561,14 +563,14 @@ at the heads named, 2026-11-05 about 16:39Z. Hunks read with `-U0`.
 - **The maintainer:** Reading 1 and Reading 2. Each is one word; DP-1 to DP-5 are ruled.
 - **The holder of PL 8372:** DP-1's dated line on its A14 at the draft branch. T3 already takes one
   dated line there, for 62 to 63 (RL 8375 @`555a1e8b`).
-- **The lead:** the DB window (DP-4); the ids; the seat after SL 8373's T3; adding `sl-8381-report-response` to S5's brief so
-  the gate's Object line names SL 8381's head; the SL row and LG id at the mint; a P2 closure carry
+- **The lead:** the DB window (DP-4); the ids; the seat after SL-2085's T3; adding `sl-8381-report-response` to S5's brief so
+  the gate's Object line names SL-2088's head; the SL row and LG id at the mint; a P2 closure carry
   line if the line fails.
-- **SL 8373's seat:** S4's marks as PL 8372 has them. The block is `illustrative`, ceiling 31.
-- **The executor:** LG 8382, with A2's and A3's statements, M1's and M2's runs, and the window's lines;
+- **SL-2085's seat:** S4's marks as PL 8372 has them. The block is `illustrative`, ceiling 31.
+- **The executor:** LG-2089, with A2's and A3's statements, M1's and M2's runs, and the window's lines;
   the PR body's OpenAPI line (A17).
-- **The slice's auditor:** FD 8379's essay, its closing act and register row, at the mint (A14), and
-  the LG's Audit section (A15). `relates:` here gains PL 8372's, SL 8373's and RL 8375's minted ids.
+- **The slice's auditor:** FD-2090's essay, its closing act and register row, at the mint (A14), and
+  the LG's Audit section (A15). `relates:` here gains PL 8372's, SL-2085's and RL 8375's minted ids.
 - **Not done here, on purpose:** `_counts` at `platform/validation.py:54` restates `report.counts`, a
   small duplicate this slice leaves; no screen reads the new keys (G4); `evidence_blob` at
   `validation-report.schema.json:59` stays, as RL 8375 notes.

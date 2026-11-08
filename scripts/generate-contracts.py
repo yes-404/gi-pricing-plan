@@ -128,7 +128,7 @@ GENERATED_SHAPES: dict[str, str] = {
     # four divergences had accumulated unseen. With these published, no shape in the
     # contract corpus is a hand-authored promise no code is checked against.
     "dataset-version": "DatasetVersion",
-    # Moved 2026-11-07 (FD 8379, SL 8381): this contract has always described the REPORT
+    # Moved 2026-11-07 (FD-2090, SL-2088): this contract has always described the REPORT
     # RESPONSE (it requires `overall` and `counts`), so the generated side is the response-side
     # `ValidationReportView`. The stored body stays `ValidationReport`, without those two keys.
     "validation-report": "ValidationReportView",

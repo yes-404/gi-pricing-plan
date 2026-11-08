@@ -3,7 +3,7 @@
   "$id": "https://contracts.gi-pricing.dev/validation-report.schema.json",
   "title": "ValidationReport",
   "description": "Immutable result of one validation run. See 01-data-management.md §4.6.",
-  "$comment": "2026-11-07 (FD 8379, SL 8381): this document describes the report RESPONSE, `ValidationReportView`. The stored body is `ValidationReport`, the same object without `overall` and `counts`, which are derived from `results` and never stored.",
+  "$comment": "2026-11-07 (FD-2090, SL-2088): this document describes the report RESPONSE, `ValidationReportView`. The stored body is `ValidationReport`, the same object without `overall` and `counts`, which are derived from `results` and never stored.",
   "type": "object",
   "required": ["id", "dataset_version_id", "rule_set_id", "rule_set_version", "job_id",
                "started_at", "finished_at", "overall", "counts", "results"],
@@ -35,7 +35,7 @@
     "empty_layers": {
       "type": "array",
       "items": {"enum": ["structural", "referential", "actuarial_sanity", "distributional"]},
-      "$comment": "Declared 2026-11-07 (FD 8379, DP-5): the model has always carried it (`01` §4.6); the contract omitted it."
+      "$comment": "Declared 2026-11-07 (FD-2090, DP-5): the model has always carried it (`01` §4.6); the contract omitted it."
     },
     "results": {
       "type": "array",

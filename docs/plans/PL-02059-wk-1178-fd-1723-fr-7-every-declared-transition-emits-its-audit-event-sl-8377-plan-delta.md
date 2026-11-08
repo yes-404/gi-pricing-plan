@@ -151,7 +151,7 @@ Measured for each of 15 local chain branches: `git diff --name-only $(git merge-
 | SL 8361, SL 8370 | `06` `:284`, `:563-:604`, `:764`; `02:1895`; `03:1089` | Clear of `06:85`, `:92`, `:154`. |
 | M SL 8359 | `02` `:303`, `:315`, `:3417` | Clear of `02:246`, `:257`. |
 | LAST-1 SL 8340 | `00:234` | Clear of `00:128`. |
-| FD-1381 TRACK A, SL 8373 | `docs/specs/` §4 sections and fence lines | Two of this plan's lines share a §4 section with TRACK A's blocks: `02:1664` in §4.10 (between fences `:1596` and `:1683`) and `03:1044` in §4.12 (after fence `:1006`). Different lines, no fence touched here. Whichever merges second re-reads. TRACK A has no branch to measure yet, so this is read from PL 8372's block list. |
+| FD-1381 TRACK A, SL-2085 | `docs/specs/` §4 sections and fence lines | Two of this plan's lines share a §4 section with TRACK A's blocks: `02:1664` in §4.10 (between fences `:1596` and `:1683`) and `03:1044` in §4.12 (after fence `:1006`). Different lines, no fence touched here. Whichever merges second re-reads. TRACK A has no branch to measure yet, so this is read from PL 8372's block list. |
 | M SL 8359, SL 8361 | `docs/open-questions.md` | Added at the fold: each writes OQ rows there (`913b4674`, `19b87d07`), and DP-4's and DP-11's OQs land after them. **An append-position conflict is possible**; mechanical. `00` §10, `03` §10 and `docs/roadmap.md` §10 were not measured at the fold and are re-read at the re-merge. |
 | D, F, G, LAST-2 + T, P | none | No path in common. |
 

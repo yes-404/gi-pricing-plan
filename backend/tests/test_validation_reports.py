@@ -121,7 +121,7 @@ async def test_presenting_a_report_never_writes_its_outcome_into_the_stored_body
     database: Database, workspace_id
 ) -> None:
     """The stored body is the artifact; `overall` and `counts` are derived for the response
-    and never assigned (FD 8379, `01` §4.6)."""
+    and never assigned (FD-2090, `01` §4.6)."""
     actor = await _principal_with_role(database, workspace_id, "analyst")
     version_id = await _version(database, workspace_id, actor)
     report = _report(version_id, _result(RuleOutcome.PASS), _result(RuleOutcome.WARN))

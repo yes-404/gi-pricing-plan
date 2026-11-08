@@ -246,7 +246,7 @@ def test_the_algorithm_diff_response_is_typed_by_its_model() -> None:
 @pytest.mark.req("FR-42")
 def test_the_report_route_publishes_its_outcome() -> None:
     """`01` §4.6's report carries `overall` and `counts`; the route's response must say so
-    (FD 8379: both were plain properties, so the published response omitted them)."""
+    (FD-2090: both were plain properties, so the published response omitted them)."""
     document = _load(OPENAPI)
     paths = document["paths"]
     ref = paths["/api/v1/validation-reports/{report_id}"]["get"]["responses"]["200"][
