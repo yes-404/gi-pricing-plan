@@ -34,9 +34,16 @@ import time
 from collections.abc import Callable
 from datetime import datetime
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from uuid import UUID
 
 ROOT = Path(__file__).resolve().parent.parent
+
+#: The shared development database every `-T` copy is made from; no DSN a database arm runs on
+#: may name it (PL-2095, DP-2).
+TEMPLATE_DATABASE = "gipricing"
 
 # =============================================================================================
 # Pre-registered constants. P0 = the commit that first carries this block; the ledger cites it.
@@ -511,6 +518,17 @@ class _Env:
         register_data_handlers()
         register_rate_table_handlers()
         self.settings = load_settings(dev_auth_enabled=True)
+        # FD-2093: the application's login role may not create a workspace or its members, so
+        # the seed alone runs on the owner's connection (`seed.py`'s FD-1729 split); everything
+        # `create_app` and the measured paths touch stays on the application's.
+        if self.settings.migration_database_url is None:
+            raise SystemExit(
+                "GIP_MIGRATION_DATABASE_URL is not set: the sweep seeds the demo workspace and "
+                "its members as the schema owner (the application's login role cannot)"
+            )
+        self.owner_database = Database(
+            self.settings.model_copy(update={"database_url": self.settings.migration_database_url})
+        )
         self.database = Database(self.settings)
         self.blob_store = BlobStore(self.settings)
         self.app = create_app(self.settings)
@@ -526,6 +544,41 @@ class _Env:
         return httpx.AsyncClient(
             transport=httpx.ASGITransport(app=self.app), base_url="http://measure"
         )
+
+
+def dsn_failure(app_url: str, owner_url: str | None) -> str | None:
+    """The 29 Oct rules, made mechanical (PL-2095, DP-2 (a)): why this pair of DSNs may not run
+    a database arm, or `None`. The owner writes, so it must be named, must not be the template,
+    and must reach the same database as the application's login role under another user."""
+    from sqlalchemy.engine import make_url
+
+    if owner_url is None:
+        return (
+            "GIP_MIGRATION_DATABASE_URL is not set: name the schema owner's DSN on the same "
+            "-T copy as GIP_DATABASE_URL"
+        )
+    app, owner = make_url(app_url), make_url(owner_url)
+    if owner.database == TEMPLATE_DATABASE:
+        return f"the owner DSN names the template database {TEMPLATE_DATABASE!r}: use a -T copy"
+    if (app.host, app.port, app.database) != (owner.host, owner.port, owner.database):
+        return (
+            "the app and owner DSNs must name the same host, port and database: "
+            f"{app.host}:{app.port}/{app.database} vs {owner.host}:{owner.port}/{owner.database}"
+        )
+    if app.username == owner.username:
+        return (
+            f"the app and owner DSNs name the same user {app.username!r}: the owner is not the app"
+        )
+    return None
+
+
+async def _grant(env: _Env, workspace_id: UUID) -> dict[str, Any]:
+    """Grant the demo principals in `workspace_id`, as the owner (PL-2095, DP-5). The owner's
+    connection lives for this call alone."""
+    try:
+        return await _import_seed().grant_demo_principals(env.owner_database, workspace_id)
+    finally:
+        await env.owner_database.dispose()
 
 
 async def _timed_get(
@@ -601,7 +654,7 @@ async def _fremtpl2(env: _Env, rows: int | None, reuse: bool) -> tuple[Any, Any,
         await seed.run(rows)
     info = json.loads((seed.DATA_DIR / "last-seed.json").read_text())
     workspace_id = UUID(info["workspace_id"])
-    principals = await seed.grant_demo_principals(env.database, workspace_id)
+    principals = await _grant(env, workspace_id)
     async with env.database.session() as session:
         dataset_id = (
             await session.execute(
@@ -656,9 +709,8 @@ async def _one_way(args: argparse.Namespace) -> int:
         corpora.append((f"freMTPL2 prepared version ({best_rows} rows)", workspace_id, actor, best))
 
         # (ii) the wide synthetic version: 80 columns x 1 000 000 rows, ingested as parquet
-        seed = _import_seed()
         wide_ws = new_uuid7()
-        wide_actor = (await seed.grant_demo_principals(env.database, wide_ws))["analyst"]
+        wide_actor = (await _grant(env, wide_ws))["analyst"]
         async with env.database.unit_of_work() as session:
             dataset = await dataset_service.create_dataset(
                 session,
@@ -763,6 +815,37 @@ async def _one_way(args: argparse.Namespace) -> int:
 # --- NFR-470: storage overhead and deduplication -----------------------------------------------
 
 
+#: NFR-470's per-version queries, keyed by the names its reading prints. Each binds one `:v`, a
+#: version id (a UUID).
+STORAGE_VERSION_QUERIES: dict[str, str] = {
+    "dataset_versions_row": "select pg_column_size(t.*) from dataset_versions t where id = :v",
+    "validation_reports": (
+        "select coalesce(sum(pg_column_size(t.*)), 0) from validation_reports t "
+        "where dataset_version_id = :v"
+    ),
+    "profiles": (
+        "select coalesce(sum(pg_column_size(t.*)), 0) from profiles t where dataset_version_id = :v"
+    ),
+    "ingestion_runs_rows": (
+        "select coalesce(sum(pg_column_size(t.*)), 0) from ingestion_runs t "
+        "where dataset_version_id = :v"
+    ),
+    "ingestion_runs_source_bytes_read": (
+        "select coalesce(sum(bytes_read), 0) from ingestion_runs where dataset_version_id = :v"
+    ),
+    "audit_events_rows": (
+        "select coalesce(sum(pg_column_size(t.*)), 0) from audit_events t "
+        "where entity_ref like '%' || cast(cast(:v as uuid) as text) || '%'"
+    ),
+}
+
+
+async def _version_scalar(session: Any, query: str, version_id: UUID) -> int:
+    from sqlalchemy import text
+
+    return int((await session.execute(text(query), {"v": version_id})).scalar_one())
+
+
 async def _storage(args: argparse.Namespace) -> int:
     from sqlalchemy import text
 
@@ -811,37 +894,22 @@ async def _storage(args: argparse.Namespace) -> int:
             new_bytes = sum(b for d, (b, m) in sizes.items() if m == parquet and d not in seen)
             seen.update(sizes)
 
-            async def scalar(query: str, version_id: Any = version_id) -> int:
-                return int((await session.execute(text(query), {"v": version_id})).scalar_one())
+            async def scalar(name: str, version_id: UUID = version_id) -> int:
+                return await _version_scalar(session, STORAGE_VERSION_QUERIES[name], version_id)
 
             own = {
-                "dataset_versions_row": await scalar(
-                    "select pg_column_size(t.*) from dataset_versions t where id = :v"
-                ),
-                "validation_reports": await scalar(
-                    "select coalesce(sum(pg_column_size(t.*)), 0) from validation_reports t "
-                    "where dataset_version_id = :v"
-                ),
-                "profiles": await scalar(
-                    "select coalesce(sum(pg_column_size(t.*)), 0) from profiles t "
-                    "where dataset_version_id = :v"
-                ),
+                "dataset_versions_row": await scalar("dataset_versions_row"),
+                "validation_reports": await scalar("validation_reports"),
+                "profiles": await scalar("profiles"),
                 "non_parquet_blobs": other_blobs,
             }
             overhead = int(sum(own.values()))
             excluded = {
-                "ingestion_runs_rows": await scalar(
-                    "select coalesce(sum(pg_column_size(t.*)), 0) from ingestion_runs t "
-                    "where dataset_version_id = :v"
-                ),
+                "ingestion_runs_rows": await scalar("ingestion_runs_rows"),
                 "ingestion_runs_source_bytes_read": await scalar(
-                    "select coalesce(sum(bytes_read), 0) from ingestion_runs "
-                    "where dataset_version_id = :v"
+                    "ingestion_runs_source_bytes_read"
                 ),
-                "audit_events_rows": await scalar(
-                    "select coalesce(sum(pg_column_size(t.*)), 0) from audit_events t "
-                    "where entity_ref like '%' || cast(:v as text) || '%'"
-                ),
+                "audit_events_rows": await scalar("audit_events_rows"),
             }
             ratio = (payload + overhead) / payload if payload else None
             _emit(
@@ -891,10 +959,9 @@ async def _cells_diff(args: argparse.Namespace) -> int:
     from model_schema import JobKind, JobResult, JobStatus, new_uuid7
     from model_schema.refs import ArtifactRef
 
-    seed = _import_seed()
     env = _Env()
     workspace_id = new_uuid7()
-    actor = (await seed.grant_demo_principals(env.database, workspace_id))["actuary"]
+    actor = (await _grant(env, workspace_id))["actuary"]
     headers = env.headers(actor.id, workspace_id)
     selected = [r for r in CELLS_DIFF_RUNS if args.only in (None, r[0])]
     p95: dict[str, float] = {}
@@ -1263,6 +1330,17 @@ def main() -> int:
         return _profile_child(args.parquet)
     import asyncio
 
+    _bootstrap_paths()
+    from app.config import load_settings
+
+    settings = load_settings(dev_auth_enabled=True)
+    owner = settings.migration_database_url
+    failure = dsn_failure(
+        settings.database_url.get_secret_value(),
+        owner.get_secret_value() if owner is not None else None,
+    )
+    if failure is not None:
+        raise SystemExit(failure)
     handler = {"one-way": _one_way, "storage": _storage, "cells-diff": _cells_diff}[args.command]
     return asyncio.run(handler(args))
 
