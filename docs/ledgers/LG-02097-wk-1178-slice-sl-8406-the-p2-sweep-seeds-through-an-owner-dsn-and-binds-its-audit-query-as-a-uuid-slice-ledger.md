@@ -168,6 +168,8 @@ SL-2096's roadmap row and LG-2097 `status:` → `closed` on the clean audit and 
 
 **Dated line, 2026-11-08 (lead 31): audit N1 accepted as built.** PL-2095 R2 (i) says each arm disposes `owner_database` when it ends. The build disposes it in a `finally` inside `_grant` after every call (`scripts/measure-p2-nfr-sweep.py`, `_grant`). The owner connection lives for one grant call and is always disposed, including on error, which is tighter than per-arm. Accepted by the lead, from-lead 2026-11-08 04:37:46 GMT.
 
+**Dated line, 2026-11-08 (lead 31): A9's second file at the re-merged head goes to the PR's python CI.** At the re-merged head `e18337239747`, `tests/test_measure_p2_nfr_sweep.py` and `backend/tests/test_route_permission_pin.py` gave "96 passed, 2 warnings in 1.58s", rc 0. `backend/tests/test_measure_p2_nfr_sweep_storage.py` gave 5 errors, one per parametrised query: "GIP_TEST_DATABASE_URL is not set, and the per-worktree test database 'gipricing_sl-8406_da05d927' does not exist yet". Its fixture refuses rather than skips, so a green python CI run on this PR, which runs pytest on a `postgres:16-alpine` service (`.github/workflows/python.yml`), means the file ran on Postgres and passed at the merged head. No local DB lane was granted. Running this file only in the PR's python CI was accepted by the maintainer, from-lead 2026-11-08 04:48:41 GMT. This supersedes "re-run at re-merged head OWED-TO-GATE" in the table above.
+
 ### Build log
 
 - 2026-11-07: worktree `sl-8406` from `origin/main` `c602a539df82` (merge 79); plan records merged from `origin/draft/pl-fd8403-2026-11-07` (`d8596eb5`; INDEX conflict taken theirs, regenerated, `doc-index.py --check` rc=0).
