@@ -1,10 +1,10 @@
 ---
-id: PL-8409
+id: PL-2083
 family: plan
 kind: map
-title: WK-1178 — OQ-2035 option D, a bulk rate-table operation computes its exact result and rounds it once, half-even, to the smaller of 28 significant digits and 28 decimal places, in a context it states and records, SL 8410 — a dated Work-plan delta
+title: WK-1178 — OQ-2035 option D, a bulk rate-table operation computes its exact result and rounds it once, half-even, to the smaller of 28 significant digits and 28 decimal places, in a context it states and records, SL-2084 — a dated Work-plan delta
 status: draft                   # draft → active → superseded | retired (§1.2a) — L1: draft→active rides the slice's PR
-created: 2026-11-07             # draft under working id 8409
+created: 2026-11-08             # original date 2026-11-07, drafted under working id 8409; minted 2026-11-08
 owner: planner
 tree: a3db8fcec45b33a1a76ae642e72d203f24e9e99e   # origin/main 27d705552f89c4d3b4a39802acfe86068e4e1d1b
 phase: P2
@@ -12,20 +12,20 @@ work: WK-1178
 supersedes: []
 superseded_by: ~
 corrected_by: []
-relates: [PL-2040, FD-2028, FD-2032, OQ-2035, OQ-1784, FR-8412, FR-233, FR-234, FR-239, FR-245, FR-275, FR-226, FR-229, FR-23, FR-273, SL-8410]
+relates: [PL-2040, FD-2028, FD-2032, OQ-2035, OQ-1784, FR-2082, FR-233, FR-234, FR-239, FR-245, FR-275, FR-226, FR-229, FR-23, FR-273, SL-2084]
 ---
 
-# PL 8409 — WK-1178: OQ-2035 option D. A bulk operation rounds its exact result once, in a context it states and records (SL 8410, a dated Work-plan delta)
+# PL-2083 — WK-1178: OQ-2035 option D. A bulk operation rounds its exact result once, in a context it states and records (SL-2084, a dated Work-plan delta)
 
 > **For agentic workers:** a **dated Work-plan delta** under Lean P2 L1 (a'). It `relates:` `PL-2040`
 > (the sibling delta that refused a bulk operation by value type, FD-2032) and edits no earlier plan. It
-> carries the spec change, already written on this branch (FR 8412 in `03` §3.3, OQ-2035 decided in both
-> mirrored rows, a dated line on `04` §4.4, the roadmap gate row and SL 8410's row), and one code slice row,
-> SL 8410, whose ledger is LG 8411. **It decides nothing.** DP-1 and DP-3 carry recommendations; DP-2 is
+> carries the spec change, already written on this branch (FR-2082 in `03` §3.3, OQ-2035 decided in both
+> mirrored rows, a dated line on `04` §4.4, the roadmap gate row and SL-2084's row), and one code slice row,
+> SL-2084, whose ledger is LG-2085. **It decides nothing.** DP-1 and DP-3 carry recommendations; DP-2 is
 > ruled; DP-4 is new with the ruling and carries a recommendation. The executor's skills are
 > `superpowers:test-driven-development`, `.claude/skills/python-test`, `.claude/skills/python-package` and
-> `.claude/skills/contract-schema`. PL 8409, SL 8410, LG 8411 and FR 8412 are working ids reserved by the
-> lead (FR 8412: the lead's message of 2026-11-07, "the new FR's working id is FR 8412").
+> `.claude/skills/contract-schema`. PL-2083, SL-2084, LG-2085 and FR-2082 were drafted under the working ids 8409, 8410, 8411 and 8412, reserved by the
+> lead, and minted 2026-11-08 (FR-2082: the lead's message of 2026-11-07, "the new FR's working id is FR 8412").
 
 ## Authority
 
@@ -55,7 +55,7 @@ relates: [PL-2040, FD-2028, FD-2032, OQ-2035, OQ-1784, FR-8412, FR-233, FR-234, 
   `99d83663edf8` (the prefix the 23:22:37 entry names, re-read 2026-11-07), Part 0 and Part 1, and its
   scripts `measure_rule.py`, `measure_engine.py` and their `.out` files.
 - **This seat.** Brief `~/gi-pricing-plan.local/handover/brief-plan-oq2035-2026-11-07.md`, sha256 prefix
-  `a3b92d33853c`, and the lead's messages of 2026-11-07 after 23:30 GMT (FR 8412; write both roadmap edits;
+  `a3b92d33853c`, and the lead's messages of 2026-11-07 after 23:30 GMT (FR-2082; write both roadmap edits;
   the 23:29:34 ruling).
 
 ## Goal
@@ -152,7 +152,7 @@ tiny pct 1.840000000000000000000000000 True 0.000005s
   factor and then the product: two roundings. D rounds once. **606 of 1,999 accepted-today cells** differ
   in the 28th significant digit for one 30-dp percentage. Relative 1e-27; no payable can move. The DM
   draft's 20,000 pairs used factors of at most 6 decimal places, so they could not see this. The 23:29:34
-  entry corrects the 23:22:37 reason on this count, and FR 8412 (6) states it.
+  entry corrects the 23:22:37 reason on this count, and FR-2082 (6) states it.
 - **Cost:** about 2.9 µs per cell against 1.0 µs today, a fresh context per call included; 0.73 s for a
   250,000-cell table (FR-232's rows threshold). No NFR budgets a bulk operation (`03` §9 read); NFR-498
   (audit) is unaffected.
@@ -177,7 +177,7 @@ No DP is the planner's to rule. **DP-1 and DP-4 block R2.**
   slower, and an exponent past about 4,300 digits trips CPython's integer-to-string limit.
   **Recommendation (a).** It is the entry's "rounded once" for every operation, division included, without a
   second precision; it is about 15 lines; and the huge-percentage cases stay cheap (6 µs) and refused where
-  they are today. Under (a), FR 8412 (1) says "no intermediate is rounded", which is stronger than the
+  they are today. Under (a), FR-2082 (1) says "no intermediate is rounded", which is stronger than the
   entry's "or to a stated working precision for a division" and is what the entry's "rounded once" needs.
 - **DP-2: the long-percentage exception to "today's bytes". RULED 2026-11-07 23:29:34 GMT, option (i): round
   once.** Where `1 + percentage` has more than 28 significant digits, a result can differ from today's in its
@@ -188,13 +188,13 @@ No DP is the planner's to rule. **DP-1 and DP-4 block R2.**
   (`version + 1`, FR-229) with its own pin `rate_table:<slug>@<n+1>`; a Rating Version pinning it is a new
   Rating Version with its own `content_hash`, since the bundle hash takes the graph and the pins (DM draft
   §0.6). The same hash with different bytes cannot arise from this change. **Reproducibility then reads
-  "same input and same recorded context, same bytes"** (FR 8412 (7)): the record of a version created after
+  "same input and same recorded context, same bytes"** (FR-2082 (7)): the record of a version created after
   the change names the context, and a record without it was written under "ambient 28, two roundings".
 - **DP-3: what "keeps its stored text" compares.** (a) **The rounded result** equals the current value
   (today's `_transform_rows`, `:734-736`, and `uplift_by_filter`, `:827`). (b) The exact result equals the
   current value (the DM draft's proposed wording, oq-draft.md `:118`). **Recommendation (a).** Under (b) a
   cell such as `1.8400` uplifted by `1E-40` would be re-written as `1.84` and counted as changed although
-  its value did not move; (a) is today's behaviour and keeps today's bytes. FR 8412 (4) is written as (a).
+  its value did not move; (a) is today's behaviour and keeps today's bytes. FR-2082 (4) is written as (a).
 - **DP-4 (blocking, new with the 23:29:34 addition): where the recorded context sits, and its shape.**
   (a) **Record-only parameter classes.** `UpliftTableRecordedParameters(UpliftTableParameters)`, and the same
   for `uplift_by_filter` and `rebase_to_level`, each adding `context: BulkOperationContext | None = None`;
@@ -218,30 +218,30 @@ No DP is the planner's to rule. **DP-1 and DP-4 block R2.**
 ## Acceptance Standard
 
 Each item is checked by a command a fresh reviewer can run. Items 1 to 6 apply to this branch (the spec
-change, the roadmap rows and the plan); A1 to A14 to SL 8410.
+change, the roadmap rows and the plan); A1 to A14 to SL-2084.
 
 1. **The docs checks pass on this branch.** `python3 scripts/audit-docs.py` prints no failing line except
-   those for the working ids this branch uses (PL 8409, SL 8410, LG 8411, FR 8412), and
+   those for the working ids this branch uses (PL-2083, SL-2084, LG-2085, FR-2082), and
    `python3 scripts/doc-index.py --check` exits 0. After the mint both exit 0.
 2. **No requirement range.** `grep -nE '(N?FR)-[0-9]+ *(-|to|–) *(N?FR-)?[0-9]+' <this file>` prints no
    line that stands for a set of ids.
-3. **One new requirement, after FR-233.** `grep -c '^| \*\*FR-8412\*\* |' docs/specs/03-rating-engine.md`
+3. **One new requirement, after FR-233.** `grep -c '^| \*\*FR-2082\*\* |' docs/specs/03-rating-engine.md`
    prints `1`, and `grep -n -A1 '^| \*\*FR-233\*\* |' docs/specs/03-rating-engine.md` shows it on the next
    line; its text names clause (7), the recorded context, citing `2026-11-07 23:29:34 GMT`.
 4. **OQ-2035 is decided in both places, the same way.** `grep -c '^| ~~\*\*OQ-2035\*\*~~ ✔ | \*\*DECIDED
    2026-11-07: option D' docs/open-questions.md docs/specs/03-rating-engine.md` prints `1` for each file,
-   and each row cites `2026-11-07 23:22:37 GMT` and FR 8412; the register row also cites `23:29:34`.
+   and each row cites `2026-11-07 23:22:37 GMT` and FR-2082; the register row also cites `23:29:34`.
 5. **FR-23 and FR-273 are not changed.** `git diff origin/main...HEAD -- docs/specs/00-overview.md` prints
    nothing, and `git diff -U0 origin/main...HEAD -- docs/specs/03-rating-engine.md | grep -c '^[-+]|
    \*\*FR-273\*\*'` prints `0`.
 6. **The roadmap carries both edits.** `grep -c '~~\*\*OQ-2035\*\*~~ ✔' docs/roadmap.md` prints `1` and the
-   same row reads `**14 (9 open)**`; `grep -c '^id: SL-8410$' docs/roadmap.md` prints `1` with
+   same row reads `**14 (9 open)**`; `grep -c '^id: SL-2084$' docs/roadmap.md` prints `1` with
    `status: draft`.
 
-SL 8410:
+SL-2084:
 
 - **A1. The write set** is the Write set below, by `git diff --name-only origin/main...HEAD`, quoted.
-- **A2. Red first, by cause, in LG 8411 before the green.** R1's first class runs at the slice's base and
+- **A2. Red first, by cause, in LG-2085 before the green.** R1's first class runs at the slice's base and
   fails for these causes, each failure quoted: T-rebase raises `RATE_TABLE_CELL_UNPARSEABLE`; T-ambient
   raises `RATE_TABLE_CELL_UNPARSEABLE` on `'3.37037036703703703670370370367'` under `prec=400`, a text the
   default context rounds and stores; T-long-percentage stores `2.240172837290617283729061729`, not `…728`;
@@ -261,8 +261,8 @@ SL 8410:
   prints nothing; `git diff -U0 origin/main...HEAD -- packages/pricing-core/src/pricing_core/rate_tables/operations.py
   | grep -c -E '^[-+].*(MAX_POSITIONAL_EXPONENT|def _format_value)'` prints `0`; and
   `TestFormatValueIsBoundedBeforeItIsBuilt` passes inside A4.
-- **A7. The requirement is evidenced.** `uv run python scripts/req-coverage.py` lists FR 8412 with the new
-  tests in `test_rate_table_bulk_ops.py` as its evidence (`@pytest.mark.req("FR-8412")`).
+- **A7. The requirement is evidenced.** `uv run python scripts/req-coverage.py` lists FR-2082 with the new
+  tests in `test_rate_table_bulk_ops.py` as its evidence (`@pytest.mark.req("FR-2082")`).
 - **A8. The record carries the context, and only the operation writes it.** `TestTheRecordCarriesTheContext`
   passes: `uplift_table`, `uplift_by_filter` and `rebase_to_level` records carry `parameters.context ==
   BulkOperationContext(precision=28, places=28, rounding="half_even", version=1)`; a `floor_and_cap` record
@@ -272,7 +272,7 @@ SL 8410:
   scripts/generate-contracts.py --check` exits 0 at the head; `git diff --name-only origin/main...HEAD --
   docs/contracts` lists only `docs/contracts/schemas/generated/rate-table-version.schema.json` and
   `docs/contracts/openapi/generated.json`; `bulk-operation-request.schema.json` is not in it.
-- **A10. GREEN by import closure (common seat brief, item 29),** the commands and the list quoted in LG 8411:
+- **A10. GREEN by import closure (common seat brief, item 29),** the commands and the list quoted in LG-2085:
   changed modules `git diff --name-only origin/main...HEAD -- packages/*/src backend/src`.
   `model_schema/rating.py` is imported by most of the codebase, so the closure is wide; its test files beyond
   A4's run in the gate. The rate-table closure read at `27d70555` is `operations.py` →
@@ -288,8 +288,8 @@ SL 8410:
   `packages/model-schema/src/model_schema/__init__.py`.
 - **A13. The gate.** One full code gate, both halves, on the re-merged head, every rc quoted (`CLAUDE.md`
   §11), **started no later than Tue 10 Nov 2026 20:00 GMT**. If it cannot start by then it is not started:
-  LG 8411 records "not started; FR 8412 stands as the rule; the code is carried to Phase 3 by name", and the
-  P2 closure record carries SL 8410 by name (the 23:22:37 entry).
+  LG-2085 records "not started; FR-2082 stands as the rule; the code is carried to Phase 3 by name", and the
+  P2 closure record carries SL-2084 by name (the 23:22:37 entry).
 - **A14. The LG quotes the spike** (the 23:29:34 entry): "20,000 of 20,000 pairs equal to an exact-rational
   oracle" and "606 of 1,999 accepted-today cells differ in the 28th digit for one 30-dp percentage", with
   the script's path and this plan's Evidence block as the source.
@@ -318,7 +318,7 @@ SL 8410:
 
 - **Seats:** one executor (model per `executor.md`) and one auditor. No decision-maker once DP-1, DP-3 and
   DP-4 are ruled.
-- **Ids:** PL 8409, SL 8410, LG 8411 and FR 8412, all reserved by the lead. No other id is foreseen.
+- **Ids:** PL-2083, SL-2084, LG-2085 and FR-2082, all reserved by the lead. No other id is foreseen.
 - **DB:** none for R1 and R2: `operations.py`, the `model-schema` classes and the test file are pure, run
   through `run-small.sh` (no `createdb`, no migration; common seat brief, item 32). The full gate brings
   its own DB as every gate does; no window of the slice's own.
@@ -329,7 +329,7 @@ SL 8410:
   fires in CI (its filter `docs/contracts/openapi/**`) as well as `python.yml` (`packages/**`); the local
   gate runs both halves regardless (`CLAUDE.md` §11), with `pnpm --dir frontend generate:api` before the
   frontend half. No timed path changes: a bulk operation is not inside an NFR measurement.
-- **Hours, gate not counted, an estimate:** R1 1.25 h, R2a 0.75 h, R2b 0.75 h, contracts 0.5 h, LG 8411 and
+- **Hours, gate not counted, an estimate:** R1 1.25 h, R2a 0.75 h, R2b 0.75 h, contracts 0.5 h, LG-2085 and
   records 1 h, so **about 4.25 h**, plus about 1 h of audit.
 - **Calendar** (the entry; weekdays read from `date -d … +%A`): plan Sun 8 Nov, build Mon 9 Nov, gate Tue
   10 Nov, **not started if its gate cannot start by Tue 10 Nov 20:00 GMT**, merged inside Thu 12 Nov (the
@@ -379,7 +379,7 @@ and the generated `docs/contracts/schemas/generated/rate-table-version.schema.js
 
 ## Tasks
 
-### SL 8410: the row. Scope: A1 to A14; `03` FR 8412 (new), FR-233, FR-234 (the refusal it keeps), FR-239 (unchanged, read), FR-245, FR-275, FR-226; `04` §4.4; lane WK-1178; after this plan's acceptance, gate by Tue 10 Nov 20:00 GMT
+### SL-2084: the row. Scope: A1 to A14; `03` FR-2082 (new), FR-233, FR-234 (the refusal it keeps), FR-239 (unchanged, read), FR-245, FR-275, FR-226; `04` §4.4; lane WK-1178; after this plan's acceptance, gate by Tue 10 Nov 20:00 GMT
 
 **Files:**
 - Modify: `packages/model-schema/src/model_schema/rating.py` (after `RebaseToLevelParameters`, `:1411-1416`;
@@ -390,7 +390,7 @@ and the generated `docs/contracts/schemas/generated/rate-table-version.schema.js
 - Test: `packages/pricing-core/tests/test_rate_table_bulk_ops.py` (two new classes at the end of the file)
 - Regenerate: `docs/contracts/schemas/generated/rate-table-version.schema.json`,
   `docs/contracts/openapi/generated.json`
-- Ledger: LG 8411 under `docs/ledgers/`
+- Ledger: LG-2085 under `docs/ledgers/`
 
 **Interfaces:**
 - Consumes: `uplift_table(table, *, percentage)`, `uplift_by_filter(table, *, percentage, filter)`,
@@ -418,7 +418,7 @@ and the generated `docs/contracts/schemas/generated/rate-table-version.schema.js
 
 ```python
 def _round_once(exact: Fraction) -> Decimal:
-    """FR 8412's rule computed independently: exact rational, rounded half-even with integers
+    """FR-2082's rule computed independently: exact rational, rounded half-even with integers
     to the smaller of 28 significant digits and 28 decimal places."""
     if exact == 0:
         return Decimal(0)
@@ -445,11 +445,11 @@ def _one_cell(value: str) -> RateTableVersion:
 
 
 class TestABulkOperationRoundsOnceInAStatedContext:
-    """FR 8412 (OQ-2035 option D, to-lead "2026-11-07 23:22:37 GMT"): the exact result, rounded
+    """FR-2082 (OQ-2035 option D, to-lead "2026-11-07 23:22:37 GMT"): the exact result, rounded
     once, half-even, to the smaller of 28 significant digits and 28 decimal places, in a context
     the operation states and never the caller's."""
 
-    @pytest.mark.req("FR-8412")
+    @pytest.mark.req("FR-2082")
     def test_a_rebase_below_one_tenth_is_stored_not_refused(self) -> None:
         rows = [
             {"driver_age_band": "17-20", "relativity": "0.05"},
@@ -466,7 +466,7 @@ class TestABulkOperationRoundsOnceInAStatedContext:
             {"driver_age_band": "25-29", "relativity": "1"},
         ]
 
-    @pytest.mark.req("FR-8412")
+    @pytest.mark.req("FR-2082")
     def test_the_stored_text_does_not_depend_on_the_callers_context(self) -> None:
         percentage = Decimal("0.123456789012345678901234567890")
         expected = [{"driver_age_band": "17-20", "relativity": "3.370370367037037036703703704"}]
@@ -498,7 +498,7 @@ class TestABulkOperationRoundsOnceInAStatedContext:
                 )
                 assert _cells(rebased)[0]["relativity"] == "0.0333333333333333333333333333"
 
-    @pytest.mark.req("FR-8412")
+    @pytest.mark.req("FR-2082")
     def test_the_factor_is_not_rounded_before_the_product(self) -> None:
         """DP-2, ruled (i): one rounding. Today rounds 1 + percentage to 28 digits first and
         stores 2.240172837290617283729061729."""
@@ -507,7 +507,7 @@ class TestABulkOperationRoundsOnceInAStatedContext:
         )
         assert _cells(result)[0]["relativity"] == "2.240172837290617283729061728"
 
-    @pytest.mark.req("FR-8412")
+    @pytest.mark.req("FR-2082")
     def test_every_result_is_the_exact_result_rounded_once(self) -> None:
         rng = random.Random(2035)
         mismatches = []
@@ -533,7 +533,7 @@ class TestABulkOperationRoundsOnceInAStatedContext:
                 mismatches.append((old, got[0]["relativity"], want))
         assert mismatches == []
 
-    @pytest.mark.req("FR-8412")
+    @pytest.mark.req("FR-2082")
     def test_a_money_minor_uplift_holds_the_fraction(self) -> None:
         """The entry's (a): no rounding to whole minor units at the operation."""
         table = _version(
@@ -552,7 +552,7 @@ class TestABulkOperationRoundsOnceInAStatedContext:
 
 - [ ] **Step 2: Run the red at the base.** Before the run, `pgrep -af '[d]emo.py|[v]itest'` prints nothing
   and load1 < 6. Run: `run-small.sh <wt> packages/pricing-core/tests/test_rate_table_bulk_ops.py`. Expected,
-  each quoted in LG 8411 (A2): `test_a_rebase_below_one_tenth_is_stored_not_refused` FAILS with
+  each quoted in LG-2085 (A2): `test_a_rebase_below_one_tenth_is_stored_not_refused` FAILS with
   `ValueError: RATE_TABLE_CELL_UNPARSEABLE: value '0.03333333333333333333333333333'`;
   `test_the_stored_text_does_not_depend_on_the_callers_context` FAILS at `prec=400` with
   `RATE_TABLE_CELL_UNPARSEABLE: value '3.37037036703703703670370370367'` (the default context stored
@@ -560,16 +560,18 @@ class TestABulkOperationRoundsOnceInAStatedContext:
   FAILS with `…729` != `…728`; `test_every_result_is_the_exact_result_rounded_once` FAILS with the rebase
   refusal (`'0.001817401515196671574266691304'` in the planner's scratch run) or a non-empty `mismatches`.
   `test_a_money_minor_uplift_holds_the_fraction` PASSES (A3). Every other test in the file PASSES.
-- [ ] **Step 3: Commit** the class alone: `test(pricing-core): FR 8412 red — a bulk operation rounds once in
-  a stated context (SL 8410)`.
+- [ ] **Step 3: Commit** the class alone: `test(pricing-core): FR-2082 red — a bulk operation rounds once in
+  a stated context (SL-2084)`.
 
 #### R2a: the record's shape (model-schema), then the record's red
+
+*(Amended 2026-11-08, on the entry of the maintainer (by delegation), "2026-11-08 00:07:30 GMT" in `to-lead.md`, "SL-2084 DEVIATION ACCEPTED": R2a also swaps the three `parameters=` constructors in `operations.py` to the Recorded classes, with no context, because the narrowed field refuses the parent class; without the swap the red is a ValidationError on 39 tests, not A2's context-None red. The write set already holds `operations.py`; only the task order moves.)*
 
 - [ ] **Step 1: Write the classes.** In `model_schema/rating.py`, after `RebaseToLevelParameters`:
 
 ```python
 class BulkOperationContext(BaseModel):
-    """FR 8412 (7): the decimal context a computing bulk operation ran in, recorded with its
+    """FR-2082 (7): the decimal context a computing bulk operation ran in, recorded with its
     parameters (04 §4.4). The operation writes it; no request carries it."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
@@ -581,8 +583,8 @@ class BulkOperationContext(BaseModel):
 
 
 class UpliftTableRecordedParameters(UpliftTableParameters):
-    """The record's parameters: the request's, plus the context (FR 8412). `None` on a record
-    written before FR 8412, which reads as ambient 28 digits, factor and product each rounded.
+    """The record's parameters: the request's, plus the context (FR-2082). `None` on a record
+    written before FR-2082, which reads as ambient 28 digits, factor and product each rounded.
     It is not dumped when `None`, so a stored record's bytes do not move."""
 
     context: BulkOperationContext | None = Field(
@@ -591,7 +593,7 @@ class UpliftTableRecordedParameters(UpliftTableParameters):
 
 
 class UpliftByFilterRecordedParameters(UpliftByFilterParameters):
-    """As `UpliftTableRecordedParameters`, for `uplift_by_filter` (FR 8412)."""
+    """As `UpliftTableRecordedParameters`, for `uplift_by_filter` (FR-2082)."""
 
     context: BulkOperationContext | None = Field(
         default=None, exclude_if=lambda value: value is None
@@ -599,7 +601,7 @@ class UpliftByFilterRecordedParameters(UpliftByFilterParameters):
 
 
 class RebaseToLevelRecordedParameters(RebaseToLevelParameters):
-    """As `UpliftTableRecordedParameters`, for `rebase_to_level` (FR 8412)."""
+    """As `UpliftTableRecordedParameters`, for `rebase_to_level` (FR-2082)."""
 
     context: BulkOperationContext | None = Field(
         default=None, exclude_if=lambda value: value is None
@@ -628,12 +630,12 @@ class RebaseToLevelOperation(RebaseToLevelRequest, BulkOperationBase):
 
 ```python
 class TestTheRecordCarriesTheContext:
-    """FR 8412 (7), to-lead "2026-11-07 23:29:34 GMT": the recorded parameters name the context;
+    """FR-2082 (7), to-lead "2026-11-07 23:29:34 GMT": the recorded parameters name the context;
     the operation writes it, a request cannot; a record from before reads as None."""
 
     _CONTEXT = BulkOperationContext(precision=28, places=28, rounding="half_even", version=1)
 
-    @pytest.mark.req("FR-8412")
+    @pytest.mark.req("FR-2082")
     def test_each_computing_operation_records_its_context(self) -> None:
         records = [
             uplift_table(_version(), percentage=Decimal("0.10")).created_by_operation,
@@ -651,7 +653,7 @@ class TestTheRecordCarriesTheContext:
             assert record is not None
             assert record.parameters.context == self._CONTEXT
 
-    @pytest.mark.req("FR-8412")
+    @pytest.mark.req("FR-2082")
     def test_floor_and_cap_records_no_context(self) -> None:
         record = floor_and_cap(
             _version(), floor=Decimal("1.2"), cap=Decimal("1.5")
@@ -659,7 +661,7 @@ class TestTheRecordCarriesTheContext:
         assert record is not None
         assert "context" not in record.parameters.model_dump()
 
-    @pytest.mark.req("FR-8412")
+    @pytest.mark.req("FR-2082")
     def test_a_request_cannot_send_the_context(self) -> None:
         with pytest.raises(ValidationError, match="extra_forbidden|Extra inputs"):
             UpliftTableRequest.model_validate(
@@ -669,7 +671,7 @@ class TestTheRecordCarriesTheContext:
                 }
             )
 
-    @pytest.mark.req("FR-8412")
+    @pytest.mark.req("FR-2082")
     def test_a_record_from_before_reads_as_no_context(self) -> None:
         stored = uplift_table(_version(), percentage=Decimal("0.10")).model_dump(mode="json")
         assert stored["created_by_operation"]["parameters"].pop("context") is not None
@@ -681,11 +683,11 @@ class TestTheRecordCarriesTheContext:
   Run the file: `test_each_computing_operation_records_its_context` FAILS with `context` `None` (the
   operation does not write it yet); `test_a_record_from_before_reads_as_no_context` FAILS with
   `KeyError: 'context'` (a `None` context is not dumped); `test_floor_and_cap_records_no_context` and
-  `test_a_request_cannot_send_the_context` PASS (the shape holds them). Quote each in LG 8411.
+  `test_a_request_cannot_send_the_context` PASS (the shape holds them). Quote each in LG-2085.
 - [ ] **Step 3: Regenerate the contracts.** `uv run --directory <wt> python scripts/generate-contracts.py`,
   then `--check` (rc 0); quote `git diff --stat -- docs/contracts` (A9).
-- [ ] **Step 4: Commit** `feat(model-schema): FR 8412 — a bulk operation's record names its arithmetic
-  context (SL 8410)`.
+- [ ] **Step 4: Commit** `feat(model-schema): FR-2082 — a bulk operation's record names its arithmetic
+  context (SL-2084)`.
 
 #### R2b: the stated context (operations)
 
@@ -709,12 +711,12 @@ from decimal import (
   file uses them (`grep -n` them first). After `_format_value`, add:
 
 ```python
-#: FR 8412: a bulk operation's result is rounded once, half-even, to the smaller of 28
+#: FR-2082: a bulk operation's result is rounded once, half-even, to the smaller of 28
 #: significant digits (FR-245) and 28 decimal places (FR-275's scale limit).
 _RESULT_DIGITS = 28
 _RESULT_PLACES = 28
 
-#: FR 8412 (7): the identity of `_result_context`, recorded with every computing operation's
+#: FR-2082 (7): the identity of `_result_context`, recorded with every computing operation's
 #: parameters. `version` changes only with a requirement that changes the rule.
 _RESULT_CONTEXT_RECORD = BulkOperationContext(
     precision=_RESULT_DIGITS, places=_RESULT_PLACES, rounding="half_even", version=1
@@ -722,7 +724,7 @@ _RESULT_CONTEXT_RECORD = BulkOperationContext(
 
 
 def _result_context() -> Context:
-    """FR 8412: the one context a bulk operation computes in, never the caller's.
+    """FR-2082: the one context a bulk operation computes in, never the caller's.
 
     `decimal` rounds each operation once from its exact result, so `fma` (uplift) and `divide`
     (rebase) need no working precision. `Emin` puts `Etiny` (`Emin - prec + 1`) at -28, so a result
@@ -764,7 +766,7 @@ def _result_context() -> Context:
   `RebaseToLevelRecordedParameters(base_level=base_level, context=_RESULT_CONTEXT_RECORD)`.
 
   Each of the three docstrings gains one line: "The result is rounded once, in `_result_context`, and the
-  record names it (FR 8412)." `_format_value` is not edited (G3).
+  record names it (FR-2082)." `_format_value` is not edited (G3).
 - [ ] **Step 2: Run green.** The STOP rule first. Run A4's three files through `run-small.sh`. Expected: all
   pass, including `TestFormatValueIsBoundedBeforeItIsBuilt` and the nine new tests. Quote the summary line
   and rc whole.
@@ -773,9 +775,9 @@ def _result_context() -> Context:
   `uv run --directory <wt> lint-imports`; `uv run --directory <wt> python scripts/generate-contracts.py --check`.
   Every rc quoted. A mypy error on the narrowed `parameters` field is reported verbatim and STOPs for the
   lead (DP-4 (b) is the fallback); it is never silenced with an ignore.
-- [ ] **Step 4: A5, A6, A9 and A12's commands,** output quoted in LG 8411.
-- [ ] **Step 5: Commit** `fix(pricing-core): FR 8412 — a bulk operation rounds its exact result once, in a
-  stated context it records (SL 8410, OQ-2035 D)`.
+- [ ] **Step 4: A5, A6, A9 and A12's commands,** output quoted in LG-2085.
+- [ ] **Step 5: Commit** `fix(pricing-core): FR-2082 — a bulk operation rounds its exact result once, in a
+  stated context it records (SL-2084, OQ-2035 D)`.
 
 #### G: the gate
 
@@ -785,7 +787,7 @@ def _result_context() -> Context:
 - [ ] **Step 2:** One full code gate, both halves, on the lead's word (single or paired, Gate form), **started
   by Tue 10 Nov 2026 20:00 GMT** or not started (A13). Every rc quoted; A11's two tests named in the pytest
   output.
-- [ ] **Step 3:** LG 8411 carries R1's red, R2a's record red, R2b's green, the spike's counts (A14), the GREEN
+- [ ] **Step 3:** LG-2085 carries R1's red, R2a's record red, R2b's green, the spike's counts (A14), the GREEN
   derivation (A10) and the gate's rc table before the audit.
 
 ### Write set
@@ -794,9 +796,9 @@ def _result_context() -> Context:
 `packages/pricing-core/src/pricing_core/rate_tables/operations.py`;
 `packages/pricing-core/tests/test_rate_table_bulk_ops.py`;
 `docs/contracts/schemas/generated/rate-table-version.schema.json` and `docs/contracts/openapi/generated.json`
-(generated); LG 8411; SL 8410's roadmap row (`status:` and `tree:` only, at the mint and the close); this
-plan (`status:` only); `docs/INDEX.md`. The spec change (FR 8412, the two OQ-2035 rows, the `04` §4.4 dated
-line, the gate row and SL 8410's row) is already on this plan's branch and merges with it or before the
+(generated); LG-2085; SL-2084's roadmap row (`status:` and `tree:` only, at the mint and the close); this
+plan (`status:` only); `docs/INDEX.md`. The spec change (FR-2082, the two OQ-2035 rows, the `04` §4.4 dated
+line, the gate row and SL-2084's row) is already on this plan's branch and merges with it or before the
 slice.
 
 ### Files shared
@@ -812,35 +814,35 @@ re-merge.
   paired).
 - **The `CLAUDE.md` §14 review (P3 spec proposal, the entry's words):** does `00` FR-23's `_minor` suffix
   promise integrality in a rate cell, and should FR-273's list ("relativities, loadings, factors") name a
-  money cell? FR 8412 (5) points there and changes neither. **D is carried into the §14 high re-read as a
+  money cell? FR-2082 (5) points there and changes neither. **D is carried into the §14 high re-read as a
   decision, not a proposal** (the 23:22:37 entry), with the 23:29:34 correction.
 - **The lead, or the next docs batch:** FD-2028's dated line ("decided D, `to-lead.md` 2026-11-07 23:22:37
-  GMT, corrected 23:29:34; fixed by SL 8410, or carried to Phase 3 by name") and its register row. Not this
+  GMT, corrected 23:29:34; fixed by SL-2084, or carried to Phase 3 by name") and its register row. Not this
   branch's: the planner writes plans, closures and the SL rows it cuts (`planner.md`, Tools); the roadmap gate
   row is on this branch on the lead's instruction.
-- **The lead:** the build seat's brief; the mint order (the lead's message: PL 8409, SL 8410, LG 8411 and
-  FR 8412 mint at the spec change's PR, cited before citing); FR 8412 re-pointed across this branch, the
+- **The lead:** the build seat's brief; the mint order (the lead's message: PL-2083, SL-2084, LG-2085 and
+  FR-2082 mint at the spec change's PR, cited before citing); FR-2082 re-pointed across this branch, the
   slice and every `@pytest.mark.req` at the mint (the named mint exception template,
   `docs/process/process-backlog.md:85`).
 - **The auditor:** A1 to A14 at `origin/main...<slice branch>`; FD-2028 closed by the slice's close commit;
-  SL 8410's row read at `origin/main` after the merge (common seat brief item 42).
+  SL-2084's row read at `origin/main` after the merge (common seat brief item 42).
 
 ## Self-review
 
-1. **Ruling coverage, 23:22:37.** Option D → FR 8412 (1)-(4), R2b, A2, A5. "Exactly or to a stated working
+1. **Ruling coverage, 23:22:37.** Option D → FR-2082 (1)-(4), R2b, A2, A5. "Exactly or to a stated working
    precision for a division" → DP-1 (a), stronger: no working precision. "Rounded once half-even to the
    smaller of 28 significant digits and 28 decimal places" → `_result_context`, T-oracle. "Trailing zeros
-   dropped" → `_format_value`, unchanged. "`floor_and_cap` does no arithmetic" → FR 8412 (4), untouched.
-   Sub-question (a) → FR 8412 (5), G4, A3. FR-23 / FR-273 to §14 → acceptance item 5, Hand-off. "New FR in
+   dropped" → `_format_value`, unchanged. "`floor_and_cap` does no arithmetic" → FR-2082 (4), untouched.
+   Sub-question (a) → FR-2082 (5), G4, A3. FR-23 / FR-273 to §14 → acceptance item 5, Hand-off. "New FR in
    03 §3" → item 3. "OQ-2035 resolved both ways" → item 4. "FD-2028's fix line" → Hand-off. "operations.py's
    arithmetic context + the rebase refusal removed + tests red-first" → R1, R2b. "R2's 308 bound untouched"
-   → G3, A6. "Plan Sun 8 … not started after Tue 10 20:00" → Needs, A13, FR 8412's Delivery line, SL 8410's
+   → G3, A6. "Plan Sun 8 … not started after Tue 10 20:00" → Needs, A13, FR-2082's Delivery line, SL-2084's
    row.
-2. **Ruling coverage, 23:29:34.** The re-worded reason → FR 8412 (6), DP-2, the register row. The recorded
-   context (precision, rounding, version) → FR 8412 (7), DP-4, R2a, A8, the `04` §4.4 line. "Same input and
-   same recorded context → same bytes" → FR 8412 (7), DP-2. "Ambient 28, two roundings by absence" → FR 8412
-   (7), DP-4, the legacy-record test. "Not (ii)" → FR 8412 (3), DP-2. "A re-run is a new version with its own
-   pin and hash; FR-239's hash rule not touched" → DP-2, FR 8412 (7). "The LG quotes the spike's counts" →
+2. **Ruling coverage, 23:29:34.** The re-worded reason → FR-2082 (6), DP-2, the register row. The recorded
+   context (precision, rounding, version) → FR-2082 (7), DP-4, R2a, A8, the `04` §4.4 line. "Same input and
+   same recorded context → same bytes" → FR-2082 (7), DP-2. "Ambient 28, two roundings by absence" → FR-2082
+   (7), DP-4, the legacy-record test. "Not (ii)" → FR-2082 (3), DP-2. "A re-run is a new version with its own
+   pin and hash; FR-239's hash rule not touched" → DP-2, FR-2082 (7). "The LG quotes the spike's counts" →
    A14. **One addition of the planner's, marked:** `places` in the context's identity (DP-4).
 3. **Every cite read** at `27d70555`: `operations.py:21`, `:31-60`, `:589-599`, `:694-723`, `:726-742`,
    `:766-772`, `:786-924`; `money.py:126-157`; `rating.py:1376-1490`; `db/models.py:2438`;
@@ -859,7 +861,7 @@ re-merge.
    `exclude_if` (pydantic 2.14.1 in the venv). `mypy --strict` over the scratch `model_schema.rating` and
    `operations` reports no error on the narrowed `parameters` fields (only `unused-ignore` lines that
    `--ignore-missing-imports` causes). **Not run:** `generate-contracts.py` and the gate.
-4. **Placeholders:** none. FR 8412 is the lead's working id, in space form in prose and `FR-8412` in ids
+4. **Placeholders:** none. FR-2082 is the lead's working id, in space form in prose and `FR-2082` in ids
    and markers.
 5. **Sums:** hours 1.25 + 0.75 + 0.75 + 0.5 + 1 = 4.25.
 6. **Calendar**, from `date -d … +%A`: Sat 7 Nov (today), Sun 8, Mon 9, Tue 10, Thu 12 Nov (code freeze),
