@@ -5,7 +5,7 @@ title: WK-1178 slice SL-8406 — FD-8403 and FD-8404, the P2 sweep seeds as the 
 status: active                 # active → closed (§1.2a)
 created: 2026-11-07
 owner: executor
-tree: aaeba1075366d361a7374027a44d0779dc88e886   # the tree of head 86b63e54ed40 (sl-8406-sweep-owner-dsn), the head the Gate section was written against; was 1a18754a38df… (a commit id, not a tree), corrected 2026-11-08 on audit N2
+tree: 3a0bb563a378e4f8812093c4f2e698c4eb7d755b   # the tree of the gated head 7a640cf998ee (sl-8406-sweep-owner-dsn); was 1a18754a38df… (a commit id, not a tree), corrected 2026-11-08 on audit N2 and the lead's word
 slice: SL-8406
 phase: P2
 work: WK-1178
@@ -16,7 +16,7 @@ relates: [FD-8403, FD-8404, PL-8405, PL-1735, LG-2003]
 
 # LG-8407 — WK-1178 slice SL-8406: the P2 sweep's two instrument defects
 
-*Dated line, 2026-11-08 (lead 31, audit N2): the front matter `tree:` is the tree `aaeba1075366d361a7374027a44d0779dc88e886` of head `86b63e54ed40`, the head the Gate section's runs were written against (window W green). The slice's gate ran at `7a640cf998ee`; the slice's three files (`scripts/measure-p2-nfr-sweep.py`, `tests/test_measure_p2_nfr_sweep.py`, `backend/tests/test_measure_p2_nfr_sweep_storage.py`) are byte-identical between the two heads (`git diff --stat 86b63e54ed40 7a640cf998ee -- <those three>` empty); the other differences are main's merges.*
+*Dated line, 2026-11-08 (lead 31, audit N2): the front matter `tree:` is the tree `3a0bb563a378e4f8812093c4f2e698c4eb7d755b` of the gated head `7a640cf998ee`, the head the slice's gate measured (gate.log START line). The Gate section's window runs are at head `86b63e54ed40`. The slice's three files (`scripts/measure-p2-nfr-sweep.py`, `tests/test_measure_p2_nfr_sweep.py`, `backend/tests/test_measure_p2_nfr_sweep_storage.py`) are byte-identical between the two heads (`git diff --stat 86b63e54ed40 7a640cf998ee -- <those three>` empty); the other differences are main's merges.*
 
 **GO:** to-lead "2026-11-07 19:10:01 GMT" (PL 8405 accepted, DP-1 to DP-6 all (a); conditions: A5 proves the DP-2 guard red on each broken input; window W under "2026-11-05 14:40:19 GMT"'s conditions, on the maintainer's word, beside a gate's pytest only; A8's empty `backend/src` diff quoted by its command; pairable, the pair word at the re-merged head with imports read).
 **MERGE-ACK:** (added at merge.)
