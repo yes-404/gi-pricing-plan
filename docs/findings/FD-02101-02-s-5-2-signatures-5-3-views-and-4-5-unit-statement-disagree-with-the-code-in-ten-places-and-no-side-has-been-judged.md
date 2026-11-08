@@ -12,7 +12,7 @@ relates: [FR-145, FR-150, FR-1840, OQ-587, FD-1723, FD-2034]
 
 # FD-2101 — 02's §5.2 signatures, §5.3 views and §4.5 unit statement disagree with the code in ten places
 
-*(Minted 2026-11-08 as FD-2101 from working id 8415, born open, filed 2026-11-08 by the auditor on the P28 recon of module 02 and the §14 review accepted at to-lead "2026-11-08 09:02:21 GMT". Severity LOW: no limb names a wrong number or a price. Owner Work: P3-C.)*
+*(Minted 2026-11-08 as FD-2101 from working id 8415, born open, filed 2026-11-08 by the auditor on the P28 recon of module 02 and the plan review (`CLAUDE.md` section 14) accepted at to-lead "2026-11-08 09:02:21 GMT". Severity LOW: no limb names a wrong number or a price. Owner Work: P3-C.)*
 
 ## Finding
 

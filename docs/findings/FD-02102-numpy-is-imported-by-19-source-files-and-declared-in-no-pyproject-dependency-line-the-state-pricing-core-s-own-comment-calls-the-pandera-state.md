@@ -12,7 +12,7 @@ relates: [FD-2034]
 
 # FD-2102 — numpy is imported by 19 source files and declared in no pyproject dependency line
 
-*(Minted 2026-11-08 as FD-2102 from working id 8416, born open, filed 2026-11-08 by the auditor on the skills-gap review's finding F10 and the §14 review accepted at to-lead "2026-11-08 09:02:21 GMT". Severity LOW. Owner Work: P3-D.)*
+*(Minted 2026-11-08 as FD-2102 from working id 8416, born open, filed 2026-11-08 by the auditor on the skills-gap review's finding F10 and the plan review (`CLAUDE.md` section 14) accepted at to-lead "2026-11-08 09:02:21 GMT". Severity LOW. Owner Work: P3-D.)*
 
 ## Finding
 
