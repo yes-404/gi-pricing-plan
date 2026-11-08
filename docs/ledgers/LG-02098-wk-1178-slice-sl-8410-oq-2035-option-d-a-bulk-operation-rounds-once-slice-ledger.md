@@ -197,6 +197,8 @@ The fourteenth is the one real red (item 31's "failing files outside the eight d
 - **GREEN** is owed to the slice PR's python CI at the merged head, on its Postgres service (the maintainer's either/or:
   no local DB lane; never the shared server). This ledger does not claim it.
 
+**Dated line, 2026-11-08 (written 08:48:45 GMT, docs batch 23, lead 31): GREEN for `test_bulk_operation_creates_a_new_version_with_the_operation_record` at the merged head.** Read by the maintainer at MERGE-ACK of #1471 from python run 42454933679: the job runs `uv run pytest -q` on its Postgres service and ended `7660 passed, 28 skipped, 5 xfailed, 156 warnings in 1521.32s (0:25:21)`, with no FAILED or ERROR line. `backend/tests/test_api_rate_tables.py` appears only in the warnings section, not in a failure list. The 28 skipped equal the baseline. This discharges the GREEN this ledger's Gate section owed to the PR's python CI.
+
 ## Audit
 
 Folded verbatim (two `|` inside code spans in the A5 and A6 table cells are escaped as `\|` so the rows parse, check 22; nothing else differs, bar the space-form ids noted below) from the LG 8411 audit-section draft under `~/gi-pricing-plan.local/scratch/aud-s8406s8410/` (sha256 prefix `872c870d1f04`; item 34).
