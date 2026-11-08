@@ -1417,7 +1417,7 @@ class RebaseToLevelParameters(BaseModel):
 
 
 class BulkOperationContext(BaseModel):
-    """FR 8412 (7): the decimal context a computing bulk operation ran in, recorded with its
+    """FR-2082 (7): the decimal context a computing bulk operation ran in, recorded with its
     parameters (04 §4.4). The operation writes it; no request carries it."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
@@ -1429,8 +1429,8 @@ class BulkOperationContext(BaseModel):
 
 
 class UpliftTableRecordedParameters(UpliftTableParameters):
-    """The record's parameters: the request's, plus the context (FR 8412). `None` on a record
-    written before FR 8412, which reads as ambient 28 digits, factor and product each rounded.
+    """The record's parameters: the request's, plus the context (FR-2082). `None` on a record
+    written before FR-2082, which reads as ambient 28 digits, factor and product each rounded.
     It is not dumped when `None`, so a stored record's bytes do not move."""
 
     context: BulkOperationContext | None = Field(
@@ -1439,7 +1439,7 @@ class UpliftTableRecordedParameters(UpliftTableParameters):
 
 
 class UpliftByFilterRecordedParameters(UpliftByFilterParameters):
-    """As `UpliftTableRecordedParameters`, for `uplift_by_filter` (FR 8412)."""
+    """As `UpliftTableRecordedParameters`, for `uplift_by_filter` (FR-2082)."""
 
     context: BulkOperationContext | None = Field(
         default=None, exclude_if=lambda value: value is None
@@ -1447,7 +1447,7 @@ class UpliftByFilterRecordedParameters(UpliftByFilterParameters):
 
 
 class RebaseToLevelRecordedParameters(RebaseToLevelParameters):
-    """As `UpliftTableRecordedParameters`, for `rebase_to_level` (FR 8412)."""
+    """As `UpliftTableRecordedParameters`, for `rebase_to_level` (FR-2082)."""
 
     context: BulkOperationContext | None = Field(
         default=None, exclude_if=lambda value: value is None

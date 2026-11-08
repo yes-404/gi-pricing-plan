@@ -1,23 +1,23 @@
 ---
 id: LG-8411
 family: ledger
-title: WK-1178 slice SL-8410 — OQ-2035 option D, a bulk operation rounds its exact result once, in a stated context it records (slice ledger)
+title: WK-1178 slice SL-2084 — OQ-2035 option D, a bulk operation rounds its exact result once, in a stated context it records (slice ledger)
 status: active                 # active → closed (§1.2a)
 created: 2026-11-08            # working id 8411
 owner: executor
 tree: ba298745f793f274231ee44afcef8f7022b4f696   # the tree of commit b196e208 (sl-8410-oq2035-option-d, R2b; base 663d7dcd of origin/draft/pl-oq2035-2026-11-07)
-slice: SL-8410
+slice: SL-2084
 phase: P2
 work: WK-1178
-plans: [PL-8409]
+plans: [PL-2083]
 corrected_by: []
-relates: [PL-8409, FR-8412, FD-2028, OQ-2035, SL-8410]
+relates: [PL-2083, FR-2082, FD-2028, OQ-2035, SL-2084]
 ---
 
-# LG 8411 — WK-1178 slice SL 8410: OQ-2035 option D
+# LG 8411 — WK-1178 slice SL-2084: OQ-2035 option D
 
 **GO:** the brief `brief-exec-sl8410-2026-11-08.md` (sha256 prefix `223e3453a9d2`), lead 31, on to-lead
-"2026-11-07 23:56:36 GMT" (PL 8409 accepted; DP-1 (a), DP-2, DP-3 (a), DP-4 (a); the three LG conditions
+"2026-11-07 23:56:36 GMT" (PL-2083 accepted; DP-1 (a), DP-2, DP-3 (a), DP-4 (a); the three LG conditions
 C1–C3) and "2026-11-07 23:22:37 GMT", "2026-11-07 23:29:34 GMT". **MERGE-ACK:** (added at merge.)
 
 Every run below is DB-free, through `run-small.sh`, on the executor's own tree
@@ -88,11 +88,11 @@ on the test file, **on hunks that predate this slice** (the base files are not f
 - A6: `git diff origin/main...HEAD --stat -- packages/model-schema/src/model_schema/money.py` → empty. `_format_value` and `MAX_POSITIONAL_EXPONENT` were not edited.
 - A9: `git diff --stat -- docs/contracts` at R2a: `docs/contracts/openapi/generated.json` (136) and `…/schemas/generated/rate-table-version.schema.json` (91) only.
 - A12: `git diff --name-only origin/main...HEAD | grep -E '^(frontend/|backend/src/|backend/migrations/)|__init__.py'` → no output, grep rc=1.
-- A7: `uv run python scripts/req-coverage.py` rc=0 prints `FR-8412 9 test file(s)` (the nine new tests, all in `test_rate_table_bulk_ops.py`).
+- A7: `uv run python scripts/req-coverage.py` rc=0 prints `FR-2082 9 test file(s)` (the nine new tests, all in `test_rate_table_bulk_ops.py`).
 
 ## The spike (A14)
 
-Source: `~/gi-pricing-plan.local/scratch/plan-oq2035/spike_ctx.py` and PL 8409's Evidence block. **20,000 of
+Source: `~/gi-pricing-plan.local/scratch/plan-oq2035/spike_ctx.py` and PL-2083's Evidence block. **20,000 of
 20,000 pairs equal to an exact-rational oracle**; **606 of 1,999 accepted-today cells differ in the 28th
 significant digit for one 30-dp percentage** (relative 1e-27; no payable can move). R1's
 `test_every_result_is_the_exact_result_rounded_once` is the in-tree form (2,000 draws, seed 2035).

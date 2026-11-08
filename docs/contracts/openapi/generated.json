@@ -1659,7 +1659,7 @@
       },
       "BulkOperationContext": {
         "additionalProperties": false,
-        "description": "FR 8412 (7): the decimal context a computing bulk operation ran in, recorded with its\nparameters (04 §4.4). The operation writes it; no request carries it.",
+        "description": "FR-2082 (7): the decimal context a computing bulk operation ran in, recorded with its\nparameters (04 §4.4). The operation writes it; no request carries it.",
         "properties": {
           "places": {
             "minimum": 0.0,
@@ -14999,7 +14999,7 @@
       },
       "RebaseToLevelRecordedParameters": {
         "additionalProperties": false,
-        "description": "As `UpliftTableRecordedParameters`, for `rebase_to_level` (FR 8412).",
+        "description": "As `UpliftTableRecordedParameters`, for `rebase_to_level` (FR-2082).",
         "properties": {
           "base_level": {
             "additionalProperties": {
@@ -18756,7 +18756,7 @@
       },
       "UpliftByFilterRecordedParameters": {
         "additionalProperties": false,
-        "description": "As `UpliftTableRecordedParameters`, for `uplift_by_filter` (FR 8412).",
+        "description": "As `UpliftTableRecordedParameters`, for `uplift_by_filter` (FR-2082).",
         "properties": {
           "context": {
             "anyOf": [
@@ -18857,7 +18857,7 @@
       },
       "UpliftTableRecordedParameters": {
         "additionalProperties": false,
-        "description": "The record's parameters: the request's, plus the context (FR 8412). `None` on a record\nwritten before FR 8412, which reads as ambient 28 digits, factor and product each rounded.\nIt is not dumped when `None`, so a stored record's bytes do not move.",
+        "description": "The record's parameters: the request's, plus the context (FR-2082). `None` on a record\nwritten before FR-2082, which reads as ambient 28 digits, factor and product each rounded.\nIt is not dumped when `None`, so a stored record's bytes do not move.",
         "properties": {
           "context": {
             "anyOf": [

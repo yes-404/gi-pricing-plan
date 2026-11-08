@@ -732,12 +732,12 @@ def _format_value(value: Decimal) -> str:
     return format(value.normalize(exact), "f")
 
 
-#: FR 8412: a bulk operation's result is rounded once, half-even, to the smaller of 28
+#: FR-2082: a bulk operation's result is rounded once, half-even, to the smaller of 28
 #: significant digits (FR-245) and 28 decimal places (FR-275's scale limit).
 _RESULT_DIGITS = 28
 _RESULT_PLACES = 28
 
-#: FR 8412 (7): the identity of `_result_context`, recorded with every computing operation's
+#: FR-2082 (7): the identity of `_result_context`, recorded with every computing operation's
 #: parameters. `version` changes only with a requirement that changes the rule.
 _RESULT_CONTEXT_RECORD = BulkOperationContext(
     precision=_RESULT_DIGITS, places=_RESULT_PLACES, rounding="half_even", version=1
@@ -745,7 +745,7 @@ _RESULT_CONTEXT_RECORD = BulkOperationContext(
 
 
 def _result_context() -> Context:
-    """FR 8412: the one context a bulk operation computes in, never the caller's.
+    """FR-2082: the one context a bulk operation computes in, never the caller's.
 
     `decimal` rounds each operation once from its exact result, so `fma` (uplift) and `divide`
     (rebase) need no working precision. `Emin` puts `Etiny` (`Emin - prec + 1`) at -28, so a
@@ -832,7 +832,7 @@ def uplift_table(
 
     The result is validated against the declared bounds before it persists
     (FR-234), and the version records the operation (04 §4.4). The result is rounded
-    once, in `_result_context`, and the record names it (FR 8412).
+    once, in `_result_context`, and the record names it (FR-2082).
     """
     _check_value_type(table, "uplift_table")
     rows = _rows_of(table)
@@ -861,7 +861,7 @@ def uplift_by_filter(
 ) -> RateTableVersion:
     """FR-233: uplift only the cells matching the filter, new immutable version.
 
-    The result is rounded once, in `_result_context`, and the record names it (FR 8412).
+    The result is rounded once, in `_result_context`, and the record names it (FR-2082).
     """
     _check_value_type(table, "uplift_by_filter")
     rows = _rows_of(table)
@@ -940,7 +940,7 @@ def rebase_to_level(
 
     It runs only on a `relativity` column, and it moves premiums unless the base rate
     offsets it (FR-233). The result is rounded once, in `_result_context`, and the record
-    names it (FR 8412).
+    names it (FR-2082).
     """
     _check_value_type(table, "rebase_to_level")
     rows = _rows_of(table)

@@ -876,7 +876,7 @@ class TestBulkOperationValueType:
 
 
 def _round_once(exact: Fraction) -> Decimal:
-    """FR 8412's rule computed independently: exact rational, rounded half-even with integers
+    """FR-2082's rule computed independently: exact rational, rounded half-even with integers
     to the smaller of 28 significant digits and 28 decimal places."""
     if exact == 0:
         return Decimal(0)
@@ -909,11 +909,11 @@ _CALLER_CONTEXTS = (
 
 
 class TestABulkOperationRoundsOnceInAStatedContext:
-    """FR 8412 (OQ-2035 option D, to-lead "2026-11-07 23:22:37 GMT"): the exact result, rounded
+    """FR-2082 (OQ-2035 option D, to-lead "2026-11-07 23:22:37 GMT"): the exact result, rounded
     once, half-even, to the smaller of 28 significant digits and 28 decimal places, in a context
     the operation states and never the caller's."""
 
-    @pytest.mark.req("FR-8412")
+    @pytest.mark.req("FR-2082")
     def test_a_rebase_below_one_tenth_is_stored_not_refused(self) -> None:
         rows = [
             {"driver_age_band": "17-20", "relativity": "0.05"},
@@ -930,7 +930,7 @@ class TestABulkOperationRoundsOnceInAStatedContext:
             {"driver_age_band": "25-29", "relativity": "1"},
         ]
 
-    @pytest.mark.req("FR-8412")
+    @pytest.mark.req("FR-2082")
     def test_the_stored_text_does_not_depend_on_the_callers_context(self) -> None:
         percentage = Decimal("0.123456789012345678901234567890")
         expected = [{"driver_age_band": "17-20", "relativity": "3.370370367037037036703703704"}]
@@ -965,7 +965,7 @@ class TestABulkOperationRoundsOnceInAStatedContext:
                 )
                 assert _cells(rebased)[0]["relativity"] == "0.0333333333333333333333333333"
 
-    @pytest.mark.req("FR-8412")
+    @pytest.mark.req("FR-2082")
     def test_the_factor_is_not_rounded_before_the_product(self) -> None:
         """DP-2, ruled (i): one rounding. Today rounds 1 + percentage to 28 digits first and
         stores 2.240172837290617283729061729."""
@@ -974,7 +974,7 @@ class TestABulkOperationRoundsOnceInAStatedContext:
         )
         assert _cells(result)[0]["relativity"] == "2.240172837290617283729061728"
 
-    @pytest.mark.req("FR-8412")
+    @pytest.mark.req("FR-2082")
     def test_every_result_is_the_exact_result_rounded_once(self) -> None:
         rng = random.Random(2035)
         mismatches = []
@@ -1000,7 +1000,7 @@ class TestABulkOperationRoundsOnceInAStatedContext:
                 mismatches.append((old, got[0]["relativity"], want))
         assert mismatches == []
 
-    @pytest.mark.req("FR-8412")
+    @pytest.mark.req("FR-2082")
     def test_a_money_minor_uplift_holds_the_fraction(self) -> None:
         """The entry's (a): no rounding to whole minor units at the operation."""
         table = _version(
@@ -1018,12 +1018,12 @@ class TestABulkOperationRoundsOnceInAStatedContext:
 
 
 class TestTheRecordCarriesTheContext:
-    """FR 8412 (7), to-lead "2026-11-07 23:29:34 GMT": the recorded parameters name the context;
+    """FR-2082 (7), to-lead "2026-11-07 23:29:34 GMT": the recorded parameters name the context;
     the operation writes it, a request cannot; a record from before reads as None."""
 
     _CONTEXT = BulkOperationContext(precision=28, places=28, rounding="half_even", version=1)
 
-    @pytest.mark.req("FR-8412")
+    @pytest.mark.req("FR-2082")
     def test_each_computing_operation_records_its_context(self) -> None:
         records = [
             uplift_table(_version(), percentage=Decimal("0.10")).created_by_operation,
@@ -1041,7 +1041,7 @@ class TestTheRecordCarriesTheContext:
             assert record is not None
             assert record.parameters.context == self._CONTEXT  # type: ignore[union-attr]
 
-    @pytest.mark.req("FR-8412")
+    @pytest.mark.req("FR-2082")
     def test_floor_and_cap_records_no_context(self) -> None:
         record = floor_and_cap(
             _version(), floor=Decimal("1.2"), cap=Decimal("1.5")
@@ -1049,7 +1049,7 @@ class TestTheRecordCarriesTheContext:
         assert record is not None
         assert "context" not in record.parameters.model_dump()
 
-    @pytest.mark.req("FR-8412")
+    @pytest.mark.req("FR-2082")
     def test_a_request_cannot_send_the_context(self) -> None:
         with pytest.raises(ValidationError, match=r"extra_forbidden|Extra inputs"):
             UpliftTableRequest.model_validate(
@@ -1059,7 +1059,7 @@ class TestTheRecordCarriesTheContext:
                 }
             )
 
-    @pytest.mark.req("FR-8412")
+    @pytest.mark.req("FR-2082")
     def test_a_record_from_before_reads_as_no_context(self) -> None:
         stored = uplift_table(_version(), percentage=Decimal("0.10")).model_dump(mode="json")
         assert stored["created_by_operation"]["parameters"].pop("context") is not None
