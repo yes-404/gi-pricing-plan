@@ -20,8 +20,10 @@ from typing import ClassVar
 
 import pytest
 from openpyxl import load_workbook
+from pydantic import ValidationError
 
 from model_schema.rating import (
+    BulkOperationContext,
     ImportPreview,
     ImportVerdict,
     RateTableCell,
@@ -32,6 +34,7 @@ from model_schema.rating import (
     RateTableValueType,
     RateTableVersion,
     SeededFrom,
+    UpliftTableRequest,
 )
 from model_schema.refs import ArtifactRef
 from pricing_core.rate_tables.operations import (
@@ -1012,3 +1015,54 @@ class TestABulkOperationRoundsOnceInAStatedContext:
         )
         result = uplift_table(table, percentage=Decimal("0.0375"))
         assert _cells(result)[0]["relativity"] == "12807.9375"
+
+
+class TestTheRecordCarriesTheContext:
+    """FR 8412 (7), to-lead "2026-11-07 23:29:34 GMT": the recorded parameters name the context;
+    the operation writes it, a request cannot; a record from before reads as None."""
+
+    _CONTEXT = BulkOperationContext(precision=28, places=28, rounding="half_even", version=1)
+
+    @pytest.mark.req("FR-8412")
+    def test_each_computing_operation_records_its_context(self) -> None:
+        records = [
+            uplift_table(_version(), percentage=Decimal("0.10")).created_by_operation,
+            uplift_by_filter(
+                _version(),
+                percentage=Decimal("0.10"),
+                filter={"driver_age_band": ["17-20"]},
+            ).created_by_operation,
+            rebase_to_level(
+                _version(value=_value(min=None, max=None)),
+                base_level={"driver_age_band": ["25-29"]},
+            ).created_by_operation,
+        ]
+        for record in records:
+            assert record is not None
+            assert record.parameters.context == self._CONTEXT  # type: ignore[union-attr]
+
+    @pytest.mark.req("FR-8412")
+    def test_floor_and_cap_records_no_context(self) -> None:
+        record = floor_and_cap(
+            _version(), floor=Decimal("1.2"), cap=Decimal("1.5")
+        ).created_by_operation
+        assert record is not None
+        assert "context" not in record.parameters.model_dump()
+
+    @pytest.mark.req("FR-8412")
+    def test_a_request_cannot_send_the_context(self) -> None:
+        with pytest.raises(ValidationError, match="extra_forbidden|Extra inputs"):
+            UpliftTableRequest.model_validate(
+                {
+                    "kind": "uplift_table",
+                    "parameters": {"percentage": "0.10", "context": self._CONTEXT.model_dump()},
+                }
+            )
+
+    @pytest.mark.req("FR-8412")
+    def test_a_record_from_before_reads_as_no_context(self) -> None:
+        stored = uplift_table(_version(), percentage=Decimal("0.10")).model_dump(mode="json")
+        assert stored["created_by_operation"]["parameters"].pop("context") is not None
+        legacy = RateTableVersion.model_validate(stored)
+        assert legacy.created_by_operation is not None
+        assert legacy.created_by_operation.parameters.context is None  # type: ignore[union-attr]

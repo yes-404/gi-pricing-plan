@@ -1416,6 +1416,44 @@ class RebaseToLevelParameters(BaseModel):
     base_level: KeyFilter
 
 
+class BulkOperationContext(BaseModel):
+    """FR 8412 (7): the decimal context a computing bulk operation ran in, recorded with its
+    parameters (04 §4.4). The operation writes it; no request carries it."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    precision: int = Field(ge=1)
+    places: int = Field(ge=0)
+    rounding: Literal["half_even"]
+    version: int = Field(ge=1)
+
+
+class UpliftTableRecordedParameters(UpliftTableParameters):
+    """The record's parameters: the request's, plus the context (FR 8412). `None` on a record
+    written before FR 8412, which reads as ambient 28 digits, factor and product each rounded.
+    It is not dumped when `None`, so a stored record's bytes do not move."""
+
+    context: BulkOperationContext | None = Field(
+        default=None, exclude_if=lambda value: value is None
+    )
+
+
+class UpliftByFilterRecordedParameters(UpliftByFilterParameters):
+    """As `UpliftTableRecordedParameters`, for `uplift_by_filter` (FR 8412)."""
+
+    context: BulkOperationContext | None = Field(
+        default=None, exclude_if=lambda value: value is None
+    )
+
+
+class RebaseToLevelRecordedParameters(RebaseToLevelParameters):
+    """As `UpliftTableRecordedParameters`, for `rebase_to_level` (FR 8412)."""
+
+    context: BulkOperationContext | None = Field(
+        default=None, exclude_if=lambda value: value is None
+    )
+
+
 # The request body of `POST .../bulk-operation` (03 §5.1): the record's `kind` and
 # `parameters`, written once. `applied_to` and `result` are the server's, so they are
 # not request fields and `extra="forbid"` refuses them. Each record below inherits its
@@ -1463,11 +1501,11 @@ BULK_OPERATION_REQUEST_ADAPTER: Final[TypeAdapter[BulkOperationRequest]] = TypeA
 
 
 class UpliftTableOperation(UpliftTableRequest, BulkOperationBase):
-    pass
+    parameters: UpliftTableRecordedParameters
 
 
 class UpliftByFilterOperation(UpliftByFilterRequest, BulkOperationBase):
-    pass
+    parameters: UpliftByFilterRecordedParameters
 
 
 class FloorAndCapOperation(FloorAndCapRequest, BulkOperationBase):
@@ -1475,7 +1513,7 @@ class FloorAndCapOperation(FloorAndCapRequest, BulkOperationBase):
 
 
 class RebaseToLevelOperation(RebaseToLevelRequest, BulkOperationBase):
-    pass
+    parameters: RebaseToLevelRecordedParameters
 
 
 #: The BulkOperation record (04 §4.4), discriminated on `kind`. A version created by a

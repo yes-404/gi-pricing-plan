@@ -49,12 +49,12 @@ from model_schema.rating import (
     RateTableValueType,
     RateTableVersion,
     RebaseToLevelOperation,
-    RebaseToLevelParameters,
+    RebaseToLevelRecordedParameters,
     SeededFrom,
     UpliftByFilterOperation,
-    UpliftByFilterParameters,
+    UpliftByFilterRecordedParameters,
     UpliftTableOperation,
-    UpliftTableParameters,
+    UpliftTableRecordedParameters,
 )
 from model_schema.refs import ArtifactRef, slug_is_admitted
 from pricing_core.rating.compile import ValidationIssue, cell_parses
@@ -797,7 +797,7 @@ def uplift_table(
     new_rows, changed = _transform_rows(rows, table.value.name, lambda old: old * factor)
     operation = UpliftTableOperation(
         kind="uplift_table",
-        parameters=UpliftTableParameters(percentage=percentage),
+        parameters=UpliftTableRecordedParameters(percentage=percentage),
         applied_to=_ref(table, table.version),
         result=BulkOperationResult(
             changed_cells=changed, new_version=_ref(table, table.version + 1)
@@ -833,7 +833,7 @@ def uplift_by_filter(
             new_rows.append(row)
     operation = UpliftByFilterOperation(
         kind="uplift_by_filter",
-        parameters=UpliftByFilterParameters(percentage=percentage, filter=filter),
+        parameters=UpliftByFilterRecordedParameters(percentage=percentage, filter=filter),
         applied_to=_ref(table, table.version),
         result=BulkOperationResult(
             changed_cells=changed, new_version=_ref(table, table.version + 1)
@@ -913,7 +913,7 @@ def rebase_to_level(
     _validate_result(new_rows, table)
     operation = RebaseToLevelOperation(
         kind="rebase_to_level",
-        parameters=RebaseToLevelParameters(base_level=base_level),
+        parameters=RebaseToLevelRecordedParameters(base_level=base_level),
         applied_to=_ref(table, table.version),
         result=BulkOperationResult(
             changed_cells=changed, new_version=_ref(table, table.version + 1)

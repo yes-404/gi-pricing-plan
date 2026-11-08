@@ -49,6 +49,40 @@
       "title": "BlobRef",
       "type": "object"
     },
+    "BulkOperationContext": {
+      "additionalProperties": false,
+      "description": "FR 8412 (7): the decimal context a computing bulk operation ran in, recorded with its\nparameters (04 §4.4). The operation writes it; no request carries it.",
+      "properties": {
+        "places": {
+          "minimum": 0,
+          "title": "Places",
+          "type": "integer"
+        },
+        "precision": {
+          "minimum": 1,
+          "title": "Precision",
+          "type": "integer"
+        },
+        "rounding": {
+          "const": "half_even",
+          "title": "Rounding",
+          "type": "string"
+        },
+        "version": {
+          "minimum": 1,
+          "title": "Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "precision",
+        "places",
+        "rounding",
+        "version"
+      ],
+      "title": "BulkOperationContext",
+      "type": "object"
+    },
     "BulkOperationResult": {
       "additionalProperties": false,
       "description": "The outcome of a bulk operation (04 §4.4): what changed and what it created.",
@@ -325,7 +359,7 @@
           "type": "string"
         },
         "parameters": {
-          "$ref": "#/$defs/RebaseToLevelParameters"
+          "$ref": "#/$defs/RebaseToLevelRecordedParameters"
         },
         "result": {
           "$ref": "#/$defs/BulkOperationResult"
@@ -340,9 +374,9 @@
       "title": "RebaseToLevelOperation",
       "type": "object"
     },
-    "RebaseToLevelParameters": {
+    "RebaseToLevelRecordedParameters": {
       "additionalProperties": false,
-      "description": "`rebase_to_level`'s parameters (04 §4.4): the reference level that becomes 1.0.",
+      "description": "As `UpliftTableRecordedParameters`, for `rebase_to_level` (FR 8412).",
       "properties": {
         "base_level": {
           "additionalProperties": {
@@ -353,12 +387,23 @@
           },
           "title": "Base Level",
           "type": "object"
+        },
+        "context": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/BulkOperationContext"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         }
       },
       "required": [
         "base_level"
       ],
-      "title": "RebaseToLevelParameters",
+      "title": "RebaseToLevelRecordedParameters",
       "type": "object"
     },
     "SeededFrom": {
@@ -393,7 +438,7 @@
           "type": "string"
         },
         "parameters": {
-          "$ref": "#/$defs/UpliftByFilterParameters"
+          "$ref": "#/$defs/UpliftByFilterRecordedParameters"
         },
         "result": {
           "$ref": "#/$defs/BulkOperationResult"
@@ -408,10 +453,21 @@
       "title": "UpliftByFilterOperation",
       "type": "object"
     },
-    "UpliftByFilterParameters": {
+    "UpliftByFilterRecordedParameters": {
       "additionalProperties": false,
-      "description": "`uplift_by_filter`'s parameters (04 §4.4): the percentage plus the key filter.",
+      "description": "As `UpliftTableRecordedParameters`, for `uplift_by_filter` (FR 8412).",
       "properties": {
+        "context": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/BulkOperationContext"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
         "filter": {
           "additionalProperties": {
             "items": {
@@ -433,7 +489,7 @@
         "percentage",
         "filter"
       ],
-      "title": "UpliftByFilterParameters",
+      "title": "UpliftByFilterRecordedParameters",
       "type": "object"
     },
     "UpliftTableOperation": {
@@ -448,7 +504,7 @@
           "type": "string"
         },
         "parameters": {
-          "$ref": "#/$defs/UpliftTableParameters"
+          "$ref": "#/$defs/UpliftTableRecordedParameters"
         },
         "result": {
           "$ref": "#/$defs/BulkOperationResult"
@@ -463,10 +519,21 @@
       "title": "UpliftTableOperation",
       "type": "object"
     },
-    "UpliftTableParameters": {
+    "UpliftTableRecordedParameters": {
       "additionalProperties": false,
-      "description": "`uplift_table`'s parameters (04 §4.4): the percentage, applied to every cell.",
+      "description": "The record's parameters: the request's, plus the context (FR 8412). `None` on a record\nwritten before FR 8412, which reads as ambient 28 digits, factor and product each rounded.\nIt is not dumped when `None`, so a stored record's bytes do not move.",
       "properties": {
+        "context": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/BulkOperationContext"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
         "percentage": {
           "description": "Exact decimal as a string; never a binary float (FR-10).",
           "pattern": "^-?[0-9]+(\\.[0-9]+)?$",
@@ -477,7 +544,7 @@
       "required": [
         "percentage"
       ],
-      "title": "UpliftTableParameters",
+      "title": "UpliftTableRecordedParameters",
       "type": "object"
     }
   },
