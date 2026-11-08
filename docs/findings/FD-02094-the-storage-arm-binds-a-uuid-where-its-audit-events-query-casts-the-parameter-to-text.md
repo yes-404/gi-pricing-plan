@@ -1,18 +1,20 @@
 ---
-id: FD-8404
+id: FD-2094
 family: finding
 title: the P2 sweep's storage arm binds a UUID where its audit_events query casts the parameter to text, so asyncpg refuses the bind and NFR-470 cannot be measured
-status: active
-created: 2026-11-07   # draft under working id 8404, filed with PL 8405's mint
+status: closed
+created: 2026-11-08   # original date 2026-11-07, draft under working id 8404; minted 2026-11-08 as FD-2094
 owner: auditor
 tree: bfeedd9a282ee0180be54bf201b17930fc4bd2d0   # origin/main at the draft; the S2 run was at 6f958137, and the instrument is the same file at both
 corrected_by: []
-relates: [WK-1178, SL-1736, LG-2003, PL-1735, FD-8403, NFR-470]
+relates: [WK-1178, SL-1736, LG-2003, PL-1735, FD-2093, NFR-470]
 ---
 
-# FD 8404 — the P2 sweep's storage arm binds a UUID where its audit_events query casts the parameter to text, so asyncpg refuses the bind and NFR-470 cannot be measured
+# FD-2094 — the P2 sweep's storage arm binds a UUID where its audit_events query casts the parameter to text, so asyncpg refuses the bind and NFR-470 cannot be measured
 
-*(Draft under working id 8404, on `draft/pl-fd8403-2026-11-07`. It is filed with PL 8405's mint, not before. The severity, the owner and the title's subject (the UUID binding) are the maintainer's, to-lead "2026-11-07 18:54:18 GMT" item (1).)*
+*Disclosure: drafted under working id 8404; minted as FD-2094 on 2026-11-08, in the SL-2096 mint (WK-1178).*
+
+*(Draft under working id 8404, on `draft/pl-fd8403-2026-11-07`. It is filed with PL-2095's mint, not before. The severity, the owner and the title's subject (the UUID binding) are the maintainer's, to-lead "2026-11-07 18:54:18 GMT" item (1).)*
 
 ## Finding
 
@@ -38,7 +40,7 @@ bind fails before the query runs: `DataError: invalid input for query argument $
 `audit_events.entity_ref` is a `String(512)` (`backend/src/app/db/models.py:234`). The text match is what the
 query means, so the bind's type is the defect, not the query.
 
-**This defect is not FD 8403.** It is independent of the role: the owner gets the same error, because the
+**This defect is not FD-2093.** It is independent of the role: the owner gets the same error, because the
 type is decided at bind. The storage arm never ran before S2: `LG-2003` lists `storage` under "Owed", not
 exercised. No test reaches it, because `tests/test_measure_p2_nfr_sweep.py` is DB-free.
 
@@ -62,11 +64,13 @@ last line `rc=1`. It ran as `gip_app_login` with the owner as `GIP_MIGRATION_DAT
 - `:149` `asyncpg.exceptions.DataError: invalid input for query argument $1: UUID('01a1b75a-840f-7909-9e9f-70ec5b8b94... (expected str, got UUID)`
 - `:302-303` `sqlalchemy.exc.DBAPIError: … [SQL: select coalesce(sum(pg_column_size(t.*)), 0) from audit_events t where entity_ref like '%' || cast($1 as text) || '%']`
 
-The run had passed `_fremtpl2` (`:604`, on a workspace `seed.run` had just created: see FD 8403) and the
+The run had passed `_fremtpl2` (`:604`, on a workspace `seed.run` had just created: see FD-2093) and the
 third ingest (`:775-785`) before it failed.
 
 ## Disposition
 
-MEDIUM, owner WK-1178 (to-lead "2026-11-07 18:54:18 GMT"). **Fixed in the same instrument slice as FD 8403**
-(SL 8406 under PL 8405), after the pin, red first against a `-T` copy. J storage then runs in S3 on Fri
+MEDIUM, owner WK-1178 (to-lead "2026-11-07 18:54:18 GMT"). **Fixed in the same instrument slice as FD-2093**
+(SL-2096 under PL-2095), after the pin, red first against a `-T` copy. J storage then runs in S3 on Fri
 13 Nov with I.
+
+***Resolved 2026-11-08*** — closed in place 2026-11-08 by the executor, as the closing act of the mint of SL-2096 (WK-1178, LG-2097, PL-2095; this PR, its number, squash commit and merge date are written at the merge's date-of-record), on the GO to-lead "2026-11-07 19:10:01 GMT", from the audit of SL-2096 adopted by the lead (from-lead "2026-11-08 00:13:01 GMT"; the audit section is in LG-2097). Delivered remedy: `audit_events_rows` is `… cast(cast(:v as uuid) as text) …` (one site: `git grep -n -E 'cast\(:|::text|as text'` finds none left); red `expected str, got UUID` at R1 on `audit_events_rows` only, green at R2; `backend/tests/test_measure_p2_nfr_sweep_storage.py` holds it. Gate evidence: LG-2097.

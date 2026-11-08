@@ -1,4 +1,4 @@
-"""`scripts/measure-p2-nfr-sweep.py`'s storage arm (FD 8404, PL 8405): its per-version queries run.
+"""`scripts/measure-p2-nfr-sweep.py`'s storage arm (FD-2094, PL-2095): its per-version queries run.
 
 The arm's `audit_events_rows` query bound a `UUID` against `cast(:v as text)`, which asyncpg
 refuses (`expected str, got UUID`). No test reached the database arms, so the defect met its first

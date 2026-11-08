@@ -1,18 +1,20 @@
 ---
-id: FD-8403
+id: FD-2093
 family: finding
 title: the P2 NFR sweep seeds through the app DSN, so least privilege (FD-1729) blocks it
-status: active
-created: 2026-11-07   # draft under working id 8403, filed with PL 8405's mint
+status: closed
+created: 2026-11-08   # original date 2026-11-07, draft under working id 8403; minted 2026-11-08 as FD-2093
 owner: auditor
 tree: bfeedd9a282ee0180be54bf201b17930fc4bd2d0   # origin/main at the draft; the S2 runs were at 6f958137, and the instrument is the same file at both (git diff 6f958137 bfeedd9a -- scripts/measure-p2-nfr-sweep.py is empty)
 corrected_by: []
 relates: [WK-1178, SL-1736, LG-2003, PL-1735, FD-1729, FR-44, NFR-1443, NFR-468]
 ---
 
-# FD 8403 — the P2 NFR sweep seeds through the app DSN, so least privilege (FD-1729) blocks it
+# FD-2093 — the P2 NFR sweep seeds through the app DSN, so least privilege (FD-1729) blocks it
 
-*(Draft under working id 8403, on `draft/pl-fd8403-2026-11-07`. It is filed with PL 8405's mint, not before. The severity, the owner and the title are the maintainer's, to-lead "2026-11-07 18:49:24 GMT" item I. The one-way corpus joins by the dated line of to-lead "2026-11-07 18:54:18 GMT" item (1).)*
+*Disclosure: drafted under working id 8403; minted as FD-2093 on 2026-11-08, in the SL-2096 mint (WK-1178).*
+
+*(Draft under working id 8403, on `draft/pl-fd8403-2026-11-07`. It is filed with PL-2095's mint, not before. The severity, the owner and the title are the maintainer's, to-lead "2026-11-07 18:49:24 GMT" item I. The one-way corpus joins by the dated line of to-lead "2026-11-07 18:54:18 GMT" item (1).)*
 
 ## Finding
 
@@ -81,8 +83,10 @@ as its first line and `rc=1` as its last. Every run was on its own `createdb -T 
 ## Disposition
 
 MEDIUM, owner WK-1178: it blocks a measurement and prices nothing (to-lead "2026-11-07 18:49:24 GMT").
-**Fix before Thu 12 Nov**, after the pin in the queue, in SL 8406 under PL 8405. The harness seeds through
+**Fix before Thu 12 Nov**, after the pin in the queue, in SL-2096 under PL-2095. The harness seeds through
 a separate owner DSN and serves through the app DSN. The app's runtime code is not touched. The seed URL
 never names the template. Red first on a `-T` copy. The gate is on the maintainer's word. I and J
 (one-way) then run in S3 on Fri 13 Nov on the frozen tree. If J's or K's arms hit the same wall, they
 join this finding by dated line: one finding, one fix.
+
+***Resolved 2026-11-08*** — closed in place 2026-11-08 by the executor, as the closing act of the mint of SL-2096 (WK-1178, LG-2097, PL-2095; this PR, its number, squash commit and merge date are written at the merge's date-of-record), on the GO to-lead "2026-11-07 19:10:01 GMT", from the audit of SL-2096 adopted by the lead (from-lead "2026-11-08 00:13:01 GMT"; the audit section is in LG-2097). Delivered remedy: `scripts/measure-p2-nfr-sweep.py` seeds through `_Env.owner_database` (built from `GIP_MIGRATION_DATABASE_URL`, as `seed.py` builds it) via the single `_grant`, and serves through the app DSN; `dsn_failure` refuses an unset owner DSN, the template database `gipricing`, a different host/port/database, and one user on both DSNs. Red first by assertion (LG-2097: "the seed was handed the APP database"), A5 mutation proofs reverted; window W: R0 `permission denied for table workspaces`, head rc=0 for `cells-diff`, `one-way` and `storage` (100000 rows, by the ruling "2026-11-07 21:03:10 GMT"). Gate evidence: LG-2097 (gate END `2026-11-08T03:29:03+00:00`, `rc=1`, standing under item 31).

@@ -42,7 +42,7 @@ if TYPE_CHECKING:
 ROOT = Path(__file__).resolve().parent.parent
 
 #: The shared development database every `-T` copy is made from; no DSN a database arm runs on
-#: may name it (PL 8405, DP-2).
+#: may name it (PL-2095, DP-2).
 TEMPLATE_DATABASE = "gipricing"
 
 # =============================================================================================
@@ -518,7 +518,7 @@ class _Env:
         register_data_handlers()
         register_rate_table_handlers()
         self.settings = load_settings(dev_auth_enabled=True)
-        # FD 8403: the application's login role may not create a workspace or its members, so
+        # FD-2093: the application's login role may not create a workspace or its members, so
         # the seed alone runs on the owner's connection (`seed.py`'s FD-1729 split); everything
         # `create_app` and the measured paths touch stays on the application's.
         if self.settings.migration_database_url is None:
@@ -547,7 +547,7 @@ class _Env:
 
 
 def dsn_failure(app_url: str, owner_url: str | None) -> str | None:
-    """The 29 Oct rules, made mechanical (PL 8405, DP-2 (a)): why this pair of DSNs may not run
+    """The 29 Oct rules, made mechanical (PL-2095, DP-2 (a)): why this pair of DSNs may not run
     a database arm, or `None`. The owner writes, so it must be named, must not be the template,
     and must reach the same database as the application's login role under another user."""
     from sqlalchemy.engine import make_url
@@ -573,7 +573,7 @@ def dsn_failure(app_url: str, owner_url: str | None) -> str | None:
 
 
 async def _grant(env: _Env, workspace_id: UUID) -> dict[str, Any]:
-    """Grant the demo principals in `workspace_id`, as the owner (PL 8405, DP-5). The owner's
+    """Grant the demo principals in `workspace_id`, as the owner (PL-2095, DP-5). The owner's
     connection lives for this call alone."""
     try:
         return await _import_seed().grant_demo_principals(env.owner_database, workspace_id)

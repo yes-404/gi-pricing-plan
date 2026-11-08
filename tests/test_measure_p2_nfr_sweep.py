@@ -372,7 +372,7 @@ def test_the_profile_command_line_defaults_to_every_size_and_parses_a_subset() -
     assert subset.sizes == [TWO_M]
 
 
-# --- PL 8405 (SL 8406): seed as the owner, serve as the app --------------------------------------
+# --- PL-2095 (SL-2096): seed as the owner, serve as the app --------------------------------------
 
 APP_DSN = "postgresql+asyncpg://gip_app_login:secret@localhost:5432/gipricing_copy"
 OWNER_DSN = "postgresql+asyncpg://gipricing:gipricing@localhost:5432/gipricing_copy"
@@ -381,7 +381,7 @@ OWNER_DSN = "postgresql+asyncpg://gipricing:gipricing@localhost:5432/gipricing_c
 def test_the_seed_runs_on_the_owner_database_and_never_on_the_app_database(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """FD 8403: `grant_demo_principals` writes `workspaces`, roles and members, which the
+    """FD-2093: `grant_demo_principals` writes `workspaces`, roles and members, which the
     application's login role may not. A recorder stands in for it and says which handle it got."""
     import asyncio
     from types import SimpleNamespace

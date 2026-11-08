@@ -1,10 +1,10 @@
 ---
-id: PL-8405
+id: PL-2095
 family: plan
 kind: map
-title: WK-1178 — FD 8403 and FD 8404, the P2 NFR sweep seeds through a separate owner DSN and serves through the app DSN, and its storage arm binds its audit_events query as a UUID, SL 8406 — a dated Work-plan delta
-status: draft                   # draft → active → superseded | retired (§1.2a) — L1: draft→active rides the slice's PR
-created: 2026-11-07             # draft under working id 8405
+title: WK-1178 — FD-2093 and FD-2094, the P2 NFR sweep seeds through a separate owner DSN and serves through the app DSN, and its storage arm binds its audit_events query as a UUID, SL-2096 — a dated Work-plan delta
+status: active                  # draft → active → superseded | retired (§1.2a) — L1: draft→active rides the slice's PR
+created: 2026-11-08             # original date 2026-11-07, draft under working id 8405; minted 2026-11-08
 owner: planner
 tree: 20087ba79fe33e15d30f4a68ed6b0d49264ff98f   # origin/main bfeedd9a282ee0180be54bf201b17930fc4bd2d0
 phase: P2
@@ -12,39 +12,41 @@ work: WK-1178
 supersedes: []
 superseded_by: ~
 corrected_by: []
-relates: [PL-1856, PL-1735, SL-1736, LG-2003, FD-1729, FD-8403, FD-8404, FR-44, NFR-1443, NFR-468, NFR-470]
+relates: [PL-1856, PL-1735, SL-1736, LG-2003, FD-1729, FD-2093, FD-2094, FR-44, NFR-1443, NFR-468, NFR-470]
 ---
 
-# PL 8405 — WK-1178: the P2 sweep instrument's two defects. Seed as the owner, serve as the app, bind the audit query as a UUID (SL 8406, a dated Work-plan delta)
+# PL-2095 — WK-1178: the P2 sweep instrument's two defects. Seed as the owner, serve as the app, bind the audit query as a UUID (SL-2096, a dated Work-plan delta)
+
+*Disclosure: drafted under working id 8405; minted as PL-2095 on 2026-11-08, in the SL-2096 mint (WK-1178). Status draft → active rides the slice's PR (L1 (a')).*
 
 > **For agentic workers:** a **dated Work-plan delta** under Lean P2 L1 (a'). It `relates:` `PL-1735`
 > (the sweep's own delta, the instrument's plan) and `PL-1856` (the WK-1178 parent PL-2059 also relates), and edits neither. It has one slice row,
-> SL 8406, whose ledger is LG 8407. **It decides nothing.** Six decision points each carry a
+> SL-2096, whose ledger is LG-2097. **It decides nothing.** Six decision points each carry a
 > recommendation; the maintainer rules them. The build seat starts when the pin lands, and the gate runs
 > on the maintainer's word (to-lead "2026-11-07 18:54:59 GMT"). The executor's skills are
 > `superpowers:test-driven-development`, `.claude/skills/python-test` and `.claude/skills/dev-commands`.
-> PL 8405, SL 8406, LG 8407, FD 8403 and FD 8404 are working ids reserved by the lead.
+> PL-2095, SL-2096, LG-2097, FD-2093 and FD-2094 are working ids reserved by the lead.
 
 ## Authority
 
-- **FD 8403.** To-lead "2026-11-07 18:49:24 GMT" item I: "FD, YES … severity MEDIUM (blocks a measurement;
+- **FD-2093.** To-lead "2026-11-07 18:49:24 GMT" item I: "FD, YES … severity MEDIUM (blocks a measurement;
   no mispricing), owner WK-1178". "Scope: the harness's shared _Env, so J and K join the same FD by dated
   line if they hit the wall; one FD, one fix." "FIX, code before Thu 12, after the pin in the queue:
   scripts/measure-p2-nfr-sweep.py seeds through a SEPARATE owner DSN and serves through the app DSN; red
   first (the S2 failure reproduced in a test against a -T copy), green after; the app's runtime code is not
   touched; the seed URL never names the template (29 Oct rules); gate single or paired on my word."
-- **FD 8404.** To-lead "2026-11-07 18:54:18 GMT" item (1): "FD 8403 joins by dated line for the one-way
+- **FD-2094.** To-lead "2026-11-07 18:54:18 GMT" item (1): "FD-2093 joins by dated line for the one-way
   corpus (grant_demo_principals as gip_app_login at :661). The storage arm's asyncpg DataError at :841 →
-  :815 … is a SECOND defect: FD 8404, YES, MEDIUM, owner WK-1178, titled on the UUID binding; fixed in the
-  SAME instrument slice as FD 8403, after the pin, each red first against a -T copy; J runs in S3 with I."
-- **This plan.** To-lead "2026-11-07 18:54:59 GMT": "a dated delta under WK-1178's plan, with FD 8403 and
-  FD 8404 essays as its evidence", stating (a) to (f), which are answered here in order: (a) DP-1 and
+  :815 … is a SECOND defect: FD-2094, YES, MEDIUM, owner WK-1178, titled on the UUID binding; fixed in the
+  SAME instrument slice as FD-2093, after the pin, each red first against a -T copy; J runs in S3 with I."
+- **This plan.** To-lead "2026-11-07 18:54:59 GMT": "a dated delta under WK-1178's plan, with FD-2093 and
+  FD-2094 essays as its evidence", stating (a) to (f), which are answered here in order: (a) DP-1 and
   Task R2; (b) DP-3, and the sibling grep in Evidence; (c) Tasks R1 and W, with Needs; (d) Gate form;
   (e) Needs; (f) S3 form.
 
 ## Goal
 
-After SL 8406, `scripts/measure-p2-nfr-sweep.py` runs its three database arms against one `-T` copy with
+After SL-2096, `scripts/measure-p2-nfr-sweep.py` runs its three database arms against one `-T` copy with
 two env-named DSNs: the **owner** DSN for the seed alone, and the **app** DSN for everything `create_app`
 and the measured paths touch. `storage`'s per-version queries also bind. Nothing under `backend/src/`
 changes. Then I (NFR-1443), J one-way (NFR-468) and J storage (NFR-470) can run in S3 on Fri 13 Nov.
@@ -74,7 +76,7 @@ prints nothing.
 | `.github/workflows/python.yml:118`, `:343-344` | CI's service database **is named `gipricing`**, owner and app DSNs both on it |
 | `LG-2003` | the harness's DB arms are "wiring only until their first smoke"; `storage` and `one-way` never ran; the one NFR-1443 reading (2026-10-22) ran as the owner, before FD-1729 merged (`#1398` `1e0a8abb`, `#1399` `eaddb4d9`, 2026-10-26); the harness merged after it (`#1429` `c796e4c0`, 2026-11-04) |
 
-**The S2 tracebacks** are quoted with their log lines in FD 8403 and FD 8404. In short: I as
+**The S2 tracebacks** are quoted with their log lines in FD-2093 and FD-2094. In short: I as
 `gip_app_login` → `permission denied for table workspaces` at `:897`; I as the owner → `LeastPrivilegeError`
 at `:901`; J one-way as `gip_app_login` → the same denial at `:661`; J storage → `DataError … (expected str,
 got UUID)` at `:841` → `:815`.
@@ -108,21 +110,21 @@ are written to them.
   template wrote demo rows into it. The guard costs one function and DB-free tests. It sits in `main()`,
   not in `_Env`, because CI's own database is named `gipricing` (`python.yml:118`) and tests build `_Env`
   directly. The guard protects the operator's command, not the test fixture.
-- **DP-3: FD 8404's fix.** (a) The SQL types the parameter:
+- **DP-3: FD-2094's fix.** (a) The SQL types the parameter:
   `entity_ref like '%' || cast(cast(:v as uuid) as text) || '%'`. The bind stays the one `UUID` that all six
   queries share. (b) The query binds `str(version_id)` under its own name. **Recommendation (a).** One
   token-level change. `scalar` keeps one signature and one bind. The parameter's type is stated where it is
   used. `::` is not available: SQLAlchemy's `text()` would read `:v::uuid` as a bind name.
 - **DP-4 (blocking): where the reds live.** (a) **Three layers.**
-  - FD 8403's red is DB-free, in `tests/test_measure_p2_nfr_sweep.py`: a recorder stands in for
+  - FD-2093's red is DB-free, in `tests/test_measure_p2_nfr_sweep.py`: a recorder stands in for
     `grant_demo_principals` and fails when it is handed the app database.
-  - FD 8404's red is DB-backed, in a new `backend/tests/test_measure_p2_nfr_sweep_storage.py`, on the
+  - FD-2094's red is DB-backed, in a new `backend/tests/test_measure_p2_nfr_sweep_storage.py`, on the
     `database` fixture (the login role on the per-worktree `-T` copy). This needs no `OWNER_FIXTURE_USERS`
     row.
   - Both are reproduced from S2 as harness runs in one DB window on a `createdb -T` copy: red at R0's head,
     green at R2's.
 
-  (b) Window runs only. (c) A DB-backed FD 8403 test on `owner_database`, which needs a
+  (b) Window runs only. (c) A DB-backed FD-2093 test on `owner_database`, which needs a
   `backend/tests/conftest_db.py` allow-list row. **Recommendation (a).** (b) leaves CI blind again: the
   reason both defects reached S2 is that no test touches the DB arms (`LG-2003` A4). (c) edits the fixture
   file every DB-backed test loads, which would break the clean file overlap of the Gate form. The ruling's
@@ -137,7 +139,7 @@ are written to them.
   seeded Jobs and the rate-table seeding stay on the app DSN. (b) Move them to the owner pre-emptively.
   **Recommendation (a).** They write what the application writes, under grants (Evidence). Moving them
   would hide from the measurement a wall the application itself would hit. If W's green run stops on one,
-  that is a STOP to the lead, and a dated line on FD 8403 by the scope rule "J and K join the same FD by
+  that is a STOP to the lead, and a dated line on FD-2093 by the scope rule "J and K join the same FD by
   dated line". It is never a silent move to the owner.
 
 ## Acceptance Standard
@@ -145,19 +147,19 @@ are written to them.
 Each item is checked by a command a fresh reviewer can run. Items 1 and 2 apply to this plan.
 
 1. **This delta passes the docs checks on its own branch.** `python3 scripts/audit-docs.py` prints no
-   failing line except those for the working ids this branch uses (PL 8405, FD 8403, FD 8404, and SL 8406 and
-   LG 8407 cited), and `python3 scripts/doc-index.py --check` agrees. After the mint both exit 0.
+   failing line except those for the working ids this branch uses (PL-2095, FD-2093, FD-2094, and SL-2096 and
+   LG-2097 cited), and `python3 scripts/doc-index.py --check` agrees. After the mint both exit 0.
 2. **No requirement range.** `grep -nE '(N?FR)-[0-9]+ *(-|to|–) *(N?FR-)?[0-9]+' <this file>` prints no line
    that stands for a set of ids.
 
-SL 8406:
+SL-2096:
 
 - **A1. The write set** is the Write set below, by `git diff --name-only origin/main...HEAD`. Nothing under
   `backend/src/`, `packages/`, `examples/`, `backend/migrations/`, `deploy/` or `backend/tests/conftest*.py`.
 - **A2. One seeding path.** `git grep -n 'grant_demo_principals(' -- scripts/measure-p2-nfr-sweep.py` prints
   exactly one line, inside `_grant`, and that line names `env.owner_database`. `git grep -n '_grant(' -- scripts/measure-p2-nfr-sweep.py`
   shows the call sites that replaced `:604`, `:661` and `:897`.
-- **A3. Red by cause, in the LG before the green (FD 8403).** At R1's commit,
+- **A3. Red by cause, in the LG before the green (FD-2093).** At R1's commit,
   `test_the_seed_runs_on_the_owner_database_and_never_on_the_app_database` fails with its own assertion
   message naming the app database. A fixture, import, `AttributeError` or `NameError` is not the red. At
   R2's commit it passes.
@@ -170,7 +172,7 @@ SL 8406:
   different database, same user, and one accepting case. Each refusal is shown red by deleting its clause,
   the mutation is reverted, and the revert is proved by `git diff --stat` empty. The commands and outputs are
   in the LG.
-- **A6. Red by cause (FD 8404).** At R1's commit, `backend/tests/test_measure_p2_nfr_sweep_storage.py` fails
+- **A6. Red by cause (FD-2094).** At R1's commit, `backend/tests/test_measure_p2_nfr_sweep_storage.py` fails
   on `audit_events_rows` with `DataError` and `expected str, got UUID` in the text. Every other
   coalesce-shaped storage query in the same test passes. At R2's commit all pass. `dataset_versions_row`
   (a `scalar_one` over a row the empty database lacks) is named in the test as excluded, with that reason.
@@ -203,8 +205,8 @@ SL 8406:
 
 - **Seats:** one executor (model per `executor.md`) and one auditor. No decision-maker is needed once the
   DPs are ruled.
-- **Ids:** PL 8405, SL 8406, LG 8407, FD 8403, FD 8404, all reserved. No other id is foreseen. A wall in W's
-  green run is a dated line on FD 8403 (DP-6), not a new id.
+- **Ids:** PL-2095, SL-2096, LG-2097, FD-2093, FD-2094, all reserved. No other id is foreseen. A wall in W's
+  green run is a dated line on FD-2093 (DP-6), not a new id.
 - **DB:** one window, W, of about 45 min, on its own `createdb -T gipricing` copy per pass, granted in writing
   by the lead (common brief items 6 and 12).
   - Each pass gets a fresh copy, `gipricing_sl8406_<red|green>`. Both DSNs point at the copy:
@@ -259,12 +261,12 @@ Each side's file list is `git diff --name-only origin/main...origin/<branch> | s
   `backend/src/app/demo/guide.py`.** That is one-way: nothing LAST-2 runs imports this slice. SL 8373's code
   is `scripts/audit-docs.py`, `tests/test_spec_examples.py` and a fixture, and neither slice reads the other.
 - **Verdict: pairable with either** (no shared code file, no partition path). The one consequence is item 21:
-  if LAST-2 merges before SL 8406's gate, SL 8406 re-merges main and re-runs A9's two files at the re-merged
+  if LAST-2 merges before SL-2096's gate, SL-2096 re-merges main and re-runs A9's two files at the re-merged
   head before its PR. The maintainer gives the word for single or paired.
 
 ## S3 form (brief item (f))
 
-The fixed harness runs on nfr-bench-1 on Fri 13 Nov, on the frozen tree (which holds SL 8406, merged
+The fixed harness runs on nfr-bench-1 on Fri 13 Nov, on the frozen tree (which holds SL-2096, merged
 before Thu 12). Each of **I** (`cells-diff`, all five runs, `--seeded-jobs` default 10 000), **J one-way**
 (`one-way`, defaults) and **J storage** (`storage`, defaults) gets its own `createdb -T gipricing` copy,
 `gipricing_nfrs3_<item>`, migrated to head, with **both DSNs naming that copy**:
@@ -292,7 +294,7 @@ K (contention) touches no database and is not affected.
 
 ## Tasks
 
-### SL 8406: the row. Scope: A1 to A10; `01` NFR-468, NFR-470, FR-44; `03` NFR-1443 (measured by the instrument, not changed); lane WK-1178; after the pin, before Thu 12 Nov
+### SL-2096: the row. Scope: A1 to A10; `01` NFR-468, NFR-470, FR-44; `03` NFR-1443 (measured by the instrument, not changed); lane WK-1178; after the pin, before Thu 12 Nov
 
 Worktree `sl-8406-sweep-dsn`, from `origin/main` at its seat. Every line number above is re-derived at that
 base (G7).
@@ -306,7 +308,7 @@ base (G7).
   `audit_events_rows`), with the SQL text unchanged. Add a module-level
   `async def _version_scalar(session, query: str, version_id: UUID) -> int`, the body of today's `scalar`;
   `_storage` calls it. `tests/test_measure_p2_nfr_sweep.py` stays green (run-small). Record the R0 sha in
-  LG 8407: W's red pass runs there.
+  LG-2097: W's red pass runs there.
 - [ ] **R1. The failing tests, committed alone.**
   - In `tests/test_measure_p2_nfr_sweep.py`, add
     `test_the_seed_runs_on_the_owner_database_and_never_on_the_app_database`. It uses a stand-in `env`
@@ -321,11 +323,11 @@ base (G7).
     `new_uuid7()`, expecting `0`. It is red at R1 on `audit_events_rows` only (A6). It is DB-backed, so it
     runs in a no-gate gap or in W, never beside a gate (item 32).
 - [ ] **R2. Green (one commit per defect).**
-  - (i) FD 8403: `_Env` adds `self.owner_database`, built as `seed.py:458-460` builds it, and exits naming
+  - (i) FD-2093: `_Env` adds `self.owner_database`, built as `seed.py:458-460` builds it, and exits naming
     `GIP_MIGRATION_DATABASE_URL` when that is unset. `_grant` passes `env.owner_database`. Each arm disposes
     `owner_database` when it ends. `main()` calls `dsn_failure` (DP-2) before `asyncio.run` for `one-way`,
     `storage` and `cells-diff`, and exits with its message.
-  - (ii) FD 8404: `audit_events_rows` becomes
+  - (ii) FD-2094: `audit_events_rows` becomes
     `… like '%' || cast(cast(:v as uuid) as text) || '%'` (DP-3).
   - Then A5's four mutations, each reverted. ruff, ruff format on the changed files, and mypy, each rc
     quoted (item 16).
@@ -338,13 +340,13 @@ base (G7).
   (DP-6).
 - [ ] **G. The gate (A10).** Re-merge `origin/main` (a merge, never a rebase). Run A9's files at the
   re-merged head, then one full code gate on the maintainer's word, single or paired. The gate's lines go
-  in LG 8407 before the auditor is seated.
+  in LG-2097 before the auditor is seated.
 
 ### Write set
 
 `scripts/measure-p2-nfr-sweep.py`; `tests/test_measure_p2_nfr_sweep.py`; new
-`backend/tests/test_measure_p2_nfr_sweep_storage.py`; LG 8407; `docs/roadmap.md` (SL 8406's row, one
-line, at the mint); this plan (`status:` only); FD 8403 and FD 8404 and their register rows (drafted on
+`backend/tests/test_measure_p2_nfr_sweep_storage.py`; LG-2097; `docs/roadmap.md` (SL-2096's row, one
+line, at the mint); this plan (`status:` only); FD-2093 and FD-2094 and their register rows (drafted on
 this branch, minted with the slice); `docs/INDEX.md`.
 
 ### Files shared
@@ -357,8 +359,8 @@ Code: none with LAST-2 or SL 8373 (Gate form). Records: `docs/INDEX.md` with bot
 - **The maintainer:** DP-1 to DP-6; the slice GO when the pin lands; the gate's word (single or paired).
 - **The lead:** window W's grant and brief; the build seat; S3's brief items (1) to (4); the mint order
   (ids land in merge order: this slice's block after whatever merges before it).
-- **The auditor:** A1 to A10 at `origin/main...sl-8406-sweep-dsn`; FD 8403 and FD 8404 closed by the
-  slice's close commit, and SL 8406's row read at `origin/main` after the merge (common brief item 42).
+- **The auditor:** A1 to A10 at `origin/main...sl-8406-sweep-dsn`; FD-2093 and FD-2094 closed by the
+  slice's close commit, and SL-2096's row read at `origin/main` after the merge (common brief item 42).
 
 ## Self-review
 
@@ -366,7 +368,7 @@ Code: none with LAST-2 or SL 8373 (Gate form). Records: `docs/INDEX.md` with bot
    - 18:49:24: separate owner DSN (DP-1, R2 (i)); app DSN serves (A4); red first on a `-T` copy (A3, A6,
      A7); app runtime untouched (A8, G1); seed URL never the template (DP-2, G2); gate single or paired on
      the word (A10, Gate form); J and K join by dated line (DP-6).
-   - 18:54:18: `:661` joins FD 8403 (DP-5, A2); `:841` → `:815` is FD 8404, the same slice (DP-3, A6).
+   - 18:54:18: `:661` joins FD-2093 (DP-5, A2); `:841` → `:815` is FD-2094, the same slice (DP-3, A6).
    - 18:54:59 (a) to (f): each is mapped under Authority.
 2. **Every cite read** at `bfeedd9a`: the script lines in Evidence; `seed.py:346`, `:448-461`;
    `config.py:121-129`; `main.py:29`, `:114`, `:278`; `immutability.py:171`; the grants migration's rows;
@@ -388,7 +390,7 @@ This section is appended. No sentence above it is edited: Task W and A7 still re
 this delta is the record that the 2000-row green could not exist.
 
 **Ruling.** To-lead "2026-11-07 21:03:10 GMT" (the maintainer, by delegation): "A7 one-way and storage:
-ACCEPT 100000 rows as A7's size, by dated delta on PL 8405 task W and A7". The reason it quotes: "at 2000
+ACCEPT 100000 rows as A7's size, by dated delta on PL-2095 task W and A7". The reason it quotes: "at 2000
 and 20000 rows the SEED's own fit raises DegenerateFitError ("9 level(s) below the relativity floor 0.01")
 at R0 and at the head alike, before any code under test; at 100000 the red/green splits exactly on the two
 defects". A7's `cells-diff --only rows-10000 --seeded-jobs 10` stays at its size and is MET.
