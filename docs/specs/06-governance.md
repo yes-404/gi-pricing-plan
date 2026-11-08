@@ -187,7 +187,7 @@ auditor, or a regulator:
 
 ### 4.1 `Role`, `RoleAssignment`, `Permission`
 
-```json
+```json illustrative
 {
   "role": {
     "slug": "pricing-actuary",
@@ -343,7 +343,7 @@ Notably absent from Pricing Actuary: ~~every `*:approve` permission~~ `approval:
 
 ### 4.2 `ApprovalPolicy` (workspace defaults)
 
-```json
+```json illustrative
 {
   "policies": [
     {"artifact_type": "validation_rule", "approvers_required": 1,
@@ -459,7 +459,7 @@ Notably absent from Pricing Actuary: ~~every `*:approve` permission~~ `approval:
 
 ### 4.3 `ApprovalRequest` and `ApprovalDecision`
 
-```json
+```json schema=ApprovalRequest
 {
   "id": "0190b5a2-7c3e-7a10-9d21-4f6b8c2e1a01",
   "workspace_id": "0190b5a2-7c3e-7a10-9d21-4f6b8c2e1a01",
@@ -480,7 +480,7 @@ The block above validates as an `ApprovalRequest`. The block below is FR-352's f
 `change_summary`, with the `expedited`, `evidence_bundle`, `checklist` and `flags` keys, as the example
 first printed them.
 
-```json
+```json illustrative
 {
   "change_summary": "AD frequency model refit on 2026H1 data; driver-age relativities softened at young ages; minimum premium raised to £280.",
   "expedited": false,
@@ -550,7 +550,7 @@ Generated sections, in order (R3). Each cites the artifacts it drew from.
 
 *(Dated note, 2026-10-18, WK-674 Slice 5, on the maintainer's (by delegation) entry "2026-10-18 23:22:15 BST" in `to-lead.md`: this module keeps no table of action names. The action `deployment.switched` (FR-268) is `03`'s, named and defined once in `03` §5.1's list of this Work's audit actions; it is chained and verified like every other event here.)*
 
-```json
+```json schema=AuditEvent
 {
   "id": "0190b5a2-7c3e-7a10-9d21-4f6b8c2e1a01",
   "workspace_id": "0190b5a2-7c3e-7a10-9d21-4f6b8c2e1a01",

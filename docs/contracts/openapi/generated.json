@@ -15925,6 +15925,45 @@
         "title": "RelativityLevel",
         "type": "object"
       },
+      "ReportCounts": {
+        "additionalProperties": false,
+        "properties": {
+          "error": {
+            "minimum": 0.0,
+            "title": "Error",
+            "type": "integer"
+          },
+          "fail": {
+            "minimum": 0.0,
+            "title": "Fail",
+            "type": "integer"
+          },
+          "pass": {
+            "minimum": 0.0,
+            "title": "Pass",
+            "type": "integer"
+          },
+          "skipped": {
+            "minimum": 0.0,
+            "title": "Skipped",
+            "type": "integer"
+          },
+          "warn": {
+            "minimum": 0.0,
+            "title": "Warn",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "pass",
+          "warn",
+          "fail",
+          "error",
+          "skipped"
+        ],
+        "title": "ReportCounts",
+        "type": "object"
+      },
       "ReportSummary": {
         "additionalProperties": false,
         "description": "A report's headline, without its body (NFR-471).\n\nThe history view renders dates and verdicts. Loading fifty full reports to do that is\nthe difference between a 500 ms budget met and missed, so the list returns this and\n`GET /validation-reports/{id}` returns the artifact.",
@@ -19052,10 +19091,13 @@
         "title": "ValidationLayer",
         "type": "string"
       },
-      "ValidationReport": {
+      "ValidationReportView": {
         "additionalProperties": false,
-        "description": "The outcome of one validation run (`01` §4.6).",
+        "description": "A report **as presented** (`01` §4.6): the artifact, plus the outcome derived from it.\n\nNever stored. The stored body is `ValidationReport`, and it stays free of both keys because\nit is the artifact (`ValidationReportRow`); `extra=\"forbid\"` there refuses this shape, so a\nview cannot be read back as a report. `overall` and `counts` are fields so the published\ncontract and the `01` §4.6 example hold them, and checked so neither is ever assigned.",
         "properties": {
+          "counts": {
+            "$ref": "#/components/schemas/ReportCounts"
+          },
           "dataset_version_id": {
             "format": "uuid",
             "title": "Dataset Version Id",
@@ -19090,6 +19132,9 @@
               }
             ],
             "title": "Job Id"
+          },
+          "overall": {
+            "$ref": "#/components/schemas/OverallOutcome"
           },
           "reference_dataset_version_id": {
             "anyOf": [
@@ -19132,9 +19177,11 @@
           "rule_set_id",
           "rule_set_version",
           "started_at",
-          "finished_at"
+          "finished_at",
+          "overall",
+          "counts"
         ],
-        "title": "ValidationReport",
+        "title": "ValidationReportView",
         "type": "object"
       },
       "ValidationRule": {
@@ -41546,7 +41593,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ValidationReport"
+                  "$ref": "#/components/schemas/ValidationReportView"
                 }
               }
             },

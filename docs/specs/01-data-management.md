@@ -221,7 +221,7 @@ vocabulary; every entity also carries the `ArtifactEnvelope` from `00-overview.m
 
 ### 4.1 `Dataset`
 
-```json
+```json schema=Dataset
 {
   "id": "0190b5a2-7c3e-7a10-9d21-4f6b8c2e1a01",
   "workspace_id": "0190b5a2-7c3e-7a10-9d21-4f6b8c2e1a01",
@@ -257,7 +257,7 @@ the single answer to whether the data is fittable *(OQ-565, decided 2026-08-19)*
 
 ### 4.2 `DatasetVersion`
 
-```json
+```json illustrative
 {
   "id": "uuid",
   "workspace_id": "uuid",
@@ -330,7 +330,7 @@ the single answer to whether the data is fittable *(OQ-565, decided 2026-08-19)*
 
 A rule is a tagged union on `layer` + `check`:
 
-```json
+```json schema=ValidationRule
 {
   "id": "0190b5a2-7c3e-7a10-9d21-4f6b8c2e1a01",
   "version": 2,
@@ -348,7 +348,7 @@ A rule is a tagged union on `layer` + `check`:
 }
 ```
 
-```json
+```json schema=ValidationRuleSet
 {
   "id": "0190b5a2-7c3e-7a10-9d21-4f6b8c2e1a01",
   "slug": "motor-gb-standard",
@@ -579,7 +579,7 @@ key is one target with several columns.
 
 ### 4.6 `ValidationReport`
 
-```json
+```json schema=ValidationReportView
 {
   "id": "0190b5a2-7c3e-7a10-9d21-4f6b8c2e1a01",
   "dataset_version_id": "0190b5a2-7c3e-7a10-9d21-4f6b8c2e1a01",
@@ -589,7 +589,7 @@ key is one target with several columns.
   "started_at": "2026-08-14T09:12:00Z",
   "finished_at": "2026-08-14T09:14:37Z",
   "overall": "pass_with_warnings",
-  "counts": {"pass": 41, "warn": 3, "fail": 0, "error": 0, "skipped": 1},
+  "counts": {"pass": 0, "warn": 1, "fail": 0, "error": 0, "skipped": 0},
   "results": [
     {
       "rule_id": "0190b5a2-7c3e-7a10-9d21-4f6b8c2e1a01", "rule_slug": "psi-driver-age", "rule_version": 2,
@@ -612,8 +612,15 @@ key is one target with several columns.
 > `fail` or `error` (the invariants below). `evidence_blob` is no longer printed: no field carries it and
 > FR-49 does not list one. `overall` and `counts` stay, because the authored `validation-report.schema.json`
 > requires both, but `GET /validation-reports/{report_id}` does not yet serialise them: they are plain
-> properties of the model. That is FD 8379 (working id; owner WK-1178), and until it lands this block is the
+> properties of the model. That is FD-2090 (working id; owner WK-1178), and until it lands this block is the
 > spec's statement and not what the route returns.
+
+> **Amended 2026-11-07 (FD-2090, WK-1178, SL-2088).** The note above is discharged: `GET /validation-reports/{report_id}`
+> now returns `overall` and `counts`. The block is the **response**, `ValidationReportView`, and is validated as such
+> (`schema=ValidationReportView`); the stored body is `ValidationReport`, the same object without `overall` and
+> `counts`, which are derived from `results`, checked against them, and never stored (NFR-469). The example's counts
+> now agree with its one result: they were `{"pass": 41, "warn": 3, ...}` beside one `warn` result, which the
+> view refuses.
 
 > **Amended 2026-08-26 (W6b-18).** The example previously printed `"offending_sample": []`, which settled nothing about the item encoding (OQ-567, decided 2026-08-26: (b)). The item shape is written out: one object per offending row, property keys are column names, values are the cell value as a string or null — `None` is distinct from `""`. A composite key is one item with several properties. A column-level check emits `{"column": <name>}`.
 
@@ -644,7 +651,7 @@ checked at promotion (FR-46), not baked into `overall`.
 
 ### 4.7 `Profile`
 
-```json
+```json illustrative
 {
   "id": "uuid",
   "dataset_version_id": "uuid",
@@ -791,7 +798,7 @@ checked at promotion (FR-46), not baked into `overall`.
 
 A **table** declares what it is keyed by; a **version** holds effective-dated rows.
 
-```json
+```json illustrative
 {
   "table": {
     "slug": "ons-postcode-directory",
@@ -845,7 +852,7 @@ refused with `REFERENCE_VERSION_NOT_PINNED` rather than falling back.
 required this since Phase 0, and the response was the only documented `01` response with no
 §4 subsection, which is how it stayed an untyped `dict[str, Any]` through six slices.)*
 
-```json
+```json schema=DatasetLineage
 {
   "version_id": "0190b5a2-7c3e-7a10-9d21-4f6b8c2e1a01",
   "built_from": {"parent_version_id": "0190b5a2-7c3e-7a10-9d21-4f6b8c2e1a01", "operation": "sample", "parameters": {}},

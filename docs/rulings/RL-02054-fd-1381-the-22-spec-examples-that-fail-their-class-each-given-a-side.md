@@ -16,7 +16,7 @@ relates: [FD-1381, FD-1281, FD-1374, RL-1522, RL-1301, RL-1311, RL-1263]
 
 # RL-2054 — FD-1381: the 22 failing spec examples, each with a recorded side
 
-*Disclosure: drafted under working id 8375; minted as RL-2054 on 2026-11-06, in the TRACK A (SL 8373, T3) mint.*
+*Disclosure: drafted under working id 8375; minted as RL-2054 on 2026-11-06, in the TRACK A (SL-2085, T3) mint.*
 
 ## Authority and scope
 
@@ -25,12 +25,12 @@ relates: [FD-1381, FD-1281, FD-1374, RL-1522, RL-1301, RL-1311, RL-1263]
   `FD-1381`'s item 1: the spec example is never matched to the code silently, and where the code is wrong that is its own
   finding.
 - **Accepted, with three rulings.** `to-lead.md` "2026-11-05 16:31:45 GMT" accepted the 22 rows otherwise and ruled three: (1) row 5's
-  finding is FD 8379 (working id), MEDIUM, owner WK-1178; (2) row 19 is not spec wrong but spec ahead of code, and its block
+  finding is FD-2090 (working id), MEDIUM, owner WK-1178; (2) row 19 is not spec wrong but spec ahead of code, and its block
   splits; (3) `07:234` as `JobError` is accepted as a correction by that dated line, and the hidden-validator fixes at `01:224`,
   `02:544` and `02:690` are accepted. Those rulings are applied below.
 - **The tree.** `origin/main` `bdad132291fdc05fe233d3ddc946e413dcbd2e1f`, tree `850cf225`. **Every line number here holds
   at this commit only** (G7). `NN:line` is the opening fence line in `docs/specs/NN-*.md`.
-- **Not ruled here.** No spec text, code or fence line changes in this record. T3 applies the fixes; S4 of SL 8373 applies
+- **Not ruled here.** No spec text, code or fence line changes in this record. T3 applies the fixes; S4 of SL-2085 applies
   the marks.
 
 ## T1: the re-derivation
@@ -88,7 +88,7 @@ counts as code wrong.
 | 2 | `01:224` | `Dataset` | fragment by design | Omits the envelope by §4's stated convention: "every entity also carries the `ArtifactEnvelope`" | `datasets.py`: `id`, `workspace_id`, `created_at` required; `latest_version` and `latest_version_status` are "one fact" (`:224`) | **Fields.** Add `id`, `workspace_id`, `created_at`, `latest_version_status`; literal uuids | `schema=Dataset` |
 | 3 | `01:329` | `ValidationRule` | spec wrong | `"owner": "pricing-actuary@example.com"` | `validation.py:83`: no `owner`, `extra="forbid"`. `validation-rule.schema.json`'s description, reconciled 2026-08-23, already records `owner` as "carried by no field of the model". No FR names a rule owner | Remove `owner`; add `id` and `version` | `schema=ValidationRule` |
 | 4 | `01:346` | `ValidationRuleSet` | spec wrong | `"rules": [{"rule_id": …, "rule_version": 2, "enabled": true, "severity_override": null}]` | `validation.py:157`: `entries: tuple[RuleSetEntry, ...]`, each embedding the whole `rule` (`:115`). `GET`/`PUT …/rule-set` return that class (`api/validation.py:422`, `:439`). The `PUT` body is `rules` of `rule_id`, `enabled`, `severity_override` (`RuleSetReplace`, `:124`), with no `rule_version` | Replace `rules` by `entries`, one entry embedding row 3's fixed rule; add `id`; literal uuids. Dated line under the 2026-08-15 note: the read shape is `entries`, the `PUT` body is `rules`, and neither has the printed `rule_version` | `schema=ValidationRuleSet` |
-| 5 | `01:550` | `ValidationReport` | **code wrong** (wire) + spec wrong (limbs) | Prints `overall` and `counts`; the authored `validation-report.schema.json:7-8` requires both. Also `evidence_blob`, and `overall` as a four-way string | `validation.py:556`, `:567`: plain properties, so `GET /validation-reports/{report_id}` (`api/validation.py:146`) omits both, as does `generated.json`'s `ValidationReport`. `RuleResult` (`:510`) has no `evidence_blob`, nothing builds one, and FR-49 does not list one; the authored contract's nullable entry (`:59`) is the only other trace | Spec limbs only: add `id`, literal uuids, remove `evidence_blob`, `"overall": "pass_with_warnings"`. **Keep `overall` and `counts`.** Dated line naming FD 8379 | `illustrative`, naming FD 8379, until it lands |
+| 5 | `01:550` | `ValidationReport` | **code wrong** (wire) + spec wrong (limbs) | Prints `overall` and `counts`; the authored `validation-report.schema.json:7-8` requires both. Also `evidence_blob`, and `overall` as a four-way string | `validation.py:556`, `:567`: plain properties, so `GET /validation-reports/{report_id}` (`api/validation.py:146`) omits both, as does `generated.json`'s `ValidationReport`. `RuleResult` (`:510`) has no `evidence_blob`, nothing builds one, and FR-49 does not list one; the authored contract's nullable entry (`:59`) is the only other trace | Spec limbs only: add `id`, literal uuids, remove `evidence_blob`, `"overall": "pass_with_warnings"`. **Keep `overall` and `counts`.** Dated line naming FD-2090 | `illustrative`, naming FD-2090, until it lands |
 | 6 | `02:421` | `Factor` | fragment by design | Omits the envelope, §4's convention | `id` required | **Fields.** Add `id`; literal uuids | `schema=Factor` |
 | 7 | `02:544` | `Grouping` | spec wrong | `target_level_stats` carries `"relativity": 0.78`; `mapping` holds `"…": "…"` | `modelling.py:563`: `tuple[OneWayRow, ...]`; `profiles.py:137` has no `relativity`. FR-107 asks for Level statistics and the change in fit, not a relativity | Remove `relativity`. Replace the `"…"` entry with a real entry mapping a source level to `G4`, so `default_target_level` is a target level. Literal uuids | `schema=Grouping` |
 | 8 | `02:690` | `GlmSpec` | fragment by design | "`GlmSpec` adds:" (`02:688`), the arm's own fields only | `model_family_slug`, `dataset_version_id`, `response_column` required; a Poisson spec needs `offset` (`modelling.py:1222`) | **Fields.** Add those three and `"offset": {"kind": "log_column", "column": "exposure_years"}`, §4.4's own common-block value. Reword `02:688` to say the example also carries the required common fields | `schema=GlmSpec` |
@@ -120,7 +120,7 @@ not parse, rows 5, 15, 17, 18, and row 19's second block). 32 + 31 = 63.
 
 ### Code wrong
 
-- **Row 5: FD 8379 (working id; the real id comes at its mint), CONFIRMED, MEDIUM, owner WK-1178** (`to-lead.md`
+- **Row 5: FD-2090 (working id; the real id comes at its mint), CONFIRMED, MEDIUM, owner WK-1178** (`to-lead.md`
   "2026-11-05 16:31:45 GMT" (1)). `GET /api/v1/validation-reports/{report_id}` omits `overall` and `counts`, which `01` §4.6 and
   the authored contract state. **Why the code and not the spec.** The other three statements agree: the example, the authored
   contract's `required`, and `ReportSummary`, the sibling route, which does carry `overall` (`api/dataset_versions.py:188`). The
@@ -131,8 +131,8 @@ not parse, rows 5, 15, 17, 18, and row 19's second block). 32 + 31 = 63.
   `overall` (`RL-1900`, `RL-1172`, `FD-1512`). **The constraint is the maintainer's, not this record's.** The stored body is
   `report.model_dump(mode="json")` (`platform/validation.py:114`), read back by `model_validate` (`:154`) under `extra="forbid"`.
   Stored bytes stay unchanged, old bodies still read, and `overall` is never written into the stored body, so a bare
-  `@computed_field` is refused. The fix is its own slice riding SL 8373's gate, before the freeze. **It does not widen TRACK A.**
-  Until it lands the block is `illustrative`, naming FD 8379, and `ILLUSTRATIVE_CEILING` counts it.
+  `@computed_field` is refused. The fix is its own slice riding SL-2085's gate, before the freeze. **It does not widen TRACK A.**
+  Until it lands the block is `illustrative`, naming FD-2090, and `ILLUSTRATIVE_CEILING` counts it.
 - **Row 18: `FD-1281`, existing.** No new finding.
 
 ### Noticed, not ruled
@@ -153,9 +153,9 @@ Nothing. DP-4's fallback is not used.
 
 - **T3 (executor):** rows 1 to 14, 16 and 19 to 22, one commit per spec, each citing this ruling. Rows 15, 17 and 18 have no
   text change. A3 holds on this list: every fix is in a §4 section, and none is in `06` §4.1, the section SL 8361 shares.
-- **S4 of SL 8373:** the Mark column. Row 21 is `schema=JobError`.
+- **S4 of SL-2085:** the Mark column. Row 21 is `schema=JobError`.
 - **T3 also:** a dated line on PL-2053 moving its 62 to 63 for row 19's new block (`to-lead.md` "2026-11-05 16:31:45 GMT" (2)), and
-  citing FD 8379 by its working id on row 5.
+  citing FD-2090 by its working id on row 5.
 
 ## Acceptance — the violation that must become detectable
 
@@ -164,7 +164,7 @@ not pass. This ruling adds no script; these are the checks.
 
 1. **Every row has a side (A1).** `grep -cE '^\| [0-9]+ \| `[0-9]{2}:[0-9]+` \|' <this file>` prints 22.
 2. **Each fix passes, until check 40 lands.** `fix_proof.py` at T3's base prints no `FAIL` line but the one for `02:544` as printed.
-   Once T3 has merged, the blocks themselves are the input, and `tests/test_spec_examples.py` of SL 8373 (A11) reads them.
+   Once T3 has merged, the blocks themselves are the input, and `tests/test_spec_examples.py` of SL-2085 (A11) reads them.
 3. **No other `illustrative` on this list.** After S4, of these 22 fences only rows 5, 15, 17 and 18 carry `illustrative`, with row 19's
    new second block, and each of the others carries the class in its Mark column. Check 40's note line must then read 63 blocks,
    32 `schema`, 31 `illustrative`, 0 unmarked, unless a dated line moves a block.

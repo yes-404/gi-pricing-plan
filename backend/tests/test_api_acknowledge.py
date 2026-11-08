@@ -86,6 +86,10 @@ def test_an_actuary_acknowledges_a_warning_through_the_route(
     report_id = asyncio.get_event_loop().run_until_complete(
         _stored_report(database, workspace_id, principal, warn)
     )
+    # `01` §4.6: the response carries the outcome, and it is a function of the results alone.
+    before = api_client.get(f"/api/v1/validation-reports/{report_id}", headers=actuary).json()
+    assert before["overall"] == "pass_with_warnings"
+    assert before["counts"]["warn"] == 1
 
     created = api_client.post(
         f"/api/v1/validation-reports/{report_id}/results/{warn.rule_id}/acknowledge",
@@ -101,6 +105,9 @@ def test_an_actuary_acknowledges_a_warning_through_the_route(
     # The report now reads as acknowledged — the state promotion depends on.
     view = api_client.get(f"/api/v1/validation-reports/{report_id}", headers=actuary).json()
     assert view["results"][0]["acknowledgement"] is not None
+    # ...and acknowledging a warning moves neither `overall` nor `counts`.
+    assert view["overall"] == before["overall"]
+    assert view["counts"] == before["counts"]
 
 
 @pytest.mark.req("FR-46")

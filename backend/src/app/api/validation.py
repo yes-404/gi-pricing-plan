@@ -53,7 +53,7 @@ from model_schema import (
     JobKind,
     Severity,
     ValidationLayer,
-    ValidationReport,
+    ValidationReportView,
     ValidationRule,
     ValidationRuleSet,
 )
@@ -143,7 +143,7 @@ class RuleSetReplace(BaseModel):
 )
 async def get_report(
     report_id: UUID, caller: ReadDatasets, database: DatabaseDep
-) -> ValidationReport:
+) -> ValidationReportView:
     async with database.session() as session:
         # The report *as presented*: its acknowledgements merged in, so a client can tell
         # which warnings still need one. The stored artifact is untouched.

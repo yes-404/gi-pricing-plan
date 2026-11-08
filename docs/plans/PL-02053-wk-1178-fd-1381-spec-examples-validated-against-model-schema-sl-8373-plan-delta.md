@@ -2,8 +2,8 @@
 id: PL-2053
 family: plan
 kind: map
-title: WK-1178 — FD-1381, every JSON example in docs/specs carries a marker and every class-marked example passes model_validate, SL 8373 — a dated Work-plan delta
-status: draft                   # draft → active → superseded | retired (§1.2a) — L1: draft→active rides the slice's PR
+title: WK-1178 — FD-1381, every JSON example in docs/specs carries a marker and every class-marked example passes model_validate, SL-2085 — a dated Work-plan delta
+status: active                  # draft → active → superseded | retired (§1.2a) — L1: draft→active rides the slice's PR
 created: 2026-11-06             # original date 2026-11-05, filed under working id 8372; minted 2026-11-06
 owner: planner
 tree: 850cf225797c8a63065130dc9012a2ef31b5ef55
@@ -15,16 +15,16 @@ corrected_by: []
 relates: [FD-1381, FD-1374, FD-1281, FD-1484, RL-1263, FR-212, FR-214, FR-152]
 ---
 
-# PL-2053 — WK-1178: FD-1381. Spec examples are marked, and validated against `model-schema` (SL 8373, a dated Work-plan delta)
+# PL-2053 — WK-1178: FD-1381. Spec examples are marked, and validated against `model-schema` (SL-2085, a dated Work-plan delta)
 
-*Disclosure: drafted under working id 8372; minted as PL-2053 on 2026-11-06, in the TRACK A (SL 8373, T3) mint.*
+*Disclosure: drafted under working id 8372; minted as PL-2053 on 2026-11-06, in the TRACK A (SL-2085, T3) mint.*
 
 > **For agentic workers:** a **dated Work-plan delta** under Lean P2 L1 (a'): a new `PL-` that
-> edits no earlier plan. It holds one docs track, TRACK A, and one code slice, SL 8373. **It
+> edits no earlier plan. It holds one docs track, TRACK A, and one code slice, SL-2085. **It
 > decides nothing, and no build seat starts until the maintainer accepts it** (to-lead
 > "2026-11-05 15:55:35 GMT" item (4)). The executor's skills are
 > `superpowers:test-driven-development`, `.claude/skills/python-test` and
-> `.claude/skills/spec-change`. PL-2053 is minted (was working id 8372); SL 8373 and LG 8374 are working ids, reserved by the lead.
+> `.claude/skills/spec-change`. PL-2053 is minted (was working id 8372); SL-2085 and LG-2086 are working ids, reserved by the lead.
 
 ## Authority
 
@@ -172,7 +172,7 @@ No DP is the planner's to rule. Each states a recommendation; **DP-4 and DP-5 ar
   token cannot drift from its block, shifts no line, and CommonMark reads the first word as the
   language. Its one cost is `test_objective_submission.py:533`.
 - **DP-3: ordering (`:166-168`, the planner's choice, stated here for the maintainer's sight).**
-  (a) **The marks ride SL 8373**, after TRACK A's text has merged, and the check is in gate mode from
+  (a) **The marks ride SL-2085**, after TRACK A's text has merged, and the check is in gate mode from
   its first commit on `main`. (b) The marks land in TRACK A first. (c) Report-only first, then the
   switch. **Recommendation (a): one gate.** Under DP-2 (a), (b) puts a `backend/tests/` edit in a
   docs PR, so the docs-only gate no longer applies (common seat brief, item 30): a second code gate.
@@ -185,7 +185,7 @@ No DP is the planner's to rule. Each states a recommendation; **DP-4 and DP-5 ar
   forbids. The essay's "10" is a product of a classifier its blind spots already doubt (`:110-112`).
   Cost: about 3 h more, docs, no gate. Fallback if TRACK A is late: (a) for what remains, each row
   named in the finding.
-- **DP-5 (blocking): when, against the freeze.** (a) TRACK A seats at acceptance; SL 8373 queues
+- **DP-5 (blocking): when, against the freeze.** (a) TRACK A seats at acceptance; SL-2085 queues
   behind M with the chain's additions, and gates before Wed 11 Nov 12:00 if the re-baseline at D's END
   shows the margin. Otherwise it stays the named exception and merges after the code freeze, as a
   tooling-only change. (b) All of it waits for the chain's end. (c) Both after the freeze.
@@ -215,7 +215,7 @@ TRACK A:
 - **A4. The docs-only gate is green,** and `test_rating_declared_reads.py` plus
   `-k test_the_section_4_2_policies_array_validates_as_policy_entries` pass, since both read spec text.
 
-SL 8373:
+SL-2085:
 
 - **A5. The write set** is the Write set below, by `git diff --name-only origin/main...HEAD`.
 - **A6. Rule first.** `git log --reverse` shows the skills' commit before the first commit touching
@@ -253,11 +253,11 @@ SL 8373:
 
 ## Needs
 
-- **Seats:** one decision-maker for T2; one executor for T3 and for SL 8373, model per the role file;
+- **Seats:** one decision-maker for T2; one executor for T3 and for SL-2085, model per the role file;
   one auditor. Audits take precedence when the cap binds (to-lead "2026-11-05 15:55:35 GMT").
 - **Ids, not reserved:** one `RL-` for T2; one `FD-` per code-wrong row; on DP-4 (a), one `FD-` for the
-  carry. PL-2053, SL 8373 and LG 8374 are held.
-- **Gate cost:** **one SOLO full gate, about 2.5 h, for SL 8373**, no DB window of its own, no compose
+  carry. PL-2053, SL-2085 and LG-2086 are held.
+- **Gate cost:** **one SOLO full gate, about 2.5 h, for SL-2085**, no DB window of its own, no compose
   build, no timed path changed. **TRACK A: no gate slot**, the docs-only gate only, on the lead's
   light route. Hours, gate not counted: TRACK A about 10 h under DP-4 (b), about 7 h under (a); SL
   8373 about 7 h. Total about 17 h against the triage's 16, since the population grew from 10 to 22.
@@ -279,7 +279,7 @@ each citing the ruling. Replace the placeholders in `01:809` and `02:1861` with 
 validate. Change no fence line: the marks are S4's. Stop on any block outside the ruling. Docs-only
 gate, then a docs PR; run A4's two tests.
 
-### SL 8373: the check (code). Its row: scope A5 to A14; lane WK-1178; after TRACK A's merge, LAST-2 and SL 8361
+### SL-2085: the check (code). Its row: scope A5 to A14; lane WK-1178; after TRACK A's merge, LAST-2 and SL 8361
 
 **Files:** see Write set. **Base:** a head holding TRACK A's merge.
 
@@ -487,7 +487,7 @@ def check_spec_examples(specs: list[pathlib.Path]) -> None:
 
 ### Write set
 
-SL 8373: `scripts/audit-docs.py`; new `tests/test_spec_examples.py` and
+SL-2085: `scripts/audit-docs.py`; new `tests/test_spec_examples.py` and
 `tests/fixtures/spec-examples/ra-c535b19d.json`; `backend/tests/test_objective_submission.py` (one line);
 `docs/specs/00` to `07` (fence lines only); `.claude/skills/spec-change/SKILL.md`;
 `.claude/skills/docs-audit/SKILL.md`; the LG; `docs/roadmap.md` (the SL row); this plan (`status:` only);
@@ -523,8 +523,8 @@ slice, by re-merge.
 ## Dated lines
 
 - **2026-11-05 17:46:59 GMT — block count 62 → 63 (T3, `RL-2054` row 19; `to-lead.md` "2026-11-05 16:31:45 GMT" (2)).** Row 19's block at `06:462` splits into two `json` blocks, so the `json` blocks of `docs/specs/*.md` are 63, not 62. Every "62" above (the Evidence table, "The 62, by what each needs", S4's "all 62 blocks", T9's "61 against 62", the self-review sums) reads 63 from this line: the 12 + 22 + 2 + 6 + 20 = 62 sum gains the one block, and S4's end state is `schema=` 32 + `illustrative` 31 = 63 (`RL-2054` "End state"). T3 sets no mark: the marks are S4's.
-- **2026-11-05 17:46:59 GMT — A14's "the re-merged head" is SL 8381's head (`to-lead.md` "2026-11-05 16:46:26 GMT", "2026-11-05 16:55:19 GMT").** Where A14 says "One SOLO full gate on the re-merged head", the head is SL 8381's, not SL 8373's branch tip alone.
-- **2026-11-05 17:47:05 GMT — row 5 (`01:550`, `ValidationReport`) is code wrong, finding FD 8379 (working id; `RL-2054`, `to-lead.md` "2026-11-05 16:31:45 GMT" (1)).** MEDIUM, owner WK-1178. The block keeps `overall` and `counts` and is marked `illustrative` by S4, naming FD 8379, until the fix lands; `ILLUSTRATIVE_CEILING` counts it.
+- **2026-11-05 17:46:59 GMT — A14's "the re-merged head" is SL-2088's head (`to-lead.md` "2026-11-05 16:46:26 GMT", "2026-11-05 16:55:19 GMT").** Where A14 says "One SOLO full gate on the re-merged head", the head is SL-2088's, not SL-2085's branch tip alone.
+- **2026-11-05 17:47:05 GMT — row 5 (`01:550`, `ValidationReport`) is code wrong, finding FD-2090 (working id; `RL-2054`, `to-lead.md` "2026-11-05 16:31:45 GMT" (1)).** MEDIUM, owner WK-1178. The block keeps `overall` and `counts` and is marked `illustrative` by S4, naming FD-2090, until the fix lands; `ILLUSTRATIVE_CEILING` counts it.
 
 ## Audit — TRACK A (PL-2053 T3 against RL-2054), aud-t3, 2026-11-05
 
@@ -535,12 +535,12 @@ Object: `origin/main...fd5e5d81` (detached worktree `aud-t3`, tree `5d24a34e`). 
 | RL-2054 A1: 22 rows with a side | `grep -cE '^\| [0-9]+ \| `[0-9]{2}:[0-9]+` \|'` prints 22. Counts: 10 spec wrong, 9 fragment, 1 spec ahead, 2 code wrong (rows 5 and 18). They sum to 22 and agree with the title and INDEX row. |
 | Rows 1-4, 6-14, 16, 19-22 applied as ruled | DELIVERED. Each ruled fix is in the diff, in a §4 section (A3). |
 | Rows 15, 17, 18 no text change | CONFIRMED. No hunk in `03` near 954, none in `04`, none at `06:346`. |
-| Row 5 | Spec limbs only; `overall` and `counts` kept; `evidence_blob` removed; dated "Clarified" line at `01` §4.6 names FD 8379 (working id) and WK-1178. PL-2053 has the matching dated line. |
+| Row 5 | Spec limbs only; `overall` and `counts` kept; `evidence_blob` removed; dated "Clarified" line at `01` §4.6 names FD-2090 (working id) and WK-1178. PL-2053 has the matching dated line. |
 | Row 19 | SPLIT. Block 1 validates as ApprovalRequest. Block 2 has the four keys as printed. The dated line names WK-677 and RL-1522 DP-4 (a) and says FR-352 is not amended. The older note is not edited. |
 | Row 21 | `07:232` reworded; block narrowed to `JobError`. |
 | Hidden validators `01:224`, `02:544`, `02:690` | DELIVERED: `latest_version_status`; a `5 → G4` mapping entry; `offset` log_column. All three blocks pass in full. |
 | Dated notes not edited | `01` 2026-08-15 note, `02` 2026-08-18 and 2026-09-30 notes, `07` 2026-10-10 note: no deletions. Each has an appended dated line (rows 4, 12, 22). |
-| PL-2053 dated lines | 62→63 (names RL-2054 row 19), A14 head = SL 8381's head, row 5 names FD 8379. |
+| PL-2053 dated lines | 62→63 (names RL-2054 row 19), A14 head = SL-2088's head, row 5 names FD-2090. |
 | MARKS | No fence line in the diff carries `schema=` or `illustrative`. The lead's brief said otherwise and was wrong. The marks are S4's. |
 | Fence census (own predicate `^\s{0,3}` + 3 backticks) | 154 fence lines = 77 blocks. json per file: 2, 8, 19, 15, 4, 5, 5, 5 = 63. |
 | Own validation (`scratch/aud-t3/val.py`, tools-main venv, read-only) | 20 blocks PASS `model_validate`, validators included: 00:318, 01:224, 01:333, 01:351, 01:848, 02:421, 02:545, 02:691, 02:730, 02:903, 02:1102, 02:1150, 02:1556, 02:1887, 03:374, 03:1021, 06:462, 06:553, 07:234 (as JobError), 07:246. Row 5 (01:582) FAILs with exactly 2 errors, `overall` and `counts` extra_forbidden, as ruled. |
@@ -550,16 +550,18 @@ Object: `origin/main...fd5e5d81` (detached worktree `aud-t3`, tree `5d24a34e`). 
 Does any requirement's meaning change beyond the example? No. Two factual sentences are new: `01` §4.6 says the route does not yet serialise `overall` and `counts`, and `03` §4.2 says an immutable version cannot hold a diff. Both are ruled in RL-2054 rows 5 and 14. No FR is amended, and the OQ mirrors and skills-map are not touched (no dependency moved).
 Does a changed example disagree with prose? None found. `02:1671` (§4.9's `kinds`) and `03:468` (`diff_vs_seed` as a function) still hold.
 
-Four verdicts: no requirement is left without evidence by TRACK A. Row 19's FR-352 limbs are deferred, owner WK-677 (RL-1522). Row 5's wire defect is FD 8379, owner WK-1178. Row 18 is carried by FD-1281.
+Four verdicts: no requirement is left without evidence by TRACK A. Row 19's FR-352 limbs are deferred, owner WK-677 (RL-1522). Row 5's wire defect is FD-2090, owner WK-1178. Row 18 is carried by FD-1281.
 
 Nit (non-blocking): row 12's sentence moved out of `_note` sits after the 2026-09-30 amendment, not directly under the block.
 
-Item 42 (the `SL-` row's status at `origin/main`, read 2026-11-06 at 0510d2c4e5e1): no `SL-` row exists for SL 8373 on main or on this head (`git grep -nE '(SL|LG)[- ]?(8373|8374)\b' -- docs/roadmap.md docs/ledgers` prints nothing); both ids are reserved and unfiled. There is no `active` row to close, and none is claimed closed. The marks are S4's.
+Item 42 (the `SL-` row's status at `origin/main`, read 2026-11-06 at 0510d2c4e5e1): no `SL-` row exists for SL-2085 on main or on this head (`git grep -nE '(SL|LG)[- ]?(8373|8374)\b' -- docs/roadmap.md docs/ledgers` prints nothing); both ids are reserved and unfiled. There is no `active` row to close, and none is claimed closed. The marks are S4's.
 
 No gate ran on this docs track. The audit above, the eight docs-audit files and the DB-free spec-readers are its evidence; the DB-backed modules are owed to CI.
 
 **Lead's adoption (from-lead, 2026-11-05 18:02:39 GMT, verbatim):** "aud-t3 ADOPTED, released: TRACK A @fd5e5d81: nothing NOT MET; 20 blocks validate, row 5 fails only on overall + counts as ruled; 8 spec-reading files pass; 2 fail on the working-id gap, re-read at the mint (test_audit_docs_ids's message unread by the auditor: read at the mint); 3 DB-backed owed to CI. Drafts scratch/aud-t3/. Mint after #1434."
 
-**Mint record (2026-11-06):** working ids 8372 and 8375 became PL-2053 and RL-2054, minted contiguously after LG-2052 on origin/main 0510d2c4e5e1. FD 8379 is not filed on this head and stays a working id in space form. SL 8373 and LG 8374 stay reserved. This PR's number, squash commit and merge date are written at the merge's date-of-record.
+**Mint record (2026-11-06):** working ids 8372 and 8375 became PL-2053 and RL-2054, minted contiguously after LG-2052 on origin/main 0510d2c4e5e1. FD-2090 is not filed on this head and stays a working id in space form. SL-2085 and LG-2086 stay reserved. This PR's number, squash commit and merge date are written at the merge's date-of-record.
 
 *(Dated note, 2026-11-07, docs batch 16, by the executor: the row at line 150, `A SL 8325`, names the slice minted as **SL-2075** (PL-2074, LG-2076, #1456). The plan is frozen at its date and line 150 is not edited.)*
+
+*(Dated note, 2026-11-08, docs batch 19, by the executor, on the maintainer (by delegation) ACK of merge 85, to-lead "2026-11-07 23:41:47 GMT": the row naming `SL 8368` (PL-2053 line 149; PL-2059 line 147) names the slice minted as **SL-2080** (LG-2081, FD-2079, #1460). The plan is frozen at its date and that row is not edited.)*

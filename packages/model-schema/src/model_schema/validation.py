@@ -19,7 +19,7 @@ import enum
 from collections.abc import Mapping
 from datetime import datetime
 from types import MappingProxyType
-from typing import Annotated, Any, Final
+from typing import Annotated, Any, Final, Self, TypedDict
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, computed_field, model_validator
@@ -33,12 +33,14 @@ __all__ = [
     "BuiltinRule",
     "OffendingSampleItem",
     "OverallOutcome",
+    "ReportCounts",
     "RuleOutcome",
     "RuleResult",
     "RuleSetEntry",
     "Severity",
     "ValidationLayer",
     "ValidationReport",
+    "ValidationReportView",
     "ValidationRule",
     "ValidationRuleSet",
     "ValidationRuleSubmission",
@@ -536,8 +538,40 @@ class RuleResult(BaseModel):
         return self.outcome is RuleOutcome.WARN and self.acknowledgement is None
 
 
-class ValidationReport(BaseModel):
-    """The outcome of one validation run (`01` §4.6)."""
+# Functional because `pass` is a keyword, and the authored contract closes this object at
+# five keys.
+ReportCounts = TypedDict(
+    "ReportCounts",
+    {
+        "pass": Annotated[int, Field(ge=0)],
+        "warn": Annotated[int, Field(ge=0)],
+        "fail": Annotated[int, Field(ge=0)],
+        "error": Annotated[int, Field(ge=0)],
+        "skipped": Annotated[int, Field(ge=0)],
+    },
+)
+
+
+def _counts_of(results: tuple[RuleResult, ...]) -> dict[str, int]:
+    counts = dict.fromkeys((o.value for o in RuleOutcome), 0)
+    for result in results:
+        counts[result.outcome.value] += 1
+    return counts
+
+
+def _overall_of(results: tuple[RuleResult, ...]) -> OverallOutcome:
+    outcomes = {r.outcome for r in results}
+    if RuleOutcome.FAIL in outcomes:
+        return OverallOutcome.FAIL
+    if RuleOutcome.ERROR in outcomes:
+        return OverallOutcome.ERROR
+    if RuleOutcome.WARN in outcomes:
+        return OverallOutcome.PASS_WITH_WARNINGS
+    return OverallOutcome.PASS
+
+
+class _ReportFields(BaseModel):
+    """The ten fields of `01` §4.6's report, in their stored order. Moving one reorders a body."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
@@ -552,12 +586,13 @@ class ValidationReport(BaseModel):
     reference_dataset_version_id: UUID | None = None
     empty_layers: tuple[ValidationLayer, ...] = ()
 
+
+class ValidationReport(_ReportFields):
+    """The outcome of one validation run (`01` §4.6)."""
+
     @property
     def counts(self) -> dict[str, int]:
-        counts = dict.fromkeys((o.value for o in RuleOutcome), 0)
-        for result in self.results:
-            counts[result.outcome.value] += 1
-        return counts
+        return _counts_of(self.results)
 
     @property
     def unacknowledged_warnings(self) -> int:
@@ -592,17 +627,37 @@ class ValidationReport(BaseModel):
         Acknowledgement remains what it always was: a fact *about* a report, checked at
         promotion (FR-46) through `unacknowledged_warnings`, never inside `overall`.
         """
-        outcomes = {r.outcome for r in self.results}
-        if RuleOutcome.FAIL in outcomes:
-            return OverallOutcome.FAIL
-        if RuleOutcome.ERROR in outcomes:
-            return OverallOutcome.ERROR
-        if RuleOutcome.WARN in outcomes:
-            return OverallOutcome.PASS_WITH_WARNINGS
-        return OverallOutcome.PASS
+        return _overall_of(self.results)
 
     @property
     def permits_validation(self) -> bool:
         """`01` §4.6: the transition to `validated` is permitted for `pass` and
         `pass_with_warnings` only — the single question `01` §1.3 asks of a report."""
         return self.overall in {OverallOutcome.PASS, OverallOutcome.PASS_WITH_WARNINGS}
+
+
+class ValidationReportView(_ReportFields):
+    """A report **as presented** (`01` §4.6): the artifact, plus the outcome derived from it.
+
+    Never stored. The stored body is `ValidationReport`, and it stays free of both keys because
+    it is the artifact (`ValidationReportRow`); `extra="forbid"` there refuses this shape, so a
+    view cannot be read back as a report. `overall` and `counts` are fields so the published
+    contract and the `01` §4.6 example hold them, and checked so neither is ever assigned.
+    """
+
+    overall: OverallOutcome
+    counts: ReportCounts
+
+    @model_validator(mode="after")
+    def _derived_never_assigned(self) -> Self:
+        if self.overall is not _overall_of(self.results) or self.counts != _counts_of(self.results):
+            raise InputFreeError(
+                "overall and counts are derived from results, never assigned (01 §4.6)"
+            )
+        return self
+
+    @classmethod
+    def of(cls, report: ValidationReport) -> Self:
+        return cls.model_validate(
+            {**report.model_dump(mode="json"), "overall": report.overall, "counts": report.counts}
+        )
