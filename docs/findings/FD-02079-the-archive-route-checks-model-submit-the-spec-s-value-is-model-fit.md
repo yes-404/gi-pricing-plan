@@ -44,3 +44,5 @@ Fixed by SL-2080 (`sl-8368-archive-permission` @1fedb56f, tree 199aa6c6): `archi
 ## Decision
 
 ***Resolved 2026-11-07*** — closed in place 2026-11-07 by the executor, as the closing act of the mint of SL-2080 (WK-1178, LG-2081; this PR; its number, squash commit and merge date are written at the merge's date-of-record). The remedy in Disposition is delivered and tested both ways on the real route; the gate evidence is in LG-2081.
+
+**Dated note, 2026-11-08 (written 04:26:26 GMT): working id SL 8370 is SL-2091.** This record cites the permission-pin slice by its working id `SL 8370`. It was minted as SL-2091, with its ledger LG 8371 minted as LG-2092 (#1467). The record is frozen at its date, so the cite above is left as written.

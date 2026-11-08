@@ -870,3 +870,5 @@ re-merge.
 7. **No range of requirement ids.** Estimates are marked: the hours and the gate's 2.5 h.
 8. **The plan rules nothing:** DP-2 is the maintainer's ruling, quoted; DP-1, DP-3 and DP-4 carry
    recommendations; the gate form is a reading, and the word is the maintainer's.
+
+**Dated note, 2026-11-08 (written 04:35:42 GMT): the branch `sl-8370-permission-pin` carried SL-2091.** This record names the permission-pin slice by its branch, `sl-8370` (lines 163, 346–376 and 807). That slice was minted as SL-2091, with its ledger LG-2092, and merged as #1467 (`7a030ae1`). The record is frozen at its date, so the branch names above are left as written.

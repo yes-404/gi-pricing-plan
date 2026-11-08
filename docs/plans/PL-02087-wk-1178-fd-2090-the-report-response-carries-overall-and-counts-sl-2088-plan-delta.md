@@ -600,3 +600,5 @@ at the heads named, 2026-11-05 about 16:39Z. Hunks read with `-U0`.
    re-read there. T4's cite was `:102` and is `:77` at `bdad1322`. A4 now scopes its first commit to the
    branch, because `main`'s history already touches `validation.py`. The fold found that one window must
    hold both the red and the green, which R1 and R2 split: Step 14 is why.
+
+**Dated note, 2026-11-08 (written 04:26:26 GMT): working id SL 8370 is SL-2091.** This record cites the permission-pin slice by its working id `SL 8370`. It was minted as SL-2091, with its ledger LG 8371 minted as LG-2092 (#1467). The record is frozen at its date, so the cite above is left as written.

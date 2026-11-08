@@ -447,3 +447,5 @@ Named row by row under **The chain's collisions**. In short: `03:138-139` with R
 *(Dated note, 2026-11-07, docs batch 16, by the executor: the row at line 146, `A SL 8325 @e75e0f1a`, names the slice minted as **SL-2075** (PL-2074, LG-2076, #1456). The plan is frozen at its date and line 146 is not edited.)*
 
 *(Dated note, 2026-11-08, docs batch 19, by the executor, on the maintainer (by delegation) ACK of merge 85, to-lead "2026-11-07 23:41:47 GMT": the row naming `SL 8368` (PL-2053 line 149; PL-2059 line 147) names the slice minted as **SL-2080** (LG-2081, FD-2079, #1460). The plan is frozen at its date and that row is not edited.)*
+
+**Dated note, 2026-11-08 (written 04:26:26 GMT): working id SL 8370 is SL-2091.** This record cites the permission-pin slice by its working id `SL 8370`. It was minted as SL-2091, with its ledger LG 8371 minted as LG-2092 (#1467). The record is frozen at its date, so the cite above is left as written.
