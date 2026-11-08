@@ -197,7 +197,7 @@ The fourteenth is the one real red (item 31's "failing files outside the eight d
 
 ## Audit
 
-Folded verbatim from `~/gi-pricing-plan.local/scratch/aud-s8406s8410/LG-8411-audit-section.md` (sha256 prefix `872c870d1f04`; item 34).
+Folded verbatim from the LG 8411 audit-section draft under `~/gi-pricing-plan.local/scratch/aud-s8406s8410/` (sha256 prefix `872c870d1f04`; item 34).
 **Adopted** by lead 31, `~/gi-pricing-plan.local/channel/from-lead-2026-10-09.md` "2026-11-08 00:13:01 GMT aud-s8406s8410 FINAL ADOPTED": for
 SL 8410 (PL 8409) at 28ca1d53: "A1, A4-A9, A12, DP-1 (a), DP-3 (a), DP-4 (a) MET; A2, A3, A14, C1, C2, C3 MET-BY-RECORD; A10, A11, A13
 OWED-TO-GATE. Findings: N1 LOW the accepted R2a deviation's dated line in PL 8409 goes in the spec PR (maintainer 00:07:58); N2 LOW ruff format on
@@ -210,8 +210,8 @@ DRAFT — proposal. Auditor aud-s8406s8410 (sonnet, medium), Sun 8 Nov 2026. Not
 
 ## Audit — SL 8410 (PL 8409, OQ-2035 option D, FR 8412), range `origin/main...origin/sl-8410-oq2035-option-d` @28ca1d534c69
 
-Scope from PL 8409 first (A1–A14, DP rulings, conditions C1–C3 of to-lead "2026-11-07 23:56:36 GMT", rulings 23:22:37 and 23:29:34), then evidence read to the assert (operations.py and rating.py diffs, FR-8412 row in 03, LG 8411).
-Own runs (tree = detached worktree `scratch/aud-s8406s8410/w8410` @28ca1d53; pgrep demo/vitest empty before each): `run-small.sh` on the three A4 files → **213 passed in 7.64s, rc=0** (`small-8410.log`); `packages/model-schema/tests/test_rate_tables.py` → **72 passed, rc=0** (`small-8410b.log`); `generate-contracts.py --check` → "58 generated contracts match the models"; `req-coverage.py` → `FR-8412 9 test file(s)` (9 `req("FR-8412")` markers, all in `test_rate_table_bulk_ops.py`); `ruff check` on both packages → all passed; `audit-docs.py` (gate-2 flock) rc=1, ONE failure `check 31: gap in the full allocation between 2077 and 8409` = own working ids; `doc-index.py --check` rc=0.
+Scope from PL 8409 first (A1–A14, DP rulings, conditions C1–C3 of to-lead "2026-11-07 23:56:36 GMT", rulings 23:22:37 and 23:29:34), then evidence read to the assert (operations.py and rating.py diffs, FR 8412 row in 03, LG 8411).
+Own runs (tree = detached worktree `scratch/aud-s8406s8410/w8410` @28ca1d53; pgrep demo/vitest empty before each): `run-small.sh` on the three A4 files → **213 passed in 7.64s, rc=0** (`small-8410.log`); `packages/model-schema/tests/test_rate_tables.py` → **72 passed, rc=0** (`small-8410b.log`); `generate-contracts.py --check` → "58 generated contracts match the models"; `req-coverage.py` → `FR 8412 9 test file(s)` (9 `req("FR 8412")` markers, all in `test_rate_table_bulk_ops.py`); `ruff check` on both packages → all passed; `audit-docs.py` (gate-2 flock) rc=1, ONE failure `check 31: gap in the full allocation between 2077 and 8409` = own working ids; `doc-index.py --check` rc=0.
 
 | Item | Verdict | Evidence |
 |---|---|---|
@@ -249,7 +249,7 @@ Own runs (tree = detached worktree `scratch/aud-s8406s8410/w8410` @28ca1d53; pgr
 - No NOT MET items. OWED-TO-GATE: A10, A11, A13; item 39 read.
 
 ### Closing acts owed (FD-2028, proposal; not on the branch)
-FD-2028 gets a dated line (the PL 8409 hand-off names it): "decided D, `to-lead.md` 2026-11-07 23:22:37 GMT, corrected 23:29:34; fixed by SL 8410 (PR #<N>, squash <sha>)" with its register row at `docs/findings/register.md:450`'s row moved to resolved, and `OQ-2035` already DECIDED in both mirrors. SL-8410's roadmap row is `status: draft`, `tree: ~`: it goes active at the mint and closed on the clean audit and merge (item 42) — read at `origin/main` after the merge.
+FD-2028 gets a dated line (the PL 8409 hand-off names it): "decided D, `to-lead.md` 2026-11-07 23:22:37 GMT, corrected 23:29:34; fixed by SL 8410 (PR #<N>, squash <sha>)" with its register row at `docs/findings/register.md:450`'s row moved to resolved, and `OQ-2035` already DECIDED in both mirrors. SL 8410's roadmap row is `status: draft`, `tree: ~`: it goes active at the mint and closed on the clean audit and merge (item 42) — read at `origin/main` after the merge.
 
 ## PRs
 
