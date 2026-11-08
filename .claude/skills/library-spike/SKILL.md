@@ -83,7 +83,9 @@ keep the fetch script alongside the spike.
 
 ## Landing the result
 
-1. Write it up in `docs/research/` with sources, method, and the version tested.
+1. Write it up as `docs/research/RS-<nnnnn>-<slug>.md`, `kind: spike`, the id from
+   `python3 scripts/doc-id.py next` and the header from `docs/_templates/RS.md`, with sources,
+   method, and the version tested.
 2. Apply it: use `spec-change` for requirements, `adr-write` for an addendum.
 3. Update the affected `docs/open-questions.md` rows and mark verified rows in
    `docs/skills-map.md`.
@@ -91,6 +93,8 @@ keep the fetch script alongside the spike.
 5. `python3 scripts/audit-docs.py`
 
 ## Verified
+
+2026-11-08 (tree `c4ae584a`) — The filing step states the `RS-` form (skills-gap F2), read against `docs/research/` and `docs/_templates/RS.md`. Only that step was re-read. The entries below name no tree; none was recorded (`CLAUDE.md` §13; skills-gap F5).
 
 2026-08-14 — Used for six spikes: SymPy 1.14.0 (Piecewise differentiation), XGBoost 3.4.0
 (`base_margin` inclusion in `predt`), Pydantic 2.13.4 (discriminated unions and `Decimal`

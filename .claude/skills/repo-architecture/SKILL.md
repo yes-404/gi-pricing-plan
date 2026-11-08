@@ -1,6 +1,6 @@
 ---
 name: repo-architecture
-description: How this monorepo is laid out and why — the annotated tree, the polyglot component map and why CI is path-filtered into three workflow files, the one-way model-schema → docs/contracts → frontend seam and why the generated contract is published under docs/ rather than treated as a build output, how the specification and the code are held consistent by audit-docs.py and req-coverage.py, and the stack choices decided against that bind when a dependency is chosen (no statsmodels, no pandera, monotonic constraints on both boosters, what mypy --strict covers). Use when adding a component or a dependency, adding or changing a CI workflow, deciding where a shared shape belongs, or wondering why a generated artifact is committed. CLAUDE.md §2 and §3 carry the rules; this carries the tree and the reasons.
+description: How this monorepo is laid out and why — the annotated tree, the polyglot component map and why CI is three path-filtered workflow files and one unfiltered history-policy workflow, the one-way model-schema → docs/contracts → frontend seam and why the generated contract is published under docs/ rather than treated as a build output, how the specification and the code are held consistent by audit-docs.py and req-coverage.py, and the stack choices decided against that bind when a dependency is chosen (no statsmodels, no pandera, monotonic constraints on both boosters, what mypy --strict covers). Use when adding a component or a dependency, adding or changing a CI workflow, deciding where a shared shape belongs, or wondering why a generated artifact is committed. CLAUDE.md §2 and §3 carry the rules; this carries the tree and the reasons.
 ---
 
 # Why the repository is shaped this way
@@ -24,9 +24,9 @@ there: it belongs to `docs/roadmap.md` §6 and only there**
 ├── alembic.ini             migrations — dev-commands has the DSN it does *not* default to
 ├── pyproject.toml          uv workspace root; ruff, mypy, pytest config
 ├── uv.lock                 COMMITTED — a lockfile, not an environment
-├── .importlinter           ADR-703/704/DEP-3 — 3 contracts, enforced in CI
+├── .importlinter           ADR-703/704/DEP-3, RS-1176 — 4 contracts, enforced in CI
 ├── .gitignore              see .claude/skills/git-hygiene
-├── .github/workflows/      python.yml · frontend.yml · docs.yml, path-filtered
+├── .github/workflows/      python.yml · frontend.yml · docs.yml, path-filtered; history-policy.yml, unfiltered
 │
 ├── docs/                   the specification suite — authoritative
 │   ├── README.md           the fuller index of the suite (CLAUDE.md §4 is the one-line version)
@@ -118,6 +118,9 @@ the union of all paths would run every job for every change: a docs-only edit wo
 Python dependencies and install pnpm, and each side would wait on the other's toolchain.
 Splitting into `python.yml`, `frontend.yml` and `docs.yml` is what makes the filter
 effective.
+
+The fourth file, `history-policy.yml`, has no path filter on purpose. It checks commit messages,
+not files, so a filter would let it pass by not running (`CLAUDE.md` §2).
 
 The consequence to remember when running the gate: **it has two halves**, and the Python
 half has been green while the frontend half was red. `.claude/skills/dev-commands` has both.
@@ -226,6 +229,8 @@ trees are declared outside the gate rather than half-claimed by `CLAUDE.md` §3;
 in by being made clean and added to `files`.
 
 ## Verified
+
+2026-11-08 (tree `c4ae584a`) — `history-policy.yml` added (skills-gap F3), read against `.github/workflows/` (4 files) and `CLAUDE.md` §2. `.importlinter`'s contract count corrected from 3 to 4 (`grep -c '^\[importlinter:contract' .importlinter` prints 4). Only those statements were re-read.
 
 2026-11-05 — **mypy scope declared (FD-1662, DP-H4).** `uv run mypy` rc 0 over 253 source
 files with `scripts/demo.py` added, at tree `b4f4f7e24efeea0ebfc84282fe8e94c88492a943` (the commit before this line).

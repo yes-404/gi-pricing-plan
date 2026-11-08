@@ -743,7 +743,7 @@ uv run pytest -q                            # reconcile N against what actually 
 Reconcile the two before citing a pass count in a closure record or an audit — a smaller
 collected total than expected is itself the finding, not something a green run rules out.
 
-### `req-coverage.py`'s percentage has three silent failure modes — two inflate it, one deflates it
+### `req-coverage.py`'s percentage has four silent failure modes — two inflate it, two deflate it
 
 The script counts a requirement as **specified** only where its id appears in bold
 (`**FR-XXX-N**`) somewhere in `docs/specs/`, and **claimed** wherever any test carries
@@ -762,8 +762,13 @@ this before writing it here).
 - **Shared-clause-attribution** (deflates): a clause shared across several requirement ids
   gets tagged against only one of them in practice. The untagged siblings show zero
   coverage even though the same test exercises their shared behaviour too.
+- **One-marker-form** (deflates, FD-1725): `scripts/req-coverage.py:58` and
+  `scripts/scope-audit.py:82` read only `@pytest.mark.req("X")`. A multi-argument
+  `req("A", "B")` and a module-level `pytestmark = pytest.mark.req("X")` are invisible to both.
+  Unlike the other three, this one is a defect, carried to P3-D. Also, the `test file(s)` column
+  appends once per marker, so it counts markers, not files.
 
-None of these are bugs — the script counts exactly what it says it counts. Read `N%
+None of the first three are bugs — the script counts exactly what it says it counts. Read `N%
 claimed` as a floor on attention, not a measure of test quality.
 
 ## The RFC-937 id instruments — `doc-id.py` and `doc-index.py`
@@ -1040,6 +1045,36 @@ session-scoped autouse fixture `_empty_the_database_after_the_session` (`backend
 The database must therefore already be migrated and created for the worktree; if it is not, the run still exits with
 pytest's code and only prints a "could not empty the test database" warning.
 
+## A demo STOP is a branch in the command, never a line you read afterwards
+
+A timed stage (the demo, a benchmark) is a measurement, so nothing runs beside it. Put the guard first in every
+command that runs a script or test:
+
+```bash
+pgrep -af "[d]emo.py|[v]itest" && { echo STOP; exit 75; };
+```
+
+The bracket stops `pgrep` matching its own shell. Printing the `pgrep` output and reading it afterwards failed
+twice on the night of 2026-11-07, for a lead and for a seat, so the check must end the command. A brief that
+holds the rule does not reach a seat that never read it: the spawn prompt carries the line too. Before a gate
+launches, the lead quiesces seats' runs in its path or gives each seat its start time. `exit 75` here means a
+demo is live; in the slot probes above it means a slot is held. (`docs/process/process-backlog.md`, rows of
+2026-11-03 19:26, 2026-11-07 22:13 and 22:33, and 2026-11-08 01:11 GMT.)
+
+## A DB window, and `run-heavy`
+
+**A DB window is single-tenant on the shared server.** A brief that grants a second seat any `createdb` or other
+DB write inside another seat's window is a defect in the brief. The window's first and last commands are the
+template-guard reads; a seat that skips the START guard has not opened the window, so stop at the first missing
+quote. No backend test is DB-free in practice: `backend/tests/conftest_db.py`'s session-autouse teardown
+TRUNCATEs, so a backend run outside its window sets `GIP_TEST_DATABASE_URL` and `GIP_TEST_APP_DATABASE_URL` first.
+(`process-backlog.md`, rows of 2026-10-29 18:57, 2026-11-03 19:26 and 2026-11-04 10:12 GMT.)
+
+**`run-heavy.sh` is outside the repository**, at `~/gi-pricing-plan.local/handover/run-heavy.sh`; its header is the
+usage. Only `scripts/run-small.sh` is under `scripts/`. A refusal is a stop, not a bypass: the seat reports and waits.
+`--light` is for `scripts/audit-docs.py` or `scripts/doc-index.py` only (rc 78 otherwise), so a brief's tool route must
+be one the tool allows, checked before seating.
+
 ## Expensive-run checklist — pytest, gate, frontend as one pattern
 
 **Expensive runs (full suite, full gate, full frontend build) cost 4.5+ cores and 13+ 
@@ -1133,6 +1168,8 @@ where the tree did not change:
 Verified: 2026-09-17
 
 ## Verified
+
+2026-11-08 (tree `c4ae584a`) — The fourth `req-coverage` failure mode (review P12, FD-1725), the demo STOP (skills-gap A3) and the DB-window and `run-heavy` section (A7) added; each read against its cited process rows, the two script lines and `run-heavy.sh`'s header. The rest of this file was not re-read.
 
 2026-10-17, against main `cf509df89dbebff329bb6b319bcc9bcd2a2c2352`. **The template-DB paragraph was added** (the maintainer's ruling, relayed by the lead): `gipricing` is migrations-only, rebuilt after a migration, never seeded. The rebuild at `d4e81b7a2c95` is the lead's report; this author did not query the database.
 
