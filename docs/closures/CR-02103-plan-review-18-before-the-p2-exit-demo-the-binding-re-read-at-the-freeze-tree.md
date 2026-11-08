@@ -1,19 +1,19 @@
 ---
-id: CR-8417
+id: CR-2103
 family: closure
 kind: review
 title: Plan review 18 — before the P2 exit demo — the binding re-read at the freeze tree
 status: active                  # write-once; this is the only value this family ever takes
-created: 2026-11-08   # working id 8417
+created: 2026-11-08   # drafted 2026-11-08 under working id 8417; minted 2026-11-08 as CR-2103
 owner: lead
 tree: 374a22bf33ad3c62a4d2c8b69ba83bd334d4b167
 phase: P2
 work: WK-1178
 corrected_by: []
-relates: [CR-1907, WK-8418, FD-2099, FD-2100, FD-2101, FD-2102, FD-1706, FD-1723, FD-1381, FD-1482, FD-1725, FD-2034, OQ-1960]     # ids only
+relates: [CR-1907, WK-2104, FD-2099, FD-2100, FD-2101, FD-2102, FD-1706, FD-1723, FD-1381, FD-1482, FD-1725, FD-2034, OQ-1960]     # ids only
 ---
 
-# CR-8417 — P2 pre-demo plan review (`CLAUDE.md` §14): the binding re-read at the freeze tree
+# CR-2103 — P2 pre-demo plan review (`CLAUDE.md` §14): the binding re-read at the freeze tree
 
 **Filing note.** The accepted working file is `~/gi-pricing-plan.local/scratch/plan-s14/review-2026-11-08-freeze.md`, 160 lines, sha256 `73420bb468ca`, written against tree `374a22bf33ad3c62a4d2c8b69ba83bd334d4b167`. The text below is that file, with two changes only: its first heading is this record's heading, and its blank acceptance line is the Acceptance section below. The section "Filing: proposal, record, owner, state" is added at filing. Quotes are verbatim.
 
@@ -196,7 +196,7 @@ State at filing, 2026-11-08. A record with no id yet names its family, owner and
 | P22 | the S3 brief's dated line; the addendum states D-3's available branch | maintainer | accepted as the entry states; due with S3's addendum |
 | P22b | the S3 brief, `997762bc318b`: NFR-490 via `scripts/bench-rating.py`, or the "no S3 reading taken" sentence | lead | done (to-lead "2026-11-08 09:04:05 GMT") |
 | P23 | FD-1706, FD-1723, FD-1381, FD-1482, FD-1725: dated lines, docs batch 25a (#1474, `7bf10751`) | auditor; lead sets `decision:` | landed; verdicts from-lead "2026-11-08 09:30:19 GMT" |
-| P24 | WK 8418, `draft`, opened to-lead "2026-11-08 09:40:05 GMT"; WK-676 and WK-679 dated lines, this batch | maintainer opened; row owner lead | landed in this batch |
+| P24 | WK-2104, `draft`, opened to-lead "2026-11-08 09:40:05 GMT"; WK-676 and WK-679 dated lines, this batch | maintainer opened; row owner lead | landed in this batch |
 | P25 | a proposal to the user's P2 close line; P3-C and P3-D rows, not yet minted | maintainer; the user's line | accepted as a proposal; due at the P2 close |
 | P26 | P3 spec items: a Dislocation Run budget NFR; FR-23 and FR-273's wording | decision-maker | accepted; P3 spec only |
 | P27 | `docs/roadmap.md` `works:` and `gates:`, docs batch 24 (#1473, `a8ad2d01`) | lead | landed in batch 24 |
@@ -216,3 +216,5 @@ Corrected two minutes later, verbatim from the entry's opening:
 That count was corrected in turn, verbatim from the entry's opening:
 
 > 2026-11-08 09:49:26 GMT — Maintainer: CORRECTION to my 09:04:05 line — the §14 proposals index has 21 DATA rows; the 22 counted the header row with the `^\| ` predicate; the acceptance (09:02:21, sha 73420bb468ca) is unchanged, and CR 8417 quotes the entries and states no count.
+
+(The entry's working id `CR 8417` is this record, minted as CR-2103.)
