@@ -707,3 +707,5 @@ OWED to WK-1178 for want of a harness, as the Q1-tail file (2026-11-04 12:41:18 
 *(Dated line, 2026-11-07, docs batch 15, by the executor: "FD 8408" in the verdicts line above is minted as FD-2077; the original sentence is not edited.)*
 
 *(Dated line, 2026-11-07, docs batch 18, by the executor, on the maintainer's ruling to-lead "2026-11-07 23:21:26 GMT" ("NFR-490 gets its carry line in the next docs batch now, owner WK-1178 as the brief says, so no reading is unowned at the freeze"). **Carry line: NFR-490 — trace overhead at p99 +524.0 % against ≤ 20 %, the S2 reading above (host AMD EPYC 7B12, 8 vCPU) — is a pre-freeze indication, never a verdict; owner WK-1178; carried into the P2 closure record by name.** Its "never changes the result" limb stays OWED to WK-1178 as stated above. The original sentences are not edited.)*
+
+*(Dated line, 2026-11-08 (written 06:05:29 GMT), docs batch 22, by the lead: the working ids FD 8403 and FD 8404 in the item I and item J lines above are minted as FD-2093 and FD-2094, and closed by SL-2096 (#1469, `9775f352`). This ledger is closed, so the lines above are left as written.)*

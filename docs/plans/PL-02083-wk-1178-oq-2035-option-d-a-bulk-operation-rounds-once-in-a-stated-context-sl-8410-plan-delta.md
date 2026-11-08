@@ -875,3 +875,5 @@ re-merge.
    recommendations; the gate form is a reading, and the word is the maintainer's.
 
 **Dated note, 2026-11-08 (written 04:35:42 GMT): the branch `sl-8370-permission-pin` carried SL-2091.** This record names the permission-pin slice by its branch, `sl-8370` (lines 163, 346–376 and 807). That slice was minted as SL-2091, with its ledger LG-2092, and merged as #1467 (`7a030ae1`). The record is frozen at its date, so the branch names above are left as written.
+
+**Dated note, 2026-11-08 (written 06:05:29 GMT): working id PL 8405 is PL-2095.** The gate-cost line in this record cites `PL 8405`'s estimate by its working id. That plan was minted as PL-2095 with SL-2096 (#1469, `9775f352`). The record is frozen at its date, so the cite is left as written.
