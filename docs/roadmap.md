@@ -3881,6 +3881,50 @@ relates: [FD-2090, PL-2087, LG-2089]
 
 *(Closed 2026-11-08 by the audit commit of the slice's PR, on the lead's adoption of aud-sl8381 (`from-lead-2026-10-09.md`, "2026-11-07 23:17:41 GMT") and of the gate (`gate.log` END `2026-11-08T01:07:00+00:00`, `rc=1`, standing under item 31 with one fix, `ba471a5e`). Item 42: no `SL-2088` row existed at `origin/main` `7dc10140` before this PR's mint, which added it as `closed`. This PR; its number, squash commit and merge date are written at the merge's date-of-record.)*
 
+#### SL-2096 — WK-1178 slice — FD-2093 and FD-2094: the P2 NFR sweep seeds through an owner DSN and binds its audit query as a UUID
+
+```yaml
+id: SL-2096
+family: slice
+title: WK-1178 slice — FD-2093 and FD-2094, the P2 sweep seeds as the owner and binds its audit_events query as a UUID
+status: closed                    # draft → active → closed (§1.2a)
+created: 2026-11-08   # original date 2026-11-07, working id 8406, minted 2026-11-08
+owner: executor
+tree: 3a0bb563a378e4f8812093c4f2e698c4eb7d755b
+phase: P2
+work: WK-1178
+corrected_by: []
+relates: [PL-2095, FD-2093, FD-2094, LG-2097]
+```
+
+`scripts/measure-p2-nfr-sweep.py` seeds through a separate owner DSN (`GIP_MIGRATION_DATABASE_URL`) via one `_grant`, serves through the app DSN, refuses the template database, and binds `audit_events_rows` as a UUID cast. Plan `PL-2095`, ledger `LG-2097`.
+
+(Minted 2026-11-08 from working id 8406, in the SL-2096 mint PR; plan `PL-2095` (working id 8405), ledger `LG-2097` (working id 8407). `tree` is the tree of the gated head `7a640cf998ee` of `sl-8406-sweep-owner-dsn`, before this PR's merges of `origin/main`.)
+
+*(Closed 2026-11-08 by the audit commit of the slice's PR, on the lead's adoption of the audit (`from-lead-2026-10-09.md`, "2026-11-08 00:13:01 GMT") and of the gate (`gate.log` END `2026-11-08T03:29:03+00:00`, `rc=1`, standing under item 31). Item 42: no `SL-2096` row existed at `origin/main` `7a030ae1` before this PR's mint, which added it as `closed`. This PR; its number, squash commit and merge date are written at the merge's date-of-record.)*
+
+#### SL-2091 — WK-1178 slice — FD-1482 limb 2 (b), RL-1483 item 3: the permission pin
+
+```yaml
+id: SL-2091
+family: slice
+title: WK-1178 slice — FD-1482 limb 2 (b), RL-1483 item 3, the permission pin
+status: closed                    # draft → active → closed (§1.2a)
+created: 2026-11-08   # original date 2026-11-05, working id 8370, minted 2026-11-08
+owner: lead
+tree: 4873a0d8698804e00cf8631a4f309f90214bcb8b
+phase: P2
+work: WK-1178
+corrected_by: []
+relates: [FD-1482, RL-1483, FR-343, FD-2079, LG-2092]
+```
+
+`backend/tests/test_route_permission_pin.py` holds every live route to its `07`/module-spec §5.1 `Permission` cell: 207 rows parsed, 168 live operations walked, each compared with its row, rows sharing a key must agree. The ledger is `LG-2092`.
+
+(Minted 2026-11-08 from working id 8370, in the SL-2091 mint PR; ledger `LG-2092` (working id 8371). `tree` is the tree of the gated head `805d036b` of `sl-8370-permission-pin`, before this PR's merges of `origin/main`.)
+
+*(Closed 2026-11-08 by the audit commit of the slice's PR, on the lead's adoption of the gate (`gate.log` END `2026-11-08T03:05:41+00:00`, `rc=1`, standing under item 31). Item 42: no `SL-2091` row existed at `origin/main` `81c898c7` before this PR's mint, which added it as `closed`. This PR; its number, squash commit and merge date are written at the merge's date-of-record.)*
+
 #### SL-2084 — WK-1178 slice — OQ-2035 option D: a bulk operation rounds its exact result once, in a stated context, and records that context
 
 ```yaml
