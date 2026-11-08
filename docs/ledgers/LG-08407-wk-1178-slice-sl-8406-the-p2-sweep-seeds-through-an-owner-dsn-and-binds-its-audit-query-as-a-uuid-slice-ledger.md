@@ -5,7 +5,7 @@ title: WK-1178 slice SL-8406 — FD-8403 and FD-8404, the P2 sweep seeds as the 
 status: active                 # active → closed (§1.2a)
 created: 2026-11-07
 owner: executor
-tree: 1a18754a38df02057a48cd8531a8baad6f0a5f73   # the commit this was written against (sl-8406-sweep-owner-dsn; base c602a539df82aa0e6758176ed42b68e39ebd2ff8)
+tree: aaeba1075366d361a7374027a44d0779dc88e886   # the tree of head 86b63e54ed40 (sl-8406-sweep-owner-dsn), the head the Gate section was written against; was 1a18754a38df… (a commit id, not a tree), corrected 2026-11-08 on audit N2
 slice: SL-8406
 phase: P2
 work: WK-1178
@@ -15,6 +15,8 @@ relates: [FD-8403, FD-8404, PL-8405, PL-1735, LG-2003]
 ---
 
 # LG-8407 — WK-1178 slice SL-8406: the P2 sweep's two instrument defects
+
+*Dated line, 2026-11-08 (lead 31, audit N2): the front matter `tree:` is the tree `aaeba1075366d361a7374027a44d0779dc88e886` of head `86b63e54ed40`, the head the Gate section's runs were written against (window W green). The slice's gate ran at `7a640cf998ee`; the slice's three files (`scripts/measure-p2-nfr-sweep.py`, `tests/test_measure_p2_nfr_sweep.py`, `backend/tests/test_measure_p2_nfr_sweep_storage.py`) are byte-identical between the two heads (`git diff --stat 86b63e54ed40 7a640cf998ee -- <those three>` empty); the other differences are main's merges.*
 
 **GO:** to-lead "2026-11-07 19:10:01 GMT" (PL 8405 accepted, DP-1 to DP-6 all (a); conditions: A5 proves the DP-2 guard red on each broken input; window W under "2026-11-05 14:40:19 GMT"'s conditions, on the maintainer's word, beside a gate's pytest only; A8's empty `backend/src` diff quoted by its command; pairable, the pair word at the re-merged head with imports read).
 **MERGE-ACK:** (added at merge.)
@@ -125,7 +127,44 @@ END 21:01:50 GMT, gate sl8368 still in stage pytest. `pg_database` count 0 for e
 
 ### Audit
 
-(The auditor's.)
+DRAFT — proposal. Auditor aud-s8406s8410 (sonnet, medium), Sun 8 Nov 2026. Not adopted until the lead adopts, amends or rejects it (CLAUDE.md §12/§13).
+
+## Audit — SL 8406 (PL 8405, FD 8403 + FD 8404), range `origin/main...origin/sl-8406-sweep-owner-dsn` @c7cad487c27d (merge of cdf3871c; code files byte-identical to window head 86b63e54ed40: `git diff 86b63e54 c7cad487 -- scripts tests backend` empty)
+
+Scope derived from PL 8405 first (A1–A10 + dated delta 6a878875, ruling to-lead "2026-11-07 21:03:10 GMT"), then evidence. Read to the assert: script diff, both test files, LG 8407, window logs `~/gi-pricing-plan.local/scratch/sl-8406/w-*.log` (head= first line, rc= last line checked).
+Own runs (tree = detached worktree `scratch/aud-s8406s8410/w8406` @c7cad487, `uv sync --all-packages --frozen`; pgrep demo/vitest empty before each): `run-small.sh` on `tests/test_measure_p2_nfr_sweep.py` → **73 passed in 15.69s, rc=0** (`small-8406.log`); `audit-docs.py` via gate-2 flock → rc=1 with ONE failure, `check 31: gap in the full allocation between 2073 and 8403` = the slice's own working ids (`audit-docs-8406.log`); `doc-index.py --check` rc=0.
+
+| Item | Verdict | Evidence |
+|---|---|---|
+| A1 write set | MET | `git diff --name-only origin/main...HEAD`: script, two test files, PL/LG/FD×2/register/INDEX only; nothing under backend/src, packages, examples, migrations, deploy, conftest |
+| A2 one seeding path | MET | `git grep -n 'grant_demo_principals('` → one line (:579) in `_grant` on `env.owner_database`; `_grant(` call sites :657, :713, :964 |
+| A3 red by cause (FD 8403) | MET-BY-RECORD | LG R1 red `AssertionError: the seed was handed the APP database, not the owner database`; test text matches; green 73 passed re-run by me |
+| A4 create_app never sees owner | MET | `test_env_serves_through_the_app_dsn_…` and `…without_an_owner_dsn_exits_naming_the_variable` in my 73-pass run; `_Env` code reads `migration_database_url`, raises SystemExit naming the variable |
+| A5 guard + mutation proofs | MET-BY-RECORD | 5 DB-free tests pass (mine); LG a5-mutations log: 4 mutations red, `git diff --stat` empty after each; the "unset" proof was redone after maintainer 19:35:11 (assertion red, quoted) |
+| A6 red by cause (FD 8404) | MET-BY-RECORD | `w-a6red.log` (head=1963f65ab353, rc=1) 6× `expected str, got UUID`, only `audit_events_rows`; `w-a6green.log` head=86b63e54ed40 rc=0; `dataset_versions_row` excluded and reasoned in the test file |
+| A7 S2 failures reproduced then cleared | MET-BY-RECORD at 100000 rows (delta) | red R0: `w-a7red-cells.log` (rc=1, 3× `permission denied for table workspaces`), `w-bigred-oneway.log` (3×, rc=1), `w-bigred-storage.log` (4× `expected str, got UUID`, rc=1); green head 86b63e54ed40: cells rc=0, `w-biggreen-oneway.log` rc=0, `w-biggreen-storage.log` rc=0. All SHA-first/rc-last. Size 100000 is covered by the ruling "2026-11-07 21:03:10 GMT" and delta 6a878875 (2000-row green cannot exist: `DegenerateFitError`). I did not re-run the window (DB lane is the lead's) |
+| A8 runtime untouched | MET | `git diff --name-only origin/main...HEAD -- backend/src` → 0 files |
+| A9 closure tests green | PARTLY: file 1 MET (my run); file 2 MET-BY-RECORD (window A6 green); re-run at re-merged head OWED-TO-GATE | `backend/tests/test_measure_p2_nfr_sweep_storage.py` is DB-backed; I ran no DB (brief) |
+| A10 gate | OWED-TO-GATE | not run; gate on the maintainer's word |
+| G5 reading rules untouched | MET | diff touches no `NFR_*_RULE`, bands, `CELLS_DIFF_RUNS`, `NFR_1443_SEEDED_JOBS` |
+| Item 43/45 | N/A | no route or handler changed |
+
+### Findings (proposals)
+- **N1 (LOW, deviation with no ruling found).** PL 8405 R2 (i) says "each arm disposes `owner_database` when it ends"; the build disposes inside `_grant` per call (LG build log: "The lead may rule otherwise"). Grep of from-lead/to-lead for `dispose` finds no ruling. Behaviour is sound — `one-way` calls `_grant` twice on one `_Env` and ran rc=0 at 100000 rows — so propose: lead records the deviation as accepted (one dated line in LG 8407), no code change.
+- **N2 (LOW).** LG 8407 front matter `tree:` is `1a18754a…`, but its text cites later heads (`1a392466…`, `86b63e54`, `8881bb75`). Propose the closing act refreshes `tree:`/the head it was written against (git-hygiene: a Verified date carries the tree).
+- **N3 (INFO).** Plan Evidence line numbers (`:604/:661/:897`) are `bfeedd9a`'s (G7); after the change they are `:657/:713/:964` — the LG records that.
+- No NOT MET items. Two OWED-TO-GATE: A9 re-run at the re-merged head, A10.
+
+### Closing acts (FD-1842 form) — NOT carried by the plan branch
+Branch state: `docs/findings/FD-08403-…` and `FD-08404-…` are `status: active` with only a `## Disposition` section; register rows present with no closing note. So the closing acts below are owed at the mint (ids land in merge order, then regenerate INDEX under the gate-2 flock; item 17).
+Proposed text to append to each FD after `## Disposition` and to set `status: closed`:
+
+> ***Resolved <merge date>*** — closed in place by <role>, as the closing act of the mint of SL-<n> (WK-1178, LG-<n>, PL-<n>; [PR #<N>, squash commit <sha> on main, merged <time>]), on the GO to-lead "2026-11-07 19:10:01 GMT". FD-<n8403>: delivered remedy: `scripts/measure-p2-nfr-sweep.py` seeds through `_Env.owner_database` (built from `GIP_MIGRATION_DATABASE_URL`, as `seed.py` builds it) via the single `_grant`, and serves through the app DSN; `dsn_failure` refuses an unset owner DSN, the template database `gipricing`, a different host/port/database, and one user on both DSNs. Red first by assertion (LG-<n>: "the seed was handed the APP database"), A5 mutation proofs reverted; window W: R0 `permission denied for table workspaces`, head rc=0 for `cells-diff`, `one-way` and `storage` (100000 rows, by the ruling "2026-11-07 21:03:10 GMT"). Gate evidence: LG-<n>. FD-<n8404>: delivered remedy: `audit_events_rows` is `… cast(cast(:v as uuid) as text) …` (one site: `git grep -n -E 'cast\(:|::text|as text'` finds none left); red `expected str, got UUID` at R1 on `audit_events_rows` only, green at R2; `backend/tests/test_measure_p2_nfr_sweep_storage.py` holds it.
+
+Register rows (`docs/findings/register.md`): both rows' resolution cell → `**resolved <date> — <SL-n>**` with the same PR/squash facts; keep the row, do not delete.
+SL 8406's roadmap row and LG 8407 `status:` → `closed` on the clean audit and the lead's merge (item 42); read the row at `origin/main` after the merge.
+
+**Dated line, 2026-11-08 (lead 31): audit N1 accepted as built.** PL 8405 R2 (i) says each arm disposes `owner_database` when it ends. The build disposes it in a `finally` inside `_grant` after every call (`scripts/measure-p2-nfr-sweep.py`, `_grant`). The owner connection lives for one grant call and is always disposed, including on error, which is tighter than per-arm. Accepted by the lead, from-lead 2026-11-08 04:37:46 GMT.
 
 ### Build log
 
