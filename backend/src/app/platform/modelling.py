@@ -1590,12 +1590,16 @@ async def archive(
     the operation that removes one names its replacement (`_supersede_earlier_versions`).
     A model in `review` cannot either — withdraw the request first, so the approver's queue
     does not lose an item without a decision recorded against it.
+
+    Gated on `model:fit`, the Model write right (`06` §4.1), not `model:submit`: archiving
+    retires a model, it does not put one in front of an approver. The transition check below,
+    not the permission, is what keeps an `approved` model out of reach.
     """
     await rbac.require_permission(
         session,
         workspace_id=workspace_id,
         principal=actor,
-        permission=Permission.MODEL_SUBMIT,
+        permission=Permission.MODEL_FIT,
     )
     row = await _for_update(session, workspace_id, model_id)
     before = _require_transition(row, ModelStatus.ARCHIVED)

@@ -780,7 +780,7 @@ async def submit_model(
 )
 async def archive_model(
     model_id: UUID,
-    caller: SubmitModels,
+    caller: FitModels,
     database: DatabaseDep,
     response: Response,
     if_match: Annotated[

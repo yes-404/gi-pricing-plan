@@ -1849,7 +1849,7 @@ owner: maintainer
 phase: P2
 ```
 
-From “Workstreams” (line 386): **`expression` custom objectives** — SymPy derivation, the gradient/hessian compilation target, the authoring UI, and ~~lifting `expression_objectives_enabled`~~ making `expression_objectives_enabled` liftable **plus `custom_objective:author` and its check, which `06` FR-367 requires the `expression` kind to arrive with** | Added 2026-08-15 by OQ-573's decision, which moved this work out of WK-661 rather than deleting it: `02` FR-144/145, FR-150, §4.6, and `WF-702` Route B. It depends on nothing in WK-669–WK-675 and could equally be pulled into 1b if WK-661 finishes early — but it must not start before the certification machinery it fronts (FR-151) has run for a phase, which is the whole point of the decision — **close audit filed (CR-1980), acceptance owed** *(dated 2026-11-03 by the auditor, on the maintainer's entry "2026-11-03 15:36:59 GMT" item 5 in `to-lead.md`; audited at `c807a59d`; the record proposes, the lead gives the §13 verdicts, and the close is the user's dated line)*
+From “Workstreams” (line 386): **`expression` custom objectives** — SymPy derivation, the gradient/hessian compilation target, the authoring UI, and ~~lifting `expression_objectives_enabled`~~ making `expression_objectives_enabled` liftable **plus `custom_objective:author` and its check, which `06` FR-367 requires the `expression` kind to arrive with** | Added 2026-08-15 by OQ-573's decision, which moved this work out of WK-661 rather than deleting it: `02` FR-144/145, FR-150, §4.6, and `WF-702` Route B. It depends on nothing in WK-669–WK-675 and could equally be pulled into 1b if WK-661 finishes early — but it must not start before the certification machinery it fronts (FR-151) has run for a phase, which is the whole point of the decision — **close audit filed (CR-1980), acceptance owed** *(dated 2026-11-03 by the auditor, on the maintainer's entry "2026-11-03 15:36:59 GMT" item 5 in `to-lead.md`; audited at `c807a59d`; the record proposes, the lead gives the §13 verdicts, and the close is the user's dated line)* — **fresh close audit filed (CR-2078, re-testing CR-1980), acceptance owed** *(dated 2026-11-05 by the auditor, on the maintainer's entry "2026-11-05 11:07:14 GMT" in `to-lead.md`; audited at `2f108b1e`; the record proposes, the lead gives the §13 verdicts, and the close is the user's dated line)* *(Dated 2026-11-07 by the auditor: CR-2078 refreshed at `cdf3871c` on nfr-bench-1 S2's readings; still NOT CLOSE-READY, proposed, on FD 8408 (NFR-476's expression limb, 1.502 against 1.25), FD-2009 and the docs closing acts)*
 
 *(Amended 2026-09-30 by the lead, on `PL-1268` §Activation item 2 and `RL-1265` DP-1 to DP-3.)* Two corrections. First, "lifting `expression_objectives_enabled`" reads "making `expression_objectives_enabled` liftable", because DP-3 (a) keeps the default off: WK-690 switches it on nowhere, and enabling it for a workspace is a separate, dated maintainer decision after WK-690 closes (`RL-1265` DP-3). The `### WK-690` heading and its `title:` still read "lifting" and are deliberately left unchanged, because they are the row's identity string; this From line carries the correction. Second, FR-85, FR-86's field, FR-210 with FR-208's `spline` and `polynomial` arms, and FR-154's expression half left WK-690 for Phase 3 (`RL-1265`), spec change first, deferred with an owner: the maintainer, with the event being the P2 phase closure record, which lists them for P3's first plan.
 
@@ -3852,6 +3852,28 @@ relates: [PL-8409, LG-8411, FR-8412, FR-233, FD-2028, OQ-2035]
 ```
 
 `uplift_table`, `uplift_by_filter` and `rebase_to_level` compute the exact result and round it once, half-even, to the smaller of 28 significant digits and 28 decimal places, in a context the operation states, never the caller's; the operation's recorded parameters carry that context's identity (FR 8412; to-lead "2026-11-07 23:22:37 GMT" and "2026-11-07 23:29:34 GMT"). Per PL 8409 (plan of record), ledger LG 8411. **If its gate cannot start by Tue 10 Nov 2026 20:00 GMT it is not started, and the code is carried to Phase 3 by name.**
+
+#### SL-2080 — WK-1178 slice — FD-2079: `POST /api/v1/models/{id}/archive` requires `model:fit`, not `model:submit`
+
+```yaml
+id: SL-2080
+family: slice
+title: WK-1178 slice — FD-2079: `POST /api/v1/models/{id}/archive` requires `model:fit`, not `model:submit`
+status: closed                    # draft → active → closed (§1.2a)
+created: 2026-11-07   # original date 2026-11-05, working id 8368, minted 2026-11-07
+owner: lead
+tree: 0f095cd9faa559e6c5f8baac81152c36f6a918a5
+phase: P2
+work: WK-1178
+corrected_by: []
+relates: [FD-2079, LG-2081]
+```
+
+The archive route and its service check carried `model:submit`; `06` §4.1 makes `model:fit` the Model write right. The slice swaps the constant to `FitModels` / `Permission.MODEL_FIT`, proves both directions and the `approved` and `review` state refusals on the real route, and carries a dated line on `02` §5.1's archive row. The ledger is `LG-2081`; the finding it discharges is `FD-2079`.
+
+(Minted 2026-11-07 from working id 8368, with the mint tool of record `mint-repoint.py`; finding `FD-2079` (working id 8366), ledger `LG-2081` (working id 8369). `tree` is the tree of the slice branch (`sl-8368-archive-permission` @`42009e0d`) before this PR's re-merge of `origin/main`.)
+
+*(Closed 2026-11-07 by the audit commit of the slice's PR, on the lead's adoption of the gate (`gate.log` END `2026-11-07T22:29:14Z`, `rc=1`, standing under item 31; the 13 failures are item 31's set by name). Before this PR the row did not exist at `origin/main` `e12dc849`; the mint adds it, closed. Item 42: the PR sets the row `closed` here. This PR; its number, squash commit and merge date are written at the merge's date-of-record.)*
 
 ### WK-1250 — Sub-graph composition and MTA/cancellation pricing — FR-217's inlining and FR-218's authoring half
 
