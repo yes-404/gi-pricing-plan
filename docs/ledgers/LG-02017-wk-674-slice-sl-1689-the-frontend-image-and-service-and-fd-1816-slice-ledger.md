@@ -262,3 +262,5 @@ span is 18:17:05 to 18:24:07 UTC; the doc-index run beside the demo, about 19:17
 PR #1435.
 
 *(Dated line, 2026-11-06, CR-2071's PR, by the executor, on to-lead "2026-11-06 09:54:01 GMT" (4): item 42 extended — a closed slice's LG status closes with its row; `SL-1689` read `closed` and this ledger `active` after #1435 and the audit, so the status is closed here. The body is not edited.)*
+
+*(Dated note, 2026-11-08, docs batch 19, by the executor, on the maintainer (by delegation) ACK of merge 85, to-lead "2026-11-07 23:41:47 GMT": the working ids this record cites in prose are minted: FD 8366 (line 165) is **FD-2079**, SL 8368 is **SL-2080**, LG 8369 is **LG-2081** (#1460). The record is frozen at its date and its text is not edited.)*

@@ -129,3 +129,5 @@ The rulings' edits are in the commit that follows `4610b9e7` (see `git log`).
 ## PRs
 
 None. Ends unpushed.
+
+*(Dated note, 2026-11-08, docs batch 19, by the executor, on the maintainer (by delegation) ACK of merge 85, to-lead "2026-11-07 23:41:47 GMT": the working ids this record cites in prose are minted: FD 8366 (lines 64, 86, 117) is **FD-2079**, SL 8368 is **SL-2080**, LG 8369 is **LG-2081** (#1460). The record is frozen at its date and its text is not edited.)*
