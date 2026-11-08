@@ -115,6 +115,7 @@ rc=0
 - **Frontend** (all rc 0): `pnpm install --frozen-lockfile`, `pnpm generate:api`, `pnpm lint`, `pnpm type-check`, `pnpm build`; vitest (`fe-test.log`) `Test Files  138 passed (138)`, `Tests  919 passed (919)`.
 - **Demo:** `demo.py --journey wf-699 --no-compose` rc=0, designed stop with both lines seen, `demo seconds | 1472` (PASS); **D7** `ok  19985 policies in the sample; rate table edits: +485990825; NCD ladder and expense loading: +3851186; sum +489842011 minor units` (equal).
 - **Dislocation:** `dislocation #1 | 541 s (29 Oct passes: 422 / 387 / 383 s; this box 21:17:05 baseline 552 / 558 s)`. Recorded as **a paired reading** (pair 4, with SL 8406), not as a regression finding and not as an NFR measurement.
+- **Item 21 (re-merge of main 81c898c7):** the import closure of this slice is empty — it changes no source module, only its own test file `backend/tests/test_route_permission_pin.py` — so no code-adjacent test is owed; main's new `packages/model-schema/tests/test_validation_report_stored_form.py` and `tests/test_spec_examples.py` are not code-adjacent to the pin, and PR CI's full suite at the merged head covers them (lead, to-lead 2026-11-08).
 - **END rc parts:** `python max=1 fe max=0 demo=0 restore rc_kc=0 role rc_role=0 skip rc_skip=0 infra rc_infra=0 template rc_tg=0 db0 rc_db0=0`; template guard `alembic_version=1 environments=3 tenant_marker=1` clean at START, db 0 `dbsize` 56 at START.
 
 ### Red first (planted on the live tree, each reverted)
