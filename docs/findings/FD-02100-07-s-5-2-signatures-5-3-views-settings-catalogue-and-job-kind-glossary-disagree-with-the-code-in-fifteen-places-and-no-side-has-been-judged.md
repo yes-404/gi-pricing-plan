@@ -1,18 +1,18 @@
 ---
-id: FD-8414
+id: FD-2100
 family: finding
 title: 07's §5.2 signatures, §5.3 views, settings catalogue and Job Kind glossary disagree with the code in fifteen places, and no side has been judged
 status: active
-created: 2026-11-08
+created: 2026-11-08   # original date 2026-11-08, set at the draft; minted 2026-11-08
 owner: auditor
 tree: 374a22bf33ad
 corrected_by: []
 relates: [FD-1284, OQ-1285, FD-1693, FD-2034]
 ---
 
-# FD-8414 — 07's §5.2 signatures, §5.3 views, settings catalogue and Job Kind glossary disagree with the code in fifteen places
+# FD-2100 — 07's §5.2 signatures, §5.3 views, settings catalogue and Job Kind glossary disagree with the code in fifteen places
 
-*(Working id 8414, born open, filed 2026-11-08 by the auditor on the P28 recon of module 07 and the §14 review accepted at to-lead "2026-11-08 09:02:21 GMT". Severity LOW: no limb names a wrong number or a price. Owner Work: P3-D.)*
+*(Minted 2026-11-08 as FD-2100 from working id 8414, born open, filed 2026-11-08 by the auditor on the P28 recon of module 07 and the §14 review accepted at to-lead "2026-11-08 09:02:21 GMT". Severity LOW: no limb names a wrong number or a price. Owner Work: P3-D.)*
 
 ## Finding
 

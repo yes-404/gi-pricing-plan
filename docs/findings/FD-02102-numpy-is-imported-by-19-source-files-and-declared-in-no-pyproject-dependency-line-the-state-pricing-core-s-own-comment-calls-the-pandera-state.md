@@ -1,18 +1,18 @@
 ---
-id: FD-8416
+id: FD-2102
 family: finding
 title: numpy is imported by 19 source files and declared in no pyproject dependency line, the state pricing-core's own comment calls the pandera state
 status: active
-created: 2026-11-08
+created: 2026-11-08   # original date 2026-11-08, set at the draft; minted 2026-11-08
 owner: auditor
 tree: 374a22bf33ad
 corrected_by: []
 relates: [FD-2034]
 ---
 
-# FD-8416 — numpy is imported by 19 source files and declared in no pyproject dependency line
+# FD-2102 — numpy is imported by 19 source files and declared in no pyproject dependency line
 
-*(Working id 8416, born open, filed 2026-11-08 by the auditor on the skills-gap review's finding F10 and the §14 review accepted at to-lead "2026-11-08 09:02:21 GMT". Severity LOW. Owner Work: P3-D.)*
+*(Minted 2026-11-08 as FD-2102 from working id 8416, born open, filed 2026-11-08 by the auditor on the skills-gap review's finding F10 and the §14 review accepted at to-lead "2026-11-08 09:02:21 GMT". Severity LOW. Owner Work: P3-D.)*
 
 ## Finding
 
