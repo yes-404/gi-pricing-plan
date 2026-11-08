@@ -31,3 +31,5 @@ LOW, ruled. The INDEX line is accepted as generated output, never hand-edited.
 ## Disposition
 
 **Deferred with an owner: WK-1178.** Derive `execution` from the closure record's verdict, red first, or a ruling. The Work stays `active`.
+
+*(Dated line, 2026-11-07, docs batch 17, on the maintainer's grant to-lead "2026-11-07 21:51:52 GMT" (RULED: SL-1275 closes; "a dated line on FD-2073 names this as its second instance in the next batch"). **Second instance:** closing SL-1275 (docs batch 16) makes the generated `docs/INDEX.md` derive `execution: closed` for WK-690's map plans PL-1268, PL-1621, PL-1665 and PL-1996, while WK-690 is NOT CLOSE-READY (CR 8314; its row carries FD-2009 and FD-2077). The derived status is read as a verdict, the same defect as the five WK-674 leaf plans above. It is not a reason to hold a slice open (the grant). The INDEX line stays generated output, never hand-edited. Disposition unchanged: deferred, owner WK-1178.)*

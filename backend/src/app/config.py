@@ -152,6 +152,11 @@ class Settings(BaseSettings):
     # transit the API process.
     blob_multipart_threshold_mb: Annotated[int, Field(ge=1, le=1024)] = 64
 
+    # FR-450 (2026-11-05, FD-1802): the request-body limit on the two upload routes, in MiB.
+    # `deploy/lb.conf` and `deploy/frontend.nginx.conf` carry `client_max_body_size` = this
+    # default + 1 MiB; raising it here means raising them (a test holds the default to both).
+    max_upload_body_mib: Annotated[int, Field(ge=1, le=1024)] = 64
+
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
 
     # FR-391 / NFR-461: the platform refuses to start in prod without TLS termination.

@@ -47,6 +47,7 @@ from app.api import (
     validation,
 )
 from app.api import settings as settings_api
+from app.api.body_limit import MIB, BodyLimitMiddleware
 from app.api.responses import problems, without_fastapi_validation_error
 from app.auth.oidc import OidcVerifier
 from app.config import Settings, load_settings
@@ -214,6 +215,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     app.openapi = _openapi  # type: ignore[method-assign]
 
+    # FR-450: below routing (FastAPI reads a `File()` body before the handler runs), and added
+    # before `TraceMiddleware` so that stays outermost and a 413 carries its `trace_id`.
+    app.add_middleware(BodyLimitMiddleware, max_bytes=settings.max_upload_body_mib * MIB)
     app.add_middleware(TraceMiddleware)
     install_error_handlers(app)
 
