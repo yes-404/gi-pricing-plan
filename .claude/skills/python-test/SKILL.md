@@ -772,6 +772,24 @@ Related: benchmark phases run in **separate processes** (`--only <phase>`), beca
 does not return freed arenas to the OS — a peak-RSS reading taken after an earlier phase in
 the same process is that earlier phase's high-water mark, not this one's.
 
+## A slice's GREEN set is the import closure plus what a closure cannot see
+
+Derive the set by import closure, never by hand and never by a text grep of module names: changed modules, then
+their importers, one more level of importers, then every test file importing anything in that set. Then add these,
+which do not import the changed module:
+
+| The change | Add | Why a closure misses it |
+|---|---|---|
+| An API request shape | `backend/tests/test_api_authorisation_sweep.py` | A route-level sweep |
+| A raise site, handler or sink | `backend/tests/test_error_sinks.py`, `backend/tests/test_worker_raise_sites.py`, `packages/pricing-core/tests/test_quote_input_raise_sites.py` | Censuses that read source |
+| What `scripts/` imports or loads by path | Tests that copy `scripts/` (`shutil.copy`, `copytree`), such as `tests/test_doc_id_migrate.py` | A copy is not an import |
+| A spec row | The list from `grep -lE 'docs/specs\|"docs" */ *"specs"' backend/tests tests` | They read the file |
+| The test DB role, a DSN or a shared fixture | The full suite at the re-merged head; a patch-id cover is refused | Tests added on main after the base have never run under the change |
+
+A claim that a field has "no reader" greps `tests/` and `docs/specs/` as well as `src`: an absence can be pinned on
+purpose. (`docs/process/process-backlog.md`, rows of 2026-10-26 07:05, 2026-11-05 18:05, 21:06 and 22:32, and
+2026-11-06 02:27, 06:00 and 07:42, and 2026-11-07 19:52 GMT.)
+
 ## Three patterns from W37-6 migration testing
 
 ### pre_migration_root fixture — session-scoped materialisation of a historical tree
@@ -867,6 +885,8 @@ EXTERNAL_API_ENDPOINT = "https://example.com/v1/very/long/path/that/is/part/of/t
 ```
 
 ## Verified
+
+2026-11-08 (tree `c4ae584a`) — The GREEN-set section added (skills-gap A1); each named test file exists at that tree and each row was read against its process rows. The rest of this file was not re-read.
 
 2026-09-17 (three patterns, W37-6 migration) — pre_migration_root fixture used in 85e31b0 
 (option C ruling, 13:52:10 BST), vacuous-empty test bug found and fixed in test suite 

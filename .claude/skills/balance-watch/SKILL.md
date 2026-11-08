@@ -75,6 +75,8 @@ Reports to stdout (relayed by Monitor). Also appends to LOG_FILE for lead to rea
 
 ## Verified
 
+2026-11-08 — In use? Unknown since 2026-11-08; retire proposal at the P2 close (to-lead "2026-11-08 09:15:29 GMT", R1: whether any current spend flows through DeepSeek is the user's knowledge). Nothing here was re-verified. The entries below name no tree; none was recorded (`CLAUDE.md` §13; skills-gap F5).
+
 2026-08-29 — filed under `.claude/skills/balance-watch/`, mirroring `reporter-cycle`
 (task #33). The poller previously ran from an ephemeral job directory
 (`/home/puzhenhao1989/.claude/jobs/4e4ed21d/tmp/balance_watch_w11.py`) with no durable

@@ -427,6 +427,19 @@ unmerged by ancestry. `git diff --stat origin/main <branch>` — **two dots** �
 the real delta, and a large deletion count there means the branch is behind, not that it
 deletes anything.
 
+## A merge's body, its delete and its read-back are separate, checked steps
+
+- **Fetch and check the body in one call; merge in the next.** Check a byte count above 0 and that the first line
+  starts `Range:`. Merge 40 (#1409) went in with its title only, after a timed-out body fetch.
+- **Rewrite the `Range:` line after any re-merge.** A squash body naming a stale head and tree is a record defect
+  (#1371).
+- **A delete never shares a command with its guard.** The check runs in one call and its result is read; the delete
+  runs in the next.
+- **The read-back quotes the squash's `%B` line count and main's own push CI runs**, by id and conclusion, not only
+  the PR's runs. Main's python run went red unseen across merges 43 and 44.
+
+(`docs/process/process-backlog.md`, rows of 2026-10-25 15:38, 2026-10-29 22:05 and 22:06, and 2026-11-03 15:56 GMT.)
+
 ## Deleting branches after a squash-merge
 
 Squash-merge rewrites history, so `git branch -d` **refuses** even when the content is
@@ -975,6 +988,8 @@ delta, not the PR. W6b-13 practiced this by accident: the executor's push `8ef88
 it fixed; a silent amend would have carried the old verdict over the new code.
 
 ## Verified
+
+2026-11-08 (tree `c4ae584a`) — The merge-body section added (skills-gap A6), read against its process rows. The rest of this file was not re-read.
 
 2026-09-29, against main `49604a31785c8e7709e9b87c3926e27ea1c0f7f2`. **The role
 `Co-Authored-By` trailer was added** under "Commit messages", on the maintainer's confirmation

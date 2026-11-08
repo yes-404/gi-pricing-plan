@@ -418,6 +418,8 @@ for 200 on an authenticated route hangs until the timeout on a perfectly healthy
 
 ## Verified
 
+2026-11-08 — The entries below name no tree; none was recorded (`CLAUDE.md` §13; skills-gap F5). Nothing here was re-verified.
+
 2026-08-15 — written as WK-663's groundwork, from the decided stack and the shapes the
 backend actually publishes; the `OneWayRow` float/integer split was read out of the
 generated contract rather than assumed.

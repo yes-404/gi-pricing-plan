@@ -4188,6 +4188,8 @@ From “Workstreams” (line 467): Full scoped RBAC, custom roles, break-glass |
 **2026-10-22:** also owns, as a Phase 3 item, enforcement of the scope kinds `MODEL_FAMILY` and `RATING_ALGORITHM`. `06` FR-345 lists them and `ScopeType` (`packages/model-schema/src/model_schema/permissions.py`) declares them, but nothing enforces them: no Phase 2 API creates a scoped grant, so no check reads one. The enforcement ships with `POST /api/v1/role-assignments` (`06` §5.1), which is itself spec-ahead-of-phase and owned here. Until then the two kinds are declared, not enforced. Placement, not a cut: nothing is built ahead of P3 (`CLAUDE.md` §0). (Added 2026-10-22 by the executor, on the maintainer's entry "2026-10-22 17:46:43 BST" item 3 as relayed by lead 26 in `to-lead.md` 17:47:13 BST: "3b (MODEL_FAMILY/RATING_ALGORITHM) = P3 item for WK-676 in the docs batch"; the `FR-345` text that states the same fact is SL-1878's Task 1, not written here.)
 
 
+*(Dated 2026-11-08, docs batch 25, on to-lead "2026-11-08 09:02:21 GMT", P24, and to-lead "2026-11-08 09:40:05 GMT": also owns FD-2034's **C5** (role revocation, verdict "not started": `revoked_at` is honoured on read and has no writer) with **`06` FR-350**, which was on no Work.)*
+
 ### WK-677 — Approval policies, escalation, evidence enforcement, attestations
 
 ```yaml
@@ -4240,6 +4242,8 @@ From “Workstreams” (line 470): Audit explorer, chain verification, export | 
 
 *(Dated 2026-10-14 by the lead, on the maintainer's (by delegation) entry "2026-10-14 10:57:10 BST — FD 8023 MEDIUM + trigger CONFIRMED; the D-list line-read GO (closed-phase + P2-scope only); later-phase D lines GO (re lead 10:56:41)", item 4 ("dated roadmap lines placing each on its module's Work … No line-read is needed: they are spec-only until their phase"): `06` NFR-521 (audit retention ≥ 7 years; the hash chain verifiable over the whole retained range) join this Work's requirement list — it is chain verification over the audit log. Placement only: nothing is built ahead of this Work's phase (`CLAUDE.md` §0).)*
 
+
+*(Dated 2026-11-08, docs batch 25, on to-lead "2026-11-08 09:02:21 GMT", P24, and to-lead "2026-11-08 09:40:05 GMT": also owns FD-2034's **C1** (the rename of the four shared names to `<type>.returned`), **C4** (FR-369's `entity_ref` form) and **C6** (`traces.py:297`: the first route to call it owes an event).)*
 
 ### WK-680 — Dossier generation, commentary blocks, PDF, point-in-time regeneration
 
@@ -4411,6 +4415,32 @@ Much of the *write path* already exists from Phase 1 (§5). Phase 3 is largely t
 requirements.
 
 ---
+
+### WK-8418 — P3-B — unreached lifecycle states: Custom Objective and Custom Metric → deprecated, Peril Structure → archived
+
+```yaml
+id: WK-8418
+family: work
+title: P3-B — unreached lifecycle states: Custom Objective and Custom Metric → deprecated, Peril Structure → archived
+status: draft
+created: 2026-11-08
+owner: lead
+phase: P3
+relates: [FD-2034, FD-1723, FD-2064, OQ-2063, OQ-2037, CR-8417, FR-163, FR-154]
+```
+
+Opened `draft` by to-lead "2026-11-08 09:40:05 GMT", the maintainer's opening of this Work (P24 of the §14 review, CR 8417, accepted to-lead "2026-11-08 09:02:21 GMT"); the landing was delegated to the planner of docs batch 25, quoting that stamp.
+
+**Scope.**
+
+1. FD-2034 C2: the 6 `→ deprecated` edges and two routes for Custom Objective and Custom Metric, with OQ-609's selection refusal.
+2. FD-2034 C3: Peril Structure `→ archived`, 3 edges, one route.
+3. FD-2064.
+4. OQ-2063 and OQ-2037, decided before the first slice.
+
+**Exit criteria.** Every declared transition in scope is reached by a journey test and emits its audit event (FD-1723 FR-7's rule); the spec's §5.1 tables name each route; `req-coverage.py` marks each FR the Work claims.
+
+**Slices:** cut by the planner at P3 start.
 
 ## P4 — Optimisation & Monitoring
 status: active

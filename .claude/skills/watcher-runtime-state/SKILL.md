@@ -1,9 +1,11 @@
 ---
 name: watcher-runtime-state
-description: Write and maintain the RFC-895 runtime state file (artifact B) — position and the in-flight expensive-verifications list, re-derived every cycle rather than compared against a separate tally, so a dead or unwired writer cannot masquerade as a healthy zero. Use when standing up a new session's watcher, when a role needs to announce or check an expensive verification in flight (spec §8), or when a role needs the current phase/work/slice without reconstructing it from `docs/roadmap.md` itself.
+description: No writer since 2026-10-05; Phase 3 decides whether it returns. Write and maintain the RFC-895 runtime state file (artifact B) — position and the in-flight expensive-verifications list, re-derived every cycle rather than compared against a separate tally, so a dead or unwired writer cannot masquerade as a healthy zero. Use when standing up a new session's watcher, when a role needs to announce or check an expensive verification in flight (spec §8), or when a role needs the current phase/work/slice without reconstructing it from `docs/roadmap.md` itself.
 ---
 
 # watcher-runtime-state: the RFC-895 runtime state file, re-derived not compared
+
+> **No writer since 2026-10-05; Phase 3 decides whether it returns** (to-lead 2026-10-25 11:47:10 GMT, T1). Artifact B was withdrawn on 2026-10-25. The body describes the design, not a live service.
 
 `write_runtime_state.py` writes `$RUNTIME_STATE_FILE` (default
 `~/gi-pricing-plan.local/handover/runtime-state.json`) — the runtime state file
