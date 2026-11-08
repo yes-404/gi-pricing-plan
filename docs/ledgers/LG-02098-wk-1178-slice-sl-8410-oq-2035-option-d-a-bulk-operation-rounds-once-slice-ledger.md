@@ -199,7 +199,7 @@ The fourteenth is the one real red (item 31's "failing files outside the eight d
 
 ## Audit
 
-Folded verbatim from the LG 8411 audit-section draft under `~/gi-pricing-plan.local/scratch/aud-s8406s8410/` (sha256 prefix `872c870d1f04`; item 34).
+Folded verbatim (two `|` inside code spans in the A5 and A6 table cells are escaped as `\|` so the rows parse, check 22; nothing else differs, bar the space-form ids noted below) from the LG 8411 audit-section draft under `~/gi-pricing-plan.local/scratch/aud-s8406s8410/` (sha256 prefix `872c870d1f04`; item 34).
 **Adopted** by lead 31, `~/gi-pricing-plan.local/channel/from-lead-2026-10-09.md` "2026-11-08 00:13:01 GMT aud-s8406s8410 FINAL ADOPTED": for
 SL 8410 (PL 8409) at 28ca1d53: "A1, A4-A9, A12, DP-1 (a), DP-3 (a), DP-4 (a) MET; A2, A3, A14, C1, C2, C3 MET-BY-RECORD; A10, A11, A13
 OWED-TO-GATE. Findings: N1 LOW the accepted R2a deviation's dated line in PL 8409 goes in the spec PR (maintainer 00:07:58); N2 LOW ruff format on
@@ -221,8 +221,8 @@ Own runs (tree = detached worktree `scratch/aud-s8406s8410/w8410` @28ca1d53; pgr
 | A2 red first by cause | MET-BY-RECORD | LG: R1 `4 failed, 120 passed` — rebase `RATE_TABLE_CELL_UNPARSEABLE` on `0.0333…`, ambient `prec=400` unparseable `3.37037036703703703670370370367`, factor-rounded `…729061729` vs `…728`, oracle unparseable; record red `6 failed` after R2a (`context` None; `KeyError`). Not an import/NameError. Logs `scratch/sl-8410/r1-red.log`, `r2a-red.log` |
 | A3 pin green before/after | MET-BY-RECORD | `test_a_money_minor_uplift_holds_the_fraction` in base 120 passed and in my 213 |
 | A4 green | MET | my run above, 213 passed rc=0 (`TestFormatValueIsBoundedBeforeItIsBuilt` is in the files) |
-| A5 no ambient / old arithmetic gone | MET | `git grep -E 'getcontext|setcontext|localcontext'` over rate_tables/ → none; the old-arithmetic grep on operations.py → none (both rc=1, run by me) |
-| A6 308 bound untouched | MET | `git diff … money.py` empty; `-U0` diff of operations.py grep count of `MAX_POSITIONAL_EXPONENT|def _format_value` = 0 |
+| A5 no ambient / old arithmetic gone | MET | `git grep -E 'getcontext\|setcontext\|localcontext'` over rate_tables/ → none; the old-arithmetic grep on operations.py → none (both rc=1, run by me) |
+| A6 308 bound untouched | MET | `git diff … money.py` empty; `-U0` diff of operations.py grep count of `MAX_POSITIONAL_EXPONENT\|def _format_value` = 0 |
 | A7 requirement evidenced | MET | req-coverage line above |
 | A8 record carries context, only operation writes it | MET | `TestTheRecordCarriesTheContext` (4 tests) in my 213 run; request classes unchanged so `extra="forbid"` stands |
 | A9 contracts follow shape | MET | `--check` rc 0; diff touches only `rate-table-version.schema.json` and `openapi/generated.json` |
