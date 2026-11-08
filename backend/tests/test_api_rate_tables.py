@@ -850,7 +850,12 @@ def test_bulk_operation_creates_a_new_version_with_the_operation_record(
     assert [row["relativity"] for row in body["rows"]] == ["2.112", "1.551", "1.232"]
     operation = body["created_by_operation"]
     assert operation["kind"] == "uplift_table"
-    assert operation["parameters"] == {"percentage": "0.10"}
+    # FR-2082 (7): the record carries the context the operation computed in, written by the
+    # operation, never by the request.
+    assert operation["parameters"] == {
+        "percentage": "0.10",
+        "context": {"precision": 28, "places": 28, "rounding": "half_even", "version": 1},
+    }
     assert operation["applied_to"] == f"rate_table:{slug}@1"
     assert operation["result"] == {
         "changed_cells": 3,

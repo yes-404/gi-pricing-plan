@@ -802,6 +802,8 @@ plan (`status:` only); `docs/INDEX.md`. The spec change (FR-2082, the two OQ-203
 line, the gate row and SL-2084's row) is already on this plan's branch and merges with it or before the
 slice.
 
+*(Amended 2026-11-08, on the entry of the maintainer (by delegation), "2026-11-08 05:28:36 GMT" in `to-lead.md`, "SL 8410 (SL-2084) GATE END READ", STANDS WITH ONE FIX: the write set adds `backend/tests/test_api_rate_tables.py`. The gate's one real red was `test_bulk_operation_creates_a_new_version_with_the_operation_record`, whose assertion at `:853` expected `parameters == {"percentage": "0.10"}`; under FR-2082 (7) the record also carries `context`. The fix asserts the whole parameters positively, the context included. A plan miss, not a code defect: this plan's write set did not name the API test that reads the record's parameters.)*
+
 ### Files shared
 
 Code: none with sl-8370, sl-8381 or sl-8406. Generated: `docs/contracts/openapi/generated.json` with
