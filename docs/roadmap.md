@@ -3848,10 +3848,10 @@ tree: ~
 phase: P2
 work: WK-1178
 corrected_by: []
-relates: [PL-2083, LG-2085, FR-2082, FR-233, FD-2028, OQ-2035]
+relates: [PL-2083, LG-8411, FR-2082, FR-233, FD-2028, OQ-2035]
 ```
 
-`uplift_table`, `uplift_by_filter` and `rebase_to_level` compute the exact result and round it once, half-even, to the smaller of 28 significant digits and 28 decimal places, in a context the operation states, never the caller's; the operation's recorded parameters carry that context's identity (FR-2082; to-lead "2026-11-07 23:22:37 GMT" and "2026-11-07 23:29:34 GMT"). Per PL-2083 (plan of record), ledger LG-2085. **If its gate cannot start by Tue 10 Nov 2026 20:00 GMT it is not started, and the code is carried to Phase 3 by name.**
+`uplift_table`, `uplift_by_filter` and `rebase_to_level` compute the exact result and round it once, half-even, to the smaller of 28 significant digits and 28 decimal places, in a context the operation states, never the caller's; the operation's recorded parameters carry that context's identity (FR-2082; to-lead "2026-11-07 23:22:37 GMT" and "2026-11-07 23:29:34 GMT"). Per PL-2083 (plan of record), ledger LG 8411. **If its gate cannot start by Tue 10 Nov 2026 20:00 GMT it is not started, and the code is carried to Phase 3 by name.**
 
 #### SL-2080 — WK-1178 slice — FD-2079: `POST /api/v1/models/{id}/archive` requires `model:fit`, not `model:submit`
 

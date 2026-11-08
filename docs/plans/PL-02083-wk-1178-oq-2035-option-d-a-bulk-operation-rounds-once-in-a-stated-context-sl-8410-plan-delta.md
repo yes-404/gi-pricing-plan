@@ -21,11 +21,12 @@ relates: [PL-2040, FD-2028, FD-2032, OQ-2035, OQ-1784, FR-2082, FR-233, FR-234, 
 > (the sibling delta that refused a bulk operation by value type, FD-2032) and edits no earlier plan. It
 > carries the spec change, already written on this branch (FR-2082 in `03` §3.3, OQ-2035 decided in both
 > mirrored rows, a dated line on `04` §4.4, the roadmap gate row and SL-2084's row), and one code slice row,
-> SL-2084, whose ledger is LG-2085. **It decides nothing.** DP-1 and DP-3 carry recommendations; DP-2 is
+> SL-2084, whose ledger is LG 8411. **It decides nothing.** DP-1 and DP-3 carry recommendations; DP-2 is
 > ruled; DP-4 is new with the ruling and carries a recommendation. The executor's skills are
 > `superpowers:test-driven-development`, `.claude/skills/python-test`, `.claude/skills/python-package` and
-> `.claude/skills/contract-schema`. PL-2083, SL-2084, LG-2085 and FR-2082 were drafted under the working ids 8409, 8410, 8411 and 8412, reserved by the
+> `.claude/skills/contract-schema`. PL-2083, SL-2084 and FR-2082 were drafted under the working ids 8409, 8410 and 8412, reserved by the
 > lead, and minted 2026-11-08 (FR-2082: the lead's message of 2026-11-07, "the new FR's working id is FR 8412").
+> *(Dated 2026-11-08, on the lead's ruling: LG 8411 stays a working id in this plan; it mints at the SL-2084 slice PR, where its file exists, at the next free id then, not necessarily 2085.)*
 
 ## Authority
 
@@ -221,7 +222,7 @@ Each item is checked by a command a fresh reviewer can run. Items 1 to 6 apply t
 change, the roadmap rows and the plan); A1 to A14 to SL-2084.
 
 1. **The docs checks pass on this branch.** `python3 scripts/audit-docs.py` prints no failing line except
-   those for the working ids this branch uses (PL-2083, SL-2084, LG-2085, FR-2082), and
+   those for the working ids this branch uses (PL-2083, SL-2084, LG 8411, FR-2082), and
    `python3 scripts/doc-index.py --check` exits 0. After the mint both exit 0.
 2. **No requirement range.** `grep -nE '(N?FR)-[0-9]+ *(-|to|–) *(N?FR-)?[0-9]+' <this file>` prints no
    line that stands for a set of ids.
@@ -241,7 +242,7 @@ change, the roadmap rows and the plan); A1 to A14 to SL-2084.
 SL-2084:
 
 - **A1. The write set** is the Write set below, by `git diff --name-only origin/main...HEAD`, quoted.
-- **A2. Red first, by cause, in LG-2085 before the green.** R1's first class runs at the slice's base and
+- **A2. Red first, by cause, in LG 8411 before the green.** R1's first class runs at the slice's base and
   fails for these causes, each failure quoted: T-rebase raises `RATE_TABLE_CELL_UNPARSEABLE`; T-ambient
   raises `RATE_TABLE_CELL_UNPARSEABLE` on `'3.37037036703703703670370370367'` under `prec=400`, a text the
   default context rounds and stores; T-long-percentage stores `2.240172837290617283729061729`, not `…728`;
@@ -272,7 +273,7 @@ SL-2084:
   scripts/generate-contracts.py --check` exits 0 at the head; `git diff --name-only origin/main...HEAD --
   docs/contracts` lists only `docs/contracts/schemas/generated/rate-table-version.schema.json` and
   `docs/contracts/openapi/generated.json`; `bulk-operation-request.schema.json` is not in it.
-- **A10. GREEN by import closure (common seat brief, item 29),** the commands and the list quoted in LG-2085:
+- **A10. GREEN by import closure (common seat brief, item 29),** the commands and the list quoted in LG 8411:
   changed modules `git diff --name-only origin/main...HEAD -- packages/*/src backend/src`.
   `model_schema/rating.py` is imported by most of the codebase, so the closure is wide; its test files beyond
   A4's run in the gate. The rate-table closure read at `27d70555` is `operations.py` →
@@ -288,7 +289,7 @@ SL-2084:
   `packages/model-schema/src/model_schema/__init__.py`.
 - **A13. The gate.** One full code gate, both halves, on the re-merged head, every rc quoted (`CLAUDE.md`
   §11), **started no later than Tue 10 Nov 2026 20:00 GMT**. If it cannot start by then it is not started:
-  LG-2085 records "not started; FR-2082 stands as the rule; the code is carried to Phase 3 by name", and the
+  LG 8411 records "not started; FR-2082 stands as the rule; the code is carried to Phase 3 by name", and the
   P2 closure record carries SL-2084 by name (the 23:22:37 entry).
 - **A14. The LG quotes the spike** (the 23:29:34 entry): "20,000 of 20,000 pairs equal to an exact-rational
   oracle" and "606 of 1,999 accepted-today cells differ in the 28th digit for one 30-dp percentage", with
@@ -318,7 +319,7 @@ SL-2084:
 
 - **Seats:** one executor (model per `executor.md`) and one auditor. No decision-maker once DP-1, DP-3 and
   DP-4 are ruled.
-- **Ids:** PL-2083, SL-2084, LG-2085 and FR-2082, all reserved by the lead. No other id is foreseen.
+- **Ids:** PL-2083, SL-2084, LG 8411 and FR-2082, all reserved by the lead. No other id is foreseen.
 - **DB:** none for R1 and R2: `operations.py`, the `model-schema` classes and the test file are pure, run
   through `run-small.sh` (no `createdb`, no migration; common seat brief, item 32). The full gate brings
   its own DB as every gate does; no window of the slice's own.
@@ -329,7 +330,7 @@ SL-2084:
   fires in CI (its filter `docs/contracts/openapi/**`) as well as `python.yml` (`packages/**`); the local
   gate runs both halves regardless (`CLAUDE.md` §11), with `pnpm --dir frontend generate:api` before the
   frontend half. No timed path changes: a bulk operation is not inside an NFR measurement.
-- **Hours, gate not counted, an estimate:** R1 1.25 h, R2a 0.75 h, R2b 0.75 h, contracts 0.5 h, LG-2085 and
+- **Hours, gate not counted, an estimate:** R1 1.25 h, R2a 0.75 h, R2b 0.75 h, contracts 0.5 h, LG 8411 and
   records 1 h, so **about 4.25 h**, plus about 1 h of audit.
 - **Calendar** (the entry; weekdays read from `date -d … +%A`): plan Sun 8 Nov, build Mon 9 Nov, gate Tue
   10 Nov, **not started if its gate cannot start by Tue 10 Nov 20:00 GMT**, merged inside Thu 12 Nov (the
@@ -390,7 +391,7 @@ and the generated `docs/contracts/schemas/generated/rate-table-version.schema.js
 - Test: `packages/pricing-core/tests/test_rate_table_bulk_ops.py` (two new classes at the end of the file)
 - Regenerate: `docs/contracts/schemas/generated/rate-table-version.schema.json`,
   `docs/contracts/openapi/generated.json`
-- Ledger: LG-2085 under `docs/ledgers/`
+- Ledger: LG 8411 under `docs/ledgers/`
 
 **Interfaces:**
 - Consumes: `uplift_table(table, *, percentage)`, `uplift_by_filter(table, *, percentage, filter)`,
@@ -552,7 +553,7 @@ class TestABulkOperationRoundsOnceInAStatedContext:
 
 - [ ] **Step 2: Run the red at the base.** Before the run, `pgrep -af '[d]emo.py|[v]itest'` prints nothing
   and load1 < 6. Run: `run-small.sh <wt> packages/pricing-core/tests/test_rate_table_bulk_ops.py`. Expected,
-  each quoted in LG-2085 (A2): `test_a_rebase_below_one_tenth_is_stored_not_refused` FAILS with
+  each quoted in LG 8411 (A2): `test_a_rebase_below_one_tenth_is_stored_not_refused` FAILS with
   `ValueError: RATE_TABLE_CELL_UNPARSEABLE: value '0.03333333333333333333333333333'`;
   `test_the_stored_text_does_not_depend_on_the_callers_context` FAILS at `prec=400` with
   `RATE_TABLE_CELL_UNPARSEABLE: value '3.37037036703703703670370370367'` (the default context stored
@@ -683,7 +684,7 @@ class TestTheRecordCarriesTheContext:
   Run the file: `test_each_computing_operation_records_its_context` FAILS with `context` `None` (the
   operation does not write it yet); `test_a_record_from_before_reads_as_no_context` FAILS with
   `KeyError: 'context'` (a `None` context is not dumped); `test_floor_and_cap_records_no_context` and
-  `test_a_request_cannot_send_the_context` PASS (the shape holds them). Quote each in LG-2085.
+  `test_a_request_cannot_send_the_context` PASS (the shape holds them). Quote each in LG 8411.
 - [ ] **Step 3: Regenerate the contracts.** `uv run --directory <wt> python scripts/generate-contracts.py`,
   then `--check` (rc 0); quote `git diff --stat -- docs/contracts` (A9).
 - [ ] **Step 4: Commit** `feat(model-schema): FR-2082 — a bulk operation's record names its arithmetic
@@ -775,7 +776,7 @@ def _result_context() -> Context:
   `uv run --directory <wt> lint-imports`; `uv run --directory <wt> python scripts/generate-contracts.py --check`.
   Every rc quoted. A mypy error on the narrowed `parameters` field is reported verbatim and STOPs for the
   lead (DP-4 (b) is the fallback); it is never silenced with an ignore.
-- [ ] **Step 4: A5, A6, A9 and A12's commands,** output quoted in LG-2085.
+- [ ] **Step 4: A5, A6, A9 and A12's commands,** output quoted in LG 8411.
 - [ ] **Step 5: Commit** `fix(pricing-core): FR-2082 — a bulk operation rounds its exact result once, in a
   stated context it records (SL-2084, OQ-2035 D)`.
 
@@ -787,7 +788,7 @@ def _result_context() -> Context:
 - [ ] **Step 2:** One full code gate, both halves, on the lead's word (single or paired, Gate form), **started
   by Tue 10 Nov 2026 20:00 GMT** or not started (A13). Every rc quoted; A11's two tests named in the pytest
   output.
-- [ ] **Step 3:** LG-2085 carries R1's red, R2a's record red, R2b's green, the spike's counts (A14), the GREEN
+- [ ] **Step 3:** LG 8411 carries R1's red, R2a's record red, R2b's green, the spike's counts (A14), the GREEN
   derivation (A10) and the gate's rc table before the audit.
 
 ### Write set
@@ -796,7 +797,7 @@ def _result_context() -> Context:
 `packages/pricing-core/src/pricing_core/rate_tables/operations.py`;
 `packages/pricing-core/tests/test_rate_table_bulk_ops.py`;
 `docs/contracts/schemas/generated/rate-table-version.schema.json` and `docs/contracts/openapi/generated.json`
-(generated); LG-2085; SL-2084's roadmap row (`status:` and `tree:` only, at the mint and the close); this
+(generated); LG 8411; SL-2084's roadmap row (`status:` and `tree:` only, at the mint and the close); this
 plan (`status:` only); `docs/INDEX.md`. The spec change (FR-2082, the two OQ-2035 rows, the `04` §4.4 dated
 line, the gate row and SL-2084's row) is already on this plan's branch and merges with it or before the
 slice.
@@ -820,7 +821,7 @@ re-merge.
   GMT, corrected 23:29:34; fixed by SL-2084, or carried to Phase 3 by name") and its register row. Not this
   branch's: the planner writes plans, closures and the SL rows it cuts (`planner.md`, Tools); the roadmap gate
   row is on this branch on the lead's instruction.
-- **The lead:** the build seat's brief; the mint order (the lead's message: PL-2083, SL-2084, LG-2085 and
+- **The lead:** the build seat's brief; the mint order (the lead's message: PL-2083, SL-2084, LG 8411 and
   FR-2082 mint at the spec change's PR, cited before citing); FR-2082 re-pointed across this branch, the
   slice and every `@pytest.mark.req` at the mint (the named mint exception template,
   `docs/process/process-backlog.md:85`).
