@@ -556,9 +556,11 @@ surface sits in Phase 1.**
 status: active
 opened: 2026-08-14
 target: 2026-11-18
-gates: ~
+gates: code freeze 2026-11-12 · docs freeze 2026-11-13 · rehearsal 2026-11-16 · plan review 2026-11-16 to 2026-11-17 · exit demo 2026-11-18
 exit criteria: G1–G6 of [`CR-1212`](closures/CR-01212-plan-review-15-p2-exit-criteria-budget-sequencing-and-the-open-finding-set.md), as accepted by the maintainer 2026-09-28, listed below
-works: WK-668, WK-669, WK-670, WK-671, WK-672, WK-673, WK-674, WK-675, WK-690, WK-693, WK-694, WK-695, WK-696, WK-697, WK-1169, WK-1170, WK-1178, WK-1250
+works: WK-668, WK-669, WK-670, WK-671, WK-672, WK-673, WK-674, WK-675, WK-690, WK-693, WK-694, WK-695, WK-696, WK-697, WK-1178, WK-1250
+
+*(Dated 2026-11-08 (written 09:24:57 GMT), docs batch 24, by the lead, on P27 of the §14 review accepted at to-lead "2026-11-08 09:02:21 GMT": `gates:` above carries the P2 dates of record (to-lead "2026-11-05 09:58:58 GMT"). `WK-1169` and `WK-1170`, which read `phase: P3`, leave P2's `works:`. P3's `works:` gains them and `WK-1914` and `WK-1915`, also `phase: P3`.)*
 
 *(Dated line, 2026-10-11: WK-1169 and WK-1170 left Phase 2 on 2026-10-08 and are struck from this list; their sections below (`WK-1169`, `WK-1170`) record the moves, "WK-1169 moves out of Phase 2 to Phase 3" and "WK-1170 moves out of Phase 2 to Phase 3", under G1's moved-out-of-P2 clause, F-1 (a) of the maintainer's (by delegation) entry "2026-10-08 12:55:22 BST — P2 RE-PLAN RULED on the inventory (handover/p2-inventory-2026-10-09.md, at 60e9254c): F-1 (a), F-2 (b), F-3 (b), F-4 (a)+(b), F-5 (a)/(b), F-6 (a)" in `~/gi-pricing-plan.local/channel/to-lead.md`; their `phase:` field is set to `P3` by the same batch, on the maintainer's 2026-10-11 10:48 BST entry.)*
 
@@ -4156,7 +4158,7 @@ opened: 2026-08-14
 target: ~
 gates: ~
 exit criteria: ~
-works: WK-676, WK-677, WK-678, WK-679, WK-680, WK-681, WK-682, WK-691, WK-1251, WK-1288
+works: WK-676, WK-677, WK-678, WK-679, WK-680, WK-681, WK-682, WK-691, WK-1169, WK-1170, WK-1251, WK-1288, WK-1914, WK-1915
 
 **2026-09-29: requirements carried into Phase 3 without a Work.** CR-1212 P12 records that FR-432, FR-433, FR-434, FR-435 and FR-438 were on no roadmap row. FR-434 and FR-435 went to WK-674 in P2 (CR-1212 P12; placed in PL-1237). The other three are carried to P3, and no P3 Work names them yet:
 
