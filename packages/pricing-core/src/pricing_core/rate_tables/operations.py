@@ -19,7 +19,15 @@ import hashlib
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import datetime
-from decimal import Context, Decimal, Inexact, InvalidOperation
+from decimal import (
+    ROUND_HALF_EVEN,
+    Context,
+    Decimal,
+    DivisionByZero,
+    Inexact,
+    InvalidOperation,
+    Overflow,
+)
 from io import BytesIO, StringIO
 from itertools import product
 from typing import Literal
@@ -32,6 +40,7 @@ from model_schema.modelling import Factor, FactorIntent, GlmFitResult, Model, Re
 from model_schema.money import MAX_POSITIONAL_EXPONENT
 from model_schema.rating import (
     BulkOperation,
+    BulkOperationContext,
     BulkOperationResult,
     FloorAndCapOperation,
     FloorAndCapParameters,
@@ -723,6 +732,39 @@ def _format_value(value: Decimal) -> str:
     return format(value.normalize(exact), "f")
 
 
+#: FR 8412: a bulk operation's result is rounded once, half-even, to the smaller of 28
+#: significant digits (FR-245) and 28 decimal places (FR-275's scale limit).
+_RESULT_DIGITS = 28
+_RESULT_PLACES = 28
+
+#: FR 8412 (7): the identity of `_result_context`, recorded with every computing operation's
+#: parameters. `version` changes only with a requirement that changes the rule.
+_RESULT_CONTEXT_RECORD = BulkOperationContext(
+    precision=_RESULT_DIGITS, places=_RESULT_PLACES, rounding="half_even", version=1
+)
+
+
+def _result_context() -> Context:
+    """FR 8412: the one context a bulk operation computes in, never the caller's.
+
+    `decimal` rounds each operation once from its exact result, so `fma` (uplift) and `divide`
+    (rebase) need no working precision. `Emin` puts `Etiny` (`Emin - prec + 1`) at -28, so a
+    result below 0.1 is subnormal and lands on 28 decimal places in that same rounding. The
+    traps are the default context's, so what raised under it still raises. A fresh context
+    per call keeps its flags the call's own.
+    """
+    return Context(
+        prec=_RESULT_DIGITS,
+        rounding=ROUND_HALF_EVEN,
+        Emin=_RESULT_DIGITS - _RESULT_PLACES - 1,
+        Emax=999999,
+        capitals=1,
+        clamp=0,
+        flags=[],
+        traps=[InvalidOperation, DivisionByZero, Overflow],
+    )
+
+
 def _transform_rows(
     rows: list[CellRow],
     value_name: str,
@@ -789,15 +831,20 @@ def uplift_table(
     """FR-233: multiply every cell by (1 + percentage), new immutable version.
 
     The result is validated against the declared bounds before it persists
-    (FR-234), and the version records the operation (04 §4.4).
+    (FR-234), and the version records the operation (04 §4.4). The result is rounded
+    once, in `_result_context`, and the record names it (FR 8412).
     """
     _check_value_type(table, "uplift_table")
     rows = _rows_of(table)
-    factor = Decimal(1) + percentage
-    new_rows, changed = _transform_rows(rows, table.value.name, lambda old: old * factor)
+    context = _result_context()
+    new_rows, changed = _transform_rows(
+        rows, table.value.name, lambda old: old.fma(percentage, old, context=context)
+    )
     operation = UpliftTableOperation(
         kind="uplift_table",
-        parameters=UpliftTableRecordedParameters(percentage=percentage),
+        parameters=UpliftTableRecordedParameters(
+            percentage=percentage, context=_RESULT_CONTEXT_RECORD
+        ),
         applied_to=_ref(table, table.version),
         result=BulkOperationResult(
             changed_cells=changed, new_version=_ref(table, table.version + 1)
@@ -812,18 +859,21 @@ def uplift_table(
 def uplift_by_filter(
     table: RateTableVersion, *, percentage: Decimal, filter: KeyFilter
 ) -> RateTableVersion:
-    """FR-233: uplift only the cells matching the filter, new immutable version."""
+    """FR-233: uplift only the cells matching the filter, new immutable version.
+
+    The result is rounded once, in `_result_context`, and the record names it (FR 8412).
+    """
     _check_value_type(table, "uplift_by_filter")
     rows = _rows_of(table)
     _check_filter_key(table, filter)
-    factor = Decimal(1) + percentage
+    context = _result_context()
     value_name = table.value.name
     new_rows: list[CellRow] = []
     changed = 0
     for row in rows:
         if _row_matches(row, filter):
             old = Decimal(row[value_name])
-            new = old * factor
+            new = old.fma(percentage, old, context=context)
             if new == old:
                 new_rows.append(row)
             else:
@@ -833,7 +883,9 @@ def uplift_by_filter(
             new_rows.append(row)
     operation = UpliftByFilterOperation(
         kind="uplift_by_filter",
-        parameters=UpliftByFilterRecordedParameters(percentage=percentage, filter=filter),
+        parameters=UpliftByFilterRecordedParameters(
+            percentage=percentage, filter=filter, context=_RESULT_CONTEXT_RECORD
+        ),
         applied_to=_ref(table, table.version),
         result=BulkOperationResult(
             changed_cells=changed, new_version=_ref(table, table.version + 1)
@@ -887,7 +939,8 @@ def rebase_to_level(
     value equals the reference keeps a normalized rendering.
 
     It runs only on a `relativity` column, and it moves premiums unless the base rate
-    offsets it (FR-233).
+    offsets it (FR-233). The result is rounded once, in `_result_context`, and the record
+    names it (FR 8412).
     """
     _check_value_type(table, "rebase_to_level")
     rows = _rows_of(table)
@@ -902,18 +955,21 @@ def rebase_to_level(
     reference = Decimal(matching[0][table.value.name])
     if reference == 0:
         raise ValueError(f"{REBASE_ZERO_REFERENCE}: base_level {base_level} has value 0")
+    context = _result_context()
     value_name = table.value.name
     new_rows: list[CellRow] = []
     changed = 0
     for row in rows:
-        quotient = Decimal(row[value_name]) / reference
+        quotient = context.divide(Decimal(row[value_name]), reference)
         new_rows.append({**row, value_name: _format_value(quotient)})
         if quotient != Decimal(1):
             changed += 1
     _validate_result(new_rows, table)
     operation = RebaseToLevelOperation(
         kind="rebase_to_level",
-        parameters=RebaseToLevelRecordedParameters(base_level=base_level),
+        parameters=RebaseToLevelRecordedParameters(
+            base_level=base_level, context=_RESULT_CONTEXT_RECORD
+        ),
         applied_to=_ref(table, table.version),
         result=BulkOperationResult(
             changed_cells=changed, new_version=_ref(table, table.version + 1)

@@ -1051,7 +1051,7 @@ class TestTheRecordCarriesTheContext:
 
     @pytest.mark.req("FR-8412")
     def test_a_request_cannot_send_the_context(self) -> None:
-        with pytest.raises(ValidationError, match="extra_forbidden|Extra inputs"):
+        with pytest.raises(ValidationError, match=r"extra_forbidden|Extra inputs"):
             UpliftTableRequest.model_validate(
                 {
                     "kind": "uplift_table",
