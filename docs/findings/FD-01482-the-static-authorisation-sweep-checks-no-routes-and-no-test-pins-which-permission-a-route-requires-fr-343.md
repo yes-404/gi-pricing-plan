@@ -2,7 +2,7 @@
 id: FD-1482
 family: finding
 title: The static authorisation sweep checks no routes, and no test pins which permission a route requires (FR-343)
-status: active
+status: closed
 created: 2026-10-08            # original date 2026-09-30, set at the draft; minted 2026-10-08
 owner: auditor
 tree: 9f63d0feee524815e7e0c68c99a53ac3f80e6c37
@@ -325,3 +325,5 @@ anchor and export routes; read `:578-579` as the first two). Unchanged: FR-343 a
 *(Dated line, 2026-11-05, SL-2011 audit (LG-2012), by the auditor, on to-lead "2026-11-05 15:51:04 GMT": limb 2 (a), RL-1483 item 1, the `Permission` column on every §5.1 row, lands in SL-2011. 207 rows in 7 tables = 166 built operations + 3 app-level routes + 38 unbuilt; of the 166, 140 equal the route's `requires()` exactly, 7 carry an "also" clause the handler enforces, 18 are handler-guarded or `authenticated`/`open` with no permission in code, and 1 disagrees (`02` `POST /models/{id}/archive`: spec `model:fit`, code `model:submit`; FD 8366, filed with sl-8368). Limb 2 (b), the pin test, is not landed: it waits on FD 8366, the cell fix (sl-8370) and FD-1484's `table_rows`. FD-1482 stays open.)*
 
 *(Dated note, 2026-11-08, docs batch 19, by the executor, on to-lead "2026-11-07 23:41:47 GMT": the cite at line 325, `FD 8366, filed with sl-8368`, is FD-2079 (SL-2080, #1460). The essay is frozen at its date and line 325 is not edited.)*
+
+***Resolved 2026-11-08*** — closed in place 2026-11-08 10:11:42 UTC by the auditor, on the review's row P23 and RL-1483. Limb 2 is delivered in both parts: (a) the `Permission` column on every §5.1 row (#1434, `9f39bf82`), and (b) `backend/tests/test_route_permission_pin.py`, which holds every live route to its row's cell (SL-2091, #1467, `7a030ae1`; LG-2092) and fails on RL-1483's own `AUDIT_READ` to `JOB_READ` swap. Limbs 1 and 3 were closed by `dfddfad8` (#1104). The register row carries the dated line.
