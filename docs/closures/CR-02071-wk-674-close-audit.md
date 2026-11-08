@@ -265,6 +265,8 @@ exit 0. Main holds no working ids, so the clause can be met as written. **Owed: 
 the gate S3 stands on, rc 0 expected on every command including item 31's eight files. A nonzero there is a finding.**
 The gates above are **evidence, not discharge**.
 
+*(Dated line, 2026-11-08 (written 08:48:45 GMT), docs batch 23, by the lead, on the maintainer's END read, to-lead "2026-11-08 08:47:21 GMT": Acceptance 11 is MET at the freeze tree `374a22bf33ad` (tree `c0216baccf24`). The freeze-tree gate, main at the last code merge, ended 2026-11-08T08:46:35Z rc=0 with every rc part 0 and its acceptance row PASS: pytest `7660 passed, 28 skipped, 5 xfailed, 156 warnings in 4642.00s`, 0 failed, 28 the baseline; every frontend row rc 0; the demo PASS in 1462 s, dislocation 497 s quiet by census; D7 ok; template guard and redis db 0 clean. The owed list's row 11 is discharged by this line. The acceptance of the Work stays the user's.)*
+
 ### §3. New checks proven on broken input
 
 | Slice | Red on record | Ancestry |
