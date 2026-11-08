@@ -3931,17 +3931,19 @@ relates: [FD-1482, RL-1483, FR-343, FD-2079, LG-2092]
 id: SL-2084
 family: slice
 title: WK-1178 slice — OQ-2035 option D, a bulk operation rounds once in a stated context and records it (FR-2082)
-status: draft                     # draft → active → closed (§1.2a)
+status: closed                    # draft → active → closed (§1.2a)
 created: 2026-11-08   # original date 2026-11-07, working id 8410, reserved by the lead; cut by the planner in PL-2083 (working id 8409); minted 2026-11-08
 owner: lead
-tree: ~
+tree: f80dc9cb96657d223020815fa82006825b6e29bf   # the gated head 8b6c42466df5 (sl-8410-oq2035-option-d); the gate ran on it (LG-2098 Gate), the test-only fix f6fa7d18 follows it
 phase: P2
 work: WK-1178
 corrected_by: []
-relates: [PL-2083, LG-8411, FR-2082, FR-233, FD-2028, OQ-2035]
+relates: [PL-2083, LG-2098, FR-2082, FR-233, FD-2028, OQ-2035]
 ```
 
 `uplift_table`, `uplift_by_filter` and `rebase_to_level` compute the exact result and round it once, half-even, to the smaller of 28 significant digits and 28 decimal places, in a context the operation states, never the caller's; the operation's recorded parameters carry that context's identity (FR-2082; to-lead "2026-11-07 23:22:37 GMT" and "2026-11-07 23:29:34 GMT"). Per PL-2083 (plan of record), ledger LG 8411. **If its gate cannot start by Tue 10 Nov 2026 20:00 GMT it is not started, and the code is carried to Phase 3 by name.**
+
+*(Closed 2026-11-08 by the mint commit of the slice's PR, on the lead's adoption of the gate (`gate.log` END `2026-11-08T05:27:14+00:00`, `rc=1`, standing under item 31 with one test-only fix, `f6fa7d18`, ruled "STANDS WITH ONE FIX" by the maintainer, `to-lead.md` "2026-11-08 05:28:36 GMT") and of the audit (from-lead "2026-11-08 00:13:01 GMT"; the audit section is in LG-2098). Item 42: the row read `draft` at `origin/main` `9775f352` before this PR; it reads `closed` here. Ledger: LG-2098.)*
 
 #### SL-2080 — WK-1178 slice — FD-2079: `POST /api/v1/models/{id}/archive` requires `model:fit`, not `model:submit`
 

@@ -1,11 +1,11 @@
 ---
-id: LG-8411
+id: LG-2098
 family: ledger
 title: WK-1178 slice SL-2084 — OQ-2035 option D, a bulk operation rounds its exact result once, in a stated context it records (slice ledger)
-status: active                 # active → closed (§1.2a)
-created: 2026-11-08            # working id 8411
+status: closed                 # active → closed (§1.2a)
+created: 2026-11-08            # original date 2026-11-08, draft under working id 8411; minted 2026-11-08
 owner: executor
-tree: ba298745f793f274231ee44afcef8f7022b4f696   # the tree of commit b196e208 (sl-8410-oq2035-option-d, R2b; base 663d7dcd of origin/draft/pl-oq2035-2026-11-07)
+tree: f80dc9cb96657d223020815fa82006825b6e29bf   # the tree of the gated head 8b6c42466df5 (sl-8410-oq2035-option-d); the gate ran on it, and the one test-only fix f6fa7d18 follows it (the gate START line, "START head: 8b6c4246… tree: f80dc9cb…"); was ba298745f793 (the tree of R2b b196e208), corrected at the mint
 slice: SL-2084
 phase: P2
 work: WK-1178
@@ -14,7 +14,9 @@ corrected_by: []
 relates: [PL-2083, FR-2082, FD-2028, OQ-2035, SL-2084]
 ---
 
-# LG 8411 — WK-1178 slice SL-2084: OQ-2035 option D
+# LG-2098 — WK-1178 slice SL-2084: OQ-2035 option D
+
+*Disclosure: drafted under working id 8411; minted as LG-2098 on 2026-11-08, in the SL-2084 mint (WK-1178), after SL-2096's LG-2097 (ids in merge order).*
 
 **GO:** the brief `brief-exec-sl8410-2026-11-08.md` (sha256 prefix `223e3453a9d2`), lead 31, on to-lead
 "2026-11-07 23:56:36 GMT" (PL-2083 accepted; DP-1 (a), DP-2, DP-3 (a), DP-4 (a); the three LG conditions
