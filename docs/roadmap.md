@@ -3941,7 +3941,7 @@ corrected_by: []
 relates: [PL-2083, LG-2098, FR-2082, FR-233, FD-2028, OQ-2035]
 ```
 
-`uplift_table`, `uplift_by_filter` and `rebase_to_level` compute the exact result and round it once, half-even, to the smaller of 28 significant digits and 28 decimal places, in a context the operation states, never the caller's; the operation's recorded parameters carry that context's identity (FR-2082; to-lead "2026-11-07 23:22:37 GMT" and "2026-11-07 23:29:34 GMT"). Per PL-2083 (plan of record), ledger LG 8411. **If its gate cannot start by Tue 10 Nov 2026 20:00 GMT it is not started, and the code is carried to Phase 3 by name.**
+`uplift_table`, `uplift_by_filter` and `rebase_to_level` compute the exact result and round it once, half-even, to the smaller of 28 significant digits and 28 decimal places, in a context the operation states, never the caller's; the operation's recorded parameters carry that context's identity (FR-2082; to-lead "2026-11-07 23:22:37 GMT" and "2026-11-07 23:29:34 GMT"). Per PL-2083 (plan of record), ledger LG-2098. **If its gate cannot start by Tue 10 Nov 2026 20:00 GMT it is not started, and the code is carried to Phase 3 by name.**
 
 *(Closed 2026-11-08 by the mint commit of the slice's PR, on the lead's adoption of the gate (`gate.log` END `2026-11-08T05:27:14+00:00`, `rc=1`, standing under item 31 with one test-only fix, `f6fa7d18`, ruled "STANDS WITH ONE FIX" by the maintainer, `to-lead.md` "2026-11-08 05:28:36 GMT") and of the audit (from-lead "2026-11-08 00:13:01 GMT"; the audit section is in LG-2098). Item 42: the row read `draft` at `origin/main` `9775f352` before this PR; it reads `closed` here. Ledger: LG-2098.)*
 
