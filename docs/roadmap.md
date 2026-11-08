@@ -3835,6 +3835,28 @@ A stated request-body limit on both upload routes (`backend/src/app/api/body_lim
 
 *(Closed 2026-11-07 by the audit commit of the slice's PR, on the lead's adoption of the gate (`gate.log` END `2026-11-07T20:16:50+00:00`, standing modulo the census fix); no row existed at `origin/main` `cdf3871c` before this PR's mint, which added it as `active`. Item 42: the PR sets the row `closed` here. This PR; its number, squash commit and merge date are written at the merge's date-of-record.)*
 
+#### SL-2080 — WK-1178 slice — FD-2079: `POST /api/v1/models/{id}/archive` requires `model:fit`, not `model:submit`
+
+```yaml
+id: SL-2080
+family: slice
+title: WK-1178 slice — FD-2079: `POST /api/v1/models/{id}/archive` requires `model:fit`, not `model:submit`
+status: closed                    # draft → active → closed (§1.2a)
+created: 2026-11-07   # original date 2026-11-05, working id 8368, minted 2026-11-07
+owner: lead
+tree: 0f095cd9faa559e6c5f8baac81152c36f6a918a5
+phase: P2
+work: WK-1178
+corrected_by: []
+relates: [FD-2079, LG-2081]
+```
+
+The archive route and its service check carried `model:submit`; `06` §4.1 makes `model:fit` the Model write right. The slice swaps the constant to `FitModels` / `Permission.MODEL_FIT`, proves both directions and the `approved` and `review` state refusals on the real route, and carries a dated line on `02` §5.1's archive row. The ledger is `LG-2081`; the finding it discharges is `FD-2079`.
+
+(Minted 2026-11-07 from working id 8368, with the mint tool of record `mint-repoint.py`; finding `FD-2079` (working id 8366), ledger `LG-2081` (working id 8369). `tree` is the tree of the slice branch (`sl-8368-archive-permission` @`42009e0d`) before this PR's re-merge of `origin/main`.)
+
+*(Closed 2026-11-07 by the audit commit of the slice's PR, on the lead's adoption of the gate (`gate.log` END `2026-11-07T22:29:14Z`, `rc=1`, standing under item 31; the 13 failures are item 31's set by name). Before this PR the row did not exist at `origin/main` `e12dc849`; the mint adds it, closed. Item 42: the PR sets the row `closed` here. This PR; its number, squash commit and merge date are written at the merge's date-of-record.)*
+
 ### WK-1250 — Sub-graph composition and MTA/cancellation pricing — FR-217's inlining and FR-218's authoring half
 
 ```yaml
