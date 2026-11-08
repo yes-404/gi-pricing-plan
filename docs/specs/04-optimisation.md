@@ -275,6 +275,8 @@ Each `kind` uses the parameters FR-233 names:
 - `rebase_to_level` — `base_level`; rescales the table so the named reference level's
   value becomes 1.0. *(Amended 2026-11-05, SL-2041, FD-2032: `03` FR-233 refuses `rebase_to_level` on any column but `relativity`, and both uplifts on `count`, with `BULK_OPERATION_NOT_APPLICABLE`.)*
 
+*(Amended 2026-11-07, WK-1178, `03` FR-2082, to-lead "2026-11-07 23:29:34 GMT"; the shape is PL-2083 DP-4's recommendation, delivered by SL-2084: the record of `uplift_table`, `uplift_by_filter` and `rebase_to_level` carries in `parameters` a `context` object naming the decimal context the operation computed in — `precision` (28), `places` (28), `rounding` (`"half_even"`) and `version` (1). The operation writes it; a request that sends it is refused (`extra` is forbidden on the request's `parameters`). A record without it was written before FR-2082 and reads as ambient 28 significant digits with the factor and the product each rounded. `floor_and_cap` computes nothing and records no `context`.)*
+
 `percentage`, `floor`, `cap` ~~and `base_level`~~ are decimal strings, never floats (R2). *(Amended 2026-10-12, the maintainer's (by delegation) entry "2026-10-12 03:07:15 BST": `base_level` is a key filter, as the example above and the next sentence state, never a decimal; its listing here was an error. Delivered with SL-1669, which types `percentage`, `floor` and `cap` as decimal strings.)*
 `filter` and `base_level` use exact-value matching over the table's declared keys (`03`
 §4.2 `keys`) — the "key filter" FR-233 names; richer filter syntax (ranges,
