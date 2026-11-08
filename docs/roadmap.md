@@ -1849,11 +1849,13 @@ owner: maintainer
 phase: P2
 ```
 
-From “Workstreams” (line 386): **`expression` custom objectives** — SymPy derivation, the gradient/hessian compilation target, the authoring UI, and ~~lifting `expression_objectives_enabled`~~ making `expression_objectives_enabled` liftable **plus `custom_objective:author` and its check, which `06` FR-367 requires the `expression` kind to arrive with** | Added 2026-08-15 by OQ-573's decision, which moved this work out of WK-661 rather than deleting it: `02` FR-144/145, FR-150, §4.6, and `WF-702` Route B. It depends on nothing in WK-669–WK-675 and could equally be pulled into 1b if WK-661 finishes early — but it must not start before the certification machinery it fronts (FR-151) has run for a phase, which is the whole point of the decision — **close audit filed (CR-1980), acceptance owed** *(dated 2026-11-03 by the auditor, on the maintainer's entry "2026-11-03 15:36:59 GMT" item 5 in `to-lead.md`; audited at `c807a59d`; the record proposes, the lead gives the §13 verdicts, and the close is the user's dated line)*
+From “Workstreams” (line 386): **`expression` custom objectives** — SymPy derivation, the gradient/hessian compilation target, the authoring UI, and ~~lifting `expression_objectives_enabled`~~ making `expression_objectives_enabled` liftable **plus `custom_objective:author` and its check, which `06` FR-367 requires the `expression` kind to arrive with** | Added 2026-08-15 by OQ-573's decision, which moved this work out of WK-661 rather than deleting it: `02` FR-144/145, FR-150, §4.6, and `WF-702` Route B. It depends on nothing in WK-669–WK-675 and could equally be pulled into 1b if WK-661 finishes early — but it must not start before the certification machinery it fronts (FR-151) has run for a phase, which is the whole point of the decision — **close audit filed (CR-1980), acceptance owed** *(dated 2026-11-03 by the auditor, on the maintainer's entry "2026-11-03 15:36:59 GMT" item 5 in `to-lead.md`; audited at `c807a59d`; the record proposes, the lead gives the §13 verdicts, and the close is the user's dated line)* — **fresh close audit filed (CR-2078, re-testing CR-1980), acceptance owed** *(dated 2026-11-05 by the auditor, on the maintainer's entry "2026-11-05 11:07:14 GMT" in `to-lead.md`; audited at `2f108b1e`; the record proposes, the lead gives the §13 verdicts, and the close is the user's dated line)* *(Dated 2026-11-07 by the auditor: CR-2078 refreshed at `cdf3871c` on nfr-bench-1 S2's readings; still NOT CLOSE-READY, proposed, on FD 8408 (NFR-476's expression limb, 1.502 against 1.25), FD-2009 and the docs closing acts)*
 
 *(Amended 2026-09-30 by the lead, on `PL-1268` §Activation item 2 and `RL-1265` DP-1 to DP-3.)* Two corrections. First, "lifting `expression_objectives_enabled`" reads "making `expression_objectives_enabled` liftable", because DP-3 (a) keeps the default off: WK-690 switches it on nowhere, and enabling it for a workspace is a separate, dated maintainer decision after WK-690 closes (`RL-1265` DP-3). The `### WK-690` heading and its `title:` still read "lifting" and are deliberately left unchanged, because they are the row's identity string; this From line carries the correction. Second, FR-85, FR-86's field, FR-210 with FR-208's `spline` and `polynomial` arms, and FR-154's expression half left WK-690 for Phase 3 (`RL-1265`), spec change first, deferred with an owner: the maintainer, with the event being the P2 phase closure record, which lists them for P3's first plan.
 
 **2026-09-28 — the start gate is MET** (item E3 in the deputy's OQ-stream entry; Maintainer decision by delegation (deputy, on the maintainer's instruction of 2026-09-28 11:24 BST), 2026-09-28 11:33:12 BST). The gate above says this work must not start before the certification machinery it fronts (FR-151) has run for a phase. That machinery shipped in WK-661 (`CR-754`, closed 2026-08-22). It has since run for a phase: P1b was accepted closed on 2026-08-27 (`CR-822`). **WK-690 must add `sympy`**: `grep -c -i sympy uv.lock` prints 0 at `12431a88`. It lands together with the `docs/skills-map.md` update that the dependency requires (`CLAUDE.md` §10). The first slice is the parser, brought to `02` §4.6's profiles (item E2, filed in the Track E spec PR).
+
+*(Dated line, 2026-11-07, docs batch 16, by the executor, on CR 8314's refresh (F2) and the maintainer's carry ruling (`to-lead.md` "2026-11-07 20:28:26 GMT"): **FR-207's WK-690 limb is moved out of this Work**: its two `custom_objective_ref` residuals are Phase 3's, owner the maintainer, on `RL-1362` DP-S3-5 and `02` FR-207's staging rule. CR 8314 states the move in its "Moved out of WK-690" paragraph and its deliverable table ("reassigned"). The slice and Work rows above that cite FR-207 (SL-1273's title among them) are history and are not edited.)*
 
 
 #### SL-1271 — Slice 1: the parser brought to §4.6's four profiles, with its limits and the sympy pin (FR-144, FR-145, FR-36, NFR-483, `01` §4.5 `expression` check, `02` §4.6)
@@ -1941,13 +1943,15 @@ Minted as `SL-1274` at #943's merge turn, 2026-09-30, with `python3 scripts/doc-
 
 (Closed 2026-10-18 as a Slice by fix4-1274's closing acts (LG-1817 minted from working id 8062), on the pre-PR audit of LG-1817 (auditor-1274, "## Audit", 2026-10-18 18:18:08 BST; head `ebcb6eaa`): F-C1, F-C2 and F-C3 are answered in LG-1817, F-C2's migration hazard (a bare NotNullViolation on `f2b6d90a4c17`'s downgrade) is fixed red-first at `68eb62a7` and proved in the round-trip window written in LG-1817, on the maintainer's "2026-10-18 18:20:40 BST" (`to-lead.md`). MERGE-ACK: not yet given.)
 
+(Dated line, 2026-11-07, docs batch 16, by the executor, on CR 8314's refresh (F3) and the maintainer's carry ruling (`to-lead.md` "2026-11-07 20:28:26 GMT"): "MERGE-ACK: not yet given." above is superseded by the record. The PR is #1344, squash merge `d87dd25971f5c7abddbf63da6cfee247a5daa51a` (committed 2026-10-18 19:08:06 +01:00), and the MERGE-ACK is the maintainer's "2026-10-18 19:07:51 BST — Maintainer: MERGE-ACK #1344 (SL-1274 / LG-1817: WK-690 S4, expression Factors through the platform)" (`to-lead.md`). The status `closed` stands; no sentence above is edited.)
+
 #### SL-1275 — Slice 5: the authoring view, and `WF-702` Route B end to end (`02` §5.3)
 
 ```yaml
 id: SL-1275
 family: slice
 title: Slice 5: the authoring view, and `WF-702` Route B end to end (`02` §5.3)
-status: active                   # draft → active → closed | retired (§1.2a)
+status: closed                   # draft → active → closed | retired (§1.2a)
 created: 2026-09-30
 owner: planner                   # cut in the map plan (draft); lead dispatches (active)
 tree: dee49f781fd23f9df2e72161885c77fa17a6f1ab
@@ -1963,6 +1967,8 @@ Minted as `SL-1275` at #943's merge turn, 2026-09-30, with `python3 scripts/doc-
 (Activated 2026-10-21 on the maintainer's entry "2026-10-21 15:03:33 BST — Maintainer: GOs on the 15:02:44 work queue" (`to-lead.md`), item 4. `PL-1268` and `PL-1665` are `active`; `PL-1621` stands as `PL-1665` amends it. The slice's one ledger is `LG-1839` (working id reserved by the lead in eta.md; minted at the merge turn). Executor seat `exec-1275`, branch `sl-1275-wk690-s5-authoring-view`.)
 
 (Built and gated 2026-10-22; **stays `active`** on the maintainer's B4 ruling ("2026-10-22 00:57:13 BST": merge-then-measure, precedent SL-1367 Acc 10). Slice audit `RS-1844` NOT-CLEAN, resolved by R1–R3; re-audit `RS-1845` CLEAN for the delta; the code gate re-ran at `96354f9c` (ledger `LG-1839` item 13). **Carried, owner WK-690:** the `PL-1665` 5.7 measurement (3c, 3d) in a TRUE ALONE window, which closes the slice; `features.expression_objectives_enabled` stays default OFF; FR-1840's 3d budget stays provisional until measured. Also carried to WK-690: FD-1842 (`grammar_refusal` `RecursionError` on the create path, MEDIUM).)
+
+(Closed 2026-11-07, docs batch 16, by the executor, on CR 8314's refresh (F1) and the maintainer's carry ruling (`to-lead.md` "2026-11-07 20:28:26 GMT"): the one condition the paragraph above left open, the `PL-1665` 5.7 measurement, was taken at `dae9637e` on 2026-11-05 (10:15:20 to 10:18:52 UTC; `LG-1839`'s addendum and its dated line of docs batch 11 carry the load and the command): 3d PASS, 3c UNMET, carried by name as FD-2009 (working id 8352, owner WK-690). The row's `status:` is flipped to `closed` here; the paragraphs above are not edited. `LG-1839` stays `active` until S3's readings land; its close follows S3.)
 
 #### SL-1622 — WK-690 fix row: FD-1349, FD-1492 and FD-1512 fixed before close, and FD-1294's discharge line
 
@@ -3806,6 +3812,50 @@ One stdlib table-row parser (`packages/model-schema/src/model_schema/table_rows.
 (Minted 2026-11-07 from working id 8343, with the mint tool of record `mint-repoint.py`; plan `PL-2068`, ledger `LG-2070`. `tree` is the tree of the slice branch (`sl-8343-table-row-parser` @`723e5fca`) before the merge of `origin/main`. The slice's PR carries T folded, the second of two slices on one branch and one gate.)
 
 *(Closed 2026-11-07 by the audit commit of the slice's PR, on the lead's adoption of aud-sl8343 (`from-lead-2026-10-09.md`, "2026-11-05 17:08:05 GMT"); no row existed at `origin/main` `3c3ee5cbc182` before this PR's mint, which added it as `active`. Item 42: the row at `origin/main` was found absent, not `active`.)*
+
+#### SL-2075 — WK-1178 slice — FD-1802 / FD-1746: the upload body limit and the purge audit's before state
+
+```yaml
+id: SL-2075
+family: slice
+title: WK-1178 slice — FD-1802 / FD-1746: the upload body limit and the purge audit's before state
+status: closed                    # draft → active → closed (§1.2a)
+created: 2026-11-07   # original date 2026-11-05, working id 8325, minted 2026-11-07
+owner: lead
+tree: b655490eb27d546d68e94c96b7735a6d575f686b
+phase: P2
+work: WK-1178
+corrected_by: []
+relates: [FD-1802, FD-1746, PL-2074, LG-2076]
+```
+
+A stated request-body limit on both upload routes (`backend/src/app/api/body_limit.py`, a typed setting, nginx at the limit plus a small margin) and a purge audit event that carries its before state (version ids and statuses). The plan is `PL-2074`; the ledger is `LG-2076`.
+
+(Minted 2026-11-07 from working id 8325, with the mint tool of record `mint-repoint.py`; plan `PL-2074` (working id 8324), ledger `LG-2076` (working id 8326). `tree` is the tree of the slice branch (`sl-8325-a-upload-limit` @`14571939`) before the merge of `origin/main`.)
+
+*(Closed 2026-11-07 by the audit commit of the slice's PR, on the lead's adoption of the gate (`gate.log` END `2026-11-07T20:16:50+00:00`, standing modulo the census fix); no row existed at `origin/main` `cdf3871c` before this PR's mint, which added it as `active`. Item 42: the PR sets the row `closed` here. This PR; its number, squash commit and merge date are written at the merge's date-of-record.)*
+
+#### SL-2080 — WK-1178 slice — FD-2079: `POST /api/v1/models/{id}/archive` requires `model:fit`, not `model:submit`
+
+```yaml
+id: SL-2080
+family: slice
+title: WK-1178 slice — FD-2079: `POST /api/v1/models/{id}/archive` requires `model:fit`, not `model:submit`
+status: closed                    # draft → active → closed (§1.2a)
+created: 2026-11-07   # original date 2026-11-05, working id 8368, minted 2026-11-07
+owner: lead
+tree: 0f095cd9faa559e6c5f8baac81152c36f6a918a5
+phase: P2
+work: WK-1178
+corrected_by: []
+relates: [FD-2079, LG-2081]
+```
+
+The archive route and its service check carried `model:submit`; `06` §4.1 makes `model:fit` the Model write right. The slice swaps the constant to `FitModels` / `Permission.MODEL_FIT`, proves both directions and the `approved` and `review` state refusals on the real route, and carries a dated line on `02` §5.1's archive row. The ledger is `LG-2081`; the finding it discharges is `FD-2079`.
+
+(Minted 2026-11-07 from working id 8368, with the mint tool of record `mint-repoint.py`; finding `FD-2079` (working id 8366), ledger `LG-2081` (working id 8369). `tree` is the tree of the slice branch (`sl-8368-archive-permission` @`42009e0d`) before this PR's re-merge of `origin/main`.)
+
+*(Closed 2026-11-07 by the audit commit of the slice's PR, on the lead's adoption of the gate (`gate.log` END `2026-11-07T22:29:14Z`, `rc=1`, standing under item 31; the 13 failures are item 31's set by name). Before this PR the row did not exist at `origin/main` `e12dc849`; the mint adds it, closed. Item 42: the PR sets the row `closed` here. This PR; its number, squash commit and merge date are written at the merge's date-of-record.)*
 
 ### WK-1250 — Sub-graph composition and MTA/cancellation pricing — FR-217's inlining and FR-218's authoring half
 
