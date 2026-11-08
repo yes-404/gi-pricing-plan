@@ -651,7 +651,7 @@ class ValidationReportView(_ReportFields):
     @model_validator(mode="after")
     def _derived_never_assigned(self) -> Self:
         if self.overall is not _overall_of(self.results) or self.counts != _counts_of(self.results):
-            raise ValueError(
+            raise InputFreeError(
                 "overall and counts are derived from results, never assigned (01 §4.6)"
             )
         return self
