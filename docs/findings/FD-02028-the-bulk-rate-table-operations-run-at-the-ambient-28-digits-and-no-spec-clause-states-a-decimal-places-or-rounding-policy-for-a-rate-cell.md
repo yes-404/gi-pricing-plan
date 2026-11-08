@@ -37,3 +37,5 @@ Measured by the data-modelling seat on `cda3c0dc`, DB-free, with the real operat
 ## Disposition
 
 Open, owner WK-1178. **The decision is the user's** (it sets how rates are rounded): OQ-2035 carries the options and a recommendation to the §14 review of Mon 16 Nov 2026; if undecided, the P2 closure record carries it by name. Rulings: to-lead "2026-11-05 16:33:41 GMT" and "2026-11-05 17:20:30 GMT" (sizing corrected to step 1, MEDIUM stands). Related, not the same: FD-1783 / OQ-1784 ask for a declared precision at a fit's materialisation. Filed as working id 8383.
+
+*(Decided 2026-11-08 by the plan's hand-off (PL-2083): decided D, `to-lead.md` 2026-11-07 23:22:37 GMT, corrected 23:29:34; fixed by SL-2084, or carried to Phase 3 by name.)*
