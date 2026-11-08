@@ -28,6 +28,55 @@
       "title": "Acknowledgement",
       "type": "object"
     },
+    "OverallOutcome": {
+      "enum": [
+        "pass",
+        "pass_with_warnings",
+        "fail",
+        "error"
+      ],
+      "title": "OverallOutcome",
+      "type": "string"
+    },
+    "ReportCounts": {
+      "additionalProperties": false,
+      "properties": {
+        "error": {
+          "minimum": 0,
+          "title": "Error",
+          "type": "integer"
+        },
+        "fail": {
+          "minimum": 0,
+          "title": "Fail",
+          "type": "integer"
+        },
+        "pass": {
+          "minimum": 0,
+          "title": "Pass",
+          "type": "integer"
+        },
+        "skipped": {
+          "minimum": 0,
+          "title": "Skipped",
+          "type": "integer"
+        },
+        "warn": {
+          "minimum": 0,
+          "title": "Warn",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "pass",
+        "warn",
+        "fail",
+        "error",
+        "skipped"
+      ],
+      "title": "ReportCounts",
+      "type": "object"
+    },
     "RuleOutcome": {
       "enum": [
         "pass",
@@ -180,8 +229,11 @@
     }
   },
   "additionalProperties": false,
-  "description": "The outcome of one validation run (`01` §4.6).",
+  "description": "A report **as presented** (`01` §4.6): the artifact, plus the outcome derived from it.\n\nNever stored. The stored body is `ValidationReport`, and it stays free of both keys because\nit is the artifact (`ValidationReportRow`); `extra=\"forbid\"` there refuses this shape, so a\nview cannot be read back as a report. `overall` and `counts` are fields so the published\ncontract and the `01` §4.6 example hold them, and checked so neither is ever assigned.",
   "properties": {
+    "counts": {
+      "$ref": "#/$defs/ReportCounts"
+    },
     "dataset_version_id": {
       "format": "uuid",
       "title": "Dataset Version Id",
@@ -217,6 +269,9 @@
       ],
       "default": null,
       "title": "Job Id"
+    },
+    "overall": {
+      "$ref": "#/$defs/OverallOutcome"
     },
     "reference_dataset_version_id": {
       "anyOf": [
@@ -260,8 +315,10 @@
     "rule_set_id",
     "rule_set_version",
     "started_at",
-    "finished_at"
+    "finished_at",
+    "overall",
+    "counts"
   ],
-  "title": "ValidationReport",
+  "title": "ValidationReportView",
   "type": "object"
 }

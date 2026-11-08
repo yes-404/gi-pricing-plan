@@ -106,6 +106,9 @@ entirely.
      doc-index.py --check` CI step); a merged PR's title names its `SL-` and the slice's
      ledger records the PR — needs GitHub PR context this tree-snapshot tool does not have,
      so noted rather than checked here.
+ 40. Every fence in docs/specs/ declares a language, and every `json` block declares
+     `schema=<Class>` or `illustrative` and parses when classed (FD-1381). Validation
+     against model-schema is tests/test_spec_examples.py's, so this script stays stdlib.
 
 Usage: python3 scripts/audit-docs.py
 """
@@ -3689,6 +3692,83 @@ def _partition_by_w37_11_record() -> tuple[list[str], list[str]]:
     return counted, disclosed
 
 
+_SPEC_FENCE_RE: Final = re.compile(r"^\s{0,3}```(?P<info>.*)$")
+_EXAMPLE_MARKER_RE: Final = re.compile(
+    r"^json (?:schema=(?P<schema>[A-Z]\w*)|(?P<illustrative>illustrative))$"
+)
+
+
+@dataclass(frozen=True)
+class SpecFence:
+    """One fenced block of a spec; `tests/test_spec_examples.py` loads this parser by path."""
+
+    path: pathlib.Path
+    line: int
+    info: str
+    body: str
+
+    @property
+    def language(self) -> str:
+        return self.info.split(" ", 1)[0]
+
+    @property
+    def schema(self) -> str | None:
+        marker = _EXAMPLE_MARKER_RE.match(self.info)
+        return marker["schema"] if marker else None
+
+    @property
+    def illustrative(self) -> bool:
+        marker = _EXAMPLE_MARKER_RE.match(self.info)
+        return bool(marker and marker["illustrative"])
+
+
+def spec_fences(path: pathlib.Path) -> list[SpecFence]:
+    """Every fenced block, indented ones included: a list-indented fence is still a fence."""
+    lines = path.read_text(encoding="utf-8").splitlines()
+    fences: list[SpecFence] = []
+    i = 0
+    while i < len(lines):
+        opening = _SPEC_FENCE_RE.match(lines[i])
+        if opening is None:
+            i += 1
+            continue
+        j = i + 1
+        while j < len(lines) and _SPEC_FENCE_RE.match(lines[j]) is None:
+            j += 1
+        fences.append(SpecFence(path, i + 1, opening["info"].strip(), "\n".join(lines[i + 1 : j])))
+        i = j + 1
+    return fences
+
+
+def check_spec_examples(specs: list[pathlib.Path]) -> None:
+    """Check 40: every fence declares a language; every json block is marked (FD-1381)."""
+    total = schema = illustrative = unmarked = 0
+    for spec in specs:
+        for block in spec_fences(spec):
+            where = f"{block.path.name}:{block.line}"
+            if not block.language:
+                fail(f"check 40: {where}: a fence declares no language")
+                continue
+            if block.language != "json":
+                continue
+            total += 1
+            if block.schema:
+                schema += 1
+                try:
+                    json.loads(block.body)
+                except ValueError as exc:
+                    fail(f"check 40: {where}: schema={block.schema} does not parse: {exc}")
+            elif block.illustrative:
+                illustrative += 1
+            else:
+                unmarked += 1
+                fail(f"check 40: {where}: json block has no schema= or illustrative marker")
+    notes.append(
+        f"check 40: {total} json blocks: {schema} schema, {illustrative} illustrative, "
+        f"{unmarked} unmarked"
+    )
+
+
 def main() -> int:
     md = sorted(ROOT.rglob("*.md"))
     specs = sorted(ROOT.glob("specs/*.md"))
@@ -4204,6 +4284,9 @@ def main() -> int:
 
     # 29. every docs/findings/register.md Decision cell conforms to its own header grammar
     check_register_grammar()
+
+    # 40. every spec fence declares a language; every json block declares its class (FD-1381)
+    check_spec_examples(specs)
 
     # Last, after every check has had its say: the governed W37-11 residue ceiling
     # decides which of the failures above are disclosed rather than counted.

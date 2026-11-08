@@ -243,6 +243,19 @@ def test_the_algorithm_diff_response_is_typed_by_its_model() -> None:
     assert schema == {"$ref": "#/components/schemas/AlgorithmDiff"}
 
 
+@pytest.mark.req("FR-42")
+def test_the_report_route_publishes_its_outcome() -> None:
+    """`01` §4.6's report carries `overall` and `counts`; the route's response must say so
+    (FD-2090: both were plain properties, so the published response omitted them)."""
+    document = _load(OPENAPI)
+    paths = document["paths"]
+    ref = paths["/api/v1/validation-reports/{report_id}"]["get"]["responses"]["200"][
+        "content"
+    ]["application/json"]["schema"]["$ref"]
+    schema = document["components"]["schemas"][ref.rsplit("/", 1)[1]]
+    assert {"overall", "counts"} <= set(schema["required"])
+
+
 SPEC_RATING_ENGINE = ROOT / "docs" / "specs" / "03-rating-engine.md"
 
 
@@ -734,6 +747,7 @@ def _declared_fields(
         "transparency-artifact",
         "objective-certificate",
         "peril-structure",
+        "validation-report",
     ],
 )
 def test_an_artifact_shape_carries_exactly_what_its_contract_declares(slug: str) -> None:

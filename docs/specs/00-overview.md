@@ -11,7 +11,7 @@
 An open-source general insurance pricing platform for the UK/EU market, covering the full
 pricing lifecycle:
 
-```
+```text
 data preparation → risk modelling → rating algorithm design → deployment/scoring
       → monitoring → governance
 ```
@@ -76,7 +76,7 @@ Actors are used with these exact names in every workflow document.
 
 ### 1.5 System context
 
-```
+```text
                        ┌──────────────────────────────────────────┐
    Analyst /            │  Frontend — Vue 3 SPA                    │
    Actuary  ──────────► │  workbench · DAG designer · dashboards   │
@@ -266,7 +266,7 @@ This section fixes the relationships and the identity rules.
 
 ### 4.1 Entity relationship map
 
-```
+```text
 Workspace
  └── Dataset ──────< DatasetVersion ──< ValidationReport
                           │      └────< Profile
@@ -315,7 +315,7 @@ tenants would show two of these trees in two systems.
 Every persisted entity carries the envelope below (defined once in `model-schema` as
 `ArtifactEnvelope`, referenced by every module contract):
 
-```json
+```json schema=ArtifactEnvelope
 {
   "id": "0190b5a2-7c3e-7a10-9d21-4f6b8c2e1a01",
   "workspace_id": "0190b5a2-7c3e-7a10-9d21-4f6b8c2e1a01",
@@ -362,7 +362,7 @@ Module specs define their own endpoints; all of them obey the following.
 
 Cursor pagination everywhere (stable under concurrent writes):
 
-```
+```text
 GET /api/v1/models?limit=50&cursor=<opaque>&status=approved&sort=-created_at
 → 200 {"items": [...], "next_cursor": "<opaque>|null", "total_estimate": 1234}
 ```
@@ -371,7 +371,7 @@ GET /api/v1/models?limit=50&cursor=<opaque>&status=approved&sort=-created_at
 
 A single RFC 9457 `application/problem+json` shape, with a stable machine `code`:
 
-```json
+```json schema=ProblemDetail
 {
   "type": "https://docs.gi-pricing.dev/errors/dataset-not-validated",
   "title": "Dataset version is not validated",
