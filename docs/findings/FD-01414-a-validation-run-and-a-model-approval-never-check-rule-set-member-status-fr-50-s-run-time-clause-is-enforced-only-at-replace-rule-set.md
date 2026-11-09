@@ -191,3 +191,5 @@ missing-member drop is ruled with it, per the 11:07:28 addendum). **Discharge = 
 merge.** Filed by the auditor; the verdict is the lead's.
 
 **Superseded (struck, kept for the record):** ~~Open. Not part of the FD-1356 fix slice (PL 9762): the reset it contains touches no row today; its own FD, deadline before the P2 exit demo, a DM rules WHERE (the maintainer, 11:07:12 and 11:07:28).~~
+
+***Dated line, 2026-11-09*** (docs batch 29, by the auditor). `to-lead` "2026-11-09 10:12:52 GMT" (3): the auditor's proposed owner accepted as a proposal: **P3-C, by name, for the model-approval limb**. SL-1409 discharged all but the model-approval limb, 11 models and 15 versions, which WK-1178's close cannot own. P19 (a); `CR-2103` P25 makes P3-C and P3-D WK-1178's successors, and neither has a `### WK-` row yet, so this record is their owner until the rows exist.

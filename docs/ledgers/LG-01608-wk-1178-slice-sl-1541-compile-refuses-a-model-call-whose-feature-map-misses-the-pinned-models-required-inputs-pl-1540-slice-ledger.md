@@ -55,7 +55,7 @@ The ruff fix is the only change after the gate besides this ledger's closing act
 
 ### Audit
 
-Not yet given.
+*(Dated line, 2026-11-09, docs batch 29, by the auditor, filed under FD-1655 (`to-lead` "2026-11-09 10:12:52 GMT" (1)). Written from this ledger's own red and green lines and the merge, read and not re-run; the merge is an ancestor of `origin/main` at `40ba57f4`. Source: `RS-1649`'s row for the slice. )* SL-1541, #1272 `d699a561d6a93f33b74beb9c07023f8e655bb8c7` (merged 2026-10-11T11:12:28+01:00). **Red then green:** the red-by-cause table in the Build log (four `DID NOT RAISE ValueError`, the `required_model_inputs` AttributeError, the census entry, each rc 1; both files rc 0 at `54b79c67`, 10 and 19 passed). **Gate:** at `d536053f`, GATE-RC=1; the one OWN red, ruff E501 at `backend/tests/test_rating_algorithms.py:620`, was fixed after the gate and checked per file (`ruff check` on that file rc 0; `-k one_required_inputs_helper` 2 passed), with no re-run of the gate (FD-1655 (ii)); the other reds are mint artefacts (check 31 and the 13 audit-on-tree tests); the frontend ran 665 of 665.
 
 ### Build log
 

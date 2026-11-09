@@ -186,3 +186,5 @@ channel entries, not merged records; the ruling record is the mint turn's.
 *(Amended 2026-09-30: citations of the WK-675 map plan re-pointed to PL-1286 after #920 merged, and "the PR still open" (evidence item 7) corrected to "merged by #920"; no other change. The mint disclosure above is kept.)*
 
 Ownership shape: event
+
+***Dated line, 2026-11-09*** (docs batch 29, by the auditor). `to-lead` "2026-11-09 10:12:52 GMT" (3): the auditor's proposed owner accepted as a proposal: **P3-C, for the Deployments limb**. The version list and the regression suite are delivered (SL-1552 and SL-1553 are `closed`); no Deployments view or route is in `frontend/src`, and the row's owner WK-675 is closed. P19 (a); `CR-2103` P25 makes P3-C and P3-D WK-1178's successors, and neither has a `### WK-` row yet, so this record is their owner until the rows exist.

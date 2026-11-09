@@ -109,3 +109,5 @@ The lead's 00:08:46 correction reads the build "below the 277.8 line IF NFR-493 
 **Event that next confirms or discharges it:** the remedy slice's profiling spike on the path the demo uses (hypothesis first: per-policy memory from `.collect()` materialisation and frame width; the build's cost as two `score_batch` passes plus a Python row loop), then a measured end-to-end dislocation run at a size the maintainer names. The `R2` full-book N=3 median is no longer expected: the full book did not complete in 60 min (two attempts, above).
 
 **Remedy: none applied; none proposed in code here.** The planning inputs (`PL-1452`, the dispatch record) are frozen; the correction is this record's measured figures.
+
+***Dated line, 2026-11-09*** (docs batch 29, by the auditor). `to-lead` "2026-11-09 10:12:52 GMT" (3): the auditor's proposed owner accepted as a proposal: **P3-C, by name**. `SL-1575`, the row's measured target, reads `closed`, so the owner is the P3-C row and not that slice. P19 (a); `CR-2103` P25 makes P3-C and P3-D WK-1178's successors, and neither has a `### WK-` row yet, so this record is their owner until the rows exist.
