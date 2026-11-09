@@ -18,7 +18,9 @@ During row 6b's headless browser check (SL-1913, 2026-11-09, headless Chromium t
 
 ## Evidence
 
-At tree 374a22bf33ad, `grep -nE "watch|onBeforeRouteUpdate|route\.params|useRoute|onMounted" frontend/src/views/RatingVersionView.vue` prints one line: `2:import { computed, onMounted, ref } from "vue";`, and `22:onMounted(async () => {`. No `watch`, no `onBeforeRouteUpdate`, no `useRoute`. The id arrives as the prop `id` (`defineProps<{ id: string }>()`, line 6) and is read once, in `onMounted`. The router entry is `frontend/src/router/index.ts:244`. Script and screenshots: `~/gi-pricing-plan.local/scratch/exec-rehprep2/rows-6-6b.v2.mjs`, `~/gi-pricing-plan.local/scratch/exec-sl1913/row6b/`.
+At tree 374a22bf33ad, `grep -nE "watch|onBeforeRouteUpdate|route\.params|useRoute|onMounted" frontend/src/views/RatingVersionView.vue` prints two lines: `2:import { computed, onMounted, ref } from "vue";` and `22:onMounted(async () => {`. No `watch`, no `onBeforeRouteUpdate`, no `useRoute`. The id arrives as the prop `id` (`const props = defineProps<{ id: string }>();`, line 8) and is read once, in `onMounted`. The router entry is `frontend/src/router/index.ts:244`. *(Dated correction, 2026-11-09, by the executor, on the audit N2 in `LG-8226`'s Audit section, adopted by the lead at from-lead "2026-11-09 22:05:11 GMT": the essay said the grep "prints one line" and then listed two, and put `defineProps` at line 6. Re-run at origin/main 2a66ce6388f4 (`git show origin/main:frontend/src/views/RatingVersionView.vue | grep -nE "watch|onBeforeRouteUpdate|route\.params|useRoute|onMounted|defineProps"`, rc=0) it prints `2:import { computed, onMounted, ref } from "vue";`, `8:const props = defineProps<{ id: string }>();` and `22:onMounted(async () => {`; the original five-term grep, without `defineProps`, prints lines 2 and 22 only. The 30 s timeout observation's own output is **not in any retained log**: only the seat's account of it exists. "Not diagnosed" stands.)*
+
+Script and screenshots: `~/gi-pricing-plan.local/scratch/exec-rehprep2/rows-6-6b.v2.mjs`, `~/gi-pricing-plan.local/scratch/exec-sl1913/row6b/`.
 
 ## Disposition
 

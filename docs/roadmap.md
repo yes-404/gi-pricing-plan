@@ -3490,7 +3490,7 @@ Test-only fix of FD-1872 (owner WK-1178): `backend/tests/test_deployment_switch_
 id: SL-1913
 family: slice
 title: WK-1178 rehearsal slice — the full PL-1544 rehearsal checklist (rows 0–9 and PL-1912's row 6b) on the exit tree, Mon 9 Nov 2026
-status: active                     # draft → active → closed | retired (§1.2a)
+status: closed                     # draft → active → closed | retired (§1.2a)
 created: 2026-10-25
 owner: planner                   # cut by the planner (draft); lead dispatches (active)
 tree: ff976406f1bf133cfe040d2c44d383011503988a
@@ -3513,6 +3513,8 @@ One full run of `PL-1544` §"Rehearsal checklist", rows 0 to 9 as written there 
 *(Dated 2026-11-06, docs batch 13, by the executor, on to-lead "2026-11-06 01:24:04 GMT" item (3) and the lead's log of 2026-11-06 04:15:32: **the gate template now carries the digest seed**, and its first full gate proof is H's (`~/gi-pricing-plan.local/scratch/slh-gate/gate/gate.log`, END 04:14:47, seeded demo PASS in 1523 s). The seed block was proved red on a corrupted copy and on a changed pin before it was used (lead's log, 2026-11-06 01:28:00; `scratch/gate-template/gate-template.sh`). This adds to the 2026-11-06 line above and changes none of it: the rehearsal's own seeding of the demo host stays this slice's seat's.)*
 
 *(Dated 2026-11-09 (written 09:46:29 GMT, reworded the same day after the ruling named below), by the executor: `status` `draft → active` (`document-ids.md` §1.6, SL row: the lead dispatches). Authority: the maintainer's entry to-lead "2026-11-09 09:30:15 GMT", word (1), "SL-1913 Phase A may start now", **withdrawn** by the ruling to-lead "2026-11-09 09:52:39 GMT" (Phase A = (b)): CLAUDE.md §13 (Lean P2 L1) allows no activation PR for this slice, so this change is **not** a PR of its own. It stays on branch `docs/sl1913-activation-2026-11-09`, unmerged, as the first commit of the rehearsal's own branch, and reaches `main` in the one PR after Mon 16 Nov 2026 that carries this row change, `LG 8226` with the maintainer's GO quoted, and the rehearsal results. Ledger `LG 8226` is born with this commit (to-lead "2026-10-25 21:07:44 GMT" (i), `PL-1912`). The heading's date and the 2026-11-04 correction above are unchanged: the rehearsal is Mon 16 Nov 2026.)*
+
+*(Closed by a dated line, 2026-11-09, by the executor, on the lead's adoption of the audit at from-lead "2026-11-09 22:05:11 GMT" and common brief item 42: `status` `active → closed`. The audit is in `LG-8226`'s Audit section (aud-sl1913, 2026-11-09 22:05 GMT), whose verdict reads: "CLEAN on every result and every guard; NOT-CLEAN on two record-form items only (N1, N2), neither touching a result the executor recorded". The lead's adoption reads: "audit ADOPTED; every result and guard CLEAN; N2 (FD 8422 essay) fixed before the mint; N1 (rc= not last line on some logs) waived for this slice with a process row; O1 (row 5 states NFR-529 against 1444 s) added. Close follows." The close commit is this PR's; `LG-8226` is `closed` by the same commit. Working ids stay unminted.)*
 
 #### SL-1976 — WK-1178 hotfix slice — the CI MinIO image guard pins the tarball sha256 and accepts the config or the manifest Id (FD-1975)
 
