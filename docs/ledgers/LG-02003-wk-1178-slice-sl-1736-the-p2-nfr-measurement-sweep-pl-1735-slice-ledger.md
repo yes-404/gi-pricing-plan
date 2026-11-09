@@ -2,7 +2,7 @@
 id: LG-2003
 family: ledger
 title: WK-1178 slice SL-1736 — the P2 NFR measurement sweep (NFR-467, 468, 470, 485, 1443 DIAGNOSTIC; NFR-472 red-first) (slice ledger)
-status: active                 # active → closed (§1.2a)
+status: closed                 # active → closed (§1.2a)
 created: 2026-11-04   # drafted 2026-10-22 under working id 8155; minted as LG-2003
 owner: executor
 tree: f3462d8fc1336dc4583fe8a7af92fed399993a55
@@ -709,3 +709,48 @@ OWED to WK-1178 for want of a harness, as the Q1-tail file (2026-11-04 12:41:18 
 *(Dated line, 2026-11-07, docs batch 18, by the executor, on the maintainer's ruling to-lead "2026-11-07 23:21:26 GMT" ("NFR-490 gets its carry line in the next docs batch now, owner WK-1178 as the brief says, so no reading is unowned at the freeze"). **Carry line: NFR-490 — trace overhead at p99 +524.0 % against ≤ 20 %, the S2 reading above (host AMD EPYC 7B12, 8 vCPU) — is a pre-freeze indication, never a verdict; owner WK-1178; carried into the P2 closure record by name.** Its "never changes the result" limb stays OWED to WK-1178 as stated above. The original sentences are not edited.)*
 
 *(Dated line, 2026-11-08 (written 06:05:29 GMT), docs batch 22, by the lead: the working ids FD 8403 and FD 8404 in the item I and item J lines above are minted as FD-2093 and FD-2094, and closed by SL-2096 (#1469, `9775f352`). This ledger is closed, so the lines above are left as written.)*
+
+## Addendum 2026-11-09 — nfr-bench-1 session 3: items K-B, I, J and NFR-490 (the exit readings), and SL-1736's close
+
+*(Filled by the planner (plan-s3fill), docs batch 32, from `~/gi-pricing-plan.local/scratch/nfr-bench-1/s3/`; the S2 lines above stand.)*
+
+### K-B
+
+- K (PL-1735 Task 0): factor 1.049 (max of 3 B/A wall ratios 1.0493, 1.0098, 1.0317; min 1.010; spread 0.039), band 0.95; synthetic, CPU-only contention: 2 busy-loop processes in B2 and B3, 1 in B4 (load1 had reached 1.64 at 60 s). Load1 start → end, A runs 0.95 → 0.96, 0.68 → 1.35, 0.58 → 1.10; B runs 1.07 → 1.73, 1.03 → 1.59, 1.64 → 1.74. Excluded 1 (B1: contended end load1 2.04 ≥ 2.0); unpaired 1 (A1). A LOWER BOUND on the shared-box penalty, not the penalty: CPU-only stress omits IO and memory contention. tree 374a22bf33ad; Intel(R) Xeon(R) CPU @ 2.20GHz; 8 vCPU; lower bound on a non-spec host. Interim band 0.43 stays in the frozen script: **not reachable at the frozen constant on this tree** (O-7, to-lead "2026-11-09 12:07:49 GMT"), carried as a limb to P3-C (product constant), not a red. A first attempt gave fewer than 3 valid pairs and no factor (`K-attempt1/`); the factor of record is the second window, `K-contention.jsonl` and `K-window.log:69` to `:108`, A, B interleaved on one tree.
+
+### I
+
+- I, NFR-1443, rows 10 000: p95 56.939 ms / ≤ 300 ms, n = 100 pages, limit 50, load1 1.18 → 1.17: met (script band DIAGNOSTIC-PASS); server-side, in-process, excludes network; tree 374a22bf33ad; Intel(R) Xeon(R) CPU @ 2.20GHz; 8 vCPU; lower bound on a non-spec host (`I-cellsdiff.log:222`).
+- I, NFR-1443, rows 250 000: p95 58.300 ms / ≤ 300 ms, n = 100 pages, limit 50, load1 1.08 → 1.0: met (script band DIAGNOSTIC-PASS); server-side, in-process, excludes network; tree 374a22bf33ad; Intel(R) Xeon(R) CPU @ 2.20GHz; 8 vCPU; lower bound on a non-spec host (`I-cellsdiff.log:427`).
+- I, NFR-1443, parquet 10 000: p95 53.386 ms / ≤ 300 ms, n = 100 pages, limit 50, load1 1.0 → 1.0: met (script band DIAGNOSTIC-PASS); server-side, in-process, excludes network; tree 374a22bf33ad; Intel(R) Xeon(R) CPU @ 2.20GHz; 8 vCPU; lower bound on a non-spec host (`I-cellsdiff.log:632`).
+- I, NFR-1443, parquet 250 000: p95 51.399 ms / ≤ 300 ms, n = 100 pages, limit 50, load1 1.0 → 1.32: met (script band DIAGNOSTIC-PASS); server-side, in-process, excludes network; tree 374a22bf33ad; Intel(R) Xeon(R) CPU @ 2.20GHz; 8 vCPU; lower bound on a non-spec host (`I-cellsdiff.log:837`).
+- I, NFR-1443, parquet 1 000 000: p95 62.729 ms / ≤ 300 ms, n = 100 pages, limit 50, load1 1.26 → 1.24: met (script band DIAGNOSTIC-PASS); server-side, in-process, excludes network; tree 374a22bf33ad; Intel(R) Xeon(R) CPU @ 2.20GHz; 8 vCPU; lower bound on a non-spec host (`I-cellsdiff.log:1042`).
+- I, NFR-1443, rows 2× property: p95(250 000) / p95(10 000) = 1.024 / ≤ 2.0: met (script band DIAGNOSTIC-PASS) (`:1043`).
+- I, NFR-1443, parquet 2× property: p95(250 000) / p95(10 000) = 0.963 / ≤ 2.0: met (script band DIAGNOSTIC-PASS) (`:1044`).
+
+### J
+
+- J, NFR-468, freMTPL2 corpus (677 442 rows, 5 one-way columns): p50 26.149, p95 29.209 ms / < 300 ms, p99 31.321, max 33.433, n = 200, load1 1.97 → 1.89: met (script band DIAGNOSTIC-PASS); server-side, in-process, excludes network; tree 374a22bf33ad; Intel(R) Xeon(R) CPU @ 2.20GHz; 8 vCPU; lower bound on a non-spec host (`J-oneway.log:557`).
+- J, NFR-468, wide synthetic corpus (80 columns × 1 000 000 rows, 2 one-way columns): p50 29.280, p95 33.571 ms / < 300 ms, p99 36.619, max 111.374, n = 200, load1 1.89 → 1.76: met (script band DIAGNOSTIC-PASS); server-side, in-process, excludes network; tree 374a22bf33ad; Intel(R) Xeon(R) CPU @ 2.20GHz; 8 vCPU; lower bound on a non-spec host (`J-oneway.log:999`).
+- J, NFR-470, versions 1 to 6: (payload + overhead) / payload = 1.0056, 1.0035, 1.0003, 1.0009, 1.0632, 1.0029 / ≤ 1.2, source upload excluded: met (script band DIAGNOSTIC-PASS) (`J-storage.log:119` to `:124`).
+- J, NFR-470, dedup: the third identical version's (version 6) new parquet bytes against earlier versions = 0 / 0: met; tree 374a22bf33ad; Intel(R) Xeon(R) CPU @ 2.20GHz; 8 vCPU; lower bound on a non-spec host (`J-storage.log:124`).
+
+### NFR-490
+
+- NFR-490 — trace overhead at p99: 86.446 ms vs 13.567 ms untraced = +537.2% / 20% budget — OVER (`NFR490.log:45`, the harness line verbatim); traced load1 0.89 → 0.95, untraced load1 0.77 → 0.90; 200-step bundle, one exact GBM `model_call`, 1000 calls; the "never changes the result" limb is NOT MEASURED, re-owned by subject to P3-C (to-lead "2026-11-09 16:37:51 GMT"); tree 374a22bf33ad; Intel(R) Xeon(R) CPU @ 2.20GHz; 8 vCPU; lower bound on a non-spec host.
+- NFR-490, where the added cost sits (medians, interleaved, 200 rounds, `:66` to `:67`): A 17.132 ms, B 61.910 ms, C 76.022 ms; engine-side 44.778 ms = 76.0 %, `_build_trace` 14.112 ms = 24.0 % of 58.890 ms added. The P3-A carry reads, in the maintainer's words (to-lead "2026-11-09 18:38:40 GMT" (1)): "+537.2% in process, 76% engine-side trace cost, 24% our _build_trace; P3-A measures on the spec host; any product change to trace building is P3-C's". S2's indication was +524.0 %, on AMD EPYC 7B12: consistent in direction; not like-for-like.
+
+### SL-1736's close, by criterion (`PL-1735` Acceptance Standard)
+
+| Criterion | Evidence | State |
+|---|---|---|
+| A3, factor pairs | K-B above: 3 interleaved pairs, factor 1.049 | MET |
+| A3, P1 constants | O-7 | **not reachable at the frozen constant on this tree**; carried as a limb to P3-C (product constant), not a red (to-lead "2026-11-09 12:07:49 GMT") |
+| A5, NFR-468 | J above | met |
+| A5, NFR-470 | J above | met |
+| A5, NFR-1443 re-measure | I above, five runs at the frozen tree | met, DIAGNOSTIC; the spec-host measurement is P3-A's (to-lead "2026-11-09 14:53:21 GMT" (7)) |
+| A5, NFR-467; A10 | S2 item H | MET, as read above |
+| A5, NFR-485 | S2 item G | MET, as read above |
+| A1, A2, A4, A6 to A9 | adopted 2026-11-05; no S3 OVER falls under A6 (I and J met) | as adopted |
+
+*(Dated line, 2026-11-09, docs batch 32, by the planner (plan-s3fill), on the maintainer's (by delegation) entry "2026-11-09 16:27:43 GMT" ("SL-1736 closes in the same batch with A3's O-7 line") and common brief item 42: this ledger's `status:` and the `SL-1736` row in `docs/roadmap.md` read `closed` by this commit. This line corrects the 2026-11-08 line above, which said "This ledger is closed" while the front matter and the row read `active`: until this commit they read `active` correctly. A separate S3 audit of SL-1736 was not run by this seat; §5 of the skeleton names one, and the close rests on the entry above.)*

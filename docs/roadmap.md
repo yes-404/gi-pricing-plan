@@ -1095,7 +1095,7 @@ Row 2 (S-b) of `PL-1984`: FD-1490's registry entry is dropped (FR-227, `RL-1958`
 id: WK-674
 family: work
 title: Deployment: environments, atomic switchover, rollback, shadow — **and the tenancy mechanics ADR-710 requires**
-status: active
+status: closed
 created: 2026-08-14
 owner: maintainer
 phase: P2
@@ -1104,6 +1104,8 @@ phase: P2
 From “Workstreams” (line 384): Deployment: environments, atomic switchover, rollback, shadow — **and the tenancy mechanics ADR-710 requires** | FR-267, FR-268, FR-269, FR-270, FR-271, FR-272; `07` FR-428, FR-429, FR-430, FR-431, and added 2026-08-15 by OQ-540's decision: **FR-436** (a deployment refuses to start against another tenant's database) and **FR-18** (a Job records the platform build, because version skew between tenants is now permanent). Any earlier `Job` migration should carry FR-18's column rather than wait for this *(Corrected 2026-09-29 by the lead, per `PL-1237`'s Scope note, amended by the maintainer's answer Q843-2: "The roadmap WK-674 row edit is the lead's, after the map is accepted." Added: `07` **FR-437** (the reference identity provider, `07:153`), **FR-412**'s memory half (`07:101`) and **FR-415**'s worker service (`07:104`); and `CR-1212`'s **FR-434**, **FR-435**, **NFR-531**, **NFR-534**, **NFR-489**, **NFR-490**, **NFR-502**, **NFR-493**'s linearity limb and **NFR-496**'s prod-sampling limb. **The F1 obligation:** the Work is done only when the switchover meets the F1 acceptance test on the deployment path this Work builds, not on a loopback mirror (`PL-1237` Goal).)* — **close audit filed (CR-2071), interim, acceptance owed** *(dated 2026-11-06 by the executor, on to-lead "2026-11-06 09:54:01 GMT": PROPOSED not ready at `9852f004`; the Work stays `active` and the close is the user's dated line)*
 
 **2026-10-09 — the Work-plan delta for Slices 4 to 6 is PL-1537** (draft), the Lean P2 L5 delta written after the 2026-10-08 re-plan: it sets Slices 4, 5 and 6 as rows with their write sets, FR-452's management-API limb in Slice 4, NFR-501 placed in Slice 5 and Slice 6 named rung 5. Recorded in the docs batch D1.
+
+*(Dated acceptance line, 2026-11-09, docs batch 32, by the executor, on the maintainer's (by delegation) entries "2026-11-09 10:09:00 GMT" (D-5) and "2026-11-09 16:27:43 GMT" (D-3 and WK-674): WK-674 is **CLOSED** by the maintainer by the user's delegation of 2026-11-09. The user's words, Mon 9 Nov ~10:09 London: "WK-693, WK-674, WK-690 and WK-1178: plz close them on behalf of me if you are happy with the outcome". The 10:09:00 entry held WK-674 until S3's NFR-489 exit reading and D-3; the 16:27:43 entry gives both. D-3 took the budget branch: NFR-489's budgets stand and a dated amendment line on the requirement records the P2 exit reading, UNMET on the 8-vCPU non-spec host (D5.12 at an offered 100 rps, n = 1, N = 4: p99 101.915 ms against 15 ms), accepted for the P2 close as an interim, with the remedy question re-opened on the spec host in P3-A (D-2). **FD-1836 and FD-1411 are carried by name to P3-A, and F38 with them.** Acceptance is recorded in [`CR-2071`](closures/CR-02071-wk-674-close-audit.md) §Acceptance. The P2 close line itself stays the user's.)*
 
 #### SL-1255 — Slice 1: tenancy and provenance (FR-436, FR-18)
 
@@ -2973,7 +2975,7 @@ The fix of FD-1753 (HIGH by run, owner WK-1178). A GLM `model_call` renames each
 id: SL-1736
 family: slice
 title: WK-1178 slice — the P2 NFR measurement sweep: NFR-467, NFR-468, NFR-470, NFR-485 and NFR-1443 measured DIAGNOSTIC with pre-registered reading rules; NFR-472's red-first test
-status: active                   # draft → active → closed | retired (§1.2a)
+status: closed                   # draft → active → closed | retired (§1.2a)
 created: 2026-10-16 # original date 2026-10-14, set at the draft; minted 2026-10-16
 owner: planner                   # cut by the planner (draft); lead dispatches (active)
 tree: 8eaf6d5f9cd4204e1e077b44069d4afd395f1461
@@ -2990,6 +2992,8 @@ On the maintainer's (by delegation) entry "2026-10-14 11:06:52 BST — D-list li
 *(Amended 2026-10-14 by the planner, planner-p1fix, before the mint, on the maintainer's (by delegation) entry "2026-10-14 12:42:55 BST", item (2): NFR-467 is added, measured at 10 M rows (not extrapolated) on the shared VM with its own instrument and the threshold from its row and 2026-08-14 amendment, `PL-1735` Task 5a; nfr-bench-1 session 2 is the fallback. Session 2's planned total is restated in the plan: 3.9 h committed, at most 5.15 h.)*
 
 (Activated 2026-10-22 as WK-1178's P2 NFR measurement sweep, on the maintainer's GO, `to-lead.md` "2026-10-22 11:53:15 BST — Maintainer: SL-1569 and SL-1736 slice GO; D1–D4 and the two orders ruled"; ledger LG-2003 (minted 2026-11-04 from working id 8155), which carries the draft→active flip of `PL-1735` as the slice PR's L1 path. Dispatched by lead 26 to seat exec-1736. The 4 ALONE measurement grants run after SL-1275 and SL-1711 merge.)
+
+*(Dated line, 2026-11-09, docs batch 32, by the planner (plan-s3fill), on the maintainer's (by delegation) entry "2026-11-09 16:27:43 GMT" and common brief item 42: **SL-1736 is closed.** K-B, I and J are read in LG-2003's 2026-11-09 addendum (factor 1.049; NFR-1443, NFR-468 and NFR-470 met; Intel(R) Xeon(R) CPU @ 2.20GHz; 8 vCPU; lower bound on a non-spec host). A3's P1 constant: not reachable at the frozen constant on this tree, carried as a limb to P3-C (product constant), not a red (to-lead "2026-11-09 12:07:49 GMT", O-7). LG-2003 reads `closed` in the same commit.)*
 
 #### SL-1738 — WK-1178 fix slice — FD-1744: a recipe cell that does not parse is never silently nulled, and validation gives it a verdict (FR-32, VR-STR-2)
 
@@ -4961,5 +4965,7 @@ not when its requirements are individually ticked off.
 *(Amended 2026-10-14 by the maintainer (dated line by delegation), on the user's decision of 2026-10-14 in the maintainer's channel entry "2026-10-14 09:50:37 BST": "WF-701 phases A–D" means its deployment steps, A1–A6 and C1–C4, C6, C7, with Phase B optional; C5 (`05` FR-310), D1–D4 (`05` FR-331, FR-333, FR-329, FR-332) and A3's notification (FR-453) are WF-701's monitoring half, checked at row 4 with `WK-687`/`WK-688` (P4), as the P2 outcome line already says.)* — attached to the row 2 line above.
 
 *(Row 4, cross-pointer, 2026-10-14: `WF-701`'s monitoring steps C5, D1–D4 and A3's notification are checked here, per the dated line on row 2 above, the maintainer's channel entry "2026-10-14 09:50:37 BST".)*
+
+*(Dated line, 2026-11-09, docs batch 32, by the planner (plan-s3fill), P22, on the maintainer's (by delegation) entry "2026-11-09 16:27:43 GMT": §12 row 2 "meeting NFR-489": NOT MET by D5.12 (n = 1, N = 4, at offered rate 100 of target 200 rps, p99 101.915 ms against 15 ms, no-GBM limb; Intel(R) Xeon(R) CPU @ 2.20GHz; 8 vCPU; lower bound on a non-spec host). FD-1836 and FD-1411 carried by name to P3-A (draft; opened at the P2 close, CR-2103 P16), F38 with them. Whether P2 exits with row 2 unmet is the user's word, asked at the user's P2 acceptance line after the exit demo.)*
 
 The workflow documents were written with timing tables for exactly this purpose.
