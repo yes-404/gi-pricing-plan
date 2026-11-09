@@ -1,5 +1,5 @@
 ---
-id: FD-8420
+id: FD-2106
 family: finding
 title: examples/fremtpl2/journey.py:1295 B3 compares a twice-rounded product against a once-rounded premium, and fails only on an exact half-minor tie
 status: active
@@ -10,7 +10,7 @@ corrected_by: []
 relates: []
 ---
 
-# FD-8420 — examples/fremtpl2/journey.py:1295 B3 compares a twice-rounded product against a once-rounded premium, and fails only on an exact half-minor tie
+# FD-2106 — examples/fremtpl2/journey.py:1295 B3 compares a twice-rounded product against a once-rounded premium, and fails only on an exact half-minor tie
 
 ## Finding
 
@@ -32,4 +32,4 @@ Read at this branch: `examples/fremtpl2/journey.py:1295` (the expectation) and `
 
 ## Disposition
 
-Open, owner P3-C, the check's limb. Not fixed before Wed 18: the journey is rehearsal and demo code and the product is right. On a B3 failure with the full seed, the runbook line of the same 14:02:10 entry applies: if the earlier `unrounded_minor` × loading equals the later `unrounded_minor` to the minor unit, it is this finding's tie, the product is right, log it as an instance of FD 8420 and continue; any other difference is a product fault. Remedy at P3-C: have B3 read the later quote's own `unrounded_minor` as the comparand instead of re-deriving the product from a rounded value.
+Open, owner P3-C, the check's limb. Not fixed before Wed 18: the journey is rehearsal and demo code and the product is right. On a B3 failure with the full seed, the runbook line of the same 14:02:10 entry applies: if the earlier `unrounded_minor` × loading equals the later `unrounded_minor` to the minor unit, it is this finding's tie, the product is right, log it as an instance of FD-2106 and continue; any other difference is a product fault. Remedy at P3-C: have B3 read the later quote's own `unrounded_minor` as the comparand instead of re-deriving the product from a rounded value.
