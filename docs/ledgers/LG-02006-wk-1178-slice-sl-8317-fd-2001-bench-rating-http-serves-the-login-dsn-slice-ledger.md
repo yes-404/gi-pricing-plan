@@ -2,7 +2,7 @@
 id: LG-2006
 family: ledger
 title: WK-1178 slice SL-2005 — FD-2001, scripts/bench-rating.py --http serves the login DSN (slice ledger)
-status: active                 # active → closed (§1.2a)
+status: closed                 # active → closed (§1.2a)
 created: 2026-11-04             # filed under working id 8318
 owner: executor
 tree: 484b678730fe84ce827882d79459dcaf9dfb7b50   # sl-8317-fd2001-serve-dsn, the fix commit this was written against (base 181403d923a5ef7c5cde1533890421ebd1762b36)
@@ -97,3 +97,5 @@ Not run by the executor (DP-3 (a)): the full SOLO gate, both halves, runs in a s
 ## PRs
 
 (Owed at the PR: number, title, merge commit. Branch `sl-8317-fd2001-serve-dsn`, unpushed at this entry.)
+
+*(Dated line, 2026-11-09, docs batch 27, by the executor, on to-lead "2026-11-09 10:00:22 GMT" item (4): this ledger's front matter reads `status: active` at origin/main `40ba57f4b320` while its slice SL-2005 reads `status: closed` in `docs/roadmap.md` there. The slice's code merged as #1431 (`dae9637e`, "fix(scripts): SL-2005 — bench-rating --http serves the login DSN (--serve-dsn), the owner DSN only seeds and fetches (FD-2001; WK-1178; PL-2004, LG-2006) (#1431)"); its row was set `closed` by #1432 (`2f108b1e`, "docs: docs batch 10 — eleven + one WK-1178 slice closes, the gate and adoption lines, FD-1838 + FD-2001 closing acts, the SL-1736 + SL-1854 audits, process rows (#1432)"). Derived by the predicate: ledger front matter `status: active` and its `slice:` row reading `closed` in `docs/roadmap.md` at `40ba57f4b320`; 13 ledgers, LG-2003 (SL-1736) and LG-1977 (SL-1976) excluded as their slices read `active`. The front matter is flipped to `status: closed` in this batch, per to-lead "2026-11-09 10:28:26 GMT" (LEDGERS), so the record no longer says `active` for a closed slice.)*
