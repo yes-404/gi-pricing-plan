@@ -46,3 +46,5 @@ The recon is `~/gi-pricing-plan.local/scratch/p28/recon-07.md` (local, not commi
 ## Disposition
 
 **deferred with an owner: P3-D.** The Work's first act is, per limb, to decide which side was wrong, then amend the spec (with a dated line) or the code. Limbs 10 and 11 are Phase 3 views, so a spec-side note only until their Works are activated; limb 10 has no Work and P3-D places it. Limb 3 is reassigned to WK-1251 and is not P3-D's.
+
+***Dated line, 2026-11-09*** (docs batch 30, by the executor), on the maintainer's "2026-11-09 12:08:21 GMT" entry, Q5: "FD-2100 MOVES to P3-C with FD-2099 and FD-2101 — a spec-vs-code drift of 07 is product, not tools". **Owner: P3-C, no longer P3-D.** The filing (batch 25a, working id 8414) said P3-D because it read the drift as a tools matter; a spec-vs-code drift of `07` is product, so this finding moves to P3-C with FD-2099 and FD-2101. The Disposition above is not edited: where it says P3-D, read P3-C; limb 3 stays reassigned to WK-1251, and limb 10, which it says P3-D places, is placed by P3-C.

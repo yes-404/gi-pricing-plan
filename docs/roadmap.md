@@ -4424,12 +4424,14 @@ family: work
 title: P3-B — unreached lifecycle states: Custom Objective and Custom Metric → deprecated, Peril Structure → archived
 status: draft
 created: 2026-11-08
-owner: lead
+owner: maintainer
 phase: P3
 relates: [FD-2034, FD-1723, FD-2064, OQ-2063, OQ-2037, CR-2103, FR-163, FR-154]
 ```
 
 Opened `draft` (working id 8418; minted 2026-11-08 as WK-2104) by to-lead "2026-11-08 09:40:05 GMT", the maintainer's opening of this Work (P24 of the §14 review, CR-2103, accepted to-lead "2026-11-08 09:02:21 GMT"); the landing was delegated to the planner of docs batch 25, quoting that stamp.
+
+***Dated line, 2026-11-09*** (docs batch 30, by the executor), on the maintainer's "2026-11-09 12:08:21 GMT" entry, Q7: "the WK template's owner field reads maintainer (document-ids §1.6); WK-2104's 'lead' is corrected to maintainer by a dated line in batch 30." The `owner:` field above read `lead` from the minting on 2026-11-08 and now reads `maintainer`; nothing else in this row changes.
 
 **Scope.**
 
