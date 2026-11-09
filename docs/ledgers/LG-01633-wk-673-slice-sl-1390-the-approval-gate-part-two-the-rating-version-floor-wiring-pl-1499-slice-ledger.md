@@ -51,7 +51,7 @@ Order and acceptance checks are `PL-1499` §"Tasks" and §"Acceptance Standard" 
 
 ### Audit
 
-(Written by the auditor at slice close.)
+*(Dated line, 2026-11-09, docs batch 29, by the auditor, filed under FD-1655 (`to-lead` "2026-11-09 10:12:52 GMT" (1)). Written from this ledger's own red and green lines and the merge, read and not re-run; the merge is an ancestor of `origin/main` at `40ba57f4`. Source: `RS-1649`'s row for the slice. )* SL-1390, #1279 `3065770c4030cb4aa3b90e5f049498804669f173` (merged 2026-10-11T16:11:19+01:00). **Red then green:** this ledger's `### Gate` is empty, but its Build log classifies the gate-1 run of `d674aa69` (tree `d042f0b4`): red-first stages for Acceptance 1, 2 and 7, all expected. The reds for A3, A4 and A10 and the broken-loop proofs are not in this ledger; they were run by FD-1651's discharge (Resolved 2026-11-04, #1426 `db92a7bc`, `LG-1998`).
 
 ### Build log
 

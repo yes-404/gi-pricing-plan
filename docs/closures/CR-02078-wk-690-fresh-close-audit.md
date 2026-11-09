@@ -618,3 +618,5 @@ waits for S2's readings; a dated delta line then carries M, L as information, an
 - FD-2009 (FR-1840 3c p99 limb, MEDIUM), owner WK-690: read on AMD EPYC 7B12, 8 vCPU, S2 2026-11-07.
 
 The seating of this seat's auditor came by message at 20:15 GMT; the maintainer's entry "2026-11-07 20:28:26 GMT", item (1), is its record. The close itself remains the user's dated line.
+
+*(Dated line, 2026-11-09, docs batch 28, by the executor, on to-lead "2026-11-09 10:09:00 GMT" (delegated decision D-5, filed when made): the user said: "WK-693, WK-674, WK-690 and WK-1178: plz close them on behalf of me if you are happy with the outcome". WK-690 is CLOSED by the maintainer by the user's delegation WITH NAMED CARRIES FD-2077 (NFR-476 expression limb, read on the S2 EPYC host) and FD-2009 (FR-1840 preview isolation p99, read on S1's Broadwell host, per the correction of "2026-11-09 09:50:51 GMT"), both already-ruled named carries to be re-owned to the P3 rows at the P2 close; "accept the numbers" is not taken. The file's last line above, "The close itself remains the user's dated line", is answered by this line.)*

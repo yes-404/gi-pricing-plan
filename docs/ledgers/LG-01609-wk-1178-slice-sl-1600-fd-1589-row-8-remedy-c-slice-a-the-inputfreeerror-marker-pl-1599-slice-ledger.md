@@ -65,7 +65,7 @@ The 13 pytest failures (all in `tests/`, each a reading of the unminted tree, ch
 
 ### Audit
 
-Written by the auditor.
+*(Dated line, 2026-11-09, docs batch 29, by the auditor, filed under FD-1655 (`to-lead` "2026-11-09 10:12:52 GMT" (1)). Written from this ledger's own red and green lines and the merge, read and not re-run; the merge is an ancestor of `origin/main` at `40ba57f4`. Source: `RS-1649`'s row for the slice. )* SL-1600, #1273 `02f23b4a74cfdf81ff4ac875e1ff7ab2db777c4a` (merged 2026-10-11T11:48:26+01:00). **Red then green:** Gate 2 at `8f674476` (tree `76fd5860aacf8aac0d5d8dba2f9eb870088934d9`): `red_sinks` rc 1 (`test_a_request_validation_422_carries_no_submitted_value` and `test_a_coded_validator_message_gets_the_fixed_text` failed), `green_sinks` rc 0. **Gate:** ruff, mypy, import-linter, req-coverage, contracts rc 0; audit-docs (check 31) and the 13 pytest failures are mint artefacts; `DagDesigner.test.ts` failed once and passed alone, WK-675's. **Limb:** A6 is FD-1653, accepted.
 
 ### Build log
 
