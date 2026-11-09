@@ -3457,7 +3457,7 @@ Test-only fix of FD-1872 (owner WK-1178): `backend/tests/test_deployment_switch_
 id: SL-1913
 family: slice
 title: WK-1178 rehearsal slice — the full PL-1544 rehearsal checklist (rows 0–9 and PL-1912's row 6b) on the exit tree, Mon 9 Nov 2026
-status: draft                    # draft → active → closed | retired (§1.2a)
+status: active                     # draft → active → closed | retired (§1.2a)
 created: 2026-10-25
 owner: planner                   # cut by the planner (draft); lead dispatches (active)
 tree: ff976406f1bf133cfe040d2c44d383011503988a
@@ -3476,6 +3476,8 @@ One full run of `PL-1544` §"Rehearsal checklist", rows 0 to 9 as written there 
 *(Dated 2026-11-06, docs batch 12, by the executor, on to-lead "2026-11-06 01:24:04 GMT" item (4): **this slice's seat seeds the demo host by digest** from `~/gi-pricing-plan.local/data/fremtpl2/` before Mon 16 Nov 2026, and **the rehearsal runs with OpenML treated as absent**; `fetch` stays the fallback and its sha256 pin the check (`fetch.py` accepts a present file only if `_digest` equals the pin, so a seeded copy cannot be different data). **The demo's public fetch (P10) stops being a process row and is closed by this line**; it supersedes the 2026-11-05 line above on that point only (the owner it names, the rehearsal's seat, is the one that seeds). Evidence: the demo of 2026-11-06 01:20 failed at the fetch, `fetch.py` `IncompleteRead` after 122441 of about 36 MB, and `api.openml.org` did not answer in 25 s at 01:22; ruled NOT RUN (a third party), not RED.)*
 
 *(Dated 2026-11-06, docs batch 13, by the executor, on to-lead "2026-11-06 01:24:04 GMT" item (3) and the lead's log of 2026-11-06 04:15:32: **the gate template now carries the digest seed**, and its first full gate proof is H's (`~/gi-pricing-plan.local/scratch/slh-gate/gate/gate.log`, END 04:14:47, seeded demo PASS in 1523 s). The seed block was proved red on a corrupted copy and on a changed pin before it was used (lead's log, 2026-11-06 01:28:00; `scratch/gate-template/gate-template.sh`). This adds to the 2026-11-06 line above and changes none of it: the rehearsal's own seeding of the demo host stays this slice's seat's.)*
+
+*(Dated 2026-11-09 (written 2026-11-09 09:46:29 GMT), by the executor, activating this slice: `status` `draft → active` (`document-ids.md` §1.6, SL row: the lead dispatches). Authority: the maintainer's entry to-lead "2026-11-09 09:30:15 GMT", word (1), verbatim: "SL-1913 Phase A may start now (the brief's "Fri 13 unless moved earlier on the maintainer's word" — moved)"; dispatched by lead 32 through the brief `brief-exec-sl1913a-2026-11-09.md`. Ledger `LG 8226` is created in this activation PR, per to-lead "2026-10-25 21:07:44 GMT" (i) and `PL-1912`. Activation needs: PL-1912 is minted and `active`; the exit tree and the empty-box condition (row 1) are the lead's at the Phase B GO. The heading's date and the 2026-11-04 correction above are unchanged: the rehearsal is Mon 16 Nov 2026.)*
 
 #### SL-1976 — WK-1178 hotfix slice — the CI MinIO image guard pins the tarball sha256 and accepts the config or the manifest Id (FD-1975)
 
