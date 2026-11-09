@@ -64,3 +64,5 @@ the handler builds it from the model. The remedy's shape is a design choice and 
 Work's planner's to put as a decision point; nothing here picks it. Event that next confirms or
 discharges it: `jobs.py`'s event `data` being produced by a `model-schema` model, or a ruling
 that records why not.
+
+***Dated line, 2026-11-09*** (docs batch 29, by the auditor). `to-lead` "2026-11-09 10:12:52 GMT" (2): **CARRIED to P3-C**, P19 (a); `CR-2103` P25 makes P3-C and P3-D WK-1178's successors, and neither has a `### WK-` row yet, so this record is their owner until the rows exist; off the demo path (the journey polls `GET /jobs/{id}` and has no caller of the event stream). The `data` dict of the job-events stream built in `backend/src/app/api/jobs.py` still has no `model-schema` owner. Read at `40ba57f4`.
