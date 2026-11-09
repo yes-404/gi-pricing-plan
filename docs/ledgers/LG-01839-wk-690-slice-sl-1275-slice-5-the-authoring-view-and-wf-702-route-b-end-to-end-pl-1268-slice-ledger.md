@@ -2,7 +2,7 @@
 id: LG-1839
 family: ledger
 title: WK-690 slice SL-1275 — Slice 5, the authoring view and WF-702 Route B end to end (PL-1268, PL-1621, PL-1665) (slice ledger)
-status: active                 # active → closed (§1.2a)
+status: closed                 # active → closed (§1.2a)
 created: 2026-10-21
 owner: executor
 tree: ac34e2a06e2a430512c447161e05d9ffcb35ebd9
@@ -140,3 +140,5 @@ Driver `bench-b-pl1665-57.py` sha256 `c68de47cb777b79c6ee3be7265cdd0674ca9aa5b55
 - Log: `~/gi-pricing-plan.local/scratch/nfr-bench-1/s2/M-expression.log`.
 
 *(Dated line, 2026-11-07, docs batch 16, by the executor, on CR 8314's refresh (F1) and the maintainer's carry ruling (`to-lead.md` "2026-11-07 20:28:26 GMT"): this ledger **stays `active` until S3's readings land; its close follows S3** (the lead's word 2026-11-07: batch 15 adds S2's L and M lines here and S3 may record L here). Condition (2), "closes only on the 5.7 measurement", is met by Item B at `dae9637e` (2026-11-05; the load and command are in the dated line of docs batch 11 above). The measured result is not clean: 3d PASS, 3c UNMET, carried by name (FD-2009, working id 8352, owner WK-690). `SL-1275`'s roadmap row closes in this batch. Sections above are not edited.)*
+
+*(Dated line, 2026-11-09, docs batch 27, by the executor, on to-lead "2026-11-09 10:00:22 GMT" item (4): this ledger's front matter reads `status: active` at origin/main `40ba57f4b320` while its slice SL-1275 reads `status: closed` in `docs/roadmap.md` there. The slice's code merged as #1359 (`71e481fa`, "feat: SL-1275 — WK-690 Slice 5, the objective authoring view and WF-702 Route B end to end (#1359)"); its row was set `closed` by #1458 (`27d70555`, "docs: docs batch 16 — CR 8314 docs acts (SL-1275 closed, PL-1996 active), slice A residue, process rows (#1458)"). Derived by the predicate: ledger front matter `status: active` and its `slice:` row reading `closed` in `docs/roadmap.md` at `40ba57f4b320`; 13 ledgers, LG-2003 (SL-1736) and LG-1977 (SL-1976) excluded as their slices read `active`. The front matter is flipped to `status: closed` in this batch, per to-lead "2026-11-09 10:28:26 GMT" (LEDGERS), so the record no longer says `active` for a closed slice.)*
