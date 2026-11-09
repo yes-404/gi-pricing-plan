@@ -18,7 +18,7 @@ relates: [PL-1912, PL-1544, SL-1913, LG-1841]
 
 *Disclosure: working id LG 8226, reserved by the lead; it stays unminted until the slice's close (the maintainer's ruling, to-lead "2026-10-25 21:07:44 GMT", (i): a slice's ledger is created in the slice's own PR at its activation, so LG 8226 stays an unminted working id; PL-1912 says the same). Born at activation with no results; Phase B fills it.*
 
-**GO:** the maintainer's entry to-lead "2026-11-09 09:30:15 GMT", word (1): "SL-1913 Phase A may start now"; Phase A is the activation PR (docs only). Phase B (the rehearsal run) is a separate dispatch. **MERGE-ACK:** (added at merge.)
+**GO:** (to be quoted verbatim from the maintainer's GO for the dispatch, per the ruling to-lead "2026-11-09 09:52:39 GMT", Phase A = (b); not yet given). This file and the roadmap row's `draft → active` line are Phase A's work, kept unmerged on branch docs/sl1913-activation-2026-11-09 as the first commit of the rehearsal's own branch; no activation PR (CLAUDE.md §13, Lean P2 L1). **MERGE-ACK:** (added at merge.)
 
 ## Tasks
 
@@ -32,7 +32,7 @@ Rows 0–9 and 6b: one line per row, each with command, output and tree, appende
 
 ### Gate
 
-Docs-only activation (common brief item 30). Recorded at the activation PR's head by the executor in the build log.
+Phase A is docs-only (common brief item 30); no PR is opened for it. Recorded at the branch head by the executor in the build log.
 
 ### Audit
 
@@ -40,8 +40,8 @@ Docs-only activation (common brief item 30). Recorded at the activation PR's hea
 
 ### Build log
 
-- 2026-11-09 (executor, exec-sl1913a): activation commit on branch docs/sl1913-activation-2026-11-09 from origin/main 40ba57f4b32087ec783383396ffada82601947c5: SL-1913 `draft → active` by a dated line under the roadmap block; this ledger created from `docs/_templates/LG.md`.
+- 2026-11-09 (executor, exec-sl1913a): Phase A commit on branch docs/sl1913-activation-2026-11-09 (unmerged, no PR) from origin/main 40ba57f4b32087ec783383396ffada82601947c5: SL-1913 `draft → active` by a dated line under the roadmap block; this ledger created from `docs/_templates/LG.md`.
 
 ## PRs
 
-(Added at the activation PR's opening.)
+(Added when the rehearsal's one PR opens.)
