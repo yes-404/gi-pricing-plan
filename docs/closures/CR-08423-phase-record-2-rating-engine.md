@@ -262,7 +262,7 @@ Proven both ways on 2026-11-09: every count is 0 at `2ecdd7a3` (batch 28 not mer
 
 **The maintainer's owner rulings, `to-lead` 2026-11-09 23:29:42 GMT (2). Their dated lines land in this batch, so none is on the register at T.**
 1. **`:340` FD-1597** (422 `FieldError` echoes a dict key unmasked, `safe_error` masks it): owner P3-C. Severity LOW on the row.
-2. **`:362` FD-1671** (a decimal Rating Input crosses `POST /score` as binary float): owner P3-C, **as its FIRST act. Severity LOW on record** (the maintainer (by delegation), "2026-10-12 03:04:43 BST"; register `:362`, essay `:33`). The ruling's words: "a decimal-as-float on the scoring path is a §7 money-rule risk". Listed by name in the P2 close line.
+2. **`:362` FD-1671** (a decimal Rating Input crosses `POST /score` as binary float): owner P3-C, **as its FIRST act; severity LOW on record; probe first; money-rule exposure unproven** (`to-lead` "2026-11-09 23:38:05 GMT"; LOW stands on the record's reason, FR-244: past the parse the engine evaluates in binary float by ruled design, so the parse adds no loss the rating path does not already admit; register `:362`, essay `:33`). "A §7 money-rule risk" (23:29:42 (2)) is the reason for its order and for naming it in the P2 close line, not a severity. The first act's first step is the probe: a Rating Input over 15 significant digits through `POST /score` against the same input as Decimal in pricing-core, the priced result compared to the minor unit; the rating is confirmed LOW or raised by a dated line on the probe's result. Listed by name in the P2 close line.
 3. **FR-362:** a scope statement with no Work (`to-lead` 14:53:21 GMT (1)); the Carried row above cites it. NFR-500 and NFR-477 are read under G4.
 
 **G3 at T: met (proposed); this batch carries those four lines and the two owner lines above.** Every row of the set has a resolution in the three classes. FD-1200 is fixed and FD-1199 is accepted by a dated line. The re-read ran at T1 `c019d467` (the human read, `to-lead` 15:58:49 GMT) and by delta T1→T (`aud-delta`, read at `to-lead` 23:28:22 GMT) (`to-lead` 2026-11-09 12:06:28 GMT (3), which said Tue 17 and Wed 18; dates by `to-lead` 14:58:57 GMT). If docs merge after T, the demo day reads only the delta by file list.
@@ -387,7 +387,7 @@ uv run --directory <T worktree> python scripts/generate-contracts.py --check;   
 | G4 met | **MET AS CARRIED** (`to-lead` 2026-11-09 23:29:42 GMT (1)): NFR-526, NFR-527, NFR-536 carried, unread, to P3-A; NFR-500, NFR-477 to P3-A; NFR-467, 485, 502, 480, 531, 534 read as stated with their trees |
 | G5 met | met (proposed); the filing commit's row owed |
 
-**What the P2 close line must list (the line is the user's; `to-lead` 2026-11-09 23:29:42 GMT (1), (2)):** NFR-526, NFR-527, NFR-536 (carried, unread, to P3-A, "not measured at the P2 exit"); FD-1671 (a decimal Rating Input crosses `POST /score` as binary float; severity LOW on record; P3-C's FIRST act; "a decimal-as-float on the scoring path is a §7 money-rule risk").
+**What the P2 close line must list (the line is the user's; `to-lead` 2026-11-09 23:29:42 GMT (1), (2)):** NFR-526, NFR-527, NFR-536 (carried, unread, to P3-A, "not measured at the P2 exit"); FD-1671 (a decimal Rating Input crosses `POST /score` as binary float; severity LOW on record; probe first; money-rule exposure unproven; P3-C's FIRST act, its first step the probe (FR-244 the reason LOW stands; `to-lead` "2026-11-09 23:38:05 GMT")).
 
 #### Dated lines landed with this part (`to-lead` 2026-11-09 23:28:22 and 23:29:42 GMT)
 
@@ -404,7 +404,7 @@ All in this batch, by the auditor, each citing its ruling's stamp. Locators are 
 | 8 | 23:29:42 (2) | `docs/specs/03-rating-engine.md:1592` NFR-500; `register.md:81` F37 | Measurement carried to P3-A |
 | 9 | 23:29:42 (2) | `docs/specs/02-modelling.md:3067` NFR-477 | Measurement carried to P3-A |
 | 10 | 23:29:42 (2) | `register.md:340` FD-1597; the FD-1597 essay | Owner P3-C, replacing WK-1178 |
-| 11 | 23:29:42 (2) | `register.md:362` FD-1671; the FD-1671 essay | Owner P3-C as its FIRST act; severity LOW on record; listed by name in the P2 close line |
+| 11 | 23:29:42 (2) | `register.md:362` FD-1671; the FD-1671 essay | Owner P3-C as its FIRST act; severity LOW on record; probe first; money-rule exposure unproven (23:38:05, the line on the row and essay); listed by name in the P2 close line |
 
 Not owed by these entries: FR-362 (no line; `to-lead` 14:53:21 GMT stands); the runbook (a handover file, final at `c5b260a10792`); the six readings of 23:29:42 (4), which live in this part.
 
@@ -418,7 +418,7 @@ The measurements behind the roll-up, each with its tree and its scope (phase-clo
 - **Docs checks.** Third part, G5 table: `audit-docs.py`, `doc-index.py --check`, `register-lint.py`, `req-coverage.py`, `generate-contracts.py --check` at T, each rc 0 with its log and sha. At the filing commit: the G5 table's last row.
 - **NFRs.** Third part, G4 table, one row per id, each measured with its tree and host, or carried with its owner. G4 reads MET AS CARRIED.
 - **Exit demo.** **Not resolvable at this record, because** the demo is Wed 11 Nov afternoon. The rehearsal of record is `LG-2107` (third part, G2); the runbook's OPEN 4 names it as the fallback evidence the user may take, by the user's choice.
-- **Cross-cutting checks.** Contract drift: `generate-contracts.py --check` rc 0 at T. Money discipline and workflow coverage: `audit-docs.py`'s own checks, within its rc 0 at T (third part, G5). The money-rule risk the maintainer names on FD-1671 is a finding, not a check result (third part, G3).
+- **Cross-cutting checks.** Contract drift: `generate-contracts.py --check` rc 0 at T. Money discipline and workflow coverage: `audit-docs.py`'s own checks, within its rc 0 at T (third part, G5). FD-1671's money-rule exposure is unproven: a finding with a probe owed, not a check result (third part, G3; `to-lead` "2026-11-09 23:38:05 GMT").
 
 - Retry counters (RFC-895 artifact B, per phase): *read 2026-11-09 from `~/gi-pricing-plan.local/handover/runtime-state.json`:* 2 entries, `slice:SL-1273:fix` 1 and `slice:SL-1409:fix` 2; last written 2026-10-05T13:09:09Z. The counters stopped five weeks before the freeze, so they are not a record of P2's loops (F57). A local file, not a repo artifact.
 
@@ -1074,7 +1074,7 @@ The cells of Tables A to C keep their reading at `40ba57f4` unless a cell says o
 | `:355` | FD-1658 | 06 §5.1 declares GET/POST /api/v1/roles, POST /api/v1/role-assignments a | WK-676 | LOW | WK-676 | **carry → WK-676** (P3, active). Read |
 | `:360` | FD-1663 | A Model's diagnostics_id is a bare UUID with no foreign key (db/models.p | WK-677 | LOW | WK-677 | **carry → WK-677** (P3, active). Read |
 | `:361` | FD-1664 | WF-698's failure row (WF-698:129) names T | WK-1178 | LOW | WK-1178 | **carry → P3-C** (`to-lead` 10:12:52 (2), P19 (a); a proposal: a product-doc correction, the decision-maker's). Demo path: off. The event's grep still prints the unstruck hit at `WF-698…:129`. Read, predicate run |
-| `:362` | FD-1671 | A decimal Rating Input crosses POST /score as binary float (default JSON | WK-1178 | LOW | WK-1178 | **carry → P3-C, as its FIRST act** (`to-lead` 2026-11-09 23:29:42 GMT (2)), replacing WK-1178. Severity **LOW on record** (register `:362`; the maintainer (by delegation), "2026-10-12 03:04:43 BST"), unchanged. **The 23:29:42 entry calls it a money-rule risk:** "a decimal-as-float on the scoring path is a §7 money-rule risk". Listed by name in the P2 close line. Read |
+| `:362` | FD-1671 | A decimal Rating Input crosses POST /score as binary float (default JSON | WK-1178 | LOW | WK-1178 | **carry → P3-C, as its FIRST act** (`to-lead` 2026-11-09 23:29:42 GMT (2)), replacing WK-1178. Severity LOW on record; probe first; money-rule exposure unproven (`to-lead` "2026-11-09 23:38:05 GMT"; LOW stands on the record's reason, FR-244). The first act's first step is the probe of that entry; the rating is confirmed or raised by a dated line on its result. Listed by name in the P2 close line. Read |
 | `:368` | FD-1703 | The job-events SSE stream's data payload is a dict built in the handler  | WK-1178 | LOW | WK-1178 | **carry → P3-C** (`to-lead` 10:12:52 (2), P19 (a); a proposal). Demo path: off (the stream has no caller on the path). No model and no ruling at `40ba57f4`. Read |
 | `:370` | FD-1706 | FR-259's "100 % of declines and errors" is not met for errors: POST /api | WK-1178 | MEDIUM | WK-1178 | **fixed** (Resolved 2026-11-08 on WF-701 C7(iv); entered Table B at `40ba57f4`). Read |
 | `:372` | FD-1715 | Blob garbage collection selects ref_count == 0 (blobs.py:403, FR-420), B | WK-1251 | MEDIUM | WK-1251 | **carry → WK-1251** (P3, `status: draft`), with its binding precondition. Read |
@@ -1433,7 +1433,7 @@ Every finding carried into the phase, resolved, accepted with an owner, or re-pl
 
 PROPOSED (the auditor's proposal; the lead adopts, amends or rejects): G1, G3 and G5 read met at T; G4 reads MET AS CARRIED; G2's preconditions read as stated and G2 itself is owed at the demo; G6 is this record's third dated part, filed with this record. §13's verdicts per unevidenced requirement: RATE's five per §Dispositions 5 and the roll-up above; FR-59 not started; other modules not assigned to P2 by the exit criteria (stated limit, `### Scope reconciliation`). **The verdicts are the lead's; the close itself is the maintainer's and the user's dated line.**
 
-**What the P2 close line must list (the line is the user's; `to-lead` 2026-11-09 23:29:42 GMT (1), (2)):** NFR-526, NFR-527, NFR-536 (carried, unread, to P3-A, "not measured at the P2 exit"); FD-1671 (a decimal Rating Input crosses `POST /score` as binary float; severity LOW on record; P3-C's FIRST act; "a decimal-as-float on the scoring path is a §7 money-rule risk").
+**What the P2 close line must list (the line is the user's; `to-lead` 2026-11-09 23:29:42 GMT (1), (2)):** NFR-526, NFR-527, NFR-536 (carried, unread, to P3-A, "not measured at the P2 exit"); FD-1671 (a decimal Rating Input crosses `POST /score` as binary float; severity LOW on record; probe first; money-rule exposure unproven; P3-C's FIRST act, its first step the probe (FR-244 the reason LOW stands; `to-lead` "2026-11-09 23:38:05 GMT")).
 
 ### Retrospective (phase-close form)
 
