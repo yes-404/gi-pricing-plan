@@ -2975,7 +2975,7 @@ The fix of FD-1753 (HIGH by run, owner WK-1178). A GLM `model_call` renames each
 id: SL-1736
 family: slice
 title: WK-1178 slice — the P2 NFR measurement sweep: NFR-467, NFR-468, NFR-470, NFR-485 and NFR-1443 measured DIAGNOSTIC with pre-registered reading rules; NFR-472's red-first test
-status: active                   # draft → active → closed | retired (§1.2a)
+status: closed                   # draft → active → closed | retired (§1.2a)
 created: 2026-10-16 # original date 2026-10-14, set at the draft; minted 2026-10-16
 owner: planner                   # cut by the planner (draft); lead dispatches (active)
 tree: 8eaf6d5f9cd4204e1e077b44069d4afd395f1461
@@ -2992,6 +2992,8 @@ On the maintainer's (by delegation) entry "2026-10-14 11:06:52 BST — D-list li
 *(Amended 2026-10-14 by the planner, planner-p1fix, before the mint, on the maintainer's (by delegation) entry "2026-10-14 12:42:55 BST", item (2): NFR-467 is added, measured at 10 M rows (not extrapolated) on the shared VM with its own instrument and the threshold from its row and 2026-08-14 amendment, `PL-1735` Task 5a; nfr-bench-1 session 2 is the fallback. Session 2's planned total is restated in the plan: 3.9 h committed, at most 5.15 h.)*
 
 (Activated 2026-10-22 as WK-1178's P2 NFR measurement sweep, on the maintainer's GO, `to-lead.md` "2026-10-22 11:53:15 BST — Maintainer: SL-1569 and SL-1736 slice GO; D1–D4 and the two orders ruled"; ledger LG-2003 (minted 2026-11-04 from working id 8155), which carries the draft→active flip of `PL-1735` as the slice PR's L1 path. Dispatched by lead 26 to seat exec-1736. The 4 ALONE measurement grants run after SL-1275 and SL-1711 merge.)
+
+*(Dated line, 2026-11-09, docs batch 32, by the planner (plan-s3fill), on the maintainer's (by delegation) entry "2026-11-09 16:27:43 GMT" and common brief item 42: **SL-1736 is closed.** K-B, I and J are read in LG-2003's 2026-11-09 addendum (factor 1.049; NFR-1443, NFR-468 and NFR-470 met; Intel(R) Xeon(R) CPU @ 2.20GHz; 8 vCPU; lower bound on a non-spec host). A3's P1 constant: not reachable at the frozen constant on this tree, carried as a limb to P3-C (product constant), not a red (to-lead "2026-11-09 12:07:49 GMT", O-7). LG-2003 reads `closed` in the same commit.)*
 
 #### SL-1738 — WK-1178 fix slice — FD-1744: a recipe cell that does not parse is never silently nulled, and validation gives it a verdict (FR-32, VR-STR-2)
 
@@ -4963,5 +4965,7 @@ not when its requirements are individually ticked off.
 *(Amended 2026-10-14 by the maintainer (dated line by delegation), on the user's decision of 2026-10-14 in the maintainer's channel entry "2026-10-14 09:50:37 BST": "WF-701 phases A–D" means its deployment steps, A1–A6 and C1–C4, C6, C7, with Phase B optional; C5 (`05` FR-310), D1–D4 (`05` FR-331, FR-333, FR-329, FR-332) and A3's notification (FR-453) are WF-701's monitoring half, checked at row 4 with `WK-687`/`WK-688` (P4), as the P2 outcome line already says.)* — attached to the row 2 line above.
 
 *(Row 4, cross-pointer, 2026-10-14: `WF-701`'s monitoring steps C5, D1–D4 and A3's notification are checked here, per the dated line on row 2 above, the maintainer's channel entry "2026-10-14 09:50:37 BST".)*
+
+*(Dated line, 2026-11-09, docs batch 32, by the planner (plan-s3fill), P22, on the maintainer's (by delegation) entry "2026-11-09 16:27:43 GMT": §12 row 2 "meeting NFR-489": NOT MET by D5.12 (n = 1, N = 4, at offered rate 100 of target 200 rps, p99 101.915 ms against 15 ms, no-GBM limb; Intel(R) Xeon(R) CPU @ 2.20GHz; 8 vCPU; lower bound on a non-spec host). FD-1836 and FD-1411 carried by name to P3-A (draft; opened at the P2 close, CR-2103 P16), F38 with them. Whether P2 exits with row 2 unmet is the user's word, asked at the user's P2 acceptance line after the exit demo.)*
 
 The workflow documents were written with timing tables for exactly this purpose.
