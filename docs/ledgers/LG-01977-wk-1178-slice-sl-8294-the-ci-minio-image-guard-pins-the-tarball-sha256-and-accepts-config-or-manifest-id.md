@@ -2,7 +2,7 @@
 id: LG-1977
 family: ledger
 title: WK-1178 slice SL-1976 — the CI MinIO image guard pins the tarball sha256 and accepts the config or the manifest Id (hotfix ledger)
-status: active                 # active → closed (§1.2a)
+status: closed                 # active → closed (§1.2a)
 created: 2026-11-03               # drafted 2026-11-03 under working id 8295
 owner: executor
 tree: a8ef6f19c0be1142b0ac9dea88086f1ce6f95cbe   # origin/main at the branch cut
