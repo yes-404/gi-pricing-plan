@@ -1,5 +1,5 @@
 ---
-id: FD-8419
+id: FD-2105
 family: finding
 title: scripts/bench-deploy-path.py compiles an approved rating version, so its governed run 409s by construction, and S2's D5.12 "NO READING (409)" was this defect, not the product
 status: active
@@ -10,7 +10,7 @@ corrected_by: []
 relates: [WK-690, LG-2003]
 ---
 
-# FD-8419 — scripts/bench-deploy-path.py compiles an approved rating version, so its governed run 409s by construction, and S2's D5.12 "NO READING (409)" was this defect, not the product
+# FD-2105 — scripts/bench-deploy-path.py compiles an approved rating version, so its governed run 409s by construction, and S2's D5.12 "NO READING (409)" was this defect, not the product
 
 ## Finding
 
