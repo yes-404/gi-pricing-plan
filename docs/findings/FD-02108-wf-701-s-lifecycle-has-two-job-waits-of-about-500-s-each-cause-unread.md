@@ -1,5 +1,5 @@
 ---
-id: FD-8421
+id: FD-2108
 family: finding
 title: WF-701's lifecycle has two Job waits of about 500 s each, K2 compile to the dev precondition and C7(ii) to C7(iii); the 10-minute target is exceeded by the waits, not the work; cause unread
 status: active
@@ -7,10 +7,10 @@ created: 2026-11-09
 owner: auditor                  # DRAFT by the executor for the auditor's sign-off (document-ids §1.6)
 tree: 374a22bf33ad
 corrected_by: []
-relates: [LG-8226, SL-1913]
+relates: [LG-2107, SL-1913]
 ---
 
-# FD-8421 — WF-701's lifecycle has two Job waits of about 500 s each; cause unread
+# FD-2108 — WF-701's lifecycle has two Job waits of about 500 s each; cause unread
 
 ## Finding
 
