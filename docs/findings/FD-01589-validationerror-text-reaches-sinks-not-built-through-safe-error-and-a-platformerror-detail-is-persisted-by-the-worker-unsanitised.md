@@ -143,3 +143,7 @@ worker path.
 - **Rows 2–11: open**, owner WK-1178. This FD stays `active`.
 
 *(Dated line, 2026-11-05, docs batch 11, by the auditor, on to-lead "2026-11-05 10:31:31 GMT" (second triage c9e75802158f accepted), item (C)(5): rows 3, 7, 9, 10 and 11 are CARRIED TO P3, a departure from the earlier rulings by this word (rows 3 and 7 catch plain `ValueError`s, for which `safe_error_detail` returns an empty string, so they are not one-line fixes).)*
+
+***Dated line, 2026-11-09*** (docs batch 29, by the auditor). `to-lead` "2026-11-09 10:12:52 GMT" (3): the auditor's proposed owner accepted as a proposal: **P3-C, by name, for rows 2, 4, 5 and 6**. LOW: the 422 text returned to its sender, remedy `safe_error_detail`. P19 (a); `CR-2103` P25 makes P3-C and P3-D WK-1178's successors, and neither has a `### WK-` row yet, so this record is their owner until the rows exist.
+
+***Dated line, 2026-11-09*** (docs batch 30, by the executor, on the maintainer's "2026-11-09 12:08:21 GMT" entry (P3 WK drafts read), Q2/Q3: "YES — FD-1589 rows 3, 7, 9, 10, 11 and F62 are product code, P3-C (the F53 precedent, P25)"): **rows 3, 7, 9, 10 and 11 of this finding are owned by P3-C, by name.** They are product code, not tools; the 2026-11-05 carry to P3 (above) stands and this line names the owner. Rows 2, 4, 5 and 6 are batch 29's line, not touched here. `CR-2103` P25 makes P3-C and P3-D WK-1178's successors; neither has a `### WK-` row yet, so this record is the owner until the rows exist.

@@ -2,7 +2,7 @@
 id: LG-1896
 family: ledger
 title: WK-1178 slice SL-1569 — a declared decimal output is served as an exact JSON string on every scoring path (PL-1568) (slice ledger)
-status: active                 # active → closed (§1.2a)
+status: closed                 # active → closed (§1.2a)
 created: 2026-10-25   # drafted 2026-10-23 under working id 8154; minted 2026-10-25 as LG-1896
 owner: executor
 tree: bf845e11
@@ -197,3 +197,5 @@ Limb 2, p99 ms per run 1/2/3:
 | `/score/compare` | 54.634 / 54.543 / 52.493 (median 54.543, range 2.142) | 50.074 / 50.317 / 57.560 (median 50.317) | −4.225, STOP=False |
 
 Limb 3 (structural, HEAD tree): `/api/v1/score` and `/api/v1/score/compare` both `response_model None`, `response_field None`, schema200 `$ref` `ScoringResult` / `ScoreComparison`. Verdict: **NO_STOP_CONDITION = PASS**.
+
+*(Dated line, 2026-11-09, docs batch 27, by the executor, on to-lead "2026-11-09 10:00:22 GMT" item (4): this ledger's front matter reads `status: active` at origin/main `40ba57f4b320` while its slice SL-1569 reads `status: closed` in `docs/roadmap.md` there. The slice's code merged as #1387 (`96e1b369`, "feat(rating): a declared decimal output is served as an exact JSON string on every scoring path (SL-1569, PL-1568) (#1387)"); its row was set `closed` by #1432 (`2f108b1e`, "docs: docs batch 10 — eleven + one WK-1178 slice closes, the gate and adoption lines, FD-1838 + FD-2001 closing acts, the SL-1736 + SL-1854 audits, process rows (#1432)"). Derived by the predicate: ledger front matter `status: active` and its `slice:` row reading `closed` in `docs/roadmap.md` at `40ba57f4b320`; 13 ledgers, LG-2003 (SL-1736) and LG-1977 (SL-1976) excluded as their slices read `active`. The front matter is flipped to `status: closed` in this batch, per to-lead "2026-11-09 10:28:26 GMT" (LEDGERS), so the record no longer says `active` for a closed slice.)*

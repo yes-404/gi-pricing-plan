@@ -2,7 +2,7 @@
 id: LG-1839
 family: ledger
 title: WK-690 slice SL-1275 — Slice 5, the authoring view and WF-702 Route B end to end (PL-1268, PL-1621, PL-1665) (slice ledger)
-status: active                 # active → closed (§1.2a)
+status: closed                 # active → closed (§1.2a)
 created: 2026-10-21
 owner: executor
 tree: ac34e2a06e2a430512c447161e05d9ffcb35ebd9
@@ -140,3 +140,13 @@ Driver `bench-b-pl1665-57.py` sha256 `c68de47cb777b79c6ee3be7265cdd0674ca9aa5b55
 - Log: `~/gi-pricing-plan.local/scratch/nfr-bench-1/s2/M-expression.log`.
 
 *(Dated line, 2026-11-07, docs batch 16, by the executor, on CR 8314's refresh (F1) and the maintainer's carry ruling (`to-lead.md` "2026-11-07 20:28:26 GMT"): this ledger **stays `active` until S3's readings land; its close follows S3** (the lead's word 2026-11-07: batch 15 adds S2's L and M lines here and S3 may record L here). Condition (2), "closes only on the 5.7 measurement", is met by Item B at `dae9637e` (2026-11-05; the load and command are in the dated line of docs batch 11 above). The measured result is not clean: 3d PASS, 3c UNMET, carried by name (FD-2009, working id 8352, owner WK-690). `SL-1275`'s roadmap row closes in this batch. Sections above are not edited.)*
+
+*(Dated line, 2026-11-09, docs batch 27, by the executor, on to-lead "2026-11-09 10:00:22 GMT" item (4): this ledger's front matter reads `status: active` at origin/main `40ba57f4b320` while its slice SL-1275 reads `status: closed` in `docs/roadmap.md` there. The slice's code merged as #1359 (`71e481fa`, "feat: SL-1275 — WK-690 Slice 5, the objective authoring view and WF-702 Route B end to end (#1359)"); its row was set `closed` by #1458 (`27d70555`, "docs: docs batch 16 — CR 8314 docs acts (SL-1275 closed, PL-1996 active), slice A residue, process rows (#1458)"). Derived by the predicate: ledger front matter `status: active` and its `slice:` row reading `closed` in `docs/roadmap.md` at `40ba57f4b320`; 13 ledgers, LG-2003 (SL-1736) and LG-1977 (SL-1976) excluded as their slices read `active`. The front matter is flipped to `status: closed` in this batch, per to-lead "2026-11-09 10:28:26 GMT" (LEDGERS), so the record no longer says `active` for a closed slice.)*
+
+## Addendum 2026-11-09 — nfr-bench-1 session 3: item L, NFR-476's fit limb, and NFR-488's diagnostics not measured
+
+*(Filled by the planner (plan-s3fill), docs batch 32, from `~/gi-pricing-plan.local/scratch/nfr-bench-1/s3/`; the S2 addendum above stands. `gbm.py` and `bench-model.py` are unchanged between S2's head `6f958137` and the frozen tree, so S2's pre-read of the fit path still describes this run; S3 quoted none of its own.)*
+
+- **L, NFR-476 fit limb: 194.32 s wall (1206.76 s cpu) / < 1200 s on 3,750,000 rows fitted of 5,000,000 loaded × 60 factors × 500 trees: met; the 5 M-scale clause not exercised by this line (O-6, to-lead "2026-11-09 12:07:49 GMT"); peak RSS 8,122 MB; synthesis not printed; diagnostics not measured (below); Intel(R) Xeon(R) CPU @ 2.20GHz; 8 vCPU; lower bound on a non-spec host (against NFR-456's 16-core worker); tree 374a22bf33ad.** `L-gbm5M.log:17` (`--rows 5000000`; the banner at `:16` names the loaded frame, and `bench_gbm` fits `int(rows * 0.75)`, read at the tree).
+- L, true-5 M SIBLING, labelled (O-6): 249.38 s wall (1527.96 s cpu) / < 1200 s on 5,000,000 rows fitted (`--rows 6666667`) × 60 × 500; peak RSS 10,674 MB; Intel(R) Xeon(R) CPU @ 2.20GHz; 8 vCPU; lower bound on a non-spec host; tree 374a22bf33ad (`L-sibling-6666667.log:19`).
+- **NFR-488, GBM per-factor diagnostics, as a limb of this item** (to-lead "2026-11-09 18:38:40 GMT" (2), in the maintainer's words): "GBM diagnostics not measured at S3: the run cap was shorter than the budget-implied time; S2's 3.75 M reading stands as the last measurement; owner P3-A for the spec-host measurement". Facts: both processes printed the fit line and no NFR-488 line, and ended rc 124 under the seat's own caps, `timeout 5400` at 3.75 M and `timeout 1500` at 5.0 M (`L-gbm5M.log:2`, `:18`, `:27`; `L-sibling-6666667.log:2`, `:20`, `:29`), load1 7.71 and 6.85 at the end, so still working. S2's 3.75 M diagnostics took 3875.41 s, 623 passes, 0.0402 fits per pass, within NFR-488's 0.06 (LG-1839 S2 addendum). The budget-implied time at 0.06 × 623 passes is about 7264 s at S3's 194.32 s fit, and about 9322 s at the sibling's 249.38 s (623 assumed from S2; S3 printed no pass count). A cap of 5400 s or 1500 s is below those times: rc 124 is "not measured", not a breach. No finding is filed.

@@ -61,3 +61,5 @@ FD-1951 (S1b Step 7.2 postgres-pro review, fifth medium); the rulings above; S1c
 ## Disposition
 
 Open, owner WK-1178, MEDIUM. Filed under working id 8267.
+
+***Dated line, 2026-11-09*** (docs batch 30, by the executor), on the maintainer's "2026-11-09 12:14:13 GMT" entry ("Batch 30 list accepted (markers on FD-1374, 1534, 1595, 1598, 1741; FD-1963's P3-C line; FD-1416's Resolved marker after 29)"): **FD-1963 is CARRIED to P3-C, by name.** The row read "fix before WK-1178's close, by the P2 exit demo Thu 12 Nov 2026", which is a deadline, not a carry. It cannot be met: the code freeze is `374a22bf`, `deploy/postgres/app-login-role.sql` at origin/main `2ecdd7a3` still revokes no membership (`grep -n -i -E "revoke|pg_auth_members"` over it prints nothing), and `git log --oneline 374a22bf..origin/main -- deploy` prints nothing. The fix is product code (the provisioner), so P3-C; the remedy is unchanged (red-first on a planted extra membership, with the operator-impact line); the startup `P_OWN` check keeps refusing every owner-reachable membership in the meantime.

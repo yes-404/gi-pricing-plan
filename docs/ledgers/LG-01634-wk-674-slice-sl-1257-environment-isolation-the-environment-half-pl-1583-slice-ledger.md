@@ -77,7 +77,7 @@ Classification: audit-docs rc 1 (9) = check 31 (the working id's `created` earli
 
 ### Audit
 
-Not yet run.
+*(Dated line, 2026-11-09, docs batch 29, by the auditor, filed under FD-1655 (`to-lead` "2026-11-09 10:12:52 GMT" (1)). Written from this ledger's own red and green lines and the merge, read and not re-run; the merge is an ancestor of `origin/main` at `40ba57f4`. Source: `RS-1649`'s row for the slice. )* SL-1257, #1280 `fe80aec625b616adb467d4bca322674882e60f5c` (merged 2026-10-11T18:43:36+01:00). **Red then green:** Task 2 (`ENVIRONMENT_SETTING` absent, rc 1, then rc 0) and Task 3 (collection ImportError, then 7 passed) in the Task list. **Gate:** runs 2 to 4; the parent-source reds are T4 rc 1 and T5 rc 1 (nine setup errors `'State' object has no attribute 'rate_limiter'`); run 4 at `a97edc7f` has zero reds of the slice's own and its other failures are the 13 audit-on-tree tests, classed as mint artefacts. **Limb:** RS-1649 A3 (no committed migration round-trip test) is discharged by FD-1650 (Resolved 2026-11-05, #1337).
 
 ### Build log
 
