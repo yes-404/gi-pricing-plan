@@ -53,3 +53,35 @@ parquet version needs its blob read. It reads; it writes nothing. It needs a liv
 ## Disposition
 
 Deferred with an owner: auditor (WK-1178), due before the code freeze. The event that next discharges it: the census run against a live database with its query, count and databases quoted, then the Escalation above. Filed under working id 8118.
+
+*(Dated line, 2026-11-09, docs batch 27, by the executor, on to-lead "2026-11-09 10:00:22 GMT" item (2) (a) and (e) and the lead's verdict in from-lead "2026-11-09 10:08" (FD-1815 entry); draft: aud-fd1815, `scratch/aud-fd1815/fd1815-dated-line-draft.md`. **Closed by the census, window START 2026-11-09 10:05:40 GMT, END 10:07:08 GMT; code and schema read at origin/main `40ba57f4b320`. The zero is VACUOUS.** Server `gi-pricing-postgres-1`, every non-template database: `gipricing`, `postgres`. Result: 0 hits over an EMPTY corpus. It shows that no rate-table row exists in any database on this server; it says nothing about the finite or non-finite character of any stored value, because none is stored. No database that held rate tables from a build before `c1a9c430` still exists on this server.
+
+| Database | Locus | Hits | Denominator |
+|---|---|---|---|
+| gipricing | rate_table_cells.value, named non-finite | 0 | 0 |
+| gipricing | rate_table_cells.value, not a finite decimal | 0 | 0 |
+| gipricing | rate_table_versions.definition default_row value, named non-finite | 0 | 0 |
+| gipricing | rate_table_versions, quoted non-finite token in definition, seeded_from, created_by_* | 0 | 0 |
+| gipricing | rate_table_versions storage=parquet (blob read owed if > 0) | 0 | 0 |
+| postgres | no rate_tables, rate_table_versions or rate_table_cells table (to_regclass NULL) | n/a | n/a |
+
+Row denominators in gipricing: rate_tables 0, rate_table_versions 0, rate_table_cells 0; datasets, dataset_versions, models and rating_versions also 0 (alembic b7e4c2a91d36). No parquet version exists, so no blob was owed. Instrument proven red first on a planted copy (`aud_fd1815_copy`, `createdb -T gipricing`, dropped, pg_database count 0): 10 cells with NaN, sNaN, Infinity, -inf, nan, NaN123, abc and 3 finite controls read named 6 of 10 and not-finite 7 of 10; default_row 1 of 1; token 2 of 2; parquet 1 of 2. Disclosed against condition (b): the login was superuser `gipricing` with effective role `pg_read_all_data` (no low-privilege login exists; creating one is a cluster write the grant does not name), so "no write grant" holds for the effective role only.
+
+SQL verbatim (psql; run under `PGOPTIONS "-c default_transaction_read_only=on -c role=pg_read_all_data"`):
+
+```sql
+\set finite '''^[[:space:]]*[+-]?([0-9]+(\\.[0-9]*)?|\\.[0-9]+)([eE][+-]?[0-9]+)?[[:space:]]*$'''
+\set named '''^[[:space:]]*[+-]?(s?nan[0-9]*|inf(inity)?)[[:space:]]*$'''
+\set token '''"[[:space:]]*[+-]?(s?nan[0-9]*|inf(inity)?)[[:space:]]*"'''
+select current_database() db, current_user, current_setting('default_transaction_read_only') ro;
+\echo == census: db | locus | hits | denominator
+select current_database() db, 'rate_table_cells.value named non-finite' locus, count(*) filter (where value #>> '{}' ~* :named) hits, count(*) denominator from rate_table_cells
+union all select current_database(), 'rate_table_cells.value not a finite decimal', count(*) filter (where value #>> '{}' is null or value #>> '{}' !~ :finite), count(*) from rate_table_cells
+union all select current_database(), 'rate_table_versions.definition default_row value named non-finite', count(*) filter (where definition->'default_row'->>(definition->'value'->>'name') ~* :named), count(*) filter (where jsonb_typeof(definition->'default_row')='object') from rate_table_versions
+union all select current_database(), 'rate_table_versions quoted non-finite token in definition/seeded_from/created_by_*', count(*) filter (where concat_ws(' ',definition::text,seeded_from::text,created_by_operation::text,created_by_import::text,created_by_edit::text) ~* :token), count(*) from rate_table_versions
+union all select current_database(), 'rate_table_versions storage=parquet (blob read owed if > 0)', count(*) filter (where storage='parquet'), count(*) from rate_table_versions
+order by 2;
+\echo == per version (rows mode), hits only: slug | version | storage | named hits | cells
+select t.slug, v.version_number, v.storage, count(*) filter (where c.value #>> '{}' ~* :named), count(*) from rate_table_cells c left join rate_table_versions v on v.id=c.version_id left join rate_tables t on t.id=v.rate_table_id group by 1,2,3 having count(*) filter (where c.value #>> '{}' ~* :named) > 0 order by 1,2;
+```
+)*
