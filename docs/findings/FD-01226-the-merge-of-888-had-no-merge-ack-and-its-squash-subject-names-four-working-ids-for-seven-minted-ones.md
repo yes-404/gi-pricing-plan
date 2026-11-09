@@ -2,7 +2,7 @@
 id: FD-1226
 family: finding
 title: The merge of #888 had no MERGE-ACK, and its squash subject names four working ids for seven minted ones
-status: retired
+status: closed
 created: 2026-09-29
 owner: auditor
 tree: bb2aa935dbdf207a7073df85f8fde143e1cee77b
@@ -51,6 +51,6 @@ register rows, the `created:` dates against the working-id drafts (`1de2eec7`), 
 full SHA. Event: the maintainer accepts or rules on the unapproved merge. Which rule or check could have stopped it (the merge
 was made by a teammate's account) is a question in no charter, so it is the lead's.
 
-## Disposition — retired 2026-11-09
+## Disposition — closed 2026-11-09
 
-Retired 2026-11-09 (batch 30), quoting the maintainer's "2026-11-09 11:59:32 GMT" entry, side ruling (A): "RULED — the merge is ACCEPTED after the fact: its content has stood on main for six weeks, was built on, audited and migrated, and nothing in it was reverted; the process breach is already the standing rule (no merge without an ACK entry naming the sha) and FD-1226's subject-id limb was repaired by the mint re-point work; FD-1226 closes by a dated line quoting this ruling". The merge `bb2aa935` is accepted after the fact; the squash subject stays wrong and the correction above (cite FD-1214 to FD-1220) stands. The finding joins the accepted rows of the P2 closure record as the 15th.
+Closed 2026-11-09 (batch 30), quoting the maintainer's "2026-11-09 11:59:32 GMT" entry, side ruling (A): "RULED — the merge is ACCEPTED after the fact: its content has stood on main for six weeks, was built on, audited and migrated, and nothing in it was reverted; the process breach is already the standing rule (no merge without an ACK entry naming the sha) and FD-1226's subject-id limb was repaired by the mint re-point work; FD-1226 closes by a dated line quoting this ruling". The merge `bb2aa935` is accepted after the fact; the squash subject stays wrong and the correction above (cite FD-1214 to FD-1220) stands. The finding joins the accepted rows of the P2 closure record as the 15th.
