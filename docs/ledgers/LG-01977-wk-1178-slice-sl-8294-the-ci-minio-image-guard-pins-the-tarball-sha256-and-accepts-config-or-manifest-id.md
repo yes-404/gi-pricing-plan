@@ -80,3 +80,5 @@ FD-1975 (draft for the auditor's sign-off, `owner: auditor`) and its register ro
 ## PRs
 
 (None yet.)
+
+*(Dated line, 2026-11-09, docs batch 28, by the executor, on the lead's correction and the maintainer's "2026-11-09 10:28:26 GMT" ledger rule (a ledger reading `active` for a closed slice is the defect; common seat brief item 42): front matter `status` flipped from `active` to `closed`. SL-1976 closed the same day (roadmap dated line); PR #1417 merged as squash `5a9e47c5d72bb9e7e03438b93fbf269c8015322c`, and FD-1975 was closed in place on 2026-11-03.)*
