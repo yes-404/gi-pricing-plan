@@ -2,7 +2,7 @@
 id: LG-1947
 family: ledger
 title: WK-1178 slice S1b — FD-1729 part 2, the startup refusal, the trigger-tamper proof and the exact grant map (slice ledger)
-status: active                 # active → closed (§1.2a)
+status: closed                 # active → closed (§1.2a)
 created: 2026-10-26   # drafted 2026-10-25 under working id 8248
 owner: executor
 tree: 1e0a8abbc90723ae9c887a901f700b72f6f94cc1   # origin/main at S1b's branch cut (S1a's squash, #1398); the red list below was drafted against S1a's seam head df215d55 and is re-measured at this base
@@ -214,4 +214,4 @@ Neither route is present: `rolcreaterole` f and `rolsuper` f for both roles; `ad
 
 **MERGE-ACK.** Pending, for the lead.
 
-*(Dated line, 2026-11-09, docs batch 27, by the executor, on to-lead "2026-11-09 10:00:22 GMT" item (4): this ledger's front matter reads `status: active` at origin/main `40ba57f4b320` while its slice SL-1948 reads `status: closed` in `docs/roadmap.md` there. The slice's code merged as #1399 (`eaddb4d9`, "fix(db,tests): the startup refusal, the tamper proof and the exact grant map — FD-1729 part 2 (SL-1948, LG-1947, RS-1949, OQ-1950, FD-1951) (#1399)"); its row was set `closed` by #1432 (`2f108b1e`, "docs: docs batch 10 — eleven + one WK-1178 slice closes, the gate and adoption lines, FD-1838 + FD-2001 closing acts, the SL-1736 + SL-1854 audits, process rows (#1432)"). Derived by the predicate: ledger front matter `status: active` and its `slice:` row reading `closed` in `docs/roadmap.md` at `40ba57f4b320`; 13 ledgers, LG-2003 (SL-1736) and LG-1977 (SL-1976) excluded as their slices read `active`. The ledger's own `status:` is not edited by this line.)*
+*(Dated line, 2026-11-09, docs batch 27, by the executor, on to-lead "2026-11-09 10:00:22 GMT" item (4): this ledger's front matter reads `status: active` at origin/main `40ba57f4b320` while its slice SL-1948 reads `status: closed` in `docs/roadmap.md` there. The slice's code merged as #1399 (`eaddb4d9`, "fix(db,tests): the startup refusal, the tamper proof and the exact grant map — FD-1729 part 2 (SL-1948, LG-1947, RS-1949, OQ-1950, FD-1951) (#1399)"); its row was set `closed` by #1432 (`2f108b1e`, "docs: docs batch 10 — eleven + one WK-1178 slice closes, the gate and adoption lines, FD-1838 + FD-2001 closing acts, the SL-1736 + SL-1854 audits, process rows (#1432)"). Derived by the predicate: ledger front matter `status: active` and its `slice:` row reading `closed` in `docs/roadmap.md` at `40ba57f4b320`; 13 ledgers, LG-2003 (SL-1736) and LG-1977 (SL-1976) excluded as their slices read `active`. The front matter is flipped to `status: closed` in this batch, per to-lead "2026-11-09 10:28:26 GMT" (LEDGERS), so the record no longer says `active` for a closed slice.)*

@@ -2,7 +2,7 @@
 id: LG-1760
 family: ledger
 title: WK-1178 slice SL-1455 — NFR-489, the /score request path meets its p99 budget at 25 to 200 rps (PL-1454 slice ledger)
-status: active
+status: closed
 created: 2026-10-17 # original date 2026-10-11, set at the filing; minted 2026-10-17
 owner: executor
 tree: 2e5a8121bfa77353ac3260165cf19313fd390028
@@ -566,4 +566,4 @@ Errors 0 except one at 100 rps default-live. Handler p99 without GBM 33–42 ms,
 
 Brief amendment of 2026-11-07 17:31:43 GMT (on to-lead "2026-11-07 17:31:27 GMT"): session 1's NFR-489 ladder (item C above) ran on an Intel Xeon @ 2.20 GHz (family 6, model 79); session 2's host is an AMD EPYC 7B12. Any comparison of the item-N profile or of session 2's 25 rps arms with session 1's carries: AMD EPYC 7B12; not like-for-like with S1; 8 vCPU; lower bound on a non-spec host. Item C's re-run on this platform (the FD-1836 control) is NOT done in S2 and moves to S3.
 
-*(Dated line, 2026-11-09, docs batch 27, by the executor, on to-lead "2026-11-09 10:00:22 GMT" item (4): this ledger's front matter reads `status: active` at origin/main `40ba57f4b320` while its slice SL-1455 reads `status: closed` in `docs/roadmap.md` there. The slice's code merged as #1323 (`9c602fec`, "perf(score): SL-1455 — the /score request path's per-request cost cut for NFR-489 (FD-1411; LG-1760) (#1323)"); its row was set `closed` by #1432 (`2f108b1e`, "docs: docs batch 10 — eleven + one WK-1178 slice closes, the gate and adoption lines, FD-1838 + FD-2001 closing acts, the SL-1736 + SL-1854 audits, process rows (#1432)"). Derived by the predicate: ledger front matter `status: active` and its `slice:` row reading `closed` in `docs/roadmap.md` at `40ba57f4b320`; 13 ledgers, LG-2003 (SL-1736) and LG-1977 (SL-1976) excluded as their slices read `active`. The ledger's own `status:` is not edited by this line.)*
+*(Dated line, 2026-11-09, docs batch 27, by the executor, on to-lead "2026-11-09 10:00:22 GMT" item (4): this ledger's front matter reads `status: active` at origin/main `40ba57f4b320` while its slice SL-1455 reads `status: closed` in `docs/roadmap.md` there. The slice's code merged as #1323 (`9c602fec`, "perf(score): SL-1455 — the /score request path's per-request cost cut for NFR-489 (FD-1411; LG-1760) (#1323)"); its row was set `closed` by #1432 (`2f108b1e`, "docs: docs batch 10 — eleven + one WK-1178 slice closes, the gate and adoption lines, FD-1838 + FD-2001 closing acts, the SL-1736 + SL-1854 audits, process rows (#1432)"). Derived by the predicate: ledger front matter `status: active` and its `slice:` row reading `closed` in `docs/roadmap.md` at `40ba57f4b320`; 13 ledgers, LG-2003 (SL-1736) and LG-1977 (SL-1976) excluded as their slices read `active`. The front matter is flipped to `status: closed` in this batch, per to-lead "2026-11-09 10:28:26 GMT" (LEDGERS), so the record no longer says `active` for a closed slice.)*
