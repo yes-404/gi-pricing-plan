@@ -37,3 +37,5 @@ Filed by the retro audit RS-1649, from the executor's finding candidate in LG-16
 ## Discharge path
 
 Required by the maintainer's condition, `to-lead.md` "2026-10-11 20:17:38 BST" item 4. Deferred to WK-1178 as a P3 carry: the decision-maker rules a named code or accepts the generic one, decided no later than the P2 close review (target the P2 exit demo, Thu 2026-11-12); if a code is named, a red-first test per site (`compile.py:761`, `:785`, `:1007`) closes it. Filed by the auditor, 2026-10-11; the lead gives the verdict.
+
+*Carried 2026-11-09, docs batch 28, by the executor, on the maintainer's "2026-11-09 10:12:52 GMT" entry (`to-lead.md`, a local channel file), ruling (1): FD-1654 is CARRIED to P3-C by dated line, the decision date named above met. The generic `BUNDLE_COMPILE_FAILED` stays accepted at P2 (LOUD, never a misprice); naming a code, with a red-first test per site, is P3-C's.*
