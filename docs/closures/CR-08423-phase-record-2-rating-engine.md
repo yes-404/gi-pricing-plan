@@ -1564,7 +1564,7 @@ rc=0
 
 ## Acceptance
 
-> **The maintainer's acceptance of the third dated part (their act, on the filed draft):** ____________________ **Date:** ____________
+> **The maintainer's acceptance of the third dated part (their act, on the filed draft):** ACCEPTED, the maintainer (by delegation, on D-3, D-4 and D-5 of 2026-11-09), 2026-11-10 00:07:12 GMT, on the filed draft at tree d87033b08d52 (working id CR 8423, docs/batch33-2026-11-09 @64dddb94): the third dated part is adopted as proposed — G1 met; G2 preconditions met, G2 itself owed at the demo; G3 met on this batch's lines; G4 met as carried, NFR-526, 527, 536 unread to P3-A; G5 met; G6 this record. FD-1671 LOW on record, probe first. This line binds nothing the user reserves: the P2 close line, the 15 accepted rows and WK-1178's close at the P2 close are the user's or by D-5. **Date:** 2026-11-10 00:07:12 GMT
 
 > **The user's P2 close line:** ____________________ **Date:** ____________
 
