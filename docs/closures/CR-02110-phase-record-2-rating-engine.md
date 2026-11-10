@@ -1,5 +1,5 @@
 ---
-id: CR-8423
+id: CR-2110
 family: closure
 kind: phase                    # work | phase | review — no other value (§1.2)
 title: Phase record — 2 (Rating Engine)
@@ -15,7 +15,7 @@ relates: [CR-1212, CR-1247, CR-1907, CR-1171, CR-838, CR-834, CR-927, CR-1243, C
 
 *Phase record of P2, filed by the auditor (aud-file, Claude Opus 5.5), 2026-11-09, on `to-lead` 2026-11-09 23:18:15 and 12:06:28 GMT (6). Written against the exit tree T = `fcfd7746c6e95d322e5a7f307d4e83d4563fd0ca`; the code freeze tree of record is `374a22bf33ad` (the code diff between them is empty, quoted in the third dated part). **Every verdict and resolution below is a proposal (`CLAUDE.md` §12): the lead adopts, amends or rejects; the maintainer's acceptance of the third part and the user's P2 close line are their own dated acts, in `## Acceptance`, and are blank here.** Dates of record were moved forward by the user on `to-lead` 2026-11-09 14:58:57 GMT (demo Wed 11 Nov); a quoted ruling or an earlier pass's text keeps the date it was written with ("Wed 18", "Mon 16", "Fri 13", "Tue 17"), and dated lines govern. Log locators `scratch/…` and `handover/…` are local files under `~/gi-pricing-plan.local/`, cited with their sha256 prefixes where they carry a claim.*
 
-# CR-8423 — Phase record — 2 (Rating Engine)
+# CR-2110 — Phase record — 2 (Rating Engine)
 
 ## Scope
 
@@ -366,7 +366,7 @@ uv run --directory <T worktree> python scripts/generate-contracts.py --check;   
 | Code diff `374a22bf`→T, quoted (d) | `git diff --name-only 374a22bf fcfd7746c6e9 -- . ':!docs' ':!.claude'` | 0, **empty** | this part |
 | Python half, per stage | the freeze gate stands (ruling (1)); the diff is empty | ruff 0, mypy 0, import_linter 0, pytest 0: `7660 passed, 28 skipped, 5 xfailed, 156 warnings in 4642.00s (1:17:21)`, skipped 28 = baseline | `to-lead` 2026-11-08 08:47:21 GMT; `CR-2071:268` |
 | Frontend half, per stage | the freeze gate stands (ruling (1)); the diff is empty | `fe max=0` in the END rc parts; each stage's rc is in that gate's log, not re-read here | as above |
-| At the filing commit: docs-only diff from T, and the four docs checks of (b) | `git diff --name-only fcfd7746c6e9 <filing> -- . ':!docs'`; the four commands above at `<filing>` | Filing commit `0621bb8bbb0e` (`docs/batch33-2026-11-09`): `git diff --name-only fcfd7746c6e9 0621bb8bbb0e -- . ':!docs'` prints nothing, rc 0. `doc-index.py --check` rc 0, `register-lint.py` rc 0, `req-coverage.py` rc 0, `generate-contracts.py --check` rc 0; `audit-docs.py` rc 1 on one line only, check 31's gap on the working id `CR-8423` (permitted until the mint). This row is the only change after that commit. | `scratch/batch33/logs/F5/`: docs-only-diff `80df6a2133c8`, doc-index `7cf8a9186fd4`, register-lint `59acc1efdbcb`, req-coverage `4e9005f02f9d`, generate-contracts `6c2db4a1f47e`, audit-docs `493549785f70` |
+| At the filing commit: docs-only diff from T, and the four docs checks of (b) | `git diff --name-only fcfd7746c6e9 <filing> -- . ':!docs'`; the four commands above at `<filing>` | Filing commit `0621bb8bbb0e` (`docs/batch33-2026-11-09`): `git diff --name-only fcfd7746c6e9 0621bb8bbb0e -- . ':!docs'` prints nothing, rc 0. `doc-index.py --check` rc 0, `register-lint.py` rc 0, `req-coverage.py` rc 0, `generate-contracts.py --check` rc 0; `audit-docs.py` rc 1 on one line only, check 31's gap on the working id `CR 8423` (now CR-2110) (permitted until the mint). This row is the only change after that commit. | `scratch/batch33/logs/F5/`: docs-only-diff `80df6a2133c8`, doc-index `7cf8a9186fd4`, register-lint `59acc1efdbcb`, req-coverage `4e9005f02f9d`, generate-contracts `6c2db4a1f47e`, audit-docs `493549785f70` |
 
 **How run:** `<tree-T>` is `scratch/plan-part3/tree-T`, a `git clone --shared` checked out detached at T (status clean), so that no check writes to tools-main; the two `.venv` commands use tools-main's venv, whose editable installs are at the same T. `audit-docs` prints warnings above its result line; each log has `head=` first and `rc=` last.
 
