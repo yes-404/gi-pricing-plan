@@ -517,8 +517,8 @@ forward-compatible migrations for rolling deploys; reference-counted blob GC.
 
 | ID | Requirement |
 |---|---|
-| **NFR-526** | API metadata reads p95 < 300 ms (NFR-457); the scoring path is specified separately in `03` (NFR-489). |
-| **NFR-527** | Job submission to `running` in < 5 s when a worker slot is free; queue depth and wait time are observable. |
+| **NFR-526** | API metadata reads p95 < 300 ms (NFR-457); the scoring path is specified separately in `03` (NFR-489). *(Dated line, 2026-11-09, docs batch 33, by the auditor, on `to-lead` "2026-11-09 23:29:42 GMT" (1): carried to P3-A, "not measured at the P2 exit". The requirement's budget stands.)* |
+| **NFR-527** | Job submission to `running` in < 5 s when a worker slot is free; queue depth and wait time are observable. *(Dated line, 2026-11-09, docs batch 33, by the auditor, on `to-lead` "2026-11-09 23:29:42 GMT" (1): carried to P3-A, "not measured at the P2 exit". The requirement's budget stands.)* |
 | **NFR-528** | Progress updates arrive at least every 5 s for a running Job, or the Job is treated as stalled and flagged. |
 | **NFR-529** | The compose stack starts to a usable seeded state in < 5 min on a developer laptop (R2, FR-439). |
 | **NFR-530** | RPO ≤ 15 min, RTO ≤ 4 h (NFR-460), with a restore procedure exercised in CI against a synthetic backup at least monthly. |
@@ -527,7 +527,7 @@ forward-compatible migrations for rolling deploys; reference-counted blob GC.
 | **NFR-533** | Container images have no `HIGH`/`CRITICAL` CVEs at release, are signed, and ship an SBOM (NFR-461). |
 | **NFR-534** | The scoring service runs and serves with the compute worker pool entirely absent (FR-434). |
 | **NFR-535** | **A Model scores in a process where the libraries that *fit* models cannot be imported — proven by scoring in a subprocess with `glum`, `scikit-learn`, `celery` and `dagster` made unimportable, not by review.** (OQ-642, decided 2026-08-18.) One image with a role flag ships through Phases 1–2 and a separate scoring image from Phase 3, and the only thing that can make that split cheap later is that the scoring path never grew a fitting dependency in between. NFR-534 states the runtime property against the *worker pool*; this states it against the *dependency set*, which is what a second image would actually have to shed. `xgboost` and `lightgbm` are deliberately **not** on the forbidden side: `02` FR-193 scores a GBM by loading its JSON booster, so a boosting library is a scoring dependency by design — what the split sheds is the libraries that fit. **An import-linter contract is the wrong instrument here, and was tried first.** `glum` and `sklearn` are already imported at their call sites rather than at module scope — inside `fit_glm`, `propose_banding` and `propose_grouping` — which is exactly the discipline this requirement wants; import-linter reads the AST and counts a function-scope import like any other, so a contract over `pricing_core.modelling.predict` reports four violations against code that is already correct, and the only ways to green it are to weaken it or to move modules that have no other reason to move. The property is a runtime one, so the check creates the runtime. The slice that builds the scoring API (Phase 2) extends the same test to that entry point rather than adding a second mechanism. |
-| **NFR-536** | Trace context propagates end to end for ≥ 99 % of requests, verified by a CI check that asserts a `trace_id` appears in worker logs for a traced API call (R4). |
+| **NFR-536** | Trace context propagates end to end for ≥ 99 % of requests, verified by a CI check that asserts a `trace_id` appears in worker logs for a traced API call (R4). *(Dated line, 2026-11-09, docs batch 33, by the auditor, on `to-lead` "2026-11-09 23:29:42 GMT" (1): carried to P3-A, "not measured at the P2 exit". The requirement's budget stands.)* |
 
 ---
 
