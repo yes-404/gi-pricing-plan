@@ -1,5 +1,5 @@
 ---
-id: LG-8424
+id: LG-2111
 family: ledger
 title: P2 exit demo run r1 (ledger)
 status: closed                 # active → closed (§1.2a)
@@ -10,12 +10,12 @@ phase: P2
 work: WK-1178
 plans: [PL-1544, PL-1912]
 corrected_by: []
-relates: [CR-2110, LG-2107, PL-1544, PL-1912, SL-1913, FD-8428]
+relates: [CR-2110, LG-2107, PL-1544, PL-1912, SL-1913, FD-2115]
 ---
 
-# LG-8424 — P2 exit demo, run r1 (Wed 11 Nov 2026)
+# LG-2111 — P2 exit demo, run r1 (Wed 11 Nov 2026)
 
-*Disclosure: working id LG 8424, given by lead 33 (`from-lead` 2026-11-11 11:00:21 GMT); unminted on this branch. Written by the auditor (aud-p2close, Claude Opus 5.5), 2026-11-11, on the maintainer's entry `to-lead` 2026-11-11 10:58:58 GMT item (2)(b), from the run's own logs. Every reading below is quoted from a log, with its locator; every stamp is the log's own. The run was lead 33's (`from-lead` 2026-11-11 10:36:58 to 10:58:38 GMT). This is the run record for `CR-2110` G2; it is not a slice ledger, and no slice is named.*
+*Disclosure: working id LG-2111, given by lead 33 (`from-lead` 2026-11-11 11:00:21 GMT); unminted on this branch. Written by the auditor (aud-p2close, Claude Opus 5.5), 2026-11-11, on the maintainer's entry `to-lead` 2026-11-11 10:58:58 GMT item (2)(b), from the run's own logs. Every reading below is quoted from a log, with its locator; every stamp is the log's own. The run was lead 33's (`from-lead` 2026-11-11 10:36:58 to 10:58:38 GMT). This is the run record for `CR-2110` G2; it is not a slice ledger, and no slice is named.*
 
 **Authority.** The user named the hour: "I would like to start the demo now, plz help me to arrange it" (`to-lead` 2026-11-11 10:36:21 GMT). The runbook of record is `handover/exit-demo-runbook-wed-18-nov.md`, FINAL at sha256 `c5b260a10792` (`CR-2110` G2 (e)). The rehearsal of record is `LG-2107`.
 
@@ -120,7 +120,7 @@ Then `:3463` "journey done in 766s"; `:3471` "served page: http://localhost:5173
 
 **Ports**, as lead 33 logged them (`from-lead` 2026-11-11 10:51:35 GMT, verbatim): "Ports curl rc 0 http 200: 5173 / and /demo, 8000 healthz/readyz, 8080 realm." The stack came up from tools-main (`from-lead` 10:36:58 GMT: "stack four healthy from tools-main, keycloak bind under tools-main, redis -n 0 dbsize 56").
 
-**The user's page walk** (10:51 to 10:58 GMT, the demo serving; the maintainer's entry 10:58:14 GMT: "the user drove every page over forwarded ports and signed in as analyst (the password's first live test: passed)"). The client lines the walk printed, for the record, none on a journey step: `demo.log:3500` and `:3521` "[Unhandled rejection] ProblemError: Development identity is enabled; supply x-dev-principal-id." (2; the same message `LG-2107` row 6 records on every load); `:3540` "10:54:13 AM [vite] (client) [Unhandled rejection] TypeError: Cannot read properties of null (reading '0')" in `echarts/lib/coord/View.js` (a graph view), after `:3539` "[ECharts] Can't get DOM width or height" (1). Not diagnosed here. Filed as FD 8428 ([`FD-8428`](../findings/FD-08428-the-dataset-lineage-graph-raises-an-unhandled-echarts-typeerror-on-the-dataset-detail-view-not-diagnosed.md)): LOW, deferred with an owner, WK-1914 (lead 33, 2026-11-11).
+**The user's page walk** (10:51 to 10:58 GMT, the demo serving; the maintainer's entry 10:58:14 GMT: "the user drove every page over forwarded ports and signed in as analyst (the password's first live test: passed)"). The client lines the walk printed, for the record, none on a journey step: `demo.log:3500` and `:3521` "[Unhandled rejection] ProblemError: Development identity is enabled; supply x-dev-principal-id." (2; the same message `LG-2107` row 6 records on every load); `:3540` "10:54:13 AM [vite] (client) [Unhandled rejection] TypeError: Cannot read properties of null (reading '0')" in `echarts/lib/coord/View.js` (a graph view), after `:3539` "[ECharts] Can't get DOM width or height" (1). Not diagnosed here. Filed as FD-2115 ([`FD-2115`](../findings/FD-02115-the-dataset-lineage-graph-raises-an-unhandled-echarts-typeerror-on-the-dataset-detail-view-not-diagnosed.md)): LOW, deferred with an owner, WK-1914 (lead 33, 2026-11-11).
 
 **The user's acceptance of the demo**, verbatim (the maintainer's entry `to-lead` 2026-11-11 10:58:14 GMT): "yes I go through all the page and it looks good, I am happy to accept the demo".
 

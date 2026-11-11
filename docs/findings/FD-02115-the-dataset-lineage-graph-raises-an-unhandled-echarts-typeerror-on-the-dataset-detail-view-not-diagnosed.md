@@ -1,5 +1,5 @@
 ---
-id: FD-8428
+id: FD-2115
 family: finding
 title: The dataset lineage graph raises an unhandled ECharts TypeError on the dataset detail view; not diagnosed
 status: active
@@ -7,16 +7,16 @@ created: 2026-11-11
 owner: auditor
 tree: 374a22bf33ad
 corrected_by: []
-relates: [LG-8424, LG-2107, CR-2110, WK-1914]
+relates: [LG-2111, LG-2107, CR-2110, WK-1914]
 ---
 
-# FD-8428 — The dataset lineage graph raises an unhandled ECharts TypeError on the dataset detail view
+# FD-2115 — The dataset lineage graph raises an unhandled ECharts TypeError on the dataset detail view
 
-*Working id FD 8428, given by lead 33 (`from-lead` 2026-11-11); unminted on this branch. Filed by the auditor (aud-p2close, Claude Opus 5.5) on lead 33's disposition (3) of 2026-11-11, which set the severity, the owner and the first step.*
+*Working id FD-2115, given by lead 33 (`from-lead` 2026-11-11); unminted on this branch. Filed by the auditor (aud-p2close, Claude Opus 5.5) on lead 33's disposition (3) of 2026-11-11, which set the severity, the owner and the first step.*
 
 ## Finding
 
-During the user's page walk at the P2 exit demo (run r1, Wed 11 Nov 2026, frozen tree `374a22bf33ad`; `LG-8424`), opening a dataset's detail page logged an ECharts warning that the chart container has no size, and then an unhandled promise rejection, a `TypeError`, inside ECharts' graph-view coordinate system. The page that was open is the dataset detail view. Its lineage request is the last API call before the warning. At `374a22bf`, `frontend/src/views/DatasetDetailView.vue:17` imports `LineageGraph.vue` and mounts it at `:241-249`, under `v-if="lineage"`. `LineageGraph.vue:90` is the frontend's only ECharts series of `type: "graph"` (`git grep -n -E "type: ?['\"]graph['\"]" 374a22bf -- frontend/src` prints that one line), and `:153` sets `autoresize`. The rejection did not stop the user's walk. It touches no money path and no journey step. Whether the graph then drew, and whether the cause is a zero-size container on first paint, is **not diagnosed**.
+During the user's page walk at the P2 exit demo (run r1, Wed 11 Nov 2026, frozen tree `374a22bf33ad`; `LG-2111`), opening a dataset's detail page logged an ECharts warning that the chart container has no size, and then an unhandled promise rejection, a `TypeError`, inside ECharts' graph-view coordinate system. The page that was open is the dataset detail view. Its lineage request is the last API call before the warning. At `374a22bf`, `frontend/src/views/DatasetDetailView.vue:17` imports `LineageGraph.vue` and mounts it at `:241-249`, under `v-if="lineage"`. `LineageGraph.vue:90` is the frontend's only ECharts series of `type: "graph"` (`git grep -n -E "type: ?['\"]graph['\"]" 374a22bf -- frontend/src` prints that one line), and `:153` sets `autoresize`. The rejection did not stop the user's walk. It touches no money path and no journey step. Whether the graph then drew, and whether the cause is a zero-size container on first paint, is **not diagnosed**.
 
 ## Evidence
 

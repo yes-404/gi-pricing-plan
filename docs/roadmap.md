@@ -2184,7 +2184,7 @@ Minted 2026-09-28 on the maintainer's instruction of that day ("yes record and i
 
 **NFR-526, NFR-527 and NFR-536 are measured under WK-1178**, on the exit tree *(added 2026-09-29 on `CR-1247`, and the maintainer's entry "2026-09-29 17:27:28 BST · maintainer (acting on the maintainer's behalf) · ACCEPTANCES: the WK-672 Work close (#906) and plan review 16 (#905), per proposal", §2 row 7: "NFR-526, 527 and 536 are measured under WK-1178.")*. They measure paths built today (API metadata p95, Job submission latency and trace propagation), so G4 reads them as measured, not carried. *(Dated line, 2026-11-09, docs batch 33, by the auditor, on `to-lead` "2026-11-09 23:29:42 GMT" (1), amending the 2026-09-29 words of this line: NFR-526, NFR-527 and NFR-536 are each **carried to P3-A, "not measured at the P2 exit"**; no reading exists at the exit tree, and G4 reads them "carried, unread" (G4 MET AS CARRIED). The P2 close line lists the three.)*
 
-***Dated line, 2026-11-11 10:58:58 GMT — WK-1178 CLOSED*** (the maintainer's act, by delegation, on D-5 (to-lead "2026-11-09 10:09:00 GMT" (4)) and the accepted §14 review; written by the planner in the P2-close docs batch). The maintainer's entry "2026-11-11 10:58:58 GMT — Maintainer: THE USER'S P2 CLOSE WORD", MY ACTS: "WK-1178 CLOSED at the P2 close". The Work closes with its phase, as this row's first paragraph says ("it closes with its phase"); the phase record is [`CR-2110`](closures/CR-02110-phase-record-2-rating-engine.md). `status:` above read `active` from 2026-09-28 and reads `closed` from this line. **Its still-open items are re-owned by name, as the P3 drafts (`P3-WK-drafts.md`, sha256 prefix `196357ab59ac`) and `CR-2110` §Re-owning map say:** NFR-526, NFR-527 and NFR-536 → **WK-8425** (P3-A), "not measured at the P2 exit" (the line above); FR-177, the expression-Factor limb FR-174/175/177 of FD-1751 → **WK-8426** (P3-C); `SL-1601` (FD-1589 row 8) → **WK-8426** (P3-C), re-parented by its own dated line; NFR-490's result-identity limb (register `:445`) → **WK-8426** (P3-C), the overhead limb → **WK-8425** (P3-A). Its register rows are re-owned by subject (to-lead "2026-11-09 15:03:02 GMT" (3)): lifecycle rows → WK-2104, product rows → P3-C, tooling and process rows → P3-D; the owner cells are the register's, edited in the same batch. Every slice below is `closed` or `retired`.
+***Dated line, 2026-11-11 10:58:58 GMT — WK-1178 CLOSED*** (the maintainer's act, by delegation, on D-5 (to-lead "2026-11-09 10:09:00 GMT" (4)) and the accepted §14 review; written by the planner in the P2-close docs batch). The maintainer's entry "2026-11-11 10:58:58 GMT — Maintainer: THE USER'S P2 CLOSE WORD", MY ACTS: "WK-1178 CLOSED at the P2 close". The Work closes with its phase, as this row's first paragraph says ("it closes with its phase"); the phase record is [`CR-2110`](closures/CR-02110-phase-record-2-rating-engine.md). `status:` above read `active` from 2026-09-28 and reads `closed` from this line. **Its still-open items are re-owned by name, as the P3 drafts (`P3-WK-drafts.md`, sha256 prefix `196357ab59ac`) and `CR-2110` §Re-owning map say:** NFR-526, NFR-527 and NFR-536 → **WK-2112** (P3-A), "not measured at the P2 exit" (the line above); FR-177, the expression-Factor limb FR-174/175/177 of FD-1751 → **WK-2113** (P3-C); `SL-1601` (FD-1589 row 8) → **WK-2113** (P3-C), re-parented by its own dated line; NFR-490's result-identity limb (register `:445`) → **WK-2113** (P3-C), the overhead limb → **WK-2112** (P3-A). Its register rows are re-owned by subject (to-lead "2026-11-09 15:03:02 GMT" (3)): lifecycle rows → WK-2104, product rows → P3-C, tooling and process rows → P3-D; the owner cells are the register's, edited in the same batch. Every slice below is `closed` or `retired`.
 
 #### SL-1300 — WK-1178 fix slice — compile_bundle refuses a step ref not pinned at its exact version (FR-237)
 
@@ -4206,9 +4206,9 @@ opened: 2026-08-14
 target: ~
 gates: ~
 exit criteria: ~
-works: WK-676, WK-677, WK-678, WK-679, WK-680, WK-681, WK-682, WK-691, WK-1169, WK-1170, WK-1251, WK-1288, WK-1914, WK-1915, WK-2104, WK-8425, WK-8426, WK-8427
+works: WK-676, WK-677, WK-678, WK-679, WK-680, WK-681, WK-682, WK-691, WK-1169, WK-1170, WK-1251, WK-1288, WK-1914, WK-1915, WK-2104, WK-2112, WK-2113, WK-2114
 
-***Dated line, 2026-11-11 — P3 IS THE CURRENT PHASE*** (the P2-close docs batch, by the planner, on the maintainer's entry "2026-11-11 10:58:58 GMT — Maintainer: THE USER'S P2 CLOSE WORD" in `to-lead.md`, item (2)(c)). Phase 2 closed 2026-11-11 (`## P2`'s dated line of that date; [`CR-2110`](closures/CR-02110-phase-record-2-rating-engine.md)), and **this phase is the current phase from that date**. `status: active` above is unchanged: it has read `active` since 2026-08-14, when the phases were opened. `works:` gains the three Works the same entry opens or signs: **WK-8425** (P3-A, spec-host measurement; opened `active`), **WK-8426** (P3-C) and **WK-8427** (P3-D), both signed `draft` as drafted. The phase-review rule holds at the start: nothing starts in P3 while an open P2 finding lacks a resolution (`CLAUDE.md` §14; the count is `CR-2110`'s).
+***Dated line, 2026-11-11 — P3 IS THE CURRENT PHASE*** (the P2-close docs batch, by the planner, on the maintainer's entry "2026-11-11 10:58:58 GMT — Maintainer: THE USER'S P2 CLOSE WORD" in `to-lead.md`, item (2)(c)). Phase 2 closed 2026-11-11 (`## P2`'s dated line of that date; [`CR-2110`](closures/CR-02110-phase-record-2-rating-engine.md)), and **this phase is the current phase from that date**. `status: active` above is unchanged: it has read `active` since 2026-08-14, when the phases were opened. `works:` gains the three Works the same entry opens or signs: **WK-2112** (P3-A, spec-host measurement; opened `active`), **WK-2113** (P3-C) and **WK-2114** (P3-D), both signed `draft` as drafted. The phase-review rule holds at the start: nothing starts in P3 while an open P2 finding lacks a resolution (`CLAUDE.md` §14; the count is `CR-2110`'s).
 
 **2026-09-29: requirements carried into Phase 3 without a Work.** CR-1212 P12 records that FR-432, FR-433, FR-434, FR-435 and FR-438 were on no roadmap row. FR-434 and FR-435 went to WK-674 in P2 (CR-1212 P12; placed in PL-1237). The other three are carried to P3, and no P3 Work names them yet:
 
@@ -4475,10 +4475,10 @@ Opened `draft` (working id 8418; minted 2026-11-08 as WK-2104) by to-lead "2026-
 
 **Slices:** cut by the planner at P3 start.
 
-### WK-8425 — P3-A — spec-host measurement
+### WK-2112 — P3-A — spec-host measurement
 
 ```yaml
-id: WK-8425
+id: WK-2112
 family: work
 title: P3-A — spec-host measurement
 status: active
@@ -4505,16 +4505,16 @@ relates: [CR-2103, CR-2110, WK-1178, FD-1836, FD-1411, FD-2007, FD-2009, FD-2033
 
 **Carried here by ruling since** (the same drafts, §5): NFR-494, "unread at S1–S3" (to-lead 2026-11-09 23:28:22 GMT (1)); NFR-526, NFR-527 and NFR-536, each "not measured at the P2 exit" (23:29:42 GMT (1); WK-1178's re-owning line); NFR-500 and NFR-477, measurement (23:29:42 GMT (2)); NFR-488's GBM diagnostics limb, the spec-host measurement (18:38:40 GMT (2)). **Signed placements** (to-lead 2026-11-09 14:53:21 GMT): F22's NFR-454, NFR-455, NFR-456, NFR-457, NFR-518 and NFR-520 (performance budgets, measured on the spec host); NFR-1443, the G4 carry, measurement class. D-3 (to-lead 2026-11-09 16:27:43 GMT): NFR-489's budgets stand, and FD-1836, FD-1411 and F38 are carried here by name.
 
-**Also in scope, by reference and not restated** (RFC-756): the P3-A row of [`CR-2110`](closures/CR-02110-phase-record-2-rating-engine.md) §Re-owning map and the additions by ruling under it, with one exception. **NFR-490's result-identity limb (register `:445`) is not this Work's:** it is WK-8426's (P3-C), by to-lead "2026-11-09 16:37:51 GMT", and `CR-2110`'s line at `:1291` is corrected to say so by a dated line in the same batch. NFR-490's overhead limb (+537.2%) stays here (item 2).
+**Also in scope, by reference and not restated** (RFC-756): the P3-A row of [`CR-2110`](closures/CR-02110-phase-record-2-rating-engine.md) §Re-owning map and the additions by ruling under it, with one exception. **NFR-490's result-identity limb (register `:445`) is not this Work's:** it is WK-2113's (P3-C), by to-lead "2026-11-09 16:37:51 GMT", and `CR-2110`'s line at `:1291` is corrected to say so by a dated line in the same batch. NFR-490's overhead limb (+537.2%) stays here (item 2).
 
 **Exit criteria:** not drafted. `CR-2103` P16 gives its plan to the planner ("maintainer opens; planner writes its plan"); the Work's one `PL-` proposes them, and the maintainer accepts them.
 
 **Slices:** cut by the planner in that plan.
 
-### WK-8426 — P3-C — product: correctness carries and unreached views
+### WK-2113 — P3-C — product: correctness carries and unreached views
 
 ```yaml
-id: WK-8426
+id: WK-2113
 family: work
 title: P3-C — product: correctness carries and unreached views
 status: draft
@@ -4571,19 +4571,19 @@ created: 2026-10-10            # original date 2026-10-10, set at the draft; min
 owner: planner                   # cut by the planner (draft); lead dispatches (active)
 tree: fe0b0627590307259ec6d56be7f73115cf245092
 phase: P3
-work: WK-8426
+work: WK-2113
 corrected_by: []
 relates: [FD-1589, SL-1600]
 ```
 
 Moved to P3 by the lead's entry "2026-10-10 16:07:46 BST — RULINGS on PL 9955 re-sized (@688d639e, ≈4.8 lane-days): DP-9 = A in P2, B1/B2 to P3; DP-8 (b) with an identifier-pattern constraint; DP-5 extension YES", DP-9: *"B1/B2 (≈2.7 lane-days, messages no request reaches) MOVE TO P3 … A dated P3 row (owner WK-1178) records them by count with the planner's list"*. **It records, by count at `fe0b0627`:** **B1**, 41 free messages in 19 validators of classes built in a handler from a user's create body; **B2**, 47 free messages in 27 validators of system-produced models; and the **5 graph signals** (`GraphUnresolvedRefError` ×3, `GraphCycleError` ×2), pending the FR-215 `step_id` pattern, which PL-1599's DP-10 asked for and the lead ruled at "2026-10-10 16:23:12 BST" a P3 spec change (`step_id` carries no schema pattern, so DP-8 (b) cannot name a step until it lands; graph messages name no step meanwhile, which is correct behaviour). The site lists, by `file:Class.validator`, are PL-1599's Appendix A; P3 plans from them and re-derives them at its own base. Until this row's work lands, slice A's guard holds these sites by exact count in `_RESIDUAL`, and DP-5's allow-list already gives any stored refusal from them input-free fixed text. Each is rewritten to field and rule only, raised as `InputFreeError`; the last P3 slice deletes `_RESIDUAL`. ≈2.7 lane-days as ruled (B1 ≈1.3, B2 ≈1.4). **Not a cut-ladder rung:** it was never in the P2 baseline. **Activation needs:** `SL-1600` (slice A) merged, because both change `_RESIDUAL` (RL-1263); the FR-215 `step_id` pattern (DP-10, a P3 spec change) landed before the graph signals; a P3 plan; the maintainer's activation of P3 work. *(Cut 2026-10-10 by the planner (planner-remedy-c3) under working id 9958, reserved by the lead in its message to planner-remedy-c3 on 2026-10-10, free-checked on all origin refs and eta.)*
 
-***Dated line, 2026-11-11 10:58:58 GMT — RE-PARENTED*** (the maintainer's act, by delegation; written by the planner in the P2-close docs batch). The maintainer's entry "2026-11-11 10:58:58 GMT — Maintainer: THE USER'S P2 CLOSE WORD" in `to-lead.md`, MY ACTS: "SL-1601 re-parented as the drafts say". The drafts name P3-C (`P3-WK-drafts.md`, sha256 prefix `196357ab59ac`, Q4, ruled at to-lead "2026-11-09 12:08:21 GMT": "RE-PARENTED at the P2 close by a dated line to the P3 row that owns its subject"). The `work:` field above read `WK-1178` from the cut on 2026-10-10 and reads `WK-8426` from this line, because WK-1178 closed at the P2 close. The row moved here from under `WK-1288`, where it sat by position only. Its heading and `title:` keep their words as cut ("WK-1178 P3 carry"). Nothing else in the row changes: status `draft`, and its activation needs, stand.
+***Dated line, 2026-11-11 10:58:58 GMT — RE-PARENTED*** (the maintainer's act, by delegation; written by the planner in the P2-close docs batch). The maintainer's entry "2026-11-11 10:58:58 GMT — Maintainer: THE USER'S P2 CLOSE WORD" in `to-lead.md`, MY ACTS: "SL-1601 re-parented as the drafts say". The drafts name P3-C (`P3-WK-drafts.md`, sha256 prefix `196357ab59ac`, Q4, ruled at to-lead "2026-11-09 12:08:21 GMT": "RE-PARENTED at the P2 close by a dated line to the P3 row that owns its subject"). The `work:` field above read `WK-1178` from the cut on 2026-10-10 and reads `WK-2113` from this line, because WK-1178 closed at the P2 close. The row moved here from under `WK-1288`, where it sat by position only. Its heading and `title:` keep their words as cut ("WK-1178 P3 carry"). Nothing else in the row changes: status `draft`, and its activation needs, stand.
 
-### WK-8427 — P3-D — process and instruments
+### WK-2114 — P3-D — process and instruments
 
 ```yaml
-id: WK-8427
+id: WK-2114
 family: work
 title: P3-D — process and instruments
 status: draft
