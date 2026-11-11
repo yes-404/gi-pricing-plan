@@ -33,6 +33,7 @@ Plan-ledger SHA-citation convention, dated 2026-08-26 (WK-664 decision maker): t
 | **Phase 0 (Specification)** | Closed 2026-08-14 — 8 specs, 5 workflows, 5 ADRs, 31 contracts; `scripts/audit-docs.py` prints the current requirement count, which changes whenever an implementation proves the spec wrong |
 | **Blocking Phase 1** | **Nothing.** All seven of Track C's decisions are taken — the last six (OQ-MODEL-1, 2, 4, 5, 6, 7) on 2026-08-15. What remains open gates Phase 2 or later (§10) |
 | **Code written** | Each phase section's `status:` line is the authority (`## P1a`, `## P1b`, `## P2` below). This row does not restate it, because a restated status goes stale (RFC-756). *Pointer since 2026-09-28, item E11.* |
+| **Current phase** | **P3 — Governance**, from 2026-11-11, when Phase 2 closed (`## P2`'s dated line of that date; `CR-2110`). *Row added 2026-11-11 by the planner in the P2-close docs batch, on the maintainer's entry "2026-11-11 10:58:58 GMT" (`to-lead.md`), item (2)(c): "the current phase stated as P3". `CLAUDE.md` §0 says the current phase is "`docs/roadmap.md` §6's to state"; this document's `## 6.` is the Phase 1 split, so the statement is here and at `## P3`, and `CLAUDE.md` is not edited (the same entry, (2)(e)).* |
 
 The remaining Phase 0 work is a **decision backlog, not a writing backlog**. Every open
 question already carries options, trade-offs, and a recommendation.
@@ -553,16 +554,20 @@ surface sits in Phase 1.**
 ---
 
 ## P2 — Rating Engine
-status: active
+status: closed
 opened: 2026-08-14
 target: 2026-11-18
-gates: code freeze 2026-11-12 · docs freeze 2026-11-13 · rehearsal 2026-11-16 · plan review 2026-11-16 to 2026-11-17 · exit demo 2026-11-18
+gates: code freeze 2026-11-08 · plan review 2026-11-08 to 2026-11-10 · rehearsal 2026-11-09 · docs freeze 2026-11-10 · exit demo 2026-11-11
 exit criteria: G1–G6 of [`CR-1212`](closures/CR-01212-plan-review-15-p2-exit-criteria-budget-sequencing-and-the-open-finding-set.md), as accepted by the maintainer 2026-09-28, listed below
 works: WK-668, WK-669, WK-670, WK-671, WK-672, WK-673, WK-674, WK-675, WK-690, WK-693, WK-694, WK-695, WK-696, WK-697, WK-1178, WK-1250
 
 *(Dated 2026-11-08 (written 09:24:57 GMT), docs batch 24, by the lead, on P27 of the §14 review accepted at to-lead "2026-11-08 09:02:21 GMT": `gates:` above carries the P2 dates of record (to-lead "2026-11-05 09:58:58 GMT"). `WK-1169` and `WK-1170`, which read `phase: P3`, leave P2's `works:`. P3's `works:` gains them and `WK-1914` and `WK-1915`, also `phase: P3`.)*
 
 *(Dated 2026-11-09, docs batch 31, by the executor, quoting the user's order relayed in to-lead "2026-11-09 14:58:57 GMT" (the maintainer's entry), verbatim: "move them: move the work forward". **`gates:` above is superseded by this line; its text stays as written.** Dates of record: S3 Mon 9 Nov; rehearsal (`SL-1913`) **Tue 10 Nov 2026**; the §14 session and its third dated part **Tue 10 Nov evening to Wed 11 Nov morning**; **docs freeze Wed 11 Nov 2026**, when the third part is filed (the addendum batch and the third part are the last docs merges; anything after is a dated exception by the maintainer); **exit demo Wed 11 Nov 2026 afternoon**, on this box (D-2), then the user's P2 acceptance line; code freeze achieved Sun 8 Nov at `374a22bf`, so the Thu 12 Nov date is moot. The `target:` field above (2026-11-18) is likewise superseded by Wed 11 Nov 2026. Weekdays read with `date -d`: Tuesday, Wednesday, Sunday, Thursday.)*
+
+***Dated line, 2026-11-11 — PHASE 2 CLOSED*** (the P2-close docs batch, written by the planner on the lead's brief; the act is the maintainer's, by delegation), on the maintainer's entry "2026-11-11 10:58:58 GMT — Maintainer: THE USER'S P2 CLOSE WORD" in `to-lead.md`, item (2)(c). **Phase 2 is closed, 2026-11-11**, on the user's close word as that entry records it. The user, verbatim, as the entry quotes them: "yes I go through all the page and it looks good, I am happy to accept the demo" and "instruct the lead for the remaining work in close P2." The phase record is [`CR-2110`](closures/CR-02110-phase-record-2-rating-engine.md); its §Acceptance carries the user's two sentences and what the line covers. `status:` above read `active` from 2026-08-14 and reads `closed` from this line. Every Work in `works:` above is `closed`; WK-1178 closes by this batch (its row below). Carried into Phase 3 by the same line: NFR-489 read UNMET at exit with FD-1836, FD-1411 and F38 (budgets stand, D-3); NFR-526, NFR-527 and NFR-536 not measured at the P2 exit; FD-1671 LOW on record, probe first, P3-C's first act. **The current phase is P3** (`## P3 — Governance`, below).
+
+***Dated correction, 2026-11-11*** (the same batch, by the planner, on item (2)(c) of the 10:58:58 GMT entry: "the stale gates: dates line corrected by a dated line"). The `gates:` field above read, from docs batch 24 (2026-11-08) to this line: `code freeze 2026-11-12 · docs freeze 2026-11-13 · rehearsal 2026-11-16 · plan review 2026-11-16 to 2026-11-17 · exit demo 2026-11-18`. Those are the dates of to-lead "2026-11-05 09:58:58 GMT". The user's order of to-lead "2026-11-09 14:58:57 GMT" moved them (the batch 31 line above), and `CR-2110` §Limits of this record names the field as stale. The field is set in place to the dates as they happened: **code freeze** Sun 2026-11-08, the freeze tree `374a22bf` (gate END 2026-11-08T08:46:35+00:00, rc 0, as `CR-2103` quotes it); **plan review** the §14 review accepted 2026-11-08 09:02:21 GMT (`CR-2103`), and its third dated part accepted 2026-11-10 00:07:12 GMT (`CR-2110` §Acceptance); **rehearsal** `SL-1913` Mon 2026-11-09, run 20:00 to about 22:30 GMT (`LG-2107`), merged at `fcfd7746` (#1483); **docs freeze** Tue 2026-11-10, batch 33 merged at `78671a70` (#1484, 2026-11-10T00:47:12Z); **exit demo** Wed 2026-11-11, accepted by the user (to-lead "2026-11-11 10:58:14 GMT"). The batch 31 line's forecast dates (rehearsal Tue 10 Nov, docs freeze Wed 11 Nov) are left as written. `target:` (2026-11-18) is not changed by this line; the batch 31 line already supersedes it. Weekdays read with `date -d`: Sunday, Monday, Tuesday, Wednesday.
 
 *(Dated line, 2026-10-11: WK-1169 and WK-1170 left Phase 2 on 2026-10-08 and are struck from this list; their sections below (`WK-1169`, `WK-1170`) record the moves, "WK-1169 moves out of Phase 2 to Phase 3" and "WK-1170 moves out of Phase 2 to Phase 3", under G1's moved-out-of-P2 clause, F-1 (a) of the maintainer's (by delegation) entry "2026-10-08 12:55:22 BST — P2 RE-PLAN RULED on the inventory (handover/p2-inventory-2026-10-09.md, at 60e9254c): F-1 (a), F-2 (b), F-3 (b), F-4 (a)+(b), F-5 (a)/(b), F-6 (a)" in `~/gi-pricing-plan.local/channel/to-lead.md`; their `phase:` field is set to `P3` by the same batch, on the maintainer's 2026-10-11 10:48 BST entry.)*
 
@@ -2165,7 +2170,7 @@ Minted 2026-09-28 by `CR-1167` Proposal 5.1 (plan review 14, accepted by delegat
 id: WK-1178
 family: work
 title: 'P2 standing maintenance: hotfixes, dependency bumps and security findings'
-status: active
+status: closed
 created: 2026-09-28
 owner: maintainer
 phase: P2
@@ -2178,6 +2183,8 @@ Minted 2026-09-28 on the maintainer's instruction of that day ("yes record and i
 **FR-177 is WK-1178 scope** (`specs/02-modelling.md`: the joint measurement of an `interaction` Factor, permutation importance and partial dependence through its operands' source columns). FR-176, FR-177 and FR-178 moved here from WK-690, which is `expression` custom objectives, by FD-1195. **Dated 2026-09-28:** the deputy's ruling DP-FD1195-2 (entry of 21:41:20 BST) delivers FR-178 only in the FD-1195 PR and makes FR-177 **its own WK-1178 PR**; FR-177 carries a dated amendment naming the owner as WK-1178, and it is not built at that date. **FR-178 is delivered in two parts:** partial dependence in #880 (`9fa2b833`); the permutation-block omission record in #887 (open) — the deputy's correction of 2026-09-28 22:52:41 BST, which withdraws its earlier reading that #880 delivered FR-178.
 
 **NFR-526, NFR-527 and NFR-536 are measured under WK-1178**, on the exit tree *(added 2026-09-29 on `CR-1247`, and the maintainer's entry "2026-09-29 17:27:28 BST · maintainer (acting on the maintainer's behalf) · ACCEPTANCES: the WK-672 Work close (#906) and plan review 16 (#905), per proposal", §2 row 7: "NFR-526, 527 and 536 are measured under WK-1178.")*. They measure paths built today (API metadata p95, Job submission latency and trace propagation), so G4 reads them as measured, not carried. *(Dated line, 2026-11-09, docs batch 33, by the auditor, on `to-lead` "2026-11-09 23:29:42 GMT" (1), amending the 2026-09-29 words of this line: NFR-526, NFR-527 and NFR-536 are each **carried to P3-A, "not measured at the P2 exit"**; no reading exists at the exit tree, and G4 reads them "carried, unread" (G4 MET AS CARRIED). The P2 close line lists the three.)*
+
+***Dated line, 2026-11-11 10:58:58 GMT — WK-1178 CLOSED*** (the maintainer's act, by delegation, on D-5 (to-lead "2026-11-09 10:09:00 GMT" (4)) and the accepted §14 review; written by the planner in the P2-close docs batch). The maintainer's entry "2026-11-11 10:58:58 GMT — Maintainer: THE USER'S P2 CLOSE WORD", MY ACTS: "WK-1178 CLOSED at the P2 close". The Work closes with its phase, as this row's first paragraph says ("it closes with its phase"); the phase record is [`CR-2110`](closures/CR-02110-phase-record-2-rating-engine.md). `status:` above read `active` from 2026-09-28 and reads `closed` from this line. **Its still-open items are re-owned by name, as the P3 drafts (`P3-WK-drafts.md`, sha256 prefix `196357ab59ac`) and `CR-2110` §Re-owning map say:** NFR-526, NFR-527 and NFR-536 → **WK-8425** (P3-A), "not measured at the P2 exit" (the line above); FR-177, the expression-Factor limb FR-174/175/177 of FD-1751 → **WK-8426** (P3-C); `SL-1601` (FD-1589 row 8) → **WK-8426** (P3-C), re-parented by its own dated line; NFR-490's result-identity limb (register `:445`) → **WK-8426** (P3-C), the overhead limb → **WK-8425** (P3-A). Its register rows are re-owned by subject (to-lead "2026-11-09 15:03:02 GMT" (3)): lifecycle rows → WK-2104, product rows → P3-C, tooling and process rows → P3-D; the owner cells are the register's, edited in the same batch. Every slice below is `closed` or `retired`.
 
 #### SL-1300 — WK-1178 fix slice — compile_bundle refuses a step ref not pinned at its exact version (FR-237)
 
@@ -4199,7 +4206,9 @@ opened: 2026-08-14
 target: ~
 gates: ~
 exit criteria: ~
-works: WK-676, WK-677, WK-678, WK-679, WK-680, WK-681, WK-682, WK-691, WK-1169, WK-1170, WK-1251, WK-1288, WK-1914, WK-1915, WK-2104
+works: WK-676, WK-677, WK-678, WK-679, WK-680, WK-681, WK-682, WK-691, WK-1169, WK-1170, WK-1251, WK-1288, WK-1914, WK-1915, WK-2104, WK-8425, WK-8426, WK-8427
+
+***Dated line, 2026-11-11 — P3 IS THE CURRENT PHASE*** (the P2-close docs batch, by the planner, on the maintainer's entry "2026-11-11 10:58:58 GMT — Maintainer: THE USER'S P2 CLOSE WORD" in `to-lead.md`, item (2)(c)). Phase 2 closed 2026-11-11 (`## P2`'s dated line of that date; [`CR-2110`](closures/CR-02110-phase-record-2-rating-engine.md)), and **this phase is the current phase from that date**. `status: active` above is unchanged: it has read `active` since 2026-08-14, when the phases were opened. `works:` gains the three Works the same entry opens or signs: **WK-8425** (P3-A, spec-host measurement; opened `active`), **WK-8426** (P3-C) and **WK-8427** (P3-D), both signed `draft` as drafted. The phase-review rule holds at the start: nothing starts in P3 while an open P2 finding lacks a resolution (`CLAUDE.md` §14; the count is `CR-2110`'s).
 
 **2026-09-29: requirements carried into Phase 3 without a Work.** CR-1212 P12 records that FR-432, FR-433, FR-434, FR-435 and FR-438 were on no roadmap row. FR-434 and FR-435 went to WK-674 in P2 (CR-1212 P12; placed in PL-1237). The other three are carried to P3, and no P3 Work names them yet:
 
@@ -4396,25 +4405,6 @@ Opened `draft` 2026-09-30 on the maintainer's entry "2026-09-30 07:07:58 BST —
 
 It is a P3 roadmap row only: **nothing is built ahead of P3** (`CLAUDE.md` §0), and it is **not a P2 scope addition**. Its map plan comes in P3; its activation is the maintainer's. (Amended 2026-09-30 by the lead, on the maintainer's entries 07:07:58 and 05:35:06. Minted as WK-1288 at #952's merge turn, 2026-09-30, with `python3 scripts/doc-id.py next --ref origin/main` at `df0d4635` printing 1288 (working id 9985 before the mint).)
 
-#### SL-1601 — WK-1178 P3 carry — FD-1589 row 8, remedy (c), B1 and B2: the model-schema validator messages no request reaches, rewritten input-free
-
-```yaml
-id: SL-1601
-family: slice
-title: WK-1178 P3 carry — FD-1589 row 8, remedy (c), B1 and B2 — the 41 handler-built and 47 system-produced model-schema validator messages rewritten input-free, with the 5 graph signals pending the FR-215 step_id pattern (DP-10, ruled P3)
-status: draft                  # draft → active → closed | retired (§1.2a)
-created: 2026-10-10            # original date 2026-10-10, set at the draft; minted 2026-10-10
-owner: planner                   # cut by the planner (draft); lead dispatches (active)
-tree: fe0b0627590307259ec6d56be7f73115cf245092
-phase: P3
-work: WK-1178
-corrected_by: []
-relates: [FD-1589, SL-1600]
-```
-
-Moved to P3 by the lead's entry "2026-10-10 16:07:46 BST — RULINGS on PL 9955 re-sized (@688d639e, ≈4.8 lane-days): DP-9 = A in P2, B1/B2 to P3; DP-8 (b) with an identifier-pattern constraint; DP-5 extension YES", DP-9: *"B1/B2 (≈2.7 lane-days, messages no request reaches) MOVE TO P3 … A dated P3 row (owner WK-1178) records them by count with the planner's list"*. **It records, by count at `fe0b0627`:** **B1**, 41 free messages in 19 validators of classes built in a handler from a user's create body; **B2**, 47 free messages in 27 validators of system-produced models; and the **5 graph signals** (`GraphUnresolvedRefError` ×3, `GraphCycleError` ×2), pending the FR-215 `step_id` pattern, which PL-1599's DP-10 asked for and the lead ruled at "2026-10-10 16:23:12 BST" a P3 spec change (`step_id` carries no schema pattern, so DP-8 (b) cannot name a step until it lands; graph messages name no step meanwhile, which is correct behaviour). The site lists, by `file:Class.validator`, are PL-1599's Appendix A; P3 plans from them and re-derives them at its own base. Until this row's work lands, slice A's guard holds these sites by exact count in `_RESIDUAL`, and DP-5's allow-list already gives any stored refusal from them input-free fixed text. Each is rewritten to field and rule only, raised as `InputFreeError`; the last P3 slice deletes `_RESIDUAL`. ≈2.7 lane-days as ruled (B1 ≈1.3, B2 ≈1.4). **Not a cut-ladder rung:** it was never in the P2 baseline. **Activation needs:** `SL-1600` (slice A) merged, because both change `_RESIDUAL` (RL-1263); the FR-215 `step_id` pattern (DP-10, a P3 spec change) landed before the graph signals; a P3 plan; the maintainer's activation of P3 work. *(Cut 2026-10-10 by the planner (planner-remedy-c3) under working id 9958, reserved by the lead in its message to planner-remedy-c3 on 2026-10-10, free-checked on all origin refs and eta.)*
-
-
 ### WK-1914 — Provenance and diagnostics views: the per-artifact `produced_by_job_id` display (narrowed FR-6) and the finer-level diagnostics view on the stored grouping chain (FR-109)
 
 ```yaml
@@ -4482,6 +4472,158 @@ Opened `draft` (working id 8418; minted 2026-11-08 as WK-2104) by to-lead "2026-
 4. OQ-2063 and OQ-2037, decided before the first slice.
 
 **Exit criteria.** Every declared transition in scope is reached by a journey test and emits its audit event (FD-1723 FR-7's rule); the spec's §5.1 tables name each route; `req-coverage.py` marks each FR the Work claims.
+
+**Slices:** cut by the planner at P3 start.
+
+### WK-8425 — P3-A — spec-host measurement
+
+```yaml
+id: WK-8425
+family: work
+title: P3-A — spec-host measurement
+status: active
+created: 2026-11-11
+owner: maintainer
+tree: fcfd7746c6e95d322e5a7f307d4e83d4563fd0ca
+phase: P3
+corrected_by: []
+relates: [CR-2103, CR-2110, WK-1178, FD-1836, FD-1411, FD-2007, FD-2009, FD-2033, FD-2077, FD-2105]
+```
+
+***Dated line, 2026-11-11 10:58:58 GMT — OPENED*** (the maintainer's act, by delegation, on D-5 and the accepted §14 review; written by the planner in the P2-close docs batch under working id 8425). The maintainer's entry "2026-11-11 10:58:58 GMT — Maintainer: THE USER'S P2 CLOSE WORD" in `to-lead.md`, MY ACTS: "P3-A OPENED (draft → active) with the opening items of P3-WK-drafts 196357ab59ac". The row is opened and made `active` in that one act; it never stood `draft` on main. Its basis is `CR-2103` P16 (D-2 (b)), verbatim: "One P3 Work on a 16-core host of the `02` NFR-475 class, for measurement and P3's demos. Measure first, fix second." `CR-2103` P16 also says: "A dated G4 line says nfr-bench-1 is single-tenant but **not** that host. **That a non-e2 host removes FD-2033's stall is an assumption until read or measured**".
+
+**Opening items**, from `scratch/plan-p3wk/P3-WK-drafts.md` (local, sha256 prefix `196357ab59ac`) §5, as to-lead "2026-11-09 16:43:34 GMT" (2) lists them, verbatim:
+
+1. FD-1836, FD-1411, F38.
+2. NFR-490 +537% with the scorer-vs-HTTP diagnosis. **Corrected by `to-lead` 2026-11-09 18:38:40 GMT (1):** NFR-490's carry reads "+537.2% in process, 76% engine-side trace cost, 24% our _build_trace; P3-A measures on the spec host; any product change to trace building is P3-C's"; the scorer-vs-HTTP diagnosis belongs to NFR-489 and goes on FD-1836's carry.
+3. FD-2077, FD-2009 (spec-host re-read).
+4. NFR-456's 16-core clause.
+5. The GBM clause of NFR-489.
+6. The multi-process generator (FD-2105's client-ceiling limb).
+
+**Opening item added at the opening, 2026-11-11** (by the planner, on lead 33's instruction of that day, which adopts aud-p2close's reading): **F43 L3, NFR-454's p99 < 50 ms server-side limb.** The basis is the maintainer's ruling of to-lead "2026-11-10 00:54:21 GMT" (2), verbatim in its part: "L3 (NFR-454 p99 < 50 ms server-side) is a measurement limb: it stays on F43's register row unchanged, and the P3-A opening carries it only if CR-2110 G4 reads NFR-454 unread at T — checked at the opening, not tonight." It was checked at the opening. `CR-2110`'s G4 table (`:286` to `:327`) has no NFR-454 row, and NFR-454 appears in that record only at `:1340`, F22's named gap. So NFR-454 is unread at T, and this Work carries the limb. F43's register row is not changed.
+
+**Carried here by ruling since** (the same drafts, §5): NFR-494, "unread at S1–S3" (to-lead 2026-11-09 23:28:22 GMT (1)); NFR-526, NFR-527 and NFR-536, each "not measured at the P2 exit" (23:29:42 GMT (1); WK-1178's re-owning line); NFR-500 and NFR-477, measurement (23:29:42 GMT (2)); NFR-488's GBM diagnostics limb, the spec-host measurement (18:38:40 GMT (2)). **Signed placements** (to-lead 2026-11-09 14:53:21 GMT): F22's NFR-454, NFR-455, NFR-456, NFR-457, NFR-518 and NFR-520 (performance budgets, measured on the spec host); NFR-1443, the G4 carry, measurement class. D-3 (to-lead 2026-11-09 16:27:43 GMT): NFR-489's budgets stand, and FD-1836, FD-1411 and F38 are carried here by name.
+
+**Also in scope, by reference and not restated** (RFC-756): the P3-A row of [`CR-2110`](closures/CR-02110-phase-record-2-rating-engine.md) §Re-owning map and the additions by ruling under it, with one exception. **NFR-490's result-identity limb (register `:445`) is not this Work's:** it is WK-8426's (P3-C), by to-lead "2026-11-09 16:37:51 GMT", and `CR-2110`'s line at `:1291` is corrected to say so by a dated line in the same batch. NFR-490's overhead limb (+537.2%) stays here (item 2).
+
+**Exit criteria:** not drafted. `CR-2103` P16 gives its plan to the planner ("maintainer opens; planner writes its plan"); the Work's one `PL-` proposes them, and the maintainer accepts them.
+
+**Slices:** cut by the planner in that plan.
+
+### WK-8426 — P3-C — product: correctness carries and unreached views
+
+```yaml
+id: WK-8426
+family: work
+title: P3-C — product: correctness carries and unreached views
+status: draft
+created: 2026-11-11
+owner: maintainer
+tree: fcfd7746c6e95d322e5a7f307d4e83d4563fd0ca
+phase: P3
+corrected_by: []
+relates: [CR-2103, WK-1178, FD-1219, FD-1220, FD-1240, FD-1246, FD-1283, FD-1284, FD-1331, FD-1335, FD-1366, FD-1414, FD-1491, FD-1495, FD-1573, FD-1576, FD-1589, FD-1597, FD-1619, FD-1624, FD-1654, FD-1664, FD-1671, FD-1703, FD-1706, FD-1723, FD-1745, FD-1751, FD-1754, FD-1756, FD-1783, FD-1796, FD-1798, FD-1954, FD-1963, FD-1978, FD-1983, FD-2031, FD-2058, FD-2099, FD-2100, FD-2101, FD-2108, FD-2109, OQ-1285, OQ-1617, OQ-1672, OQ-1784]
+```
+
+***Dated line, 2026-11-11 10:58:58 GMT — SIGNED*** (the maintainer's act, by delegation, on D-5 and the accepted §14 review; written by the planner in the P2-close docs batch under working id 8426). The maintainer's entry "2026-11-11 10:58:58 GMT — Maintainer: THE USER'S P2 CLOSE WORD" in `to-lead.md`, MY ACTS: "the P3-C and P3-D rows SIGNED as drafted (P3-C first act the FD-1671 probe; P3-D first act the FD-1489 braces check)". The row below is the draft of `scratch/plan-p3wk/P3-WK-drafts.md` (local, sha256 prefix `196357ab59ac`), verbatim but for the id, `created:` and `tree:` (the P2 exit tree T of `CR-2110`), with the draft's scope markers dropped. Its first act is the FD-1671 probe. "Q1" to "Q7" are the drafts' questions, each ruled at to-lead "2026-11-09 12:08:21 GMT". Status `draft`, as drafted: its activation is the maintainer's.
+
+Opened `draft` at the P2 close by the maintainer's line, on `CR-2103` P25 and P19 (a). It takes the **product-code** carries of WK-1178 and of closed Works. The register's F-series rows (F6, F43, F53, F55, F62) have no id form `relates:` accepts, so they are named here only.
+
+**First act.**
+
+1. **FD-1671: severity LOW on record; probe first; money-rule exposure unproven** (`to-lead` 2026-11-09 23:29:42 GMT (2), 23:38:05 GMT). A decimal Rating Input crosses `POST /score` as binary float. LOW stands on the record's reason: past the parse the engine evaluates in binary float by ruled design (FR-244), so the parse adds no loss the rating path does not already admit. "A §7 money-rule risk" is the reason for its order and for naming it in the P2 close line, not a severity. **The first step is the probe:** a Rating Input over 15 significant digits through `POST /score` against the same input as Decimal in pricing-core, the priced result compared to the minor unit. The rating is then confirmed LOW or raised by a dated line on the probe's result, never on words.
+
+**Scope.** Groups are for reading, not a slice cut.
+
+1. **Published contract and shapes.** FD-1335 Part B (three routes). FD-1366: `POST /sub-graphs` and `POST /sub-graphs/{slug}/versions` take `dict[str, Any]`; on WF-699 step B7, a contract-only gap, validated at run time. FD-1703: the job-events `data` dict has no `model-schema` owner. F62: the two-key `timing_ms` shape has no test (Q3).
+2. **Errors and text reaching a sink.** FD-1219. FD-1220. FD-1589 rows 2, 3, 4, 5, 6, 7, 9, 10, 11 (Q2) and row 8 through `SL-1601` (Q4). FD-1597 (the 422 `FieldError` echoes a dict key unmasked, `safe_error` masks it; owner P3-C, `to-lead` 2026-11-09 23:29:42 GMT (2)): the lead's ruling on the UI trade is still open, options (a) to (c). FD-1654.
+3. **Rating evaluation.** FD-1240: a governed spike, then an `ADR-706` addendum, then the pin moves with `skills-map.md` and `03` §8. FD-1246. F55. FD-1331 (FR-275). FD-1619 with OQ-1617. FD-1624: fix or accept is unmade among the row's (i) to (iii). FD-1671 with OQ-1672: the first act above. FD-1783 with OQ-1784. FD-1796. FD-1798. FD-1495's limb, RL-1470 Ruled 9. FD-1754's real GBM Factor support: **no OQ exists; one is owed before a slice** (`CLAUDE.md` §0).
+4. **Rating operations.** FD-1414's model-approval limb (11 models, 15 versions). FD-1491. FD-1576 and FD-1983: **the P26 Dislocation Run budget NFR comes first**, spec only, the decision-maker's. FD-1573. FD-2058.
+5. **Deployment, scoring and roles.** F43 L1 (FR-250): **DISCHARGED** by a dated line citing S3's D5.12 log `D512-n1-N4.log` (`to-lead` 2026-11-09 23:28:22 GMT (3)): "a reading of `live` on 374a22bf, which main contains — unmet, but exactly the reading L1 lacked"; F43's other limbs unchanged. F53: an `UPDATE`-refused test as `gip_app`. FD-1963: red-first on a planted membership; **the row's deadline was the exit demo, and no code lands after the freeze, so it needs a dated line at the close.** FD-1706: the unit test RL-1712 names.
+6. **Modelling and data.** F6 (FR-59, `unrun_layers`, on no roadmap row, not started). FD-1723's FR-14 and FR-15. FD-1745: which side is wrong is unruled; the 5 M measurement stays with P3-A. Dated clause (`to-lead` 2026-11-09 23:28:22 GMT (4)): "the labelled true-5 M fit ran once at S3 (249.38 s, 10,674 MB, within the essay's MemoryMax 30 G); the fit clause is exercised once at 5 M; the diagnostics at that scale are not measured (NFR-488's limb)"; the carry stands. FD-1751 (FR-174, FR-175, FR-177). FD-1756: Polars 2 and PyArrow, a governed major upgrade. FD-2031.
+7. **Views** (Q6: no owning Work, so each here says "view"). FD-1283's Deployments view, with OQ-1285 (WK-675 Slice 12). FD-1284's Jobs and Job detail views (WK-675 Slices 13, 14, whose row blocks are on draft branch `pl-9582-wk675-s4-leaf`). FD-1978.
+8. **Spec against code, side unjudged.** FD-1664. FD-2099, FD-2100 and FD-2101: which side is wrong is the first act, per limb. FD-2100 moved here on Q5, all limbs but 3 (WK-1251); limb 10 is placed by this Work: Jobs here, `/admin/*` with WK-1288.
+9. *(Moved: FD-2106 is P3-D's, `to-lead` 2026-11-09 15:03:02 GMT (1).)*
+10. **From the signature pass (`to-lead` 14:53:21).** F22's ids FR-365, FR-378, FR-411, FR-427, NFR-458 (risk_tier, mandatory commentary blocks, scheduled jobs, secret audit, audit completeness). FR-207's two `custom_objective_ref` residuals, by the maintainer's dated line at this row's opening.
+11. **The near-bound constant (O-7, `to-lead` 2026-11-09 12:07:49 GMT).** `NEAR_BOUND_FRACTION` (`scripts/measure-p2-nfr-sweep.py`, at `c019d4671112`) is a frozen constant Friday's factor cannot reach: SL-1736's A3 reads "not reachable at the frozen constant on this tree", carried as a limb to P3-C ("product constant"), not a red.
+12. **The B9 route test (FD-1954; `to-lead` 2026-11-09 15:58:49 GMT).** The owed code limb, CARRIED by name: the FR-227 route test that B9's float refusal is owed (`to-lead` 2026-10-26 14:10:47 GMT). At the frozen tree `examples/fremtpl2/journey.py:497` still calls `self.skip("B9")` and `backend/tests/test_wf699_journey.py:47` pins "KNOWN GAP B9: FD-1490"; the demo prints B9 as a known gap (FD-1490). No code before Wed 11. **Split by `to-lead` 2026-11-09 16:43:34 GMT (1):** the FR-227 route test, red-first, stays here; the asserted 422 probe replacing B9's Skip and the journey-test pin go to P3-D (its item 11).
+13. **From the SL-1913 rehearsal, by minted id.** FD-2108 (MEDIUM): WF-701's lifecycle has two Job waits of about 500 s each (K2 compile to the dev precondition; C7(ii) to C7(iii)); the cause is unread, a polling or scheduler interval the first suspect (`to-lead` 2026-11-09 21:10:32 GMT (c)). FD-2109 (LOW): `RatingVersionView.vue` does not re-render on a pushState to another version's URL; not diagnosed (21:10:32 GMT (d)).
+14. **NFR-490's "never changes the result" limb (register `:445`; `to-lead` 2026-11-09 16:37:51 GMT).** Re-owned by subject from WK-1178: a determinism check of the traced path. S3 did not measure it. The overhead limb (+537.2%) is P3-A's.
+
+**Exit criteria.**
+
+1. Every item above is discharged by the event its register row names, or takes a `CLAUDE.md` §13 verdict by dated line.
+2. Each OQ named above, the OQ owed for FD-1754, and the P26 NFR are decided before the first slice that depends on them.
+3. Each requirement the Work claims is marked by `req-coverage.py`: FR-14, FR-15, FR-59, FR-174, FR-175, FR-177, FR-275. (FR-250 left this list with F43 L1's discharge, `to-lead` 2026-11-09 23:28:22 GMT (3).)
+4. **Kind test (P25):** `git diff --name-only origin/main...<slice>` for every slice shows a product path (`packages/*/src`, `backend/src`, `frontend/src`, `deploy/`, `docs/specs`, `docs/workflows`), or only tests of product code. A slice touching `scripts/`, `.claude/` or `.github/` belongs to P3-D.
+
+**Slices:** cut by the planner at P3 start.
+
+#### SL-1601 — WK-1178 P3 carry — FD-1589 row 8, remedy (c), B1 and B2: the model-schema validator messages no request reaches, rewritten input-free
+
+```yaml
+id: SL-1601
+family: slice
+title: WK-1178 P3 carry — FD-1589 row 8, remedy (c), B1 and B2 — the 41 handler-built and 47 system-produced model-schema validator messages rewritten input-free, with the 5 graph signals pending the FR-215 step_id pattern (DP-10, ruled P3)
+status: draft                  # draft → active → closed | retired (§1.2a)
+created: 2026-10-10            # original date 2026-10-10, set at the draft; minted 2026-10-10
+owner: planner                   # cut by the planner (draft); lead dispatches (active)
+tree: fe0b0627590307259ec6d56be7f73115cf245092
+phase: P3
+work: WK-8426
+corrected_by: []
+relates: [FD-1589, SL-1600]
+```
+
+Moved to P3 by the lead's entry "2026-10-10 16:07:46 BST — RULINGS on PL 9955 re-sized (@688d639e, ≈4.8 lane-days): DP-9 = A in P2, B1/B2 to P3; DP-8 (b) with an identifier-pattern constraint; DP-5 extension YES", DP-9: *"B1/B2 (≈2.7 lane-days, messages no request reaches) MOVE TO P3 … A dated P3 row (owner WK-1178) records them by count with the planner's list"*. **It records, by count at `fe0b0627`:** **B1**, 41 free messages in 19 validators of classes built in a handler from a user's create body; **B2**, 47 free messages in 27 validators of system-produced models; and the **5 graph signals** (`GraphUnresolvedRefError` ×3, `GraphCycleError` ×2), pending the FR-215 `step_id` pattern, which PL-1599's DP-10 asked for and the lead ruled at "2026-10-10 16:23:12 BST" a P3 spec change (`step_id` carries no schema pattern, so DP-8 (b) cannot name a step until it lands; graph messages name no step meanwhile, which is correct behaviour). The site lists, by `file:Class.validator`, are PL-1599's Appendix A; P3 plans from them and re-derives them at its own base. Until this row's work lands, slice A's guard holds these sites by exact count in `_RESIDUAL`, and DP-5's allow-list already gives any stored refusal from them input-free fixed text. Each is rewritten to field and rule only, raised as `InputFreeError`; the last P3 slice deletes `_RESIDUAL`. ≈2.7 lane-days as ruled (B1 ≈1.3, B2 ≈1.4). **Not a cut-ladder rung:** it was never in the P2 baseline. **Activation needs:** `SL-1600` (slice A) merged, because both change `_RESIDUAL` (RL-1263); the FR-215 `step_id` pattern (DP-10, a P3 spec change) landed before the graph signals; a P3 plan; the maintainer's activation of P3 work. *(Cut 2026-10-10 by the planner (planner-remedy-c3) under working id 9958, reserved by the lead in its message to planner-remedy-c3 on 2026-10-10, free-checked on all origin refs and eta.)*
+
+***Dated line, 2026-11-11 10:58:58 GMT — RE-PARENTED*** (the maintainer's act, by delegation; written by the planner in the P2-close docs batch). The maintainer's entry "2026-11-11 10:58:58 GMT — Maintainer: THE USER'S P2 CLOSE WORD" in `to-lead.md`, MY ACTS: "SL-1601 re-parented as the drafts say". The drafts name P3-C (`P3-WK-drafts.md`, sha256 prefix `196357ab59ac`, Q4, ruled at to-lead "2026-11-09 12:08:21 GMT": "RE-PARENTED at the P2 close by a dated line to the P3 row that owns its subject"). The `work:` field above read `WK-1178` from the cut on 2026-10-10 and reads `WK-8426` from this line, because WK-1178 closed at the P2 close. The row moved here from under `WK-1288`, where it sat by position only. Its heading and `title:` keep their words as cut ("WK-1178 P3 carry"). Nothing else in the row changes: status `draft`, and its activation needs, stand.
+
+### WK-8427 — P3-D — process and instruments
+
+```yaml
+id: WK-8427
+family: work
+title: P3-D — process and instruments
+status: draft
+created: 2026-11-11
+owner: maintainer
+tree: fcfd7746c6e95d322e5a7f307d4e83d4563fd0ca
+phase: P3
+corrected_by: []
+relates: [CR-2103, WK-1178, FD-1193, FD-1214, FD-1215, FD-1216, FD-1218, FD-1227, FD-1238, FD-1338, FD-1354, FD-1381, FD-1413, FD-1479, FD-1480, FD-1489, FD-1684, FD-1725, FD-1801, FD-1820, FD-1954, FD-2010, FD-2029, FD-2030, FD-2073, FD-2102, FD-2105, FD-2106, OQ-1229, OQ-1960]
+```
+
+***Dated line, 2026-11-11 10:58:58 GMT — SIGNED*** (the maintainer's act, by delegation, on D-5 and the accepted §14 review; written by the planner in the P2-close docs batch under working id 8427). The maintainer's entry "2026-11-11 10:58:58 GMT — Maintainer: THE USER'S P2 CLOSE WORD" in `to-lead.md`, MY ACTS: "the P3-C and P3-D rows SIGNED as drafted (P3-C first act the FD-1671 probe; P3-D first act the FD-1489 braces check)". The row below is the draft of `scratch/plan-p3wk/P3-WK-drafts.md` (local, sha256 prefix `196357ab59ac`), verbatim but for the id, `created:` and `tree:` (the P2 exit tree T of `CR-2110`), with the draft's scope markers dropped. Its first act is the FD-1489 braces check. "Q1" to "Q7" are the drafts' questions, each ruled at to-lead "2026-11-09 12:08:21 GMT". Status `draft`, as drafted: its activation is the maintainer's.
+
+Opened `draft` at the P2 close by the maintainer's line, on `CR-2103` P25 and P19 (a). It takes the **tools and process** carries. F-series rows are named here only, as for P3-C.
+
+**First acts, in this order.**
+
+1. **FD-1489, the `braces` check, at P3 start** (to-lead "2026-11-09 11:59:32 GMT" (B)): `npm view braces versions`. If a patched release exists, the acceptance lapses and the bump is this Work's first change. At `2ecdd7a3` the lockfile still pins 3.0.3 and #1441's diff has 0 `braces` lines.
+2. **Dependabot #1440, #1441, #1443, #1444.** #1443's `ruff · mypy · import-linter · pytest` concluded `failure` at head `0ca3dd6156f4` (run 42158755540). **Its failure was not read**: `gh run view --log-failed` returned 0 bytes on this token. It is read before any merge, as ruled. Each PR's head will be stale by P3, so re-read it then.
+
+**Scope.** Groups are for reading, not a slice cut.
+
+1. **Docs-audit and register instruments.** F36. F66. F68 (candidate to close: its own discharge clause, S2 `71f5a220`, has fired). F79. F86. F89. F90. F113. FD-1215. FD-1216. FD-1381's two limbs of the 2026-11-08 line. FD-1480. FD-1725. FD-1684 at register `:395`. FD-2010. FD-2029. FD-2030. FD-2073. FD-1354's widened item: a sweep; any defect it finds in product text goes to P3-C.
+2. **Ids and migration tools.** FD-1338. FD-1413 (both halves). FD-1479 (remedy A or B unpicked). FD-1820.
+3. **Test infrastructure.** F40. F45 and F47 (**each row says it needs its own authorisation**). F46. FD-1218. FD-1227 with OQ-1229. FD-1801.
+4. **Team runtime and watchers.** F30. F57 (the "withdrawn" claim has no record). F65 (`get_eta_updated` returns `None` on a seconds stamp). F69. F72. FD-1214. FD-1238 (the charter amendment stays the maintainer's).
+5. **CI, dependencies and skills.** F26. F33. **The `docker buildx` pin:** `docker compose build` fails on buildx 0.13.1 (0.17.0 required); a host-tool version, no FD (`to-lead` 13:02:32 (2)). FD-2102: `numpy` declared in each importing package, or a dated ruling. **superpowers 6.3.0 to 7.0.0:** review the diff, decide, record in `.claude/skills/README.md`; a refresh needs the maintainer's approval and a security review (`CLAUDE.md` §12). OQ-1960, or decided at the close. Skills A2 (`gate-script`), A5 (`slice-close`) and A8 (seat lifecycle, options not a pick) from `scratch/p28/skills-gap.md`, routed "to P3" by the 09:15:29 entry with no Work named: **proposed here, strike if not wanted.**
+6. **Measurement drivers.** FD-2105, its limbs: put `scripts/bench-deploy-path.py:142` in the D5.11 order and make `api()` print an `HTTPError`'s status and body; pass `-p` in `running_api_replicas`; the committed `record()` has no latency field, so a completed run prints no p99 (`:88-130`, `to-lead` 12:03:43). A further limb ruled at `to-lead` 10:52:33 (b), case (b) read at 11:00:59: the client-bound generator at 200 rps, written also as an input to P3-A (the spec-host measurement needs a multi-process generator). Two limbs ruled at `to-lead` 2026-11-09 18:35:07 GMT (2), (3): the v4 driver's hard-coded "rate=200 exit" label; its compose-up after the quiet bar (load_start 3.1–4.4).
+7. *(Moved: FD-2100 is P3-C's, Q5.)*
+8. **Trigger watch, no code.** F7 (FR-67): carried until a named exposure-ordered reader exists.
+9. **From the signature pass (`to-lead` 14:53:21).** F93, this Work's first docs act: a dated amendment line on RFC-937 naming the exemption ruling and one on the ruling naming §1.5 (the maintainer's line). FD-1193, with the repository-settings parts the user's (owner-only settings). F22's ids NFR-459, NFR-460, NFR-464 (retention, recoverability, licensing).
+10. **The demo journey's checks.** FD-2106: `examples/fremtpl2/journey.py:1295` B3 compares a twice-rounded product against a once-rounded premium, and fails only on an exact half-minor tie; fix direction: compare against the later quote's own `unrounded_minor` (`to-lead` 14:02:10). "moved from P3-C 15:0x, tooling by location" (15:0x = `to-lead` 2026-11-09 15:03:02 GMT (1)).
+11. **The demo journey's B9 (FD-1954; `to-lead` 2026-11-09 16:43:34 GMT (1)).** The asserted 422 probe replacing B9's Skip (`examples/fremtpl2/journey.py:497`) and the journey-test pin (`backend/tests/test_wf699_journey.py:47`), red-first; tooling by location, like FD-2106. The FR-227 route test is P3-C's (its item 12).
+
+**Exit criteria.**
+
+1. Every item above is discharged by the event its register row names, or takes a `CLAUDE.md` §13 verdict by dated line.
+2. Each changed check is proven red on deliberately broken input (`CLAUDE.md` §13).
+3. The superpowers decision is recorded with its date, and each Dependabot PR is merged or closed with a one-line reason.
+4. **Kind test (P25):** no slice changes non-test code under `packages/*/src`, `backend/src` or `frontend/src`. Exceptions, each named: FD-2102's `pyproject.toml` lines, and the Dependabot lockfiles.
 
 **Slices:** cut by the planner at P3 start.
 
