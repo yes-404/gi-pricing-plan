@@ -10,7 +10,7 @@ tree: fcfd7746c6e95d322e5a7f307d4e83d4563fd0ca
 phase: P2
 work: ~                        # a kind: phase record names no Work (CR-822 precedent; ruled 2026-11-08 by the maintainer, `to-lead` "2026-11-08 10:02:49 GMT")
 corrected_by: []
-relates: [CR-1212, CR-1247, CR-1907, CR-1171, CR-838, CR-834, CR-927, CR-1243, CR-2000, CR-2071, CR-1952, CR-2078, CR-1173, CR-1183, CR-1179, CR-1164, CR-1999, CR-2103, LG-2107, LG-8424, FD-1597, FD-1661, FD-1671, FD-1745, FD-1836, FD-1411]     # ids only
+relates: [CR-1212, CR-1247, CR-1907, CR-1171, CR-838, CR-834, CR-927, CR-1243, CR-2000, CR-2071, CR-1952, CR-2078, CR-1173, CR-1183, CR-1179, CR-1164, CR-1999, CR-2103, LG-2107, LG-8424, FD-8428, FD-1597, FD-1661, FD-1671, FD-1745, FD-1836, FD-1411]     # ids only
 ---
 
 *Phase record of P2, filed by the auditor (aud-file, Claude Opus 5.5), 2026-11-09, on `to-lead` 2026-11-09 23:18:15 and 12:06:28 GMT (6). Written against the exit tree T = `fcfd7746c6e95d322e5a7f307d4e83d4563fd0ca`; the code freeze tree of record is `374a22bf33ad` (the code diff between them is empty, quoted in the third dated part). **Every verdict and resolution below is a proposal (`CLAUDE.md` §12): the lead adopts, amends or rejects; the maintainer's acceptance of the third part and the user's P2 close line are their own dated acts, in `## Acceptance`, and are blank here.** Dates of record were moved forward by the user on `to-lead` 2026-11-09 14:58:57 GMT (demo Wed 11 Nov); a quoted ruling or an earlier pass's text keeps the date it was written with ("Wed 18", "Mon 16", "Fri 13", "Tue 17"), and dated lines govern. Log locators `scratch/…` and `handover/…` are local files under `~/gi-pricing-plan.local/`, cited with their sha256 prefixes where they carry a claim.*
@@ -270,6 +270,8 @@ Proven both ways on 2026-11-09: every count is 0 at `2ecdd7a3` (batch 28 not mer
 3. **FR-362:** a scope statement with no Work (`to-lead` 14:53:21 GMT (1)); the Carried row above cites it. NFR-500 and NFR-477 are read under G4.
 
 **G3 at T: met (proposed); this batch carries those four lines and the two owner lines above.** Every row of the set has a resolution in the three classes. FD-1200 is fixed and FD-1199 is accepted by a dated line. The re-read ran at T1 `c019d467` (the human read, `to-lead` 15:58:49 GMT) and by delta T1→T (`aud-delta`, read at `to-lead` 23:28:22 GMT) (`to-lead` 2026-11-09 12:06:28 GMT (3), which said Tue 17 and Wed 18; dates by `to-lead` 14:58:57 GMT). If docs merge after T, the demo day reads only the delta by file list.
+
+*(Dated line, 2026-11-11, by the auditor (aud-p2close, Claude Opus 5.5), on lead 33's disposition (3) of 2026-11-11.)* **One finding is new after T:** FD 8428 ([`FD-8428`](../findings/FD-08428-the-dataset-lineage-graph-raises-an-unhandled-echarts-typeerror-on-the-dataset-detail-view-not-diagnosed.md)). It is an unhandled ECharts `TypeError` on the dataset detail view's lineage graph, seen at the exit demo, run r1 ([`LG-8424`](../ledgers/LG-08424-p2-exit-demo-run-r1-ledger.md)). LOW; **deferred with an owner: WK-1914**, phase 3. It has a resolution, so the count of open findings without one stays 0. The text above is kept as written at filing.
 
 ---
 

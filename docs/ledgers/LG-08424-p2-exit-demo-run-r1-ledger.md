@@ -10,7 +10,7 @@ phase: P2
 work: WK-1178
 plans: [PL-1544, PL-1912]
 corrected_by: []
-relates: [CR-2110, LG-2107, PL-1544, PL-1912, SL-1913]
+relates: [CR-2110, LG-2107, PL-1544, PL-1912, SL-1913, FD-8428]
 ---
 
 # LG-8424 — P2 exit demo, run r1 (Wed 11 Nov 2026)
@@ -120,7 +120,7 @@ Then `:3463` "journey done in 766s"; `:3471` "served page: http://localhost:5173
 
 **Ports**, as lead 33 logged them (`from-lead` 2026-11-11 10:51:35 GMT, verbatim): "Ports curl rc 0 http 200: 5173 / and /demo, 8000 healthz/readyz, 8080 realm." The stack came up from tools-main (`from-lead` 10:36:58 GMT: "stack four healthy from tools-main, keycloak bind under tools-main, redis -n 0 dbsize 56").
 
-**The user's page walk** (10:51 to 10:58 GMT, the demo serving; the maintainer's entry 10:58:14 GMT: "the user drove every page over forwarded ports and signed in as analyst (the password's first live test: passed)"). The client lines the walk printed, for the record, none on a journey step: `demo.log:3500` and `:3521` "[Unhandled rejection] ProblemError: Development identity is enabled; supply x-dev-principal-id." (2; the same message `LG-2107` row 6 records on every load); `:3540` "10:54:13 AM [vite] (client) [Unhandled rejection] TypeError: Cannot read properties of null (reading '0')" in `echarts/lib/coord/View.js` (a graph view), after `:3539` "[ECharts] Can't get DOM width or height" (1). Not diagnosed here; reported to the lead.
+**The user's page walk** (10:51 to 10:58 GMT, the demo serving; the maintainer's entry 10:58:14 GMT: "the user drove every page over forwarded ports and signed in as analyst (the password's first live test: passed)"). The client lines the walk printed, for the record, none on a journey step: `demo.log:3500` and `:3521` "[Unhandled rejection] ProblemError: Development identity is enabled; supply x-dev-principal-id." (2; the same message `LG-2107` row 6 records on every load); `:3540` "10:54:13 AM [vite] (client) [Unhandled rejection] TypeError: Cannot read properties of null (reading '0')" in `echarts/lib/coord/View.js` (a graph view), after `:3539` "[ECharts] Can't get DOM width or height" (1). Not diagnosed here. Filed as FD 8428 ([`FD-8428`](../findings/FD-08428-the-dataset-lineage-graph-raises-an-unhandled-echarts-typeerror-on-the-dataset-detail-view-not-diagnosed.md)): LOW, deferred with an owner, WK-1914 (lead 33, 2026-11-11).
 
 **The user's acceptance of the demo**, verbatim (the maintainer's entry `to-lead` 2026-11-11 10:58:14 GMT): "yes I go through all the page and it looks good, I am happy to accept the demo".
 
