@@ -1044,31 +1044,12 @@ def test_check_ignores_a_file_whose_name_does_not_lead_with_a_padded_id(
     assert doc_id_cli.check(tmp_path) == []
 
 
-def test_check_finds_a_gap_in_index_contiguity(
+def test_check_no_longer_reads_index_contiguity(
     doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
 ) -> None:
+    """ADR 8449: docs/INDEX.md is frozen, so a gap in it is not a failure."""
     _write(tmp_path / "docs" / "INDEX.md", "| PL-1240 | plan |\n| PL-1242 | plan |\n")
-    failures = doc_id_cli.check(tmp_path)
-    assert any(f.kind == "noncontiguous" for f in failures)
-
-
-def test_check_finds_no_gap_when_index_is_contiguous(
-    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
-) -> None:
-    _write(
-        tmp_path / "docs" / "INDEX.md",
-        "| PL-1240 | plan |\n| RL-1241 | ruling |\n| RL-1242 | ruling |\n",
-    )
-    assert [f for f in doc_id_cli.check(tmp_path) if f.kind == "noncontiguous"] == []
-
-
-def test_check_contiguity_does_not_start_at_one(
-    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
-) -> None:
-    # D6: "five [width] because the sequence starts near 1 000" — contiguity must not
-    # assume the run starts at 1; only internal gaps are a defect.
-    _write(tmp_path / "docs" / "INDEX.md", "| PL-1000 | plan |\n| PL-1001 | plan |\n")
-    assert [f for f in doc_id_cli.check(tmp_path) if f.kind == "noncontiguous"] == []
+    assert doc_id_cli.check(tmp_path) == []
 
 
 def test_check_ignores_a_local_file_numbered_above_the_merged_maximum(
@@ -1270,175 +1251,28 @@ def test_classify_total_equals_git_ls_files_count(
 # ---------------------------------------------------------------------------------------
 
 
-def test_widen_renames_a_padded_file(
-    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
-) -> None:
-    _write(tmp_path / "docs" / "plans" / "PL-01240-example.md", "# Example\n")
-    doc_id_cli.widen(tmp_path, to=6)
-    assert not (tmp_path / "docs" / "plans" / "PL-01240-example.md").exists()
-    assert (tmp_path / "docs" / "plans" / "PL-001240-example.md").is_file()
 
 
-def test_widen_rewrites_a_link_target_but_not_its_citation_text(
-    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
-) -> None:
-    _write(tmp_path / "docs" / "plans" / "PL-01240-example.md", "# Example\n")
-    citing = tmp_path / "docs" / "rulings" / "RL-01241-example.md"
-    _write(citing, "See [PL-1240](../plans/PL-01240-example.md) for detail.\n")
-    doc_id_cli.widen(tmp_path, to=6)
-    text = (tmp_path / "docs" / "rulings" / "RL-001241-example.md").read_text(
-        encoding="utf-8"
-    )
-    assert "[PL-1240](../plans/PL-001240-example.md)" in text
-    # The citation (link text) is unpadded and must never change — RFC-937 §1.1 rule 2.
-    assert "[PL-001240]" not in text
 
 
-def test_widen_does_not_touch_an_unpadded_citation_in_prose(
-    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
-) -> None:
-    _write(tmp_path / "docs" / "plans" / "PL-01240-example.md", "# Example\n")
-    prose_file = tmp_path / "docs" / "rulings" / "RL-01241-example.md"
-    _write(prose_file, "See PL-1240 for detail — no link here.\n")
-    doc_id_cli.widen(tmp_path, to=6)
-    text = (tmp_path / "docs" / "rulings" / "RL-001241-example.md").read_text(
-        encoding="utf-8"
-    )
-    assert text == "See PL-1240 for detail — no link here.\n"
 
 
-def test_widen_touches_no_citation_number_header_or_body_line(
-    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
-) -> None:
-    # The plan's own prescribed proof: diff the tree with filenames and link targets
-    # normalised away, and the result must be empty.
-    target_before = "docs/plans/PL-01240-example.md"
-    citing_before = "docs/rulings/RL-01241-example.md"
-    _write(
-        tmp_path / target_before,
-        _header("PL-1240") + "\nBody text citing RL-1241 and PL-1240 in prose.\n",
-    )
-    _write(
-        tmp_path / citing_before,
-        _header("RL-1241", "ruling")
-        + "\nSee [PL-1240](../plans/PL-01240-example.md) for detail.\n"
-        "Prose also cites RL-1241 and PL-1240 without a link.\n",
-    )
-    before = {
-        rel: (tmp_path / rel).read_text(encoding="utf-8")
-        for rel in (target_before, citing_before)
-    }
-
-    doc_id_cli.widen(tmp_path, to=6)
-
-    target_after = "docs/plans/PL-001240-example.md"
-    citing_after = "docs/rulings/RL-001241-example.md"
-    after = {
-        rel: (tmp_path / rel).read_text(encoding="utf-8")
-        for rel in (target_after, citing_after)
-    }
-
-    def _normalise(text: str) -> str:
-        return text.replace("PL-01240", "PL-ID").replace("PL-001240", "PL-ID").replace(
-            "RL-01241", "RL-ID"
-        ).replace("RL-001241", "RL-ID")
-
-    assert _normalise(before[target_before]) == _normalise(after[target_after])
-    assert _normalise(before[citing_before]) == _normalise(after[citing_after])
 
 
-def test_widen_appends_to_redirects_csv_creating_it_if_absent(
-    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
-) -> None:
-    _write(tmp_path / "docs" / "plans" / "PL-01240-example.md", "# Example\n")
-    doc_id_cli.widen(tmp_path, to=6)
-    redirects = (tmp_path / "docs" / "REDIRECTS.csv").read_text(encoding="utf-8")
-    assert "docs/plans/PL-01240-example.md" in redirects
-    assert "docs/plans/PL-001240-example.md" in redirects
 
 
-def test_widen_appends_to_an_existing_redirects_csv_without_discarding_its_rows(
-    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
-) -> None:
-    existing = "old_id,new_id,old_path,new_path\nRFC-711,RFC-1,old.md,rfcs/RFC-00001-x.md\n"
-    _write(tmp_path / "docs" / "REDIRECTS.csv", existing)
-    _write(tmp_path / "docs" / "plans" / "PL-01240-example.md", "# Example\n")
-    doc_id_cli.widen(tmp_path, to=6)
-    redirects = (tmp_path / "docs" / "REDIRECTS.csv").read_text(encoding="utf-8")
-    assert "RFC-711,RFC-1,old.md,rfcs/RFC-00001-x.md" in redirects
-    assert "docs/plans/PL-001240-example.md" in redirects
 
 
-def test_widen_updates_the_document_ids_width_sentence(
-    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
-) -> None:
-    _write(
-        tmp_path / "docs" / "process" / "document-ids.md",
-        "Filenames pad the integer to the standard's width, currently five: "
-        "`PL-01240-<slug>.md`.\n",
-    )
-    result = doc_id_cli.widen(tmp_path, to=6)
-    text = (tmp_path / "docs" / "process" / "document-ids.md").read_text(encoding="utf-8")
-    assert "currently six" in text
-    assert "currently five" not in text
-    assert result.document_ids_updated is True
 
 
-def test_widen_warns_but_does_not_fail_when_document_ids_md_is_absent(
-    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
-) -> None:
-    _write(tmp_path / "docs" / "plans" / "PL-01240-example.md", "# Example\n")
-    result = doc_id_cli.widen(tmp_path, to=6)
-    assert result.document_ids_updated is False
-    assert any("document-ids.md" in w for w in result.warnings)
 
 
-def test_widen_updates_the_pad_width_constant_in_docid_py(
-    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
-) -> None:
-    fake_docid = (
-        "from __future__ import annotations\n\nfrom typing import Final\n\n"
-        "PAD_WIDTH: Final = 5\n"
-    )
-    _write(tmp_path / "scripts" / "_docid.py", fake_docid)
-    result = doc_id_cli.widen(tmp_path, to=6)
-    updated = (tmp_path / "scripts" / "_docid.py").read_text(encoding="utf-8")
-    assert "PAD_WIDTH: Final = 6" in updated
-    assert result.pad_width_constant_updated is True
 
 
-def test_widen_warns_when_docid_py_pad_width_constant_is_not_found(
-    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
-) -> None:
-    result = doc_id_cli.widen(tmp_path, to=6)
-    assert result.pad_width_constant_updated is False
-    assert any("PAD_WIDTH" in w for w in result.warnings)
 
 
-def test_widen_regenerates_index_by_invoking_doc_index_py_when_present(
-    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
-) -> None:
-    # A stand-in for W37-3's script — not real doc-index.py, just proof that widen shells
-    # out to whatever lives at scripts/doc-index.py after making its own changes.
-    _write(
-        tmp_path / "scripts" / "doc-index.py",
-        "from pathlib import Path\n"
-        "Path('docs/INDEX.md').write_text('regenerated by the stand-in\\n')\n",
-    )
-    (tmp_path / "docs").mkdir(exist_ok=True)
-    result = doc_id_cli.widen(tmp_path, to=6)
-    assert result.index_regenerated is True
-    assert (tmp_path / "docs" / "INDEX.md").read_text(encoding="utf-8") == (
-        "regenerated by the stand-in\n"
-    )
 
 
-def test_widen_warns_when_doc_index_py_is_absent(
-    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
-) -> None:
-    result = doc_id_cli.widen(tmp_path, to=6)
-    assert result.index_regenerated is False
-    assert any("doc-index.py" in w for w in result.warnings)
 
 
 # ---------------------------------------------------------------------------------------
@@ -1567,13 +1401,6 @@ def test_main_check_classify_prints_a_table_and_exits_zero(
     assert "1" in out
 
 
-def test_main_widen_performs_the_rename_and_exits_zero(
-    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
-) -> None:
-    _write(tmp_path / "docs" / "plans" / "PL-01240-example.md", "# Example\n")
-    exit_code = doc_id_cli.main(["widen", "--to", "6", "--repo-root", str(tmp_path)])
-    assert exit_code == 0
-    assert (tmp_path / "docs" / "plans" / "PL-001240-example.md").is_file()
 
 
 def test_main_widen_requires_the_to_flag(doc_id_cli: types.ModuleType) -> None:
@@ -1756,59 +1583,5 @@ def test_sweep_exclusion_reason_gives_every_class_its_own_named_reason(
     ) == 4
 
 
-def test_load_module_does_not_write_bytecode_and_restores_global_state(
-    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
-) -> None:
-    """`_load_module` is what `migrate()` uses to load a snapshot's own `scripts/*.py` by
-    path (`_load_doc_index`/`_load_audit_docs`/`_load_register_lint`) — exec'ing a module
-    this way writes a `.pyc` into its `__pycache__/` by default, which a non-git-aware
-    whole-tree walk over the snapshot (`_iter_tree_files`) would then read back as new
-    migration output. Proven directly at this helper, not only through the full `migrate()`
-    proof in `tests/test_doc_id_migrate.py`. `sys.dont_write_bytecode` must also come back
-    exactly as it was: the setting is process-global, so a concurrent import elsewhere must
-    not have its own caching behaviour silently changed by this one call.
-    """
-    before = sys.dont_write_bytecode
-    target = tmp_path / "probe_module.py"
-    target.write_text("VALUE = 1\n", encoding="utf-8")
-
-    loaded = doc_id_cli._load_module("probe_module_under_test", target)
-
-    assert loaded.VALUE == 1  # the load itself still succeeded
-    assert not (tmp_path / "__pycache__").exists()
-    assert sys.dont_write_bytecode == before
 
 
-def test_iter_tree_files_applies_the_shared_exclusion_and_still_yields_real_files(
-    doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
-) -> None:
-    """`doc-id.py`'s own migration-sweep walk, `_iter_tree_files` — the population
-    `migrate()`'s citation rewrite, vendored-skip loop and RL-989 row (g) classifier
-    (`_read_tree_text`) all iterate. Proof at the walk itself, not only at the shared
-    predicate it calls: a wiring mistake (calling the predicate on the wrong string, or
-    not at all) would pass the predicate-only tests above and still leak here.
-    """
-    root = tmp_path / "tree"
-    excluded = [
-        "uv.lock",
-        "pnpm-lock.yaml",
-        "frontend/pnpm-lock.yaml",
-        "tests/fixtures/docs-ids/w37-4-checks/check35-readme-allowlist/README.md",
-        "tests/fixtures/docs-migration/docs/rfcs/0001-example-note.md",
-        "scripts/__pycache__/doc-index.cpython-312.pyc",
-    ]
-    included = ["docs/rfcs/0002-real.md", "scripts/doc-id.py", "README.md"]
-    for rel in [*excluded, *included]:
-        target = root / rel
-        target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_text("RFC-711 lives here\n", encoding="utf-8")
-    (root / ".git").mkdir()
-    (root / ".git" / "HEAD").write_text("ref: refs/heads/main\n", encoding="utf-8")
-
-    seen = {p.relative_to(root).as_posix() for p in doc_id_cli._iter_tree_files(root)}
-
-    for rel in excluded:
-        assert rel not in seen, f"{rel} should have been excluded from the sweep"
-    for rel in included:
-        assert rel in seen, f"{rel} should still be part of the sweep"
-    assert ".git/HEAD" not in seen

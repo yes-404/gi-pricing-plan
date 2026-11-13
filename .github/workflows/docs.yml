@@ -13,9 +13,9 @@ name: docs
 on:
   push:
     branches: [main]
-    paths: ['docs/**', 'scripts/audit-docs.py', 'scripts/doc-id.py', 'scripts/doc-index.py', 'scripts/_docid.py', 'scripts/_docverify.py', 'CLAUDE.md', '.claude/**', '.github/workflows/docs.yml']
+    paths: ['docs/**', 'scripts/audit-docs.py', 'scripts/doc-id.py', 'scripts/doc-index.py', 'scripts/_docid.py', 'scripts/freeze-check.py', 'scripts/_frozen.py', 'CLAUDE.md', '.claude/**', '.github/workflows/docs.yml']
   pull_request:
-    paths: ['docs/**', 'scripts/audit-docs.py', 'scripts/doc-id.py', 'scripts/doc-index.py', 'scripts/_docid.py', 'scripts/_docverify.py', 'CLAUDE.md', '.claude/**', '.github/workflows/docs.yml']
+    paths: ['docs/**', 'scripts/audit-docs.py', 'scripts/doc-id.py', 'scripts/doc-index.py', 'scripts/_docid.py', 'scripts/freeze-check.py', 'scripts/_frozen.py', 'CLAUDE.md', '.claude/**', '.github/workflows/docs.yml']
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -65,102 +65,48 @@ jobs:
       - name: audit-docs
         id: auditdocs
         continue-on-error: true
+        # Checks 30, 32, 35 and 36 fail only what this change's own diff introduces, read
+        # from the same `<base>...HEAD` range the freeze check uses (ADR 8449).
+        env:
+          AUDIT_DOCS_BASE: origin/${{ github.base_ref || 'main' }}
         run: python3 scripts/audit-docs.py
       # RFC-937 §1.7/§1.11: doc-id.py check fails on a duplicate id, a header/filename
-      # mismatch, or a docs/INDEX.md contiguity gap; doc-index.py --check fails when a
-      # fresh regeneration of docs/INDEX.md would differ from what is committed. Both are
-      # no-ops before the migration (no ids exist yet to check or index).
+      # mismatch. ADR 8449: docs/INDEX.md is frozen and no longer regenerated or checked.
       - name: doc-id check
         id: docidcheck
         continue-on-error: true
         run: python3 scripts/doc-id.py check
-      - name: doc-index --check
-        id: docindex
+      # ADR-8449: the management record families are frozen. This step reads the pull
+      # request's own diff against its merge-base, so records merged earlier by other
+      # branches are never read. It runs on pull requests only: on a push to `main` the
+      # change has already been judged, and a base to diff against does not exist.
+      # Positive control: the frozen list must match a known frozen path, so a check that
+      # reads an empty or broken list cannot report "none frozen" and pass.
+      - name: freeze check positive control
+        run: python3 -c "import importlib.util as u; s=u.spec_from_file_location('fc','scripts/freeze-check.py'); m=u.module_from_spec(s); s.loader.exec_module(m); assert m.is_frozen('docs/plans/x.md') and m.is_frozen('docs/INDEX.md') and not m.is_frozen('docs/specs/x.md')"
+      - name: freeze check
+        id: freezecheck
+        if: github.event_name == 'pull_request'
         continue-on-error: true
-        run: python3 scripts/doc-index.py --check
-      # RL-1043 §1 (docs/rulings/RL-01043-no-further-delegated-window-until-7-a-i-is-an-instrument.md): the
-      # RFC-937 §7 acceptance standard is an instrument, not a hand-maintained table. It
-      # "runs in CI on every PR touching `doc-id.py` or `audit-docs.py`, and is red on
-      # `main` until green" — so this step is EXPECTED TO FAIL until the six failing rows
-      # of RL-1043 §2 are fixed, in that ruling's order. **Do not weaken a predicate to
-      # get a green** (RL-1043 §1: "A row that cannot be expressed as a predicate the
-      # script computes is a row that was never enforceable").
-      #
-      # It is wired into this workflow rather than a new one because this workflow's
-      # `paths:` filter is already a superset of the ruling's two files, and a fourth
-      # component workflow would put CLAUDE.md §2's own description of CI out of date —
-      # an amendment that is the maintainer's, not this step's (CLAUDE.md §12).
-      #
-      # The snapshot goes in RUNNER_TEMP, outside the checkout: the instrument refuses a
-      # target inside any git work tree, which is the guard that keeps `migrate()` off a
-      # real checkout. Exit 2 means "refused to run" (a misconfiguration); exit 1 means
-      # "ran, and a row is red" — the standing state RL-1043 §1 keeps `main` in until
-      # every row is green, not a fact this step exists to carry (RL-1045 §1, decision
-      # 1). Exit 3 means the verdict set moved since the last recorded run — that is the
-      # one this step fails on, because it is the only exit code that says something
-      # about *this* change rather than about the standing backlog.
-      # WHICH REF IS THE PRE-MIGRATION INPUT. `--ref HEAD` denotes the un-migrated control
-      # only while the checkout itself is un-migrated. On a migrated checkout — the sentinel
-      # is `audit-docs.py`'s `migrated_tree()`: docs/INDEX.md and docs/REDIRECTS.csv, the two
-      # artifacts only the migration creates — HEAD already holds `migrate()`'s output, and
-      # verifying `--ref HEAD` migrates a migrated tree: every recorded row reads 0 (phantom
-      # PROGRESS) while the tool's own marked legacy-form literals read as residue. That is
-      # what docs run 35261236904 did on #782's head 323b523: GitHub's PR merge ref 2ee3cdd
-      # is the migrated tree, and the step exited 3 with (a)/(d1)/(d5)/(f) PASS -> FAIL and
-      # (d4)/(d8)/(d9)/(d10) DISCLOSE -> FAIL — none of it about the change. The base the
-      # migration ran from is recorded by the tool itself, in
-      # docs/process/delivery-process.core.json `meta.verified_against_tree`, written from the
-      # run ref (PL-00960: "the recorded merge-base SHA is load-bearing evidence, not a
-      # courtesy"), so after the migration RL-1043 §1's standing verify keeps proving THIS
-      # checkout's tool against that recorded base. The RL-1045 §1 exit-1 reading below is
-      # unchanged. Deputy ruling of 2026-09-17 (W37-6 run 2, channel to-lead.md).
-      - name: doc-id migrate --verify
-        id: docidverify
-        continue-on-error: true
-        run: |
-          ref=HEAD
-          if [ -f docs/INDEX.md ] && [ -f docs/REDIRECTS.csv ]; then
-            ref=$(python3 -c 'import json; print(json.load(open("docs/process/delivery-process.core.json"))["meta"]["verified_against_tree"])')
-            echo "::notice::migrated checkout (docs/INDEX.md + docs/REDIRECTS.csv present): --ref ${ref} = core.json meta.verified_against_tree, the pre-migration base the tool recorded"
-          else
-            echo "::notice::un-migrated checkout: --ref HEAD is the pre-migration input"
-          fi
-          code=0
-          # --record-ref HEAD: the corpus stays at the pinned base, but the W37-11 residue-
-          # ceiling record is read from the commit under test, its own git archive, so a
-          # record edit on a PR is seen by this step (F109; RL-1145 DP-2 (c)). A record
-          # missing at HEAD is a refusal, exit 2.
-          python3 scripts/doc-id.py migrate --verify "${RUNNER_TEMP}/doc-id-verify" --ref "$ref" --record-ref HEAD || code=$?
-          if [ "$code" -eq 1 ]; then
-            echo "::notice::--verify exited 1 (standing red, verdict set unchanged) — RL-1045 §1 reads this as a pass"
-            exit 0
-          fi
-          exit "$code"
-
+        run: python3 scripts/freeze-check.py --base "origin/${{ github.base_ref }}"
       # =====================================================================
       # THE VERDICT. This step, and only this step, decides whether the job is
       # red. The stage list is written out by hand and must be kept in step with
       # the `id:`s above — a job cannot enumerate its own steps, so the
       # alternative to this list is no table at all.
       #
-      # Note what this step does NOT do: it does not re-interpret exit codes.
-      # `doc-id migrate --verify`'s RL-1045 §1 normalisation (exit 1 is a
-      # PASS — the standing red with the verdict set unchanged; exit 3 is the
-      # failure) stays inside that stage's own `run:` block, where the reasoning
-      # for it is written down. The summary only ever asks "did the stage
-      # succeed?", so moving that logic here would have split one rule across
-      # two places.
+      # ADR 8449: the migration verifier (`doc-id migrate --verify`) is retired. The summary
+      # only asks "did the stage succeed?" of the stages above.
       # =====================================================================
       - name: Gate summary
         if: always()
         env:
           S_audit_docs: ${{ steps.auditdocs.outcome }}
           S_doc_id_check: ${{ steps.docidcheck.outcome }}
-          S_doc_index: ${{ steps.docindex.outcome }}
-          S_doc_id_verify: ${{ steps.docidverify.outcome }}
+          S_freeze_check: ${{ steps.freezecheck.outcome }}
         run: |
           set -u
-          stages="audit_docs doc_id_check doc_index doc_id_verify"
+          stages="audit_docs doc_id_check freeze_check"
           failed=""
           nfail=0
           ntotal=0
@@ -171,7 +117,7 @@ jobs:
           for s in $stages; do
             ntotal=$((ntotal + 1))
             eval "outcome=\${S_${s}}"
-            if [ "$outcome" = "success" ]; then
+            if [ "$outcome" = "success" ] || [ "$outcome" = "skipped" ]; then
               printf '| %s | pass | %s |\n' "$s" "$outcome" >> summary.md
             else
               printf '| %s | FAIL | %s |\n' "$s" "$outcome" >> summary.md

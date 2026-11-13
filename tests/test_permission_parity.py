@@ -26,11 +26,14 @@ SPEC = ROOT / "docs" / "specs" / "06-governance.md"
 BUILT_HEADER = "| Permission | Governs | Check owner |"
 SPECIFIED_HEADER = "| Permission | Owner Work |"
 ALIAS_HEADER = "| Name used before | Enum name |"
+#: ADR 8449: a new permission row names its owner as a GitHub issue; a row that predates the
+#: freeze still names a WK- heading of the frozen roadmap.
+ISSUE_OWNER = re.compile(r"#\d+")
 
 ENUM_WITHOUT_ROW = "enum member with no 06 §4.1 Built row"
 ROW_WITHOUT_ENUM = "06 §4.1 Built row with no enum member"
 SPECIFIED_IS_MEMBER = "Specified name is an enum member: move its row to Built in the same commit"
-OWNER_UNRESOLVED = "owner is not a WK- heading in docs/roadmap.md"
+OWNER_UNRESOLVED = "owner is not a WK- heading in the frozen roadmap or a GitHub issue #n"
 ALIAS_TARGET_NOT_MEMBER = "alias target is not an enum member"
 STRAY_TOKEN = "06 names a permission that is in no §4.1 table"
 NO_CHECK_NO_OWNER = "Built name has no check site in backend/src and no owner"
@@ -116,7 +119,9 @@ def parity_violations(
     out += [f"{SPECIFIED_IS_MEMBER}: {n}" for n in sorted(set(cat.specified) & enum_values)]
     owners = {n: o for n, o in cat.built.items() if o} | cat.specified
     out += [
-        f"{OWNER_UNRESOLVED}: {n} -> {o!r}" for n, o in sorted(owners.items()) if o not in works
+        f"{OWNER_UNRESOLVED}: {n} -> {o!r}"
+        for n, o in sorted(owners.items())
+        if o not in works and not ISSUE_OWNER.fullmatch(o)
     ]
     out += [
         f"{ALIAS_TARGET_NOT_MEMBER}: {a} -> {t}"
@@ -232,6 +237,14 @@ def test_broken_name_in_two_tables() -> None:
 def _roadmap_works() -> frozenset[str]:
     text = (ROOT / "docs" / "roadmap.md").read_text(encoding="utf-8")
     return frozenset(re.findall(r"^### (WK-\d+)\b", text, re.MULTILINE))
+
+
+@pytest.mark.req("FR-344")
+def test_a_github_issue_owner_resolves_and_any_other_owner_does_not() -> None:
+    ok = _CLEAN.replace("| `a:author` | WK-690 |", "| `a:author` | #1234 |")
+    assert not parity_violations(ok, _ENUM, _CHECKED, _WORKS)
+    bad = _CLEAN.replace("| `a:author` | WK-690 |", "| `a:author` | someone |")
+    _only(parity_violations(bad, _ENUM, _CHECKED, _WORKS), OWNER_UNRESOLVED)
 
 
 @pytest.mark.req("FR-344")
