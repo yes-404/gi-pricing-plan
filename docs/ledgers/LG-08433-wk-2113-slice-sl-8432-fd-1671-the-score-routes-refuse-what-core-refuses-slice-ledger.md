@@ -240,6 +240,10 @@ The closure predicate, verbatim: `git grep -lE "pricing_core\.rating\.score|from
 
 The throwaway probe worktree at `2ba0d0d5` was removed by exact path; no shared container bound a source under it (`docker inspect`, four containers, zero matches).
 
+### Review 4 (delta review rev4-sl8432 of `0016197b..ec032fca`, `scratch/rev4-sl8432/review.md`, sha256 6ed09e8849e6), 2026-11-13, applied by the lead
+
+No BLOCKING, 0 HIGH, 0 MEDIUM; R1–R8 dispositioned as review 3 asked. **D1 (LOW), fixed:** FR-273's dated line said the guard "refuses nothing else", which overlooked `_engine_context`'s existing refusal of a non-finite float in a declared `decimal` input; the sentence now says the guard acts on a `Decimal` only and that the existing check is unchanged and is not this guard. **D2 (LOW), recorded:** whether the real engine ever PRICED a `NaN`, `Infinity` or `-Infinity` in an undeclared key that a step reads was NOT measured (the R1 probe's 200s came from a stub bundle that reads no such key). Such a body is now a 422, so the claim "nothing that priced before is refused" is proven for finite values by the engine-limits property test and is UNPROVEN for these three constants; it is carried as a named limb of FD 8446's sweep. **D3, D4 (INFO):** the redundant `> 50` assert and a long CHANGELOG line are left as they are.
+
 ### Review 3 (reviewer rev3-sl8432, `scratch/rev3-sl8432/review.md`, sha256 a248a11027d3), fix round by seat exec-sl8432e, 2026-11-13
 
 Range `origin/main...sl-8432-fd1671-score-decimal`. The review has 0 BLOCKING; R1 to R6 are LOW, R7 and R8 INFO. Start head `0016197bb206` (merge 111); no full gate, no database, no mint, no PR. Logs are in `~/gi-pricing-plan.local/scratch/exec-sl8432e/`, each opening `head=` and ending `rc=`.
@@ -284,7 +288,7 @@ The reviewer's reading holds: the constants bypass `parse_float` and cross as ra
 | `mypy` / `lint-imports` | 0 / 0 | `Success: no issues found in 257 source files` / `Contracts: 4 kept, 0 broken.` |
 | `register-lint.py`, `doc-index.py` (regenerated), `doc-index.py --check` (gate-2) | 0 / 0 / 0 | |
 | `audit-docs.py` (gate-2) (`audit-docs2.log`) | **1** | `FAILED (2)`: check 31 only, `gap in the full allocation between 2117 and 8432` and `between 8433 and 8443`, the slice's own working ids |
-| derived docs-reading set: `git grep -lE "register\.md|process-backlog|03-rating-engine|docs/specs|\"docs\" */ *\"specs\"|ledgers|CHANGELOG" -- tests backend/tests packages/*/tests` over the worktree (44 paths, identical to round 3's `derived-docs-tests.txt`); the 27 DB-free files of round 3's `docsset.txt`, nine run-small batches (`docsset.log`) | 0 for 6 batches; 1 for three | 11 `FAILED`, every one a test that runs `audit-docs.py` on the real tree or reads check 31's contiguity, red on the same two gaps (checked: `test_doc_index.py::test_an_index_skipping_a_reserved_block_breaks_contiguity` fails on `live allocation is not contiguous: [(2117, 8432), (8433, 8443)]`); a mint closes them. The 17 DB-backed files of the 44 are owed to the gate's DB window as in round 3. |
+| derived docs-reading set: `git grep -lE "register\.md\|process-backlog\|03-rating-engine\|docs/specs\|\"docs\" */ *\"specs\"\|ledgers\|CHANGELOG" -- tests backend/tests packages/*/tests` over the worktree (44 paths, identical to round 3's `derived-docs-tests.txt`); the 27 DB-free files of round 3's `docsset.txt`, nine run-small batches (`docsset.log`) | 0 for 6 batches; 1 for three | 11 `FAILED`, every one a test that runs `audit-docs.py` on the real tree or reads check 31's contiguity, red on the same two gaps (checked: `test_doc_index.py::test_an_index_skipping_a_reserved_block_breaks_contiguity` fails on `live allocation is not contiguous: [(2117, 8432), (8433, 8443)]`); a mint closes them. The 17 DB-backed files of the 44 are owed to the gate's DB window as in round 3. |
 
 ## PRs
 
