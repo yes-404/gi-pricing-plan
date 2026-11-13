@@ -1,5 +1,5 @@
 ---
-id: FD-8434
+id: FD-2116
 family: finding
 title: CR-2110 G3 read "Rows with no resolution: none" at T while 24 open rows had none; the join never tested the register's owner cell against roadmap status
 status: active
@@ -10,9 +10,9 @@ corrected_by: []
 relates: [CR-2110, WK-2114]
 ---
 
-# FD-8434 — The G3 join let 24 open rows through
+# FD-2116 — The G3 join let 24 open rows through
 
-*Working id FD-8434, allocated by lead 34 (`from-lead` 2026-11-13); unminted on this branch. Drafted by the auditor (aud-b35, `scratch/aud-b35/stage3-fd-draft.md`, sha256 prefix `8e6741f62e29`), re-verified by aud-b35v at tree `2ba0d0d53142`, ruled by the maintainer, `to-lead` "2026-11-13 19:56:23 GMT" (G3-JOIN FD, working id 8434).*
+*Working id 8434, allocated by lead 34 (`from-lead` 2026-11-13); minted as FD-2116 in this batch. Drafted by the auditor (aud-b35, `scratch/aud-b35/stage3-fd-draft.md`, sha256 prefix `8e6741f62e29`), re-verified by aud-b35v at tree `2ba0d0d53142`, ruled by the maintainer, `to-lead` "2026-11-13 19:56:23 GMT" (G3-JOIN FD, working id 8434).*
 
 ## Finding
 

@@ -1,5 +1,5 @@
 ---
-id: FD-8435
+id: FD-2117
 family: finding
 title: No test plants a fractional `_minor` value, so audit-docs check 12 has never been seen red on the money rule; delivered but untested
 status: active
@@ -10,9 +10,9 @@ corrected_by: []
 relates: [CR-2110, WK-2114]
 ---
 
-# FD-8435 — Check 12 of `audit-docs.py` has never printed a failure on a planted fraction
+# FD-2117 — Check 12 of `audit-docs.py` has never printed a failure on a planted fraction
 
-*Working id FD-8435, allocated by lead 34 (`from-lead` 2026-11-13); unminted on this branch. Raised by the maintainer's condition (2), `to-lead` "2026-11-13 19:56:23 GMT", when closing the register row of `FR-23` (F14).*
+*Working id 8435, allocated by lead 34 (`from-lead` 2026-11-13); minted as FD-2117 in this batch. Raised by the maintainer's condition (2), `to-lead` "2026-11-13 19:56:23 GMT", when closing the register row of `FR-23` (F14).*
 
 ## Finding
 
