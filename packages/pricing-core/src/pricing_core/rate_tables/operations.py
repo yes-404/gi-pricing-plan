@@ -66,8 +66,7 @@ from model_schema.rating import (
     UpliftTableRecordedParameters,
 )
 from model_schema.refs import ArtifactRef, slug_is_admitted
-from pricing_core.modelling.errors import FactorResolutionError
-from pricing_core.modelling.factors import control_factor_in
+from pricing_core.modelling.factors import OperandNotSuppliedError, control_factor_in
 from pricing_core.rating.compile import ValidationIssue, cell_parses
 
 _APPROVED_OR_BETTER = frozenset({"approved", "live", "retired"})
@@ -232,10 +231,11 @@ def seed_from_model(
     bound = pinned[0]
     try:
         control = control_factor_in(bound, factors)
-    except FactorResolutionError as error:
+    except OperandNotSuppliedError as error:
         raise ValueError(
-            f"CONTROL_FACTOR_IN_RATEABLE_PATH: Factor {bound.slug}@{bound.version}: {error}, "
-            "so it cannot be shown not to be rated on a `control` Factor (FR-88)"
+            f"CONTROL_FACTOR_IN_RATEABLE_PATH: Factor {bound.slug}@{bound.version} crosses "
+            f"{error.operand_id}, which is not among the Factors supplied, so it cannot be "
+            "shown not to be rated on a `control` Factor (FR-88)"
         ) from error
     if control is not None:
         via = "" if control is bound else f" through the interaction {bound.slug!r}"

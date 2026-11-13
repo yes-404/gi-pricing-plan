@@ -257,18 +257,6 @@ _SINKS: dict[tuple[str, str, str], tuple[int, str]] = {
         "text names a model ref, a feature, a Factor slug@version and an interaction, all from "
         "stored artifacts, never a quote input; it reaches the 409 detail and the audit `after` "
         "(WK-2113 S3, NFR-499)"),
-    ("packages/pricing-core/src/pricing_core/rating/compile.py", "refuse_control_in_features",
-     "{exc}"): (
-        1, "a `FactorResolutionError` from `control_factor_in`: names a Factor slug or id and an "
-        "operand id from stored artifacts; shared by compile and `load_bundle` (WK-2113 S1, S3)"),
-    ("packages/pricing-core/src/pricing_core/rating/compile.py", "_refuse_control_factor_keys",
-     "{exc}"): (
-        1, "a `FactorResolutionError` from `control_factor_in` over a rate table key's Factor: "
-        "names stored artifacts only (WK-2113 S1: listed here because S1's head left it out)"),
-    ("packages/pricing-core/src/pricing_core/rate_tables/operations.py", "seed_from_model",
-     "{exc}"): (
-        1, "a `FactorResolutionError` from `control_factor_in` over a seed's bound Factor: names "
-        "stored artifacts only (WK-2113 S1: listed here because S1's head left it out)"),
     ("packages/pricing-core/src/pricing_core/modelling/gbm.py", "_compile_custom", "str(exc)"): (
         1, "an `ObjectiveError` from compiling a Custom Objective's declared source: the "
         "objective's own text, no quote exists at compile"),

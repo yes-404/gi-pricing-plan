@@ -56,9 +56,9 @@ from model_schema.rating import (
 )
 from model_schema.refs import ArtifactRef
 from model_schema.sub_graphs import SubGraph, SubGraphInputPort
-from pricing_core.modelling.errors import FactorResolutionError
 from pricing_core.modelling.factors import (
     GBM_MODEL_TYPES,
+    OperandNotSuppliedError,
     consumed_features,
     control_factor_in,
     gbm_transformed_factors,
@@ -814,10 +814,12 @@ async def _refuse_control_factor_keys(
             bound = Factor.model_validate(resolved.payload)
             try:
                 control = control_factor_in(bound, resolved.factors)
-            except FactorResolutionError as error:
+            except OperandNotSuppliedError as error:
                 _raise_named(
                     "CONTROL_FACTOR_IN_RATEABLE_PATH",
-                    f"{table_ref} key {key.get('name')!r} is bound to {factor_ref} ({error}), "
+                    f"{table_ref} key {key.get('name')!r} is bound to {factor_ref}, whose "
+                    f"interaction {error.factor_slug!r} crosses {error.operand_id}, a Factor "
+                    "not among those supplied, "
                     "so it cannot be shown not to be rated on a `control`-intent Factor "
                     "(FR-88, FR-240)",
                 )
@@ -931,10 +933,12 @@ def refuse_control_in_features(
             continue
         try:
             control = control_factor_in(factor, pool)
-        except FactorResolutionError as error:
+        except OperandNotSuppliedError as error:
             _raise_named(
                 "CONTROL_FACTOR_IN_RATEABLE_PATH",
-                f"{model_ref} was fitted on feature {feature!r} ({error}), so it cannot be "
+                f"{model_ref} was fitted on feature {feature!r}, whose interaction "
+                f"{error.factor_slug!r} crosses {error.operand_id}, a Factor not among those "
+                "supplied, so it cannot be "
                 "shown not to price on a `control`-intent Factor (FR-88, FR-240)",
             )
         if control is not None:
