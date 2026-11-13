@@ -17,7 +17,7 @@ from __future__ import annotations
 import hashlib
 import json
 import re
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Callable, Iterable, Mapping, Sequence
 from datetime import UTC, datetime
 from decimal import Decimal, InvalidOperation
 from typing import Any, NoReturn, Protocol
@@ -898,10 +898,10 @@ def _refuse_control_factor_model_calls(
             _refuse_control_factor_features(str(model_ref), resolved_pins[str(model_ref)])
 
 
-def _consumed_features(model_ref: str, resolved: ResolvedArtifact) -> tuple[str, ...]:
+def _consumed_features(model_ref: str, fit_result: object) -> tuple[str, ...]:
     """`consumed_features` of a pinned model, its failure named as the refusal (fail closed)."""
     try:
-        return consumed_features(resolved.payload.get("fit_result"))
+        return consumed_features(fit_result)
     except ValueError as error:
         _raise_named(
             "CONTROL_FACTOR_IN_RATEABLE_PATH",
@@ -910,21 +910,27 @@ def _consumed_features(model_ref: str, resolved: ResolvedArtifact) -> tuple[str,
         )
 
 
-def _refuse_control_factor_features(model_ref: str, resolved: ResolvedArtifact) -> None:
-    """Refuse a pinned model, and the model its GLM offset reads, fitted on a `control` Factor.
+def refuse_control_in_features(
+    model_ref: str, fit_result: object, factors: Iterable[Factor], pool: Iterable[Factor]
+) -> None:
+    """Refuse a model whose consumed features reach a `control`-intent Factor (FR-88, FR-240).
 
-    A consumed feature is tested through its closure (`control_factor_in`): an interaction's
-    operands get no term of their own, so the cross's slug is all `consumed_features` reports.
-    A consumed feature with no Factor at all (a GBM column) has no intent to test and is not
-    refused here; an operand the pin does not carry is refused (fail closed).
+    The one definition compile (over a pin's resolved Factors) and `load_bundle` (over the
+    Factors a stored Bundle carries) both call, so the two cannot drift. A consumed feature is
+    matched by slug among `factors` and tested through its closure (`control_factor_in`, against
+    `pool`): an interaction's operands get no term of their own, so the cross's slug is all
+    `consumed_features` reports. A consumed feature with no Factor at all (a GBM column) has no
+    intent to test and is not refused here; an operand `pool` does not carry is refused (fail
+    closed).
     """
-    by_slug = {factor.slug: factor for factor in resolved.factors}
-    for feature in _consumed_features(model_ref, resolved):
+    pool = list(pool)
+    by_slug = {factor.slug: factor for factor in factors}
+    for feature in _consumed_features(model_ref, fit_result):
         factor = by_slug.get(feature)
         if factor is None:
             continue
         try:
-            control = control_factor_in(factor, resolved.factors)
+            control = control_factor_in(factor, pool)
         except FactorResolutionError as error:
             _raise_named(
                 "CONTROL_FACTOR_IN_RATEABLE_PATH",
@@ -939,6 +945,13 @@ def _refuse_control_factor_features(model_ref: str, resolved: ResolvedArtifact) 
                 f"`control`-intent Factor {control.slug}@{control.version}{via}, which "
                 "cannot be rated on (FR-88, FR-240)",
             )
+
+
+def _refuse_control_factor_features(model_ref: str, resolved: ResolvedArtifact) -> None:
+    """Refuse a pinned model, and the model its GLM offset reads, fitted on a `control` Factor."""
+    refuse_control_in_features(
+        model_ref, resolved.payload.get("fit_result"), resolved.factors, resolved.factors
+    )
     source = resolved.offset_source
     if source is not None:
         offset = (resolved.payload.get("spec") or {}).get("offset") or {}
@@ -1079,7 +1092,7 @@ def check_model_call_coverage(
                         targets.append((component, where))
         for model_ref, where in targets:
             pin = resolved_pins[str(model_ref)]
-            required = required_model_inputs(pin.factors, _consumed_features(str(model_ref), pin))
+            required = required_model_inputs(pin.factors, _consumed_features(str(model_ref), pin.payload.get("fit_result")))
             missing = [feature for feature in required if feature not in mapped]
             if missing:
                 _raise_named(
@@ -1144,7 +1157,7 @@ def _model_factors(resolved: ResolvedArtifact) -> tuple[Factor, ...]:
 
 def _model_slugs(model_ref: str, resolved: ResolvedArtifact) -> set[str]:
     """The feature slugs a pinned model reads: required inputs, offset model's, offset column."""
-    order = _consumed_features(str(model_ref), resolved)
+    order = _consumed_features(str(model_ref), resolved.payload.get("fit_result"))
     slugs = set(required_model_inputs(resolved.factors, order))
     if resolved.offset_source is not None:
         offset_ref = (resolved.payload.get("spec") or {}).get("offset", {}).get("offset_model_ref")
