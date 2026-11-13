@@ -166,6 +166,22 @@ Ids of the slice: SL 8432, LG 8433, FD 8442, OQ 8443. Both rulings, each quoted 
 
 `test_quote_input_raise_sites.py`: the one `_raise_named` site in `_engine_context` became two (`decimals_as_floats` and the non-finite float of a declared input), so `_INPUT_FREE` gained `("rating/score.py", "decimals_as_floats"): 1` with its reason; the file passes (19 passed).
 
+**Seat runs of this round (head `ea153887357d`, no full gate, no database, no `createdb`, no mint, no PR; logs in `scratch/exec-sl8432c/`, each opening `head=`):**
+
+| command | rc | reading |
+|---|---|---|
+| `ruff check .` | 0 | `All checks passed!` |
+| `ruff format --check` on the three changed `.py` files that were format-clean (`backend/src/app/api/score.py`, the http test, the undeclared-input test) | 0 | `3 files already formatted` (`rating/score.py` and `test_quote_input_raise_sites.py` are not format-clean on main and are left as they are) |
+| `mypy` | 0 | `Success: no issues found in 257 source files` |
+| `lint-imports` | 0 | `Contracts: 4 kept, 0 broken.` |
+| GREEN non-DB set, the same 40 files as the first round (`green-nodb.log`) | 11 batches rc 0, 3 rc 1 | the three rc 1 batches are `ERROR` at setup only (`GIP_TEST_DATABASE_URL` not set: `test_approval_request_shape.py`/`test_deployment_route_types.py`, `test_startup_gc_freeze.py`, `test_error_sinks.py`); no `FAILED` |
+| `test_quote_input_raise_sites.py`, `test_rating_score_decimal_input.py`, `test_rating_score.py`, `test_rating_score_batch.py` (golden), the http test file | 0 | all passed (19; 80 passed with the three; http file 28 passed) |
+| spec-reading set, 20 files (`specreading.log`) | see right | the only `FAILED` are the five docs-audit tests of item 31's class, one cause: `audit-docs.py` check 31 on the working ids (`the live allocation is not contiguous: [(2115, 8432), (8433, 8443)]`), plus DB-fixture setup `ERROR`s |
+| `doc-index.py` / `--check` (gate-2) | 0 / 0 | regenerated after OQ-8443 |
+| `register-lint.py` (gate-2) | 0 | `register.md: OK (0 violations)` |
+| `req-coverage.py` (gate-2) | 0 | |
+| `audit-docs.py` (gate-2) | **1** | `FAILED (2)`, both check 31: `gap in the full allocation between 2115 and 8432` and `between 8433 and 8443` (the slice's working ids); no other check fails |
+
 ## PRs
 
 *(None: the branch is pushed, no PR is opened by the seat.)*
