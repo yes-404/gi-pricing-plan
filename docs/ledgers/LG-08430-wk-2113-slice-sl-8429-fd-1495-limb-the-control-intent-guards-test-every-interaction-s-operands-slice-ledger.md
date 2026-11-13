@@ -94,6 +94,41 @@ The 107 backend test files the closure reaches need a database and are **owed to
 6. **Spec**: item 5; OQ 8431 given options and a recommendation, not built.
 7. **Full gate, ids minted, audit, grant request**: not this seat's; the full gate is owed (no grant yet), ids stay working, no PR.
 
+### Follow-up by seat `exec-sl8429b` (2026-11-13, six rulings the first builder did not apply)
+
+**Ids of this slice (working, space form until the mint):** SL 8429, LG 8430, OQ 8431, OQ 8438, OQ 8439, FD 8440, FD 8441.
+
+**Rulings applied, each quoted from `to-lead.md`:**
+
+> ## 2026-11-13 19:53:34 GMT — (R1) WK-2113 (P3-C) goes draft → ACTIVE by my dated line of this stamp, riding S1's PR: its first slice is a HIGH correctness fix on my GO, which is activation in fact; the line says so.
+
+Done: `docs/roadmap.md`, WK-2113's own block, `status: active` and the dated line "2026-11-13 19:53:34 GMT — ACTIVATED".
+
+> ## 2026-11-13 19:54:02 GMT — S1 SCOPE NOTE — NOT VETOED. The backend resolver's `factor` branch (rating_versions.py:774–788) returning the Factor plus its operand chain in factors= is IN S1 … Two tests ride it through the REAL resolver path (not a hand-built ResolvedArtifact): a risk×risk interaction-keyed rate table still compiles and prices as before (same content hash), and the same table with a control operand is refused with the named error.
+
+Done: two DB-backed tests in `backend/tests/test_fr240_governance.py`, driving the real compile Job over a `WorkspaceResolver`: `test_a_risk_by_risk_interaction_keyed_table_compiles_with_an_unchanged_hash` (a) and `test_an_interaction_keyed_table_with_a_control_operand_fails_to_compile_with_its_code` (b). **Expected at `2ba0d0d5` (the tree before the fix): (a) green, (b) red** (before the fix the resolver returned no operand chain and the control operand was never read). **Both are first RUN at the gate**: this seat has no database; each was checked only to import (`import backend.tests.test_fr240_governance` rc 0) and to pass `ruff check`. Test (a) proves the real resolver still compiles the table and that the bundle's `resolved_payloads` holds the Factor payload only (the operand chain rides `ResolvedArtifact.factors`, which is not hashed); the literal pre-fix hash equality is pinned by `test_the_control_operand_guards_leave_the_fixture_bundle_hashes_unchanged` (pricing-core). One risk to read at the gate: the seeded table has no cells (the `test_api_rate_tables.py` direct-insert convention).
+
+> ## 2026-11-13 19:58:03 GMT — B2 (the algorithm save check tests no intent and REQUIRES the control operand as a feature_map input): into S1 if it is one call to the same closure helper in rating_versions.py with a red-first test; otherwise S3.
+
+**NOT done, goes to S3.** The check is `_accepted_feature_map_values` in `backend/src/app/platform/rating_algorithms.py` (not `rating_versions.py`). It is not one call: the call would sit in a loop over the consumed features with the same error mapping as `_refuse_control_factor_features`, and it would also make the save refuse a model fitted on a *direct* control Factor, which today saves and is refused only at compile. `test_a_compile_over_a_gbm_fitted_on_a_control_factor_fails_with_its_code` (`backend/tests/test_fr240_governance.py`) asserts the algorithm saves with 201 and only the compile Job fails, so the change is a decision on the save-versus-compile contract, not a one-line addition. Stated as a redesign, so per the ruling it is S3's.
+
+> ## 2026-11-13 19:58:03 GMT, condition (8) — Dislocation's interim asymmetry (recompiles and fails at prepare while /score prices until S3) is stated in S1's LG as known and closed by S3.
+
+**Known interim asymmetry, closed by WK-2113 S3:** after S1, a dislocation run on a pre-fix rating version with a control operand fails at prepare (dislocation recompiles through `compile_bundle`), while `/score` of the same version keeps pricing from its stored bundle until S3's load-time guard and re-validation land. Census on this box: 0 rating versions (gipricing `rating_versions` = 0), so 0 affected.
+
+> ## 2026-11-13 19:58:38 GMT — G3 AND G4 RULED … They are SPEC GAPS, not guard bugs: FR-240 binds intent "by factor_ref" and FR-86/FR-88 make intent a property of a Factor and are silent on columns. So: NO SLICE, and no silent pick. YES — both are filed as OQ rows (8438 G3, 8439 G4) in S1's PR beside OQ 8431, mirrored in the spec §10 and open-questions.md, each with the four options (a) column-level intent, (b) control columns derived at compile over the workspace's Factors, (c) factor_ref required on every rateable key, (d) accept and document … MY RECOMMENDATION for the record: (a) … REGISTER: two candidate rows, owner WK-2113, G3 MEDIUM … G4 LOW … each row says "spec gap, decision owed: OQ <id>" … Until the OQs are ruled, the upgrade note and the FR-240 dated clarification in S1 say in words what the guards do NOT cover: bare-name and banding-only keys, and a risk Factor over a column another Factor calls control.
+
+Done, no code: OQ 8438 (G3, `03` §10) and OQ 8439 (G4, `02` §10), each also in `docs/open-questions.md`, status open, decision owed, four options, both recommendations recorded as recommendations (the seat's: (c) for G3, (b) for G4; the maintainer's: (a)); register rows FD 8440 (G3, MEDIUM) and FD 8441 (G4, LOW), owner WK-2113, "spec gap, decision owed: OQ 8438" / "OQ 8439"; the FR-240 dated clarification in `03` now says in words what the guards do not cover. The upgrade note is S3's (CHANGELOG), not S1's.
+
+**New red/green lines**
+
+| line | head | result |
+|---|---|---|
+| (a) risk×risk interaction-keyed table compiles through the real resolver | not run (no database) | expected green at `2ba0d0d5` and at the fixed head; first RUN at the gate |
+| (b) same table, control operand, `CONTROL_FACTOR_IN_RATEABLE_PATH` | not run (no database) | expected red at `2ba0d0d5`, green at the fixed head; first RUN at the gate |
+
+**Checks after the follow-up** (tree: this branch's head at the follow-up commit, before the push; run through `flock -w 900 /tmp/slots/gate-2` for the docs scripts): `audit-docs.py` rc 1, FAILED (1): check 31, the gap between 2115 and 8429 (the slice's own working ids, cleared by the mint); `doc-index.py --check` rc 0; `register-lint.py` rc 0; `req-coverage.py` rc 0; `ruff check .` rc 0; `mypy` rc 0 (257 source files). Spec-reading tests (`run-small`, batches of three, `tests/` only): `test_doc_id_verify`, `test_permission_parity`, `test_scope_audit` 187 passed, 1 skipped; `test_file_census`, `test_audit_docs_ids`, `test_doc_id_migrate` 451 passed, 2 failed; `test_doc_id_history_input`, `test_doc_id`, `test_doc_index` 209 passed, 1 failed; `test_spec_examples`, `test_repository_invariants`, `test_register_lint` 79 passed, 5 failed. **Every failure is in the docs-audit set that reads `audit-docs` (item 31 of the common brief)** and is the same set as the first builder's `docs-tests.log` (`test_audit_docs_ids` ×2, `test_doc_index` contiguity, `test_register_lint` ×3, `test_repository_invariants` ×2), all from check 31 on the working ids; none is a spec-reading failure on content. Import closure for the one `.py` file touched (`backend/tests/test_fr240_governance.py`): no file imports it (`git grep test_fr240_governance -- backend tests` lists none); it imports (rc 0). No raise site was added, so `test_quote_input_raise_sites.py` is not re-run.
+
 ### Audit
 
 Not yet written; the auditor re-checks.
@@ -103,6 +138,7 @@ Not yet written; the auditor re-checks.
 - 2026-11-13: `575a5a68` red tests (13 failed, rc=1). Pushed.
 - 2026-11-13: `3f0eebbd` the fix, the backend resolver line, the FR-240/FR-88 clarifications, OQ 8431, the register limb and the `SL-8429` row.
 - 2026-11-13: `ae216c91` the raise-site census counts the two new raise sites (found by the closure run: item 11 of the common brief).
+- 2026-11-13: seat `exec-sl8429b` continues: R1, the two real-resolver tests, the asymmetry line, OQ 8438 and OQ 8439, FD 8440 and FD 8441 (commit below); B2 not done (S3).
 - Note: the first docs-only commands of this seat used `cd` inside a compound command (the harness resets the cwd each call), against the no-`cd` rule; no write followed from a changed directory.
 
 ## PRs

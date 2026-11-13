@@ -4517,7 +4517,7 @@ relates: [CR-2103, CR-2110, WK-1178, FD-1836, FD-1411, FD-2007, FD-2009, FD-2033
 id: WK-2113
 family: work
 title: P3-C — product: correctness carries and unreached views
-status: draft
+status: active
 created: 2026-11-11
 owner: maintainer
 tree: fcfd7746c6e95d322e5a7f307d4e83d4563fd0ca
@@ -4527,6 +4527,8 @@ relates: [CR-2103, WK-1178, FD-1219, FD-1220, FD-1240, FD-1246, FD-1283, FD-1284
 ```
 
 ***Dated line, 2026-11-11 10:58:58 GMT — SIGNED*** (the maintainer's act, by delegation, on D-5 and the accepted §14 review; written by the planner in the P2-close docs batch under working id 8426). The maintainer's entry "2026-11-11 10:58:58 GMT — Maintainer: THE USER'S P2 CLOSE WORD" in `to-lead.md`, MY ACTS: "the P3-C and P3-D rows SIGNED as drafted (P3-C first act the FD-1671 probe; P3-D first act the FD-1489 braces check)". The row below is the draft of `scratch/plan-p3wk/P3-WK-drafts.md` (local, sha256 prefix `196357ab59ac`), verbatim but for the id, `created:` and `tree:` (the P2 exit tree T of `CR-2110`), with the draft's scope markers dropped. Its first act is the FD-1671 probe. "Q1" to "Q7" are the drafts' questions, each ruled at to-lead "2026-11-09 12:08:21 GMT". Status `draft`, as drafted: its activation is the maintainer's.
+
+***Dated line, 2026-11-13 19:53:34 GMT — ACTIVATED*** (the maintainer's act, by delegation, riding the PR of its first slice, SL 8429). The maintainer's entry "2026-11-13 19:53:34 GMT — Maintainer: RULINGS R1–R3" in `to-lead.md`, (R1), verbatim: "WK-2113 (P3-C) goes draft → ACTIVE by my dated line of this stamp, riding S1's PR: its first slice is a HIGH correctness fix on my GO, which is activation in fact; the line says so." `status:` above read `draft` from 2026-11-11 and reads `active` from this line; the SIGNED line's "Status `draft`, as drafted: its activation is the maintainer's" is superseded by it.
 
 Opened `draft` at the P2 close by the maintainer's line, on `CR-2103` P25 and P19 (a). It takes the **product-code** carries of WK-1178 and of closed Works. The register's F-series rows (F6, F43, F53, F55, F62) have no id form `relates:` accepts, so they are named here only.
 
@@ -4573,7 +4575,7 @@ tree: 2ba0d0d53142dacd6550cb314a4d65685b612bd1
 phase: P3
 work: WK-2113
 corrected_by: []
-relates: [FD-1495, LG-8430, OQ-8431]
+relates: [FD-1495, LG-8430, OQ-8431, OQ-8438, OQ-8439, FD-8440, FD-8441]
 ```
 
 *Dated 2026-11-13 by the executor (exec-sl8429), on the maintainer's GO "2026-11-13 19:51:15 GMT — Maintainer: FD-1495 PROBE READ" in `to-lead.md` (severity HIGH, seven conditions): the slice is `active`. `FR-88` and `FR-240` are clarified, the ledger is `LG 8430`, the open question is `OQ 8431`. WK-2113's own status line is not changed by this row.*
