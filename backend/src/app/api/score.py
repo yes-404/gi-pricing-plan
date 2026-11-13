@@ -108,13 +108,14 @@ class _DecimalJSONRequest(Request):
     float, else refused by name) can see it, so a text of more than about 15 significant digits
     priced as the rounded value. Read as `Decimal`, the text reaches that guard, the one
     definition, and the route refuses exactly as core does (FD-1671, the maintainer's
-    (by delegation) "2026-11-13 19:53:34 GMT" (R2), design (b)). Integers, booleans and strings
-    parse as before.
+    (by delegation) "2026-11-13 19:53:34 GMT" (R2), design (b)). `NaN`, `Infinity` and
+    `-Infinity` are read as `Decimal` too (`parse_float` is not called for them), so the guard
+    refuses them by key path. Integers, booleans and strings parse as before.
     """
 
     async def json(self) -> Any:
         if not hasattr(self, "_json"):
-            self._json = json.loads(await self.body(), parse_float=Decimal)
+            self._json = json.loads(await self.body(), parse_float=Decimal, parse_constant=Decimal)
         return self._json
 
 

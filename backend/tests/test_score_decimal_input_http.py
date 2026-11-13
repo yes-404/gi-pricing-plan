@@ -457,7 +457,6 @@ def test_an_over_precise_value_in_a_nested_undeclared_key_is_refused_naming_the_
     assert "0.82469" not in response.text
 
 
-
 # --- SL 8432 review 3 R1: the three non-finite JSON literals ---------------------------------
 # `json.loads` does not route `NaN`, `Infinity` and `-Infinity` through `parse_float`, so they
 # arrived as raw floats that no guard touched in an undeclared or nested key.
@@ -479,7 +478,9 @@ _NON_FINITE = ["NaN", "Infinity", "-Infinity"]
 def test_a_non_finite_literal_in_an_undeclared_key_is_refused_naming_the_path(
     client: TestClient, literal: str, extra: str, path: str
 ) -> None:
-    body = _body(50000, "0.75", extra.replace("{{", "{").replace("}}", "}").replace("{lit}", literal))
+    body = _body(
+        50000, "0.75", extra.replace("{{", "{").replace("}}", "}").replace("{lit}", literal)
+    )
     response = _post(client, SCORE_URL, body)
     assert response.status_code == 422, response.text
     assert response.headers["content-type"].startswith("application/problem+json")
