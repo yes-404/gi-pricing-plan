@@ -396,15 +396,41 @@ def test_a_value_the_float_cannot_hold_is_refused_not_rounded_to_zero_or_infinit
     _assert_refused_naming_the_input(_post(client, SCORE_URL, _body(50000, text)), text)
 
 
+# The engine's own limits, measured at ccdafcc8 (SL 8432 round 3): its decimal holds a scale of
+# at most 28 and a magnitude below 2**96, and a float outside either fails as a 500
+# INTERNAL_ERROR. The guard refuses the same set (the maintainer's ruling, to-lead 2026-11-13
+# 21:00:31 GMT, option A with the engine's own predicate; FD 8445).
+_ENGINE_CANNOT_HOLD = [
+    "5e-324",  # a subnormal
+    "1e-321",
+    "-5e-324",
+    "2.2250738585072014e-308",  # the smallest normal double: scale 324
+    "1e-300",
+    "1e-29",  # scale 29
+    "1.5e-28",  # scale 29 with a mantissa
+    "1.234567890123456e-14",  # 16 digits at 1e-14: scale 29
+    "1e29",  # at or above 2**96
+    "-1e30",
+    "1e300",
+]
+
+
 @pytest.mark.req("FR-273")
-@pytest.mark.parametrize("text", ["5e-324", "1e-321", "-5e-324"])
-def test_a_subnormal_the_float_holds_exactly_is_not_refused_by_the_guard(
+@pytest.mark.parametrize("text", _ENGINE_CANNOT_HOLD)
+def test_a_value_the_engines_decimal_cannot_hold_is_refused_at_the_guard(
     client: TestClient, text: str
 ) -> None:
-    """The guard accepts it. The engine's own ZEN core cannot evaluate a subnormal (a
-    RATING_EVALUATION_FAILED, as before this slice), which is not the guard's refusal."""
+    """Refused with INPUT_CONTRACT_VIOLATION (422) naming the key path, never the value; before
+    the guard covered it the engine failed on it and the route answered a 500 (FD 8445)."""
+    _assert_refused_naming_the_input(_post(client, SCORE_URL, _body(50000, text)), text)
+
+
+@pytest.mark.req("FR-273")
+@pytest.mark.parametrize("text", ["1e-28", "-1e-28", "1.23456789012345e-14", "0.5"])
+def test_a_value_at_the_engines_scale_limit_still_prices(client: TestClient, text: str) -> None:
+    """The edge of the refusal: scale 28 and a 15-digit mantissa at 1e-14 price as before."""
     response = _post(client, SCORE_URL, _body(50000, text))
-    assert response.json().get("code") != "INPUT_CONTRACT_VIOLATION", response.text
+    assert response.status_code == 200, response.text
 
 
 @pytest.mark.req("FR-273")
