@@ -41,6 +41,7 @@ from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models import (
+    BlobRow,
     FactorRow,
     ModelRow,
     RateTableCellRow,
@@ -633,6 +634,30 @@ def test_a_risk_by_risk_interaction_keyed_table_compiles_with_an_unchanged_hash(
     assert set(factor_payloads) == {"factor:region_x_yoa@1"}
     assert "operand_factor_ids" in factor_payloads["factor:region_x_yoa@1"]
     assert bundle.content_hash == _PRE_FIX_RISK_BY_RISK_HASH
+
+
+@pytest.mark.req("FR-420")
+@pytest.mark.req("FR-239")
+def test_a_compiled_bundle_blob_is_retained_so_the_collector_can_never_take_it(
+    api_client, workspace_id, principal, grant, database, blob_store
+) -> None:
+    """WK-2113 S3 (FD 8447, amendment 4): the compile Job takes a reference to the bundle blob in
+    the unit of work that stores it. RED before the fix (`blob_store.put` leaves `ref_count` 0);
+    released on nothing today, since a version is immutable and never deleted."""
+    _run(grant("analyst"))
+    job_row = _compile_interaction_keyed(
+        api_client, principal, workspace_id, database, blob_store,
+        second_operand_intent=FactorIntent.RISK,
+    )
+    assert job_row.status is JobStatus.SUCCEEDED, job_row.error
+
+    async def _ref_count() -> int:
+        async with database.session() as session:
+            row = await session.get(BlobRow, job_row.result["ref"])
+            assert row is not None
+            return int(row.ref_count)
+
+    assert _run(_ref_count()) >= 1
 
 
 @pytest.mark.req("FR-88")

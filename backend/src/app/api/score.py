@@ -81,6 +81,7 @@ from model_schema import (
     Job,
     JobKind,
     Permission,
+    Principal,
     QuoteContext,
     QuoteContextOptions,
     RatingAlgorithm,
@@ -400,6 +401,7 @@ async def _fetch_bundle(
     database: Database,
     workspace_id: UUID,
     ref: ArtifactRef,
+    requester: Principal | None = None,
 ) -> CompiledBundle:
     """Resolve a ref to its hydrated `CompiledBundle`: one metadata read, then either a
     slot hit or the blob store (RL-921,
@@ -462,7 +464,12 @@ async def _fetch_bundle(
     compiled = slot.get(bundle.content_hash)
     if compiled is None:
         compiled = await hydrate(
-            bundle, slot=slot, database=database, workspace_id=workspace_id, ref=ref
+            bundle,
+            slot=slot,
+            database=database,
+            workspace_id=workspace_id,
+            ref=ref,
+            requester=requester,
         )
     slot.put(ref, compiled)
     return compiled
@@ -500,6 +507,7 @@ async def _compiled_for(
     database: Database,
     workspace_id: UUID,
     ref: ArtifactRef,
+    requester: Principal | None = None,
 ) -> CompiledBundle:
     """The hydrated bundle for `ref`, degrading to the slot when metadata storage is down.
 
@@ -516,7 +524,13 @@ async def _compiled_for(
     """
     try:
         return await _fetch_bundle(
-            source, blob_store, slot, database=database, workspace_id=workspace_id, ref=ref
+            source,
+            blob_store,
+            slot,
+            database=database,
+            workspace_id=workspace_id,
+            ref=ref,
+            requester=requester,
         )
     except PlatformError:
         raise
@@ -594,7 +608,13 @@ async def score(
     if routed is not None:
         ref, deployment_id = routed
     compiled = await _compiled_for(
-        session, blob_store, slot, database=database, workspace_id=caller.workspace_id, ref=ref
+        session,
+        blob_store,
+        slot,
+        database=database,
+        workspace_id=caller.workspace_id,
+        ref=ref,
+        requester=caller.principal,
     )
     trace = ctx.options.trace if ctx.options is not None else False
     # `score_one` refuses a context without `options.rating_version_ref` and reads the ref it
@@ -683,8 +703,13 @@ async def score_compare(
     for side, ref in (("base", body.base), ("comparison", body.comparison)):
         try:
             compiled = await _compiled_for(
-                database, blob_store, slot, database=database, workspace_id=caller.workspace_id,
+                database,
+                blob_store,
+                slot,
+                database=database,
+                workspace_id=caller.workspace_id,
                 ref=ref,
+                requester=caller.principal,
             )
         except PlatformError as exc:
             raise _naming_side(exc, side) from exc

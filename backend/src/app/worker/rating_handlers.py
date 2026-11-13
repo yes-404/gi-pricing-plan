@@ -15,7 +15,7 @@ from uuid import UUID
 
 from app.db.models import BlobRow
 from app.errors import PlatformError
-from app.platform import audit
+from app.platform import audit, blobs
 from app.platform import rating_versions as rating_versions_service
 from app.platform import regression_runs as regression_runs_service
 from app.platform import regression_suites as regression_suites_service
@@ -67,6 +67,11 @@ def _rating_compile(parameters: dict[str, Any], callback: ProgressCallback) -> J
             )
             payload = bundle.model_dump_json().encode()
             ref = await progress.blob_store.put(session, payload, "application/json")
+            # The version holds a reference to its bundle blob for as long as it exists, so FR-420's
+            # collector (`ref_count == 0`) can never take it (WK-2113 S3, FD 8447). Released on
+            # nothing today: a version is immutable and never deleted. Same unit of work as the
+            # put and `record_bundle_blob` below.
+            await blobs.retain(session, ref.sha256)
             # RL-915: the key goes on the version's own metadata, in this same
             # transaction. Without it the only record of where the bundle lives is this
             # Job's result — an operational row with its own pruning, so a trimmed Job

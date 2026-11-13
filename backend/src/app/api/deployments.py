@@ -84,6 +84,7 @@ async def submit_deployment_request(
                 blob_store=blob_store,
                 slot=slot,
                 workspace_id=caller.workspace_id,
+                actor=caller.principal,
             ),
             count_management=count,
         )
@@ -119,7 +120,11 @@ async def create_deployment(
         environment=env,
         body=body,
         revalidate=revalidator(
-            database=database, blob_store=blob_store, slot=slot, workspace_id=caller.workspace_id
+            database=database,
+            blob_store=blob_store,
+            slot=slot,
+            workspace_id=caller.workspace_id,
+            actor=caller.principal,
         ),
         count_management=count,
         switch=getattr(request.app.state, "switch", None),
@@ -154,7 +159,11 @@ async def rollback_deployment(
         environment=env,
         body=body,
         revalidate=revalidator(
-            database=database, blob_store=blob_store, slot=slot, workspace_id=caller.workspace_id
+            database=database,
+            blob_store=blob_store,
+            slot=slot,
+            workspace_id=caller.workspace_id,
+            actor=caller.principal,
         ),
         count_management=count,
         switch=getattr(request.app.state, "switch", None),

@@ -59,28 +59,42 @@ async def _refuse(
     ref: ArtifactRef,
     content_hash: str,
     refusal: str,
+    acting: Principal | None,
+    requester: Principal | None,
 ) -> PlatformError:
-    """The refusal as a decided answer: evict the hash, audit it once, return the 409."""
+    """The refusal as a decided answer: evict the hash, audit it, return the 409.
+
+    **A governance act** (`acting` set: submit, deploy, rollback) writes its OWN event with the
+    acting principal as actor, every time, never de-duplicated and never touching the memo.
+    **A load refusal** (scoring, regression, dislocation, PREPARE) is the platform's, so its actor
+    is the system principal (the audit contract permits one: `Principal.kind` includes `system`,
+    `model_schema/jobs.py`; `AuditEvent.actor` is a `Principal`; `06` FR-369's source has
+    `system`), with the requesting principal recorded in `after` where the caller has one, and the
+    event is written once per process per hash (DP-1).
+    """
     slot.discard(content_hash)
-    if slot.first_refusal(content_hash):
+    first = acting is not None or slot.first_refusal(content_hash)
+    if first:
+        after: dict[str, str] = {"bundle_hash": content_hash, "refusal": refusal}
+        if acting is None:
+            after["note"] = "first refusal in this worker"
+            if requester is not None and requester.id is not None:
+                after["requested_by"] = str(requester.id)
         try:
             async with database.unit_of_work() as session:
                 await audit.record(
                     session,
                     workspace_id=workspace_id,
-                    actor=_ACTOR,
-                    source=JobSource.SYSTEM,
+                    actor=acting or _ACTOR,
+                    source=JobSource.API if acting is not None else JobSource.SYSTEM,
                     action=REFUSAL_ACTION,
                     entity_ref=str(ref),
                     before=None,
-                    after={
-                        "bundle_hash": content_hash,
-                        "refusal": refusal,
-                        "note": "first refusal in this worker",
-                    },
+                    after=after,
                 )
         except BaseException:
-            slot.unrecord_refusal(content_hash)
+            if acting is None:
+                slot.unrecord_refusal(content_hash)
             raise
     return PlatformError(
         _CODE,
@@ -104,8 +118,13 @@ async def hydrate(
     database: Database,
     workspace_id: UUID,
     ref: ArtifactRef,
+    requester: Principal | None = None,
+    acting: Principal | None = None,
 ) -> CompiledBundle:
-    """`load_bundle`, with its `control`-intent refusal mapped to a 409 and audited once."""
+    """`load_bundle`, with its `control`-intent refusal mapped to a 409 and audited.
+
+    `acting` is set only by `revalidate` (a governance act, audited every time as that principal);
+    `requester` is the principal behind a scoring request, where there is one."""
     try:
         return load_bundle(bundle)
     except CodedError as exc:
@@ -119,6 +138,8 @@ async def hydrate(
             ref=ref,
             content_hash=bundle.content_hash,
             refusal=refusal,
+            acting=acting,
+            requester=requester,
         ) from None
 
 
@@ -130,6 +151,7 @@ async def revalidate(
     slot: BundleSlot,
     workspace_id: UUID,
     ref: ArtifactRef,
+    actor: Principal,
 ) -> None:
     """Re-validate a stored version at submit, deploy and rollback (FR-88, FR-240, FR-267/269).
 
@@ -147,7 +169,9 @@ async def revalidate(
     if blob_row is None:
         raise unreadable_bundle(ref, "it has no readable stored bundle")
     bundle = Bundle.model_validate_json(await blob_store.read(to_ref(blob_row)))
-    await hydrate(bundle, slot=slot, database=database, workspace_id=workspace_id, ref=ref)
+    await hydrate(
+        bundle, slot=slot, database=database, workspace_id=workspace_id, ref=ref, acting=actor
+    )
     version = rating_versions_service.to_schema(row)
     if version.algorithm_ref is None or version.pins is None:
         # A version that never declared pins has no rate table key or GBM pin to re-resolve, and
@@ -168,6 +192,8 @@ async def revalidate(
             ref=ref,
             content_hash=bundle.content_hash,
             refusal=refusal,
+            acting=actor,
+            requester=None,
         ) from None
 
 
@@ -178,7 +204,12 @@ class Revalidate(Protocol):
 
 
 def revalidator(
-    *, database: Database, blob_store: BlobStore, slot: BundleSlot, workspace_id: UUID
+    *,
+    database: Database,
+    blob_store: BlobStore,
+    slot: BundleSlot,
+    workspace_id: UUID,
+    actor: Principal,
 ) -> Revalidate:
     async def bound(session: AsyncSession, *, ref: ArtifactRef) -> None:
         await revalidate(
@@ -188,6 +219,7 @@ def revalidator(
             slot=slot,
             workspace_id=workspace_id,
             ref=ref,
+            actor=actor,
         )
 
     return bound

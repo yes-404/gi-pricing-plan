@@ -240,3 +240,40 @@ def test_the_census_sees_a_planted_second_caller(tmp_path: Path) -> None:
     )
     assert ("app/planted.py", "sneaky") in _callers(copy, "load_bundle", None)
     assert ("app/planted.py", "sneaky") in _callers(copy, "put", "slot")
+
+
+@pytest.mark.req("FR-88")
+@pytest.mark.req("FR-240")
+@pytest.mark.req("NFR-498")
+@pytest.mark.asyncio
+async def test_a_governance_refusal_is_never_deduplicated_and_names_the_acting_principal(
+    events: list[dict[str, Any]],
+) -> None:
+    """Amendment 3 (b) without a database: a refused deploy, a refused score, a second refused
+    deploy, a repeated score = three events, the two deploys as the acting principal."""
+    from model_schema import ActorKind, Principal
+
+    slot, database = BundleSlot(), _FakeDatabase()
+    actor = Principal(kind=ActorKind.USER, id=uuid4(), display="deployer")
+    requester = Principal(kind=ActorKind.USER, id=uuid4(), display="scorer")
+
+    async def refuse(**extra: Any) -> None:
+        with pytest.raises(PlatformError):
+            await hydrate(
+                _bundle("offender.bundle.json"),
+                slot=slot,
+                database=database,  # type: ignore[arg-type]
+                workspace_id=uuid4(),
+                ref=REF,
+                **extra,
+            )
+
+    await refuse(acting=actor)
+    await refuse(requester=requester)
+    await refuse(acting=actor)
+    await refuse(requester=requester)
+    assert len(events) == 3
+    assert [e["actor"].id for e in events if e["actor"] is actor] == [actor.id, actor.id]
+    scored = [e for e in events if e["actor"] is not actor]
+    assert scored[0]["after"]["requested_by"] == str(requester.id)
+    assert "requested_by" not in events[0]["after"]

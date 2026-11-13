@@ -42,7 +42,7 @@ from app.db.session import Database
 from app.errors import PlatformError
 from app.platform.bundle_slot import BundleSlot
 from app.platform.deployment_switch import SwitchMessage
-from model_schema import new_uuid7
+from model_schema import ArtifactRef, new_uuid7
 
 api_settings = _deployments.api_settings
 client = _deployments.client
@@ -261,3 +261,53 @@ async def test_switch_prepare_refuses_a_stored_control_operand_bundle_and_audits
     assert ref in str(refused.value.detail)
     assert OPERAND in str(refused.value.detail)
     await assert_one_event(database, workspace_id, ref, content_hash)
+
+
+@pytest.mark.req("FR-88")
+@pytest.mark.req("FR-240")
+@pytest.mark.req("NFR-498")
+@pytest.mark.asyncio
+async def test_a_governance_refusal_is_audited_every_time_as_the_acting_principal(
+    client: TestClient, database: Database, blob_store: Any, workspace_id: UUID, seat: Any
+) -> None:
+    """Amendment 3 (b), in ONE worker (one slot): a refused deploy, then a refused score of the same
+    hash, write TWO events; a second refused deploy writes a THIRD; a repeated score writes none.
+    The DP-1 memo de-duplicates scoring-path load refusals only; a deploy is a governance act by a
+    named principal and is never de-duplicated."""
+    from app.api.score import _compiled_for
+    from model_schema import ActorKind, Principal
+
+    deployer = await seat("deployer")
+    ref_str, content_hash = await stored_version(
+        database, blob_store, workspace_id, "offender.bundle.json"
+    )
+    ref = ArtifactRef.parse(ref_str)
+    slot = client.app.state.bundle_slot  # type: ignore[attr-defined]
+    requester = Principal(kind=ActorKind.USER, id=new_uuid7(), display="scorer")
+
+    async def score() -> None:
+        with pytest.raises(PlatformError):
+            await _compiled_for(
+                database,
+                blob_store,
+                slot,
+                database=database,
+                workspace_id=workspace_id,
+                ref=ref,
+                requester=requester,
+            )
+
+    assert_problem(deploy(client, deployer, "dev", ref_str), ref_str, content_hash)
+    assert len(await refusal_events(database, workspace_id)) == 1
+    await score()
+    assert len(await refusal_events(database, workspace_id)) == 2
+    assert_problem(deploy(client, deployer, "dev", ref_str), ref_str, content_hash)
+    assert len(await refusal_events(database, workspace_id)) == 3
+    await score()
+    events = await refusal_events(database, workspace_id)
+    assert len(events) == 3, "a repeated score writes no further event"
+    by_actor = sorted(str(e.actor.get("id")) for e in events)
+    assert by_actor.count(str(deployer.id)) == 2  # both deploys, the acting principal
+    scored = [e for e in events if e.actor.get("kind") == "system"]
+    assert len(scored) == 1
+    assert (scored[0].after or {}).get("requested_by") == str(requester.id)
