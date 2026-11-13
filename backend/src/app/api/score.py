@@ -93,7 +93,7 @@ from model_schema import (
 )
 from pricing_core.rating.compile import Bundle
 from pricing_core.rating.runtime import CompiledBundle, load_bundle
-from pricing_core.rating.score import score_one
+from pricing_core.rating.score import decimals_as_floats, score_one
 from pricing_core.rating.trace_diff import diff_traces
 from pricing_core.safe_error import CodedError
 
@@ -751,10 +751,11 @@ def _stored_context(ctx: QuoteContext) -> dict[str, Any]:
 
     The score routes read an input as a `Decimal` (`_DecimalJSONRequest`), which pydantic dumps in
     JSON mode as a *string*; the re-score would refuse that as not numeric. A quote is stored only
-    after it priced, so a `decimal` input here has passed FR-273's lossless check, and a
-    float is the exact value; any other `Decimal` is the float the JSON path always delivered.
+    after it priced, so every `Decimal` here, nested ones included, has passed FR-273's lossless
+    check; `decimals_as_floats` is the one crossing the live quote used, so a re-score reads the
+    same floats the quote priced.
     """
-    inputs = {k: float(v) if isinstance(v, Decimal) else v for k, v in ctx.inputs.items()}
+    inputs = {k: decimals_as_floats(v, k) for k, v in ctx.inputs.items()}
     return ctx.model_copy(update={"inputs": inputs}).model_dump(mode="json")
 
 

@@ -328,48 +328,51 @@ def _as_decimal(value: Any) -> Decimal:
     return value if isinstance(value, Decimal) else Decimal(str(value))
 
 
-def _decimals_as_floats(value: Any) -> Any:
-    """`value` with every `Decimal` in it, however nested, as a `float` (the engine's wire)."""
+def decimals_as_floats(value: Any, path: str) -> Any:
+    """`value` with every `Decimal` in it, however nested, as the `float` the engine's wire
+    carries (FR-273), at the one place that crossing happens.
+
+    The crossing is checked lossless, `Decimal(repr(float(d))) == d`; a `Decimal` that fails it
+    (more than about 15 significant digits, a magnitude that underflows to zero or overflows to
+    infinity) is refused by name with `INPUT_CONTRACT_VIOLATION`, never rounded. `path` names
+    the value (`extra_list[1].a`) and the message never echoes it (NFR-499). A float, an
+    integer and any non-numeric value are returned as they are."""
     if isinstance(value, Decimal):
-        return float(value)
+        as_float = float(value)
+        if not math.isfinite(as_float) or Decimal(repr(as_float)) != value:
+            _raise_named(
+                "INPUT_CONTRACT_VIOLATION",
+                f"input {path!r} is not exactly representable as a finite float (FR-273)",
+            )
+        return as_float
     if isinstance(value, list):
-        return [_decimals_as_floats(v) for v in value]
+        return [decimals_as_floats(v, f"{path}[{i}]") for i, v in enumerate(value)]
     if isinstance(value, dict):
-        return {k: _decimals_as_floats(v) for k, v in value.items()}
+        return {k: decimals_as_floats(v, f"{path}.{k}") for k, v in value.items()}
     return value
 
 
 def _engine_context(algorithm: RatingAlgorithm, ctx: QuoteContext) -> dict[str, Any]:
-    """The mapping the engine evaluates: the quote's inputs, with each `Decimal` in a
-    `decimal`-declared input crossed as the `float` the JSON path delivers (FR-273).
+    """The mapping the engine evaluates: the quote's inputs with every `Decimal` in them,
+    declared or not, nested or not, crossed as the `float` the JSON path delivers
+    (`decimals_as_floats`, FR-273).
 
     The binding refuses a `Decimal` (`TypeError`), so a non-money `decimal` input is the one
     value that crosses as a float; money stays integer minor units and is never converted. The
-    crossing is checked lossless, `Decimal(repr(float(d))) == d`, and a value that fails it
-    (more than about 15 significant digits, NaN, infinity) is refused by name, never rounded.
-    The message names the input, never its value (NFR-499)."""
+    guard covers an undeclared key too (SL 8432 question (a)): an `input` step may read a key
+    the input contract never declares, so a key no step reads is refused as well, stricter than
+    needed. A declared `decimal` input that is a `float` must also be finite."""
     decimal_inputs = {
         f.name for f in algorithm.input_contract if f.type == RatingInputType.DECIMAL
     }
-    inputs = dict(ctx.inputs)
+    inputs = {k: decimals_as_floats(v, k) for k, v in ctx.inputs.items()}
     for name in decimal_inputs & inputs.keys():
         value = inputs[name]
-        if isinstance(value, (Decimal, float)):
-            as_float = float(value)
-            # A float is already what crosses, so only finiteness can fail; a Decimal must
-            # also round-trip.
-            if not math.isfinite(as_float) or (
-                isinstance(value, Decimal) and Decimal(repr(as_float)) != value
-            ):
-                _raise_named(
-                    "INPUT_CONTRACT_VIOLATION",
-                    f"input {name!r} is not exactly representable as a finite float (FR-273)",
-                )
-            inputs[name] = as_float
-    for name in inputs.keys() - decimal_inputs:
-        # A `Decimal` the JSON path read (FR-273) in an input the contract does not declare
-        # `decimal`, an extra key `_validate_inputs` tolerates, crosses as the float it always was.
-        inputs[name] = _decimals_as_floats(inputs[name])
+        if isinstance(value, float) and not math.isfinite(value):
+            _raise_named(
+                "INPUT_CONTRACT_VIOLATION",
+                f"input {name!r} is not exactly representable as a finite float (FR-273)",
+            )
     return {"effective_date": ctx.effective_date.isoformat(), "purpose": ctx.purpose, **inputs}
 
 

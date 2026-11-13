@@ -73,6 +73,9 @@ _INPUT_FREE = {
     # FR-273 lossless-float refusal: the declared input name only, never the value
     # (test_rating_score_decimal_input.py drives it with a sentinel-free value assert)
     ("rating/score.py", "_engine_context"): 1,
+    # SL 8432: the same refusal for every numeric value, nested included: the key path only
+    # (test_rating_score_undeclared_input_precision.py asserts the value is not echoed)
+    ("rating/score.py", "decimals_as_floats"): 1,
     ("rating/score.py", "_check_lookup_misses"): 2,  # step ids only
     ("rating/score.py", "_check_unparseable_cells"): 1,  # FD-1648 (b): a step id only
     ("rating/score.py", "_reraise_engine_failure"): 1,  # engine error is reduced to its type name

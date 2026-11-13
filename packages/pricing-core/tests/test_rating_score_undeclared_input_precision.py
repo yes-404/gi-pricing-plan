@@ -31,8 +31,14 @@ def _payload(resolver: _FakeResolver, *, declared: bool) -> dict[str, Any]:
         algorithm["input_contract"].append({"name": "ghost", "type": "decimal", "nullable": False})
     algorithm["steps"].insert(
         0,
-        {"step_id": "s_in_ghost", "type": "input", "label": "Ghost", "input_name": "ghost",
-         "on_missing": "error", "produces": "ghost"},
+        {
+            "step_id": "s_in_ghost",
+            "type": "input",
+            "label": "Ghost",
+            "input_name": "ghost",
+            "on_missing": "error",
+            "produces": "ghost",
+        },
     )
     for step in algorithm["steps"]:
         if step["step_id"] == "s_instalment":
@@ -71,3 +77,77 @@ async def test_an_over_precise_value_in_an_undeclared_input_is_refused_too() -> 
         await score_one(
             await _bundle(declared=False), _ctx(inputs={**_INPUTS, "ghost": _OVER_PRECISE})
         )
+
+
+# --- SL 8432 option (ii): FR-273's guard covers every numeric value, nested included ---------
+
+
+async def _score_ghost(value: Any, *, declared: bool = False) -> Any:
+    return await score_one(
+        await _bundle(declared=declared), _ctx(inputs={**_INPUTS, "ghost": value})
+    )
+
+
+@pytest.mark.req("FR-273")
+async def test_a_nested_over_precise_value_is_refused_naming_the_key_path() -> None:
+    """The guard refuses even a key no step reads, naming the nested path, not the value."""
+    bundle = await _bundle(declared=False)
+    ctx = _ctx(inputs={**_INPUTS, "ghost": 0.5, "extra_list": [1.5, {"a": _OVER_PRECISE}]})
+    with pytest.raises(ValueError, match=r"INPUT_CONTRACT_VIOLATION.*'extra_list\[1\]\.a'") as info:
+        await score_one(bundle, ctx)
+    assert "0.1234567890123456789" not in str(info.value)  # NFR-499
+
+
+@pytest.mark.req("FR-273")
+@pytest.mark.parametrize("text", ["1e-400", "1e-330", "1e400", "-1e-400", "NaN"])
+async def test_an_underflowing_or_overflowing_undeclared_value_is_refused(text: str) -> None:
+    with pytest.raises(ValueError, match=r"INPUT_CONTRACT_VIOLATION.*'ghost'"):
+        await _score_ghost(Decimal(text))
+
+
+@pytest.mark.req("FR-273")
+@pytest.mark.parametrize("text", ["5e-324", "1e-321", "-5e-324", "0.0", "-0.0", "0.5", "-1.5"])
+async def test_a_value_the_float_holds_exactly_is_tolerated_in_an_undeclared_key(
+    text: str,
+) -> None:
+    """The guard accepts it (the float holds it exactly). A subnormal float then reaches the
+    engine, whose ZEN core panics on one anywhere in the context (`ScaleExceedsMaximumPrecision`,
+    a RATING_EVALUATION_FAILED, as before this slice): that is the engine's, so the assertion is
+    only that the refusal, if any, is not the guard's."""
+    from pricing_core.rating.score import decimals_as_floats
+
+    assert decimals_as_floats(Decimal(text), "k") == float(text)
+    ctx = _ctx(inputs={**_INPUTS, "ghost": 0.5, "unread": Decimal(text)})
+    try:
+        await score_one(await _bundle(declared=False), ctx)
+    except ValueError as exc:
+        assert "INPUT_CONTRACT_VIOLATION" not in str(exc)
+
+
+@pytest.mark.req("FR-273")
+async def test_integer_and_non_numeric_values_are_untouched_by_the_guard() -> None:
+    from pricing_core.rating.score import decimals_as_floats
+
+    value = {"a": 7, "b": True, "c": "x", "d": None, "e": [1, "y", 2.5]}
+    assert decimals_as_floats(value, "k") == value
+
+
+@pytest.mark.req("FR-273")
+async def test_score_batch_refuses_an_over_precise_extra_column_row_by_name() -> None:
+    import polars as pl
+    from test_rating_score_batch import _ctx_to_row
+
+    from pricing_core.rating.score import score_batch
+
+    bundle = await _bundle(declared=False)
+    ok = _ctx_to_row(_ctx(inputs={**_INPUTS, "ghost": 0.5}))
+    bad = _ctx_to_row(_ctx(inputs={**_INPUTS, "ghost": 0.5}))
+    ok["quote_id"], bad["quote_id"] = "OK", "BAD"
+    ok["ghost"], bad["ghost"] = Decimal("0.5"), _OVER_PRECISE
+    frame = pl.DataFrame([ok, bad], schema_overrides={"ghost": pl.Decimal(scale=19)}).lazy()
+    rows = {r["quote_id"]: r for r in score_batch(bundle, frame).collect().to_dicts()}
+    assert rows["OK"]["outcome"] in ("quoted", "declined")
+    assert rows["BAD"]["outcome"] == "error"
+    assert rows["BAD"]["error_code"] == "INPUT_CONTRACT_VIOLATION"
+    assert "'ghost'" in rows["BAD"]["error_message"]
+    assert "0.1234567890123456789" not in rows["BAD"]["error_message"]
