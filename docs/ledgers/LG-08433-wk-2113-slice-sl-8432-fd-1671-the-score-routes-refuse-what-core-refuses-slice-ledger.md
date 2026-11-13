@@ -240,6 +240,52 @@ The closure predicate, verbatim: `git grep -lE "pricing_core\.rating\.score|from
 
 The throwaway probe worktree at `2ba0d0d5` was removed by exact path; no shared container bound a source under it (`docker inspect`, four containers, zero matches).
 
+### Review 3 (reviewer rev3-sl8432, `scratch/rev3-sl8432/review.md`, sha256 a248a11027d3), fix round by seat exec-sl8432e, 2026-11-13
+
+Range `origin/main...sl-8432-fd1671-score-decimal`. The review has 0 BLOCKING; R1 to R6 are LOW, R7 and R8 INFO. Start head `0016197bb206` (merge 111); no full gate, no database, no mint, no PR. Logs are in `~/gi-pricing-plan.local/scratch/exec-sl8432e/`, each opening `head=` and ending `rc=`.
+
+**R1 probe, at `0016197bb206`** (the real score route on the HTTP test file's harness; `probe-rows.txt`, `probe-0016197b.log`): the literal is sent as a bare JSON constant.
+
+| where | `NaN` | `Infinity` | `-Infinity` |
+|---|---|---|---|
+| (a) declared `decimal` input (`factor`) | 422 `INPUT_CONTRACT_VIOLATION` | 422 `INPUT_CONTRACT_VIOLATION` | 422 `INPUT_CONTRACT_VIOLATION` |
+| (b) undeclared key (`unread`) | **200** (no guard) | **200** | **200** |
+| (c) nested in an undeclared list or dict | **200** | **200** | **200** |
+
+The reviewer's reading holds: the constants bypass `parse_float` and cross as raw floats in an undeclared key. The 200 is the harness's stub bundle, which reads no such key; the real engine's answer to a non-finite float was not measured here, and FD 8446's sweep owns that.
+
+| step | commit | result |
+|---|---|---|
+| red, tests only | `5fac5380` | `12 failed, 44 passed` at `0016197bb206`: the twelve (b)/(c) cases (3 literals x 4 shapes), answering 200 (`red-r1.log`, rc 1). The declared-input cases and the non-scoring-route case pass. |
+| fix | `9487966e` | `json.loads(..., parse_float=Decimal, parse_constant=Decimal)` in `_DecimalJSONRequest.json` only; `56 passed` (`green-r1.log`, rc 0). A route outside the scoring routes still parses `NaN` as a float (new test, same file). |
+
+**Dispositions:**
+
+| finding | disposition |
+|---|---|
+| R1 non-finite literals | **FIXED**, red then green, above. FR-273's dated line and the CHANGELOG say it. |
+| R2 batch-path wording | **FIXED in words** (CHANGELOG, FR-273 line, this ledger): on the batch path only a `Decimal`-typed dataset column is refused; a `Float64` column is a Python `float`, is left alone, and fails in the engine as before. Round 2's "(`score_batch` ... share it)" stands as the record of what was written then and is read with this sentence. No behaviour change. |
+| R3 silent bypass | **FIXED**: `test_the_guard_accepts_exactly_what_the_engine_evaluates` asserts for every generated float that `decimals_as_floats(x, "k") is x` (the bypass is a bypass; it fails loud the day the guard covers floats) and that the guard would have refused more than 50 of the generated values through the normal path (`refused_by_the_guard`). Commit `4bd5b737`; `6 passed` (`green-r3.log`). The new assertions were not mutation-run; the bypass assertion holds by the helper's `float` branch returning its argument. |
+| R4 reformat | **RECORDED, not reverted.** Commit `788cd873` (the round-3 fix) ran `ruff format` over all of `packages/pricing-core/src/pricing_core/rating/score.py`, about 12 hunks unrelated to the slice (`_MULTIPLY_RUNGS`, `_ELAPSED_UNITS`, `_validate_inputs`, `_build_ladder`, `_reraise_engine_failure`, `_score_context_sync`, the `score_batch` progress call). Round 2's line "not format-clean on main and left as it is" is false from that commit on and stays as the record. `ruff format --check` on that file is now clean (rc 0); reverting would be churn. The S1 re-merge conflict risk the reviewer names is the lead's to weigh. |
+| R5 integers | **FIXED in words**: the guard acts on `Decimal`; a JSON integer, including one of 2^96 or more, is outside it as ruled (20:34:11 GMT), reaches the engine as before, and is a candidate for FD 8446's sweep. The CHANGELOG now reads "a number with a fraction or an exponent, or `NaN`, `Infinity`, `-Infinity`", not "any numeric key". |
+| R6 junction | **FIXED**: `)**(Amended` is now `)** *(Amended` in the FR-273 cell of `03-rating-engine.md`. The superseded-in-place sentence of the 19:53:34 GMT clause is left as the record, not rewritten; the line says so. |
+| R7 deep nesting | **INFO, no change.** `decimals_as_floats` recurses per level; a body near the interpreter's recursion limit could raise `RecursionError` (a 500) where it crossed before. Adversarial input only, bounded by the body limit, not a pricing error; note for FD 8446's sweep. Not a real defect for this slice. |
+| R8 `Decimal("sNaN")` | **INFO, no change.** Only a direct core caller can pass it (`float()` raises `ValueError`); JSON has no such constant, and `parse_constant` only ever sees `NaN`, `Infinity`, `-Infinity`. |
+
+**Seat runs of review 3** (head `4bd5b737a5fc` plus the docs of this round's last commit; `run-small.sh`, three files at most):
+
+| command | rc | reading |
+|---|---|---|
+| `test_score_decimal_input_http.py` + `test_rating_score_decimal_input.py` + `test_rating_score_undeclared_input_precision.py` (`g1.log`) | 0 | `88 passed` |
+| `test_rating_score_engine_decimal_limits.py` + `test_rating_score_decimal_parse_equivalence.py` + `test_quote_input_raise_sites.py` (`g2.log`) | 0 | `28 passed` |
+| `test_rating_score.py` + `test_rating_score_batch.py` + `tests/test_findings_ids.py` (`g3.log`) | 0 | `72 passed` |
+| `ruff check .` | 0 | `All checks passed!` |
+| `ruff format --check` on the four changed `.py` files | 0 | `4 files already formatted` |
+| `mypy` / `lint-imports` | 0 / 0 | `Success: no issues found in 257 source files` / `Contracts: 4 kept, 0 broken.` |
+| `register-lint.py`, `doc-index.py` (regenerated), `doc-index.py --check` (gate-2) | 0 / 0 / 0 | |
+| `audit-docs.py` (gate-2) (`audit-docs2.log`) | **1** | `FAILED (2)`: check 31 only, `gap in the full allocation between 2117 and 8432` and `between 8433 and 8443`, the slice's own working ids |
+| derived docs-reading set: `git grep -lE "register\.md|process-backlog|03-rating-engine|docs/specs|\"docs\" */ *\"specs\"|ledgers|CHANGELOG" -- tests backend/tests packages/*/tests` over the worktree (44 paths, identical to round 3's `derived-docs-tests.txt`); the 27 DB-free files of round 3's `docsset.txt`, nine run-small batches (`docsset.log`) | 0 for 6 batches; 1 for three | 11 `FAILED`, every one a test that runs `audit-docs.py` on the real tree or reads check 31's contiguity, red on the same two gaps (checked: `test_doc_index.py::test_an_index_skipping_a_reserved_block_breaks_contiguity` fails on `live allocation is not contiguous: [(2117, 8432), (8433, 8443)]`); a mint closes them. The 17 DB-backed files of the 44 are owed to the gate's DB window as in round 3. |
+
 ## PRs
 
 *(None: the branch is pushed, no PR is opened by the seat.)*

@@ -8,10 +8,12 @@ about. The format follows [Keep a Changelog 1.1.0](https://keepachangelog.com/en
 ### Changed
 
 - **Scoring now refuses a numeric input the engine cannot hold exactly; it priced silently, or
-  failed with a 500, before.** `POST /api/v1/score`, `POST /api/v1/score/compare` and the batch
-  path refuse a Rating Input, or any numeric key in a quote's inputs (by key path, nested keys
-  included), whose value does not round-trip through a float, or whose float the engine's
-  decimal cannot hold. The refusal is `422` `INPUT_CONTRACT_VIOLATION` (an RFC 9457 problem)
+  failed with a 500, before.** `POST /api/v1/score` and `POST /api/v1/score/compare` refuse a
+  Rating Input, or any key in a quote's inputs written as a number with a fraction or an
+  exponent, or as `NaN`, `Infinity` or `-Infinity` (by key path, nested keys included), whose
+  value does not round-trip through a float, or whose float the engine's decimal cannot hold.
+  Integers are not checked. On the batch path only a `Decimal`-typed dataset column is checked;
+  a float column is unchanged (FD 8446). The refusal is `422` `INPUT_CONTRACT_VIOLATION` (an RFC 9457 problem)
   naming the key path; the value is never echoed. Three kinds of value are refused:
   - **More than 15 significant digits.** `0.82469000000000000002` was rounded by the JSON parse
     and priced as the rounded value; it is refused now.
