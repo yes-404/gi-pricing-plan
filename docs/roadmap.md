@@ -4575,7 +4575,7 @@ tree: 2ba0d0d53142dacd6550cb314a4d65685b612bd1
 phase: P3
 work: WK-2113
 corrected_by: []
-relates: [FD-1495, LG-8430, OQ-8431, OQ-8438, OQ-8439, FD-8440, FD-8441]
+relates: [FD-1495, LG-8430, OQ-8431, OQ-8438, OQ-8439, FD-8440, FD-8441, FD-8444]
 ```
 
 *Dated 2026-11-13 by the executor (exec-sl8429), on the maintainer's GO "2026-11-13 19:51:15 GMT — Maintainer: FD-1495 PROBE READ" in `to-lead.md` (severity HIGH, seven conditions): the slice is `active`. `FR-88` and `FR-240` are clarified, the ledger is `LG 8430`, the open question is `OQ 8431`. WK-2113's own status line is not changed by this row.*
