@@ -32,7 +32,7 @@ _EDGES = [
 def _generated() -> list[float]:
     """Floats across the whole range: random bit patterns (every exponent), short decimal
     mantissas at every power of ten from 1e-35 to 1e32, and the neighbours of each edge."""
-    rng = random.Random(2118)
+    rng = random.Random(8432)
     out = list(_EDGES)
     for e in _EDGES:
         if math.isfinite(e):

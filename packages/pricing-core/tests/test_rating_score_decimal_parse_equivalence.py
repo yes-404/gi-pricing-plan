@@ -24,7 +24,7 @@ from test_rating_score_decimal_input import _INPUTS, _compiled_with_a_decimal_in
 
 from pricing_core.rating.score import score_one
 
-_SEED = 2118
+_SEED = 8432
 _TEXTS = 2000
 
 

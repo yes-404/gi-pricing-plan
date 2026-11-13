@@ -520,7 +520,7 @@ def test_a_route_outside_the_scoring_routes_still_parses_a_non_finite_literal_as
 def _route_texts() -> list[tuple[str, bool]]:
     """(JSON number text, expected to be refused): signs, exponent notation, at most 15 significant
     digits (priced), and the underflow extremes (refused)."""
-    rng = random.Random(2118)
+    rng = random.Random(8432)
     texts: list[tuple[str, bool]] = []
     for _ in range(300):
         digits = rng.randint(1, 15)
