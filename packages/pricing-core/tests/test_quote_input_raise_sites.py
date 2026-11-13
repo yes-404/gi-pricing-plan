@@ -112,7 +112,12 @@ _INPUT_FREE = {
     # FD-1648 (SL-2020): rate table ref, key values and the stored cell text, at compile
     ("rating/compile.py", "_refuse_unparseable_cells"): 1,
     # model ref, a fitted feature name, the Factor or operand slug@version, or an operand id
-    ("rating/compile.py", "_refuse_control_factor_features"): 2,
+    # (WK-2113 S3: the one definition compile and `load_bundle` share, moved out of
+    # `_refuse_control_factor_features`)
+    ("rating/compile.py", "refuse_control_in_features"): 2,
+    # WK-2113 S3: the re-validation front half's unpinned refusal: names no input, only that the
+    # version declares no pins
+    ("rating/compile.py", "check_rateable_intent"): 1,
     # FD-1495 (SL-1985): model ref and the fit-result field that could not be read: authored
     # identifiers at compile time, never a quote
     ("rating/compile.py", "_consumed_features"): 1,
