@@ -494,6 +494,23 @@ def _column_matches(declared: str | None, source: str, factor: Factor, *, kind: 
         )
 
 
+class OperandNotSuppliedError(FactorResolutionError):
+    """An interaction's operand is not among the Factors a guard was given (FR-88, FR-240).
+
+    It carries the two names the guards put in their own refusal, so no guard interpolates an
+    exception's text (NFR-499's sink census): `factor_slug` is the interaction and `operand_id`
+    the operand that could not be read.
+    """
+
+    def __init__(self, factor_slug: str, operand_id: UUID) -> None:
+        super().__init__(
+            f"factor {factor_slug!r} crosses factor {operand_id}, which is not among the "
+            "Factors supplied, so its intent cannot be read"
+        )
+        self.factor_slug = factor_slug
+        self.operand_id = operand_id
+
+
 def control_factor_in(factor: Factor, pool: Iterable[Factor]) -> Factor | None:
     """The first `control`-intent Factor in `factor`'s closure, or `None` (FR-88, FR-240).
 
@@ -521,10 +538,7 @@ def control_factor_in(factor: Factor, pool: Iterable[Factor]) -> Factor | None:
         for operand_id in current.operand_factor_ids:
             operand = by_id.get(operand_id)
             if operand is None:
-                raise FactorResolutionError(
-                    f"factor {current.slug!r} crosses factor {operand_id}, which is not "
-                    "among the Factors supplied, so its intent cannot be read"
-                )
+                raise OperandNotSuppliedError(current.slug, operand_id)
             pending.append(operand)
     return None
 
