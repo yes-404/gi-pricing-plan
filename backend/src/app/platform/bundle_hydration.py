@@ -113,8 +113,12 @@ async def hydrate(
         if refusal is None:
             raise
         raise await _refuse(
-            slot, database, workspace_id=workspace_id, ref=ref,
-            content_hash=bundle.content_hash, refusal=refusal,
+            slot,
+            database,
+            workspace_id=workspace_id,
+            ref=ref,
+            content_hash=bundle.content_hash,
+            refusal=refusal,
         ) from None
 
 
@@ -158,8 +162,12 @@ async def revalidate(
         if refusal is None:
             raise
         raise await _refuse(
-            slot, database, workspace_id=workspace_id, ref=ref,
-            content_hash=bundle.content_hash, refusal=refusal,
+            slot,
+            database,
+            workspace_id=workspace_id,
+            ref=ref,
+            content_hash=bundle.content_hash,
+            refusal=refusal,
         ) from None
 
 
@@ -174,8 +182,12 @@ def revalidator(
 ) -> Revalidate:
     async def bound(session: AsyncSession, *, ref: ArtifactRef) -> None:
         await revalidate(
-            session, database=database, blob_store=blob_store, slot=slot,
-            workspace_id=workspace_id, ref=ref,
+            session,
+            database=database,
+            blob_store=blob_store,
+            slot=slot,
+            workspace_id=workspace_id,
+            ref=ref,
         )
 
     return bound
