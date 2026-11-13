@@ -511,11 +511,11 @@ def test_the_feature_guard_expands_a_nested_interaction_to_its_leaves() -> None:
 @pytest.mark.req("FR-240")
 def test_the_feature_guard_refuses_an_operand_that_is_not_among_the_pins_factors() -> None:
     """Fail closed: an operand the pin does not carry cannot be shown not to be `control`."""
-    cross, region, _yoa = _crossed()
+    cross, region, yoa = _crossed()
     with pytest.raises(ValueError, match="CONTROL_FACTOR_IN_RATEABLE_PATH") as refused:
         _refuse_control_factor_features(MODEL, _glm_pin((cross, region), *CROSS_TERMS))
     assert "region_x_yoa" in str(refused.value)
-    assert str(_yoa.id) in str(refused.value)
+    assert str(yoa.id) in str(refused.value)
 
 
 @pytest.mark.req("FR-88")
@@ -730,3 +730,20 @@ def test_rateable_drops_an_interaction_whose_closure_holds_a_control_factor() ->
     plan = _factor("plan")
     fine = _interaction("region_x_plan", region, plan)
     assert rateable([cross, region, yoa, plan, fine]) == (region, plan, fine)
+
+
+@pytest.mark.req("FR-88")
+@pytest.mark.req("FR-240")
+def test_control_factor_in_terminates_and_decides_on_a_cyclic_operand_graph() -> None:
+    """F-2: A crosses B and B crosses A. The walk must end, and still find a `control` leaf
+    reachable from the cycle and report none when there is none."""
+    from pricing_core.modelling.factors import control_factor_in
+
+    leaf, filler = _factor("leaf"), _factor("filler")
+    a, b = _interaction("a_x", leaf, filler), _interaction("b_x", leaf, filler)
+    a = a.model_copy(update={"operand_factor_ids": (b.id, leaf.id)})
+    b = b.model_copy(update={"operand_factor_ids": (a.id, leaf.id)})
+    assert control_factor_in(a, [a, b, leaf]) is None
+    control = _controlled("yoa")
+    b = b.model_copy(update={"operand_factor_ids": (a.id, control.id)})
+    assert control_factor_in(a, [a, b, leaf, control]) is control

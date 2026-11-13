@@ -314,6 +314,18 @@ def test_control_factors_are_fitted_but_not_rateable() -> None:
     assert rateable([risk, control]) == (risk,)
 
 
+@pytest.mark.req("FR-88")
+def test_only_risk_factors_are_rateable() -> None:
+    """FR-88: "Rating Versions may only use `risk` factors" — an `offset` or `diagnostic`
+    Factor is no more rateable than a `control` one (review F-1, SL 8429)."""
+    from pricing_core.modelling.factors import rateable
+
+    risk = _factor("area", "area")
+    offset = _factor("exposure", "exposure_years", intent=FactorIntent.OFFSET)
+    diagnostic = _factor("watch", "driv_age", intent=FactorIntent.DIAGNOSTIC)
+    assert rateable([risk, offset, diagnostic]) == (risk,)
+
+
 # -- What the first version of this file could not catch ---------------------------------
 #
 # Three independent audits found the same hole: every assertion here was either about a

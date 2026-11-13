@@ -530,13 +530,18 @@ def control_factor_in(factor: Factor, pool: Iterable[Factor]) -> Factor | None:
 
 
 def rateable(factors: Sequence[Factor]) -> tuple[Factor, ...]:
-    """The factors a Rating Version may use (FR-88).
+    """The factors a Rating Version may use (FR-88): `risk` intent alone.
 
-    `control` factors are fitted and never rated on — year of account being the standard
-    case — and neither is an interaction with a `control` operand at any depth. Selecting
-    them here rather than in `03` keeps the intent with the definition.
+    `control`, `offset` and `diagnostic` factors are fitted or watched and never rated on —
+    year of account being the standard `control` case — and neither is an interaction with a
+    `control` operand at any depth. Selecting them here rather than in `03` keeps the intent
+    with the definition.
     """
-    return tuple(f for f in factors if control_factor_in(f, factors) is None)
+    return tuple(
+        f
+        for f in factors
+        if f.intent is FactorIntent.RISK and control_factor_in(f, factors) is None
+    )
 
 
 def consumed_features(fit_result: object) -> tuple[str, ...]:
