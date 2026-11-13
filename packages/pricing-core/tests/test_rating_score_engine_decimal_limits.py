@@ -72,13 +72,21 @@ async def test_the_guard_accepts_exactly_what_the_engine_evaluates() -> None:
     bundle = await _bundle(declared=False)
     disagreements: list[str] = []
     seen = {True: 0, False: 0}
+    refused_by_the_guard = 0
     for x in _generated():
+        # The bypass must stay a bypass: a float is handed to the engine untouched. The day the
+        # guard also covers floats this fails loud, and the test must call the engine below it.
+        assert decimals_as_floats(x, "k") is x, f"the guard now touches a float: {x!r}"
         accepts = _guard_accepts(x)
+        refused_by_the_guard += not accepts
         evaluates = await _engine_evaluates(bundle, x)
         seen[evaluates] += 1
         if accepts != evaluates:
             disagreements.append(f"{x!r}: guard accepts={accepts}, engine evaluates={evaluates}")
     assert not disagreements, "\n".join(disagreements)
+    # The normal path (a Decimal) would have refused values the bypass fed the engine: without
+    # them the bypass proves nothing about the engine's own limits.
+    assert refused_by_the_guard > 50, refused_by_the_guard
     assert seen[True] > 50, seen  # both sides were exercised
     assert seen[False] > 50, seen
 
