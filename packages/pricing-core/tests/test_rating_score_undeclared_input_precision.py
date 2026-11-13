@@ -106,24 +106,31 @@ async def test_an_underflowing_or_overflowing_undeclared_value_is_refused(text: 
 
 
 @pytest.mark.req("FR-273")
-@pytest.mark.parametrize("text", ["5e-324", "1e-321", "-5e-324", "0.0", "-0.0", "0.5", "-1.5"])
+@pytest.mark.parametrize("text", ["5e-324", "1e-321", "-5e-324", "1e-29", "1e29", "-1e300"])
+async def test_a_value_the_engines_decimal_cannot_hold_is_refused_in_an_undeclared_key(
+    text: str,
+) -> None:
+    """Amended by the maintainer's S2 round 3 ruling (to-lead 2026-11-13 21:00:31 GMT): these
+    were tolerated by the guard and then failed inside the engine (FD 8445); the guard now
+    refuses them, naming the key path."""
+    ctx = _ctx(inputs={**_INPUTS, "ghost": 0.5, "unread": Decimal(text)})
+    with pytest.raises(ValueError, match=r"INPUT_CONTRACT_VIOLATION.*'unread'") as info:
+        await score_one(await _bundle(declared=False), ctx)
+    assert text not in str(info.value)  # NFR-499
+
+
+@pytest.mark.req("FR-273")
+@pytest.mark.parametrize("text", ["0.0", "-0.0", "0.5", "-1.5", "1e-28", "7.9e28"])
 async def test_a_value_the_float_holds_exactly_is_tolerated_in_an_undeclared_key(
     text: str,
 ) -> None:
-    """The guard accepts it (the float holds it exactly). A subnormal float then reaches the
-    engine, whose ZEN core panics on one anywhere in the context (`ScaleExceedsMaximumPrecision`,
-    a RATING_EVALUATION_FAILED, as before this slice): that is the engine's, so the assertion is
-    only that the refusal, if any, is not the guard's."""
+    """The guard accepts it (the float holds it exactly and the engine's decimal holds the
+    float) and the engine evaluates it."""
     from pricing_core.rating.score import decimals_as_floats
 
     assert decimals_as_floats(Decimal(text), "k") == float(text)
     ctx = _ctx(inputs={**_INPUTS, "ghost": 0.5, "unread": Decimal(text)})
-    refusal = None
-    try:
-        await score_one(await _bundle(declared=False), ctx)
-    except ValueError as exc:
-        refusal = str(exc)
-    assert refusal is None or "INPUT_CONTRACT_VIOLATION" not in refusal
+    await score_one(await _bundle(declared=False), ctx)
 
 
 @pytest.mark.req("FR-273")
