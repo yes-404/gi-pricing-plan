@@ -34,6 +34,7 @@ from backend.tests.test_rating_version_compile import (
     _headers,
     _insert_version,
     _minimal_algorithm,
+    _read_blob,
     _run_compile_job,
 )
 from sqlalchemy import select, text
@@ -57,6 +58,7 @@ from model_schema import (
     ObjectiveStatus,
     new_uuid7,
 )
+from pricing_core.rating.compile import Bundle
 
 
 @pytest.fixture(autouse=True)
@@ -427,5 +429,136 @@ def test_a_compile_over_a_gbm_fitted_on_a_control_factor_fails_with_its_code(
         )
     )
     job_row = _run_compile_job(api_client, headers, database, blob_store, row.id)
+    assert job_row.status is JobStatus.FAILED
+    assert job_row.error["code"] == "CONTROL_FACTOR_IN_RATEABLE_PATH"
+
+
+# -- An interaction-keyed table through the REAL compile resolver (FD-1495, WK-2113 S1) ------
+#
+# The `factor` branch of `WorkspaceResolver` returns the Factor plus the operands it crosses
+# (`load_factor_by_ref`), which is what lets the pricing-core key guard test every operand's
+# intent. These two tests drive that branch end to end, not a hand-built `ResolvedArtifact`.
+
+
+async def _cross_factors(
+    session: AsyncSession, workspace_id: Any, *, second_operand_intent: FactorIntent
+) -> str:
+    """Factors `region` (risk) and `yoa` (`second_operand_intent`) and the interaction
+    `region_x_yoa` crossing them; returns the interaction's ref."""
+    dataset_id = new_uuid7()
+    operand_ids = []
+    for slug, intent in (("region", FactorIntent.RISK), ("yoa", second_operand_intent)):
+        factor = Factor(
+            id=new_uuid7(), slug=slug, dataset_id=dataset_id, version=1,
+            type=FactorType.IDENTITY, source_columns=(slug,), intent=intent,
+        )
+        session.add(
+            FactorRow(
+                id=factor.id, workspace_id=workspace_id, dataset_id=dataset_id, slug=slug,
+                version=1,
+                body=factor.model_dump(mode="json", exclude={"id", "version", "dataset_id"}),
+            )
+        )
+        operand_ids.append(factor.id)
+    cross = Factor(
+        id=new_uuid7(), slug="region_x_yoa", dataset_id=dataset_id, version=1,
+        type=FactorType.INTERACTION, source_columns=(), operand_factor_ids=tuple(operand_ids),
+    )
+    session.add(
+        FactorRow(
+            id=cross.id, workspace_id=workspace_id, dataset_id=dataset_id, slug=cross.slug,
+            version=1,
+            body=cross.model_dump(mode="json", exclude={"id", "version", "dataset_id"}),
+        )
+    )
+    await session.flush()
+    return f"factor:{cross.slug}@{cross.version}"
+
+
+async def _table_keyed_on(
+    session: AsyncSession, workspace_id: Any, principal: Any, factor_ref: str
+) -> str:
+    """A rateable rows-stored table whose one key names `factor_ref`; returns its pin."""
+    slug = _compile_table_slug()
+    table = RateTableRow(
+        workspace_id=workspace_id, slug=slug, current_version=1, created_by=principal.id
+    )
+    session.add(table)
+    await session.flush()
+    session.add(
+        RateTableVersionRow(
+            workspace_id=workspace_id, rate_table_id=table.id, version_number=1,
+            storage="rows",
+            definition={
+                "slug": slug, "version": 1, "rateable": True, "storage": "rows",
+                "keys": [
+                    {"name": "region_x_yoa", "type": "string", "banding_ref": None,
+                     "factor_ref": factor_ref}
+                ],
+                "value": {"name": "relativity", "type": "relativity", "unit": "factor",
+                          "min": None, "max": None},
+                "default_row": None,
+            },
+            change_note="interaction-keyed, FD-1495",
+            created_by=principal.id,
+        )
+    )
+    await session.flush()
+    return f"rate_table:{slug}@1"
+
+
+def _compile_interaction_keyed(
+    api_client, principal, workspace_id, database, blob_store, *,
+    second_operand_intent: FactorIntent,
+) -> Any:
+    async def _arrange() -> str:
+        async with database.unit_of_work() as session:
+            ref = await _cross_factors(
+                session, workspace_id, second_operand_intent=second_operand_intent
+            )
+            return await _table_keyed_on(session, workspace_id, principal, ref)
+
+    pin = _run(_arrange())
+    return _compile_with_pins(
+        api_client, principal, workspace_id, database, blob_store, rate_tables=[pin]
+    )
+
+
+@pytest.mark.req("FR-88")
+@pytest.mark.req("FR-239")
+@pytest.mark.req("FR-240")
+def test_a_risk_by_risk_interaction_keyed_table_compiles_with_an_unchanged_hash(
+    api_client, workspace_id, principal, grant, database, blob_store
+) -> None:
+    """The green guard: the fix must not refuse what was priceable. The bundle's `resolved_payloads`
+    holds the Factor payload only — the operand chain rides `ResolvedArtifact.factors`, which is
+    not hashed — so the content hash is a function of the same inputs as before the fix (FR-239).
+    The literal pre-fix equality is pinned by pricing-core's fixture-hash test; this one proves the
+    real resolver still compiles the table and puts only the Factor payload into the bundle."""
+    _run(grant("analyst"))
+    job_row = _compile_interaction_keyed(
+        api_client, principal, workspace_id, database, blob_store,
+        second_operand_intent=FactorIntent.RISK,
+    )
+    assert job_row.status is JobStatus.SUCCEEDED, job_row.error
+    bundle = Bundle.model_validate_json(_read_blob(database, blob_store, job_row.result["ref"]))
+    factor_payloads = {k: v for k, v in bundle.resolved_payloads.items() if k.startswith("factor:")}
+    assert set(factor_payloads) == {"factor:region_x_yoa@1"}
+    assert "operand_factor_ids" in factor_payloads["factor:region_x_yoa@1"]
+    assert bundle.content_hash
+
+
+@pytest.mark.req("FR-88")
+@pytest.mark.req("FR-240")
+def test_an_interaction_keyed_table_with_a_control_operand_fails_to_compile_with_its_code(
+    api_client, workspace_id, principal, grant, database, blob_store
+) -> None:
+    """The same table as the test above with `yoa` declared `control`: refused with the named
+    error, which is only possible because the resolver supplies the operand chain."""
+    _run(grant("analyst"))
+    job_row = _compile_interaction_keyed(
+        api_client, principal, workspace_id, database, blob_store,
+        second_operand_intent=FactorIntent.CONTROL,
+    )
     assert job_row.status is JobStatus.FAILED
     assert job_row.error["code"] == "CONTROL_FACTOR_IN_RATEABLE_PATH"
