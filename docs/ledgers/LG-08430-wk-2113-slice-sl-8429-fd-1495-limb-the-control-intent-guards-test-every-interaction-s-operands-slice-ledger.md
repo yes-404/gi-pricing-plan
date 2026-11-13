@@ -65,6 +65,23 @@ FAILED test_rating_compile_fr240.py::test_seeding_from_an_interaction_with_a_mis
 | import-closure set, pricing-core part: 67 test files in 23 `run-small` batches of at most three (`green-core.log`) | `3f0eebbd` | 22 batches rc 0; batch 8 (`test_prediction_interval.py`, `test_quantile_crossing.py`, `test_quote_input_raise_sites.py`) rc 1: `test_every_quote_input_raise_site_has_a_sentinel_case`, the census counted two `_raise_named` sites in each of `_refuse_control_factor_keys` and `_refuse_control_factor_features` where the allow-list said one | 1 |
 | census fix `ae216c91`: `test_quote_input_raise_sites.py`, `test_rating_compile_fr240.py`, `test_fremtpl2_rate_fixture.py` (`green-census.log`) | `ae216c91cc55` | 71 passed | 0 |
 
+**Docs and static checks** (head `30c400bcf5bf`, `git diff --name-only origin/main...HEAD` in `diff-names.txt`; each through `flock -w 900 /tmp/slots/gate-2`; logs `head=` first, `rc=` last):
+
+| check | rc | note |
+|---|---|---|
+| `python3 scripts/audit-docs.py` (`audit-docs-3.log`) | 1 | `FAILED (1): check 31: gap in the full allocation between 2115 and 8429`: the slice's own working ids, cleared by the mint. The first run (`audit-docs.log`) also failed check 22 (an unescaped pipe in FR-240's clarification) and check 39 (stale INDEX); both fixed in `3de1d980` and `30c400bc`. |
+| `python3 scripts/doc-index.py --check` (`doc-index-check-3.log`) | 0 | byte-stable |
+| `python3 scripts/register-lint.py` (`register-lint-2.log`, head `3de1d980`) | 0 | 0 violations |
+| `uv run python scripts/req-coverage.py` (`req-coverage-2.log`, head `3de1d980`) | 0 | |
+| `uv run python scripts/generate-contracts.py --check` (`generate-contracts.log`, head `313d4c59`) | 0 | 58 contracts match |
+| `uv run ruff check .` (`ruff.log`) | 0 | |
+| `uv run mypy` (`mypy.log`) | 0 | 257 source files |
+| `uv run lint-imports` (`lint-imports.log`) | 0 | 4 kept, 0 broken |
+| `ruff format --check` on the 7 changed `.py` files | 1 | five are unformatted at `origin/main` too (`operations.py`, `compile.py`, `rating_versions.py`, `test_rating_compile_fr240.py`, `test_quote_input_raise_sites.py`); `factors.py` and `test_fremtpl2_rate_fixture.py`, clean at `origin/main`, are clean |
+| `scripts/idsweep.sh origin/sl-8429-fd1495-interaction-operands` | 0 | no duplicate, no cross-branch number |
+
+**Spec-reading and docs-audit tests** (`docs-tests.log`, head `30c400bc`, run-small in batches of three, `tests/` only; the list is `grep -lE 'docs/specs|"docs" */ *"specs"' backend/tests tests`, saved as `spec-readers.txt`, plus the eight docs-audit files): `test_doc_id.py`, `test_doc_id_verify.py`, `test_permission_parity.py`, `test_scope_audit.py`, `test_file_census.py`, `test_doc_id_migrate.py`, `test_spec_examples.py`, `test_doc_id_history_input.py`: 325 + 342 + 40 passed, rc 0. The eight docs-audit files: 13 FAILED across three batches, every one in the item-31 set (`test_audit_docs_finding_citations`, `test_audit_docs_ids`, `test_audit_docs_process_core_digest`, `test_audit_docs_w37_11_ceiling`, `test_doc_index` (`test_an_index_skipping_a_reserved_block_breaks_contiguity`), `test_register_lint`, `test_register_owed`, `test_repository_invariants`), each reading the real tree, which `audit-docs` fails only on check 31. They are re-run at the mint. The nine spec-reading files under `backend/tests` need the DB lane and are owed to the gate.
+
 The 107 backend test files the closure reaches need a database and are **owed to the gate** (brief: no DB lane for the seat). The closure is derived by `closure.py` (the changed source modules, every source file importing one, one more level of importers; GREEN = every test file importing anything in it): `git diff --name-only HEAD -- packages backend/src` for the changed modules, then an `ast` walk of `packages/**/src` and `backend/src`; lists in `changed.txt` and `green-tests.txt`. The route sweep `backend/tests/test_api_authorisation_sweep.py` is not in the closure (no request shape changed) and not run.
 
 ### Condition-by-condition evidence
