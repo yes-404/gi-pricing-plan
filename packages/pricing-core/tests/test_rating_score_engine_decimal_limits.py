@@ -1,4 +1,4 @@
-"""SL 8432 round 3: the guard and the engine's decimal limits are pinned together (the
+"""SL 2118 round 3: the guard and the engine's decimal limits are pinned together (the
 maintainer's ruling, to-lead 2026-11-13 21:00:31 GMT, condition (2)).
 
 `decimals_as_floats` refuses a `Decimal` whose float the engine's decimal cannot hold (scale
@@ -32,7 +32,7 @@ _EDGES = [
 def _generated() -> list[float]:
     """Floats across the whole range: random bit patterns (every exponent), short decimal
     mantissas at every power of ten from 1e-35 to 1e32, and the neighbours of each edge."""
-    rng = random.Random(8432)
+    rng = random.Random(2118)
     out = list(_EDGES)
     for e in _EDGES:
         if math.isfinite(e):

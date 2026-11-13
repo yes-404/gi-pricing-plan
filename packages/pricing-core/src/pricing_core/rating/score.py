@@ -335,7 +335,7 @@ def _as_decimal(value: Any) -> Decimal:
     return value if isinstance(value, Decimal) else Decimal(str(value))
 
 
-#: The limits of the decimal the engine builds from a float (measured at SL 8432 round 3, and
+#: The limits of the decimal the engine builds from a float (measured at SL 2118 round 3, and
 #: pinned by `test_rating_score_engine_decimal_limits.py`, which turns red if a dependency
 #: upgrade moves either): a scale of at most 28 digits after the point, and a magnitude below
 #: 2**96 (a 96-bit decimal). A float outside either fails inside the engine as a 500.
@@ -390,7 +390,7 @@ def _engine_context(algorithm: RatingAlgorithm, ctx: QuoteContext) -> dict[str, 
 
     The binding refuses a `Decimal` (`TypeError`), so a non-money `decimal` input is the one
     value that crosses as a float; money stays integer minor units and is never converted. The
-    guard covers an undeclared key too (SL 8432 question (a)): an `input` step may read a key
+    guard covers an undeclared key too (SL 2118 question (a)): an `input` step may read a key
     the input contract never declares, so a key no step reads is refused as well, stricter than
     needed. A declared `decimal` input that is a `float` must also be finite."""
     decimal_inputs = {f.name for f in algorithm.input_contract if f.type == RatingInputType.DECIMAL}

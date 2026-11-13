@@ -13,7 +13,7 @@ about. The format follows [Keep a Changelog 1.1.0](https://keepachangelog.com/en
   exponent, or as `NaN`, `Infinity` or `-Infinity` (by key path, nested keys included), whose
   value does not round-trip through a float, or whose float the engine's decimal cannot hold.
   Integers are not checked. On the batch path only a `Decimal`-typed dataset column is checked;
-  a float column is unchanged (FD 8446). The refusal is `422` `INPUT_CONTRACT_VIOLATION` (an RFC 9457 problem)
+  a float column is unchanged (FD 2123). The refusal is `422` `INPUT_CONTRACT_VIOLATION` (an RFC 9457 problem)
   naming the key path; the value is never echoed. Three kinds of value are refused:
   - **More than 15 significant digits.** `0.82469000000000000002` was rounded by the JSON parse
     and priced as the rounded value; it is refused now.

@@ -1,4 +1,4 @@
-"""SL-8432 (FD-1671, condition (c), FR-239 same hash, same price): parsing a decimal Rating Input
+"""SL-2118 (FD-1671, condition (c), FR-239 same hash, same price): parsing a decimal Rating Input
 as `Decimal` (the score routes' JSON parse, FR-273) changes no price that parsing it as a `float`
 priced, for any text of at most 15 significant digits.
 
@@ -24,7 +24,7 @@ from test_rating_score_decimal_input import _INPUTS, _compiled_with_a_decimal_in
 
 from pricing_core.rating.score import score_one
 
-_SEED = 8432
+_SEED = 2118
 _TEXTS = 2000
 
 

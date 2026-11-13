@@ -1,4 +1,4 @@
-"""FD-1671 / SL-8432: the score routes refuse what pricing-core refuses (FR-273).
+"""FD-1671 / SL-2118: the score routes refuse what pricing-core refuses (FR-273).
 
 A decimal Rating Input is a JSON number on the wire. Starlette parses it to a `float`, so a
 text of more than about 15 significant digits was rounded *before* pricing-core's FR-273
@@ -384,7 +384,7 @@ def test_a_stored_quote_context_keeps_a_decimal_input_a_json_number() -> None:
     assert QuoteContext.model_validate(stored).inputs["factor"] == 0.75
 
 
-# --- SL 8432 F2 / question (a): the extremes of magnitude, named, through the route ---------------
+# --- SL 2118 F2 / question (a): the extremes of magnitude, named, through the route ---------------
 
 
 @pytest.mark.req("FR-273")
@@ -392,14 +392,14 @@ def test_a_stored_quote_context_keeps_a_decimal_input_a_json_number() -> None:
 def test_a_value_the_float_cannot_hold_is_refused_not_rounded_to_zero_or_infinity(
     client: TestClient, text: str
 ) -> None:
-    """Behaviour change (SL 8432): `1e-400` read as the float 0.0 and priced; it is refused now."""
+    """Behaviour change (SL 2118): `1e-400` read as the float 0.0 and priced; it is refused now."""
     _assert_refused_naming_the_input(_post(client, SCORE_URL, _body(50000, text)), text)
 
 
-# The engine's own limits, measured at ccdafcc8 (SL 8432 round 3): its decimal holds a scale of
+# The engine's own limits, measured at ccdafcc8 (SL 2118 round 3): its decimal holds a scale of
 # at most 28 and a magnitude below 2**96, and a float outside either fails as a 500
 # INTERNAL_ERROR. The guard refuses the same set (the maintainer's ruling, to-lead 2026-11-13
-# 21:00:31 GMT, option A with the engine's own predicate; FD 8445).
+# 21:00:31 GMT, option A with the engine's own predicate; FD 2122).
 _ENGINE_CANNOT_HOLD = [
     "5e-324",  # a subnormal
     "1e-321",
@@ -421,7 +421,7 @@ def test_a_value_the_engines_decimal_cannot_hold_is_refused_at_the_guard(
     client: TestClient, text: str
 ) -> None:
     """Refused with INPUT_CONTRACT_VIOLATION (422) naming the key path, never the value; before
-    the guard covered it the engine failed on it and the route answered a 500 (FD 8445)."""
+    the guard covered it the engine failed on it and the route answered a 500 (FD 2122)."""
     _assert_refused_naming_the_input(_post(client, SCORE_URL, _body(50000, text)), text)
 
 
@@ -457,7 +457,7 @@ def test_an_over_precise_value_in_a_nested_undeclared_key_is_refused_naming_the_
     assert "0.82469" not in response.text
 
 
-# --- SL 8432 review 3 R1: the three non-finite JSON literals ---------------------------------
+# --- SL 2118 review 3 R1: the three non-finite JSON literals ---------------------------------
 # `json.loads` does not route `NaN`, `Infinity` and `-Infinity` through `parse_float`, so they
 # arrived as raw floats that no guard touched in an undeclared or nested key.
 
@@ -514,13 +514,13 @@ def test_a_route_outside_the_scoring_routes_still_parses_a_non_finite_literal_as
     assert response.json() == {"a": "float", "b": "float", "c": "float"}
 
 
-# --- SL 8432 F3: the FR-239 property, driven through the route's own JSON parse --------------
+# --- SL 2118 F3: the FR-239 property, driven through the route's own JSON parse --------------
 
 
 def _route_texts() -> list[tuple[str, bool]]:
     """(JSON number text, expected to be refused): signs, exponent notation, at most 15 significant
     digits (priced), and the underflow extremes (refused)."""
-    rng = random.Random(8432)
+    rng = random.Random(2118)
     texts: list[tuple[str, bool]] = []
     for _ in range(300):
         digits = rng.randint(1, 15)
@@ -568,7 +568,7 @@ def test_the_route_prices_what_the_float_parse_priced_and_refuses_the_underflows
         assert response.json()["outputs"] == priced.model_dump(mode="json")["outputs"], text
 
 
-# --- SL 8432 F1: the sampled trace reproduces the quote (the audit promise, FR-259) ---------------
+# --- SL 2118 F1: the sampled trace reproduces the quote (the audit promise, FR-259) ---------------
 
 
 @pytest.mark.req("FR-259")
@@ -597,7 +597,7 @@ def test_a_nested_undeclared_value_re_scores_off_path_to_the_live_quote(
     assert replay.model_dump(exclude={"timing_ms"}) == live.model_dump(exclude={"timing_ms"})
 
 
-# --- SL 8432 F6: /score/compare, the comparison side ---------------------------------------------
+# --- SL 2118 F6: /score/compare, the comparison side ---------------------------------------------
 
 
 @pytest.mark.req("FR-273")

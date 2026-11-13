@@ -1,4 +1,4 @@
-"""FD-1671 / SL-8432, condition (f): the create_app() + database reading of the score routes'
+"""FD-1671 / SL-2118, condition (f): the create_app() + database reading of the score routes'
 Decimal parse (FR-273), completing `test_score_decimal_input_http.py`'s stubbed one.
 
 One real app, one genuinely compiled Rating Version with a `decimal` input, a Service Account

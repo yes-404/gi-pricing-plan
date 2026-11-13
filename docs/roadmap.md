@@ -4580,10 +4580,10 @@ Moved to P3 by the lead's entry "2026-10-10 16:07:46 BST — RULINGS on PL 9955 
 
 ***Dated line, 2026-11-11 10:58:58 GMT — RE-PARENTED*** (the maintainer's act, by delegation; written by the planner in the P2-close docs batch). The maintainer's entry "2026-11-11 10:58:58 GMT — Maintainer: THE USER'S P2 CLOSE WORD" in `to-lead.md`, MY ACTS: "SL-1601 re-parented as the drafts say". The drafts name P3-C (`P3-WK-drafts.md`, sha256 prefix `196357ab59ac`, Q4, ruled at to-lead "2026-11-09 12:08:21 GMT": "RE-PARENTED at the P2 close by a dated line to the P3 row that owns its subject"). The `work:` field above read `WK-1178` from the cut on 2026-10-10 and reads `WK-2113` from this line, because WK-1178 closed at the P2 close. The row moved here from under `WK-1288`, where it sat by position only. Its heading and `title:` keep their words as cut ("WK-1178 P3 carry"). Nothing else in the row changes: status `draft`, and its activation needs, stand.
 
-#### SL-8432 — WK-2113 S2 — FD-1671: the score routes refuse what core refuses
+#### SL-2118 — WK-2113 S2 — FD-1671: the score routes refuse what core refuses
 
 ```yaml
-id: SL-8432
+id: SL-2118
 family: slice
 title: WK-2113 S2 — FD-1671: the score routes refuse what core refuses
 status: active                 # draft → active → closed | retired (§1.2a)
@@ -4593,10 +4593,10 @@ tree: 2ba0d0d53142dacd6550cb314a4d65685b612bd1
 phase: P3
 work: WK-2113
 corrected_by: []
-relates: [FD-1671, LG-8433]
+relates: [FD-1671, LG-2119]
 ```
 
-The maintainer's GO (R2) of `to-lead` "2026-11-13 19:53:34 GMT — Maintainer: RULINGS R1–R3", severity MEDIUM, design (b): `POST /score` and `POST /score/compare` read the JSON numbers of a Quote Context as `Decimal`, scoped to those two routes, so `pricing-core`'s FR-273 guard is the one definition and the HTTP paths refuse an over-precision `decimal` Rating Input with `INPUT_CONTRACT_VIOLATION` as core does; red first, FR-239 held by the golden suite plus a property test. Ledger `LG-8433`. Dispatched in parallel with the first S1 slice (disjoint files).
+The maintainer's GO (R2) of `to-lead` "2026-11-13 19:53:34 GMT — Maintainer: RULINGS R1–R3", severity MEDIUM, design (b): `POST /score` and `POST /score/compare` read the JSON numbers of a Quote Context as `Decimal`, scoped to those two routes, so `pricing-core`'s FR-273 guard is the one definition and the HTTP paths refuse an over-precision `decimal` Rating Input with `INPUT_CONTRACT_VIOLATION` as core does; red first, FR-239 held by the golden suite plus a property test. Ledger `LG-2119`. Dispatched in parallel with the first S1 slice (disjoint files).
 
 ### WK-2114 — P3-D — process and instruments
 

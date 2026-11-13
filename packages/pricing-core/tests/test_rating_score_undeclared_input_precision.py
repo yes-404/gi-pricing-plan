@@ -1,4 +1,4 @@
-"""SL 8432 question (a): an algorithm can read a key its input contract does not declare.
+"""SL 2118 question (a): an algorithm can read a key its input contract does not declare.
 
 An `input` step naming a key that is absent from `input_contract` passes save-time validation
 (`validate_algorithm` returns no issue) and compiles; `_validate_inputs` tolerates the extra key;
@@ -79,7 +79,7 @@ async def test_an_over_precise_value_in_an_undeclared_input_is_refused_too() -> 
         )
 
 
-# --- SL 8432 option (ii): FR-273's guard covers every numeric value, nested included ---------
+# --- SL 2118 option (ii): FR-273's guard covers every numeric value, nested included ---------
 
 
 async def _score_ghost(value: Any, *, declared: bool = False) -> Any:
@@ -111,7 +111,7 @@ async def test_a_value_the_engines_decimal_cannot_hold_is_refused_in_an_undeclar
     text: str,
 ) -> None:
     """Amended by the maintainer's S2 round 3 ruling (to-lead 2026-11-13 21:00:31 GMT): these
-    were tolerated by the guard and then failed inside the engine (FD 8445); the guard now
+    were tolerated by the guard and then failed inside the engine (FD 2122); the guard now
     refuses them, naming the key path."""
     ctx = _ctx(inputs={**_INPUTS, "ghost": 0.5, "unread": Decimal(text)})
     with pytest.raises(ValueError, match=r"INPUT_CONTRACT_VIOLATION.*'unread'") as info:
