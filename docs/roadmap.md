@@ -4594,7 +4594,7 @@ tree: 5d2189a363b7ec781b772f7fe3d3aae6f2c55385
 phase: P3
 work: WK-2113
 corrected_by: []
-relates: [FD-1495, LG-8437, SL-8429]
+relates: [FD-1495, LG-8437, SL-8429, FD-8447, OQ-8448]
 ```
 
 *Dated 2026-11-13 by the executor (exec-sl8436), on the maintainer's entries "2026-11-13 19:58:03 GMT — Maintainer: S3 RULED" (design (C)+(B), eight conditions), "21:17:39 GMT — S3 PLAN READ" (the GO; B2 (i), DP-1 to DP-3) and "21:23:21 GMT — S3 PREP READ" (hash-only versions fail closed; re-validation at submit and deploy, not at the decision): the slice is `active`, stacked on SL 8429 (S1). The ledger is `LG 8437`. WK-2113's own status line is not changed by this row.*

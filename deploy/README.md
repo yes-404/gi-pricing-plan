@@ -140,7 +140,7 @@ docker compose -f deploy/docker-compose.yml --profile app up -d --wait --scale a
   per version (reference, hash, which half found it, the Factor and the interaction), and exits
   0 (clean), 1 (an offender) or 2 (a bundle could not be read, so it is not shown clean). The
   remedy for an offender is a **new version** (a compiled version is never mutated: compile is
-  draft-only), not an edit. **Restart every `api` replica and every `worker` after the upgrade:**
+  draft-only), not an edit. **Do not enable blob garbage collection (FR-420, OQ-1943) before every existing bundle blob is retained**: versions compiled before this build hold their bundle blob at `ref_count` 0, and the compile Job now retains the blob only for new compiles. **Restart every `api` replica and every `worker` after the upgrade:**
   a running process holds the bundles it already hydrated and re-validates nothing it holds
   (`roll-api.sh` keeps the old replicas serving until the new ones pass their healthcheck, so an
   old process serves until it is removed).
