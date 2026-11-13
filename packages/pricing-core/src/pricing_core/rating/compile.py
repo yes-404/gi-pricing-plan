@@ -34,7 +34,7 @@ from pydantic import (
     model_serializer,
 )
 
-from model_schema.modelling import Banding, Factor, FactorIntent, Grouping
+from model_schema.modelling import Banding, Factor, Grouping
 from model_schema.perils import LargeLossKind, PerilStructure
 from model_schema.rating import (
     AlgorithmOutput,
@@ -56,9 +56,11 @@ from model_schema.rating import (
 )
 from model_schema.refs import ArtifactRef
 from model_schema.sub_graphs import SubGraph, SubGraphInputPort
+from pricing_core.modelling.errors import FactorResolutionError
 from pricing_core.modelling.factors import (
     GBM_MODEL_TYPES,
     consumed_features,
+    control_factor_in,
     gbm_transformed_factors,
     required_model_inputs,
 )
@@ -808,12 +810,24 @@ async def _refuse_control_factor_keys(
             factor_ref = key.get("factor_ref") if isinstance(key, dict) else None
             if factor_ref is None:
                 continue
-            factor = (await resolver.resolve(ArtifactRef.model_validate(factor_ref))).payload
-            if factor.get("intent") == FactorIntent.CONTROL.value:
+            resolved = await resolver.resolve(ArtifactRef.model_validate(factor_ref))
+            bound = Factor.model_validate(resolved.payload)
+            try:
+                control = control_factor_in(bound, resolved.factors)
+            except FactorResolutionError as error:
                 _raise_named(
                     "CONTROL_FACTOR_IN_RATEABLE_PATH",
-                    f"{table_ref} key {key.get('name')!r} is bound to {factor_ref}, a "
-                    "`control`-intent Factor, which cannot be rated on (FR-88, FR-240)",
+                    f"{table_ref} key {key.get('name')!r} is bound to {factor_ref} ({error}), "
+                    "so it cannot be shown not to be rated on a `control`-intent Factor "
+                    "(FR-88, FR-240)",
+                )
+            if control is not None:
+                via = "" if control.id == bound.id else f" through the interaction {bound.slug!r}"
+                _raise_named(
+                    "CONTROL_FACTOR_IN_RATEABLE_PATH",
+                    f"{table_ref} key {key.get('name')!r} is bound to {factor_ref}, "
+                    f"the `control`-intent Factor {control.slug}@{control.version}{via}, "
+                    "which cannot be rated on (FR-88, FR-240)",
                 )
 
 
@@ -897,15 +911,32 @@ def _consumed_features(model_ref: str, resolved: ResolvedArtifact) -> tuple[str,
 
 
 def _refuse_control_factor_features(model_ref: str, resolved: ResolvedArtifact) -> None:
-    """Refuse a pinned model, and the model its GLM offset reads, fitted on a `control` Factor."""
+    """Refuse a pinned model, and the model its GLM offset reads, fitted on a `control` Factor.
+
+    A consumed feature is tested through its closure (`control_factor_in`): an interaction's
+    operands get no term of their own, so the cross's slug is all `consumed_features` reports.
+    A consumed feature with no Factor at all (a GBM column) has no intent to test and is not
+    refused here; an operand the pin does not carry is refused (fail closed).
+    """
     by_slug = {factor.slug: factor for factor in resolved.factors}
     for feature in _consumed_features(model_ref, resolved):
         factor = by_slug.get(feature)
-        if factor is not None and factor.intent is FactorIntent.CONTROL:
+        if factor is None:
+            continue
+        try:
+            control = control_factor_in(factor, resolved.factors)
+        except FactorResolutionError as error:
+            _raise_named(
+                "CONTROL_FACTOR_IN_RATEABLE_PATH",
+                f"{model_ref} was fitted on feature {feature!r} ({error}), so it cannot be "
+                "shown not to price on a `control`-intent Factor (FR-88, FR-240)",
+            )
+        if control is not None:
+            via = "" if control is factor else f" through the interaction {factor.slug!r}"
             _raise_named(
                 "CONTROL_FACTOR_IN_RATEABLE_PATH",
                 f"{model_ref} was fitted on feature {feature!r}, the "
-                f"`control`-intent Factor {factor.slug}@{factor.version}, which "
+                f"`control`-intent Factor {control.slug}@{control.version}{via}, which "
                 "cannot be rated on (FR-88, FR-240)",
             )
     source = resolved.offset_source

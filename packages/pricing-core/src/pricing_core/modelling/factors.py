@@ -36,7 +36,7 @@ differ only in rateability, which `rateable()` below decides for `03`.
 from __future__ import annotations
 
 import ast
-from collections.abc import Mapping, Sequence
+from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from types import MappingProxyType
 from uuid import UUID
@@ -494,13 +494,49 @@ def _column_matches(declared: str | None, source: str, factor: Factor, *, kind: 
         )
 
 
+def control_factor_in(factor: Factor, pool: Iterable[Factor]) -> Factor | None:
+    """The first `control`-intent Factor in `factor`'s closure, or `None` (FR-88, FR-240).
+
+    The closure is the Factor itself and, transitively, every operand an interaction crosses
+    (`operand_factor_ids`), resolved against `pool` by id. An operand is an input of a design
+    column and gets no term of its own (FR-92), so a guard that tests only the Factor a model
+    or table names never sees it; this is the one definition every guard shares. It walks to
+    any depth, though `_cross` refuses a nested cross at resolution: a guard must not be shown
+    clean by a refusal that happens later.
+
+    Fail closed: an operand that is not in `pool` raises `FactorResolutionError`, since a
+    Factor that cannot be read cannot be shown not to be `control`.
+    """
+    by_id = {each.id: each for each in pool}
+    by_id.setdefault(factor.id, factor)
+    seen: set[UUID] = set()
+    pending = [factor]
+    while pending:
+        current = pending.pop(0)
+        if current.id in seen:
+            continue
+        seen.add(current.id)
+        if current.intent is FactorIntent.CONTROL:
+            return current
+        for operand_id in current.operand_factor_ids:
+            operand = by_id.get(operand_id)
+            if operand is None:
+                raise FactorResolutionError(
+                    f"factor {current.slug!r} crosses factor {operand_id}, which is not "
+                    "among the Factors supplied, so its intent cannot be read"
+                )
+            pending.append(operand)
+    return None
+
+
 def rateable(factors: Sequence[Factor]) -> tuple[Factor, ...]:
     """The factors a Rating Version may use (FR-88).
 
     `control` factors are fitted and never rated on — year of account being the standard
-    case. Selecting them here rather than in `03` keeps the intent with the definition.
+    case — and neither is an interaction with a `control` operand at any depth. Selecting
+    them here rather than in `03` keeps the intent with the definition.
     """
-    return tuple(f for f in factors if f.intent is FactorIntent.RISK)
+    return tuple(f for f in factors if control_factor_in(f, factors) is None)
 
 
 def consumed_features(fit_result: object) -> tuple[str, ...]:

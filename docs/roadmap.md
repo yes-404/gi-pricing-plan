@@ -4560,6 +4560,25 @@ Opened `draft` at the P2 close by the maintainer's line, on `CR-2103` P25 and P1
 
 **Slices:** cut by the planner at P3 start.
 
+#### SL-8429 — WK-2113 S1 — FD-1495 limb: the control-intent guards test every interaction's operands
+
+```yaml
+id: SL-8429
+family: slice
+title: WK-2113 S1 — FD-1495 limb — the control-intent guards test every interaction's operands (feature guard, rate-table key guard, seed; fail closed on a missing operand)
+status: active                 # draft → active → closed | retired (§1.2a)
+created: 2026-11-13
+owner: lead
+tree: 2ba0d0d53142dacd6550cb314a4d65685b612bd1
+phase: P3
+work: WK-2113
+corrected_by: []
+relates: [FD-1495, LG-8430, OQ-8431]
+```
+
+*Dated 2026-11-13 by the executor (exec-sl8429), on the maintainer's GO "2026-11-13 19:51:15 GMT — Maintainer: FD-1495 PROBE READ" in `to-lead.md` (severity HIGH, seven conditions): the slice is `active`. `FR-88` and `FR-240` are clarified, the ledger is `LG 8430`, the open question is `OQ 8431`. WK-2113's own status line is not changed by this row.*
+
+
 #### SL-1601 — WK-1178 P3 carry — FD-1589 row 8, remedy (c), B1 and B2: the model-schema validator messages no request reaches, rewritten input-free
 
 ```yaml

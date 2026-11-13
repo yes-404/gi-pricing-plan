@@ -43,7 +43,13 @@ from app.platform import transformations as transform_service
 from app.platform import transparency as transparency_service
 from app.platform.blobs import BlobStore
 from app.platform.change_summary import draft_change_summary, pair_rate_tables
-from app.platform.modelling import load_factors, resolve_offset_model, to_factor, to_model
+from app.platform.modelling import (
+    load_factor_by_ref,
+    load_factors,
+    resolve_offset_model,
+    to_factor,
+    to_model,
+)
 from model_schema import (
     ApprovalPolicy,
     ApprovalStatus,
@@ -782,10 +788,15 @@ class WorkspaceResolver:
             if factor is None:
                 raise PlatformError("NOT_FOUND", "Factor not found", 404)
             # A Factor has no approval lifecycle (RL-856's sentinel); it is read to check
-            # its intent (FR-88) and is never a pin, so no maturity floor reads it.
+            # its intent (FR-88) and is never a pin, so no maturity floor reads it. `factors`
+            # carries the interaction operands (`load_factor_by_ref` returns the Factor and
+            # its operands), which the control guard reads (FR-240, FD-1495 interaction limb).
             return ResolvedArtifact(
                 status="no_maturity_concept",
                 payload=to_factor(factor).model_dump(mode="json"),
+                factors=tuple(
+                    await load_factor_by_ref(session, workspace_id=workspace_id, ref=ref)
+                ),
             )
         if ref.type == "peril_structure":
             structure_row = await perils_service.load_structure_by_ref(

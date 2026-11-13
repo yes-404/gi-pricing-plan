@@ -719,3 +719,14 @@ def test_seeding_from_an_interaction_with_a_missing_operand_is_refused() -> None
 def test_seeding_from_an_interaction_of_risk_operands_succeeds() -> None:
     region, plan = _factor("region"), _factor("plan")
     _seed_cross([_interaction("region_x_yoa", region, plan), region, plan])
+
+
+@pytest.mark.req("FR-88")
+def test_rateable_drops_an_interaction_whose_closure_holds_a_control_factor() -> None:
+    """G5: `rateable()` is the one definition, so it reads the operands too."""
+    from pricing_core.modelling.factors import rateable
+
+    cross, region, yoa = _crossed()
+    plan = _factor("plan")
+    fine = _interaction("region_x_plan", region, plan)
+    assert rateable([cross, region, yoa, plan, fine]) == (region, plan, fine)
