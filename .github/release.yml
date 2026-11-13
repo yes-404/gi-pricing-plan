@@ -1,0 +1,20 @@
+changelog:
+  exclude:
+    labels:
+      - skip-changelog
+    authors:
+      - dependabot[bot]
+  # A pull request appears under the first category it matches, so order matters.
+  categories:
+    - title: Breaking changes
+      labels: [breaking]
+    - title: Features
+      labels: [feature]
+    - title: Fixes
+      labels: [bug]
+    - title: Documentation and specification
+      labels: [docs]
+    - title: Internal
+      labels: [internal]
+    - title: Other
+      labels: ["*"]

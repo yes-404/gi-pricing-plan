@@ -1,0 +1,44 @@
+# High-risk areas. GitHub requests a review from the people listed when a pull
+# request touches one of these paths. The author is not asked to review their own
+# pull request, so the request goes to the other person.
+#
+# This file only requests the review. The rule that it must happen, and the
+# three-working-day window, are in CONTRIBUTING.md, "Review".
+# The last matching pattern wins. There is no `*` line: other paths need no cross-review.
+#
+# PLACEHOLDER, NOT YET ACTIVE: The collaborator's GitHub handle is not known to this file.
+# Until the maintainer supplies it, every line below lists the maintainer only.
+# When the handle is known, append it to each line marked "(both)" and delete this note.
+# @COLLABORATOR-HANDLE   (placeholder, commented out, never a guessed handle)
+
+# The rating and scoring path (both)
+/packages/pricing-core/src/pricing_core/rating/   @yes-404
+/backend/src/app/api/score.py                     @yes-404
+
+# Money handling (both). Found by: grep -rlE '_minor\b|Decimal' --include=*.py packages/*/src backend/src
+# The Decimal and integer-minor-unit modules; model-schema money.py is covered by the contracts line below.
+/packages/pricing-core/src/pricing_core/money.py          @yes-404
+/packages/pricing-core/src/pricing_core/rate_tables/      @yes-404
+
+# The shared data contracts (both)
+/packages/model-schema/                           @yes-404
+/docs/contracts/                                  @yes-404
+
+# Authentication and roles (both). Found by: grep -rliE 'keycloak|permission|role' --include=*.py backend/src packages
+# and reading the module docstrings (credential to Caller, route-level permissions);
+# the Permission enum is in packages/model-schema/, covered above.
+/backend/src/app/auth/                            @yes-404
+/backend/src/app/api/authz.py                     @yes-404
+/backend/src/app/api/deps.py                      @yes-404
+/backend/src/app/api/service_accounts.py          @yes-404
+
+# Database migrations (both)
+# The draft named backend/alembic/, which does not exist; migrations are backend/migrations/ and /alembic.ini.
+/backend/migrations/                              @yes-404
+/alembic.ini                                      @yes-404
+
+# The project's own rules and CI: the maintainer only
+/CLAUDE.md                                        @yes-404
+/CONTRIBUTING.md                                  @yes-404
+/SECURITY.md                                      @yes-404
+/.github/                                         @yes-404

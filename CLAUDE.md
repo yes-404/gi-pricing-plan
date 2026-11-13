@@ -1,365 +1,95 @@
-# CLAUDE.md — Open Source General Insurance Pricing Platform
+# CLAUDE.md — GI Pricing Platform
 
-**Binding rules live here; the procedures and reasoning that satisfy them live in
-`.claude/skills/`, which this file points at rather than restates.** Read it fully.
+Binding rules for every AI session in this repository. Rules live here; procedures live in
+`.claude/skills/` and `CONTRIBUTING.md`, which this file cites and does not restate.
 
-## 0. Current Project Phase — *the phase is `docs/roadmap.md` §6's to state (read this before anything else)*
+## 1. Mission
 
-**Which phase is current, which workstreams are open, and the phase closure dates are
-`docs/roadmap.md` §6's to state, not this file's.** The `docs/` suite is the contract every
-phase builds against: **read the relevant spec before writing the code that implements
-it** — guessing is never the faster path.
+An open-source general insurance pricing platform for the UK and EU market: data
+preparation, risk modelling (GLM and ML), rating, deployment and scoring, monitoring,
+governance. Users are pricing actuaries and analysts. Every design choice favours
+reproducibility, auditability and transparency of the maths.
+
+## 2. What to deliver
 
 | Request | Deliverable |
 |---|---|
-| Inside the current phase's scope (§9) | **Code**, plus any spec change it proves necessary |
-| A capability not yet specified | **Spec change first**, then code — the spec is the design step |
-| A later phase (rating, optimisation, monitoring, governance UI) | **Spec change only** — never build ahead of the phase |
-| A design choice the specs leave open | Options + a recommendation in `docs/open-questions.md`, never a silent pick |
+| Inside the current milestone's scope | Code, plus any spec change it proves necessary, together |
+| A capability not yet specified | The spec change first, then code |
+| A later milestone | A spec change only. Never build ahead |
+| A design choice the specs leave open | A decision-needed issue with options and a recommendation. Never a silent pick |
 
-**When code and spec disagree, stop and resolve it** rather than quietly making either match
-the other. Which one is wrong is a real question and the answer has often been the spec;
-changing one silently destroys the record of which was believed, the thing a governed system
-cannot afford to lose.
+- **The specification is the contract.** Read the relevant spec before writing the code that
+  implements it. `docs/README.md` indexes the suite.
+- **When code and spec disagree, stop and resolve it.** Do not quietly make either match the other.
+- **The current milestone and its scope are on GitHub**, not in this file.
 
-Three rules survive every phase change:
+## 3. Requirements and specs
 
-- **Requirement IDs and section numbers are permanent** (§5). Never renumber; append, mark
-  superseded, or leave a tombstone. **Amended 2026-09-27 by the maintainer (dated line by
-  delegation, D3), on RFC-937 D2** — ids were renumbered once, by the W37-6 migration run,
-  onto the single global sequence §5 now names; permanence holds from that sequence
-  onward, and a product identifier (a `VR-`, artifact id or job kind) is the spec's, not
-  this sequence's, and was not touched.
-- **Counts and status that change are not written in this file.** `req-coverage.py` prints
-  requirement counts; `docs/roadmap.md` holds workstream and component status. Four
-  incidents of the copy here going stale:
-  [`RFC-756`](docs/rfcs/RFC-00756-duplicated-status-in-claude-md-goes-stale.md).
-- **Every spec change runs `python3 scripts/audit-docs.py` before commit.**
+- **Requirement ids are permanent.** Append or mark superseded. Never renumber or reuse.
+- Every spec keeps its ten sections. The procedure is `.claude/skills/spec-change`.
+- A term is defined in `docs/specs/00-overview.md` §2 before its first use.
+- Run `python3 scripts/audit-docs.py` before committing any spec change.
 
-## 1. Project Mission
+## 4. Architecture rules (decided; reopen only with a decision record)
 
-An open-source general insurance pricing platform for the UK/EU market — an open alternative
-to the established commercial pricing suites. Full lifecycle: data preparation → risk modelling (GLM/ML) → rating
-algorithm design → deployment/scoring → monitoring → governance. Primary users: pricing
-actuaries and analysts — technical (Python/notebooks) but expecting a polished UI. Every
-design decision favours reproducibility, auditability, and transparency of the maths.
+- **One contract, flowing one way:** `model-schema` generates `docs/contracts/`, which
+  generates the frontend API client. Generated files are regenerated, never edited.
+- **No shape that exists in `model-schema` is written by hand a second time**, in the
+  backend, the frontend or a test.
+- `pricing-core` stays importable alone: no FastAPI, SQLAlchemy or Redis dependency.
+- Models and rating definitions are declarative JSON artifacts, never pickles.
+- No pandas in new code. Vue 3 Composition API with `<script setup lang="ts">` only.
+- `uv.lock` is committed. The stack and where each part is used: `docs/skills-map.md`.
 
-## 2. Repository Layout — *the annotated tree and the reasoning are `.claude/skills/repo-architecture`*
+## 5. Domain rules (breaking one is silent)
 
-**Component status — exists, partial, scheduled — belongs to `docs/roadmap.md` §6 and only
-there** ([`RFC-756`](docs/rfcs/RFC-00756-duplicated-status-in-claude-md-goes-stale.md)). Three entries
-carry a rule: **`uv.lock` is committed** — a lockfile, not an environment; **`docs/contracts/`
-is generated and never hand-edited**; **a filed plan under `docs/plans/` is frozen at its
-date**. **It is a polyglot monorepo and neither language is the "main" one** — the root
-`pyproject.toml` configures Python tooling only, and **CI is three path-filtered component
-workflows and one unfiltered `history-policy` workflow; the fourth checks commit messages,
-not files, so path filtering would let it pass by not running** (amended 2026-09-02 by the
-maintainer, with F49's CI enforcement). [`docs/process/document-ids.md`](docs/process/document-ids.md)
-§1.4 is the authority for the `docs/` layout: **the directory is the family** — which
-directory a governed document lives under is what names the family it belongs to.
+- A **Dataset** is a named container. A **Dataset Version** is the immutable snapshot.
+  Modelling references a Dataset Version, never a Dataset.
+- **Money is integer minor units, or Decimal in the rating path. Never float.**
+- A `control` Factor never moves a price (FR-88, FR-240).
+- The actuarial defaults are numbered requirements, not conventions: `02-modelling.md`
+  FR-MODEL-19, 21, 26, 27, 28 and 33.
+- Only public data (freMTPL2). No real policy, claims or exposure data anywhere, including
+  in a prompt to an external tool.
 
-**One contract joins backend and frontend, and it flows one way.** ADR-704's
-`model-schema`, the single source of truth, generates `docs/contracts/` — JSON Schema +
-OpenAPI 3.1, committed, a published spec artifact rather than a build output, CI failing on
-drift (FR-451) — which generates `frontend/src/api/generated`, VCS-ignored and never
-hand-written.
+## 6. Evidence
 
-**The specification is the contract the code is written against**, not a parallel track. A
-change spanning both lands as **one commit** — spec, code, tests, any skill update — or the
-audit reports a consistency the repository does not have.
+- **Scope is derived from the specification, then evidenced.** Never from memory of what was built.
+- **Every requirement without evidence gets a verdict:** delivered but untested, deferred
+  with an owner, reassigned, or not started. Silence is not one of them.
+- **Budgets are measured, not asserted.** A check that has never failed on broken input is untested.
+- **A fix is shown failing first.**
+- **A count names its commit, its corpus and the command that produced it.**
+- **Name the range (`origin/main...branch`), not the tip. Verify the claim, not the citation.**
+- **A severity is set by a probe, not by words.**
 
-Standing architecture rules (decided — do not reopen without an ADR):
-- **Nobody hand-writes a shape that already exists in `model-schema`** — not the backend,
-  not the frontend, not a test fixture. A shape defined twice will diverge, and in a pricing
-  platform a diverged shape is a mispricing.
-- `pricing-core` stays importable standalone with zero FastAPI/SQLAlchemy/Redis deps.
-- Model and rating definitions are declarative JSON artifacts, never pickles.
+## 7. How work runs
 
-## 3. Tech Stack (specs must be written against this stack)
+The rules are in `CONTRIBUTING.md`. In short:
 
-Python 3.12 + `uv` · FastAPI + Pydantic v2 · SQLAlchemy 2.x async + Alembic · PostgreSQL 16 ·
-Celery + Redis · Polars + DuckDB · `glum` · XGBoost + LightGBM + interpret/EBM · GoRules ZEN ·
-Vue 3 + Vite + Pinia + Tailwind + ECharts, pnpm. **`docs/skills-map.md` maps each component
-to where it is used and what to read; each spec's §8 names what that module depends on.**
+- Work is arranged on GitHub: a milestone per version, one issue per Work, one pull request per Work.
+- **Decisions that bind the product are files:** `docs/adrs/`, numbered, superseded and
+  never edited. A decision reached in an issue is written there by the pull request that enacts it.
+- **Only the maintainer** decides a milestone's scope, accepts a Work, closes a milestone and
+  amends this file. The lead merges. A subagent gathers evidence and decides nothing.
+- Review follows risk. The high-risk areas are listed in `CONTRIBUTING.md`.
+- A possible wrong price or security defect is reported privately: `SECURITY.md`.
 
-Three choices already made *against*, which a session otherwise breaks by default:
+## 8. How a session works
 
-- **No pandas in new code**, except at unavoidable library boundaries.
-- **Never hand-write an API type** in the frontend; generate it from OpenAPI.
-- **Vue 3 Composition API with `<script setup lang="ts">` only** — never Options API, JSX, React.
+- **Run the whole gate before pushing, both halves.** Commands and their traps:
+  `.claude/skills/dev-commands`.
+- **Skills come first.** `.claude/skills/README.md` is the index. A procedure found to be
+  missing or wrong is written or fixed in the same session.
+- **Keep context light.** Delegate noisy searches to a subagent. Read bounded ranges, not whole files.
+- Conventional Commits. Short-lived branches from `main`.
+- **Never** put a session link in a commit, pull request or issue. Never install an external
+  skill or agent without the maintainer's approval. Never modify `~/.claude/skills/`.
+- AI use is disclosed in every pull request, and a named person is accountable for it.
 
-`.claude/skills/repo-architecture` carries the rest — why `statsmodels` and pandera are not
-dependencies despite one stale spec row naming the first, the monotonic-constraint
-requirement on both boosters, what `mypy --strict` and `ruff` cover. **Custom objectives
-are first-class** (`02-modelling.md` §4.4 catalogues the permitted forms); a spec introducing
-one is incomplete until it satisfies `.claude/skills/spec-change`'s four governance rules for
-arbitrary code — declaration, validation, versioning, audit.
+## 9. History
 
-## 4. Documentation Suite — the module map
-
-[`docs/README.md`](docs/README.md) indexes the suite and says what each spec covers: `00`
-overview and glossary · `01` data management · `02` modelling · `03` rating engine · `04`
-optimisation · `05` monitoring · `06` governance · `07` platform.
-
-`workflows/WF-698`, `WF-699`, `WF-700`, `WF-701` and `WF-702` are the **cross-module
-journeys** — dataset-to-model, model-to-rating-version, rate-change impact,
-deploy-and-monitor, custom-objective lifecycle. A module spec says what one module does; a
-workflow says what actually happens across all of them. `docs/INDEX.md` is the generated
-index of every governed document in the suite; `docs/process/document-ids.md` defines the
-document families and how their ids are assigned.
-
-## 5. Spec Document Standard
-
-**Every spec keeps all ten sections** — purpose & scope, concepts & glossary, functional
-requirements, data contracts, interfaces, workflows, cross-module dependencies, tech
-dependencies, non-functional requirements, open questions. What each must contain is in
-`.claude/skills/spec-change`: **the procedure for touching `docs/`, read it first**.
-
-**Requirement IDs are permanent: never renumber, only append or mark superseded.**
-**Amended 2026-09-27 by the maintainer (dated line by delegation, D3), on RFC-937 D2.**
-Requirement ids were renumbered once, by the W37-6 migration run, onto the single global
-sequence [`document-ids.md`](docs/process/document-ids.md) defines; the permanence rule
-holds from that sequence onward — append or mark superseded,
-never renumber. **Document and row ids are `document-ids.md`'s; product identifiers stay
-the spec's** — a `VR-`, artifact id or job kind is governed by `docs/specs/` and was not
-touched (RFC-937 D5). Section numbers here obey it too: §6 and §8 are tombstones, §2, §11,
-§13 and §14 keep their rules and point at the skill with the procedure, and no number is
-ever reused.
-
-## 6. Dataset Validation — *superseded by `01-data-management.md`*
-
-Read that spec. The number is kept, not reclaimed (§5 covers section numbers).
-
-## 7. Domain Model — *`00-overview.md` §2 is authoritative*
-
-It defines every term. Use its names in every doc and identifier; a new
-term goes there before first use. Four rules worth stating twice, because breaking one is
-silent:
-
-- A **Dataset** is a named container and holds no data; a **Dataset Version** is the
-  immutable snapshot carrying its validation report, profile and status
-  (`draft → validated → archived`).
-- **Modelling references a Dataset Version, never a Dataset.**
-- **Money is integer pence/cents, or Decimal in the rating path — never float.**
-- **The actuarial correctness defaults are numbered requirements, not conventions** —
-  family, link, offset and weight per response type, the GBM objectives and exposure
-  handling, monotonic constraints, the transparency artifact and surfaced uncertainty:
-  `02-modelling.md` FR-MODEL-19, 21, 26, 27, 28 and 33, where the amendments and the
-  empirical verification are.
-
-## 8. skills-map.md — *folded into §10*, which carries its one binding instruction.
-
-## 9. Roadmap — *the plan lives in `docs/roadmap.md`*
-
-The phase list, workstream rows, closure records, decision gates, the current phase and its
-exit criteria, which workstreams are open, and the retrofit-impossible list are written
-**only** there
-([`RFC-756`](docs/rfcs/RFC-00756-duplicated-status-in-claude-md-goes-stale.md) records this mechanism —
-this file restating phase or status content and the restatement going stale). A phase is a
-**milestone** section ([`document-ids.md`](docs/process/document-ids.md) §1.3); the rows
-inside it are `WK-` (work) and `SL-` (slice) — the families, not their contents. Two things
-change how you work rather than what is planned:
-
-- **The retrofit-impossible foundations of `docs/roadmap.md` §5 landed in Phase 1a.** They
-  are invariants to preserve, not work to schedule: regressing one is the same rewrite that
-  deferring it would have been.
-- **Do not build ahead of the phase** (§0's table). A later phase's capability is a spec
-  change, not code.
-
-## 10. How You (Claude) Work
-
-§0 decides the deliverable; these apply to whichever it is.
-
-- **Documents.** `.claude/skills/spec-change` is the procedure — glossary first, append-only
-  IDs, ten sections, open questions mirrored both ways, and `skills-map.md` updated in the
-  same PR whenever a **tech dependency** changes.
-- **When a design choice is genuinely open, do not silently pick one**: record options,
-  trade-offs and a recommendation in `open-questions.md`, or an ADR if it must be decided now.
-- **Code.** `.claude/skills/python-package` and `python-test` hold the conventions; run the
-  full gate locally before pushing (`.claude/skills/reproducing-ci-locally` has the why).
-- All PRs: Conventional Commits, short-lived branches from `main`, squash-merge, branch
-  auto-delete. `.claude/skills/git-hygiene` covers the traps.
-
-**Context discipline — a turn costs what the context weighs**, because every turn re-reads
-the whole accumulated context. Measured once over 2026-08-14 → 08-19 and not maintained
-since: **73% of spend came from calls carrying more than 200k tokens of context.** Two rules
-follow:
-
-- **Delegate noisy investigation to a subagent** — grep sweeps, log trawls, broad searches.
-  Keep the conclusion, not the file dumps: a subagent's context is discarded when it returns,
-  the main thread's is not.
-- **Read bounded ranges, not whole files** — `sed -n '100,160p'`, `grep -n -C3`, `head`, and
-  a `wc -l` before anything large. A whole file read to find one function stays in context
-  permanently, re-read every turn thereafter.
-- **A boundary metric reads zero by construction.** "Zero calls above 200k" reports where the
-  compaction cap sits, not how light the usage was — a heavy session and a disciplined one
-  produce the same zero. Read trends at the boundary (the share of calls near the cap, and
-  the spend those calls carry), never absence above it.
-  ([`RFC-789`](docs/rfcs/RFC-00789-zero-calls-above-200k-tokens-measures-the-compaction-cap-not-discipline.md))
-
-## 11. Commands Reference — *every command is in `.claude/skills/dev-commands`*
-
-**Every command has a trap that makes the obvious form wrong** — the exit-code pitfall, the
-load-contention factor that reads as a regression, the alembic DSN, the pnpm install, the
-`--all-packages` that is not optional. The rule rather than the command: **the gate has two
-halves and both must pass locally before pushing** — a Python-only "gate" has been green
-here while the frontend was red.
-
-```bash
-uv run ruff check . && uv run mypy && uv run lint-imports && uv run pytest -q
-python3 scripts/audit-docs.py && uv run python scripts/req-coverage.py
-uv run python scripts/generate-contracts.py --check
-pnpm --dir frontend install --frozen-lockfile && pnpm --dir frontend generate:api
-pnpm --dir frontend lint && pnpm --dir frontend type-check
-pnpm --dir frontend test && pnpm --dir frontend build
-```
-
-## 12. Skills
-
-Project procedures live in `.claude/skills/`, versioned with the repo. **Its `README.md` is
-the index**, `.claude/agents/README.md` the same for the delegable specialists; team roles
-are the `.md` files directly under `.claude/roles/`. **This section keeps no second list**
-([`RFC-756`](docs/rfcs/RFC-00756-duplicated-status-in-claude-md-goes-stale.md)).
-[`document-ids.md`](docs/process/document-ids.md) §1.6 — the roles-per-family owner table —
-is the authority on which role may write which document family, complementing this
-section's own rule that a role writes what its charter names.
-
-- **Discovered a non-obvious procedure** (build quirk, test setup, data format rule, deploy
-  step)? Write or update a skill, update the README, commit both with the work.
-- **A skill that turns out to be wrong is fixed in the same session**, `Verified` date
-  refreshed. Never leave a known-stale skill in place.
-- **Never install an external skill without the maintainer's approval**, and never take one
-  teaching an approach §3 decided against. The same test governs `.claude/agents/`; the
-  READMEs record each refusal.
-- **Vendored files stay as upstream wrote them**, excluded from `ruff`, every deviation
-  recorded in the README rather than made silently.
-- Monthly, or on "skill audit": re-run the gap analysis, propose additions and removals.
-- Never modify `~/.claude/skills/` (personal/global) as part of project work.
-
-**Evidence is delegated; authority is bounded by charter.** A subagent runs in its own
-context and returns a conclusion — what §10 asks for — and **skills outrank agents on
-procedure**. Two kinds of agent are governed differently:
-- A **delegable specialist** (`.claude/agents/`) gathers or verifies and **decides
-  nothing**. That directory's README is its dividing line.
-- A **role** (`.claude/roles/`) **decides what its own charter names and nothing else**,
-  and **writes the artifacts its charter names, including under `docs/`**. A spec change
-  still follows `.claude/skills/spec-change`; a requirement id is still permanent (§5).
-  **A question in no charter is the lead's.**
-
-Four things are never a role's:
-- **§13's four verdicts** and the **merge** — the lead's. An auditor *proposes*; the lead
-  adopts, amends or rejects before the record is filed.
-- **Acceptance of a Work, Phase or Project close** — the maintainer's. A Slice closes on a
-  clean audit and the lead's merge.
-- **A §14 plan review's acceptance line** — the maintainer's. The review itself is the
-  planner's to write, and binds nothing until dated.
-- **An amendment to what this file requires** — the maintainer's. Editing this file to
-  *point at* something already ruled is not an amendment.
-
-**Every decision lands as a dated artifact** — a ruling record, an audit record, a plan, or
-the slice ledger that quotes the GO and MERGE-ACK headers verbatim — never in chat.
-**Amended 2026-10-08 by the maintainer (dated line by delegation), on RFC-1506 P6** (Lean P2 item L1).
-
-**Precedence — superpowers first.** When a superpowers skill and any other both apply,
-follow the superpowers one. Read `using-superpowers` when a task starts;
-`.claude/skills/README.md` §Precedence has the working order and the narrow carve-out where
-a repo fact outranks a superpowers procedure. **Nothing in superpowers overrides §0, §5 or
-§13.**
-
-## 13. Workstream Closure Standard — *the standard is `.claude/skills/close-workstream`*
-
-**A workstream is closed only when that skill's checklist passes and the result is recorded
-in `docs/roadmap.md`** — closing without it produces a roadmap reporting progress the
-repository does not have, which the next workstream is then planned against. **Record
-destinations, per `document-ids.md` §1.4:** a closure record or a plan review is a `CR-`
-under `docs/closures/`; a finding is an `FD-` under `docs/findings/`, with a row in
-`docs/findings/register.md`; a decision already made is an `RL-` under `docs/rulings/`; a
-slice ledger is an `LG-` under `docs/ledgers/` — from Lean P2 the slice's one paperwork file,
-with five sections (scope quoting its Work-plan row, tasks, gate rc table, audit, build log),
-carried in the slice's one PR with the `SL-` row's one-line status change; a Work has one `PL-`
-whose slices are rows, changed by dated deltas that `relates:` it; no per-slice `PL-`, dispatch
-`RL-` or activation PR for a slice dispatched after the change; a process finding is a dated row in `docs/process/process-backlog.md`
-until the P2 exit demo, and an `FD-` only when it lets a wrong merge, a wrong number, a
-mispricing or data loss through, or blocks work today.
-**Amended 2026-10-08 by the maintainer (dated line by delegation), on RFC-1506 P6** (Lean P2 items L1, L3 and L5, L1 as corrected to (a') on 2026-10-08 12:02:08 BST; it read "a slice
-ledger is an `LG-` under `docs/ledgers/`"). Three rules bind wherever anything here is
-audited, not only at a close:
-
-- **Scope is derived from the specification first, then evidenced** — never from
-  recollection of what was built. Reversed, an audit is silent about what is missing.
-- **Every requirement without evidence gets one of four verdicts** — delivered but untested,
-  deferred with an owner, reassigned, not started. Silence is not one of them, and the
-  verdict is the main thread's (§12), never a subagent's.
-- **NFRs are measured, not asserted; enforcement is proven on deliberately broken input.** A
-  check that has never printed a failure has not been tested, and a generated artifact
-  matching its source proves neither correct.
-- **A reference carries its scope and its measurement.** A count carries the tree, the corpus
-  it counted over, **and the predicate it counted with** — the pattern or command verbatim and
-  runnable, or the shipped constant **by symbol at that tree, never pasted**; a schema or
-  contract name carries its full path; a `Verified` date carries the tree; a word with two
-  scopes (`shape`, `slug`, `contract`, `variant`) says which it means. The test: would it still
-  resolve for a reader holding none of your open context?
-  ([`RFC-777`](docs/rfcs/RFC-00777-a-reference-that-resolves-only-in-the-writer-s-context.md))
-  **The predicate clause was added 2026-09-02 by the maintainer, discharging register finding
-  F85**: two counts measured at the **same tree** over the **same corpus** differed only by
-  pattern — a decorator form against a bare string that also matched prose mentions — and
-  **both satisfied this rule as it stood**, while three readers reproduced neither. A pasted
-  constant is refused for the same reason a duplicated status line is
-  ([`RFC-756`](docs/rfcs/RFC-00756-duplicated-status-in-claude-md-goes-stale.md)): the copy is what goes stale.
-- **Name the range, not the tip; verify the claim, not just the citation.** A review or gate
-  names `origin/main...branch`, never the branch's tip SHA — a tip is the record of the last
-  edit, not the change set. And a citation can be correct while the content it vouches for is
-  wrong: read to the part of the cited artifact that carries the claim — a requirement's
-  clauses including its dated amendments, a test's asserts, a function's body.
-  ([`RFC-779`](docs/rfcs/RFC-00779-two-rules-for-reading-an-artifact-the-one-you-name-and-the-one-you-verify.md))
-- **A Work, Phase or Project close is accepted by the maintainer, with a dated line. A Slice
-  is not: it closes on a clean audit and the lead's merge.**
-
-## 14. Phase Review Standard — *the standard is `.claude/skills/phase-review`*
-
-§13 audits **one workstream against its own scope**. This audits **the plan** — whether the
-phase boundaries, workstream cuts and requirement set still make sense now that some of the
-work is real. The plan is a working hypothesis, re-tested while the phase is still open.
-*(Raised as [`RFC-711`](docs/rfcs/RFC-00711-plan-review-at-each-phase-boundary.md), 2026-08-15.)*
-**Trigger: a full review before each phase's exit demo — fixed, not "sometime". At a Work
-close, the closure record carries a replan check (the skill's five questions, each answered
-yes or no with one line); a full review runs only if one of its triggers fires — a phase
-boundary or Work scope moved, an exit criterion at risk, a replan decided, or a finding that
-moves a slice or phase — and the lead gives its verdict on the check; "no trigger" is
-recorded, not assumed.**
-**Amended 2026-09-29 by the maintainer (dated line by delegation), on RFC-1248 and RL-1249**:
-the trigger was "at each workstream close, and again before a phase's exit demo". The five
-questions are in the skill; three rules bind outside it:
-
-- **The output is a proposal, never a change** — recommendation, rationale, and an explicit
-  maintainer acceptance line with a date. A review that edits the roadmap on its own
-  authority is re-planning. **Every accepted proposal becomes an owned record in the family
-  `document-ids.md` §1.6 gives its kind; "unowned" is not a permitted state, and the review
-  itself is a short index of those records** (same amendment).
-- **A later phase's finding is a spec change only** (§0's table).
-- **Nothing starts in the next phase while an open finding from the current phase lacks a
-  resolution.** A finding has a resolution when the close fixes it, carries it forward with
-  a named owner, or accepts it. The phase closure record lists every open finding with its
-  resolution.
-
-## 15. Team Process — *the process is `docs/process/delivery-process.md`; the roles are `.claude/roles/`*
-
-**A team member is spawned from its role file in `.claude/roles/`, never from an inline
-brief** — the file is the charter; a brief dies with its session. **A role file that
-proves insufficient is a finding against the file**: fix the file, do not paste a brief
-back in.
-
-**Its machine-readable core is `docs/process/delivery-process.core.json`** — the same process,
-extracted so a script can check it. **The markdown is authoritative; the extract is derived.**
-**Which gate checks hold it to that is `delivery-process.md` §10's to state, not this file's**
-— read it there. This file said *"a drift check fails the gate when they disagree"*, which was
-**false**: the check that exists resolves each block's *citations*, and nothing compared the
-content, so the extract fell two commits behind its source with the gate green throughout
-(RL-905). Corrected 2026-08-30 to a pointer rather than a second description, because a
-restated enforcement is how one of the two statements goes stale
-([`RFC-756`](docs/rfcs/RFC-00756-duplicated-status-in-claude-md-goes-stale.md)) — which is what happened
-here. Read the markdown to know the process; the extract exists so a rule that can be checked
-mechanically is not left to prose.
-
-Distinct from `docs/workflows/WF-698`…`WF-702`, the domain journeys (§4): one is how the
-team works, the other what the platform does.
+This file replaced a longer, section-numbered version as decided on 2026-11-13 (decision record ADR-8449).
+That version, and the plans, ledgers, rulings and closure records it governed, are frozen
+in git history and in `docs/archive/`. A citation of an old section number refers to that version.

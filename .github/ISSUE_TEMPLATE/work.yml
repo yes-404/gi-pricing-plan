@@ -1,0 +1,70 @@
+name: Work
+description: One coherent unit of scope, delivered as one pull request. Opened or agreed by the maintainer.
+title: "Work: "
+labels: ["work"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        This issue is the record of the Work, not a discussion thread. Open a separate
+        issue for each finding or design question and link it here. Keep this description current.
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Outcome
+      description: One line, usable as the changelog entry. Then the specification sections this implements.
+    validations:
+      required: true
+  - type: textarea
+    id: requirements
+    attributes:
+      label: Requirement ids in scope
+      description: One id per line. Anything not listed is out of scope.
+    validations:
+      required: true
+  - type: textarea
+    id: paths
+    attributes:
+      label: Permitted paths
+      description: Glob patterns the pull request may change. A change outside them needs a comment here first.
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: slices
+    attributes:
+      label: Slices
+      description: One checkbox per slice. Each becomes one commit in the pull request.
+      value: |
+        - [ ] 1.
+        - [ ] 2.
+    validations:
+      required: true
+  - type: textarea
+    id: questions
+    attributes:
+      label: Unresolved questions
+      description: Link each needs-decision issue. Write "None" if there are none.
+      value: "- [ ] "
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance
+      description: What must be true to close, including any measured budget and the command that prints it.
+    validations:
+      required: true
+  - type: input
+    id: owner
+    attributes:
+      label: Accountable person
+      description: The GitHub login of the person who answers for this Work.
+    validations:
+      required: true
+  - type: markdown
+    attributes:
+      value: |
+        **Plan:** the contributor posts the plan as a comment. No code before the maintainer
+        replies `Plan accepted`. **History:** the pull request is linked here when opened.
+        The maintainer sets the milestone.
