@@ -118,10 +118,12 @@ async def test_a_value_the_float_holds_exactly_is_tolerated_in_an_undeclared_key
 
     assert decimals_as_floats(Decimal(text), "k") == float(text)
     ctx = _ctx(inputs={**_INPUTS, "ghost": 0.5, "unread": Decimal(text)})
+    refusal = None
     try:
         await score_one(await _bundle(declared=False), ctx)
     except ValueError as exc:
-        assert "INPUT_CONTRACT_VIOLATION" not in str(exc)
+        refusal = str(exc)
+    assert refusal is None or "INPUT_CONTRACT_VIOLATION" not in refusal
 
 
 @pytest.mark.req("FR-273")
