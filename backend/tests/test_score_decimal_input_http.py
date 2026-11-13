@@ -457,6 +457,62 @@ def test_an_over_precise_value_in_a_nested_undeclared_key_is_refused_naming_the_
     assert "0.82469" not in response.text
 
 
+
+# --- SL 8432 review 3 R1: the three non-finite JSON literals ---------------------------------
+# `json.loads` does not route `NaN`, `Infinity` and `-Infinity` through `parse_float`, so they
+# arrived as raw floats that no guard touched in an undeclared or nested key.
+
+_NON_FINITE = ["NaN", "Infinity", "-Infinity"]
+
+
+@pytest.mark.req("FR-273")
+@pytest.mark.parametrize("literal", _NON_FINITE)
+@pytest.mark.parametrize(
+    ("extra", "path"),
+    [
+        (',"unread":{lit}', "'unread'"),
+        (',"extra_list":[1.5,{lit}]', "'extra_list[1]'"),
+        (',"extra_list":[1.5,{{"a":{lit}}}]', "'extra_list[1].a'"),
+        (',"extra_d":{{"a":{{"b":{lit}}}}}', "'extra_d.a.b'"),
+    ],
+)
+def test_a_non_finite_literal_in_an_undeclared_key_is_refused_naming_the_path(
+    client: TestClient, literal: str, extra: str, path: str
+) -> None:
+    body = _body(50000, "0.75", extra.replace("{{", "{").replace("}}", "}").replace("{lit}", literal))
+    response = _post(client, SCORE_URL, body)
+    assert response.status_code == 422, response.text
+    assert response.headers["content-type"].startswith("application/problem+json")
+    problem = response.json()
+    assert problem["code"] == "INPUT_CONTRACT_VIOLATION"
+    assert path in problem["detail"]
+    assert literal not in response.text  # NFR-499: the problem carries no quote value
+
+
+@pytest.mark.req("FR-273")
+@pytest.mark.parametrize("literal", _NON_FINITE)
+def test_a_non_finite_literal_in_a_declared_decimal_input_is_refused(
+    client: TestClient, literal: str
+) -> None:
+    response = _post(client, SCORE_URL, _body(50000, literal))
+    assert response.status_code == 422, response.text
+    assert response.json()["code"] == "INPUT_CONTRACT_VIOLATION"
+    assert "'factor'" in response.json()["detail"]
+
+
+@pytest.mark.req("FR-273")
+def test_a_route_outside_the_scoring_routes_still_parses_a_non_finite_literal_as_float(
+    client: TestClient,
+) -> None:
+    response = client.post(
+        "/api/v1/echo",
+        content='{"a": NaN, "b": Infinity, "c": -Infinity}',
+        headers={"content-type": "application/json"},
+    )
+    assert response.status_code == 200, response.text
+    assert response.json() == {"a": "float", "b": "float", "c": "float"}
+
+
 # --- SL 8432 F3: the FR-239 property, driven through the route's own JSON parse --------------
 
 
