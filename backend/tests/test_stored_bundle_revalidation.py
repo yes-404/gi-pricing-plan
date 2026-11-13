@@ -91,7 +91,12 @@ async def stored_version(
                 dataset_version_id=uuid4(),
                 model_ref="model:motor-ad-frequency@7",
                 created_by=author or new_uuid7(),
-                bundle={"content_hash": content_hash, "blob_sha256": ref.sha256},
+                bundle={
+                    "content_hash": content_hash,
+                    "bytes": len(payload),
+                    "compiled_at": "2026-11-13T00:00:00+00:00",
+                    "blob_sha256": ref.sha256,
+                },
             ),
         )
     return f"rating_version:{slug}@1", content_hash

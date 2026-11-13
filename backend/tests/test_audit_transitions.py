@@ -1580,6 +1580,12 @@ REFERENCE_ROWS = [
 # `test_deployments.py` does (no PUBLISH, so no `test_deployment_switch*` coupling).
 
 
+async def _no_revalidation(_session: AsyncSession, *, ref: ArtifactRef) -> None:
+    """These tests prove the audit-transition wiring, not the stored-bundle guard, which
+    `test_stored_bundle_revalidation.py` proves; the service requires the argument so that a
+    caller cannot skip the guard silently (WK-2113 S3)."""
+
+
 async def _deployment_request(env: Env, *, upto: str) -> Ctx:
     deployer = await _principal(env.database, env.workspace_id, "deployer")
     version_ref = await approved_version(env.database, env.workspace_id, new_uuid7())
@@ -1592,6 +1598,7 @@ async def _deployment_request(env: Env, *, upto: str) -> Ctx:
                 actor=deployer,
                 environment=target,
                 body=DeploymentCreate(rating_version_ref=rating_ref, reason="release"),
+                revalidate=_no_revalidation,
                 switch=None,
             )
     if upto == "deployed":
@@ -1685,6 +1692,7 @@ async def _deployment_executes(session: AsyncSession, env: Env, ctx: Ctx) -> Non
             reason="release",
             deployment_request_ref=ctx.data["request_ref"],
         ),
+        revalidate=_no_revalidation,
         switch=None,
     )
 

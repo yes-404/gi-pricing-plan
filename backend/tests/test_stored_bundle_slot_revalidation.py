@@ -37,7 +37,7 @@ def test_a_new_process_starts_with_an_empty_slot() -> None:
     """The restart premise: nothing carries a hold from the previous code into a new process."""
     slot = BundleSlot()
     assert slot.get("sha256:" + "0" * 64) is None
-    assert slot.hash_for(ArtifactRef(type="rating_version", slug="x", version=1)) is None
+    assert slot.hash_for(ArtifactRef(type="rating_version", slug="rv-empty", version=1)) is None
 
 
 @pytest.mark.req("FR-88")

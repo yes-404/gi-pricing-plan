@@ -53,7 +53,12 @@ async def _compiled_metadata(session: AsyncSession) -> dict[str, str]:
     store = BlobStore(Settings(blob_bucket=test_blob_bucket()))
     await store.ensure_bucket()
     ref = await store.put(session, _CLEAN_BUNDLE.read_bytes(), "application/json")
-    return {"content_hash": _HASH, "blob_sha256": ref.sha256}
+    return {
+        "content_hash": _HASH,
+        "bytes": len(_CLEAN_BUNDLE.read_bytes()),
+        "compiled_at": "2026-11-13T00:00:00+00:00",
+        "blob_sha256": ref.sha256,
+    }
 
 
 @pytest.fixture
