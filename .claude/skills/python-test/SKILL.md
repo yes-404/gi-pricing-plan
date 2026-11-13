@@ -5,6 +5,12 @@ description: Testing discipline for this repo — requirement-traceability marke
 
 # Testing here
 
+> **Under the new frame (from 2026-11-13, ADR-8449).** The traceability markers, the
+> negative-test emphasis and the gate stay. The tests of the retired record process
+> (`tests/test_doc_id_migrate.py`, the register, ruling and ledger tests) are deleted with
+> their scripts; the sections below that cite them describe the retired process. Quote a pass
+> count in the pull request's evidence with its tree and command.
+
 ```bash
 uv run pytest -q
 uv run python scripts/req-coverage.py     # which requirements the suite claims
@@ -19,7 +25,7 @@ def test_money_minor_refuses_floats(): ...
 
 `scripts/req-coverage.py` turns those marks into a traceability report and **fails when a
 test claims a requirement that does not exist** — catching typos and any renumbering that
-breaks the append-only rule (`CLAUDE.md` §5).
+breaks the append-only rule (`CLAUDE.md` §3).
 
 Coverage is currently *reported, not gated*. At 1.7 % a threshold would fail every build
 and teach everyone to ignore it; it earns a floor once a phase's requirements are meant to
@@ -756,7 +762,7 @@ the *same* `propose_grouping` call on the *same* fixture:
 | 8.4 | 20.01 s |
 
 A 2.3x contention factor, which reads exactly like a regression and will be reported as one.
-Two consequences for any NFR measurement (`CLAUDE.md` §13 rule 5):
+Two consequences for any NFR measurement (`CLAUDE.md` §6):
 
 - **Report CPU seconds beside wall-clock, and quote `/proc/loadavg` with every figure.**
   `scripts/bench-model.py` and `bench-data.py` both do; a bespoke timing script must too.

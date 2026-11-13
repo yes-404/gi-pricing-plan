@@ -5,6 +5,15 @@ description: How this monorepo is laid out and why — the annotated tree, the p
 
 # Why the repository is shaped this way
 
+> **Under the new frame (from 2026-11-13, ADR-8449).** `docs/plans`, `docs/ledgers`,
+> `docs/rulings`, `docs/closures`, `docs/findings`, `docs/rfcs`, `docs/research`,
+> `docs/roadmap.md`, `docs/INDEX.md`, `docs/open-questions.md`, `docs/REDIRECTS.csv` and
+> `docs/_templates` are FROZEN: `scripts/freeze-check.py` fails a pull request that adds,
+> changes, deletes or renames a file in them. The tree below still describes where they
+> are; it is not where new work goes. Work, findings and decisions-needed live in GitHub
+> issues; the plan lives in the milestones; decisions that bind the product are `docs/adrs/`.
+> `CLAUDE.md` section numbers cited below are those of the retired, longer file.
+
 `CLAUDE.md` §2 states the rules — where status lives, the three layout entries that carry
 one, the one-way seam, the standing architecture rules — and §3 the three stack
 prohibitions a session breaks by default. This file is the tree itself and the reasoning

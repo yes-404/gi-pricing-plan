@@ -1,7 +1,9 @@
 ---
 name: phase-review
-description: Run CLAUDE.md §14's plan review — in full before each phase's exit demo, and at a Work close only when the auditor's replan check fires. Tests whether the plan still says the right thing, rather than whether a workstream did what it said (that is close-workstream). Five questions in fixed order, each with a written answer including "no change"; the output is a short index of proposals, each accepted one routed to an owned record, never an edit to the plan. Use when asked to review the plan, the roadmap, or the phase shape, before every phase exit demo, and when a Work close's replan check fires.
+description: RETIRED 2026-11-13, kept for history, do not follow. Run CLAUDE.md §14's plan review — in full before each phase's exit demo, and at a Work close only when the auditor's replan check fires. Tests whether the plan still says the right thing, rather than whether a workstream did what it said (that is close-workstream). Five questions in fixed order, each with a written answer including "no change"; the output is a short index of proposals, each accepted one routed to an owned record, never an edit to the plan. Use when asked to review the plan, the roadmap, or the phase shape, before every phase exit demo, and when a Work close's replan check fires.
 ---
+
+> **RETIRED WITH THE RECORD PROCESS on 2026-11-13; kept for history; do not follow.** (ADR-8449.)
 
 # Running a plan review
 

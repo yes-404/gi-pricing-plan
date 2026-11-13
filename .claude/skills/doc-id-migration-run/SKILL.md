@@ -8,6 +8,8 @@ corrected_by: []
 relates: []                      # ids only
 ---
 
+> **RETIRED WITH THE RECORD PROCESS on 2026-11-13; kept for history; do not follow.** (ADR-8449.)
+
 # doc-id migration — safe re-derivation after tool changes
 
 This skill documents how to detect when a tool change requires Commit 1 to be re-derived, 

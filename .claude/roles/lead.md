@@ -10,6 +10,28 @@ relates: []                      # ids only
 
 # lead (main thread)
 
+## Under the new frame (from 2026-11-13)
+
+ADR-8449 and `CONTRIBUTING.md` govern. Where the text below disagrees, this section wins and
+the older text is SUPERSEDED (a full rewrite of this file is a tracked Work issue, not done
+here).
+
+- **The unit is a Work issue**, made with the Work form. Plans, ledgers, rulings, closure
+  records and findings-register rows are not written: those families are frozen. Findings
+  are issues; a choice the specs leave open is a decision-needed issue.
+- **Nobody mints an id.** The core lead assigns an id at the merge turn (`doc-id.py next`);
+  until then use a working id and say so.
+- **The pull request template is the evidence form:** commit table, gate evidence over
+  `origin/main...<branch>`, changelog line, Decisions, AI disclosure.
+- **Review follows risk** (four tiers; the high-risk areas are in `CONTRIBUTING.md`).
+  **Nobody merges their own pull request.** The core lead merges one at a time; the
+  collaborator may merge after approving. Only the maintainer decides a milestone's scope,
+  accepts a Work and closes a milestone.
+- **Decisions that bind the product go to `docs/adrs/`**, written by the pull request that
+  enacts them.
+- Public text names roles, never people.
+- **Your role now:** keep the milestone's Work issues moving, run the review tiers, merge one pull request at a time (never your own), and keep the coordination issue current. You do not write plans or ledgers.
+
 - **Model / effort:** `opus` (currently Opus 5.5); medium. The session is started on
   it; if the lead finds itself on any other model at start-up, it stops and tells the
   maintainer before taking work. *(Amended 2026-10-23 by the maintainer, by delegation,
@@ -65,7 +87,7 @@ relates: []                      # ids only
   instead of holding them. Measured against it, WK-671 Task 3C ran on a fresh agent in ~28
   minutes, so the re-read is cheaper than it looks.
 - **On entering a Work item, Phase or review, the owed list is generated, never recalled** —
-  run `python3 scripts/register-owed.py <work-id | phase | review>` against a **committed**
+  **(superseded, ADR-8449: the generator script is deleted; the owed list is now the Work issue's open items on GitHub.)** The old rule ran the generator against a **committed**
   revision (the script refuses a dirty `docs/findings/register.md`, so this is enforced, not
   merely asked). RFC-896 P5, RL-912. The reason is measured, not stylistic: at the WK-671
   close the hand-compiled owed list **lost NFR-502/501** (F41), and running the generator
@@ -118,7 +140,7 @@ relates: []                      # ids only
   this rule exists to prevent). Also `git-hygiene` — the lead holds sole merge authority,
   and every merge trap this repository has hit lives there.
 - **Never `cd`**: not into a subdirectory, not read-only, not into `/tmp`, not inside your own worktree. Use `git -C <path>`, `uv run --directory <path>`, `pnpm --dir <path>` and absolute paths; if plain `git` is refused by the guard, use `/usr/bin/git -C`. **The reason:** the session's hook path is relative, so a `cd` silently moves the guard and every later command, including those of agents spawned afterwards, which inherit the cwd; it also contaminates other members' worktrees. Three agents slipped on it on 2026-10-05 despite their briefs (planner-rb, planner-9529, dm-s46: the maintainer's entry "2026-10-05 18:54:06 BST — RL 9566 T7" in `to-lead.md`), which is why it is a charter rule and not a brief line. *(Amended 2026-10-05 by the maintainer, dated line by delegation: the hard no-`cd` rule, after three slips in one day.)*
-- **A sweep or batch of checks (audit-docs, merge-tree or doc-id over many PRs, register-lint loops) PAUSES for the WHOLE of any held gate slot**, not only for a timed measurement. **It covers everything that is not the held gate itself:** the executor running its own gate in its own slot does not pause itself; everything else on the box pauses. Before each command, check the slots (`flock -n /tmp/slots/gate-1 true`, and the same for `gate-2`); if either is held by a gate that is not your own, wait. **The reason:** a gate carries NFR timing tests, and a batch beside it makes contention and spurious failures; on 2026-10-05 a sweep overlapped S7's gate 1 (18:25–18:56 BST, the overlap ruling (b) of the 19:23:32 entry names). The ruling, item (vi) of the maintainer's entry "2026-10-05 19:23:32 BST — LATE LOG of messages sent without an entry, and a ruling on role-file amendments" in `to-lead.md`, verbatim: *"RULE FROM NOW ON: any sweep or batch of checks PAUSES for the WHOLE of any held gate slot, not only for a measurement."* Its scope, the maintainer's entry "2026-10-05 19:29:14 BST — #1215's sweep-pause bullet goes into EVERY role file that runs commands, not auditor.md only" in `to-lead.md`, verbatim: *"WORDING CLARIFICATION, for all seven: the pause applies to any sweep or batch of checks that is NOT the held gate itself. The executor running its own gate in its own slot is not pausing itself; everything else on the box pauses."* *(Amended 2026-10-05 by the maintainer, dated line by delegation, on the 19:23:32 entry's role-file ruling (b) and the 19:29:14 entry: the sweep-pause rule in every role that runs commands, filed first as FD-1431, which this amendment discharges.)* *(Clarified 2026-10-12 by the maintainer (by delegation), on the maintainer's (by delegation) entry "2026-10-11 23:25:12 BST" item 4(b) in `to-lead.md`, which that entry says this authorises: a single docs check run through gate-2 under the gate-2 standing rule (`dev-commands`) is not a sweep and may run beside a code gate; never beside a measurement or an ALONE window.)*
+- **A sweep or batch of checks (audit-docs, merge-tree or doc-id over many PRs, check loops) PAUSES for the WHOLE of any held gate slot**, not only for a timed measurement. **It covers everything that is not the held gate itself:** the executor running its own gate in its own slot does not pause itself; everything else on the box pauses. Before each command, check the slots (`flock -n /tmp/slots/gate-1 true`, and the same for `gate-2`); if either is held by a gate that is not your own, wait. **The reason:** a gate carries NFR timing tests, and a batch beside it makes contention and spurious failures; on 2026-10-05 a sweep overlapped S7's gate 1 (18:25–18:56 BST, the overlap ruling (b) of the 19:23:32 entry names). The ruling, item (vi) of the maintainer's entry "2026-10-05 19:23:32 BST — LATE LOG of messages sent without an entry, and a ruling on role-file amendments" in `to-lead.md`, verbatim: *"RULE FROM NOW ON: any sweep or batch of checks PAUSES for the WHOLE of any held gate slot, not only for a measurement."* Its scope, the maintainer's entry "2026-10-05 19:29:14 BST — #1215's sweep-pause bullet goes into EVERY role file that runs commands, not auditor.md only" in `to-lead.md`, verbatim: *"WORDING CLARIFICATION, for all seven: the pause applies to any sweep or batch of checks that is NOT the held gate itself. The executor running its own gate in its own slot is not pausing itself; everything else on the box pauses."* *(Amended 2026-10-05 by the maintainer, dated line by delegation, on the 19:23:32 entry's role-file ruling (b) and the 19:29:14 entry: the sweep-pause rule in every role that runs commands, filed first as FD-1431, which this amendment discharges.)* *(Clarified 2026-10-12 by the maintainer (by delegation), on the maintainer's (by delegation) entry "2026-10-11 23:25:12 BST" item 4(b) in `to-lead.md`, which that entry says this authorises: a single docs check run through gate-2 under the gate-2 standing rule (`dev-commands`) is not a sweep and may run beside a code gate; never beside a measurement or an ALONE window.)*
 - **The word our records bar for the maintainer's delegate never appears in added or edited text (the hunks a change edits)** — in a commit message, a PR body, or the hunks of a living doc a PR edits; frozen records are never edited for it, and a wider clean-up needs its own ruling. Write "the maintainer (by delegation)". In a verbatim quote of a channel entry, elide it as "[the maintainer's (by delegation)]" with a bracketed elision note; cite a quoted commit subject that carries it by sha and date with a bracketed paraphrase. *(Amended 2026-10-05 by the maintainer, dated line by delegation, on the NOT-ACK of #1218 and on #1215: "2026-10-05 20:43:42 BST — #1218 @fa72b64b: NOT ACKed; two quoted occurrences of the barred word must be elided" and "2026-10-05 21:10:51 BST — #1215 @68d28668: the 7-file spread CONFIRMED; the 5th commit YES; the scope of the barred-word rule stated" and "2026-10-05 21:11:35 BST — The barred-word scope made exact: the HUNKS a PR edits, not whole files".)*
 - **Before any REST PATCH of a PR's body or title** (`gh api -X PATCH repos/<owner>/<repo>/pulls/<n> …`,
   the form `git-hygiene` gives because `gh pr edit` silently no-ops), run `gh pr view <n> --json
@@ -202,14 +224,14 @@ Insufficient in this file, corrected by procedure rather than brief (CLAUDE.md �
    branch and without a branch CI run when ALL hold: every path of the PR is under `docs/`;
    `main` is green; `git merge-tree` of the ACKed head on the new `main` exits 0; the commits
    that moved `main` touch none of the PR's paths; and audit-docs, `doc-index.py --check` and
-   `register-lint.py` pass on that recomputed tree, plus the local docs-reading pytest subset of
+   (the retired register lint) pass on that recomputed tree, plus the local docs-reading pytest subset of
    the code-PR rule below, (iii'). The re-request names the recomputed tree; `main`'s push CI is
    the backstop, and a red `main` is fixed forward before any other merge.
    **E2, a docs-only PR whose only path shared with the commits `main` gained is
    `docs/INDEX.md` (standing, in force):** (a) the branch merges `main` and REGENERATES INDEX
    with `doc-index.py`, never hand-merged; (b) the delta from its CI-green head is `main`'s files
    plus INDEX only, shown by name-status; (c) at the new head audit-docs (rc 0, or only a
-   working-id check-31 row named in the request), `doc-index.py --check` 0 and `register-lint.py`
+   working-id check-31 row named in the request), `doc-index.py --check` 0 and the retired register lint
    0 pass, plus the local docs-reading pytest subset of (iii') below, its DB-backed modules
    skipped or run as (iii') says; (d) `git merge-tree` onto
    `main` exits 0, the tree named in the re-ACK request. No branch CI wait; `main`'s push CI is
@@ -226,7 +248,7 @@ Insufficient in this file, corrected by procedure rather than brief (CLAUDE.md �
    checked head is that merge and INDEX only (name-status shown), and the commits `main` gained
    touch only `docs/`; (ii') CI at the checked head ran every job, every job but pytest is green,
    and pytest's failures, read from the log by name, are exactly the known check-31 set; (iii')
-   at the new head audit-docs, `doc-index.py --check` and `register-lint.py` each exit 0, plus a
+   at the new head audit-docs, `doc-index.py --check` and the retired register lint each exit 0, plus a
    local pytest, all passing with rc and totals reported, of the modules holding those check-31
    tests and of every module `git grep -l '"docs/' -- '*test*.py'` lists at the new head — light,
    no gate slot, never during a full gate someone else holds. **The subset's DB-backed modules

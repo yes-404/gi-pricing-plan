@@ -5,7 +5,7 @@ description: Add or modify a requirement, section, or open question in the docs/
 
 # Changing a spec
 
-The specification suite is the product of Phase 0 (`CLAUDE.md` §0). Specs are versioned
+The specification suite is the product of Phase 0 (`CLAUDE.md` §2). Specs are versioned
 prose with **permanent identifiers** — the failure mode is not a typo, it is a broken
 traceability chain that nobody notices for months.
 
@@ -20,7 +20,7 @@ traceability chain that nobody notices for months.
 **Every JSON example declares what it is, on its fence.** ` ```json schema=<Class>` names a class in
 `model_schema.__all__`, and the block must pass `<Class>.model_validate` in full. ` ```json illustrative`
 marks a fragment or a shape `model-schema` does not define; the block is listed, never validated.
-An `illustrative` mark on a block that contradicts an existing class is a silent pick (`CLAUDE.md` §0).
+An `illustrative` mark on a block that contradicts an existing class is a silent pick (`CLAUDE.md` §2).
 Every fence in `docs/specs/` declares a language.
 
 **Requirement IDs are append-only.** Never renumber. Never insert `42a`/`42b` — that is not
@@ -57,7 +57,7 @@ wraps a native library or a caller-injected dependency, check what that thing ne
 awaited from — a running instance, a `.pyi` stub, or a small throwaway spike — rather than
 defaulting to `def` and waiting for a mismatch to be found later.
 
-**Every spec keeps all ten sections**, in this order (`CLAUDE.md` §5 is the standard; this
+**Every spec keeps all ten sections**, in this order (`CLAUDE.md` §3 is the standard; this
 is the list it points at):
 
 1. **Purpose & scope** — what the module does and explicitly does not do
@@ -73,50 +73,31 @@ is the list it points at):
 8. **Tech dependencies** — which stack components it uses and for what (feeds
    `skills-map.md`)
 9. **Non-functional requirements** — performance, audit, security where relevant
-10. **Open questions** — mirrored into `docs/open-questions.md`
+10. **Open questions** — the heading stays; each open question is a decision-needed issue and
+    §10 lists its issue number (`#n`) with a one-line summary
 
 If a change adds a tech dependency, §8 of that spec **and** `docs/skills-map.md` must both
 change in the same commit, and **every `skills-map.md` row cites at least one spec section
 or requirement id** — a row that cites nothing cannot be checked against anything.
 
-**Open questions are mirrored in both directions.** An `OQ-` raised in a spec's §10 must
-appear in `docs/open-questions.md` with options, trade-offs, a recommendation, an owner and
-a status — and nothing may appear in that file that no spec raises. The audit enforces both
-directions.
+**Open questions are GitHub issues (ADR-8449, ND-2).** A choice a spec leaves open is a
+decision-needed issue with options, trade-offs and a recommendation; the spec's §10 lists
+its number (`#n`). `docs/open-questions.md` and the `OQ-` mirror are frozen: existing §10
+rows stay as written, nothing new is added to the register, and no mirror check runs. There
+is no gate table to update; the milestone on GitHub carries what is due when.
 
 **Never silently pick a side on an open design choice.** Record options and a
-recommendation; do not resolve it in prose (`CLAUDE.md` §10).
+recommendation in the decision-needed issue; do not resolve it in prose.
 
-**A new `OQ-` also goes into `docs/roadmap.md` §10's decision-gate table, in the same
-commit.** `audit-docs.py` does not check this — it verifies the spec ↔ register mirror and
-stops there — so a question can be raised, mirrored, and still be invisible to the plan.
-Four were: OQ-562, OQ-543, OQ-644 and OQ-582 were all raised inside Phase 1a,
-all mirrored correctly, and none reached the gate table until 2026-08-15. The `docs-audit`
-skill carries the script that catches it; run it whenever you add or decide a question.
-
-**Deciding one edits that row too**, and its `N (M open)` count is hand-maintained — so a
-decision that strikes the id and leaves the count alone leaves the plan claiming an open
-question the register has closed. Recount the row rather than decrementing it: OQ-563 had
-been decided before it ever reached the table, so the row went 9 (3 open) → 10 (2 open) in
-one edit.
-
-**A decided question keeps its gate row** — the row is where the *revisit* is scheduled, not
-only where the answer was due. OQ-576 and OQ-584 were both decided on 2026-08-18 and
-both sit at **Before Phase 2**, because each names something to re-examine against `03`'s rate
-table once it exists; OQ-585 sits in *Deferred* holding the trigger its requirement names.
-Striking the id and leaving it in place is the edit — deleting the row loses the appointment.
-
-**Deciding one is the same edit in three places**, and the register's own precedent shows
-the shape: strike the question and prefix `**DECIDED <date>: …**`; leave the options column
-as it was, because it records what was believed at the time; rewrite the recommendation
-column as the decision, naming the requirements it became; set the status. Then the spec's
-§10 row gets the same strike and a one-line pointer to those requirements, and the
-obligation itself lands in §3 as an appended `FR-`. **A decision that appends no
-requirement usually has not been applied** — it is still a recommendation.
+**Deciding one is a requirement.** The issue is closed with a comment starting `Decided:`
+and the date; the pull request that enacts it appends the `FR-` it became and lists the
+decision in its Decisions section. **A decision that appends no requirement usually has not
+been applied.** A decision that binds more than one module is also a record in `docs/adrs/`
+(`adr-write`).
 
 ## Specifying a custom objective
 
-Custom objectives are a first-class capability of this platform (`CLAUDE.md` §3): a spec may
+Custom objectives are a first-class capability of this platform (`CLAUDE.md` §4, `02-modelling.md` §4.4): a spec may
 define user-defined objective and eval functions for XGBoost/LightGBM over the gradient +
 hessian interface, and custom loss specifications where the standard families do not fit —
 Tweedie variance-power tuning, capped or large-loss-adjusted losses, asymmetric pricing
@@ -129,7 +110,7 @@ complete until it says four things:
    evaluated as given.
 2. **How it is validated** — what is checked before a fit is allowed to start.
 3. **How it is versioned** — a named, versioned definition reusable across models, with its
-   own approval status (`CLAUDE.md` §7).
+   own approval status (`02-modelling.md` §4.4).
 4. **How it is audited** — what the audit log records when one is declared, approved and used.
 
 A spec that names a new objective form without those four is the failure mode this rule
@@ -141,8 +122,7 @@ exists for: the maths is reviewable and the execution path is not.
 python3 scripts/audit-docs.py          # must print "All checks passed."
 ```
 
-Then check the decision-gate invariant if you touched open questions — see the
-`docs-audit` skill, which covers the checks the script does not.
+There is no decision-gate table to check any more (ADR-8449).
 
 ## Writing style that matches the suite
 

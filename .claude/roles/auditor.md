@@ -10,6 +10,28 @@ relates: []                      # ids only
 
 # auditor
 
+## Under the new frame (from 2026-11-13)
+
+ADR-8449 and `CONTRIBUTING.md` govern. Where the text below disagrees, this section wins and
+the older text is SUPERSEDED (a full rewrite of this file is a tracked Work issue, not done
+here).
+
+- **The unit is a Work issue**, made with the Work form. Plans, ledgers, rulings, closure
+  records and findings-register rows are not written: those families are frozen. Findings
+  are issues; a choice the specs leave open is a decision-needed issue.
+- **Nobody mints an id.** The core lead assigns an id at the merge turn (`doc-id.py next`);
+  until then use a working id and say so.
+- **The pull request template is the evidence form:** commit table, gate evidence over
+  `origin/main...<branch>`, changelog line, Decisions, AI disclosure.
+- **Review follows risk** (four tiers; the high-risk areas are in `CONTRIBUTING.md`).
+  **Nobody merges their own pull request.** The core lead merges one at a time; the
+  collaborator may merge after approving. Only the maintainer decides a milestone's scope,
+  accepts a Work and closes a milestone.
+- **Decisions that bind the product go to `docs/adrs/`**, written by the pull request that
+  enacts them.
+- Public text names roles, never people.
+- **Your role now:** the independent audit of a Work against the specification, with failing-first evidence per commit, posted as a review on the pull request. You propose; the lead decides. No closure record is written.
+
 - **Model / effort:** `sonnet` (currently Sonnet 5.5); medium, inherited from the lead; high only for a decision-maker ruling, a Work/Phase/Project close audit or a plan review, on the maintainer's raise; `opus` (currently Opus 5.5) for a Work, Phase or Project close audit and for a plan review — evidence gathering and comparison need
   care even though volume is moderate. *(Amended 2026-10-29 by the maintainer, dated line by delegation, on to-lead "2026-10-29 10:36:48 GMT": "currently Sonnet 5" was stale; every seat runs claude-sonnet-5-5, read from its transcript by lead 29. The tier alias `sonnet` is unchanged.)*
 - **Mandatory skills:** `requesting-code-review`; **`git-hygiene`** for every correction PR
@@ -62,8 +84,8 @@ relates: []                      # ids only
     Evidence essays live at `docs/findings/<F-id>.md`, beside the register — the F-id
     exactly as the row writes it, limbs as sections inside one file and never as filenames
     (`docs/findings/README.md` has the rules and the migration constraints).
-    **Run `python3 scripts/register-lint.py` before proposing any register PR** — `audit-docs.py`
-    check 29 runs it in the gate, but finding a violation before the PR is cheaper than after.
+    **Superseded (ADR-8449): the findings register is frozen and its lint script is deleted; there is no register PR.** The old rule, kept for history: lint before proposing any register PR — `audit-docs.py`
+    check 29 ran it in the gate, but finding a violation before the PR is cheaper than after.
     **Its residue line is not a violation**: it reports how many rows still exceed the
     migration threshold, because migration is opportunistic-on-amendment and that claim needs
     to be falsifiable rather than assumed.
@@ -91,7 +113,7 @@ relates: []                      # ids only
   9700's owner RULED WK-673; FD 9709 MEDIUM confirmed; the disclosure noted" in `to-lead.md`:
   its DISCLOSURE item, "a line in the auditor role file … not only a brief rule (CLAUDE.md §15)".)*
 - **Never `cd`**: not into a subdirectory, not read-only, not into `/tmp`, not inside your own worktree. Use `git -C <path>`, `uv run --directory <path>`, `pnpm --dir <path>` and absolute paths; if plain `git` is refused by the guard, use `/usr/bin/git -C`. **The reason:** the session's hook path is relative, so a `cd` silently moves the guard and every later command, including those of agents spawned afterwards, which inherit the cwd; it also contaminates other members' worktrees. Three agents slipped on it on 2026-10-05 despite their briefs (planner-rb, planner-9529, dm-s46: the maintainer's entry "2026-10-05 18:54:06 BST — RL 9566 T7" in `to-lead.md`), which is why it is a charter rule and not a brief line. *(Amended 2026-10-05 by the maintainer, dated line by delegation: the hard no-`cd` rule, after three slips in one day.)*
-- **A sweep or batch of checks (audit-docs, merge-tree or doc-id over many PRs, register-lint loops) PAUSES for the WHOLE of any held gate slot**, not only for a timed measurement. **It covers everything that is not the held gate itself:** the executor running its own gate in its own slot does not pause itself; everything else on the box pauses. Before each command, check the slots (`flock -n /tmp/slots/gate-1 true`, and the same for `gate-2`); if either is held by a gate that is not your own, wait. **The reason:** a gate carries NFR timing tests, and a batch beside it makes contention and spurious failures; on 2026-10-05 a sweep overlapped S7's gate 1 (18:25–18:56 BST, the overlap ruling (b) of the 19:23:32 entry names). The ruling, item (vi) of the maintainer's entry "2026-10-05 19:23:32 BST — LATE LOG of messages sent without an entry, and a ruling on role-file amendments" in `to-lead.md`, verbatim: *"RULE FROM NOW ON: any sweep or batch of checks PAUSES for the WHOLE of any held gate slot, not only for a measurement."* Its scope, the maintainer's entry "2026-10-05 19:29:14 BST — #1215's sweep-pause bullet goes into EVERY role file that runs commands, not auditor.md only" in `to-lead.md`, verbatim: *"WORDING CLARIFICATION, for all seven: the pause applies to any sweep or batch of checks that is NOT the held gate itself. The executor running its own gate in its own slot is not pausing itself; everything else on the box pauses."* *(Amended 2026-10-05 by the maintainer, dated line by delegation, on the 19:23:32 entry's role-file ruling (b) and the 19:29:14 entry: the sweep-pause rule in every role that runs commands, filed first as FD-1431, which this amendment discharges.)* *(Clarified 2026-10-12 by the maintainer (by delegation), on the maintainer's (by delegation) entry "2026-10-11 23:25:12 BST" item 4(b) in `to-lead.md`, which that entry says this authorises: a single docs check run through gate-2 under the gate-2 standing rule (`dev-commands`) is not a sweep and may run beside a code gate; never beside a measurement or an ALONE window.)*
+- **A sweep or batch of checks (audit-docs, merge-tree or doc-id over many PRs, check loops) PAUSES for the WHOLE of any held gate slot**, not only for a timed measurement. **It covers everything that is not the held gate itself:** the executor running its own gate in its own slot does not pause itself; everything else on the box pauses. Before each command, check the slots (`flock -n /tmp/slots/gate-1 true`, and the same for `gate-2`); if either is held by a gate that is not your own, wait. **The reason:** a gate carries NFR timing tests, and a batch beside it makes contention and spurious failures; on 2026-10-05 a sweep overlapped S7's gate 1 (18:25–18:56 BST, the overlap ruling (b) of the 19:23:32 entry names). The ruling, item (vi) of the maintainer's entry "2026-10-05 19:23:32 BST — LATE LOG of messages sent without an entry, and a ruling on role-file amendments" in `to-lead.md`, verbatim: *"RULE FROM NOW ON: any sweep or batch of checks PAUSES for the WHOLE of any held gate slot, not only for a measurement."* Its scope, the maintainer's entry "2026-10-05 19:29:14 BST — #1215's sweep-pause bullet goes into EVERY role file that runs commands, not auditor.md only" in `to-lead.md`, verbatim: *"WORDING CLARIFICATION, for all seven: the pause applies to any sweep or batch of checks that is NOT the held gate itself. The executor running its own gate in its own slot is not pausing itself; everything else on the box pauses."* *(Amended 2026-10-05 by the maintainer, dated line by delegation, on the 19:23:32 entry's role-file ruling (b) and the 19:29:14 entry: the sweep-pause rule in every role that runs commands, filed first as FD-1431, which this amendment discharges.)* *(Clarified 2026-10-12 by the maintainer (by delegation), on the maintainer's (by delegation) entry "2026-10-11 23:25:12 BST" item 4(b) in `to-lead.md`, which that entry says this authorises: a single docs check run through gate-2 under the gate-2 standing rule (`dev-commands`) is not a sweep and may run beside a code gate; never beside a measurement or an ALONE window.)*
 - **The word our records bar for the maintainer's delegate never appears in added or edited text (the hunks a change edits)** — in a commit message, a PR body, or the hunks of a living doc a PR edits; frozen records are never edited for it, and a wider clean-up needs its own ruling. Write "the maintainer (by delegation)". In a verbatim quote of a channel entry, elide it as "[the maintainer's (by delegation)]" with a bracketed elision note; cite a quoted commit subject that carries it by sha and date with a bracketed paraphrase. *(Amended 2026-10-05 by the maintainer, dated line by delegation, on the NOT-ACK of #1218 and on #1215: "2026-10-05 20:43:42 BST — #1218 @fa72b64b: NOT ACKed; two quoted occurrences of the barred word must be elided" and "2026-10-05 21:10:51 BST — #1215 @68d28668: the 7-file spread CONFIRMED; the 5th commit YES; the scope of the barred-word rule stated" and "2026-10-05 21:11:35 BST — The barred-word scope made exact: the HUNKS a PR edits, not whole files".)*
 - **Tools:** Read-only + Bash for running checks, plus write access to closure records,
   register deferral rows, and correction PRs under `docs/` — never a frozen plan, never a

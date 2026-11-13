@@ -9,18 +9,19 @@ description: Create, supersede, or annotate an architecture decision record in d
 
 Write one when the choice **constrains more than one module**, is **expensive to reverse**,
 or has **already been made** and needs recording. Otherwise it belongs in
-`docs/open-questions.md` as an open question with options and a recommendation.
+a decision-needed issue with options and a recommendation.
 
 ## Creating one
 
-Next number, never reused, from the one allocator (`docs/process/document-ids.md` §1.7):
+Next number, never reused: the core lead assigns the id at the merge turn; until then use a
+working id and say so in the pull request. The allocator (ADR-8449, ND-3):
 
 ```bash
 python3 scripts/doc-id.py next
 ```
 
 File as `docs/adrs/ADR-<nnnnn>-<kebab-title>.md`, the id zero-padded to five digits. Start from
-`docs/_templates/ADR.md`, which fixes the header. The body has this shape:
+an existing ADR (ADR-8449 is the newest) and copy its header. The body has this shape:
 
 ```markdown
 # ADR-NNNN — Title in the imperative
