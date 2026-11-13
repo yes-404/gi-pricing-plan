@@ -32,7 +32,7 @@ from fastapi.testclient import TestClient
 from app.api import deps as deps_module
 from app.api import score as score_module
 from app.errors import install_error_handlers
-from model_schema import RatingVersion
+from model_schema import QuoteContext, RatingVersion
 from pricing_core.rating.compile import ResolvedArtifact, compile_bundle
 from pricing_core.rating.runtime import CompiledBundle, load_bundle
 
@@ -354,3 +354,30 @@ def test_an_undeclared_float_input_is_tolerated_as_before(client: TestClient) ->
     response = _post(client, SCORE_URL, _body(50000, "0.75", ',"extra_rate":1.5'))
     assert response.status_code == 200, response.text
     assert response.json()["outputs"]["payable_premium_minor"] == 37500
+
+
+@pytest.mark.req("FR-273")
+def test_a_nested_undeclared_float_is_tolerated_as_before(client: TestClient) -> None:
+    extra = ',"extra_list":[1.5,{"a":2.5}]'
+    response = _post(client, SCORE_URL, _body(50000, "0.75", extra))
+    assert response.status_code == 200, response.text
+    assert response.json()["outputs"]["payable_premium_minor"] == 37500
+
+
+@pytest.mark.req("FR-259")
+def test_a_stored_quote_context_keeps_a_decimal_input_a_json_number() -> None:
+    """A `Decimal` dumps in pydantic's JSON mode as a string, which the off-path re-score refuses
+    as not numeric; the stored context carries the float, which is exact once the quote priced."""
+    ctx = QuoteContext.model_validate(
+        {
+            "purpose": "new_business",
+            "quoted_at": "2026-08-29T12:00:00",
+            "effective_date": "2026-09-01",
+            "inputs": {"factor": Decimal("0.75"), "base_minor": 5, "note": "x"},
+        }
+    )
+    assert ctx.model_dump(mode="json")["inputs"]["factor"] == "0.75"  # the hazard
+    stored = score_module._stored_context(ctx)
+    assert stored["inputs"] == {"factor": 0.75, "base_minor": 5, "note": "x"}
+    assert isinstance(stored["inputs"]["factor"], float)
+    assert QuoteContext.model_validate(stored).inputs["factor"] == 0.75

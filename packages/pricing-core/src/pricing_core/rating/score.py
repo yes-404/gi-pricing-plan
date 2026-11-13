@@ -328,6 +328,17 @@ def _as_decimal(value: Any) -> Decimal:
     return value if isinstance(value, Decimal) else Decimal(str(value))
 
 
+def _decimals_as_floats(value: Any) -> Any:
+    """`value` with every `Decimal` in it, however nested, as a `float` (the engine's wire)."""
+    if isinstance(value, Decimal):
+        return float(value)
+    if isinstance(value, list):
+        return [_decimals_as_floats(v) for v in value]
+    if isinstance(value, dict):
+        return {k: _decimals_as_floats(v) for k, v in value.items()}
+    return value
+
+
 def _engine_context(algorithm: RatingAlgorithm, ctx: QuoteContext) -> dict[str, Any]:
     """The mapping the engine evaluates: the quote's inputs, with each `Decimal` in a
     `decimal`-declared input crossed as the `float` the JSON path delivers (FR-273).
@@ -355,6 +366,10 @@ def _engine_context(algorithm: RatingAlgorithm, ctx: QuoteContext) -> dict[str, 
                     f"input {name!r} is not exactly representable as a finite float (FR-273)",
                 )
             inputs[name] = as_float
+    for name in inputs.keys() - decimal_inputs:
+        # A `Decimal` the JSON path read (FR-273) in an input the contract does not declare
+        # `decimal`, an extra key `_validate_inputs` tolerates, crosses as the float it always was.
+        inputs[name] = _decimals_as_floats(inputs[name])
     return {"effective_date": ctx.effective_date.isoformat(), "purpose": ctx.purpose, **inputs}
 
 
