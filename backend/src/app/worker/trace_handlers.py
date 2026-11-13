@@ -83,6 +83,7 @@ def _score_trace_produce(parameters: dict[str, Any], callback: ProgressCallback)
                 progress.database,
                 progress.blob_store,
                 slot,
+                database=progress.database,
                 workspace_id=workspace_id,
                 ref=ref,
             )

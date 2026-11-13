@@ -46,6 +46,7 @@ from app.db.models import (
     RateTableCellRow,
     RateTableRow,
     RateTableVersionRow,
+    RatingAlgorithmRow,
 )
 from app.db.session import Database
 from app.errors import PlatformError
@@ -402,11 +403,48 @@ def _model_call_algorithm(model_ref: str) -> dict[str, Any]:
 
 @pytest.mark.req("FR-88")
 @pytest.mark.req("FR-240")
+def test_a_save_over_a_gbm_fitted_on_a_control_factor_is_refused_with_its_code(
+    api_client, workspace_id, principal, grant, database, blob_store
+) -> None:
+    """WK-2113 S3, B2 (i) (ruling 2026-11-13 21:17:39): the algorithm SAVE runs the closure test
+    compile runs, so a `model_call` over a model fitted on a `control` Factor answers 422 naming
+    the Factor, instead of saving green (and instead of REQUIRING that Factor as an input)."""
+    _run(grant("analyst"))
+
+    async def _arrange() -> str:
+        model_id, fit_status = await _fitted_gbm(
+            database, blob_store, workspace_id, area_intent=FactorIntent.CONTROL
+        )
+        assert fit_status is JobStatus.SUCCEEDED
+        async with database.unit_of_work() as session:
+            row = await session.get(ModelRow, model_id)
+            assert row is not None
+            await mark_approved(session, row)
+            return f"model:{row.model_family_slug}@{row.version}"
+
+    model_ref = _run(_arrange())
+    refused = api_client.post(
+        "/api/v1/rating-algorithms",
+        json=_model_call_algorithm(model_ref),
+        headers=_headers(principal, workspace_id),
+    )
+    assert refused.status_code == 422, refused.text
+    body = refused.json()
+    assert body["code"] == "CONTROL_FACTOR_IN_RATEABLE_PATH"
+    assert "area" in body["detail"]
+
+
+@pytest.mark.req("FR-88")
+@pytest.mark.req("FR-240")
 def test_a_compile_over_a_gbm_fitted_on_a_control_factor_fails_with_its_code(
     api_client, workspace_id, principal, grant, database, blob_store
 ) -> None:
     """FD 9639 (DP-7): the GBM is fitted on `area`, which is then a `control` Factor; the
-    approved model is pinned by a `model_call` and the Job refuses it."""
+    approved model is pinned by a `model_call` and the Job refuses it.
+
+    WK-2113 S3, B2 (i): the algorithm SAVE refuses this model too (the next test), so the algorithm
+    is inserted directly here, as a save made before that check would have left it: compile stays
+    the gate of record and still refuses a model saved before the save-time check existed."""
     _run(grant("analyst"))
 
     async def _arrange() -> str:
@@ -422,10 +460,16 @@ def test_a_compile_over_a_gbm_fitted_on_a_control_factor_fails_with_its_code(
 
     model_ref = _run(_arrange())
     headers = _headers(principal, workspace_id)
-    created = api_client.post(
-        "/api/v1/rating-algorithms", json=_model_call_algorithm(model_ref), headers=headers
-    )
-    assert created.status_code == 201, created.text
+    async def _saved_before_the_save_check() -> None:
+        async with database.unit_of_work() as session:
+            session.add(
+                RatingAlgorithmRow(
+                    workspace_id=workspace_id, slug="mc-control", version=1,
+                    content=_model_call_algorithm(model_ref), created_by=principal.id,
+                )
+            )
+
+    _run(_saved_before_the_save_check())
     row = _run(
         _insert_version(
             database, workspace_id, principal.id,

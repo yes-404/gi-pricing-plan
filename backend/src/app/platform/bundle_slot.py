@@ -95,6 +95,8 @@ from pricing_core.rating.runtime import CompiledBundle
 
 __all__ = ["BundleSlot"]
 
+_REFUSED_CAPACITY = 256
+
 
 class BundleSlot:
     """A bounded, per-worker holding tier for hydrated bundles.
@@ -150,6 +152,12 @@ class BundleSlot:
         #: would drop the first caller's degraded read while the bundle was still held
         #: (`test_two_refs_may_memo_the_same_bundle`).
         self._resolved: OrderedDict[str, str] = OrderedDict()
+        #: Hashes this worker has already audited a refusal of (DP-1, `03` NFR-498). It exists to
+        #: write ONE Audit Event per process per hash and for nothing else: a hash is not a
+        #: validation (it covers the pins, not the carried Factor payloads), so no state here is
+        #: ever read as "this hash is clean" — every hydrate runs the guard. Bounded; an evicted
+        #: hash is audited once more, which is the safe direction.
+        self._refused: OrderedDict[str, None] = OrderedDict()
 
     @property
     def capacity(self) -> int:
@@ -188,6 +196,25 @@ class BundleSlot:
         acceptance item 2).
         """
         return self._resolved.get(str(ref))
+
+    def discard(self, content_hash: str) -> None:
+        """Drop `content_hash` and every ref memoed to it. A refused bundle must not stay held
+        under a hash a degraded read could serve it by."""
+        self._held.pop(content_hash, None)
+        self._forget(content_hash)
+
+    def first_refusal(self, content_hash: str) -> bool:
+        """Record a refusal of `content_hash`; `True` only the first time in this process."""
+        if content_hash in self._refused:
+            return False
+        self._refused[content_hash] = None
+        while len(self._refused) > _REFUSED_CAPACITY:
+            self._refused.popitem(last=False)
+        return True
+
+    def unrecord_refusal(self, content_hash: str) -> None:
+        """Undo `first_refusal` when its audit write failed, so the next refusal retries it."""
+        self._refused.pop(content_hash, None)
 
     def _forget(self, content_hash: str) -> None:
         """Drop every ref memoed to an evicted hash, so `hash_for` and `get` agree."""

@@ -72,6 +72,7 @@ from app.platform import settings as settings_service
 from app.platform import shadow as shadow_service
 from app.platform import traces as traces_service
 from app.platform.blobs import BlobStore, to_ref
+from app.platform.bundle_hydration import hydrate
 from app.platform.bundle_slot import BundleSlot
 from app.platform.deployment_switch import LiveRefs, SwitchMessage
 from app.platform.safe_exception import safe_job_exc_info
@@ -88,7 +89,7 @@ from model_schema import (
     ScoringResult,
 )
 from pricing_core.rating.compile import Bundle
-from pricing_core.rating.runtime import CompiledBundle, load_bundle
+from pricing_core.rating.runtime import CompiledBundle
 from pricing_core.rating.score import score_one
 from pricing_core.rating.trace_diff import diff_traces
 from pricing_core.safe_error import CodedError
@@ -326,7 +327,8 @@ async def _shadow_score(
     precedent, sanitised because the failing call carries the quote context, NFR-499)."""
     try:
         compiled = await _compiled_for(
-            database, blob_store, slot, workspace_id=workspace_id, ref=candidate_ref
+            database, blob_store, slot, database=database, workspace_id=workspace_id,
+            ref=candidate_ref,
         )
         options = (ctx.options or QuoteContextOptions()).model_copy(
             update={"rating_version_ref": candidate_ref, "trace": False}
@@ -395,6 +397,7 @@ async def _fetch_bundle(
     blob_store: BlobStore,
     slot: BundleSlot,
     *,
+    database: Database,
     workspace_id: UUID,
     ref: ArtifactRef,
 ) -> CompiledBundle:
@@ -420,6 +423,9 @@ async def _fetch_bundle(
 
     `source` is the request's session on `/score` (one pool checkout for the whole request,
     RL-1685) and the `Database` for a worker or the governance gate, which have no request.
+    `database` is always the `Database`: a refused bundle's Audit Event is written in its own
+    transaction there (`bundle_hydration.hydrate`, FD-1495 B1), and the only path that puts a
+    bundle into `slot` is this function's, so the slot holds only what passed the guard.
     """
     async with reading(source) as session:
         row = await rating_versions_service.resolve_rating_version_ref(
@@ -455,7 +461,9 @@ async def _fetch_bundle(
     bundle = Bundle.model_validate_json(payload)
     compiled = slot.get(bundle.content_hash)
     if compiled is None:
-        compiled = load_bundle(bundle)
+        compiled = await hydrate(
+            bundle, slot=slot, database=database, workspace_id=workspace_id, ref=ref
+        )
     slot.put(ref, compiled)
     return compiled
 
@@ -470,6 +478,7 @@ async def hydrate_for_switch(
         database,
         blob_store,
         slot,
+        database=database,
         workspace_id=message.workspace_id,
         ref=ArtifactRef.parse(message.rating_version_ref),
     )
@@ -488,6 +497,7 @@ async def _compiled_for(
     blob_store: BlobStore,
     slot: BundleSlot,
     *,
+    database: Database,
     workspace_id: UUID,
     ref: ArtifactRef,
 ) -> CompiledBundle:
@@ -505,7 +515,9 @@ async def _compiled_for(
     way: serving one would not be degradation, it would be invention.
     """
     try:
-        return await _fetch_bundle(source, blob_store, slot, workspace_id=workspace_id, ref=ref)
+        return await _fetch_bundle(
+            source, blob_store, slot, database=database, workspace_id=workspace_id, ref=ref
+        )
     except PlatformError:
         raise
     except Exception:
@@ -582,7 +594,7 @@ async def score(
     if routed is not None:
         ref, deployment_id = routed
     compiled = await _compiled_for(
-        session, blob_store, slot, workspace_id=caller.workspace_id, ref=ref
+        session, blob_store, slot, database=database, workspace_id=caller.workspace_id, ref=ref
     )
     trace = ctx.options.trace if ctx.options is not None else False
     # `score_one` refuses a context without `options.rating_version_ref` and reads the ref it
@@ -671,7 +683,8 @@ async def score_compare(
     for side, ref in (("base", body.base), ("comparison", body.comparison)):
         try:
             compiled = await _compiled_for(
-                database, blob_store, slot, workspace_id=caller.workspace_id, ref=ref
+                database, blob_store, slot, database=database, workspace_id=caller.workspace_id,
+                ref=ref,
             )
         except PlatformError as exc:
             raise _naming_side(exc, side) from exc

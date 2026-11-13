@@ -206,7 +206,8 @@ def _score_one_ref(
     slot = BundleSlot()
     bundle = progress.run_on_loop(
         _compiled_for(
-            progress.database, progress.blob_store, slot, workspace_id=workspace_id, ref=ref
+            progress.database, progress.blob_store, slot, database=progress.database,
+            workspace_id=workspace_id, ref=ref,
         )
     )
 

@@ -25,8 +25,10 @@ from app.api.authz import CallerDep, CountAfterCheck, management_counter, requir
 from app.api.deps import Caller, DatabaseDep
 from app.api.pagination import DEFAULT_LIMIT, MAX_LIMIT, Page
 from app.api.responses import problems
+from app.api.score import BlobStoreDep, BundleSlotDep
 from app.platform import deployments as service
 from app.platform import routing, shadow
+from app.platform.bundle_hydration import revalidator
 from model_schema import (
     Deployment,
     DeploymentCreate,
@@ -62,6 +64,8 @@ async def submit_deployment_request(
     caller: CallerDep,
     count: CountDep,
     database: DatabaseDep,
+    blob_store: BlobStoreDep,
+    slot: BundleSlotDep,
 ) -> DeploymentRequest:
     """**201**. **403** without `deployment:promote` on this Environment; **404** for an unknown
     Environment or Rating Version; **409** `VALIDATION_FAILED` for a retired Environment or a
@@ -75,6 +79,12 @@ async def submit_deployment_request(
             actor=caller.principal,
             environment=env,
             body=body,
+            revalidate=revalidator(
+                database=database,
+                blob_store=blob_store,
+                slot=slot,
+                workspace_id=caller.workspace_id,
+            ),
             count_management=count,
         )
 
@@ -93,6 +103,8 @@ async def create_deployment(
     caller: CallerDep,
     count: CountDep,
     database: DatabaseDep,
+    blob_store: BlobStoreDep,
+    slot: BundleSlotDep,
 ) -> DeploymentCreated:
     """**201** with the Deployment and `switch`: the processes that swapped to it and the ones
     that did not (`03` FR-268). **409** `DEPLOY_REQUIRES_APPROVAL` for a gated target without an
@@ -106,6 +118,9 @@ async def create_deployment(
         actor=caller.principal,
         environment=env,
         body=body,
+        revalidate=revalidator(
+            database=database, blob_store=blob_store, slot=slot, workspace_id=caller.workspace_id
+        ),
         count_management=count,
         switch=getattr(request.app.state, "switch", None),
     )
@@ -125,6 +140,8 @@ async def rollback_deployment(
     caller: CallerDep,
     count: CountDep,
     database: DatabaseDep,
+    blob_store: BlobStoreDep,
+    slot: BundleSlotDep,
 ) -> DeploymentCreated:
     """**201** with the new Deployment and `switch` (`03` FR-269). Needs `deployment:promote` on
     the Environment and no new approval. **409** `VALIDATION_FAILED` when the Rating Version was
@@ -136,6 +153,9 @@ async def rollback_deployment(
         actor=caller.principal,
         environment=env,
         body=body,
+        revalidate=revalidator(
+            database=database, blob_store=blob_store, slot=slot, workspace_id=caller.workspace_id
+        ),
         count_management=count,
         switch=getattr(request.app.state, "switch", None),
     )

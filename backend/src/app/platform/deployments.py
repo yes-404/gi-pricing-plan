@@ -33,6 +33,7 @@ from app.db.models import (
 from app.db.session import Database
 from app.errors import PlatformError
 from app.platform import approvals, audit, environments, rbac
+from app.platform.bundle_hydration import Revalidate
 from app.platform.deployment_switch import (
     COMMIT_TIMEOUT_SECONDS,
     PREPARE_TIMEOUT_SECONDS,
@@ -259,6 +260,7 @@ async def submit_request(
     actor: Principal,
     environment: str,
     body: DeploymentRequestCreate,
+    revalidate: Revalidate,
     count_management: Callable[[], Awaitable[None]] | None = None,
 ) -> DeploymentRequest:
     """Write a Deployment Request with its evidence **once**, and submit it (`RL-1301` A).
@@ -281,6 +283,7 @@ async def submit_request(
     )
     ref = body.rating_version_ref
     await _approved_compiled_version(session, workspace_id=workspace_id, ref=ref)
+    await revalidate(session, ref=ref)
 
     policy = await approvals.policy_for(session, workspace_id)
     entry = policy.entry_for("deployment", env.slug)
@@ -534,6 +537,7 @@ async def deploy(
     actor: Principal,
     environment: str,
     body: DeploymentCreate,
+    revalidate: Revalidate,
     count_management: Callable[[], Awaitable[None]] | None = None,
     switch: SwitchRegistry | None = None,
 ) -> Deployed:
@@ -560,6 +564,7 @@ async def deploy(
         count_management=count_management,
     )
     _, bundle_hash = await _approved_compiled_version(session, workspace_id=workspace_id, ref=ref)
+    await revalidate(session, ref=ref)
 
     entry = (await approvals.policy_for(session, workspace_id)).entry_for("deployment", env.slug)
     predecessor, deployed = await _predecessor_deployment(
@@ -687,6 +692,7 @@ async def deploy_and_switch(
     actor: Principal,
     environment: str,
     body: DeploymentCreate,
+    revalidate: Revalidate,
     count_management: Callable[[], Awaitable[None]] | None = None,
     switch: SwitchRegistry | None = None,
 ) -> DeploymentCreated:
@@ -706,6 +712,7 @@ async def deploy_and_switch(
             actor=actor,
             environment=environment,
             body=body,
+            revalidate=revalidate,
             count_management=count_management,
             switch=switch,
         )
@@ -722,6 +729,7 @@ async def rollback(
     actor: Principal,
     environment: str,
     body: RollbackCreate,
+    revalidate: Revalidate,
     count_management: Callable[[], Awaitable[None]] | None = None,
     switch: SwitchRegistry | None = None,
 ) -> Deployed:
@@ -774,6 +782,7 @@ async def rollback(
             .limit(1)
         )
     ).scalar_one()
+    await revalidate(session, ref=ref)
     deployment_id = new_uuid7()
     prepare, commit_message = await _prepare(
         switch,
@@ -824,6 +833,7 @@ async def rollback_and_switch(
     actor: Principal,
     environment: str,
     body: RollbackCreate,
+    revalidate: Revalidate,
     count_management: Callable[[], Awaitable[None]] | None = None,
     switch: SwitchRegistry | None = None,
 ) -> DeploymentCreated:
@@ -835,6 +845,7 @@ async def rollback_and_switch(
             actor=actor,
             environment=environment,
             body=body,
+            revalidate=revalidate,
             count_management=count_management,
             switch=switch,
         )
