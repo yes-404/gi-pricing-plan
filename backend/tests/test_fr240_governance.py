@@ -452,9 +452,11 @@ _TABLE_SLUG = "sl8429-region-x-yoa"
 _CELLS = (("north | 2010", "1.05"), ("north | 2011", "1.10"), ("south | 2010", "0.95"))
 # The content hash of the risk-by-risk compile test's
 # bundle, measured at 2ba0d0d5's code (before the control-intent guards read an interaction's
-# operands) in the DB lane and pinned in the commit that pins it (SL 8429, phase 2 of the review
-# round). A change to it is a change to what FR-239 promises: the same pins, the same hash.
-_PRE_FIX_RISK_BY_RISK_HASH = "PLACEHOLDER-MEASURED-AT-2ba0d0d5"
+# operands) in the DB lane, 2026-11-13 21:47 GMT (the same value at the fixed head).
+# A change to it is a change to what FR-239 promises: the same pins, the same hash.
+_PRE_FIX_RISK_BY_RISK_HASH = (
+    "sha256:f62564d52bf5d469021c7703cdab816c370fe52063901903d20fb4cc3af98db6"
+)
 
 
 def _factor_row(workspace_id: Any, dataset_id: UUID, factor: Factor) -> FactorRow:
@@ -585,9 +587,14 @@ def test_a_risk_by_risk_interaction_keyed_table_compiles_with_an_unchanged_hash(
     )
     assert job_row.status is JobStatus.SUCCEEDED, job_row.error
     bundle = Bundle.model_validate_json(_read_blob(database, blob_store, job_row.result["ref"]))
-    factor_payloads = {k: v for k, v in bundle.resolved_payloads.items() if k.startswith("factor:")}
-    assert set(factor_payloads) == {"factor:region_x_yoa@1"}
-    assert "operand_factor_ids" in factor_payloads["factor:region_x_yoa@1"]
+    # What a bundle carries is the pinned artifacts only (`compile_bundle`: `payloads` is the
+    # algorithm and every pin). The key's Factor is resolved for the guard and not carried, so
+    # the interaction chain is NOT in `resolved_payloads`; the table, with its real cells, is.
+    table = f"rate_table:{_TABLE_SLUG}@1"
+    assert set(bundle.resolved_payloads) == {table, "rating_algorithm:minimal@1"}
+    rows = bundle.resolved_payloads[table]["rows"]
+    carried = {(row["region_x_yoa"], row["relativity"]) for row in rows}
+    assert carried == set(_CELLS)
     assert bundle.content_hash == _PRE_FIX_RISK_BY_RISK_HASH
 
 
