@@ -4684,6 +4684,8 @@ From “Workstreams” (line 496): GIPP checks, price-walking, disparity reporti
 *(Dated 2026-10-14 by the lead, on the maintainer's (by delegation) entry "2026-10-14 10:57:10 BST — FD 8023 MEDIUM + trigger CONFIRMED; the D-list line-read GO (closed-phase + P2-scope only); later-phase D lines GO (re lead 10:56:41)", item 4 ("dated roadmap lines placing each on its module's Work … No line-read is needed: they are spec-only until their phase"): `04` FR-295 (ENBP through the most-used new-business channel when the original is unavailable), FR-296 (the GIPP check records its product scope) and NFR-508 (GIPP evidence retained ≥ 7 years, exportable) join this Work's requirement list — each is a GIPP-check or GIPP-evidence property, this Work's title. Placement only: nothing is built ahead of this Work's phase (`CLAUDE.md` §0).)*
 
 
+*(Dated 2026-11-13, docs batch 35, by the executor, on the maintainer's ruling `to-lead` "2026-11-13 19:56:23 GMT" (BATCH 35 CELLS RULED), condition (5), cell L87 of `docs/findings/register.md`: **FR-257, limb (4), the GIPP limb, is carried to this Work** (GIPP, FR-294). Limbs (1) to (3) of FR-257 are delivered (#886, #1260 `db0642c4`, #1426 `db92a7bc`, per the register row). The register row F44 is re-owned here; this Work's status is not changed by this line. `CR-2110`'s register-read row: "Limb 4 carry → WK-685 (P4, GIPP, FR-294) … WK-685's row needs a dated FR-257 clause".)*
+
 ### WK-686 — Materialisation into rate tables
 
 ```yaml
