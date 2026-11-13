@@ -593,6 +593,21 @@ def test_a_risk_by_risk_interaction_keyed_table_compiles_with_an_unchanged_hash(
 
 @pytest.mark.req("FR-88")
 @pytest.mark.req("FR-240")
+def test_a_clean_depth_two_interaction_keyed_table_compiles(
+    api_client, workspace_id, principal, grant, database, blob_store
+) -> None:
+    """F-3 (a): `outer_x_plan` crosses `region_x_yoa` crosses two risk leaves. Loading the whole
+    chain means a legitimate table is not refused for a loader reason."""
+    _run(grant("analyst"))
+    job_row = _compile_interaction_keyed(
+        api_client, principal, workspace_id, database, blob_store,
+        second_operand_intent=FactorIntent.RISK, nested=True,
+    )
+    assert job_row.status is JobStatus.SUCCEEDED, job_row.error
+
+
+@pytest.mark.req("FR-88")
+@pytest.mark.req("FR-240")
 def test_a_depth_two_interaction_keyed_table_with_a_control_leaf_is_refused_by_the_guard(
     api_client, workspace_id, principal, grant, database, blob_store
 ) -> None:
