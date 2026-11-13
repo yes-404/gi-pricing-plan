@@ -11,7 +11,7 @@ from __future__ import annotations
 import asyncio
 import json
 from typing import Any
-from uuid import UUID
+from uuid import UUID, uuid5
 
 import pytest
 from backend.tests.approved_rows import mark_approved
@@ -40,7 +40,13 @@ from backend.tests.test_rating_version_compile import (
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.models import FactorRow, ModelRow, RateTableRow, RateTableVersionRow
+from app.db.models import (
+    FactorRow,
+    ModelRow,
+    RateTableCellRow,
+    RateTableRow,
+    RateTableVersionRow,
+)
 from app.db.session import Database
 from app.errors import PlatformError
 from app.platform import approvals as approval_service
@@ -440,59 +446,91 @@ def test_a_compile_over_a_gbm_fitted_on_a_control_factor_fails_with_its_code(
 # intent. These two tests drive that branch end to end, not a hand-built `ResolvedArtifact`.
 
 
+# Every id and value below is fixed or derived from the workspace id, so a run is repeatable: the
+# bundle's content hash reads the pinned refs (slugs and versions) and the graph, never a row id.
+_TABLE_SLUG = "sl8429-region-x-yoa"
+_CELLS = (("north | 2010", "1.05"), ("north | 2011", "1.10"), ("south | 2010", "0.95"))
+# The content hash of the risk-by-risk compile test's
+# bundle, measured at 2ba0d0d5's code (before the control-intent guards read an interaction's
+# operands) in the DB lane and pinned in the commit that pins it (SL 8429, phase 2 of the review
+# round). A change to it is a change to what FR-239 promises: the same pins, the same hash.
+_PRE_FIX_RISK_BY_RISK_HASH = "PLACEHOLDER-MEASURED-AT-2ba0d0d5"
+
+
+def _factor_row(workspace_id: Any, dataset_id: UUID, factor: Factor) -> FactorRow:
+    return FactorRow(
+        id=factor.id, workspace_id=workspace_id, dataset_id=dataset_id, slug=factor.slug,
+        version=1, body=factor.model_dump(mode="json", exclude={"id", "version", "dataset_id"}),
+    )
+
+
 async def _cross_factors(
-    session: AsyncSession, workspace_id: Any, *, second_operand_intent: FactorIntent
+    session: AsyncSession, workspace_id: Any, *, second_operand_intent: FactorIntent,
+    nested: bool = False,
 ) -> str:
     """Factors `region` (risk) and `yoa` (`second_operand_intent`) and the interaction
-    `region_x_yoa` crossing them; returns the interaction's ref."""
-    dataset_id = new_uuid7()
-    operand_ids = []
+    `region_x_yoa` crossing them; returns the interaction's ref.
+
+    With `nested`, `region_x_yoa` is itself an operand of the pinned `outer_x_plan` (depth 2),
+    the shape `load_factors` once loaded one level of only; the ref returned is the outer one."""
+    dataset_id = uuid5(workspace_id, "dataset")
+
+    def _id(name: str) -> UUID:
+        return uuid5(workspace_id, name)
+
+    operands = []
     for slug, intent in (("region", FactorIntent.RISK), ("yoa", second_operand_intent)):
         factor = Factor(
-            id=new_uuid7(), slug=slug, dataset_id=dataset_id, version=1,
+            id=_id(slug), slug=slug, dataset_id=dataset_id, version=1,
             type=FactorType.IDENTITY, source_columns=(slug,), intent=intent,
         )
-        session.add(
-            FactorRow(
-                id=factor.id, workspace_id=workspace_id, dataset_id=dataset_id, slug=slug,
-                version=1,
-                body=factor.model_dump(mode="json", exclude={"id", "version", "dataset_id"}),
-            )
-        )
-        operand_ids.append(factor.id)
+        session.add(_factor_row(workspace_id, dataset_id, factor))
+        operands.append(factor)
     cross = Factor(
-        id=new_uuid7(), slug="region_x_yoa", dataset_id=dataset_id, version=1,
-        type=FactorType.INTERACTION, source_columns=(), operand_factor_ids=tuple(operand_ids),
+        id=_id("region_x_yoa"), slug="region_x_yoa", dataset_id=dataset_id, version=1,
+        type=FactorType.INTERACTION, source_columns=(),
+        operand_factor_ids=tuple(operand.id for operand in operands),
     )
-    session.add(
-        FactorRow(
-            id=cross.id, workspace_id=workspace_id, dataset_id=dataset_id, slug=cross.slug,
-            version=1,
-            body=cross.model_dump(mode="json", exclude={"id", "version", "dataset_id"}),
-        )
+    session.add(_factor_row(workspace_id, dataset_id, cross))
+    if not nested:
+        await session.flush()
+        return f"factor:{cross.slug}@{cross.version}"
+    plan = Factor(
+        id=_id("plan"), slug="plan", dataset_id=dataset_id, version=1,
+        type=FactorType.IDENTITY, source_columns=("plan",),
     )
+    outer = Factor(
+        id=_id("outer_x_plan"), slug="outer_x_plan", dataset_id=dataset_id, version=1,
+        type=FactorType.INTERACTION, source_columns=(),
+        operand_factor_ids=(cross.id, plan.id),
+    )
+    session.add(_factor_row(workspace_id, dataset_id, plan))
+    session.add(_factor_row(workspace_id, dataset_id, outer))
     await session.flush()
-    return f"factor:{cross.slug}@{cross.version}"
+    return f"factor:{outer.slug}@{outer.version}"
 
 
 async def _table_keyed_on(
-    session: AsyncSession, workspace_id: Any, principal: Any, factor_ref: str
+    session: AsyncSession, workspace_id: Any, principal: Any, factor_ref: str, key_name: str
 ) -> str:
-    """A rateable rows-stored table whose one key names `factor_ref`; returns its pin."""
-    slug = _compile_table_slug()
-    table = RateTableRow(
-        workspace_id=workspace_id, slug=slug, current_version=1, created_by=principal.id
+    """A rateable rows-stored table with real cells whose one key names `factor_ref`; returns
+    its pin."""
+    table_id, version_id = uuid5(workspace_id, "table"), uuid5(workspace_id, "table-version")
+    session.add(
+        RateTableRow(
+            id=table_id, workspace_id=workspace_id, slug=_TABLE_SLUG, current_version=1,
+            created_by=principal.id,
+        )
     )
-    session.add(table)
     await session.flush()
     session.add(
         RateTableVersionRow(
-            workspace_id=workspace_id, rate_table_id=table.id, version_number=1,
+            id=version_id, workspace_id=workspace_id, rate_table_id=table_id, version_number=1,
             storage="rows",
             definition={
-                "slug": slug, "version": 1, "rateable": True, "storage": "rows",
+                "slug": _TABLE_SLUG, "version": 1, "rateable": True, "storage": "rows",
                 "keys": [
-                    {"name": "region_x_yoa", "type": "string", "banding_ref": None,
+                    {"name": key_name, "type": "string", "banding_ref": None,
                      "factor_ref": factor_ref}
                 ],
                 "value": {"name": "relativity", "type": "relativity", "unit": "factor",
@@ -504,19 +542,26 @@ async def _table_keyed_on(
         )
     )
     await session.flush()
-    return f"rate_table:{slug}@1"
+    session.add_all(
+        RateTableCellRow(version_id=version_id, key=[key], value=value) for key, value in _CELLS
+    )
+    await session.flush()
+    return f"rate_table:{_TABLE_SLUG}@1"
 
 
 def _compile_interaction_keyed(
     api_client, principal, workspace_id, database, blob_store, *,
-    second_operand_intent: FactorIntent,
+    second_operand_intent: FactorIntent, nested: bool = False,
 ) -> Any:
     async def _arrange() -> str:
         async with database.unit_of_work() as session:
             ref = await _cross_factors(
-                session, workspace_id, second_operand_intent=second_operand_intent
+                session, workspace_id, second_operand_intent=second_operand_intent,
+                nested=nested,
             )
-            return await _table_keyed_on(session, workspace_id, principal, ref)
+            return await _table_keyed_on(
+                session, workspace_id, principal, ref, ref.removeprefix("factor:").split("@")[0]
+            )
 
     pin = _run(_arrange())
     return _compile_with_pins(
@@ -530,11 +575,9 @@ def _compile_interaction_keyed(
 def test_a_risk_by_risk_interaction_keyed_table_compiles_with_an_unchanged_hash(
     api_client, workspace_id, principal, grant, database, blob_store
 ) -> None:
-    """The green guard: the fix must not refuse what was priceable. The bundle's `resolved_payloads`
-    holds the Factor payload only — the operand chain rides `ResolvedArtifact.factors`, which is
-    not hashed — so the content hash is a function of the same inputs as before the fix (FR-239).
-    The literal pre-fix equality is pinned by pricing-core's fixture-hash test; this one proves the
-    real resolver still compiles the table and puts only the Factor payload into the bundle."""
+    """The green guard: the fix must not refuse what was priceable, and must not move the hash
+    (FR-239: the same pins and graph, the same content hash). The fixture is deterministic and the
+    table has real cells; `_PRE_FIX_RISK_BY_RISK_HASH` is what 2ba0d0d5's code printed for it."""
     _run(grant("analyst"))
     job_row = _compile_interaction_keyed(
         api_client, principal, workspace_id, database, blob_store,
@@ -545,7 +588,25 @@ def test_a_risk_by_risk_interaction_keyed_table_compiles_with_an_unchanged_hash(
     factor_payloads = {k: v for k, v in bundle.resolved_payloads.items() if k.startswith("factor:")}
     assert set(factor_payloads) == {"factor:region_x_yoa@1"}
     assert "operand_factor_ids" in factor_payloads["factor:region_x_yoa@1"]
-    assert bundle.content_hash
+    assert bundle.content_hash == _PRE_FIX_RISK_BY_RISK_HASH
+
+
+@pytest.mark.req("FR-88")
+@pytest.mark.req("FR-240")
+def test_a_depth_two_interaction_keyed_table_with_a_control_leaf_is_refused_by_the_guard(
+    api_client, workspace_id, principal, grant, database, blob_store
+) -> None:
+    """F-3: `outer_x_plan` crosses `region_x_yoa` crosses `yoa` (control). The real resolver loads
+    the whole chain, so the refusal is the named control one and names `yoa`, not the
+    fail-closed "not among the Factors supplied" a one-level load produced."""
+    _run(grant("analyst"))
+    job_row = _compile_interaction_keyed(
+        api_client, principal, workspace_id, database, blob_store,
+        second_operand_intent=FactorIntent.CONTROL, nested=True,
+    )
+    assert job_row.status is JobStatus.FAILED
+    assert job_row.error["code"] == "CONTROL_FACTOR_IN_RATEABLE_PATH"
+    assert "yoa" in json.dumps(job_row.error)
 
 
 @pytest.mark.req("FR-88")

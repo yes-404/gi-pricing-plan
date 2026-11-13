@@ -384,9 +384,13 @@ async def load_factors(
     precisely because an operand contributes no design column of its own — `resolve_factors`
     excludes it — so nothing about the column order changes.
 
-    One level of expansion is enough. An operand that is itself an interaction is loaded
-    here and refused at resolution, which is where the "declare a three-way as one factor"
-    message belongs.
+    The expansion is **transitive, one query per level** (a pinned interaction over plain
+    operands is two queries, as before; a depth-2 chain three). `resolve_factors` refuses an
+    operand that is itself an interaction, which is where the "declare a three-way as one
+    factor" message belongs; the walk loads its operands too, because the control-intent guard
+    (`control_factor_in`, FR-88, FR-240) reads the closure at any depth and a chain it cannot
+    read fails closed with a message naming an operand the platform never loaded (SL 8429
+    review F-3). A cycle cannot loop: an id already loaded is never asked for again.
     """
     async def _load(ids: list[UUID], what: str) -> dict[UUID, FactorRow]:
         rows = (
@@ -411,19 +415,25 @@ async def load_factors(
     by_id = {factor.id: factor for factor in pinned}
     ordered = [by_id[fid] for fid in factor_ids]
 
-    operand_ids = [
-        operand
-        for factor in ordered
-        if factor.type is FactorType.INTERACTION
-        for operand in factor.operand_factor_ids
-        if operand not in by_id
-    ]
-    if not operand_ids:
-        return ordered
-
-    deduped = list(dict.fromkeys(operand_ids))
-    operands = await _load(deduped, "interaction operands")
-    return ordered + [to_factor(operands[fid]) for fid in deduped]
+    loaded = list(ordered)
+    seen = set(by_id)
+    frontier = ordered
+    while True:
+        wanted = list(
+            dict.fromkeys(
+                operand
+                for factor in frontier
+                if factor.type is FactorType.INTERACTION
+                for operand in factor.operand_factor_ids
+                if operand not in seen
+            )
+        )
+        if not wanted:
+            return loaded
+        operands = await _load(wanted, "interaction operands")
+        frontier = [to_factor(operands[fid]) for fid in wanted]
+        seen.update(wanted)
+        loaded.extend(frontier)
 
 
 async def load_factor_by_ref(
