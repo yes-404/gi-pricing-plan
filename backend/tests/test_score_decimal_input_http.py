@@ -18,6 +18,7 @@ Exact references are computed from the request text with `decimal`, never from a
 from __future__ import annotations
 
 import asyncio
+import random
 import types
 import typing
 from collections.abc import Iterator
@@ -381,3 +382,161 @@ def test_a_stored_quote_context_keeps_a_decimal_input_a_json_number() -> None:
     assert stored["inputs"] == {"factor": 0.75, "base_minor": 5, "note": "x"}
     assert isinstance(stored["inputs"]["factor"], float)
     assert QuoteContext.model_validate(stored).inputs["factor"] == 0.75
+
+
+# --- SL 8432 F2 / question (a): the extremes of magnitude, named, through the route ---------------
+
+
+@pytest.mark.req("FR-273")
+@pytest.mark.parametrize("text", ["1e-400", "1e-330", "-1e-400", "1e400", "-1e400"])
+def test_a_value_the_float_cannot_hold_is_refused_not_rounded_to_zero_or_infinity(
+    client: TestClient, text: str
+) -> None:
+    """Behaviour change (SL 8432): `1e-400` read as the float 0.0 and priced; it is refused now."""
+    _assert_refused_naming_the_input(_post(client, SCORE_URL, _body(50000, text)), text)
+
+
+@pytest.mark.req("FR-273")
+@pytest.mark.parametrize("text", ["5e-324", "1e-321", "-5e-324"])
+def test_a_subnormal_the_float_holds_exactly_is_not_refused_by_the_guard(
+    client: TestClient, text: str
+) -> None:
+    """The guard accepts it. The engine's own ZEN core cannot evaluate a subnormal (a
+    RATING_EVALUATION_FAILED, as before this slice), which is not the guard's refusal."""
+    response = _post(client, SCORE_URL, _body(50000, text))
+    assert response.json().get("code") != "INPUT_CONTRACT_VIOLATION", response.text
+
+
+@pytest.mark.req("FR-273")
+def test_negative_and_signed_zero_inputs_price_as_before(client: TestClient) -> None:
+    prices = {
+        text: _post(client, SCORE_URL, _body(50000, text)) for text in ("0.0", "-0.0", "-0.75")
+    }
+    for response in prices.values():
+        assert response.status_code == 200, response.text
+    assert prices["0.0"].json()["outputs"] == prices["-0.0"].json()["outputs"]
+    assert prices["-0.75"].json()["outputs"]["payable_premium_minor"] == -37500
+
+
+@pytest.mark.req("FR-273")
+def test_an_over_precise_value_in_a_nested_undeclared_key_is_refused_naming_the_path(
+    client: TestClient,
+) -> None:
+    extra = ',"extra_list":[1.5,{"a":0.82469000000000000002}]'
+    response = _post(client, SCORE_URL, _body(50000, "0.75", extra))
+    assert response.status_code == 422, response.text
+    problem = response.json()
+    assert problem["code"] == "INPUT_CONTRACT_VIOLATION"
+    assert "'extra_list[1].a'" in problem["detail"]
+    assert "0.82469" not in response.text
+
+
+# --- SL 8432 F3: the FR-239 property, driven through the route's own JSON parse --------------
+
+
+def _route_texts() -> list[tuple[str, bool]]:
+    """(JSON number text, expected to be refused): signs, exponent notation, at most 15 significant
+    digits (priced), and the underflow extremes (refused)."""
+    rng = random.Random(8432)
+    texts: list[tuple[str, bool]] = []
+    for _ in range(300):
+        digits = rng.randint(1, 15)
+        mantissa = str(rng.randint(10 ** (digits - 1), 10**digits - 1))
+        sign = rng.choice(["", "-"])
+        shape = rng.choice(["plain", "exp", "frac"])
+        if shape == "exp":
+            body = f"{mantissa[0]}.{mantissa[1:] or '0'}{rng.choice('eE')}{rng.randint(-6, 4):+d}"
+            body = body.replace("+", "") if rng.random() < 0.5 else body
+        elif shape == "frac":
+            body = f"0.{mantissa}"
+        else:
+            body = mantissa if len(mantissa) < 6 else f"{mantissa[:3]}.{mantissa[3:]}"
+        texts.append((sign + body, False))
+    for _ in range(40):  # underflow to zero: one to fifteen digits, a magnitude below 5e-324
+        digits = rng.randint(1, 15)
+        mantissa = str(rng.randint(10 ** (digits - 1), 10**digits - 1))
+        texts.append((f"{rng.choice(['', '-'])}0.{mantissa}e{-rng.randint(330, 500)}", True))
+    return texts
+
+
+@pytest.mark.req("FR-239")
+@pytest.mark.req("FR-273")
+def test_the_route_prices_what_the_float_parse_priced_and_refuses_the_underflows(
+    client: TestClient, compiled: CompiledBundle
+) -> None:
+    """Every text of at most 15 significant digits prices to the premium the float parse of the
+    same text gives (core, `float(text)`); every underflowing text is refused by name."""
+    for text, refused in _route_texts():
+        response = _post(client, SCORE_URL, _body(50000, text))
+        if refused:
+            _assert_refused_naming_the_input(response, text)
+            continue
+        assert response.status_code == 200, (text, response.text)
+        ctx = QuoteContext.model_validate(
+            {
+                "purpose": "new_business",
+                "quoted_at": "2026-08-29T12:00:00",
+                "effective_date": "2026-09-01",
+                "inputs": {"base_minor": 50000, "factor": float(text)},
+                "options": {"rating_version_ref": REF},
+            }
+        )
+        priced = asyncio.run(score_module.score_one(compiled, ctx))
+        assert response.json()["outputs"] == priced.model_dump(mode="json")["outputs"], text
+
+
+# --- SL 8432 F1: the sampled trace reproduces the quote (the audit promise, FR-259) ---------------
+
+
+@pytest.mark.req("FR-259")
+def test_a_nested_undeclared_value_re_scores_off_path_to_the_live_quote(
+    compiled: CompiledBundle,
+) -> None:
+    """The off-path re-score reads `quote_context` back as JSON: a nested `Decimal` stored as a
+    string would be a different engine context from the one the live quote priced."""
+    ctx = QuoteContext.model_validate(
+        {
+            "purpose": "new_business",
+            "quoted_at": "2026-08-29T12:00:00",
+            "effective_date": "2026-09-01",
+            "inputs": {
+                "base_minor": 50000,
+                "factor": Decimal("0.75"),
+                "extra_list": [Decimal("1.5"), {"a": Decimal("2.5")}],
+            },
+            "options": {"rating_version_ref": REF},
+        }
+    )
+    stored = score_module._stored_context(ctx)
+    assert stored["inputs"]["extra_list"] == [1.5, {"a": 2.5}]
+    live = asyncio.run(score_module.score_one(compiled, ctx))
+    replay = asyncio.run(score_module.score_one(compiled, QuoteContext.model_validate(stored)))
+    assert replay.model_dump(exclude={"timing_ms"}) == live.model_dump(exclude={"timing_ms"})
+
+
+# --- SL 8432 F6: /score/compare, the comparison side ---------------------------------------------
+
+
+@pytest.mark.req("FR-273")
+def test_compare_names_the_comparison_side_when_only_it_refuses(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The one shared context fails on the base side first, so the comparison side is reached only
+    when the base call is made to succeed: `base` prices a clean copy of the quote, `comparison`
+    is the real core call over the over-precise one."""
+    real = score_module.score_one
+
+    async def base_clean(bundle: Any, ctx: Any, **kwargs: Any) -> Any:
+        if str(ctx.options.rating_version_ref).endswith("@1"):
+            clean = ctx.model_copy(update={"inputs": {**ctx.inputs, "factor": Decimal("0.75")}})
+            return await real(bundle, clean, **kwargs)
+        return await real(bundle, ctx, **kwargs)
+
+    monkeypatch.setattr(score_module, "score_one", base_clean)
+    response = _post(client, COMPARE_URL, _compare_body(50000, I2_TEXT))
+    assert response.status_code == 422, response.text
+    problem = response.json()
+    assert problem["code"] == "INPUT_CONTRACT_VIOLATION"
+    assert problem["detail"].startswith("comparison: ")
+    assert "'factor'" in problem["detail"]
+    assert I2_TEXT not in response.text
