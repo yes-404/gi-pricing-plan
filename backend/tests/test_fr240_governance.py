@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+from decimal import Decimal
 from typing import Any
 from uuid import UUID, uuid5
 
@@ -65,6 +66,7 @@ from model_schema import (
     new_uuid7,
 )
 from pricing_core.rating.compile import Bundle
+from pricing_core.rating.runtime import load_bundle
 
 
 @pytest.fixture(autouse=True)
@@ -191,17 +193,16 @@ def _run(coro: Any) -> Any:
 
 def _compile_with_pins(
     api_client, principal, workspace_id, database, blob_store, *, models=(), objectives=(),
-    rate_tables=(),
+    rate_tables=(), algorithm=None,
 ) -> Any:
     headers = _headers(principal, workspace_id)
-    created = api_client.post(
-        "/api/v1/rating-algorithms", json=_minimal_algorithm(), headers=headers
-    )
+    algorithm = algorithm or _minimal_algorithm()
+    created = api_client.post("/api/v1/rating-algorithms", json=algorithm, headers=headers)
     assert created.status_code == 201, created.text
     row = _run(
         _insert_version(
             database, workspace_id, principal.id,
-            algorithm_ref="rating_algorithm:minimal@1",
+            algorithm_ref=f"rating_algorithm:{algorithm['slug']}@1",
             pins={
                 "rate_tables": list(rate_tables), "models": list(models), "reference_tables": [],
                 "custom_objectives": list(objectives),
@@ -452,11 +453,44 @@ _TABLE_SLUG = "sl8429-region-x-yoa"
 _CELLS = (("north | 2010", "1.05"), ("north | 2011", "1.10"), ("south | 2010", "0.95"))
 # The content hash of the risk-by-risk compile test's
 # bundle, measured at 2ba0d0d5's code (before the control-intent guards read an interaction's
-# operands) in the DB lane, 2026-11-13 21:47 GMT (the same value at the fixed head).
+# operands) in the DB lane, 2026-11-13 21:50 GMT, for the lookup algorithm; the fixed head's
+# first assertion printed the same value.
 # A change to it is a change to what FR-239 promises: the same pins, the same hash.
 _PRE_FIX_RISK_BY_RISK_HASH = (
-    "sha256:f62564d52bf5d469021c7703cdab816c370fe52063901903d20fb4cc3af98db6"
+    "sha256:3948d954eb79b84aa89f20dca3ecd8e5d9f8b56bf61981b24fa1899c923424f8"
 )
+
+
+_LOOKUP_ALGORITHM_SLUG = "sl8429-lookup"
+
+
+def _lookup_algorithm(key_name: str) -> dict[str, Any]:
+    """`premium_in * <relativity looked up on the cross's level>`: a real cell prices."""
+    return {
+        "slug": _LOOKUP_ALGORITHM_SLUG,
+        "version": 1,
+        "input_contract": [
+            {"name": "premium_in", "type": "int", "nullable": False},
+            {"name": key_name, "type": "string", "nullable": False},
+        ],
+        "outputs": [{"name": "payable_premium_minor", "type": "money_minor", "required": True}],
+        "steps": [
+            {"step_id": "s_in", "type": "input", "label": "Premium", "input_name": "premium_in",
+             "on_missing": "error", "produces": "premium_in"},
+            {"step_id": "s_key", "type": "input", "label": "Level", "input_name": key_name,
+             "on_missing": "error", "produces": key_name},
+            {"step_id": "s_tbl", "type": "table", "label": "Relativity",
+             "rate_table_ref": f"rate_table:{_TABLE_SLUG}@1", "key_expr": [key_name],
+             "on_miss": "error", "consumes": [key_name], "produces": "relativity"},
+            {"step_id": "s_expr", "type": "expression", "label": "Apply",
+             "expr": "premium_in * relativity", "result_type": "decimal",
+             "consumes": ["premium_in", "relativity"], "produces": "payable"},
+            {"step_id": "s_out", "type": "output", "label": "Out",
+             "output_name": "payable_premium_minor", "rounding": {"mode": "half_even", "dp": 0},
+             "consumes": ["payable"]},
+        ],
+        "sub_graphs": [],
+    }
 
 
 def _factor_row(workspace_id: Any, dataset_id: UUID, factor: Factor) -> FactorRow:
@@ -553,7 +587,7 @@ async def _table_keyed_on(
 
 def _compile_interaction_keyed(
     api_client, principal, workspace_id, database, blob_store, *,
-    second_operand_intent: FactorIntent, nested: bool = False,
+    second_operand_intent: FactorIntent, nested: bool = False, lookup: bool = False,
 ) -> Any:
     async def _arrange() -> str:
         async with database.unit_of_work() as session:
@@ -567,7 +601,8 @@ def _compile_interaction_keyed(
 
     pin = _run(_arrange())
     return _compile_with_pins(
-        api_client, principal, workspace_id, database, blob_store, rate_tables=[pin]
+        api_client, principal, workspace_id, database, blob_store, rate_tables=[pin],
+        algorithm=_lookup_algorithm("region_x_yoa") if lookup else None,
     )
 
 
@@ -583,7 +618,7 @@ def test_a_risk_by_risk_interaction_keyed_table_compiles_with_an_unchanged_hash(
     _run(grant("analyst"))
     job_row = _compile_interaction_keyed(
         api_client, principal, workspace_id, database, blob_store,
-        second_operand_intent=FactorIntent.RISK,
+        second_operand_intent=FactorIntent.RISK, lookup=True,
     )
     assert job_row.status is JobStatus.SUCCEEDED, job_row.error
     bundle = Bundle.model_validate_json(_read_blob(database, blob_store, job_row.result["ref"]))
@@ -591,11 +626,18 @@ def test_a_risk_by_risk_interaction_keyed_table_compiles_with_an_unchanged_hash(
     # algorithm and every pin). The key's Factor is resolved for the guard and not carried, so
     # the interaction chain is NOT in `resolved_payloads`; the table, with its real cells, is.
     table = f"rate_table:{_TABLE_SLUG}@1"
-    assert set(bundle.resolved_payloads) == {table, "rating_algorithm:minimal@1"}
+    assert set(bundle.resolved_payloads) == {
+        table, f"rating_algorithm:{_LOOKUP_ALGORITHM_SLUG}@1"
+    }
     rows = bundle.resolved_payloads[table]["rows"]
     carried = {(row["region_x_yoa"], row["relativity"]) for row in rows}
     assert carried == set(_CELLS)
     assert bundle.content_hash == _PRE_FIX_RISK_BY_RISK_HASH
+    # A real cell prices: `north | 2011` carries 1.10, so a premium of 1000 prices to 1100.
+    scored = load_bundle(bundle).decision.evaluate(
+        {"premium_in": 1000, "region_x_yoa": "north | 2011"}
+    )["result"]
+    assert Decimal(str(scored["payable"])) == Decimal(1100)
 
 
 @pytest.mark.req("FR-88")
