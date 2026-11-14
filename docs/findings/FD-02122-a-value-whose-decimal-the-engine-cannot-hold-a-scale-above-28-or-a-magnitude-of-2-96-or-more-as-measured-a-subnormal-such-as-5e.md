@@ -16,8 +16,6 @@ relates: [WK-2113, SL-2118, LG-2119, FR-273, FD-1671]
 
 *Working id 8445, allocated by lead 34; minted as FD-2122 (WK-2113 S2). This document files, as a finding file, the register row that carried the finding as a row only. Every statement below is the register row's, quoted; nothing is added to it.*
 
-*Filed late, 2026-11-14, by WK-2113 S1's mint: S2's mint (merge 112) recorded this finding as a register row only.*
-
 ## Finding
 
 Per the register row (`docs/findings/register.md`, the row ending "(FD 2122)"), severity and source: **LOW**, from the maintainer's (by delegation) entries "2026-11-13 20:56:28 GMT" and "2026-11-13 21:00:31 GMT" (S2 round 3): found by the S2 seat's red run at `ccdafcc8`; the engine's decimal (`ScaleExceedsMaximumPrecision`; a bare error on the large side) fails every float outside scale <= 28 and magnitude < 2^96, which includes the subnormals the 20:56:28 ruling named and the smallest normal double it said would price. No value that priced is affected. `backend/tests/test_score_decimal_input_http.py`, `packages/pricing-core/tests/test_rating_score_engine_decimal_limits.py`.

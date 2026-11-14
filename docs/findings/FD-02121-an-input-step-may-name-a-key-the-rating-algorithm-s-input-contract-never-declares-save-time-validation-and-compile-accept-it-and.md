@@ -16,8 +16,6 @@ relates: [WK-2113, SL-2118, LG-2119, OQ-2120, FR-213, FR-212, FR-273]
 
 *Working id 8442, allocated by lead 34; minted as FD-2121 (WK-2113 S2). This document files, as a finding file, the register row that carried the finding as a row only. Every statement below is the register row's, quoted; nothing is added to it.*
 
-*Filed late, 2026-11-14, by WK-2113 S1's mint: S2's mint (merge 112) recorded this finding as a register row only.*
-
 ## Finding
 
 Per the register row (`docs/findings/register.md`, the row ending "(FD 2121)"), severity and source: **MEDIUM candidate**, from the maintainer's (by delegation) entry "2026-11-13 20:34:11 GMT" (S2 question (a)): after SL 2118 no precision loss remains through it (FR-273 now guards every numeric key), but an algorithm can price on an input the contract does not declare, which FR-213's typed-input promise does not expect. `authored.py:60` says the key must be declared in a comment only; FR-212's producer check is satisfied by the input step itself. `packages/pricing-core/tests/test_rating_score_undeclared_input_precision.py::test_save_time_validation_lets_an_input_step_name_an_undeclared_key` pins the path.
