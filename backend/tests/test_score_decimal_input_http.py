@@ -1,0 +1,632 @@
+"""FD-1671 / SL-2118: the score routes refuse what pricing-core refuses (FR-273).
+
+A decimal Rating Input is a JSON number on the wire. Starlette parses it to a `float`, so a
+text of more than about 15 significant digits was rounded *before* pricing-core's FR-273
+guard (`_engine_context`: lossless as a float, else refused by name) could see it, and
+`POST /score` answered 200 with the premium of the rounded value. The ruled design (the
+maintainer's (by delegation) "2026-11-13 19:53:34 GMT" (R2), design (b)) parses the JSON numbers
+of the scoring routes' bodies as `Decimal`, so the one definition is core's.
+
+No database: the route is the real `app.api.score` router on a bare app with the app's real error
+handlers, its auth, rate-limit, session and resolution dependencies stubbed (the probe's harness,
+`scratch/exec-fd1671p/probe.md`). The create_app()+DB reading is
+`test_score_decimal_input_db.py`.
+
+Exact references are computed from the request text with `decimal`, never from a parsed float.
+"""
+
+from __future__ import annotations
+
+import asyncio
+import random
+import typing
+from collections.abc import Iterator
+from decimal import ROUND_HALF_EVEN, Decimal, localcontext
+from typing import Any
+from uuid import uuid4
+
+import pytest
+from fastapi import APIRouter, FastAPI
+from fastapi.testclient import TestClient
+
+from app.api import deps as deps_module
+from app.api import score as score_module
+from app.api.deps import Caller
+from app.errors import install_error_handlers
+from model_schema import ActorKind, Principal, QuoteContext, RatingVersion
+from pricing_core.rating.compile import ResolvedArtifact, compile_bundle
+from pricing_core.rating.runtime import CompiledBundle, load_bundle
+
+SCORE_URL = "/api/v1/score"
+COMPARE_URL = "/api/v1/score/compare"
+REF = "rating_version:score-fixture@1"
+
+_ALGORITHM: dict[str, Any] = {
+    "slug": "score-fixture",
+    "version": 1,
+    "input_contract": [
+        {"name": "base_minor", "type": "int", "nullable": False},
+        {"name": "factor", "type": "decimal", "nullable": False},
+    ],
+    "outputs": [{"name": "payable_premium_minor", "type": "money_minor", "required": True}],
+    "steps": [
+        {
+            "step_id": "s_in_b",
+            "type": "input",
+            "label": "b",
+            "input_name": "base_minor",
+            "on_missing": "error",
+            "produces": "base_minor",
+        },
+        {
+            "step_id": "s_in_f",
+            "type": "input",
+            "label": "f",
+            "input_name": "factor",
+            "on_missing": "error",
+            "produces": "factor",
+        },
+        {
+            "step_id": "s_x",
+            "type": "expression",
+            "label": "x",
+            "expr": "base_minor * factor",
+            "result_type": "money_minor",
+            "consumes": ["base_minor", "factor"],
+            "produces": "premium_minor",
+        },
+        {
+            "step_id": "s_out",
+            "type": "output",
+            "label": "o",
+            "output_name": "payable_premium_minor",
+            "rounding": {"mode": "half_even", "dp": 0},
+            "consumes": ["premium_minor"],
+        },
+    ],
+    "sub_graphs": [],
+}
+
+
+class _Resolver:
+    async def resolve(self, ref: Any) -> ResolvedArtifact:
+        return ResolvedArtifact(status="approved", payload=_ALGORITHM)
+
+
+def _version() -> RatingVersion:
+    return RatingVersion.model_validate(
+        {
+            "id": str(uuid4()),
+            "workspace_id": str(uuid4()),
+            "slug": "score-fixture",
+            "version": 1,
+            "status": "draft",
+            "dataset_version_id": str(uuid4()),
+            "model_ref": "model:none@1",
+            "created_at": "2026-08-29T12:00:00Z",
+            "created_by": str(uuid4()),
+            "updated_at": "2026-08-29T12:00:00Z",
+            "algorithm_ref": "rating_algorithm:score-fixture@1",
+            "pins": {
+                "rate_tables": [],
+                "models": [],
+                "reference_tables": [],
+                "custom_objectives": [],
+            },
+            "model_reference_mode": "exact",
+        }
+    )
+
+
+def _exact_minor(base: int, text: str) -> int:
+    """The price of `base * text`, rounded half-even once, from the TEXT (never a float)."""
+    with localcontext() as ctx:
+        ctx.prec = 80
+        return int((Decimal(base) * Decimal(text)).quantize(Decimal(1), rounding=ROUND_HALF_EVEN))
+
+
+@pytest.fixture(scope="module")
+def compiled() -> CompiledBundle:
+    return load_bundle(asyncio.run(compile_bundle(_version(), _Resolver())))
+
+
+@pytest.fixture
+def seen(compiled: CompiledBundle, monkeypatch: pytest.MonkeyPatch) -> list[dict[str, Any]]:
+    """The `inputs` each `score_one` call received, in order."""
+    calls: list[dict[str, Any]] = []
+    real = score_module.score_one
+
+    async def spy(bundle: Any, ctx: Any, **kwargs: Any) -> Any:
+        calls.append(dict(ctx.inputs))
+        return await real(bundle, ctx, **kwargs)
+
+    async def no_route(*_a: Any, **_k: Any) -> None:
+        return None
+
+    async def held(*_a: Any, **_k: Any) -> CompiledBundle:
+        return compiled
+
+    async def no_sample(*_a: Any, **_k: Any) -> None:
+        return None
+
+    monkeypatch.setattr(score_module, "score_one", spy)
+    monkeypatch.setattr(score_module, "_routed", no_route)
+    monkeypatch.setattr(score_module, "_compiled_for", held)
+    monkeypatch.setattr(score_module, "_maybe_sample_trace", no_sample)
+    return calls
+
+
+@pytest.fixture
+def client(seen: list[dict[str, Any]]) -> Iterator[TestClient]:
+    app = FastAPI()
+    install_error_handlers(app)
+    app.include_router(score_module.router, prefix="/api/v1")
+    # A throwaway route outside the scoring routes: it must keep parsing JSON numbers as float.
+    echo = APIRouter()
+
+    @echo.post("/echo")
+    async def _echo(body: dict[str, object]) -> dict[str, str]:
+        return {k: type(v).__name__ for k, v in body.items()}
+
+    app.include_router(echo, prefix="/api/v1")
+    # The real caller type both score dependencies return (`Caller`, app/api/deps.py:77, via
+    # `ScoreExecuteDep` score.py:200 and `RatingReadDep` rating_algorithms.py:32), with the
+    # `principal` the routes pass on as `requester` (score.py:659, :754).
+    caller = Caller(
+        principal=Principal(kind=ActorKind.USER, id=uuid4(), display="scorer@insurer.example"),
+        workspace_id=uuid4(),
+        environment=None,
+    )
+    overrides = app.dependency_overrides
+    overrides[typing.get_args(score_module.ScoreExecuteDep)[1].dependency] = lambda: caller
+    overrides[typing.get_args(score_module.RatingReadDep)[1].dependency] = lambda: caller
+    overrides[score_module._enforce_score_rate_limit] = lambda: None
+    overrides[deps_module.request_session] = lambda: None
+    overrides[deps_module._settings] = lambda: None
+    for dependency in (
+        score_module._database,
+        score_module._blob_store,
+        score_module._bundle_slot,
+        score_module._live_refs,
+    ):
+        overrides[dependency] = lambda: None
+    with TestClient(app, raise_server_exceptions=False) as c:
+        yield c
+
+
+def _body(base: int, factor_text: str, extra_inputs: str = "") -> str:
+    """A raw request body: the factor is written as a JSON number, character for character."""
+    return (
+        '{"purpose":"new_business","quoted_at":"2026-08-29T12:00:00",'
+        '"effective_date":"2026-09-01",'
+        f'"inputs":{{"base_minor":{base},"factor":{factor_text}{extra_inputs}}},'
+        f'"options":{{"rating_version_ref":"{REF}"}}}}'
+    )
+
+
+def _compare_body(base: int, factor_text: str) -> str:
+    return (
+        '{"base":"rating_version:score-fixture@1","comparison":"rating_version:score-fixture@2",'
+        '"context":{"purpose":"new_business","quoted_at":"2026-08-29T12:00:00",'
+        '"effective_date":"2026-09-01",'
+        f'"inputs":{{"base_minor":{base},"factor":{factor_text}}}}}}}'
+    )
+
+
+def _post(client: TestClient, url: str, body: str) -> Any:
+    return client.post(url, content=body, headers={"content-type": "application/json"})
+
+
+def _assert_refused_naming_the_input(response: Any, factor_text: str) -> None:
+    assert response.status_code == 422, response.text
+    assert response.headers["content-type"].startswith("application/problem+json")
+    problem = response.json()
+    assert problem["code"] == "INPUT_CONTRACT_VIOLATION"
+    assert "'factor'" in problem["detail"]
+    assert factor_text not in response.text  # NFR-499: the problem carries no quote value
+
+
+# --- condition (a): the reading of record, I1 to I3 -----------------------------------------
+
+I2_TEXT = "0.82469000000000000002"  # 20 significant digits: exact price 41235, float price 41234
+I3_TEXT = "0.82468999999999999998"  # 20 significant digits: parses to the same float as I2
+I1_TEXT = "0.824690000000000"  # 15 significant digits: the float is exact for the purpose
+
+
+@pytest.mark.req("FR-273")
+def test_i2_a_20_digit_decimal_input_is_refused_not_rounded_and_priced(client: TestClient) -> None:
+    assert _exact_minor(50000, I2_TEXT) == 41235
+    _assert_refused_naming_the_input(_post(client, SCORE_URL, _body(50000, I2_TEXT)), I2_TEXT)
+
+
+@pytest.mark.req("FR-273")
+def test_i3_a_20_digit_decimal_input_below_the_rounding_boundary_is_refused_too(
+    client: TestClient,
+) -> None:
+    _assert_refused_naming_the_input(_post(client, SCORE_URL, _body(50000, I3_TEXT)), I3_TEXT)
+
+
+@pytest.mark.req("FR-239")
+def test_i1_a_15_digit_decimal_input_still_prices_as_before(client: TestClient) -> None:
+    response = _post(client, SCORE_URL, _body(50000, I1_TEXT))
+    assert response.status_code == 200, response.text
+    assert response.json()["outputs"]["payable_premium_minor"] == 41234
+    assert _exact_minor(50000, I1_TEXT) == 41234
+
+
+# --- condition (b): every scoring path ------------------------------------------------------
+
+
+@pytest.mark.req("FR-273")
+@pytest.mark.parametrize("text", [I2_TEXT, I3_TEXT])
+def test_compare_refuses_an_over_precision_input_and_names_the_side(
+    client: TestClient, text: str
+) -> None:
+    response = _post(client, COMPARE_URL, _compare_body(50000, text))
+    assert response.status_code == 422, response.text
+    assert response.headers["content-type"].startswith("application/problem+json")
+    problem = response.json()
+    assert problem["code"] == "INPUT_CONTRACT_VIOLATION"
+    assert problem["detail"].startswith("base: ")  # the first side to fail is named (DP-S4-5)
+    assert "'factor'" in problem["detail"]
+    assert text not in response.text
+
+
+@pytest.mark.req("FR-239")
+def test_compare_still_prices_a_15_digit_input(client: TestClient) -> None:
+    response = _post(client, COMPARE_URL, _compare_body(50000, I1_TEXT))
+    assert response.status_code == 200, response.text
+    assert response.json()["base"]["outputs"]["payable_premium_minor"] == 41234
+
+
+@pytest.mark.req("FR-273")
+def test_the_batch_route_takes_no_rating_input_over_json() -> None:
+    """`POST /score/batch` carries a Dataset Version id and Rating Version refs, never a
+    Rating Input: its rows are read from the Dataset Version's table by the Job handler
+    (`app.worker.scoring_handlers`), so no JSON number reaches `ctx.inputs` through it."""
+    fields = set(score_module.BatchScoreRequest.model_fields)
+    assert fields == {
+        "dataset_version_id",
+        "rating_version_refs",
+        "table_name",
+        "chunk_rows",
+        "abort_failure_rate",
+    }
+
+
+# --- condition (d): the hook is scoped to the scoring routes --------------------------------
+
+
+@pytest.mark.req("FR-273")
+def test_a_route_outside_the_scoring_routes_still_parses_a_json_number_as_float(
+    client: TestClient,
+) -> None:
+    response = client.post(
+        "/api/v1/echo",
+        content='{"x": 0.82469000000000000002, "n": 3, "s": "a", "b": true}',
+        headers={"content-type": "application/json"},
+    )
+    assert response.status_code == 200, response.text
+    assert response.json() == {"x": "float", "n": "int", "s": "str", "b": "bool"}
+
+
+@pytest.mark.req("FR-273")
+def test_the_batch_route_keeps_the_default_route_class() -> None:
+    batch = next(r for r in score_module.router.routes if getattr(r, "path", "") == "/score/batch")
+    assert type(batch).__name__ == "APIRoute"
+
+
+# --- condition (e): ints, bools and strings are untouched -----------------------------------
+
+
+@pytest.mark.req("FR-273")
+def test_ints_bools_and_strings_reach_the_engine_as_themselves(
+    client: TestClient, seen: list[dict[str, Any]]
+) -> None:
+    extra = ',"a_flag":true,"a_note":"x","a_count":7'
+    response = _post(client, SCORE_URL, _body(50000, "0.75", extra))
+    assert response.status_code == 200, response.text
+    inputs = seen[-1]
+    assert inputs["base_minor"] == 50000
+    assert type(inputs["base_minor"]) is int
+    assert inputs["a_flag"] is True
+    assert inputs["a_note"] == "x"
+    assert type(inputs["a_count"]) is int
+
+
+@pytest.mark.req("FR-273")
+def test_an_exactly_representable_decimal_input_prices_as_before(client: TestClient) -> None:
+    response = _post(client, SCORE_URL, _body(50000, "0.75"))
+    assert response.status_code == 200, response.text
+    assert response.json()["outputs"]["payable_premium_minor"] == 37500
+
+
+@pytest.mark.req("FR-273")
+def test_a_non_decimal_input_given_a_json_float_behaves_as_before(client: TestClient) -> None:
+    """`base_minor` is declared `int`: a JSON `50000.0` was a float, refused as not an int; as a
+    Decimal it is refused for the same reason, by the same code."""
+    response = _post(
+        client,
+        SCORE_URL,
+        _body(50000, "0.75").replace('"base_minor":50000', '"base_minor":50000.0'),
+    )
+    assert response.status_code == 422, response.text
+    assert response.json()["code"] == "INPUT_CONTRACT_VIOLATION"
+    assert "'base_minor'" in response.json()["detail"]
+
+
+@pytest.mark.req("FR-273")
+def test_an_undeclared_float_input_is_tolerated_as_before(client: TestClient) -> None:
+    """`_validate_inputs` tolerates extra keys, and they cross into the engine context as the
+    float the JSON path always delivered: a Decimal there would be a binding `TypeError`."""
+    response = _post(client, SCORE_URL, _body(50000, "0.75", ',"extra_rate":1.5'))
+    assert response.status_code == 200, response.text
+    assert response.json()["outputs"]["payable_premium_minor"] == 37500
+
+
+@pytest.mark.req("FR-273")
+def test_a_nested_undeclared_float_is_tolerated_as_before(client: TestClient) -> None:
+    extra = ',"extra_list":[1.5,{"a":2.5}]'
+    response = _post(client, SCORE_URL, _body(50000, "0.75", extra))
+    assert response.status_code == 200, response.text
+    assert response.json()["outputs"]["payable_premium_minor"] == 37500
+
+
+@pytest.mark.req("FR-259")
+def test_a_stored_quote_context_keeps_a_decimal_input_a_json_number() -> None:
+    """A `Decimal` dumps in pydantic's JSON mode as a string, which the off-path re-score refuses
+    as not numeric; the stored context carries the float, which is exact once the quote priced."""
+    ctx = QuoteContext.model_validate(
+        {
+            "purpose": "new_business",
+            "quoted_at": "2026-08-29T12:00:00",
+            "effective_date": "2026-09-01",
+            "inputs": {"factor": Decimal("0.75"), "base_minor": 5, "note": "x"},
+        }
+    )
+    assert ctx.model_dump(mode="json")["inputs"]["factor"] == "0.75"  # the hazard
+    stored = score_module._stored_context(ctx)
+    assert stored["inputs"] == {"factor": 0.75, "base_minor": 5, "note": "x"}
+    assert isinstance(stored["inputs"]["factor"], float)
+    assert QuoteContext.model_validate(stored).inputs["factor"] == 0.75
+
+
+# --- SL 2118 F2 / question (a): the extremes of magnitude, named, through the route ---------------
+
+
+@pytest.mark.req("FR-273")
+@pytest.mark.parametrize("text", ["1e-400", "1e-330", "-1e-400", "1e400", "-1e400"])
+def test_a_value_the_float_cannot_hold_is_refused_not_rounded_to_zero_or_infinity(
+    client: TestClient, text: str
+) -> None:
+    """Behaviour change (SL 2118): `1e-400` read as the float 0.0 and priced; it is refused now."""
+    _assert_refused_naming_the_input(_post(client, SCORE_URL, _body(50000, text)), text)
+
+
+# The engine's own limits, measured at ccdafcc8 (SL 2118 round 3): its decimal holds a scale of
+# at most 28 and a magnitude below 2**96, and a float outside either fails as a 500
+# INTERNAL_ERROR. The guard refuses the same set (the maintainer's ruling, to-lead 2026-11-13
+# 21:00:31 GMT, option A with the engine's own predicate; FD 2122).
+_ENGINE_CANNOT_HOLD = [
+    "5e-324",  # a subnormal
+    "1e-321",
+    "-5e-324",
+    "2.2250738585072014e-308",  # the smallest normal double: scale 324
+    "1e-300",
+    "1e-29",  # scale 29
+    "1.5e-28",  # scale 29 with a mantissa
+    "1.234567890123456e-14",  # 16 digits at 1e-14: scale 29
+    "1e29",  # at or above 2**96
+    "-1e30",
+    "1e300",
+]
+
+
+@pytest.mark.req("FR-273")
+@pytest.mark.parametrize("text", _ENGINE_CANNOT_HOLD)
+def test_a_value_the_engines_decimal_cannot_hold_is_refused_at_the_guard(
+    client: TestClient, text: str
+) -> None:
+    """Refused with INPUT_CONTRACT_VIOLATION (422) naming the key path, never the value; before
+    the guard covered it the engine failed on it and the route answered a 500 (FD 2122)."""
+    _assert_refused_naming_the_input(_post(client, SCORE_URL, _body(50000, text)), text)
+
+
+@pytest.mark.req("FR-273")
+@pytest.mark.parametrize("text", ["1e-28", "-1e-28", "1.23456789012345e-14", "0.5"])
+def test_a_value_at_the_engines_scale_limit_still_prices(client: TestClient, text: str) -> None:
+    """The edge of the refusal: scale 28 and a 15-digit mantissa at 1e-14 price as before."""
+    response = _post(client, SCORE_URL, _body(50000, text))
+    assert response.status_code == 200, response.text
+
+
+@pytest.mark.req("FR-273")
+def test_negative_and_signed_zero_inputs_price_as_before(client: TestClient) -> None:
+    prices = {
+        text: _post(client, SCORE_URL, _body(50000, text)) for text in ("0.0", "-0.0", "-0.75")
+    }
+    for response in prices.values():
+        assert response.status_code == 200, response.text
+    assert prices["0.0"].json()["outputs"] == prices["-0.0"].json()["outputs"]
+    assert prices["-0.75"].json()["outputs"]["payable_premium_minor"] == -37500
+
+
+@pytest.mark.req("FR-273")
+def test_an_over_precise_value_in_a_nested_undeclared_key_is_refused_naming_the_path(
+    client: TestClient,
+) -> None:
+    extra = ',"extra_list":[1.5,{"a":0.82469000000000000002}]'
+    response = _post(client, SCORE_URL, _body(50000, "0.75", extra))
+    assert response.status_code == 422, response.text
+    problem = response.json()
+    assert problem["code"] == "INPUT_CONTRACT_VIOLATION"
+    assert "'extra_list[1].a'" in problem["detail"]
+    assert "0.82469" not in response.text
+
+
+# --- SL 2118 review 3 R1: the three non-finite JSON literals ---------------------------------
+# `json.loads` does not route `NaN`, `Infinity` and `-Infinity` through `parse_float`, so they
+# arrived as raw floats that no guard touched in an undeclared or nested key.
+
+_NON_FINITE = ["NaN", "Infinity", "-Infinity"]
+
+
+@pytest.mark.req("FR-273")
+@pytest.mark.parametrize("literal", _NON_FINITE)
+@pytest.mark.parametrize(
+    ("extra", "path"),
+    [
+        (',"unread":{lit}', "'unread'"),
+        (',"extra_list":[1.5,{lit}]', "'extra_list[1]'"),
+        (',"extra_list":[1.5,{{"a":{lit}}}]', "'extra_list[1].a'"),
+        (',"extra_d":{{"a":{{"b":{lit}}}}}', "'extra_d.a.b'"),
+    ],
+)
+def test_a_non_finite_literal_in_an_undeclared_key_is_refused_naming_the_path(
+    client: TestClient, literal: str, extra: str, path: str
+) -> None:
+    body = _body(
+        50000, "0.75", extra.replace("{{", "{").replace("}}", "}").replace("{lit}", literal)
+    )
+    response = _post(client, SCORE_URL, body)
+    assert response.status_code == 422, response.text
+    assert response.headers["content-type"].startswith("application/problem+json")
+    problem = response.json()
+    assert problem["code"] == "INPUT_CONTRACT_VIOLATION"
+    assert path in problem["detail"]
+    assert literal not in response.text  # NFR-499: the problem carries no quote value
+
+
+@pytest.mark.req("FR-273")
+@pytest.mark.parametrize("literal", _NON_FINITE)
+def test_a_non_finite_literal_in_a_declared_decimal_input_is_refused(
+    client: TestClient, literal: str
+) -> None:
+    response = _post(client, SCORE_URL, _body(50000, literal))
+    assert response.status_code == 422, response.text
+    assert response.json()["code"] == "INPUT_CONTRACT_VIOLATION"
+    assert "'factor'" in response.json()["detail"]
+
+
+@pytest.mark.req("FR-273")
+def test_a_route_outside_the_scoring_routes_still_parses_a_non_finite_literal_as_float(
+    client: TestClient,
+) -> None:
+    response = client.post(
+        "/api/v1/echo",
+        content='{"a": NaN, "b": Infinity, "c": -Infinity}',
+        headers={"content-type": "application/json"},
+    )
+    assert response.status_code == 200, response.text
+    assert response.json() == {"a": "float", "b": "float", "c": "float"}
+
+
+# --- SL 2118 F3: the FR-239 property, driven through the route's own JSON parse --------------
+
+
+def _route_texts() -> list[tuple[str, bool]]:
+    """(JSON number text, expected to be refused): signs, exponent notation, at most 15 significant
+    digits (priced), and the underflow extremes (refused)."""
+    rng = random.Random(8432)
+    texts: list[tuple[str, bool]] = []
+    for _ in range(300):
+        digits = rng.randint(1, 15)
+        mantissa = str(rng.randint(10 ** (digits - 1), 10**digits - 1))
+        sign = rng.choice(["", "-"])
+        shape = rng.choice(["plain", "exp", "frac"])
+        if shape == "exp":
+            body = f"{mantissa[0]}.{mantissa[1:] or '0'}{rng.choice('eE')}{rng.randint(-6, 4):+d}"
+            body = body.replace("+", "") if rng.random() < 0.5 else body
+        elif shape == "frac":
+            body = f"0.{mantissa}"
+        else:
+            body = mantissa if len(mantissa) < 6 else f"{mantissa[:3]}.{mantissa[3:]}"
+        texts.append((sign + body, False))
+    for _ in range(40):  # underflow to zero: one to fifteen digits, a magnitude below 5e-324
+        digits = rng.randint(1, 15)
+        mantissa = str(rng.randint(10 ** (digits - 1), 10**digits - 1))
+        texts.append((f"{rng.choice(['', '-'])}0.{mantissa}e{-rng.randint(330, 500)}", True))
+    return texts
+
+
+@pytest.mark.req("FR-239")
+@pytest.mark.req("FR-273")
+def test_the_route_prices_what_the_float_parse_priced_and_refuses_the_underflows(
+    client: TestClient, compiled: CompiledBundle
+) -> None:
+    """Every text of at most 15 significant digits prices to the premium the float parse of the
+    same text gives (core, `float(text)`); every underflowing text is refused by name."""
+    for text, refused in _route_texts():
+        response = _post(client, SCORE_URL, _body(50000, text))
+        if refused:
+            _assert_refused_naming_the_input(response, text)
+            continue
+        assert response.status_code == 200, (text, response.text)
+        ctx = QuoteContext.model_validate(
+            {
+                "purpose": "new_business",
+                "quoted_at": "2026-08-29T12:00:00",
+                "effective_date": "2026-09-01",
+                "inputs": {"base_minor": 50000, "factor": float(text)},
+                "options": {"rating_version_ref": REF},
+            }
+        )
+        priced = asyncio.run(score_module.score_one(compiled, ctx))
+        assert response.json()["outputs"] == priced.model_dump(mode="json")["outputs"], text
+
+
+# --- SL 2118 F1: the sampled trace reproduces the quote (the audit promise, FR-259) ---------------
+
+
+@pytest.mark.req("FR-259")
+def test_a_nested_undeclared_value_re_scores_off_path_to_the_live_quote(
+    compiled: CompiledBundle,
+) -> None:
+    """The off-path re-score reads `quote_context` back as JSON: a nested `Decimal` stored as a
+    string would be a different engine context from the one the live quote priced."""
+    ctx = QuoteContext.model_validate(
+        {
+            "purpose": "new_business",
+            "quoted_at": "2026-08-29T12:00:00",
+            "effective_date": "2026-09-01",
+            "inputs": {
+                "base_minor": 50000,
+                "factor": Decimal("0.75"),
+                "extra_list": [Decimal("1.5"), {"a": Decimal("2.5")}],
+            },
+            "options": {"rating_version_ref": REF},
+        }
+    )
+    stored = score_module._stored_context(ctx)
+    assert stored["inputs"]["extra_list"] == [1.5, {"a": 2.5}]
+    live = asyncio.run(score_module.score_one(compiled, ctx))
+    replay = asyncio.run(score_module.score_one(compiled, QuoteContext.model_validate(stored)))
+    assert replay.model_dump(exclude={"timing_ms"}) == live.model_dump(exclude={"timing_ms"})
+
+
+# --- SL 2118 F6: /score/compare, the comparison side ---------------------------------------------
+
+
+@pytest.mark.req("FR-273")
+def test_compare_names_the_comparison_side_when_only_it_refuses(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The one shared context fails on the base side first, so the comparison side is reached only
+    when the base call is made to succeed: `base` prices a clean copy of the quote, `comparison`
+    is the real core call over the over-precise one."""
+    real = score_module.score_one
+
+    async def base_clean(bundle: Any, ctx: Any, **kwargs: Any) -> Any:
+        if str(ctx.options.rating_version_ref).endswith("@1"):
+            clean = ctx.model_copy(update={"inputs": {**ctx.inputs, "factor": Decimal("0.75")}})
+            return await real(bundle, clean, **kwargs)
+        return await real(bundle, ctx, **kwargs)
+
+    monkeypatch.setattr(score_module, "score_one", base_clean)
+    response = _post(client, COMPARE_URL, _compare_body(50000, I2_TEXT))
+    assert response.status_code == 422, response.text
+    problem = response.json()
+    assert problem["code"] == "INPUT_CONTRACT_VIOLATION"
+    assert problem["detail"].startswith("comparison: ")
+    assert "'factor'" in problem["detail"]
+    assert I2_TEXT not in response.text

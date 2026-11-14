@@ -66,3 +66,24 @@ def test_member_zero_is_one_group_and_the_catalogue_partitions_the_derived_chang
     assert len(groups[0].changes) >= 12
     kinds = {d.id: d.kind for d in derived}
     assert sum(kinds[c] == "table_repointed" for c in groups[0].changes) == 7
+
+
+#: `content_hash` of the freMTPL2 baseline and of the full six-member candidate, compiled by
+#: `compile_bundle` at origin/main 2ba0d0d5, BEFORE the FD-1495 interaction-operand guards (SL 2124)
+#: existed, by `compile_bundle(*H.versions_for(fx, members))` printing `content_hash`. The guards
+#: refuse at compile and change no spec_hash of a bundle that compiled before (FR-239).
+_PRE_GUARD_HASHES = {
+    "baseline": "sha256:2b994693868377285a2a9a4f14a2e3badb162af87f73bcd6b1558d468203c18c",
+    "full": "sha256:4ec2651209ae275264882159101e62415f1da079391b0f5ea9c8ec3ca3b5228e",
+}
+
+
+@pytest.mark.req("FR-239")
+@pytest.mark.req("FR-240")
+def test_the_control_operand_guards_leave_the_fixture_bundle_hashes_unchanged() -> None:
+    fx = H.load_fixture()
+    base_v, cand_v, resolver = H.versions_for(fx, list(range(6)))
+    baseline = asyncio.run(compile_bundle(base_v, resolver)).content_hash
+    full = asyncio.run(compile_bundle(cand_v, resolver)).content_hash
+    assert baseline == _PRE_GUARD_HASHES["baseline"]
+    assert full == _PRE_GUARD_HASHES["full"]

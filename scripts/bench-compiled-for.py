@@ -134,7 +134,9 @@ async def _time_calls(
     for _ in range(n):
         call_slot = BundleSlot() if fresh_slot_per_call else slot
         t0 = time.perf_counter()
-        await _compiled_for(database, blob_store, call_slot, workspace_id=workspace_id, ref=ref)
+        await _compiled_for(
+            database, blob_store, call_slot, database=database, workspace_id=workspace_id, ref=ref
+        )
         samples.append((time.perf_counter() - t0) * 1000)
     return samples
 
@@ -182,7 +184,9 @@ async def main(n: int) -> None:
     warm_slot = BundleSlot()
     # Prime it: the first call is always a miss regardless of condition, so it is excluded
     # from both reported distributions rather than silently pulled into the "hit" one.
-    await _compiled_for(database, blob_store, warm_slot, workspace_id=workspace_id, ref=ref)
+    await _compiled_for(
+        database, blob_store, warm_slot, database=database, workspace_id=workspace_id, ref=ref
+    )
 
     hit_samples = await _time_calls(
         database, blob_store, warm_slot, workspace_id=workspace_id, ref=ref,

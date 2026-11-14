@@ -131,6 +131,26 @@ _SITES: dict[_Key, tuple[frozenset[str], str]] = {
     # still raised, now as `raise AuthenticationFailed(...)` (auth/service.py:178, 244, 253,
     # 257, 265, 269, 277), whose fixed detail is built once in `AuthenticationFailed.__init__`
     # via `super().__init__` (an attribute call, outside `_CALLEES`); no interpolation.
+    ("backend/src/app/platform/bundle_hydration.py", "_refuse", _DYNAMIC): (
+        frozenset({"content_hash", "ref", "refusal"}),
+        "WK-2113 S3: the 409 for a stored bundle that prices on a `control` Factor. NFR-499's own "
+        "words: \"quote inputs are never logged in full outside sampled traces, which are "
+        "access-controlled\", and, in its 2026-08-30 clarification, \"A full quote input may be "
+        "held only in an access-controlled artifact this specification names for that purpose, "
+        "and those are sampled traces (FR-259) and Golden Quotes (FR-260)\" (the third store, "
+        "FR-1221's regression case store, is its 2026-09-28 clarification). A quote input is "
+        "therefore the risk values a request carries in `inputs`; none of the three reaches the "
+        "message. `content_hash`: the stored Bundle's own sha256, read from the stored version, "
+        "a digest of authored pins and never request data. `refusal`: the text after the code of "
+        "`pricing_core`'s `CONTROL_FACTOR_IN_RATEABLE_PATH`, built at `refuse_control_in_features` "
+        "(and `check_rateable_intent`) from a model ref, a fitted feature name and a Factor or "
+        "operand slug@version, authored identifiers that "
+        "packages/pricing-core/tests/test_quote_input_raise_sites.py already pins input-free. "
+        "`ref`: the caller's rating-version reference. It IS echoed in the message, and that is "
+        "allowed: it is supplied by the caller (`options.rating_version_ref`) but is parsed by "
+        "`ArtifactRef.parse` to the form {type}:{slug}@{version}, anything else is refused "
+        "before this site, so it is an identifier, not an input value",
+    ),
     ("backend/src/app/platform/jobs.py", "transition", _DYNAMIC): (
         frozenset({"row.status.value", "to_status.value"}),
         "two Job status names",

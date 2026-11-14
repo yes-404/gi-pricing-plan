@@ -888,14 +888,16 @@ async def _measure_fetch(
 
     for _ in range(20):
         await _fetch_bundle(
-            database, blob_store, _slot(), workspace_id=ws, ref=_RATING_VERSION_REF
+            database, blob_store, _slot(), database=database, workspace_id=ws,
+            ref=_RATING_VERSION_REF
         )
     load_start = loadavg()
     samples: list[float] = []
     for _ in range(iterations):
         start = time.perf_counter()
         await _fetch_bundle(
-            database, blob_store, _slot(), workspace_id=ws, ref=_RATING_VERSION_REF
+            database, blob_store, _slot(), database=database, workspace_id=ws,
+            ref=_RATING_VERSION_REF
         )
         samples.append((time.perf_counter() - start) * 1000)
     load_end = loadavg()
