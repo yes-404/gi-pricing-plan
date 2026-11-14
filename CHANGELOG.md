@@ -28,3 +28,10 @@ about. The format follows [Keep a Changelog 1.1.0](https://keepachangelog.com/en
   **What a caller must do:** send at most 15 significant digits and at most 28 digits after the
   point, with a magnitude below 2^96 (`7.9e28` is accepted), or zero.
   A value that meets this prices as before; `0` and `-0` are accepted and equal.
+
+### Upgrade notes
+
+- **Do not enable blob garbage collection before backfilling bundle-blob references.** A Rating
+  Version compiled before this release stores its compiled bundle blob with `ref_count` 0, so
+  enabling garbage collection first can delete a live bundle; backfill the references first
+  (FD-2135, OQ-1943).
