@@ -35,6 +35,7 @@ __all__ = [
     "RATING_ERROR_CODES",
     "PlatformError",
     "install_error_handlers",
+    "is_registered_code",
     "problem_response",
     "unexpected_problem",
 ]
@@ -457,6 +458,11 @@ _KNOWN_CODES: Final[frozenset[str]] = (
     | RATING_ERROR_CODES
     | _GENERIC_ERROR_CODES
 )
+
+
+def is_registered_code(code: str) -> bool:
+    """Whether `code` is enumerated in a module's catalogue, the check `PlatformError` applies."""
+    return code in _KNOWN_CODES
 
 
 def _type_uri(code: str) -> str:
