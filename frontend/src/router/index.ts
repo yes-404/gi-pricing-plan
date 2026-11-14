@@ -338,6 +338,17 @@ export const routes: RouteRecordRaw[] = [
     component: () => import("@/views/AuditExplorerView.vue"),
   },
   {
+    // `06` FR-383: one artifact version's history. `:ref` is `{type}:{slug}@{version}`,
+    // percent-encoded in the path (its `:` and `@` are not path-safe in every client); vue-router
+    // decodes it. Function mode and a prop named `artifactRef`: `props: true` would pass it as
+    // `ref`, which Vue reserves in templates.
+    path: "/artifacts/:ref/history",
+    name: "artifact-history",
+    meta: { requiresAuth: true },
+    component: () => import("@/views/ArtifactHistoryView.vue"),
+    props: (route) => ({ artifactRef: String(route.params.ref) }),
+  },
+  {
     // The OIDC redirect target (Task 4's `redirect_uri`). Never guarded — the guard's
     // refusal is what sent the browser out, and a guarded callback is an unclosable loop.
     path: "/callback",

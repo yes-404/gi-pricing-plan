@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { exportAudit, listAudit, verifyChain } from "../audit";
+import { exportAudit, getArtifactHistory, listAudit, verifyChain } from "../audit";
 
 function respond(body: unknown, contentType = "application/json"): void {
   vi.stubGlobal(
@@ -49,5 +49,13 @@ describe("audit (FR-371, FR-372)", () => {
       from: "2026-01-01T00:00:00.000Z",
       format: "json",
     });
+  });
+});
+
+describe("artifact history (FR-383)", () => {
+  it("percent-encodes the ref into the path", async () => {
+    respond({ ref: "model:motor@2", events: [] });
+    await getArtifactHistory("model:motor@2");
+    expect(lastUrl().pathname).toBe("/api/v1/artifacts/model%3Amotor%402/history");
   });
 });

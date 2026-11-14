@@ -346,6 +346,13 @@ onMounted(() => void load());
             >
               {{ event.entity_ref }}
             </button>
+            <!-- Q12 (a): every entity links to history; a non-artifact ref is the view's 422. -->
+            <RouterLink
+              :to="`/artifacts/${encodeURIComponent(event.entity_ref)}/history`"
+              class="ml-2 text-xs text-slate-600 underline"
+            >
+              history
+            </RouterLink>
           </td>
           <td class="py-2">
             {{ event.justification }}

@@ -39,6 +39,8 @@ const INTACT: ChainVerification = {
   intact: true,
 };
 
+const ROUTER_LINK = { RouterLink: { props: ["to"], template: '<a :href="to"><slot /></a>' } };
+
 type Reply = { status?: number; body: unknown; type?: string };
 let replies: Reply[];
 
@@ -67,7 +69,7 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllGlobals());
 
 async function view(): Promise<void> {
-  render(AuditExplorerView);
+  render(AuditExplorerView, { global: { stubs: ROUTER_LINK } });
   await screen.findByRole("table");
 }
 
@@ -144,6 +146,14 @@ describe("the audit explorer (FR-371, FR-372, FR-373)", () => {
     await userEvent.click(screen.getByRole("button", { name: "model:motor-freq@2" }));
     await waitFor(() => expect(urls().length).toBe(2));
     expect(urls()[1]!.searchParams.get("entity")).toBe("model:motor-freq@2");
+  });
+
+  it("links a row's entity to its history, percent-encoded", async () => {
+    await view();
+    expect(screen.getByRole("link", { name: "history" })).toHaveAttribute(
+      "href",
+      "/artifacts/model%3Amotor-freq%402/history",
+    );
   });
 
   it("renders a refusal as the problem it is", async () => {

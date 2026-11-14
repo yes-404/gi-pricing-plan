@@ -35,3 +35,14 @@ export function verifyChain(range: Pick<AuditFilters, "from" | "to"> = {}): Prom
 export function exportAudit(filters: AuditFilters, format: "csv" | "json"): Promise<string> {
   return request<string>("/audit/export", { query: { ...filters, format }, responseType: "text" });
 }
+
+export type ArtifactHistory = components["schemas"]["ArtifactHistory"];
+export type ArtifactHistoryEntry = components["schemas"]["ArtifactHistoryEntry"];
+
+/**
+ * One artifact version's uniform history (FR-383). `ref` is `{type}:{slug}@{version}`; it is
+ * percent-encoded here because its `:` and `@` are not path-safe in every client.
+ */
+export function getArtifactHistory(ref: string): Promise<ArtifactHistory> {
+  return request<ArtifactHistory>(`/artifacts/${encodeURIComponent(ref)}/history`);
+}
