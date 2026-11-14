@@ -86,6 +86,8 @@ The rules are in `CONTRIBUTING.md`. In short:
 - Conventional Commits. Short-lived branches from `main`.
 - **Never** put a session link in a commit, pull request or issue. Never install an external
   skill or agent without the maintainer's approval. Never modify `~/.claude/skills/`.
+- **Never bypass a commit hook**: no `--no-verify`, no `core.hooksPath` override. A commit the
+  hook refuses is fixed, or reported to the maintainer; it is never worked around.
 - AI use is disclosed in every pull request, and a named person is accountable for it.
 
 ## 9. History
