@@ -142,10 +142,11 @@ def test_area_shares_agree_with_the_expanded_weighted_frame() -> None:
     levels = np.unique(level)
     joint = np.array([[(exposure * p[:, j])[level == lv].sum() for j in range(3)] for lv in levels])
     # scikit-learn casts a contingency table to integers, so scale before the cast: MI is
-    # invariant to a common factor, and rounding at 1e9 costs under 1e-8 bits.
-    scaled = np.round(joint * 1e9).astype(np.int64)
+    # invariant to a common factor. 1e7 keeps the rounding error near 1e-7 bits while the
+    # product of two marginals (under 1e18) stays inside int64, which 1e9 did not.
+    scaled = np.round(joint * 1e7).astype(np.int64)
     assert got.mutual_information_bits == pytest.approx(
-        mutual_info_score(None, None, contingency=scaled) / math.log(2), abs=1e-7
+        mutual_info_score(None, None, contingency=scaled) / math.log(2), abs=1e-6
     )
     level_total = joint.sum(axis=1)
     for j, c in enumerate(CLASSES):
