@@ -38,6 +38,7 @@ from pathlib import Path
 
 import pytest
 from backend.tests.conftest_db import owner_subject_settings
+from backend.tests.test_provision_app_role import requires_isolated_role_cluster
 from fastapi.testclient import TestClient
 from pydantic import SecretStr
 from sqlalchemy import text
@@ -126,6 +127,7 @@ async def _become(connection: AsyncConnection, statements: list[str], role: str)
     await connection.execute(text(f"SET LOCAL ROLE {role}"))
 
 
+@requires_isolated_role_cluster
 @pytest.mark.req("FR-44")
 @pytest.mark.parametrize("case", ["inherit_false_member_of_the_owner", "bypassrls_role"])
 async def test_an_inherit_false_membership_of_the_owner_is_refused(
@@ -187,6 +189,7 @@ async def _as_login_role(connection: AsyncConnection) -> None:
     await connection.execute(text(f"SET LOCAL ROLE {_LOGIN_ROLE}"))
 
 
+@requires_isolated_role_cluster
 @pytest.mark.req("FR-44")
 @pytest.mark.parametrize("case", list(_ROUTES))
 async def test_a_route_to_the_owner_is_refused_at_startup(
@@ -211,6 +214,7 @@ async def test_a_route_to_the_owner_is_refused_at_startup(
             await transaction.rollback()
 
 
+@requires_isolated_role_cluster
 @pytest.mark.req("FR-44")
 @pytest.mark.parametrize(
     "grant",
