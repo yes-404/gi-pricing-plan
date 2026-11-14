@@ -50,9 +50,12 @@ def _declared(route: Any, status: str) -> set[str]:
     # An unset status code is the response class's own default, 200 for every class that
     # reaches a 2xx here (FastAPI reads it from the class's constructor).
     own_status = 200 if route.status_code is None else route.status_code
-    if status == str(own_status) and own_status not in _NO_BODY:
-        if response_class.media_type is not None:
-            declared.add(response_class.media_type)
+    if (
+        status == str(own_status)
+        and own_status not in _NO_BODY
+        and response_class.media_type is not None
+    ):
+        declared.add(response_class.media_type)
     return declared
 
 
