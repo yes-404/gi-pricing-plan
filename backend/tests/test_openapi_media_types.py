@@ -10,7 +10,8 @@ types published with the ones the route declares:
   bare `Response` and `StreamingResponse`, which publish no content of their own), on the route's
   own status code, and a status that carries no body (1xx, 204, 304) publishes none;
 - plus every media type the route names in `responses[<status>]["content"]`, which is how a
-  route with a non-JSON body declares it.
+  route with a non-JSON body declares it, and, for a `responses` entry carrying a `model`, the
+  class's media type (JSON when it has none), which is where FastAPI publishes that model.
 
 It reads the document `create_app` generates and edits nothing under `docs/contracts/openapi/`.
 """
@@ -22,7 +23,7 @@ from typing import Any
 
 import pytest
 from fastapi import FastAPI
-from fastapi.routing import APIRoute
+from fastapi.routing import APIRoute, iter_route_contexts
 
 from app.config import Environment, Settings
 from app.main import create_app
@@ -36,15 +37,20 @@ def app() -> FastAPI:
     return create_app(Settings(environment=Environment.LOCAL, version="test"))
 
 
-def _declared(route: APIRoute, status: str) -> set[str]:
+def _declared(route: Any, status: str) -> set[str]:
     """The media types `route` declares for the 2xx `status`."""
+    response_class: Any = route.response_class
+    response_class = getattr(response_class, "value", response_class)  # a default placeholder
     declared: set[str] = set()
     for key, response in route.responses.items():
         if str(key) == status:
             declared |= set(response.get("content", {}))
-    if status == str(route.status_code) and route.status_code not in _NO_BODY:
-        response_class: Any = route.response_class
-        response_class = getattr(response_class, "value", response_class)  # a default placeholder
+            if "model" in response:  # published in the class's media type, JSON when it has none
+                declared.add(response_class.media_type or "application/json")
+    # An unset status code is the response class's own default, 200 for every class that
+    # reaches a 2xx here (FastAPI reads it from the class's constructor).
+    own_status = 200 if route.status_code is None else route.status_code
+    if status == str(own_status) and own_status not in _NO_BODY:
         if response_class.media_type is not None:
             declared.add(response_class.media_type)
     return declared
@@ -53,10 +59,13 @@ def _declared(route: APIRoute, status: str) -> set[str]:
 def _mismatches(app: FastAPI, document: dict[str, Any]) -> list[str]:
     """`METHOD path status: published {...}, declared {...}` for each 2xx response whose published
     media types differ from the route's declared ones."""
+    # `include_router` nests routers, so the effective path, methods, responses and response
+    # class of a route are read from FastAPI's own route contexts, the ones it builds the
+    # document from.
     routes = {
         (method.lower(), route.path_format): route
-        for route in app.routes
-        if isinstance(route, APIRoute)
+        for route in iter_route_contexts(app.routes)
+        if isinstance(route.original_route, APIRoute) and route.include_in_schema
         for method in route.methods
     }
     out: list[str] = []
