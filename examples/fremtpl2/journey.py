@@ -85,7 +85,6 @@ SKIPS: Final[tuple[Skip, ...]] = (
     Skip("E5", "SKIPPED E5 inline review: Phase 3; WK-678"),
     Skip("E7", "SKIPPED E7 Commentary Block: Phase 3; WK-680"),
     Skip("A6", "KNOWN GAP A6: FD-1491"),
-    Skip("B9", "KNOWN GAP B9: FD-1490"),
 )
 
 #: An owner is a finding or a Work: `FD-1491`, `WK-685`, or a finding's working id, `FD 9804`.
@@ -494,7 +493,7 @@ class _Journey:
             code="VALIDATION_FAILED",
             json=floaty,
         )
-        self.skip("B9")
+        self.done("B9", "a float output type is refused at save")
         self.check_b4()
         self.reference_table()
 
