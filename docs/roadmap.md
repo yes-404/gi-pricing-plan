@@ -4601,6 +4601,24 @@ Moved to P3 by the lead's entry "2026-10-10 16:07:46 BST — RULINGS on PL 9955 
 
 ***Dated line, 2026-11-11 10:58:58 GMT — RE-PARENTED*** (the maintainer's act, by delegation; written by the planner in the P2-close docs batch). The maintainer's entry "2026-11-11 10:58:58 GMT — Maintainer: THE USER'S P2 CLOSE WORD" in `to-lead.md`, MY ACTS: "SL-1601 re-parented as the drafts say". The drafts name P3-C (`P3-WK-drafts.md`, sha256 prefix `196357ab59ac`, Q4, ruled at to-lead "2026-11-09 12:08:21 GMT": "RE-PARENTED at the P2 close by a dated line to the P3 row that owns its subject"). The `work:` field above read `WK-1178` from the cut on 2026-10-10 and reads `WK-2113` from this line, because WK-1178 closed at the P2 close. The row moved here from under `WK-1288`, where it sat by position only. Its heading and `title:` keep their words as cut ("WK-1178 P3 carry"). Nothing else in the row changes: status `draft`, and its activation needs, stand.
 
+#### SL-2118 — WK-2113 S2 — FD-1671: the score routes refuse what core refuses
+
+```yaml
+id: SL-2118
+family: slice
+title: WK-2113 S2 — FD-1671: the score routes refuse what core refuses
+status: active                 # draft → active → closed | retired (§1.2a)
+created: 2026-11-13
+owner: lead
+tree: 2ba0d0d53142dacd6550cb314a4d65685b612bd1
+phase: P3
+work: WK-2113
+corrected_by: []
+relates: [FD-1671, LG-2119]
+```
+
+The maintainer's GO (R2) of `to-lead` "2026-11-13 19:53:34 GMT — Maintainer: RULINGS R1–R3", severity MEDIUM, design (b): `POST /score` and `POST /score/compare` read the JSON numbers of a Quote Context as `Decimal`, scoped to those two routes, so `pricing-core`'s FR-273 guard is the one definition and the HTTP paths refuse an over-precision `decimal` Rating Input with `INPUT_CONTRACT_VIOLATION` as core does; red first, FR-239 held by the golden suite plus a property test. Ledger `LG-2119`. Dispatched in parallel with the first S1 slice (disjoint files).
+
 ### WK-2114 — P3-D — process and instruments
 
 ```yaml
@@ -4704,6 +4722,8 @@ From “Workstreams” (line 496): GIPP checks, price-walking, disparity reporti
 
 *(Dated 2026-10-14 by the lead, on the maintainer's (by delegation) entry "2026-10-14 10:57:10 BST — FD 8023 MEDIUM + trigger CONFIRMED; the D-list line-read GO (closed-phase + P2-scope only); later-phase D lines GO (re lead 10:56:41)", item 4 ("dated roadmap lines placing each on its module's Work … No line-read is needed: they are spec-only until their phase"): `04` FR-295 (ENBP through the most-used new-business channel when the original is unavailable), FR-296 (the GIPP check records its product scope) and NFR-508 (GIPP evidence retained ≥ 7 years, exportable) join this Work's requirement list — each is a GIPP-check or GIPP-evidence property, this Work's title. Placement only: nothing is built ahead of this Work's phase (`CLAUDE.md` §0).)*
 
+
+*(Dated 2026-11-13, docs batch 35, by the executor, on the maintainer's ruling `to-lead` "2026-11-13 19:56:23 GMT" (BATCH 35 CELLS RULED), condition (5), cell L87 of `docs/findings/register.md`: **FR-257, limb (4), the GIPP limb, is carried to this Work** (GIPP, FR-294). Limbs (1) to (3) of FR-257 are delivered (#886, #1260 `db0642c4`, #1426 `db92a7bc`, per the register row). The register row F44 is re-owned here; this Work's status is not changed by this line. `CR-2110`'s register-read row: "Limb 4 carry → WK-685 (P4, GIPP, FR-294) … WK-685's row needs a dated FR-257 clause".)*
 
 ### WK-686 — Materialisation into rate tables
 
