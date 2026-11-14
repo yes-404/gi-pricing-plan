@@ -777,6 +777,116 @@
         "title": "ApproximationDeviation",
         "type": "object"
       },
+      "ArtifactHistory": {
+        "additionalProperties": false,
+        "description": "The uniform history of one artifact version (`06` §4.6, FR-383).\n\nRead from the audit log by exact `entity_ref`, so it holds exactly the events written\nunder that reference: the history of one `{type}:{slug}@{version}`, oldest first.",
+        "properties": {
+          "events": {
+            "items": {
+              "$ref": "#/components/schemas/ArtifactHistoryEntry"
+            },
+            "title": "Events",
+            "type": "array"
+          },
+          "ref": {
+            "$ref": "#/components/schemas/ArtifactRef"
+          }
+        },
+        "required": [
+          "ref",
+          "events"
+        ],
+        "title": "ArtifactHistory",
+        "type": "object"
+      },
+      "ArtifactHistoryEntry": {
+        "additionalProperties": false,
+        "description": "One audit event of an artifact version, in the shape every artifact type shares.",
+        "properties": {
+          "action": {
+            "pattern": "^[a-z_]+\\.[a-z_]+$",
+            "title": "Action",
+            "type": "string"
+          },
+          "actor": {
+            "$ref": "#/components/schemas/Principal"
+          },
+          "at": {
+            "format": "date-time",
+            "title": "At",
+            "type": "string"
+          },
+          "diff": {
+            "items": {
+              "$ref": "#/components/schemas/FieldChange"
+            },
+            "title": "Diff",
+            "type": "array"
+          },
+          "job_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Job Id"
+          },
+          "justification": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Justification"
+          },
+          "sequence": {
+            "minimum": 1.0,
+            "title": "Sequence",
+            "type": "integer"
+          },
+          "source": {
+            "$ref": "#/components/schemas/JobSource"
+          },
+          "trace_id": {
+            "anyOf": [
+              {
+                "pattern": "^[0-9a-f]{32}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trace Id"
+          },
+          "transition": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/StatusTransition"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "sequence",
+          "at",
+          "actor",
+          "source",
+          "action"
+        ],
+        "title": "ArtifactHistoryEntry",
+        "type": "object"
+      },
       "ArtifactRef": {
         "description": "Canonical artifact reference {type}:{slug}@{version} (ID-3).",
         "examples": [
@@ -950,18 +1060,17 @@
         "title": "AttributionSummary",
         "type": "object"
       },
-      "AuditEventView": {
+      "AuditEventRecord": {
         "additionalProperties": false,
-        "description": "An event as returned by the API (`06` §4.5).\n\nIncludes `event_hash` and `prev_event_hash`: an auditor exporting the log must be able\nto recompute the chain outside the platform, which is what makes it evidence rather\nthan a report (FR-372).",
+        "description": "An event as the audit API returns and exports it: `AuditEvent` plus its `sequence`.\n\n`sequence` is the per-workspace position the chain is ordered and verified by. It is not\nhashed (the hash covers `AuditEventCore` and `prev_event_hash` only), so an export line\nvalidates as this class and recomputes with `verify()` outside the platform (FR-372).",
         "properties": {
           "action": {
+            "pattern": "^[a-z_]+\\.[a-z_]+$",
             "title": "Action",
             "type": "string"
           },
           "actor": {
-            "additionalProperties": true,
-            "title": "Actor",
-            "type": "object"
+            "$ref": "#/components/schemas/Principal"
           },
           "after": {
             "anyOf": [
@@ -993,10 +1102,12 @@
             "title": "Before"
           },
           "entity_ref": {
+            "description": "Canonical `{type}:{slug}@{version}` form (ID-3).",
             "title": "Entity Ref",
             "type": "string"
           },
           "event_hash": {
+            "pattern": "^sha256:[a-f0-9]{64}$",
             "title": "Event Hash",
             "type": "string"
           },
@@ -1015,6 +1126,7 @@
                 "type": "null"
               }
             ],
+            "description": "The Job that caused this change, where one did (FR-374).",
             "title": "Job Id"
           },
           "justification": {
@@ -1031,25 +1143,29 @@
           "prev_event_hash": {
             "anyOf": [
               {
+                "pattern": "^sha256:[a-f0-9]{64}$",
                 "type": "string"
               },
               {
                 "type": "null"
               }
             ],
+            "description": "Hash of the previous event in this workspace. Null for the first event — deliberately null rather than a sentinel, because a sentinel is indistinguishable from a real predecessor and would let a truncated chain verify.",
             "title": "Prev Event Hash"
           },
           "sequence": {
+            "description": "Position in the workspace's chain, from 1.",
+            "minimum": 1.0,
             "title": "Sequence",
             "type": "integer"
           },
           "source": {
-            "title": "Source",
-            "type": "string"
+            "$ref": "#/components/schemas/JobSource"
           },
           "trace_id": {
             "anyOf": [
               {
+                "pattern": "^[0-9a-f]{32}$",
                 "type": "string"
               },
               {
@@ -1057,19 +1173,25 @@
               }
             ],
             "title": "Trace Id"
+          },
+          "workspace_id": {
+            "format": "uuid",
+            "title": "Workspace Id",
+            "type": "string"
           }
         },
         "required": [
           "id",
-          "sequence",
+          "workspace_id",
           "at",
           "actor",
           "source",
           "action",
           "entity_ref",
-          "event_hash"
+          "event_hash",
+          "sequence"
         ],
-        "title": "AuditEventView",
+        "title": "AuditEventRecord",
         "type": "object"
       },
       "Backtest": {
@@ -1949,9 +2071,46 @@
             "title": "Events Checked",
             "type": "integer"
           },
+          "first_sequence": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Where the check began. The event before it is not itself verified.",
+            "title": "First Sequence"
+          },
+          "from": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The requested lower bound on `at`, if any.",
+            "title": "From"
+          },
           "intact": {
             "title": "Intact",
             "type": "boolean"
+          },
+          "last_sequence": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The last event verified, or `None` if none was.",
+            "title": "Last Sequence"
           },
           "reason": {
             "anyOf": [
@@ -1964,6 +2123,24 @@
             ],
             "title": "Reason"
           },
+          "to": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The requested upper bound on `at`, if any.",
+            "title": "To"
+          },
+          "whole_chain": {
+            "description": "True when no range was given: the whole chain, NFR-521's proof.",
+            "title": "Whole Chain",
+            "type": "boolean"
+          },
           "workspace_id": {
             "format": "uuid",
             "title": "Workspace Id",
@@ -1972,6 +2149,7 @@
         },
         "required": [
           "workspace_id",
+          "whole_chain",
           "events_checked",
           "intact"
         ],
@@ -6482,6 +6660,39 @@
           "frequency"
         ],
         "title": "FeatureImportance",
+        "type": "object"
+      },
+      "FieldChange": {
+        "additionalProperties": false,
+        "description": "One field whose value an event changed (`06` §4.6): the `before`/`after` difference.\n\n`path` is dotted for nested state (`terms.region`); a list is one value, not diffed.",
+        "properties": {
+          "after": {
+            "anyOf": [
+              {},
+              {
+                "type": "null"
+              }
+            ],
+            "title": "After"
+          },
+          "before": {
+            "anyOf": [
+              {},
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Before"
+          },
+          "path": {
+            "title": "Path",
+            "type": "string"
+          }
+        },
+        "required": [
+          "path"
+        ],
+        "title": "FieldChange",
         "type": "object"
       },
       "FieldError": {
@@ -11350,12 +11561,12 @@
         "title": "Page[ApprovalRequest]",
         "type": "object"
       },
-      "Page_AuditEventView_": {
+      "Page_AuditEventRecord_": {
         "additionalProperties": false,
         "properties": {
           "items": {
             "items": {
-              "$ref": "#/components/schemas/AuditEventView"
+              "$ref": "#/components/schemas/AuditEventRecord"
             },
             "title": "Items",
             "type": "array"
@@ -11383,7 +11594,7 @@
           "items",
           "total_estimate"
         ],
-        "title": "Page[AuditEventView]",
+        "title": "Page[AuditEventRecord]",
         "type": "object"
       },
       "Page_CustomMetric_": {
@@ -17718,6 +17929,26 @@
         "title": "SplitRequest",
         "type": "object"
       },
+      "StatusTransition": {
+        "additionalProperties": false,
+        "description": "A lifecycle move, read from `before.status` and `after.status` (`06` §4.6).",
+        "properties": {
+          "from": {
+            "title": "From",
+            "type": "string"
+          },
+          "to": {
+            "title": "To",
+            "type": "string"
+          }
+        },
+        "required": [
+          "from",
+          "to"
+        ],
+        "title": "StatusTransition",
+        "type": "object"
+      },
       "StepChange": {
         "additionalProperties": false,
         "description": "One step that differs between two Traces (FR-262, `03` §4.10). `own_change` is true\nwhen the step was added or removed, or changed and its definition differs between the two\ncompiled algorithms (`RL-1261`; `note` does not count). False means the step's own\ndefinition is the same on both sides and it differs only through what it consumed.",
@@ -20576,6 +20807,132 @@
         ]
       }
     },
+    "/api/v1/artifacts/{ref}/history": {
+      "get": {
+        "description": "Events, oldest first, for exactly `{ref}` (`{type}:{slug}@{version}`).\n\n`422` when `{ref}` is not an artifact reference; `404` when the log holds no event for it\nin this workspace. Every artifact type's creation emits an event, so a real artifact\nalways has a history.",
+        "operationId": "artifact_history_api_v1_artifacts__ref__history_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ref",
+            "required": true,
+            "schema": {
+              "title": "Ref",
+              "type": "string"
+            }
+          },
+          {
+            "description": "The workspace to act in, as a UUID. Required when the principal is a member of more than one (`07` FR-397); a principal with exactly one, and a Service Account, send nothing. Checked against the principal's own memberships: a workspace it does not belong to yields `403 WORKSPACE_SCOPE_DENIED`, and an absent selection with several memberships yields `403 WORKSPACE_SELECTION_REQUIRED`.",
+            "in": "header",
+            "name": "Workspace-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The workspace to act in, as a UUID. Required when the principal is a member of more than one (`07` FR-397); a principal with exactly one, and a Service Account, send nothing. Checked against the principal's own memberships: a workspace it does not belong to yields `403 WORKSPACE_SCOPE_DENIED`, and an absent selection with several memberships yields `403 WORKSPACE_SELECTION_REQUIRED`.",
+              "title": "Workspace-Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ArtifactHistory"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
+          }
+        },
+        "summary": "The uniform history of one artifact version (FR-383)",
+        "tags": [
+          "governance"
+        ]
+      }
+    },
     "/api/v1/audit": {
       "get": {
         "description": "Filtered and cursor-paginated (FR-371, `00` §5.2).\n\nOrdered by `sequence`, the per-workspace monotonic counter, rather than by `at`: events\nwritten in one transaction share a timestamp, and a log whose order cannot be\nreconstructed cannot be verified.",
@@ -20732,7 +21089,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Page_AuditEventView_"
+                  "$ref": "#/components/schemas/Page_AuditEventRecord_"
                 }
               }
             },
@@ -20822,7 +21179,7 @@
     },
     "/api/v1/audit/export": {
       "get": {
-        "description": "Stream the log out, hashes included.\n\nThe hashes are the point of the export: an auditor recomputes them with\n`model_schema.compute_event_hash` and finds any break without the platform's help. An\nexport that omitted them would be a report about the log rather than the log.",
+        "description": "Stream the events the query would show: the same filters, in `sequence` order.\n\n**JSON Lines is the evidence form**: one `AuditEventRecord` per line, every hashed field\nand both hashes, so an auditor recomputes each hash with `model_schema` and finds an\nedited event without the platform's help. **The CSV is a report**: readable columns and\nthe two hashes, but not the whole event (no `workspace_id`, `before` or `after`, and\nonly the actor's display name), so it cannot be recomputed.\n\nA filtered export is the matching events with gaps, so it cannot show the chain is\nunbroken. Whether it is, is `/verify`'s to say (FR-372), not the file's.",
         "operationId": "export_audit_api_v1_audit_export_get",
         "parameters": [
           {
@@ -20834,6 +21191,55 @@
               "pattern": "^(csv|json)$",
               "title": "Format",
               "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "actor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Actor"
+            }
+          },
+          {
+            "in": "query",
+            "name": "entity",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Entity"
+            }
+          },
+          {
+            "in": "query",
+            "name": "action",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Action"
             }
           },
           {
@@ -20868,6 +21274,22 @@
                 }
               ],
               "title": "To"
+            }
+          },
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Q"
             }
           },
           {
@@ -20989,9 +21411,43 @@
     },
     "/api/v1/audit/verify": {
       "get": {
-        "description": "Recompute every hash for this workspace and report the first break.\n\nReturns `200` with `intact: false` rather than an error status. A broken chain is a\n*finding*, and an auditor asking the question needs the answer and the sequence number\n— not a 500 that looks like the endpoint is broken.",
+        "description": "Recompute the hashes of this workspace's chain and report the first break.\n\nWith neither `from` nor `to` the whole chain is verified, and that is NFR-521's proof.\nWith either, the contiguous sequence span they select is verified (`first_sequence` and\n`last_sequence` say which); the event just before the span is not itself verified.\n\nReturns `200` with `intact: false` rather than an error status. A broken chain is a\n*finding*, and an auditor asking the question needs the answer and the sequence number\n— not a 500 that looks like the endpoint is broken.",
         "operationId": "verify_chain_api_v1_audit_verify_get",
         "parameters": [
+          {
+            "in": "query",
+            "name": "from",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "From"
+            }
+          },
+          {
+            "in": "query",
+            "name": "to",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "To"
+            }
+          },
           {
             "description": "The workspace to act in, as a UUID. Required when the principal is a member of more than one (`07` FR-397); a principal with exactly one, and a Service Account, send nothing. Checked against the principal's own memberships: a workspace it does not belong to yields `403 WORKSPACE_SCOPE_DENIED`, and an absent selection with several memberships yields `403 WORKSPACE_SELECTION_REQUIRED`.",
             "in": "header",
