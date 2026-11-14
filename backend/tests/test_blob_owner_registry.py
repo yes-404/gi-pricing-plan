@@ -113,16 +113,20 @@ async def test_the_backfill_never_lowers_a_count_and_is_idempotent(
 
 @pytest.mark.req("FR-420")
 async def test_after_the_backfill_the_collector_selects_nothing_any_row_mentions(
-    database: Database, owner_database: Database, blob_store: BlobStore, workspace_id, principal
+    database: Database, blob_store: BlobStore, workspace_id, principal
 ) -> None:
     """The slice's proof. Every blob the collector would take at grace 0 is mentioned in no
     other table: a digest found anywhere in a row is a reference the registry missed.
+
+    Runs as the application's login role throughout, because the collector does: its read of
+    `blobs` and its audit append are inside `gip_app`'s grants (`b7e4c2a91d36`), so an owner
+    connection here would prove less than the application's own path.
 
     Run on the seeded demo copy as well as the test database (the DB window does both).
     """
     async with database.unit_of_work() as session:
         await blobs.backfill_ref_counts(session)
-    async with owner_database.unit_of_work() as session:
+    async with database.unit_of_work() as session:
         report = await blob_store.collect_garbage(
             session, actor=principal, workspace_id=workspace_id, dry_run=True, grace_days=0
         )
