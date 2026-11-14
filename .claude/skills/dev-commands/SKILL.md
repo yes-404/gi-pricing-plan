@@ -1250,7 +1250,7 @@ recalled. Two things measured rather than assumed, both of which changed what wa
 - **The venv exclusion is by construction and has no refusal guard.** `_enumerate_tree`
   (`:3854`) enumerates through `git ls-files -z --cached --others --exclude-standard`
   (`_LS_FILES_ARGS`, `:3851`), so `.gitignore` applies before anything is a candidate.
-  Predicate `grep -n '\.venv' scripts/doc-id.py` at `7d5d6e0` → **4
+  Predicate `grep -n '\.venv' scripts/doc-id.py scripts/_docverify.py` (script retired 2026-11-13; kept as the command that was run) at `7d5d6e0` → **4
   lines, all prose in a comment or docstring** (`scripts/doc-id.py:544`, `:3826`, `:5011`,
   `:5028`), no conditional anywhere.
 
