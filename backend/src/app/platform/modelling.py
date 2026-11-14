@@ -389,7 +389,7 @@ async def load_factors(
     operand that is itself an interaction, which is where the "declare a three-way as one
     factor" message belongs; the walk loads its operands too, because the control-intent guard
     (`control_factor_in`, FR-88, FR-240) reads the closure at any depth and a chain it cannot
-    read fails closed with a message naming an operand the platform never loaded (SL 8429
+    read fails closed with a message naming an operand the platform never loaded (SL 2124
     review F-3). A cycle cannot loop: an id already loaded is never asked for again.
     """
     async def _load(ids: list[UUID], what: str) -> dict[UUID, FactorRow]:

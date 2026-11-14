@@ -431,7 +431,7 @@ async def test_a_stored_cell_the_engine_reads_compiles(raw: str) -> None:
     await compile_bundle(_version(), _with_cells("1.5", raw))
 
 
-# -- FD-1495's interaction limb (SL 8429): a `control` OPERAND of a `risk` interaction ---------
+# -- FD-1495's interaction limb (SL 2124): a `control` OPERAND of a `risk` interaction ---------
 #
 # A cross is a design column of its own and its operands get no term (`02` FR-92), so a pinned
 # model that prices through `<cross>[a | x]` consumes only the cross's slug. FR-88's "never

@@ -4528,7 +4528,7 @@ relates: [CR-2103, WK-1178, FD-1219, FD-1220, FD-1240, FD-1246, FD-1283, FD-1284
 
 ***Dated line, 2026-11-11 10:58:58 GMT — SIGNED*** (the maintainer's act, by delegation, on D-5 and the accepted §14 review; written by the planner in the P2-close docs batch under working id 8426). The maintainer's entry "2026-11-11 10:58:58 GMT — Maintainer: THE USER'S P2 CLOSE WORD" in `to-lead.md`, MY ACTS: "the P3-C and P3-D rows SIGNED as drafted (P3-C first act the FD-1671 probe; P3-D first act the FD-1489 braces check)". The row below is the draft of `scratch/plan-p3wk/P3-WK-drafts.md` (local, sha256 prefix `196357ab59ac`), verbatim but for the id, `created:` and `tree:` (the P2 exit tree T of `CR-2110`), with the draft's scope markers dropped. Its first act is the FD-1671 probe. "Q1" to "Q7" are the drafts' questions, each ruled at to-lead "2026-11-09 12:08:21 GMT". Status `draft`, as drafted: its activation is the maintainer's.
 
-***Dated line, 2026-11-13 19:53:34 GMT — ACTIVATED*** (the maintainer's act, by delegation, riding the PR of its first slice, SL 8429). The maintainer's entry "2026-11-13 19:53:34 GMT — Maintainer: RULINGS R1–R3" in `to-lead.md`, (R1), verbatim: "WK-2113 (P3-C) goes draft → ACTIVE by my dated line of this stamp, riding S1's PR: its first slice is a HIGH correctness fix on my GO, which is activation in fact; the line says so." `status:` above read `draft` from 2026-11-11 and reads `active` from this line; the SIGNED line's "Status `draft`, as drafted: its activation is the maintainer's" is superseded by it.
+***Dated line, 2026-11-13 19:53:34 GMT — ACTIVATED*** (the maintainer's act, by delegation, riding the PR of its first slice, SL 2124). The maintainer's entry "2026-11-13 19:53:34 GMT — Maintainer: RULINGS R1–R3" in `to-lead.md`, (R1), verbatim: "WK-2113 (P3-C) goes draft → ACTIVE by my dated line of this stamp, riding S1's PR: its first slice is a HIGH correctness fix on my GO, which is activation in fact; the line says so." `status:` above read `draft` from 2026-11-11 and reads `active` from this line; the SIGNED line's "Status `draft`, as drafted: its activation is the maintainer's" is superseded by it.
 
 Opened `draft` at the P2 close by the maintainer's line, on `CR-2103` P25 and P19 (a). It takes the **product-code** carries of WK-1178 and of closed Works. The register's F-series rows (F6, F43, F53, F55, F62) have no id form `relates:` accepts, so they are named here only.
 
@@ -4562,10 +4562,10 @@ Opened `draft` at the P2 close by the maintainer's line, on `CR-2103` P25 and P1
 
 **Slices:** cut by the planner at P3 start.
 
-#### SL-8429 — WK-2113 S1 — FD-1495 limb: the control-intent guards test every interaction's operands
+#### SL-2124 — WK-2113 S1 — FD-1495 limb: the control-intent guards test every interaction's operands
 
 ```yaml
-id: SL-8429
+id: SL-2124
 family: slice
 title: WK-2113 S1 — FD-1495 limb — the control-intent guards test every interaction's operands (feature guard, rate-table key guard, seed; fail closed on a missing operand)
 status: active                 # draft → active → closed | retired (§1.2a)
@@ -4575,10 +4575,10 @@ tree: 2ba0d0d53142dacd6550cb314a4d65685b612bd1
 phase: P3
 work: WK-2113
 corrected_by: []
-relates: [FD-1495, LG-8430, OQ-8431, OQ-8438, OQ-8439, FD-8440, FD-8441, FD-8444]
+relates: [FD-1495, LG-2125, OQ-2126, OQ-2127, OQ-2128, FD-2129, FD-2130, FD-2131]
 ```
 
-*Dated 2026-11-13 by the executor (exec-sl8429), on the maintainer's GO "2026-11-13 19:51:15 GMT — Maintainer: FD-1495 PROBE READ" in `to-lead.md` (severity HIGH, seven conditions): the slice is `active`. `FR-88` and `FR-240` are clarified, the ledger is `LG 8430`, the open question is `OQ 8431`. WK-2113's own status line is not changed by this row.*
+*Dated 2026-11-13 by the executor (exec-sl8429), on the maintainer's GO "2026-11-13 19:51:15 GMT — Maintainer: FD-1495 PROBE READ" in `to-lead.md` (severity HIGH, seven conditions): the slice is `active`. `FR-88` and `FR-240` are clarified, the ledger is `LG 2125`, the open question is `OQ 2126`. WK-2113's own status line is not changed by this row.*
 
 
 #### SL-8436 — WK-2113 S3 — FD-1495 limb B1/B2: stored bundles are re-validated and refused
@@ -4619,6 +4619,24 @@ relates: [FD-1589, SL-1600]
 Moved to P3 by the lead's entry "2026-10-10 16:07:46 BST — RULINGS on PL 9955 re-sized (@688d639e, ≈4.8 lane-days): DP-9 = A in P2, B1/B2 to P3; DP-8 (b) with an identifier-pattern constraint; DP-5 extension YES", DP-9: *"B1/B2 (≈2.7 lane-days, messages no request reaches) MOVE TO P3 … A dated P3 row (owner WK-1178) records them by count with the planner's list"*. **It records, by count at `fe0b0627`:** **B1**, 41 free messages in 19 validators of classes built in a handler from a user's create body; **B2**, 47 free messages in 27 validators of system-produced models; and the **5 graph signals** (`GraphUnresolvedRefError` ×3, `GraphCycleError` ×2), pending the FR-215 `step_id` pattern, which PL-1599's DP-10 asked for and the lead ruled at "2026-10-10 16:23:12 BST" a P3 spec change (`step_id` carries no schema pattern, so DP-8 (b) cannot name a step until it lands; graph messages name no step meanwhile, which is correct behaviour). The site lists, by `file:Class.validator`, are PL-1599's Appendix A; P3 plans from them and re-derives them at its own base. Until this row's work lands, slice A's guard holds these sites by exact count in `_RESIDUAL`, and DP-5's allow-list already gives any stored refusal from them input-free fixed text. Each is rewritten to field and rule only, raised as `InputFreeError`; the last P3 slice deletes `_RESIDUAL`. ≈2.7 lane-days as ruled (B1 ≈1.3, B2 ≈1.4). **Not a cut-ladder rung:** it was never in the P2 baseline. **Activation needs:** `SL-1600` (slice A) merged, because both change `_RESIDUAL` (RL-1263); the FR-215 `step_id` pattern (DP-10, a P3 spec change) landed before the graph signals; a P3 plan; the maintainer's activation of P3 work. *(Cut 2026-10-10 by the planner (planner-remedy-c3) under working id 9958, reserved by the lead in its message to planner-remedy-c3 on 2026-10-10, free-checked on all origin refs and eta.)*
 
 ***Dated line, 2026-11-11 10:58:58 GMT — RE-PARENTED*** (the maintainer's act, by delegation; written by the planner in the P2-close docs batch). The maintainer's entry "2026-11-11 10:58:58 GMT — Maintainer: THE USER'S P2 CLOSE WORD" in `to-lead.md`, MY ACTS: "SL-1601 re-parented as the drafts say". The drafts name P3-C (`P3-WK-drafts.md`, sha256 prefix `196357ab59ac`, Q4, ruled at to-lead "2026-11-09 12:08:21 GMT": "RE-PARENTED at the P2 close by a dated line to the P3 row that owns its subject"). The `work:` field above read `WK-1178` from the cut on 2026-10-10 and reads `WK-2113` from this line, because WK-1178 closed at the P2 close. The row moved here from under `WK-1288`, where it sat by position only. Its heading and `title:` keep their words as cut ("WK-1178 P3 carry"). Nothing else in the row changes: status `draft`, and its activation needs, stand.
+
+#### SL-2118 — WK-2113 S2 — FD-1671: the score routes refuse what core refuses
+
+```yaml
+id: SL-2118
+family: slice
+title: WK-2113 S2 — FD-1671: the score routes refuse what core refuses
+status: active                 # draft → active → closed | retired (§1.2a)
+created: 2026-11-13
+owner: lead
+tree: 2ba0d0d53142dacd6550cb314a4d65685b612bd1
+phase: P3
+work: WK-2113
+corrected_by: []
+relates: [FD-1671, LG-2119]
+```
+
+The maintainer's GO (R2) of `to-lead` "2026-11-13 19:53:34 GMT — Maintainer: RULINGS R1–R3", severity MEDIUM, design (b): `POST /score` and `POST /score/compare` read the JSON numbers of a Quote Context as `Decimal`, scoped to those two routes, so `pricing-core`'s FR-273 guard is the one definition and the HTTP paths refuse an over-precision `decimal` Rating Input with `INPUT_CONTRACT_VIOLATION` as core does; red first, FR-239 held by the golden suite plus a property test. Ledger `LG-2119`. Dispatched in parallel with the first S1 slice (disjoint files).
 
 ### WK-2114 — P3-D — process and instruments
 
@@ -4723,6 +4741,8 @@ From “Workstreams” (line 496): GIPP checks, price-walking, disparity reporti
 
 *(Dated 2026-10-14 by the lead, on the maintainer's (by delegation) entry "2026-10-14 10:57:10 BST — FD 8023 MEDIUM + trigger CONFIRMED; the D-list line-read GO (closed-phase + P2-scope only); later-phase D lines GO (re lead 10:56:41)", item 4 ("dated roadmap lines placing each on its module's Work … No line-read is needed: they are spec-only until their phase"): `04` FR-295 (ENBP through the most-used new-business channel when the original is unavailable), FR-296 (the GIPP check records its product scope) and NFR-508 (GIPP evidence retained ≥ 7 years, exportable) join this Work's requirement list — each is a GIPP-check or GIPP-evidence property, this Work's title. Placement only: nothing is built ahead of this Work's phase (`CLAUDE.md` §0).)*
 
+
+*(Dated 2026-11-13, docs batch 35, by the executor, on the maintainer's ruling `to-lead` "2026-11-13 19:56:23 GMT" (BATCH 35 CELLS RULED), condition (5), cell L87 of `docs/findings/register.md`: **FR-257, limb (4), the GIPP limb, is carried to this Work** (GIPP, FR-294). Limbs (1) to (3) of FR-257 are delivered (#886, #1260 `db0642c4`, #1426 `db92a7bc`, per the register row). The register row F44 is re-owned here; this Work's status is not changed by this line. `CR-2110`'s register-read row: "Limb 4 carry → WK-685 (P4, GIPP, FR-294) … WK-685's row needs a dated FR-257 clause".)*
 
 ### WK-686 — Materialisation into rate tables
 

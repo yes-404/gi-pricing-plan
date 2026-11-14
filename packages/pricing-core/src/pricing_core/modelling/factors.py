@@ -550,6 +550,11 @@ def rateable(factors: Sequence[Factor]) -> tuple[Factor, ...]:
     year of account being the standard `control` case — and neither is an interaction with a
     `control` operand at any depth. Selecting them here rather than in `03` keeps the intent
     with the definition.
+
+    Raises `OperandNotSuppliedError` when an interaction's operand is not in `factors` (the
+    closure cannot be read, so it fails closed). It has no production caller; a guard that
+    must refuse a `control` Factor in a closure calls `control_factor_in`, which names the
+    Factor it found.
     """
     return tuple(
         f

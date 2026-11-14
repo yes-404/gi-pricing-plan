@@ -69,7 +69,7 @@ def test_member_zero_is_one_group_and_the_catalogue_partitions_the_derived_chang
 
 
 #: `content_hash` of the freMTPL2 baseline and of the full six-member candidate, compiled by
-#: `compile_bundle` at origin/main 2ba0d0d5, BEFORE the FD-1495 interaction-operand guards (SL 8429)
+#: `compile_bundle` at origin/main 2ba0d0d5, BEFORE the FD-1495 interaction-operand guards (SL 2124)
 #: existed, by `compile_bundle(*H.versions_for(fx, members))` printing `content_hash`. The guards
 #: refuse at compile and change no spec_hash of a bundle that compiled before (FR-239).
 _PRE_GUARD_HASHES = {
