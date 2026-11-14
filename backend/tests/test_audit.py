@@ -362,8 +362,29 @@ async def test_system_principal_needs_no_id_but_a_user_does() -> None:
 # -- verify_range: a span of the chain, streaming, and NFR-521's proof (#1497 slice 6) ----------
 
 
-async def _seed(database: Database, workspace_id, principal, ats: list[datetime]) -> None:
-    """A valid chain whose events carry the given `at`s (`record()` stamps now())."""
+async def _seed(
+    database: Database,
+    workspace_id,
+    principal,
+    ats: list[datetime],
+    *,
+    tampered: int | None = None,
+    missing: int | None = None,
+) -> None:
+    """A chain whose events carry the given `at`s (`record()` stamps now()).
+
+    Valid unless a defect is named. It is seeded at insert time, as the login role, which holds
+    INSERT only: no UPDATE, DELETE or `session_replication_role` (FR-370). So the defect is
+    *written*, not done to a stored row, and what these helpers exercise is the ranged
+    verifier's arithmetic on a defective chain. "Edited below the application" is
+    `test_tampering_below_the_application_is_detected`, which takes the registered owner
+    fixture.
+
+    `tampered=N`: event N is stored with the action `job.failed` but the hash of the event it
+    was before the edit (`job.submitted`), as a content edit leaves it; the next event's link
+    names that stored hash. `missing=N`: event N is never stored, and the events after it keep
+    the links they would have had.
+    """
     prev: str | None = None
     rows: list[AuditEventRow] = []
     for sequence, at in enumerate(ats, start=1):
@@ -377,15 +398,19 @@ async def _seed(database: Database, workspace_id, principal, ats: list[datetime]
             entity_ref=f"job:seed@{sequence}",
         )
         event_hash = compute_event_hash(core, prev_event_hash=prev)
-        rows.append(
-            AuditEventRow(
-                **core.model_dump(exclude={"actor"}),
-                actor=principal.model_dump(mode="json"),
-                prev_event_hash=prev,
-                event_hash=event_hash,
-                sequence=sequence,
+        stored = core.model_dump(exclude={"actor"})
+        if sequence == tampered:
+            stored["action"] = "job.failed"
+        if sequence != missing:
+            rows.append(
+                AuditEventRow(
+                    **stored,
+                    actor=principal.model_dump(mode="json"),
+                    prev_event_hash=prev,
+                    event_hash=event_hash,
+                    sequence=sequence,
+                )
             )
-        )
         prev = event_hash
     async with database.unit_of_work() as session:
         session.add_all(rows)
@@ -398,24 +423,12 @@ def _days(n: int) -> list[datetime]:
     return [_DAY0 + timedelta(days=i) for i in range(n)]
 
 
-async def _tamper(owner_database: Database, workspace_id, sequence: int) -> None:
-    async with owner_database.unit_of_work() as session:
-        await session.execute(text("SET LOCAL session_replication_role = replica"))
-        await session.execute(
-            text(
-                "UPDATE audit_events SET action = 'job.failed' "
-                "WHERE workspace_id = :ws AND sequence = :seq"
-            ).bindparams(ws=workspace_id, seq=sequence)
-        )
-
-
 @pytest.mark.req("FR-372")
 async def test_a_tamper_outside_the_range_does_not_break_a_ranged_verify(
-    owner_database: Database, workspace_id, principal
+    database: Database, workspace_id, principal
 ) -> None:
-    await _seed(owner_database, workspace_id, principal, _days(5))
-    await _tamper(owner_database, workspace_id, 5)
-    async with owner_database.session() as session:
+    await _seed(database, workspace_id, principal, _days(5), tampered=5)
+    async with database.session() as session:
         span = await audit.verify_range(
             session, workspace_id, from_=_days(5)[1], to=_days(5)[2]
         )
@@ -428,11 +441,10 @@ async def test_a_tamper_outside_the_range_does_not_break_a_ranged_verify(
 
 @pytest.mark.req("FR-372")
 async def test_a_tamper_inside_the_range_is_caught_at_its_sequence(
-    owner_database: Database, workspace_id, principal
+    database: Database, workspace_id, principal
 ) -> None:
-    await _seed(owner_database, workspace_id, principal, _days(5))
-    await _tamper(owner_database, workspace_id, 3)
-    async with owner_database.session() as session:
+    await _seed(database, workspace_id, principal, _days(5), tampered=3)
+    async with database.session() as session:
         with pytest.raises(ChainBrokenError) as exc:
             await audit.verify_range(
                 session, workspace_id, from_=_days(5)[1], to=_days(5)[3]
@@ -446,16 +458,10 @@ async def test_a_tamper_inside_the_range_is_caught_at_its_sequence(
 
 @pytest.mark.req("FR-372")
 async def test_a_row_deleted_inside_the_range_is_caught_as_a_gap(
-    owner_database: Database, workspace_id, principal
+    database: Database, workspace_id, principal
 ) -> None:
-    await _seed(owner_database, workspace_id, principal, _days(5))
-    async with owner_database.unit_of_work() as session:
-        await session.execute(text("SET LOCAL session_replication_role = replica"))
-        await session.execute(
-            text("DELETE FROM audit_events WHERE workspace_id = :ws AND sequence = 3")
-            .bindparams(ws=workspace_id)
-        )
-    async with owner_database.session() as session:
+    await _seed(database, workspace_id, principal, _days(5), missing=3)
+    async with database.session() as session:
         with pytest.raises(ChainBrokenError) as exc:
             await audit.verify_range(session, workspace_id, from_=_days(5)[0], to=_days(5)[4])
     assert exc.value.sequence == 4
