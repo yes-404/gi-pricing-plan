@@ -17,6 +17,7 @@ from app.platform import audit
 from model_schema import (
     BUILTIN_ROLES,
     ActorKind,
+    AuditEventRecord,
     JobSource,
     Permission,
     Principal,
@@ -205,10 +206,11 @@ async def test_verify_reports_a_break_rather_than_failing(
 
 
 @pytest.mark.req("FR-371")
-async def test_csv_export_carries_the_hashes(
+async def test_csv_export_is_a_report_that_carries_the_hashes(
     client: TestClient, database: Database, workspace_id, principal, auditor_headers
 ) -> None:
-    """The hashes are the point: an auditor recomputes them without the platform's help."""
+    """The CSV is a readable report with both hashes. It is not recomputable: it has no
+    `workspace_id`, `before` or `after`. JSON Lines is the evidence form (next test)."""
     await _events(database, workspace_id, principal)
     response = client.get("/api/v1/audit/export?format=csv", headers=auditor_headers)
     assert response.status_code == 200
@@ -241,6 +243,46 @@ async def test_json_export_is_line_delimited(
     lines = [json.loads(line) for line in response.text.splitlines() if line]
     assert len(lines) == 3
     assert lines[0]["event_hash"].startswith("sha256:")
+
+
+@pytest.mark.req("FR-372")
+async def test_json_export_recomputes_every_hash_without_the_platform(
+    client: TestClient, database: Database, workspace_id, principal, auditor_headers
+) -> None:
+    """The export is evidence: each line validates as the contract's shape, and its hash and
+    link recompute from the line alone, using nothing but `model_schema`."""
+    await _events(database, workspace_id, principal)
+    response = client.get("/api/v1/audit/export?format=json", headers=auditor_headers)
+    events = [
+        AuditEventRecord.model_validate_json(line) for line in response.text.splitlines() if line
+    ]
+    assert [e.sequence for e in events] == [1, 2, 3]
+    assert all(e.verify() for e in events)
+    assert events[0].prev_event_hash is None
+    assert [e.prev_event_hash for e in events[1:]] == [e.event_hash for e in events[:-1]]
+    assert {e.workspace_id for e in events} == {workspace_id}
+
+
+@pytest.mark.req("FR-371")
+async def test_export_honours_the_query_filters(
+    client: TestClient, database: Database, workspace_id, principal, auditor_headers
+) -> None:
+    """FR-371: an export is what the query shows. Every filter the query takes narrows it."""
+    await _events(database, workspace_id, principal)
+    for query in (
+        "action=model.submitted",
+        "entity=model:motor-ad-frequency@2",
+        f"actor={principal.id}&action=rating_version.approved",
+        "q=number 1",
+    ):
+        shown = client.get(f"/api/v1/audit?{query}", headers=auditor_headers).json()["items"]
+        for fmt in ("json", "csv"):
+            body = client.get(
+                f"/api/v1/audit/export?format={fmt}&{query}", headers=auditor_headers
+            ).text
+            rows = [line for line in body.splitlines() if line]
+            assert len(rows) - (fmt == "csv") == len(shown), (query, fmt)
+        assert 0 < len(shown) < 3, query
 
 
 @pytest.mark.req("FR-346")

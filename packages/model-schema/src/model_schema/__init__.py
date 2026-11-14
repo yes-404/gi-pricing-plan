@@ -24,6 +24,7 @@ from model_schema.approvals import (
 from model_schema.audit import (
     AuditEvent,
     AuditEventCore,
+    AuditEventRecord,
     canonical_payload,
     compute_event_hash,
 )
@@ -507,6 +508,7 @@ __all__ = [
     "ArtifactRef",
     "AuditEvent",
     "AuditEventCore",
+    "AuditEventRecord",
     "Backtest",
     "BacktestSummary",
     "Banding",

@@ -29,7 +29,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 from model_schema.input_free import InputFreeError
 from model_schema.jobs import JobSource, Principal
 
-__all__ = ["AuditEvent", "canonical_payload", "compute_event_hash"]
+__all__ = ["AuditEvent", "AuditEventRecord", "canonical_payload", "compute_event_hash"]
 
 HASH_PREFIX = "sha256:"
 _HASH_PATTERN = r"^sha256:[a-f0-9]{64}$"
@@ -96,7 +96,7 @@ class AuditEvent(AuditEventCore):
     def core(self) -> AuditEventCore:
         """The hashed subset of this event."""
         return AuditEventCore.model_validate(
-            self.model_dump(exclude={"prev_event_hash", "event_hash"})
+            self.model_dump(include=set(AuditEventCore.model_fields))
         )
 
     def recompute_hash(self) -> str:
@@ -106,6 +106,17 @@ class AuditEvent(AuditEventCore):
     def verify(self) -> bool:
         """True when the stored hash matches the content. See `verify_chain` in the backend."""
         return self.recompute_hash() == self.event_hash
+
+
+class AuditEventRecord(AuditEvent):
+    """An event as the audit API returns and exports it: `AuditEvent` plus its `sequence`.
+
+    `sequence` is the per-workspace position the chain is ordered and verified by. It is not
+    hashed (the hash covers `AuditEventCore` and `prev_event_hash` only), so an export line
+    validates as this class and recomputes with `verify()` outside the platform (FR-372).
+    """
+
+    sequence: int = Field(ge=1, description="Position in the workspace's chain, from 1.")
 
 
 def canonical_payload(core: AuditEventCore, prev_event_hash: str | None) -> bytes:

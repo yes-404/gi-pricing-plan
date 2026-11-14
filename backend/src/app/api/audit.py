@@ -43,7 +43,7 @@ from app.db.models import AuditEventRow
 from app.db.session import Database
 from app.errors import PlatformError
 from app.platform import audit as audit_service
-from model_schema import Permission
+from model_schema import AuditEventRecord, Permission, Principal
 
 __all__ = ["router"]
 
@@ -60,32 +60,6 @@ def _database(request: Request) -> Database:
 DatabaseDep = Annotated[Database, Depends(_database)]
 
 
-class AuditEventView(BaseModel):
-    """An event as returned by the API (`06` §4.5).
-
-    Includes `event_hash` and `prev_event_hash`: an auditor exporting the log must be able
-    to recompute the chain outside the platform, which is what makes it evidence rather
-    than a report (FR-372).
-    """
-
-    model_config = ConfigDict(frozen=True, extra="forbid")
-
-    id: UUID
-    sequence: int
-    at: datetime
-    actor: dict[str, Any]
-    source: str
-    action: str
-    entity_ref: str
-    before: dict[str, Any] | None = None
-    after: dict[str, Any] | None = None
-    justification: str | None = None
-    trace_id: str | None = None
-    job_id: UUID | None = None
-    prev_event_hash: str | None = None
-    event_hash: str
-
-
 class ChainVerification(BaseModel):
     """The result of recomputing the chain (FR-372)."""
 
@@ -100,13 +74,20 @@ class ChainVerification(BaseModel):
     reason: str | None = None
 
 
-def _view(row: AuditEventRow) -> AuditEventView:
-    return AuditEventView(
+def _view(row: AuditEventRow) -> AuditEventRecord:
+    """The stored row as `model_schema.AuditEventRecord`, hashes included.
+
+    The one shape the query and the JSON Lines export both return: an auditor exporting the
+    log recomputes the chain outside the platform from exactly these fields (FR-372), which
+    is what makes it evidence rather than a report. It is the contract's shape, not a copy.
+    """
+    return AuditEventRecord(
         id=row.id,
+        workspace_id=row.workspace_id,
         sequence=row.sequence,
         at=row.at,
-        actor=row.actor,
-        source=row.source.value,
+        actor=Principal.model_validate(row.actor),
+        source=row.source,
         action=row.action,
         entity_ref=row.entity_ref,
         before=row.before,
@@ -180,7 +161,7 @@ async def query_audit(
     q: str | None = None,
     cursor: str | None = None,
     limit: Annotated[int, Query(ge=1, le=MAX_LIMIT)] = DEFAULT_LIMIT,
-) -> Page[AuditEventView]:
+) -> Page[AuditEventRecord]:
     """Filtered and cursor-paginated (FR-371, `00` §5.2).
 
     Ordered by `sequence`, the per-workspace monotonic counter, rather than by `at`: events
@@ -214,7 +195,7 @@ async def query_audit(
 
     has_more = len(rows) > limit
     page_rows = rows[:limit]
-    return Page[AuditEventView](
+    return Page[AuditEventRecord](
         items=[_view(row) for row in page_rows],
         next_cursor=encode_cursor(page_rows[-1].sequence) if has_more and page_rows else None,
         total_estimate=total,
@@ -268,20 +249,29 @@ async def export_audit(
     caller: ReadAudit,
     database: DatabaseDep,
     format: Annotated[str, Query(pattern="^(csv|json)$")] = "csv",
+    actor: UUID | None = None,
+    entity: str | None = None,
+    action: str | None = None,
     from_: Annotated[datetime | None, Query(alias="from")] = None,
     to: datetime | None = None,
+    q: str | None = None,
 ) -> StreamingResponse:
-    """Stream the log out, hashes included.
+    """Stream the events the query would show: the same filters, in `sequence` order.
 
-    The hashes are the point of the export: an auditor recomputes them with
-    `model_schema.compute_event_hash` and finds any break without the platform's help. An
-    export that omitted them would be a report about the log rather than the log.
+    **JSON Lines is the evidence form**: one `AuditEventRecord` per line, every hashed field
+    and both hashes, so an auditor recomputes each hash with `model_schema` and finds an
+    edited event without the platform's help. **The CSV is a report**: readable columns and
+    the two hashes, but not the whole event (no `workspace_id`, `before` or `after`, and
+    only the actor's display name), so it cannot be recomputed.
+
+    A filtered export is the matching events with gaps, so it cannot show the chain is
+    unbroken. Whether it is, is `/verify`'s to say (FR-372), not the file's.
     """
     if format not in {"csv", "json"}:  # pragma: no cover - Query pattern enforces it
         raise PlatformError("VALIDATION_FAILED", "Unsupported format", 422, format)
 
     conditions = _filtered(
-        caller.workspace_id, actor=None, entity=None, action=None, from_=from_, to=to, q=None
+        caller.workspace_id, actor=actor, entity=entity, action=action, from_=from_, to=to, q=q
     )
 
     async def rows() -> Any:
