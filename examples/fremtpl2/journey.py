@@ -1291,9 +1291,7 @@ class _Journey:
             json={**context, "effective_date": AFTER_LOADING_RISES},
         )
         later_rung = next(r for r in later["premium_ladder"] if r["rung"] == "payable_premium")
-        expected = _minor(Decimal(self.result.prod_premium_minor) * Decimal(LOADING_AFTER))
-        if int(later_rung["value_minor"]) != expected:
-            raise JourneyStepFailed("B3", "LOADING_NOT_MULTIPLIED_INTO_THE_PREMIUM")
+        check_loading_multiplied(rung, later_rung)
         # B3's other half: a quote dated before the reference row's `effective_from` does not use
         # it. The lookup has no row in force, so the quote is refused, not priced without it.
         # The LOOKUP misses here (no row is in force on that date; every rate table still hits),
@@ -1368,6 +1366,22 @@ def split_effects(derived: Sequence[Mapping[str, Any]]) -> dict[str, list[str]] 
     if not tables or not structure:
         return None
     return {EFFECT_RATE_TABLES: tables, EFFECT_STRUCTURE: structure}
+
+
+def check_loading_multiplied(earlier: Mapping[str, Any], later: Mapping[str, Any]) -> None:
+    """B3's multiply, checked the way the product computes it (FR-2082, `RL-1329`): the later
+    `payable_premium` rung is the earlier rung's exact `unrounded_minor` x `LOADING_AFTER`,
+    rounded once, and the later rung's own `value_minor` is its own `unrounded_minor` rounded
+    once. Multiplying the earlier rung's already-rounded `value_minor` rounds twice and differs
+    on an exact half-minor tie (FD-2106). An absent `unrounded_minor` fails the step: the rounded
+    figure is never a fallback."""
+    if earlier.get("unrounded_minor") is None or later.get("unrounded_minor") is None:
+        raise JourneyStepFailed("B3", "UNROUNDED_MINOR_ABSENT")
+    value = int(later["value_minor"])
+    if value != _minor(Decimal(earlier["unrounded_minor"]) * Decimal(LOADING_AFTER)):
+        raise JourneyStepFailed("B3", "LOADING_NOT_MULTIPLIED_INTO_THE_PREMIUM")
+    if value != _minor(Decimal(later["unrounded_minor"])):
+        raise JourneyStepFailed("B3", "LATER_RUNG_NOT_ROUNDED_ONCE")
 
 
 def _minor(value: Decimal) -> int:

@@ -636,6 +636,42 @@ def test_b9_is_not_a_skip() -> None:
     assert not [e for e in journey.SKIPS if e.step == "B9"]
 
 
+_TIE_EARLIER: Final = {"value_minor": 65670, "unrounded_minor": "65669.8996027643040000"}
+_TIE_LATER: Final = {"value_minor": 68953, "unrounded_minor": "68953.3945829025192000"}
+
+
+@pytest.mark.req("FR-221")
+def test_b3_compares_against_the_once_rounded_value_on_a_half_minor_tie() -> None:
+    """FD-2106: 65669.8996 x 1.05 = 68953.39 rounds once to 68953; the already-rounded 65670 x
+    1.05 = 68953.50 would round half-even to 68954. The product is right and the check agrees."""
+    journey.check_loading_multiplied(_TIE_EARLIER, _TIE_LATER)
+    # The multiply dropped (later = earlier): fails.
+    with pytest.raises(journey.JourneyStepFailed, match="LOADING_NOT_MULTIPLIED"):
+        journey.check_loading_multiplied(_TIE_EARLIER, _TIE_EARLIER)
+    # A later rung rounded twice (68954, the base formula's answer): fails.
+    twice = {**_TIE_LATER, "value_minor": 68954}
+    with pytest.raises(journey.JourneyStepFailed, match="LOADING_NOT_MULTIPLIED"):
+        journey.check_loading_multiplied(_TIE_EARLIER, twice)
+
+
+@pytest.mark.req("FR-221")
+def test_b3_an_absent_unrounded_minor_fails_and_never_falls_back_to_the_rounded_figure() -> None:
+    for earlier, later in (
+        ({"value_minor": 65670}, _TIE_LATER),
+        (_TIE_EARLIER, {"value_minor": 68953}),
+        ({**_TIE_EARLIER, "unrounded_minor": None}, _TIE_LATER),
+    ):
+        with pytest.raises(journey.JourneyStepFailed, match="UNROUNDED_MINOR_ABSENT"):
+            journey.check_loading_multiplied(earlier, later)
+
+
+@pytest.mark.req("FR-221")
+def test_b3_a_later_rung_not_rounded_once_from_its_own_unrounded_value_fails() -> None:
+    off = {"value_minor": 68953, "unrounded_minor": "68953.6000000000000000"}
+    with pytest.raises(journey.JourneyStepFailed, match="LATER_RUNG_NOT_ROUNDED_ONCE"):
+        journey.check_loading_multiplied(_TIE_EARLIER, off)
+
+
 #: The `derived_changes` of the journey's decomposing D7 run in `_world`, as `id`, `kind` and
 #: `description` (`PL-1694` Acceptance 18; PL 8055). `{gbm_family}` stands for `_world`'s
 #: random model family; `test_wf699_journey_runs_end_to_end` asserts this list IS the run's.
