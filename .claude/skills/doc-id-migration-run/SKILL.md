@@ -8,7 +8,7 @@ corrected_by: []
 relates: []                      # ids only
 ---
 
-> **RETIRED WITH THE RECORD PROCESS on 2026-11-13; kept for history; do not follow.** (ADR-8449.)
+> **RETIRED WITH THE RECORD PROCESS on 2026-11-13; kept for history; do not follow.** (ADR-2136.)
 
 # doc-id migration — safe re-derivation after tool changes
 

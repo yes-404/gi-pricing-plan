@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """freeze-check.py — fail a change that adds, modifies, deletes or renames a frozen record.
 
-ADR-8449: the management record families are frozen. This reads the change's own diff
+ADR-2136: the management record families are frozen. This reads the change's own diff
 against its merge-base (`git diff <base>...HEAD`, the three-dot form), so only what this
 branch changed is judged; what already sits on the base is never read. Standard library
 only.

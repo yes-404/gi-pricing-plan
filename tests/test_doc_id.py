@@ -1047,7 +1047,7 @@ def test_check_ignores_a_file_whose_name_does_not_lead_with_a_padded_id(
 def test_check_no_longer_reads_index_contiguity(
     doc_id_cli: types.ModuleType, tmp_path: pathlib.Path
 ) -> None:
-    """ADR 8449: docs/INDEX.md is frozen, so a gap in it is not a failure."""
+    """ADR-2136: docs/INDEX.md is frozen, so a gap in it is not a failure."""
     _write(tmp_path / "docs" / "INDEX.md", "| PL-1240 | plan |\n| PL-1242 | plan |\n")
     assert doc_id_cli.check(tmp_path) == []
 

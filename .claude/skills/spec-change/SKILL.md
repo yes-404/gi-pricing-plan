@@ -80,7 +80,7 @@ If a change adds a tech dependency, §8 of that spec **and** `docs/skills-map.md
 change in the same commit, and **every `skills-map.md` row cites at least one spec section
 or requirement id** — a row that cites nothing cannot be checked against anything.
 
-**Open questions are GitHub issues (ADR-8449, ND-2).** A choice a spec leaves open is a
+**Open questions are GitHub issues (ADR-2136, ND-2).** A choice a spec leaves open is a
 decision-needed issue with options, trade-offs and a recommendation; the spec's §10 lists
 its number (`#n`). `docs/open-questions.md` and the `OQ-` mirror are frozen: existing §10
 rows stay as written, nothing new is added to the register, and no mirror check runs. There
@@ -122,7 +122,7 @@ exists for: the maths is reviewable and the execution path is not.
 python3 scripts/audit-docs.py          # must print "All checks passed."
 ```
 
-There is no decision-gate table to check any more (ADR-8449).
+There is no decision-gate table to check any more (ADR-2136).
 
 ## Writing style that matches the suite
 

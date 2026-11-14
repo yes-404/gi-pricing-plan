@@ -12,7 +12,7 @@ relates: []                      # ids only
 
 ## Under the new frame (from 2026-11-13)
 
-ADR-8449 and `CONTRIBUTING.md` govern. Where the text below disagrees, this section wins and
+ADR-2136 and `CONTRIBUTING.md` govern. Where the text below disagrees, this section wins and
 the older text is SUPERSEDED (a full rewrite of this file is a tracked Work issue, not done
 here).
 
@@ -84,7 +84,7 @@ here).
     Evidence essays live at `docs/findings/<F-id>.md`, beside the register — the F-id
     exactly as the row writes it, limbs as sections inside one file and never as filenames
     (`docs/findings/README.md` has the rules and the migration constraints).
-    **Superseded (ADR-8449): the findings register is frozen and its lint script is deleted; there is no register PR.** The old rule, kept for history: lint before proposing any register PR — `audit-docs.py`
+    **Superseded (ADR-2136): the findings register is frozen and its lint script is deleted; there is no register PR.** The old rule, kept for history: lint before proposing any register PR — `audit-docs.py`
     check 29 ran it in the gate, but finding a violation before the PR is cheaper than after.
     **Its residue line is not a violation**: it reports how many rows still exceed the
     migration threshold, because migration is opportunistic-on-amendment and that claim needs

@@ -12,7 +12,7 @@ relates: []                      # ids only
 
 ## Under the new frame (from 2026-11-13)
 
-ADR-8449 and `CONTRIBUTING.md` govern. Where the text below disagrees, this section wins and
+ADR-2136 and `CONTRIBUTING.md` govern. Where the text below disagrees, this section wins and
 the older text is SUPERSEDED (a full rewrite of this file is a tracked Work issue, not done
 here).
 
@@ -87,7 +87,7 @@ here).
   instead of holding them. Measured against it, WK-671 Task 3C ran on a fresh agent in ~28
   minutes, so the re-read is cheaper than it looks.
 - **On entering a Work item, Phase or review, the owed list is generated, never recalled** —
-  **(superseded, ADR-8449: the generator script is deleted; the owed list is now the Work issue's open items on GitHub.)** The old rule ran the generator against a **committed**
+  **(superseded, ADR-2136: the generator script is deleted; the owed list is now the Work issue's open items on GitHub.)** The old rule ran the generator against a **committed**
   revision (the script refuses a dirty `docs/findings/register.md`, so this is enforced, not
   merely asked). RFC-896 P5, RL-912. The reason is measured, not stylistic: at the WK-671
   close the hand-compiled owed list **lost NFR-502/501** (F41), and running the generator

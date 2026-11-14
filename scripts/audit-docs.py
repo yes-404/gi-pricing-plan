@@ -17,24 +17,24 @@ Checks (all non-destructive, exit 1 on any failure):
  12. Money fields (*_minor) are never written as fractional numbers.
  13. Terms are not redefined in a module glossary after 00-overview defines them.
  14. Every module is exercised by at least one workflow, above a coverage floor.
- 15. (retired by ADR 8449: the open-question mirror.)
- 16-20. (retired by ADR 8449: the working notes are the frozen rfcs family.)
+ 15. (retired by ADR-2136: the open-question mirror.)
+ 16-20. (retired by ADR-2136: the working notes are the frozen rfcs family.)
  21. Every endpoint and pricing-core function a workflow journey cites is declared
      in the owning module's §5.1 or §5.2 (FR-19, OQ-543).
  22. Every markdown table row has its own header's cell count — catching a literal
      `|` inside a cell, which shifts every column after it while still rendering.
- 23. (retired by ADR 8449: the open-question mirror.)
+ 23. (retired by ADR-2136: the open-question mirror.)
  24. Every route `00` §5.6 declares as canonical for a module appears in that module's
      own §5.3 view table (FR-25); §5.6 is canonical, so a mismatch is a §5.3 error.
- 25. (retired by ADR 8449: it audited citations between frozen record families only.)
+ 25. (retired by ADR-2136: it audited citations between frozen record families only.)
  26. Every `source` citation in docs/process/delivery-process.core.json resolves to a
      real section, or numbered step, of docs/process/delivery-process.md (RFC-895 §3).
  27. The process core extract's recorded digest (`meta.derived_from_digest`) matches the
      current bytes of docs/process/delivery-process.md, paired with the commit it was last
      reconciled against (`meta.verified_against_tree`) — the other half of check 26's own
      "cheap half of a drift check" (RL-905).
- 28. (retired by ADR 8449: the plan acceptance standard; plans are a frozen family.)
- 29. (retired by ADR 8449: the findings register is frozen; register-lint.py is removed.)
+ 28. (retired by ADR-2136: the plan acceptance standard; plans are a frozen family.)
+ 29. (retired by ADR-2136: the findings register is frozen; register-lint.py is removed.)
 
 
 RFC-937
@@ -55,7 +55,7 @@ entirely.
      fields per family, read from docs/_templates/ (RL-981) — never transcribed from
      RFC-937 §1.5's own parenthesis, which diverges from the templates in both directions.
  31. Header `id` prefix and integer equal the filename's; directory equals family;
-     numbers unique in scope (contiguity retired by ADR 8449); `created` non-decreasing
+     numbers unique in scope (contiguity retired by ADR-2136); `created` non-decreasing
      with the number.
      `docs/_templates/` is exempt by path (RFC-937 §1.4).
  32. Every `<PREFIX>-<n>` in prose resolves in docs/INDEX.md and its prefix matches the
@@ -71,7 +71,7 @@ entirely.
      this file.
  35. `owner:` is a role filename under .claude/roles/, or `maintainer`, and one the
      directory's README.md permits where that README declares a permitted-owner list.
-     (ADR 8449 retired the rest: F83's register of unstampable files and the stamping
+     (ADR-2136 retired the rest: F83's register of unstampable files and the stamping
      completeness clause. The original text follows, kept for the record:)
      F83's register of files that cannot carry a header at all (60 generated
      artifacts under docs/ in formats with no comment syntax, 3 unparseable vendored
@@ -81,7 +81,7 @@ entirely.
      (condition 2). Naming, never a total: two errors that cancel pass a total-only
      check, which is RL-985's reason and `.claude/skills/docs-audit`
      §"a total validates the total, and nothing else".
- 36. (ADR 8449: scoped to the governed families; a legacy form the change introduces
+ 36. (ADR-2136: scoped to the governed families; a legacy form the change introduces
      fails, a pre-existing one is counted.)
      Redirects (renamed from `check_notes_tombstone`, see above): every `was:` has a
      REDIRECTS.csv row; every row's target exists; no pre-migration id or path form
@@ -90,11 +90,11 @@ entirely.
      once the migration lands.
  37. Shape: a document carries every `##` section its family's template body declares —
      the ten-section spec rule, generalised.
- 38. (retired by ADR 8449.)
+ 38. (retired by ADR-2136.)
      Loop signal, warn-only — never fails the gate. Notes only in S1: no PL-/RS-/RFC-
      population exists in scope yet to check coverage, freeze-gate dates or superseded/
      retired citations against.
- 39. (retired by ADR 8449: docs/INDEX.md is a frozen citation resolver, no longer regenerated.)
+ 39. (retired by ADR-2136: docs/INDEX.md is a frozen citation resolver, no longer regenerated.)
  40. Every fence in docs/specs/ declares a language, and every `json` block declares
      `schema=<Class>` or `illustrative` and parses when classed (FD-1381). Validation
      against model-schema is tests/test_spec_examples.py's, so this script stays stdlib.
@@ -776,7 +776,7 @@ def _id_scope_documents(
     # legacy-path/token quotations would otherwise be counted as the very residue it
     # exists to disclose (deputy's condition on PR #756).
     w37_11_record = REPO / _docid.W37_11_RECORD_PATH
-    # ADR 8449: a frozen record is not audited; it is the evidence of what was believed.
+    # ADR-2136: a frozen record is not audited; it is the evidence of what was believed.
     return [f for f in files if f != w37_11_record and not _is_frozen_file(f)]
 
 
@@ -784,7 +784,7 @@ def _governed_documents() -> list[pathlib.Path]:
     """The documents checks 30, 35 and 36 apply to: the families the new frame still
     governs (`_frozen.is_governed`: docs/specs, docs/adrs, docs/workflows and the kept
     process pages) and nothing else. Skill front matter, generated contracts and the frozen
-    records are out by family, never by an exemption list (ADR 8449, maintainer's residue
+    records are out by family, never by an exemption list (ADR-2136, maintainer's residue
     ruling)."""
     return [f for f in _id_scope_documents() if _frozen.is_governed(_repo_rel(f))]
 
@@ -1328,7 +1328,7 @@ def check_id_filename_directory() -> None:
         else:
             seen[number] = (canon, rel)
 
-    # ADR 8449 (ND-3): uniqueness of the one id sequence is what is guarded; contiguity
+    # ADR-2136 (ND-3): uniqueness of the one id sequence is what is guarded; contiguity
     # over docs/INDEX.md is dropped, because INDEX is frozen and a new id never enters it.
     scoped_count = len(seen)
 
@@ -1486,7 +1486,7 @@ def check_citations() -> None:
             "ids would otherwise false-positive)"
         )
         return
-    # ADR 8449 (ND-4): a frozen-family id resolves against the frozen INDEX; an id minted
+    # ADR-2136 (ND-4): a frozen-family id resolves against the frozen INDEX; an id minted
     # after the freeze never enters INDEX, so it resolves against the governed headers.
     index_ids = {
         _docid.canonical(m.group(1), int(m.group(2)))
@@ -1525,7 +1525,7 @@ def check_citations() -> None:
         if problems:
             found[rel] = [(_LINENO_RE.sub(":", m, count=1), m) for m in problems]
         checked += 1
-    # ADR 8449: a citation that does not resolve and was already there (the one in a skill's
+    # ADR-2136: a citation that does not resolve and was already there (the one in a skill's
     # prose) is counted, never rewritten away; one this change introduces fails.
     _residue_gate(
         "check 32",
@@ -2499,7 +2499,7 @@ def check_redirects() -> None:
     else:
         legacy_hits = _sweep_legacy_form_hits(_governed_documents())
 
-    # ADR 8449: scoped to the governed families; a legacy form this change introduces fails,
+    # ADR-2136: scoped to the governed families; a legacy form this change introduces fails,
     # one that was already there is counted by `_residue_gate`.
     fatal_hits = 0
     found: dict[str, list[tuple[str, str]]] = {}
@@ -2873,7 +2873,7 @@ def main() -> int:
                 "in its status line — check 14 groups workflow coverage by it"
             )
 
-    # 4. (retired by ADR 8449: the open-question mirror. Each spec's §10 is the home of its
+    # 4. (retired by ADR-2136: the open-question mirror. Each spec's §10 is the home of its
     #    questions; docs/open-questions.md is frozen.)
 
     # 5. ADRs

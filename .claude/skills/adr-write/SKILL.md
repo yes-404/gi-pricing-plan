@@ -14,14 +14,14 @@ a decision-needed issue with options and a recommendation.
 ## Creating one
 
 Next number, never reused: the core lead assigns the id at the merge turn; until then use a
-working id and say so in the pull request. The allocator (ADR-8449, ND-3):
+working id and say so in the pull request. The allocator (ADR-2136, ND-3):
 
 ```bash
 python3 scripts/doc-id.py next
 ```
 
 File as `docs/adrs/ADR-<nnnnn>-<kebab-title>.md`, the id zero-padded to five digits. Start from
-an existing ADR (ADR-8449 is the newest) and copy its header. The body has this shape:
+an existing ADR (ADR-2136 is the newest) and copy its header. The body has this shape:
 
 ```markdown
 # ADR-NNNN — Title in the imperative

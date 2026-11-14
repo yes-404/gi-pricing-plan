@@ -1,5 +1,5 @@
 ---
-id: ADR-8449
+id: ADR-2136
 family: decision
 title: Project management moves to GitHub, with a slim CLAUDE.md and frozen record families
 status: draft                 # draft → active → superseded | retired (§1.2a)
@@ -12,7 +12,7 @@ corrected_by: []
 relates: []                    # ids only — the FR-/NFR-/ADR- this decision touches
 ---
 
-# ADR-8449 — Project management moves to GitHub, with a slim CLAUDE.md and frozen record families
+# ADR-2136 — Project management moves to GitHub, with a slim CLAUDE.md and frozen record families
 
 - **Status:** draft
 - **Deciders:** the maintainer

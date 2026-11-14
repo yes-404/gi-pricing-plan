@@ -8,7 +8,7 @@ description: The commands that build, gate, migrate, benchmark and demo this rep
 `CONTRIBUTING.md` ("The gate") carries the bare invocations. This carries the commentary — which is the
 part that was learned by something failing, and the part a bare command list cannot hold.
 
-> **Under the new frame (from 2026-11-13, ADR-8449).** The gate is the one in
+> **Under the new frame (from 2026-11-13, ADR-2136).** The gate is the one in
 > `CONTRIBUTING.md`: both halves, run before pushing. No ledger is kept, so every "record in
 > the ledger" below means "say it in the pull request's evidence". Retired and not to be run:
 > `doc-id.py migrate` (including `--verify` and its slot wrapper), the owed-list generator,
@@ -293,7 +293,7 @@ tests (`--collect-only` never enters test setup, so the teardown never fires and
 lock). Record in the ledger when this fallback is used; it re-serialises the gates the
 process slots were widened to parallelise, so it is the exception.
 
-**RETIRED (ADR-8449):** the same shape for `migrate --verify`, also two slots; kept for history:
+**RETIRED (ADR-2136):** the same shape for `migrate --verify`, also two slots; kept for history:
 
 ```bash
 verify_body='POLARS_MAX_THREADS=4 RAYON_NUM_THREADS=4 TOKIO_WORKER_THREADS=4 OMP_NUM_THREADS=4 OPENBLAS_NUM_THREADS=4 MKL_NUM_THREADS=4 python3 scripts/doc-id.py migrate --verify <root>'
@@ -780,7 +780,7 @@ claimed` as a floor on attention, not a measure of test quality.
 
 ## The RFC-937 id instruments — `doc-id.py` and `doc-index.py`
 
-> **Retired by ADR 8449.** The record families (plans, ledgers, rulings, closures, findings, rfcs), `docs/roadmap.md`, `docs/INDEX.md` and `docs/open-questions.md` are frozen and no longer audited, minted or regenerated. `doc-id.py migrate`/`widen`, the register linter, the owed-list generator, the ruling census and audit-docs checks 4, 15-20, 23, 25, 28, 29, 38 and 39 are removed; `doc-id.py next` and `check` remain, and `doc-index.py` is no longer run. Read any passage below that tells you to run a retired tool as history.
+> **Retired by ADR-2136.** The record families (plans, ledgers, rulings, closures, findings, rfcs), `docs/roadmap.md`, `docs/INDEX.md` and `docs/open-questions.md` are frozen and no longer audited, minted or regenerated. `doc-id.py migrate`/`widen`, the register linter, the owed-list generator, the ruling census and audit-docs checks 4, 15-20, 23, 25, 28, 29, 38 and 39 are removed; `doc-id.py next` and `check` remain, and `doc-index.py` is no longer run. Read any passage below that tells you to run a retired tool as history.
 
 Five commands govern document ids and the generated index. `migrate` is the sixth and is
 **not** here: it is a one-way instrument, its run is done, and re-running it re-migrates
@@ -893,7 +893,7 @@ uv run python scripts/scope-audit.py DATA --catalogue VR # a spec's named-item c
 The three axes answer different questions and none substitutes for another —
 [`close-workstream`](../close-workstream/SKILL.md) has the method and the incident behind each.
 
-**RETIRED (ADR-8449): the owed-list generator is deleted; the findings register is frozen. Do not run it.** Kept for history:
+**RETIRED (ADR-2136): the owed-list generator is deleted; the findings register is frozen. Do not run it.** Kept for history:
 
 ```bash
 # (deleted) owed-list generator: <work-id | phase | review>   # e.g. W11, 2, review

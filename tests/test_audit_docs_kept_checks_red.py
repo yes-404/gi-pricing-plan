@@ -1,4 +1,4 @@
-"""The audit checks ADR 8449 keeps are still red on a planted fault.
+"""The audit checks ADR-2136 keeps are still red on a planted fault.
 
 Each case copies the audited part of the tree to a scratch directory, plants one fault, runs
 that copy's `audit-docs.py` and requires the named check to print a failure, while the
@@ -137,7 +137,7 @@ ADR_OLD = (
     "docs/adrs/ADR-00703-pricing-core-is-dependency-free-and-owns-all-actuarial-maths.md"
 )
 ADR_NEW = (
-    "docs/adrs/ADR-08449-project-management-moves-to-github-with-a-slim-claude-md-and-"
+    "docs/adrs/ADR-02136-project-management-moves-to-github-with-a-slim-claude-md-and-"
     "frozen-record-families.md"
 )
 CASES: dict[str, tuple[int, Callable[[Path], None]]] = {

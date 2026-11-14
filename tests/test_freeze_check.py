@@ -1,4 +1,4 @@
-"""`scripts/freeze-check.py` — ADR-8449's freeze check, proven on planted changes in a
+"""`scripts/freeze-check.py` — ADR-2136's freeze check, proven on planted changes in a
 throwaway git repository: an edit, an add, a delete and a rename of a frozen path each
 fail; an unfrozen path passes; a change already on the base is not read.
 

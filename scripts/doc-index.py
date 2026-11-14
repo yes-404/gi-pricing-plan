@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Generate `docs/INDEX.md` — RFC-937 §1.4's "one row per id, rows and documents alike".
 
-KEPT, NOT RUN (ADR-8449): `docs/INDEX.md` is frozen and is no longer regenerated or checked.
+KEPT, NOT RUN (ADR-2136): `docs/INDEX.md` is frozen and is no longer regenerated or checked.
 This module stays because `scripts/audit-docs.py` check 33 loads it by path
 (`_doc_index_for_audit_docs`: `Corpus`, `derive_execution`). Do not run it to regenerate the index.
 

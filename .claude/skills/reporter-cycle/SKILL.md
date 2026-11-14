@@ -3,7 +3,7 @@ name: reporter-cycle
 description: RETIRED 2026-11-13, kept for history, do not follow. Run the team's 15-minute Slack status cycle and lead-staleness nudge detection — the outage flag that stops a token failure from spamming the log, the durable-token-path requirement, the quarter-mark cycle timing, and why the nudge signal is detected here but sent by the agent, never the script. Use when standing up a new session's reporter, when a Slack post stops appearing, or when configuring REPORTER_HANDOVER_DIR for a fresh handover.
 ---
 
-> **RETIRED WITH THE RECORD PROCESS on 2026-11-13; kept for history; do not follow.** (ADR-8449.)
+> **RETIRED WITH THE RECORD PROCESS on 2026-11-13; kept for history; do not follow.** (ADR-2136.)
 
 # Reporter cycle: routine Slack posting and lead-staleness detection
 

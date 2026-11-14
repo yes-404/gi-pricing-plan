@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """doc-id.py — the id allocator and checker: `next` and `check`.
 
-ADR 8449: the one-off RFC-937 migration (`migrate`, `migrate --verify`, `widen`) and its
+ADR-2136: the one-off RFC-937 migration (`migrate`, `migrate --verify`, `widen`) and its
 verification instrument are retired with the frozen record families they migrated. What
 stays is what the one id sequence still needs for requirements, decisions and workflows:
 
@@ -480,7 +480,7 @@ def find_header_filename_mismatches(tree_root: Path) -> list[CheckFailure]:
 
 def check(tree_root: Path) -> list[CheckFailure]:
     """Every `doc-id.py check` failure at `tree_root`: duplicates and header/filename
-    mismatches (ADR 8449: INDEX contiguity is no longer checked; INDEX is frozen).
+    mismatches (ADR-2136: INDEX contiguity is no longer checked; INDEX is frozen).
     """
     return [
         *find_duplicate_ids(tree_root),

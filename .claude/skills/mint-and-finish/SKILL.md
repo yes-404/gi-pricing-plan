@@ -3,11 +3,11 @@ name: mint-and-finish
 description: RETIRED 2026-11-13, kept for history, do not follow. The executor procedure for a minter or finisher seat — minting a batch of working ids (FD/RL/PL/SL/OQ/LG) into one batch PR, re-minting when the lead's allocation shifts, merging origin/main into a PR at its merge turn (docs/INDEX.md regenerated, docs/findings/register.md rebuilt, docs/roadmap.md duplicate check), the post-mint sweep, the evidence an ACK request needs under lead.md rule 4 (1E, E2, the code-PR rule, the precondition) and the traps around it (cancelled CI, conflicting PRs with no CI, DB-backed modules that ERROR, gh pr edit --body-file), and the closing acts (R1/R2 sibling closes, FD closes, the slice mint's LG/SL closes under the docs-only waiver). Use when a brief headed "Brief — executor (minter|finisher)" sends you to mint, re-mint, merge main or prepare a PR for its ACK.
 ---
 
-> **RETIRED WITH THE RECORD PROCESS on 2026-11-13; kept for history; do not follow.** (ADR-8449.)
+> **RETIRED WITH THE RECORD PROCESS on 2026-11-13; kept for history; do not follow.** (ADR-2136.)
 
 # Mint and finish
 
-> **Retired by ADR 8449.** The record families (plans, ledgers, rulings, closures, findings, rfcs), `docs/roadmap.md`, `docs/INDEX.md` and `docs/open-questions.md` are frozen and no longer audited, minted or regenerated. `doc-id.py migrate`/`widen`, `register-lint.py`, `register-owed.py`, the ruling census and audit-docs checks 4, 15-20, 23, 25, 28, 29, 38 and 39 are removed; `doc-id.py next` and `check` remain, and `doc-index.py` is no longer run. Read any passage below that tells you to run a retired tool as history.
+> **Retired by ADR-2136.** The record families (plans, ledgers, rulings, closures, findings, rfcs), `docs/roadmap.md`, `docs/INDEX.md` and `docs/open-questions.md` are frozen and no longer audited, minted or regenerated. `doc-id.py migrate`/`widen`, `register-lint.py`, `register-owed.py`, the ruling census and audit-docs checks 4, 15-20, 23, 25, 28, 29, 38 and 39 are removed; `doc-id.py next` and `check` remain, and `doc-index.py` is no longer run. Read any passage below that tells you to run a retired tool as history.
 
 "Minter" and "finisher" are **seat names, not roles**: every seat spawns from
 `.claude/roles/executor.md` and works under a task brief (the maintainer's entry

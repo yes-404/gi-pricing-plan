@@ -1125,7 +1125,7 @@ def test_every_check_30_to_39_reports_how_many_documents_it_examined(
     audit.failures.clear()
     audit.notes.clear()
     audit.check_ids_30_39()
-    for n in range(30, 38):  # checks 38 and 39 retired by ADR 8449
+    for n in range(30, 38):  # checks 38 and 39 retired by ADR-2136
         prefix = f"check {n}:"
         own_notes = [note for note in audit.notes if note.startswith(prefix)]
         assert own_notes, (n, audit.notes)
@@ -1152,7 +1152,7 @@ def test_the_real_tree_passes_all_ten_checks() -> None:
     )
     assert result.returncode == 0, result.stdout + result.stderr
     assert "All checks passed." in result.stdout, result.stdout
-    for n in range(30, 38):  # checks 38 and 39 retired by ADR 8449
+    for n in range(30, 38):  # checks 38 and 39 retired by ADR-2136
         assert f"check {n}" in result.stdout, (n, result.stdout)
 
 

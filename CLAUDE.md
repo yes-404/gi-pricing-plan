@@ -92,6 +92,6 @@ The rules are in `CONTRIBUTING.md`. In short:
 
 ## 9. History
 
-This file replaced a longer, section-numbered version as decided on 2026-11-13 (decision record ADR-8449).
+This file replaced a longer, section-numbered version as decided on 2026-11-13 (decision record ADR-2136).
 That version, and the plans, ledgers, rulings and closure records it governed, are frozen
 in git history and in `docs/archive/`. A citation of an old section number refers to that version.

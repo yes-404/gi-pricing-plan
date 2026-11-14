@@ -26,7 +26,7 @@ SPEC = ROOT / "docs" / "specs" / "06-governance.md"
 BUILT_HEADER = "| Permission | Governs | Check owner |"
 SPECIFIED_HEADER = "| Permission | Owner Work |"
 ALIAS_HEADER = "| Name used before | Enum name |"
-#: ADR 8449: a new permission row names its owner as a GitHub issue; a row that predates the
+#: ADR-2136: a new permission row names its owner as a GitHub issue; a row that predates the
 #: freeze still names a WK- heading of the frozen roadmap.
 ISSUE_OWNER = re.compile(r"#\d+")
 

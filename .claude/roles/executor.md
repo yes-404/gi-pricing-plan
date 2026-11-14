@@ -12,7 +12,7 @@ relates: []                      # ids only
 
 ## Under the new frame (from 2026-11-13)
 
-ADR-8449 and `CONTRIBUTING.md` govern. Where the text below disagrees, this section wins and
+ADR-2136 and `CONTRIBUTING.md` govern. Where the text below disagrees, this section wins and
 the older text is SUPERSEDED (a full rewrite of this file is a tracked Work issue, not done
 here).
 

@@ -3,11 +3,11 @@ name: docs-audit
 description: RETIRED 2026-11-13, kept for history, do not follow. Verify the integrity of the docs/ specification suite and the docs/notes/ working notes before committing or opening a PR in this GI pricing platform repo. Checks requirement IDs, cross-references, open-question mirroring, ADRs, spec sections, JSON Schemas, plus structural checks for section references, error-code ownership, dependency direction, money discipline, glossary single-sourcing and workflow coverage, the notes' header block, numbering, index agreement and references, every endpoint and pricing-core function a workflow journey cites, table-row cell counts, canonical route agreement between a module's §5.3 and `00`'s §5.6, every spec §10 mirror row's status, every F-id citation against the findings register or a closure record, the process core extract's § citations against the process spec, and every filed plan's acceptance-standard field — and the decision-gate invariant the script does not cover. The script's own module docstring is the numbered list, kept current there rather than counted here. Use before any docs commit, before any working-note commit, after applying research findings, or when asked whether the documentation is consistent or hangs together.
 ---
 
-> **RETIRED WITH THE RECORD PROCESS on 2026-11-13; kept for history; do not follow.** (ADR-8449.)
+> **RETIRED WITH THE RECORD PROCESS on 2026-11-13; kept for history; do not follow.** (ADR-2136.)
 
 # Auditing the docs suite
 
-> **Retired by ADR 8449.** The record families (plans, ledgers, rulings, closures, findings, rfcs), `docs/roadmap.md`, `docs/INDEX.md` and `docs/open-questions.md` are frozen and no longer audited, minted or regenerated. `doc-id.py migrate`/`widen`, `register-lint.py`, `register-owed.py`, the ruling census and audit-docs checks 4, 15-20, 23, 25, 28, 29, 38 and 39 are removed; `doc-id.py next` and `check` remain, and `doc-index.py` is no longer run. Read any passage below that tells you to run a retired tool as history.
+> **Retired by ADR-2136.** The record families (plans, ledgers, rulings, closures, findings, rfcs), `docs/roadmap.md`, `docs/INDEX.md` and `docs/open-questions.md` are frozen and no longer audited, minted or regenerated. `doc-id.py migrate`/`widen`, `register-lint.py`, `register-owed.py`, the ruling census and audit-docs checks 4, 15-20, 23, 25, 28, 29, 38 and 39 are removed; `doc-id.py next` and `check` remain, and `doc-index.py` is no longer run. Read any passage below that tells you to run a retired tool as history.
 
 One command covers most of it:
 

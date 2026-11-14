@@ -66,17 +66,17 @@ jobs:
         id: auditdocs
         continue-on-error: true
         # Checks 30, 32, 35 and 36 fail only what this change's own diff introduces, read
-        # from the same `<base>...HEAD` range the freeze check uses (ADR 8449).
+        # from the same `<base>...HEAD` range the freeze check uses (ADR-2136).
         env:
           AUDIT_DOCS_BASE: origin/${{ github.base_ref || 'main' }}
         run: python3 scripts/audit-docs.py
       # RFC-937 §1.7/§1.11: doc-id.py check fails on a duplicate id, a header/filename
-      # mismatch. ADR 8449: docs/INDEX.md is frozen and no longer regenerated or checked.
+      # mismatch. ADR-2136: docs/INDEX.md is frozen and no longer regenerated or checked.
       - name: doc-id check
         id: docidcheck
         continue-on-error: true
         run: python3 scripts/doc-id.py check
-      # ADR-8449: the management record families are frozen. This step reads the pull
+      # ADR-2136: the management record families are frozen. This step reads the pull
       # request's own diff against its merge-base, so records merged earlier by other
       # branches are never read. It runs on pull requests only: on a push to `main` the
       # change has already been judged, and a base to diff against does not exist.
@@ -95,7 +95,7 @@ jobs:
       # the `id:`s above — a job cannot enumerate its own steps, so the
       # alternative to this list is no table at all.
       #
-      # ADR 8449: the migration verifier (`doc-id migrate --verify`) is retired. The summary
+      # ADR-2136: the migration verifier (`doc-id migrate --verify`) is retired. The summary
       # only asks "did the stage succeed?" of the stages above.
       # =====================================================================
       - name: Gate summary

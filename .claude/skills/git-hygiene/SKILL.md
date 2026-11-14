@@ -5,7 +5,7 @@ description: Git and GitHub working discipline for this repo — what belongs in
 
 # Git hygiene
 
-> **Under the new frame (from 2026-11-13, ADR-8449).** The merge rules are in
+> **Under the new frame (from 2026-11-13, ADR-2136).** The merge rules are in
 > `CONTRIBUTING.md` ("Pull requests", "Review"): one pull request per Work, squash at merge,
 > nobody merges their own pull request, the core lead merges one at a time. The section
 > "merge only the maintainer's own pull requests" below is a 2026-08-30 instruction kept as

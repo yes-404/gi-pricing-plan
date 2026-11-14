@@ -5,7 +5,7 @@ description: How this monorepo is laid out and why — the annotated tree, the p
 
 # Why the repository is shaped this way
 
-> **Under the new frame (from 2026-11-13, ADR-8449).** `docs/plans`, `docs/ledgers`,
+> **Under the new frame (from 2026-11-13, ADR-2136).** `docs/plans`, `docs/ledgers`,
 > `docs/rulings`, `docs/closures`, `docs/findings`, `docs/rfcs`, `docs/research`,
 > `docs/roadmap.md`, `docs/INDEX.md`, `docs/open-questions.md`, `docs/REDIRECTS.csv` and
 > `docs/_templates` are FROZEN: `scripts/freeze-check.py` fails a pull request that adds,

@@ -1,4 +1,4 @@
-"""The one list of frozen paths (ADR 8449), read by `freeze-check.py`, by `audit-docs.py`
+"""The one list of frozen paths (ADR-2136), read by `freeze-check.py`, by `audit-docs.py`
 (which does not scan a frozen record) and by `tests/test_freeze_check.py`.
 
 Path prefixes end in `/`; anything else is an exact path. Standard library only.

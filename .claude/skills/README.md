@@ -132,7 +132,7 @@ Each skill's own `## Verified` section carries its date and tree; this table no 
 | [`vue-frontend`](vue-frontend/SKILL.md) | Frontend conventions specific to **this** platform — the generated-client seam, how money and exact decimals cross into TypeScript, the RFC 9457 error shape, cursor pagination, and the 202-plus-Job model, and the dev-identity proxy without which a browser gets 401 on everything | self-written | — |
 | [`balance-watch`](balance-watch/SKILL.md) | The DeepSeek balance poller — the endpoint, the BEGIN CLOSE and recovery-rearm thresholds and why each, the 15-minute elapsed heartbeat and why wall-clock quarter-hours are unreachable from a 90s poll, and the durable token source versus its ephemeral extracted cache | self-written | — |
 
-## Retired (2026-11-13, ADR-8449)
+## Retired (2026-11-13, ADR-2136)
 
 These describe the record process the new frame retired. Each carries a first-line banner:
 kept for history, do not follow. They are not in the active index above.
@@ -159,9 +159,9 @@ to be read as one: `using-superpowers` routes to the others by name.
 |---|---|---|---|
 | [`using-superpowers`](using-superpowers/SKILL.md) | The router — find and invoke a skill before responding | Read first. Its own "user instructions outrank skills" line is why the precedence rule had to be written into `CLAUDE.md` §12 to bind | — |
 | [`brainstorming`](brainstorming/SKILL.md) | Turning an idea into a design before implementation | Bundles an optional local visual companion — see the security note below | — |
-| [`writing-plans`](writing-plans/SKILL.md) | A written implementation plan, bite-sized, for an engineer with no context | Pairs with this repo's `spec-change`: the spec is the design, the plan is the execution order. **New frame (ADR-8449): the plan is a comment on the Work issue; nothing is saved to `docs/plans/`, which is frozen.** Upstream's text is unchanged; this row is the recorded deviation | `PL-` |
+| [`writing-plans`](writing-plans/SKILL.md) | A written implementation plan, bite-sized, for an engineer with no context | Pairs with this repo's `spec-change`: the spec is the design, the plan is the execution order. **New frame (ADR-2136): the plan is a comment on the Work issue; nothing is saved to `docs/plans/`, which is frozen.** Upstream's text is unchanged; this row is the recorded deviation | `PL-` |
 | [`executing-plans`](executing-plans/SKILL.md) | Executing a written plan in a fresh session, with review checkpoints | Upstream never named a plan location; here it reads from `docs/plans/` | — |
-| [`subagent-driven-development`](subagent-driven-development/SKILL.md) | Fresh implementer subagent per task, review after each | Three bundled shell scripts; writes to an untracked `.superpowers/sdd/`. **New frame (ADR-8449): no ledger is written; `docs/ledgers/` is frozen** | — |
+| [`subagent-driven-development`](subagent-driven-development/SKILL.md) | Fresh implementer subagent per task, review after each | Three bundled shell scripts; writes to an untracked `.superpowers/sdd/`. **New frame (ADR-2136): no ledger is written; `docs/ledgers/` is frozen** | — |
 | [`dispatching-parallel-agents`](dispatching-parallel-agents/SKILL.md) | 2+ independent tasks with no shared state | | — |
 | [`systematic-debugging`](systematic-debugging/SKILL.md) | Root cause before any fix — symptom fixes are failure | The rule this repository already lives by: a spec/code disagreement is *resolved*, never quietly matched (`CLAUDE.md` §0) | — |
 | [`test-driven-development`](test-driven-development/SKILL.md) | Test first, watch it fail, then implement | Complements `python-test` (markers, negative tests) and `testing-strategy` (technique) | — |

@@ -5,7 +5,7 @@ description: Testing discipline for this repo — requirement-traceability marke
 
 # Testing here
 
-> **Under the new frame (from 2026-11-13, ADR-8449).** The traceability markers, the
+> **Under the new frame (from 2026-11-13, ADR-2136).** The traceability markers, the
 > negative-test emphasis and the gate stay. The tests of the retired record process
 > (`tests/test_doc_id_migrate.py`, the register, ruling and ledger tests) are deleted with
 > their scripts; the sections below that cite them describe the retired process. Quote a pass
