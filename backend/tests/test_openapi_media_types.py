@@ -37,7 +37,7 @@ def app() -> FastAPI:
     return create_app(Settings(environment=Environment.LOCAL, version="test"))
 
 
-def _declared(route: Any, status: str) -> set[str]:
+def _route_media_types(route: Any, status: str) -> set[str]:
     """The media types `route` declares for the 2xx `status`."""
     response_class: Any = route.response_class
     response_class = getattr(response_class, "value", response_class)  # a default placeholder
@@ -81,7 +81,7 @@ def _mismatches(app: FastAPI, document: dict[str, Any]) -> list[str]:
                 if not status.startswith("2"):
                     continue
                 published = set(response.get("content", {}))
-                declared = _declared(route, status)
+                declared = _route_media_types(route, status)
                 if published != declared:
                     out.append(
                         f"{method.upper()} {path} {status}: published {sorted(published)}, "
