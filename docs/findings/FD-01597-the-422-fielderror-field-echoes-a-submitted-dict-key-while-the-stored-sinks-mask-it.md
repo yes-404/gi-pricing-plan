@@ -124,3 +124,5 @@ decision above (open), then the remedy PR with a test red at its parent that sub
 `field` back.
 
 *(Dated line, 2026-11-05, docs batch 11, by the auditor, on to-lead "2026-11-05 09:51:53 GMT" (triage b28ba8e9454c accepted as the proposal of record): carried, owner WK-1178, discharge event the P3 plan review; LOW, slice over 1 h, under the 09:40:57 criteria.)*
+
+*(Dated line, 2026-11-09, docs batch 33, by the auditor, on `to-lead` "2026-11-09 23:29:42 GMT" (2): owner P3-C, replacing WK-1178, which closes with P2. Severity LOW, unchanged.)*

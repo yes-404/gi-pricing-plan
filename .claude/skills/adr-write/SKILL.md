@@ -1,6 +1,6 @@
 ---
 name: adr-write
-description: Create, supersede, or annotate an architecture decision record in docs/adr/ of this GI pricing platform. Use when a choice constrains more than one module, is expensive to reverse, or has already been made and needs recording — and when research later confirms or contradicts an accepted ADR. Covers the numbering, the status lifecycle, and the addendum-versus-edit rule that keeps accepted decisions immutable.
+description: Create, supersede, or annotate an architecture decision record in docs/adrs/ of this GI pricing platform. Use when a choice constrains more than one module, is expensive to reverse, or has already been made and needs recording — and when research later confirms or contradicts an accepted ADR. Covers the numbering, the status lifecycle, and the addendum-versus-edit rule that keeps accepted decisions immutable.
 ---
 
 # Writing an ADR
@@ -9,17 +9,19 @@ description: Create, supersede, or annotate an architecture decision record in d
 
 Write one when the choice **constrains more than one module**, is **expensive to reverse**,
 or has **already been made** and needs recording. Otherwise it belongs in
-`docs/open-questions.md` as an open question with options and a recommendation.
+a decision-needed issue with options and a recommendation.
 
 ## Creating one
 
-Next number, never reused:
+Next number, never reused: the core lead assigns the id at the merge turn; until then use a
+working id and say so in the pull request. The allocator (ADR-2136, ND-3):
 
 ```bash
-ls docs/adr/ | grep -oE '^[0-9]{4}' | sort -n | tail -1
+python3 scripts/doc-id.py next
 ```
 
-File as `docs/adrs/NNNN-kebab-title.md` with this shape:
+File as `docs/adrs/ADR-<nnnnn>-<kebab-title>.md`, the id zero-padded to five digits. Start from
+an existing ADR (ADR-2136 is the newest) and copy its header. The body has this shape:
 
 ```markdown
 # ADR-NNNN — Title in the imperative
@@ -74,6 +76,8 @@ python3 scripts/audit-docs.py    # verifies every referenced ADR-NNNN exists
 ```
 
 ## Verified
+
+2026-11-08 (tree `c4ae584a`) — Numbering and filing replaced (skills-gap F1): `docs/adr/` is absent, `docs/adrs/` holds `ADR-<nnnnn>-…` files, and `doc-id.py next` is the allocator. Only that paragraph was re-read. The entries below name no tree; none was recorded (`CLAUDE.md` §13; skills-gap F5).
 
 2026-08-14 — Confirmed by adding dated addenda to ADR-706 (ZEN Engine, where research
 resolved OQ-614 and the decision survived) and ADR-707 (Polars/DuckDB, where an open

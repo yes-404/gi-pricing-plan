@@ -31,3 +31,13 @@ Read by the maintainer at 18:36:27 GMT, mid-dip: `balloon_inflate` 325,613,355, 
 ## Disposition
 
 Open, owner WK-1178. Goes to the §14 draft beside FD-2007's host question; a dedicated host is the user's call. Filed as working id 8393.
+
+*(Dated correction, 2026-11-06, docs batch 13, by the executor, on the maintainer's entry "2026-11-06 03:16:38 GMT" (MERGE-ACK of #1439): **the title and the Finding say "9 to 13 GB"; that was the first reading (9.08 GB held at 18:36:27 GMT on 5 Nov), and the maintainer's later reads took about 13 to 16.5 GB.** The finding stands; S2's recorded counters give the figure of record, not the first reading. The original sentence and the title are left as merged.)*
+
+*(Dated line, 2026-11-06, docs batch 13, by the executor, on exec-minth's and the lead's relay: **SL 8377's demo END, 2026-11-06 08:38:32, read PSI "some" avg10 1.16 and "full" avg10 0.98.** It is the first non-zero reading at a demo end in the eight seeded or fetched demos since 5 Nov 22:28; the demo was PASS; the cause was not traced; no effect on any result is claimed. It is an untraced reading, accepted as one.)*
+
+*(Dated line, 2026-11-06, docs batch 13, by the executor: **the dislocation step, read from each gate's `gate.log` under `~/gi-pricing-plan.local/scratch/`, took 531, 597, 527, 590, 524, 530, 512 and 517 s in the eight demos of 5 to 6 Nov** (`slf-gate`, `slc-gate`, `sl8389-gate/demo-run2`, `slm-gate/demo-run2`, `slh-gate`, `slg-gate`, `sl8340-gate`, `sl8377-gate`; row `| dislocation #1 |`). The spread is 85 s (597 less 512). **This bounds what a single demo's reading can say.** No cause is claimed. The order of the eight above is the lead's; the log paths are matched by the value and the row, checked at this tree.)*
+
+*(Dated line, 2026-11-07, docs batch 14, by the executor, on the maintainer's entry "2026-11-07 17:31:27 GMT" (5) and the lead's handover item 11: **LAST-2's demo (gate END 2026-11-06 11:45:10) read the dislocation step at 644 s, the slowest of nine readings** (the eight of the line above, 512 to 597 s, and this one; spread 132 s, 644 less 512). Read from `~/gi-pricing-plan.local/scratch/sl8343-gate/gate/gate.log:139`, row `| dislocation #1 | 644 s (29 Oct passes: 422 / 387 / 383 s; this box 21:17:05 baseline 552 / 558 s) |`. No cause is claimed; it is not assumed to be the balloon.)*
+
+*(Dated line, 2026-11-07, docs batch 14, by the executor, on the maintainer's entry "2026-11-07 17:31:27 GMT" (5): **this finding's balloon readings were taken on the Broadwell platform (S1: Xeon "Broadwell" 79) and say so.** From 2026-11-07 nfr-bench-1 is AMD EPYC 7B12, a faster core (py-loop 0.98 s against 1.51 s); a reading on that platform is not like-for-like with these. The original sentences above are unchanged.)*

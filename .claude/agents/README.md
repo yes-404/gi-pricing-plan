@@ -200,4 +200,6 @@ audit; **never install more without the maintainer's approval**.
 Re-running upstream's `install-agents.sh` would overwrite all four modifications above.
 Update by hand against a fresh clone instead.
 
-**Last verified:** all seven, 2026-08-21.
+**Last verified:** all seven, 2026-08-21. *(Dated 2026-11-08, skills-gap F8: each agent file's last commit is later than that date, by `git log -1 --format=%ad --date=short -- <file>`. Those diffs were not read, so the date is not refreshed.)*
+
+A delegated specialist is a seat: it is TaskStopped at its report and read back (`docs/process/process-backlog.md`, row of 2026-11-03 15:38 GMT).

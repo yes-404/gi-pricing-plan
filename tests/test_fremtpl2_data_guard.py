@@ -31,7 +31,9 @@ EXAMPLE = ROOT / "examples" / "fremtpl2"
 
 #: Identifiers that are themselves the data directory or its reader, before derivation.
 _SEED_READER_NAMES = frozenset({"DATA_DIR", "to_csv"})
-_DATA_FILE_MARKERS = (".arff", "freMTPL2")
+_DATA_FILE_MARKERS = (".arff", "fremtpl2")  # compared lower-cased (FD-1887 H1)
+#: Calls that build a path from parts: `Path("examples", "fremtpl2", "data")`, `os.path.join(...)`.
+_PATH_BUILDERS = frozenset({"Path", "PurePath", "join", "joinpath"})
 
 
 def _names(node: ast.AST) -> set[str]:
@@ -53,6 +55,17 @@ def _loaded(node: ast.AST) -> set[str]:
         s.id if isinstance(s, ast.Name) else s.attr
         for s in ast.walk(node)
         if (isinstance(s, ast.Name) and isinstance(s.ctx, ast.Load)) or isinstance(s, ast.Attribute)
+    }
+
+
+def _import_origins(tree: ast.AST) -> dict[str, str]:
+    """`from m import x as y` anywhere in `tree`: `{"y": "x"}`, so a renamed reader is read."""
+    return {
+        a.asname: a.name
+        for s in ast.walk(tree)
+        if isinstance(s, ast.ImportFrom)
+        for a in s.names
+        if a.asname
     }
 
 
@@ -106,9 +119,12 @@ def _names_the_data_path(node: ast.AST) -> bool:
             and "fremtpl2/data" in sub.value
         ):
             return True
-        if isinstance(sub, ast.BinOp):
+        joins = isinstance(sub, ast.BinOp) or (
+            isinstance(sub, ast.Call) and bool(_names(sub.func) & _PATH_BUILDERS)
+        )
+        if joins:
             parts = _strings(sub)
-            if "data" in parts and any(m in p for p in parts for m in _DATA_FILE_MARKERS):
+            if "data" in parts and any(m in p.lower() for p in parts for m in _DATA_FILE_MARKERS):
                 return True
     return False
 
@@ -137,15 +153,34 @@ def _data_aliases(statements: list[ast.stmt], *, sibling_data: bool) -> set[str]
     return aliases
 
 
-def _is_guard(node: ast.AST) -> bool:
-    """`if ….exists…: pytest.skip(…)`, a `skipif` naming `.exists`, or a `DATA_DIR` redirect."""
+def _tests_the_data(expr: ast.AST, aliases: frozenset[str]) -> bool:
+    """Does an `.exists()` expression ask about the freMTPL2 data, not about some other path?
+
+    FD-1887 H2: `if other.exists(): pytest.skip(...)` skips on a path that is not the data, and
+    the data is then read unguarded. The data is named by `DATA_DIR`, an `ARFF` name, a module
+    alias of the data directory, or a string holding `fremtpl2` or `.arff`."""
+    names = _names(expr)
+    if names & ({"DATA_DIR"} | aliases) or any("ARFF" in n.upper() for n in names):
+        return True
+    return any(m in text.lower() for text in _strings(expr) for m in _DATA_FILE_MARKERS)
+
+
+def _is_guard(node: ast.AST, aliases: frozenset[str] = frozenset()) -> bool:
+    """A data-present `if ….exists…: pytest.skip(…)`, a `skipif` on it, or a `DATA_DIR` redirect."""
     for sub in ast.walk(node):
-        if isinstance(sub, ast.If) and "exists" in _names(sub.test):
+        if (
+            isinstance(sub, ast.If)
+            and "exists" in _names(sub.test)
+            and _tests_the_data(sub.test, aliases)
+        ):
             skips = [c for stmt in sub.body for c in ast.walk(stmt) if isinstance(c, ast.Call)]
             if any("skip" in _names(c.func) for c in skips):
                 return True
         skipif = isinstance(sub, ast.Call) and "skipif" in _names(sub.func)
-        if skipif and any("exists" in _names(arg) for arg in sub.args):  # type: ignore[attr-defined]
+        if skipif and any(
+            "exists" in _names(arg) and _tests_the_data(arg, aliases)
+            for arg in sub.args  # type: ignore[attr-defined]
+        ):
             return True
         redirect = isinstance(sub, ast.Call) and "setattr" in _names(sub.func)
         if redirect and "DATA_DIR" in _strings(sub):
@@ -160,6 +195,7 @@ def unguarded_tests(source: str, readers: set[str], *, sibling_data: bool = Fals
     module_level = _module_level(tree)
     aliases = _data_aliases(module_level, sibling_data=sibling_data)
     module_nodes: list[ast.AST] = list(module_level)
+    origins = _import_origins(tree)
 
     def closure(start: str) -> list[ast.AST]:
         seen = {start}
@@ -176,6 +212,7 @@ def unguarded_tests(source: str, readers: set[str], *, sibling_data: bool = Fals
 
     def reaches(nodes: list[ast.AST]) -> bool:
         used = set().union(*(_loaded(n) for n in nodes)) if nodes else set()
+        used |= {origins[n] for n in used if n in origins}  # `import x as y` renames a reader
         literal = any(_names_the_data_path(n) for n in nodes)
         return bool(used & (readers | aliases | {"DATA_DIR"})) or literal
 
@@ -184,7 +221,7 @@ def unguarded_tests(source: str, readers: set[str], *, sibling_data: bool = Fals
         if not name.startswith("test_"):
             continue
         nodes = closure(name) + module_nodes
-        if reaches(nodes) and not any(_is_guard(n) for n in nodes):
+        if reaches(nodes) and not any(_is_guard(n, frozenset(aliases)) for n in nodes):
             unguarded.append(name)
     return sorted(set(unguarded))
 
@@ -279,11 +316,11 @@ def test_a_direct_unguarded_reference_is_caught() -> None:
 def test_a_skip_guard_anywhere_in_the_closure_passes() -> None:
     guarded = _HELPER_CHAIN.replace(
         "def _world():",
-        "def _world():\n    if not DATA.exists():\n        pytest.skip('not fetched')",
+        "def _world():\n    if not DATA_DIR.exists():\n        pytest.skip('not fetched')",
     )
     assert unguarded_tests(guarded, _READERS) == []
     via_fixture = (
-        "import pytest\n@pytest.fixture\ndef scratch():\n    if not D.exists():\n"
+        "import pytest\n@pytest.fixture\ndef scratch():\n    if not DATA_DIR.exists():\n"
         "        pytest.skip('x')\n    return 1\n"
         "def test_a(scratch):\n    seed.build_csv(1)\n"
     )
@@ -308,3 +345,49 @@ def test_things_that_only_look_like_a_guard_are_not_one() -> None:
 
 def test_a_test_that_reaches_nothing_is_not_flagged() -> None:
     assert unguarded_tests("def test_a():\n    assert unrelated() == 1\n", _READERS) == []
+
+
+# --- FD-1887 H1 and H2: the two ways the guard passed what it should have caught ---
+
+
+def test_a_skip_on_a_path_that_is_not_the_data_is_not_a_guard() -> None:
+    """H2: `.exists()` and `pytest.skip` are both present, but the test asks about another path."""
+    other = (
+        "def test_a():\n    if other.exists():\n        pytest.skip('x')\n    seed.build_csv(1)\n"
+    )
+    other_skipif = (
+        "import pytest\n@pytest.mark.skipif(not other.exists(), reason='x')\n"
+        "def test_a():\n    seed.build_csv(1)\n"
+    )
+    assert unguarded_tests(other, _READERS) == ["test_a"]
+    assert unguarded_tests(other_skipif, _READERS) == ["test_a"]
+
+
+def test_a_skip_on_the_data_by_any_of_its_names_is_a_guard() -> None:
+    """H2's other side: the data is named by `DATA_DIR`, an `ARFF` name, or a path string."""
+    for asked in ("DATA_DIR / 'x'", "ARFF_DIR / 'x'", "Path('examples/fremtpl2/data')"):
+        source = (
+            f"def test_a():\n    if not ({asked}).exists():\n        pytest.skip('x')\n"
+            "    seed.build_csv(1)\n"
+        )
+        assert unguarded_tests(source, _READERS) == [], asked
+
+
+def test_a_data_path_built_by_a_join_is_caught_in_any_spelling() -> None:
+    """H1: lowercase `fremtpl2` in a join, `Path(...)`, `os.path.join` inside a function."""
+    lowercase = "def test_a():\n    open(P / 'fremtpl2' / 'data' / 'x')\n"
+    path_call = "def test_a():\n    open(Path('examples', 'fremtpl2', 'data'))\n"
+    in_function = (
+        "def _where():\n    return os.path.join('examples', 'fremtpl2', 'data')\n"
+        "def test_a():\n    open(_where())\n"
+    )
+    for source in (lowercase, path_call, in_function):
+        assert unguarded_tests(source, _READERS) == ["test_a"], source
+
+
+def test_a_reader_imported_under_another_name_is_still_a_reader() -> None:
+    """H1: `from seed import build_csv as bc` hides the reader from a by-name match."""
+    renamed = "from seed import build_csv as bc\ndef test_a():\n    bc(1)\n"
+    unrelated = "from seed import unrelated as u\ndef test_a():\n    u()\n"
+    assert unguarded_tests(renamed, _READERS) == ["test_a"]
+    assert unguarded_tests(unrelated, _READERS) == []

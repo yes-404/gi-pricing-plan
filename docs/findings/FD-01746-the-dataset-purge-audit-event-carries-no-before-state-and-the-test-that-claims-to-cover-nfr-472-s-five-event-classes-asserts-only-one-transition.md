@@ -2,12 +2,12 @@
 id: FD-1746
 family: finding
 title: The dataset purge audit event carries no before state, and the test that claims to cover NFR-472's five event classes asserts only one transition
-status: active
+status: closed
 created: 2026-10-17 # original date 2026-10-14, set at the filing; minted 2026-10-17
 owner: auditor
 tree: a3fc2e8dd384de6abf909f662f43011b8078fb4e
 corrected_by: []
-relates: [WK-1178, PL-1735, SL-1736, NFR-472, FR-7, FR-81, P2]
+relates: [WK-1178, PL-1735, SL-1736, NFR-472, FR-7, FR-81, P2, SL-2075, LG-2076, PL-2074]
 ---
 
 # FD-1746 — a purge audits no `before`, and the NFR-472 test is green by construction
@@ -87,3 +87,5 @@ adds a per-class assertion for acknowledgements, dictionary edits, rule-set chan
 each red on the pre-fix tree. The rule-set assertion is SL 1736's.
 
 *(Dated line, 2026-11-05, docs batch 11, by the auditor, on to-lead "2026-11-05 09:51:53 GMT" (triage b28ba8e9454c accepted as the proposal of record), item (4): severity RULED MEDIUM, as proposed.)*
+
+***Resolved 2026-11-07*** — closed in place 2026-11-07 as the closing act of the mint of SL-2075 (WK-1178, LG-2076, PL-2074; this PR; its number, squash commit and merge date are written at the merge's date-of-record), in the FD-1842 form. Delivered remedy: the dataset purge audit event now carries `before` (the dataset's versions as ids and statuses, loaded in `version` order, `backend/src/app/platform/datasets.py`), and the NFR-472 coverage claim in `test_data_nfrs.py` is narrowed to the transition class and points at the per-class tests for acknowledgements, dictionary edits, rule-set changes and purges. Red first, by cause, in LG-2076: `test_lineage.py` red at `ac43d055` (`1 failed, 26 passed`, `assert None == {'versions': [{'id': …, 'status': 'draft'}]}`), green at `0d0a28a7` (`27 passed`); the two per-class assertions were each proved red by a planted `before=None` (A9: `update_dictionary` and `platform/validation.py:354`), restored with `git diff --quiet` rc 0. The rule-set assertion is SL 1736's. Gate evidence is in LG-2076.

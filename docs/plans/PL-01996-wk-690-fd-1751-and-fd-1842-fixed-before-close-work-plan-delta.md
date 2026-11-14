@@ -3,7 +3,7 @@ id: PL-1996
 family: plan
 kind: map
 title: WK-690 — FD-1751 and FD-1842 fixed before close, one slice with two limbs (SL-1994) — Work-plan delta
-status: draft                   # draft → active → superseded | retired (§1.2a)
+status: active                  # draft → active → superseded | retired (§1.2a)
 created: 2026-11-03               # drafted 2026-11-03 under working id 8301
 owner: planner
 tree: a8ef6f19c0be1142b0ac9dea88086f1ce6f95cbe
@@ -315,3 +315,5 @@ SL-1994 is cut in `docs/roadmap.md` under `### WK-690`, after `SL-1622`, as `dra
   executor reads when it writes them.
 
 *(Dated line, 2026-11-05, docs batch 11, by the auditor, on the staged line of 2026-11-05 11:18:38 GMT: this plan's front matter still reads `status: draft`; the roadmap row at `docs/roadmap.md:1990` cites it as the plan of record for SL-1994. The field is stale against that use; it is not edited here (a filed plan is frozen at its date) and this line governs it.)*
+
+*(Dated line, 2026-11-07, docs batch 16, by the executor, on CR 8314's refresh (F6): the stale field the line of docs batch 11 above named is flipped, `draft` to `active`, the one front-matter word; SL-1994 merged at #1425 (`824a891da8b421d8a0fbe9430934aff8ecd4d574`, MERGE-ACK "2026-11-04 06:20:47 GMT") and every other WK-690 plan reads `active`. Nothing in the body is edited.)*

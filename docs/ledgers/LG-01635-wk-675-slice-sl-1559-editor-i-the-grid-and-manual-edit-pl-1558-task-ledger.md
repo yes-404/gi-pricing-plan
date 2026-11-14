@@ -58,7 +58,7 @@ Not run.
 
 ### Audit
 
-Not yet. The auditor writes it.
+*(Dated line, 2026-11-09, docs batch 29, by the auditor, filed under FD-1655 (`to-lead` "2026-11-09 10:12:52 GMT" (1)). Written from this ledger's own red and green lines and the merge, read and not re-run; the merge is an ancestor of `origin/main` at `40ba57f4`. Source: `RS-1649`'s row for the slice. )* SL-1559, #1281 `372fa92ae3ab306bc067c234487ce929dc0e2a04` (merged 2026-10-11T19:23:59+01:00). **Red then green:** the Build log's red-first run and its green (`test_rate_tables.py` 61 passed), and the gate-1 run at `25ede2d4` (16:29:55 to 17:19:49 BST), whose DB red-firsts each ran against the parent source. **Limb:** RS-1649 A10 (the stored-data stop query) was discharged by FD-1652 (Resolved, #1404).
 
 ### Build log
 

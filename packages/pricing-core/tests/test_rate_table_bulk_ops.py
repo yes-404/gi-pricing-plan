@@ -13,14 +13,17 @@ import hashlib
 import random
 from collections.abc import Callable
 from datetime import UTC, datetime
-from decimal import Decimal
+from decimal import ROUND_DOWN, ROUND_HALF_EVEN, Decimal, InvalidOperation, localcontext
+from fractions import Fraction
 from io import BytesIO
 from typing import ClassVar
 
 import pytest
 from openpyxl import load_workbook
+from pydantic import ValidationError
 
 from model_schema.rating import (
+    BulkOperationContext,
     ImportPreview,
     ImportVerdict,
     RateTableCell,
@@ -31,6 +34,7 @@ from model_schema.rating import (
     RateTableValueType,
     RateTableVersion,
     SeededFrom,
+    UpliftTableRequest,
 )
 from model_schema.refs import ArtifactRef
 from pricing_core.rate_tables.operations import (
@@ -152,6 +156,51 @@ class TestFormatValueIsFixedPoint:
         assert _cells(result) == [{"driver_age_band": "17-20", "relativity": "100"}]
 
 
+class TestFormatValueIsBoundedBeforeItIsBuilt:
+    """SL-2038 N1 (to-lead "2026-11-05 20:50:01 GMT"): fixed-point text grows with the exponent,
+    so `_format_value` refuses |adjusted exponent| > 308 (FR-21, FR-273: the engine carries
+    float64), zero's exponent included, BEFORE the text is built, with the cell code. A refusal
+    names the bound, never the value."""
+
+    @pytest.mark.req("FR-21")
+    @pytest.mark.parametrize(
+        "value",
+        [
+            Decimal("1E+309"),
+            Decimal("1E+999999"),
+            Decimal("-1E+309"),
+            Decimal("1E-309"),
+            Decimal("1E-999999"),
+            Decimal("0E-999999"),
+            Decimal("0E+309"),
+        ],
+    )
+    def test_a_magnitude_past_the_bound_is_refused_with_the_cell_code(self, value: Decimal) -> None:
+        with pytest.raises(ValueError, match=r"^RATE_TABLE_CELL_UNPARSEABLE: ") as refused:
+            _format_value(value)
+        message = str(refused.value)
+        assert message.startswith(f"{_CODE}: ")
+        assert "308" in message
+        assert len(message) < 300
+
+    @pytest.mark.req("FR-21")
+    def test_the_bound_itself_is_written(self) -> None:
+        assert _format_value(Decimal("1E+308")) == "1" + "0" * 308
+        assert _format_value(Decimal("1E-308")) == "0." + "0" * 307 + "1"
+        assert _format_value(Decimal("0E-308")) == "0"
+
+    @pytest.mark.req("FR-21")
+    def test_a_huge_percentage_is_refused_at_the_first_cell_not_after_every_row(self) -> None:
+        """Measured at cda3c0dc: 1E+999990 formatted every row (about 1 MB each) before
+        `_validate_result` saw one; 535 rows exhausted 512 MiB. The refusal is now per call."""
+        rows = [{"driver_age_band": f"b{i}", "relativity": "1.8400"} for i in range(50)]
+        base = _version(rows=rows, value=_value(min=None, max=None))
+        with pytest.raises(ValueError, match=r"^RATE_TABLE_CELL_UNPARSEABLE: ") as refused:
+            uplift_table(base, percentage=Decimal("1E+999990"))
+        assert str(refused.value).startswith(f"{_CODE}: ")
+        assert len(str(refused.value)) < 300
+
+
 _UNREADABLE = ["1E+2", "1.36E-7", ".5"]
 _CODE = "RATE_TABLE_CELL_UNPARSEABLE"
 
@@ -262,6 +311,37 @@ class TestFormatValueGoldens:
         for value in _golden_values():
             assert "E" not in _format_value(value).upper()
             assert Decimal(_format_value(value)) == value
+
+
+class TestFormatValueIsExact:
+    """`_format_value` writes the cell text, so it must not round to the ambient context's 28
+    digits: a value wider than that is written in full (SL-2038 / LG-2039, R2)."""
+
+    @pytest.mark.req("FR-234")
+    @pytest.mark.parametrize(
+        ("value", "written"),
+        [
+            ("1234567890123456789012345678901234.5678", "1234567890123456789012345678901234.5678"),
+            ("-0.12345678901234567890123456789012345", "-0.12345678901234567890123456789012345"),
+            ("1234567890123456789012345678901234.5000", "1234567890123456789012345678901234.5"),
+            ("12345678901234567890123456789012345E+3", "12345678901234567890123456789012345000"),
+            ("1E+40", "1" + "0" * 40),
+            ("0.000", "0"),
+            ("0E+5", "0"),
+        ],
+    )
+    def test_a_value_wider_than_the_ambient_precision_is_written_in_full(
+        self, value: str, written: str
+    ) -> None:
+        assert _format_value(Decimal(value)) == written
+        assert Decimal(_format_value(Decimal(value))) == Decimal(value)
+
+    @pytest.mark.req("FR-234")
+    def test_a_signaling_nan_still_raises_as_before(self) -> None:
+        """The exact form must not widen what passes: `sNaN` raised `InvalidOperation` at
+        e6d141ba (ambient traps), so it still does."""
+        with pytest.raises(InvalidOperation):
+            _format_value(Decimal("sNaN"))
 
 
 class TestDecideStorageMode:
@@ -711,3 +791,278 @@ class TestApplyCellEdits:
     def test_a_non_decimal_value_is_out_of_bounds_by_the_shared_check(self) -> None:
         result = apply_cell_edits(_version(), [self._edit("17-20", "abc")])
         assert [(i.index, i.code) for i in result.issues] == [(0, "OUT_OF_BOUNDS")]
+
+
+_OPERATIONS: dict[str, Callable[[RateTableVersion], RateTableVersion]] = {
+    "uplift_table": lambda t: uplift_table(t, percentage=Decimal("0.10")),
+    "uplift_by_filter": lambda t: uplift_by_filter(
+        t, percentage=Decimal("0.10"), filter={"driver_age_band": ["17-20"]}
+    ),
+    "rebase_to_level": lambda t: rebase_to_level(t, base_level={"driver_age_band": ["17-20"]}),
+    "floor_and_cap": lambda t: floor_and_cap(t, floor=Decimal("3"), cap=Decimal("6")),
+}
+
+#: FR-233's matrix, written out here on purpose: the code is checked against this literal.
+_REFUSED_CELLS = {
+    ("uplift_table", "count"),
+    ("uplift_by_filter", "count"),
+    ("rebase_to_level", "percentage"),
+    ("rebase_to_level", "money_minor"),
+    ("rebase_to_level", "count"),
+}
+_ALL_CELLS = [
+    (kind, value_type.value) for kind in _OPERATIONS for value_type in RateTableValueType
+]
+
+#: Cells 2, 4 and 8, after each operation.
+_EXPECTED = {
+    "uplift_table": ["2.2", "4.4", "8.8"],
+    "uplift_by_filter": ["2.2", "4", "8"],
+    "rebase_to_level": ["1", "2", "4"],
+    "floor_and_cap": ["3", "4", "6"],
+}
+
+
+def _typed(value_type: str) -> RateTableVersion:
+    return _version(
+        rows=[
+            {"driver_age_band": "17-20", "relativity": "2"},
+            {"driver_age_band": "21-24", "relativity": "4"},
+            {"driver_age_band": "25-29", "relativity": "8"},
+        ],
+        value=RateTableValue(
+            name="relativity", type=RateTableValueType(value_type), unit="u", min=None, max=None
+        ),
+    )
+
+
+class TestBulkOperationValueType:
+    @pytest.mark.req("FR-233")
+    @pytest.mark.parametrize(("kind", "value_type"), _ALL_CELLS)
+    def test_the_matrix(self, kind: str, value_type: str) -> None:
+        table = _typed(value_type)
+        operate = _OPERATIONS[kind]
+        if (kind, value_type) in _REFUSED_CELLS:
+            with pytest.raises(ValueError, match=r"^BULK_OPERATION_NOT_APPLICABLE: ") as refused:
+                operate(table)
+            text = str(refused.value)
+            assert kind in text
+            assert value_type in text
+            assert f"rate_table:{_SLUG}@{table.version}" in text
+        else:
+            result = operate(table)
+            assert [Decimal(c["relativity"]) for c in _cells(result)] == [
+                Decimal(v) for v in _EXPECTED[kind]
+            ]
+            assert result.version == table.version + 1
+            assert result.created_by_operation is not None
+            assert result.created_by_operation.kind == kind
+
+    @pytest.mark.req("FR-233")
+    def test_the_refusal_comes_before_the_filter_check(self) -> None:
+        with pytest.raises(ValueError, match=r"^BULK_OPERATION_NOT_APPLICABLE: "):
+            rebase_to_level(_typed("money_minor"), base_level={"no_such_key": ["x"]})
+
+    @pytest.mark.req("FR-233")
+    def test_the_refusal_comes_before_the_parquet_check(self) -> None:
+        table = _version(
+            storage=RateTableStorageMode.PARQUET,
+            value=RateTableValue(
+                name="relativity", type=RateTableValueType.COUNT, unit="u", min=None, max=None
+            ),
+        )
+        with pytest.raises(ValueError, match=r"^BULK_OPERATION_NOT_APPLICABLE: "):
+            uplift_table(table, percentage=Decimal("0.10"))
+
+
+def _round_once(exact: Fraction) -> Decimal:
+    """FR-2082's rule computed independently: exact rational, rounded half-even with integers
+    to the smaller of 28 significant digits and 28 decimal places."""
+    if exact == 0:
+        return Decimal(0)
+    magnitude = abs(exact)
+    adjusted = len(str(magnitude.numerator)) - len(str(magnitude.denominator))
+    if magnitude < Fraction(10) ** adjusted:
+        adjusted -= 1
+    exponent = max(-28, adjusted - 27)
+    scaled = magnitude / Fraction(10) ** exponent
+    quotient, remainder = divmod(scaled.numerator, scaled.denominator)
+    if 2 * remainder > scaled.denominator or (2 * remainder == scaled.denominator and quotient % 2):
+        quotient += 1
+    sign = 1 if exact < 0 else 0
+    return Decimal((sign, tuple(int(d) for d in str(quotient)), exponent))
+
+
+def _one_cell(value: str) -> RateTableVersion:
+    return _version(
+        rows=[{"driver_age_band": "17-20", "relativity": value}],
+        value=_value(min=None, max=None),
+    )
+
+
+_CALLER_CONTEXTS = (
+    (28, ROUND_HALF_EVEN),
+    (400, ROUND_HALF_EVEN),
+    (5, ROUND_HALF_EVEN),
+    (10, ROUND_DOWN),
+)
+
+
+class TestABulkOperationRoundsOnceInAStatedContext:
+    """FR-2082 (OQ-2035 option D, to-lead "2026-11-07 23:22:37 GMT"): the exact result, rounded
+    once, half-even, to the smaller of 28 significant digits and 28 decimal places, in a context
+    the operation states and never the caller's."""
+
+    @pytest.mark.req("FR-2082")
+    def test_a_rebase_below_one_tenth_is_stored_not_refused(self) -> None:
+        rows = [
+            {"driver_age_band": "17-20", "relativity": "0.05"},
+            {"driver_age_band": "21-24", "relativity": "1"},
+            {"driver_age_band": "25-29", "relativity": "1.5"},
+        ]
+        result = rebase_to_level(
+            _version(rows=rows, value=_value(min=None, max=None)),
+            base_level={"driver_age_band": ["25-29"]},
+        )
+        assert _cells(result) == [
+            {"driver_age_band": "17-20", "relativity": "0.0333333333333333333333333333"},
+            {"driver_age_band": "21-24", "relativity": "0.6666666666666666666666666667"},
+            {"driver_age_band": "25-29", "relativity": "1"},
+        ]
+
+    @pytest.mark.req("FR-2082")
+    def test_the_stored_text_does_not_depend_on_the_callers_context(self) -> None:
+        percentage = Decimal("0.123456789012345678901234567890")
+        expected = [{"driver_age_band": "17-20", "relativity": "3.370370367037037036703703704"}]
+        for prec, rounding in _CALLER_CONTEXTS:
+            with localcontext() as ambient:
+                ambient.prec = prec
+                ambient.rounding = rounding
+                assert _cells(uplift_table(_one_cell("3"), percentage=percentage)) == expected
+                assert (
+                    _cells(
+                        uplift_by_filter(
+                            _one_cell("3"),
+                            percentage=percentage,
+                            filter={"driver_age_band": ["17-20"]},
+                        )
+                    )
+                    == expected
+                )
+        for prec, rounding in _CALLER_CONTEXTS:
+            with localcontext() as ambient:
+                ambient.prec = prec
+                ambient.rounding = rounding
+                rebased = rebase_to_level(
+                    _version(
+                        rows=[
+                            {"driver_age_band": "17-20", "relativity": "0.1"},
+                            {"driver_age_band": "21-24", "relativity": "3"},
+                        ],
+                        value=_value(min=None, max=None),
+                    ),
+                    base_level={"driver_age_band": ["21-24"]},
+                )
+                assert _cells(rebased)[0]["relativity"] == "0.0333333333333333333333333333"
+
+    @pytest.mark.req("FR-2082")
+    def test_the_factor_is_not_rounded_before_the_product(self) -> None:
+        """DP-2, ruled (i): one rounding. Today rounds 1 + percentage to 28 digits first and
+        stores 2.240172837290617283729061729."""
+        result = uplift_table(
+            _one_cell("1.994"), percentage=Decimal("0.123456789012345678901234567890")
+        )
+        assert _cells(result)[0]["relativity"] == "2.240172837290617283729061728"
+
+    @pytest.mark.req("FR-2082")
+    def test_every_result_is_the_exact_result_rounded_once(self) -> None:
+        rng = random.Random(2035)
+        mismatches = []
+        for _ in range(2000):
+            digits = rng.randint(1, 20)
+            old = Decimal(rng.randint(1, 10**digits - 1)).scaleb(-rng.randint(digits, digits + 8))
+            if rng.random() < 0.5:
+                percentage = Decimal(rng.randint(0, 10**30)).scaleb(-rng.randint(2, 32))
+                got = _cells(uplift_table(_one_cell(format(old, "f")), percentage=percentage))
+                want = _round_once(Fraction(old) * (1 + Fraction(percentage)))
+            else:
+                reference = Decimal(rng.randint(1, 10**6)).scaleb(-rng.randint(0, 6))
+                table = _version(
+                    rows=[
+                        {"driver_age_band": "17-20", "relativity": format(old, "f")},
+                        {"driver_age_band": "21-24", "relativity": format(reference, "f")},
+                    ],
+                    value=_value(min=None, max=None),
+                )
+                got = _cells(rebase_to_level(table, base_level={"driver_age_band": ["21-24"]}))
+                want = _round_once(Fraction(old) / Fraction(reference))
+            if Decimal(got[0]["relativity"]) != want:
+                mismatches.append((old, got[0]["relativity"], want))
+        assert mismatches == []
+
+    @pytest.mark.req("FR-2082")
+    def test_a_money_minor_uplift_holds_the_fraction(self) -> None:
+        """The entry's (a): no rounding to whole minor units at the operation."""
+        table = _version(
+            rows=[{"driver_age_band": "17-20", "relativity": "12345"}],
+            value=RateTableValue(
+                name="relativity",
+                type=RateTableValueType.MONEY_MINOR,
+                unit="pence",
+                min=None,
+                max=None,
+            ),
+        )
+        result = uplift_table(table, percentage=Decimal("0.0375"))
+        assert _cells(result)[0]["relativity"] == "12807.9375"
+
+
+class TestTheRecordCarriesTheContext:
+    """FR-2082 (7), to-lead "2026-11-07 23:29:34 GMT": the recorded parameters name the context;
+    the operation writes it, a request cannot; a record from before reads as None."""
+
+    _CONTEXT = BulkOperationContext(precision=28, places=28, rounding="half_even", version=1)
+
+    @pytest.mark.req("FR-2082")
+    def test_each_computing_operation_records_its_context(self) -> None:
+        records = [
+            uplift_table(_version(), percentage=Decimal("0.10")).created_by_operation,
+            uplift_by_filter(
+                _version(),
+                percentage=Decimal("0.10"),
+                filter={"driver_age_band": ["17-20"]},
+            ).created_by_operation,
+            rebase_to_level(
+                _version(value=_value(min=None, max=None)),
+                base_level={"driver_age_band": ["25-29"]},
+            ).created_by_operation,
+        ]
+        for record in records:
+            assert record is not None
+            assert record.parameters.context == self._CONTEXT  # type: ignore[union-attr]
+
+    @pytest.mark.req("FR-2082")
+    def test_floor_and_cap_records_no_context(self) -> None:
+        record = floor_and_cap(
+            _version(), floor=Decimal("1.2"), cap=Decimal("1.5")
+        ).created_by_operation
+        assert record is not None
+        assert "context" not in record.parameters.model_dump()
+
+    @pytest.mark.req("FR-2082")
+    def test_a_request_cannot_send_the_context(self) -> None:
+        with pytest.raises(ValidationError, match=r"extra_forbidden|Extra inputs"):
+            UpliftTableRequest.model_validate(
+                {
+                    "kind": "uplift_table",
+                    "parameters": {"percentage": "0.10", "context": self._CONTEXT.model_dump()},
+                }
+            )
+
+    @pytest.mark.req("FR-2082")
+    def test_a_record_from_before_reads_as_no_context(self) -> None:
+        stored = uplift_table(_version(), percentage=Decimal("0.10")).model_dump(mode="json")
+        assert stored["created_by_operation"]["parameters"].pop("context") is not None
+        legacy = RateTableVersion.model_validate(stored)
+        assert legacy.created_by_operation is not None
+        assert legacy.created_by_operation.parameters.context is None  # type: ignore[union-attr]

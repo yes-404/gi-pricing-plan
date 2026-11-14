@@ -574,6 +574,8 @@ role grants.
 
 ## Verified
 
+2026-11-08 — The entries below name no tree; none was recorded (`CLAUDE.md` §13; skills-gap F5). Nothing here was re-verified.
+
 2026-08-23 — W32-3, dataset owner transfer. The `admin`-is-not-a-superset rule was found by a test that expected 200 for an Admin reassigning a dataset and got 403 from the route's `dataset:write` dependency; the `system`-principal ordering rule by a test that expected `VALIDATION_FAILED` and got `PERMISSION_DENIED`. Gate green both halves.
 
 2026-08-18 — WK-661, backtests. The refusal-ordering rule above was found by a test that expected the specific message and got the generic gate's. Gate green both halves at 1073 Python / 105 frontend.

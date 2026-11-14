@@ -68,6 +68,10 @@ Full gate at HEAD `466f85e6926bfb42c4b0e75f5704aaf0acc6e264` (tree `8eac9f851f8b
 
 The 13 pytest failures: `test_audit_docs_finding_citations` (1), `test_audit_docs_ids` (2), `test_audit_docs_process_core_digest` (2), `test_audit_docs_w37_11_ceiling` (1), `test_doc_index` (1), `test_register_lint` (3), `test_register_owed` (1), `test_repository_invariants` (2). None is own; the mint turn's rerun after the ids are minted must show them green.
 
+### Audit
+
+*(Dated line, 2026-11-09, docs batch 29, by the auditor, filed under FD-1655 (`to-lead` "2026-11-09 10:12:52 GMT" (1)). Written from this ledger's own red and green lines and the merge, read and not re-run; the merge is an ancestor of `origin/main` at `40ba57f4`. Source: `RS-1649`'s row for the slice. )* SL-1631, #1278 `fbde0f7049c83753eda67beb472cc3a11bc72fe9` (merged 2026-10-11T15:39:39+01:00). This ledger had no Audit section; this one is added. **Red then green:** the Gate table at `466f85e6926bfb42c4b0e75f5704aaf0acc6e264`: `red_a`, `red_b_http`, `red_c` rc 1 with `INPUT_CONTRACT_VIOLATION`, `red_e_b_unit` rc 1 with `AttributeError`, `red_d_guard` rc 0 as a guard that passes on base by design, `green` (whole `test_score.py`) rc 0. **Gate:** ruff, mypy, import-linter, req-coverage, contracts rc 0; audit-docs and pytest rc 1 as mint artefacts (13 failed, 5461 passed, 4 skipped); frontend rc 0. `RS-1649` records that the ledger's lines 2 and 3 were not written.
+
 ## PRs
 
 None yet.

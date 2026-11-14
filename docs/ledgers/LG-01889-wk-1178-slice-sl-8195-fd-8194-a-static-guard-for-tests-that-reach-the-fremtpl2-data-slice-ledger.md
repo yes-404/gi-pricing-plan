@@ -2,7 +2,7 @@
 id: LG-1889
 family: ledger
 title: WK-1178 slice SL-1888 — FD-1887, a static guard: every test that reaches the freMTPL2 data carries the data-present guard (slice ledger)
-status: active                 # active → closed (§1.2a)
+status: closed                 # active → closed (§1.2a)
 created: 2026-10-25   # drafted 2026-10-22 under working id 8196; minted 2026-10-25 as LG-1889
 owner: executor
 tree: d66ad2ed40ef150d8bc1d26f79ea33a2bbc2397b
@@ -126,3 +126,5 @@ The slice does not claim a guard that cannot miss; that claim is withdrawn. RS-1
 **Hardening is a decision for the maintainer and is not done here.** RS-1890 proposes H1 (recognise lowercase `fremtpl2` in a join, `Path(…)` and `os.path.join` inside a function; follow `import … as`) and H2 (require the guard's `.exists()` expression to name the data). If the limits above are accepted as recorded, neither needs a slice. This block changes the ledger's words only; `tests/test_fremtpl2_data_guard.py` is untouched.
 
 Dated 2026-10-25 (to-lead 2026-10-25 19:11:30 GMT): RS-1891 adopted CLEAN by the lead (RS-1890's B1/B2 landed at lines 90–124). The two hardening steps H1/H2 are owed before the P2 close, owner WK-1178 — the maintainer's 2026-10-23 12:02:21 BST ruling (2), recorded in FD-1887's essay; line 124's 'neither needs a slice' is read with it.
+
+*(Dated line, 2026-11-09, docs batch 27, by the executor, on to-lead "2026-11-09 10:00:22 GMT" item (4): this ledger's front matter reads `status: active` at origin/main `40ba57f4b320` while its slice SL-1888 reads `status: closed` in `docs/roadmap.md` there. The slice's code merged as #1385 (`8c4ec2be`, "test(data): a static guard for tests that reach the freMTPL2 data — FD-1887 (SL-1888) (#1385)"); its row was set `closed` by #1432 (`2f108b1e`, "docs: docs batch 10 — eleven + one WK-1178 slice closes, the gate and adoption lines, FD-1838 + FD-2001 closing acts, the SL-1736 + SL-1854 audits, process rows (#1432)"). Derived by the predicate: ledger front matter `status: active` and its `slice:` row reading `closed` in `docs/roadmap.md` at `40ba57f4b320`; 13 ledgers, LG-2003 (SL-1736) and LG-1977 (SL-1976) excluded as their slices read `active`. The front matter is flipped to `status: closed` in this batch, per to-lead "2026-11-09 10:28:26 GMT" (LEDGERS), so the record no longer says `active` for a closed slice.)*

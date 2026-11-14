@@ -1298,18 +1298,15 @@ class _Journey:
         # B3's other half: a quote dated before the reference row's `effective_from` does not use
         # it. The lookup has no row in force, so the quote is refused, not priced without it.
         # The LOOKUP misses here (no row is in force on that date; every rate table still hits),
-        # and the platform reports RATE_TABLE_MISS. That is CURRENT behaviour, asserted exactly:
-        # FD 9802 (D13, working, owner WK-1178): a reference-lookup miss in a step that also
-        # consumes a rate table is reported as RATE_TABLE_MISS (`score.py`
-        # `_reraise_engine_failure` orders tables first). When it is fixed, this assertion
-        # turns red and becomes REFERENCE_LOOKUP_MISS.
+        # and the platform reports REFERENCE_LOOKUP_MISS: the refusal names what missed, not what
+        # the step consumes (FD-1659, FR-255; it was RATE_TABLE_MISS before the fix).
         call(
             self.client,
             "B3",
             "POST",
             "/score",
             expect=422,
-            code="RATE_TABLE_MISS",
+            code="REFERENCE_LOOKUP_MISS",
             headers={"X-API-Key": account["key"]},
             json={**context, "effective_date": BEFORE_EFFECTIVE_FROM},
         )

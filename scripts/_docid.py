@@ -22,11 +22,34 @@ import importlib.util
 import re
 import sys
 import tomllib
+import types
 from collections.abc import Collection, Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
 from typing import Final
+
+
+def _load_table_rows() -> types.ModuleType:
+    """`table_rows.py` by path, the one table-row splitter (FD-1484).
+
+    By path because the docs gate runs under a bare `python3`, where importing `model_schema`
+    fails. `audit-docs.py` and `doc-index.py` read it as `_docid.table_rows`.
+    """
+    path = (
+        Path(__file__).resolve().parent.parent
+        / "packages" / "model-schema" / "src" / "model_schema" / "table_rows.py"
+    )
+    spec = importlib.util.spec_from_file_location("_table_rows", path)
+    assert spec is not None
+    assert spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+table_rows: Final = _load_table_rows()
 
 # RFC-937 §1.2a — five words, identical meaning in every family that uses a subset of them.
 STATUS_WORDS: Final = ("draft", "active", "closed", "retired", "superseded")
@@ -1608,7 +1631,7 @@ def load_w37_11_record(tree_root: Path) -> tuple[ResidueEntry, ...]:
         line = raw.strip()
         if not line.startswith("|") or not line.endswith("|"):
             continue
-        cells = [c.strip() for c in line.strip("|").split("|")]
+        cells = table_rows.split_row(line)
         if len(cells) != 5 or cells == ["path", "cls", "count", "reason", "owner"]:
             continue
         if set(cells[0]) <= {"-", " "}:  # the `| --- | --- | ... |` separator row

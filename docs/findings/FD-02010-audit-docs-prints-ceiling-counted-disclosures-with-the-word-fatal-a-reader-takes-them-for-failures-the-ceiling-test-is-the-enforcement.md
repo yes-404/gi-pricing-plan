@@ -31,3 +31,5 @@ The line numbers and tests above, read at the tree in the front matter; the coun
 ## Disposition
 
 Open, owner WK-1178, **fix before close with an owner** if a slice is free, else carried to P3 (the maintainer decides). Remedy, not made here: relabel the note so the pre-ceiling count reads "counted before the W37-11 ceiling" (or print the disclosed count only). The event that next discharges it: that relabel merging. Filed as working id 8367; minted FD-2010 in docs batch 11.
+
+***Dated line, 2026-11-09*** (docs batch 29, by the auditor). `to-lead` "2026-11-09 10:12:52 GMT" (3): the auditor's proposed owner accepted as a proposal: **P3-D**. The row's own terms are fix before close if a slice is free, else carry; no code after the freeze (P19 (a)), so the carry applies; a note relabel. P19 (a); `CR-2103` P25 makes P3-C and P3-D WK-1178's successors, and neither has a `### WK-` row yet, so this record is their owner until the rows exist.

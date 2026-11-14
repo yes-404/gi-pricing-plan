@@ -56,7 +56,7 @@ slot after S3's Task 7 (the lead's brief, small-test rule).
 
 ### Audit
 
-Not yet. The auditor writes it.
+*(Dated line, 2026-11-09, docs batch 29, by the auditor, filed under FD-1655 (`to-lead` "2026-11-09 10:12:52 GMT" (1)). Written from this ledger's own red and green lines and the merge, read and not re-run; the merge is an ancestor of `origin/main` at `40ba57f4`. Source: `RS-1649`'s row for the slice. )* SL-1557, #1271 `99f22479a20e7fa64f8b6654e0d371c595b1e35a` (merged 2026-10-10T23:44:16+01:00). **Red then green:** RED `-k algorithm_diff_response` rc 1 (`AssertionError` at `test_contracts.py:227`), GREEN `1 passed, 154 deselected`; gate-1 at `62b8f155` (22:12:44 to 23:01 BST), DB red-firsts 15 failed at main, with 2 further tests that are guards passing on main by design, and 17 passed at the branch. **Limb:** A24 is carried by CI by conclusion only: `RS-1649` records #1271's `python` log empty.
 
 ### Build log
 

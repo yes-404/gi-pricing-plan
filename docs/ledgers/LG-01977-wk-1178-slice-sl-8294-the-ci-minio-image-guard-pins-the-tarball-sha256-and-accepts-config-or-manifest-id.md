@@ -2,7 +2,7 @@
 id: LG-1977
 family: ledger
 title: WK-1178 slice SL-1976 — the CI MinIO image guard pins the tarball sha256 and accepts the config or the manifest Id (hotfix ledger)
-status: active                 # active → closed (§1.2a)
+status: closed                 # active → closed (§1.2a)
 created: 2026-11-03               # drafted 2026-11-03 under working id 8295
 owner: executor
 tree: a8ef6f19c0be1142b0ac9dea88086f1ce6f95cbe   # origin/main at the branch cut
@@ -80,3 +80,5 @@ FD-1975 (draft for the auditor's sign-off, `owner: auditor`) and its register ro
 ## PRs
 
 (None yet.)
+
+*(Dated line, 2026-11-09, docs batch 28, by the executor, on the lead's correction and the maintainer's "2026-11-09 10:28:26 GMT" ledger rule (a ledger reading `active` for a closed slice is the defect; common seat brief item 42): front matter `status` flipped from `active` to `closed`. SL-1976 closed the same day (roadmap dated line); PR #1417 merged as squash `5a9e47c5d72bb9e7e03438b93fbf269c8015322c`, and FD-1975 was closed in place on 2026-11-03.)*

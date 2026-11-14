@@ -2,12 +2,12 @@
 id: FD-1749
 family: finding
 title: The pre_migration_root test fixture adds a git worktree to the real repository and ignores the exit of its removal, so an interrupted run leaves a stale admin entry in the shared .git
-status: active
+status: closed
 created: 2026-10-17 # original date 2026-10-16, set at the filing; minted 2026-10-17
 owner: auditor
 tree: a2f77b2dcad5aaec41a5f10aa664383caf421e8b
 corrected_by: []
-relates: [WK-1178]
+relates: [WK-1178, SL-2048, LG-2049, PL-2047]
 ---
 
 # FD-1749 — `tests/test_doc_id_migrate.py::pre_migration_root` runs `git worktree add` against the real repository, and its teardown cannot fail loudly
@@ -29,7 +29,7 @@ shared `.git` that `git worktree prune` removes, not a wrong result. Owner WK-11
 The session-scoped fixture `pre_migration_root` (`tests/test_doc_id_migrate.py:159-194`) runs
 `git worktree add --detach <tmp>/worktree fbb5555b…` with `cwd=ROOT` (`:183-186`), that is
 against the **real repository**, and not against a clone of it. `git worktree add` writes an
-administrative directory `.git/worktrees/<name>/` into the shared `.git`. The teardown (`:189-194`)
+administrative directory `.git/worktrees/NAME/` into the shared `.git`. The teardown (`:189-194`)
 runs `git worktree remove --force` with **`check=False`** and `capture_output=True` (`:190-192`),
 so a non-zero exit is neither raised nor printed, and then `shutil.rmtree(tmp, ignore_errors=True)`
 (`:194`) deletes the temporary directory whatever the removal did. If the removal does not
@@ -93,7 +93,7 @@ Two facts decide the reading. First, `/tmp` on this machine is a `tmpfs`
 (`df /tmp` prints `tmpfs`) and the machine booted on 2026-10-16 08:13:04 (`uptime -s`), after
 both entries were made on 2026-10-14. So the absence of `/tmp/pre-migration-root-*` today proves
 nothing about what the teardown did: a reboot empties it. Second, the entries exist at all.
-If `git worktree remove --force` had succeeded, it would have deleted `.git/worktrees/<name>/`.
+If `git worktree remove --force` had succeeded, it would have deleted `.git/worktrees/NAME/`.
 So on both runs the removal either **failed with an exit that `check=False` discarded**, or
 **never ran** (a killed or timed-out pytest does not run a `finally`). This audit cannot say which
 of the two happened on 14 Oct, and does not claim to: the output of those runs was not kept.
@@ -147,7 +147,7 @@ Two remedies satisfy it. Either is acceptable; the slice records which it chose 
 
 **Creation date, recorded as already corrected.** The maintainer's entry "2026-10-16 10:30:57
 BST" withdraws the date "2026-10-16" given in its 10:26:42 entry: it was read from `ls -ld` on
-`.git/worktrees/<name>`, which is the directory's modification time. The two entries were created
+`.git/worktrees/NAME`, which is the directory's modification time. The two entries were created
 on 14 Oct, as Evidence 1 above already records from the `gitdir` files' birth times (10:43:49 UTC
 and 12:02:51 UTC). The ruling is unchanged: prune after SL-1455's END, plus this LOW finding.
 
@@ -167,3 +167,6 @@ clears the two entries read here, and `git worktree prune -n` printing nothing i
 **Not in this finding.** The pruning itself (the lead's, after GATE END), any change to
 `_PRE_MIGRATION_SHA` or to what the four tests assert, and the other worktrees under
 `.claude/worktrees/` (which `git worktree list` reports as live).
+
+***Resolved 2026-11-06*** — closed in place 2026-11-06 by the auditor, as the closing act of the audit of SL-2048 (WK-1178, LG-2049, PL-2047; this PR; its number, squash commit and merge date are written at the merge's date-of-record), on the lead's brief under the GO "2026-11-05 10:31:31 GMT" (plans C and H accepted, DP-H1 to DP-H5 ruled; `to-lead.md`, a local channel file), on the order of "2026-11-05 09:58:58 GMT". Delivered remedy: DP-H5 (a), the essay's remedy 1. The teardown of `pre_migration_root` (`tests/test_doc_id_migrate.py`) is extracted to `_remove_worktree(repo, worktree, tmp)`: `git worktree remove --force` runs with `check=True`, `shutil.rmtree(tmp, ignore_errors=True)` in an inner `finally`, so a failed removal raises `CalledProcessError` out of the fixture and the temporary directory is still deleted. No prune was added (`git diff origin/main...HEAD -- tests/test_doc_id_migrate.py | grep -ci prune` prints `0`). Red first: `626cb503`, a mutation proof (left at `check=False`): `Failed: DID NOT RAISE CalledProcessError`, `1 failed, 305 passed`; green `3e1fc07b`, `306 passed in 153.69s`; the audit repeated the mutation on the head and got the same `DID NOT RAISE`. The essay's own limit stands: a process killed before the `finally` still leaves an admin entry; the teardown makes the first failure visible, not the second (remedy 1's stated cost). At the audit (2026-11-05) no stale `.git/worktrees` registration existed (read-only check of each `gitdir` target; nothing pruned). Gate evidence: the gate: pytest `13 failed, 7224 passed, 27 skipped, 5 xfailed in 4949.99s` alone, the 13 being the item-31 docs-audit set, every other python and frontend stage rc 0, demo seeded rc 0 (LG-2049).
+

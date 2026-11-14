@@ -35,6 +35,7 @@ from model_schema import (
     RuleOutcome,
     ScopeType,
     ValidationReport,
+    ValidationReportView,
 )
 
 __all__ = [
@@ -174,7 +175,7 @@ async def acknowledgements_for(
 
 async def load_report_view(
     session: AsyncSession, *, workspace_id: UUID, report_id: UUID
-) -> ValidationReport:
+) -> ValidationReportView:
     """The report **as presented**, with its acknowledgements merged in.
 
     Distinct from `load_report`, which returns the stored artifact verbatim and must keep
@@ -186,23 +187,26 @@ async def load_report_view(
     warnings are outstanding but not **which** — and "warnings needing acknowledgement" is
     a band `01` §5.3 requires the validation view to render above the fold. With one
     warning a client could infer it; with three it cannot.
+
+    It carries `01` §4.6's outcome, `overall` and `counts`, derived from the results and
+    never stored: the stored body is `ValidationReport`, which has neither key.
     """
     report = await load_report(session, workspace_id=workspace_id, report_id=report_id)
     acknowledged = await acknowledgements_for(
         session, workspace_id=workspace_id, report_id=report_id
     )
-    if not acknowledged:
-        return report
-    return report.model_copy(
-        update={
-            "results": tuple(
-                result.model_copy(update={"acknowledgement": acknowledged[result.rule_id]})
-                if result.rule_id in acknowledged
-                else result
-                for result in report.results
-            )
-        }
-    )
+    if acknowledged:
+        report = report.model_copy(
+            update={
+                "results": tuple(
+                    result.model_copy(update={"acknowledgement": acknowledged[result.rule_id]})
+                    if result.rule_id in acknowledged
+                    else result
+                    for result in report.results
+                )
+            }
+        )
+    return ValidationReportView.of(report)
 
 
 async def reports_for_version(

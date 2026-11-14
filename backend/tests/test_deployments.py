@@ -11,6 +11,8 @@ would change it for every later test; none does.
 
 from __future__ import annotations
 
+import json
+import pathlib
 from typing import Any
 from uuid import UUID, uuid4
 
@@ -35,7 +37,28 @@ from app.db.models import (
 from app.db.session import Database
 from model_schema import DEFAULT_POLICY, EVIDENCE_FLOOR, new_uuid7
 
-_HASH = "sha256:" + "a" * 64
+#: A real, loadable compiled bundle (WK-2113 S3, ruling 2026-11-13 21:23:21 (3)): deploy, request
+#: and rollback now re-validate the stored bundle, and a hash with no readable blob is refused. The
+#: fixture is `fixtures/stored_bundles/clean.bundle.json`; `_HASH` is its own content hash.
+_CLEAN_BUNDLE = pathlib.Path(__file__).parent / "fixtures" / "stored_bundles" / "clean.bundle.json"
+_HASH = json.loads(_CLEAN_BUNDLE.read_text())["content_hash"]
+
+
+async def _compiled_metadata(session: AsyncSession) -> dict[str, str]:
+    """`row.bundle` for a version compiled to the clean fixture: its hash and a stored blob."""
+    from backend.tests.conftest_db import test_blob_bucket
+
+    from app.platform.blobs import BlobStore
+
+    store = BlobStore(Settings(blob_bucket=test_blob_bucket()))
+    await store.ensure_bucket()
+    ref = await store.put(session, _CLEAN_BUNDLE.read_bytes(), "application/json")
+    return {
+        "content_hash": _HASH,
+        "bytes": len(_CLEAN_BUNDLE.read_bytes()),
+        "compiled_at": "2026-11-13T00:00:00+00:00",
+        "blob_sha256": ref.sha256,
+    }
 
 
 @pytest.fixture
@@ -101,7 +124,7 @@ async def approved_version(
                 dataset_version_id=uuid4(),
                 model_ref="model:motor-ad-frequency@7",
                 created_by=author,
-                bundle={"content_hash": _HASH} if compiled else None,
+                bundle=await _compiled_metadata(session) if compiled else None,
             ),
         )
     return f"rating_version:{slug}@1"

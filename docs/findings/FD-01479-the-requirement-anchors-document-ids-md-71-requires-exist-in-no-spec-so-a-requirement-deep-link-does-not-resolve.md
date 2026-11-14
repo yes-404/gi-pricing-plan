@@ -96,3 +96,5 @@ paragraph and leaves deep links unavailable. The choice is the lead's; if it is 
 choice between the two, `CLAUDE.md` §0 sends it to `docs/open-questions.md`.
 
 **Disposition:** `fix before close with an owner: WK-1178`, severity and owner ruled as above; the lead gives the verdict at the mint. The remedy choice above is not made here.
+
+***Dated line, 2026-11-09*** (docs batch 29, by the auditor). `to-lead` "2026-11-09 10:12:52 GMT" (2): **CARRIED to P3-D**, P19 (a); `CR-2103` P25 makes P3-C and P3-D WK-1178's successors, and neither has a `### WK-` row yet, so this record is their owner until the rows exist; off the demo path. `document-ids.md:71` is unchanged, `git grep -c '<a id="fr-' -- docs/specs` finds 0, and remedy A or B is unpicked. Read at `40ba57f4`.

@@ -224,8 +224,12 @@ from pricing_core.rating.ladder import (
     rung_output_name,
 )
 from pricing_core.rating.runtime import (
+    CELL_GUARD_PREFIX,
+    MISS_GUARD_PREFIX,
     MODEL_CALL_ERROR_KEY,
+    UNPARSEABLE_CELL,
     CompiledBundle,
+    PurposeEvaluation,
     clamp_keys,
     exact_key,
 )
@@ -237,8 +241,11 @@ __all__ = ["build_scoring_result", "score_batch", "score_one"]
 #: other rung as `none` (see `_build_ladder`).
 _MULTIPLY_RUNGS = frozenset(
     {
-        "expense_loading", "commission", "profit_loading",
-        "optimisation_adjustment", "instalment_loading",
+        "expense_loading",
+        "commission",
+        "profit_loading",
+        "optimisation_adjustment",
+        "instalment_loading",
     }
 )
 
@@ -251,7 +258,11 @@ _BILLING_SURFACE_KEYS = frozenset(
 )
 
 _ELAPSED_UNITS: tuple[tuple[str, float], ...] = (
-    ("µs", 1.0), ("us", 1.0), ("ms", 1_000.0), ("ns", 0.001), ("s", 1_000_000.0),
+    ("µs", 1.0),
+    ("us", 1.0),
+    ("ms", 1_000.0),
+    ("ns", 0.001),
+    ("s", 1_000_000.0),
 )
 
 #: `score_batch`'s own frame contract (module docstring, "What `score_batch` is"). Every
@@ -324,33 +335,73 @@ def _as_decimal(value: Any) -> Decimal:
     return value if isinstance(value, Decimal) else Decimal(str(value))
 
 
+#: The limits of the decimal the engine builds from a float (measured at SL 2118 round 3, and
+#: pinned by `test_rating_score_engine_decimal_limits.py`, which turns red if a dependency
+#: upgrade moves either): a scale of at most 28 digits after the point, and a magnitude below
+#: 2**96 (a 96-bit decimal). A float outside either fails inside the engine as a 500.
+_ENGINE_DECIMAL_MAX_SCALE = 28
+_ENGINE_DECIMAL_CEILING = 2**96
+
+
+def _engine_decimal_holds(as_float: float) -> bool:
+    """Whether the engine's decimal can hold `as_float` (finite): the scale of its shortest
+    round-trip text, `repr`, which is what the engine reads, is within the limit, and its
+    magnitude is below the ceiling. Zero, signed or not, is held; a subnormal is not (its
+    scale is 324 or more)."""
+    scale = -int(Decimal(repr(as_float)).as_tuple().exponent)  # finite: an int exponent
+    return scale <= _ENGINE_DECIMAL_MAX_SCALE and abs(as_float) < _ENGINE_DECIMAL_CEILING
+
+
+def decimals_as_floats(value: Any, path: str) -> Any:
+    """`value` with every `Decimal` in it, however nested, as the `float` the engine's wire
+    carries (FR-273), at the one place that crossing happens.
+
+    The crossing is checked lossless, `Decimal(repr(float(d))) == d`, and the float must be
+    one the engine's decimal can hold (`_engine_decimal_holds`); a `Decimal` that fails either
+    (more than about 15 significant digits, a magnitude that underflows to zero, is subnormal
+    or has a scale above 28, or reaches 2**96 or infinity) is refused by name with
+    `INPUT_CONTRACT_VIOLATION`, never rounded. `path` names the value (`extra_list[1].a`) and
+    the message never echoes it (NFR-499). A float, an integer and any non-numeric value are
+    returned as they are."""
+    if isinstance(value, Decimal):
+        as_float = float(value)
+        if (
+            not math.isfinite(as_float)
+            or Decimal(repr(as_float)) != value
+            or not _engine_decimal_holds(as_float)
+        ):
+            _raise_named(
+                "INPUT_CONTRACT_VIOLATION",
+                f"input {path!r} is not exactly representable as a finite float within the "
+                f"engine's decimal range (FR-273)",
+            )
+        return as_float
+    if isinstance(value, list):
+        return [decimals_as_floats(v, f"{path}[{i}]") for i, v in enumerate(value)]
+    if isinstance(value, dict):
+        return {k: decimals_as_floats(v, f"{path}.{k}") for k, v in value.items()}
+    return value
+
+
 def _engine_context(algorithm: RatingAlgorithm, ctx: QuoteContext) -> dict[str, Any]:
-    """The mapping the engine evaluates: the quote's inputs, with each `Decimal` in a
-    `decimal`-declared input crossed as the `float` the JSON path delivers (FR-273).
+    """The mapping the engine evaluates: the quote's inputs with every `Decimal` in them,
+    declared or not, nested or not, crossed as the `float` the JSON path delivers
+    (`decimals_as_floats`, FR-273).
 
     The binding refuses a `Decimal` (`TypeError`), so a non-money `decimal` input is the one
     value that crosses as a float; money stays integer minor units and is never converted. The
-    crossing is checked lossless, `Decimal(repr(float(d))) == d`, and a value that fails it
-    (more than about 15 significant digits, NaN, infinity) is refused by name, never rounded.
-    The message names the input, never its value (NFR-499)."""
-    decimal_inputs = {
-        f.name for f in algorithm.input_contract if f.type == RatingInputType.DECIMAL
-    }
-    inputs = dict(ctx.inputs)
+    guard covers an undeclared key too (SL 2118 question (a)): an `input` step may read a key
+    the input contract never declares, so a key no step reads is refused as well, stricter than
+    needed. A declared `decimal` input that is a `float` must also be finite."""
+    decimal_inputs = {f.name for f in algorithm.input_contract if f.type == RatingInputType.DECIMAL}
+    inputs = {k: decimals_as_floats(v, k) for k, v in ctx.inputs.items()}
     for name in decimal_inputs & inputs.keys():
         value = inputs[name]
-        if isinstance(value, (Decimal, float)):
-            as_float = float(value)
-            # A float is already what crosses, so only finiteness can fail; a Decimal must
-            # also round-trip.
-            if not math.isfinite(as_float) or (
-                isinstance(value, Decimal) and Decimal(repr(as_float)) != value
-            ):
-                _raise_named(
-                    "INPUT_CONTRACT_VIOLATION",
-                    f"input {name!r} is not exactly representable as a finite float (FR-273)",
-                )
-            inputs[name] = as_float
+        if isinstance(value, float) and not math.isfinite(value):
+            _raise_named(
+                "INPUT_CONTRACT_VIOLATION",
+                f"input {name!r} is not exactly representable as a finite float (FR-273)",
+            )
     return {"effective_date": ctx.effective_date.isoformat(), "purpose": ctx.purpose, **inputs}
 
 
@@ -393,9 +444,7 @@ def _validate_inputs(algorithm: RatingAlgorithm, inputs: Mapping[str, Any]) -> N
                     f"input {field.name!r} does not match {field.pattern!r}",
                 )
         elif field.type == RatingInputType.DATE and not isinstance(value, str):
-            _raise_named(
-                "INPUT_CONTRACT_VIOLATION", f"input {field.name!r} must be a date string"
-            )
+            _raise_named("INPUT_CONTRACT_VIOLATION", f"input {field.name!r} must be a date string")
         elif (
             field.type == RatingInputType.ENUM
             and field.domain is not None
@@ -514,6 +563,23 @@ def _check_model_call_sentinel(result: Mapping[str, Any]) -> None:
         raise CodedError(str(result[MODEL_CALL_ERROR_KEY]))
 
 
+def _check_unparseable_cells(algorithm: RatingAlgorithm, result: Mapping[str, Any]) -> None:
+    """A rate-table cell the engine cannot parse is a hard error, on every `on_miss` (FD-1648
+    (b), FD-1478; FR-255). `to_wire` writes such a cell as `UNPARSEABLE_CELL`, so the output
+    exists where the engine would omit it, and it reaches `result` whether or not anything
+    consumes it or tolerates it. Runs before `_check_lookup_misses`: a bad cell is not a miss.
+    A message names the step, never the value or the quote."""
+    for step in algorithm.steps:
+        if isinstance(step, RatingTableStep) and any(
+            result.get(str(name)) == UNPARSEABLE_CELL for name in _as_list(step.produces)
+        ):
+            _raise_named(
+                "RATE_TABLE_CELL_UNPARSEABLE",
+                f"table step {step.step_id!r} matched a stored cell the rating engine cannot "
+                "read (FR-255)",
+            )
+
+
 def _check_lookup_misses(algorithm: RatingAlgorithm, result: Mapping[str, Any]) -> None:
     """FR-255 categories 2/3: a `table`/`lookup` step with `on_miss="error"` whose
     `produces` name did not survive evaluation found no matching row — verified live
@@ -547,7 +613,9 @@ def _failing_node(exc: RuntimeError) -> str | None:
     return node if isinstance(node, str) else None
 
 
-def _reraise_engine_failure(algorithm: RatingAlgorithm, exc: RuntimeError) -> NoReturn:
+def _reraise_engine_failure(
+    evaluation: PurposeEvaluation, context: Mapping[str, Any], exc: RuntimeError
+) -> NoReturn:
     """A finding, not merely a fallback: a `table`/`lookup` miss whose `produces` name is
     then referenced by a downstream step crashes `async_evaluate()` itself (the engine's
     own "undefined variable" `NodeError`) **before any `result` is returned**, so
@@ -555,47 +623,40 @@ def _reraise_engine_failure(algorithm: RatingAlgorithm, exc: RuntimeError) -> No
     verified live, reproduced by this module's own test suite. `model_call` failures no
     longer reach here at all (they are sentinelled — see the module docstring).
 
-    **Which code (RL-1313 DP-G4).** The engine's error is JSON and its `nodeId` is the
-    failing step's id, for an expression, a condition and a clamp bound alike. A miss code is
-    reported only when that step *directly consumes* the output of an `on_miss="error"`
-    `table` (`RATE_TABLE_MISS`) or `lookup` (`REFERENCE_LOOKUP_MISS`) step. Any other
-    engine failure — including one whose `nodeId` is missing or unparseable, and the former
-    bare re-raise — is `RATING_EVALUATION_FAILED`, so no untyped `RuntimeError` escapes
-    (FR-255).
-
-    **The stated limit, pinned by `test_the_stated_residual_still_reports_the_miss_code`.**
-    A failing step that itself directly consumes such an output, and fails for another reason,
-    still reports the miss code: the engine's error has the same shape in both cases. That is
-    a wrong diagnosis on a refused quote, never a silent price. Closing it needs the
-    wire-level change that would make the translation itself fail gracefully, which is outside
-    this function.
+    **Which code (FD-1659, FD-1478; FR-255).** The engine's error is JSON and its `nodeId` is
+    the failing step's id, which cannot tell a miss from any other failure of a step that
+    consumes the output: the engine's error has the same shape in both. So the quote is
+    re-run through the diagnostic decision (`evaluation.diagnose`), which carries a guard node
+    after each table or lookup, and the guard's own id says what failed: an unparseable cell
+    (`RATE_TABLE_CELL_UNPARSEABLE`), or a miss of an `on_miss="error"` step
+    (`RATE_TABLE_MISS` / `REFERENCE_LOOKUP_MISS`, for *that* step). Anything else, including
+    no guard firing and a failure with no `nodeId`, is `RATING_EVALUATION_FAILED`, so no
+    untyped `RuntimeError` escapes. The live decision has no guards: a node per table on every
+    quote would sit after the NFR-489 readings, and a quote that scores pays nothing (DP-R1).
     """
-    node = _failing_node(exc)
+    algorithm = evaluation.algorithm
+    diagnosed = evaluation.diagnose(context)
+    guard = _failing_node(diagnosed) if diagnosed is not None else None
+    guarded_step = None
+    code = "RATING_EVALUATION_FAILED"
+    if guard is not None and guard.startswith(CELL_GUARD_PREFIX):
+        guarded_step = guard[len(CELL_GUARD_PREFIX) :]
+        code = "RATE_TABLE_CELL_UNPARSEABLE"
+    elif guard is not None and guard.startswith(MISS_GUARD_PREFIX):
+        guarded_step = guard[len(MISS_GUARD_PREFIX) :]
+        missed = next((s for s in algorithm.steps if s.step_id == guarded_step), None)
+        code = "RATE_TABLE_MISS" if isinstance(missed, RatingTableStep) else "REFERENCE_LOOKUP_MISS"
+    node = guarded_step or _failing_node(exc)
     step = next((s for s in algorithm.steps if s.step_id == node), None)
-    consumed = set(_as_list(step.consumes)) if step is not None else set()
-
-    tables = [s for s in algorithm.steps if isinstance(s, RatingTableStep) and s.on_miss == "error"]
-    lookups = [
-        s for s in algorithm.steps if isinstance(s, RatingLookupStep) and s.on_miss == "error"
-    ]
-
-    def consumes_output_of(steps: Sequence[RatingTableStep | RatingLookupStep]) -> bool:
-        return any(consumed & set(_as_list(s.produces)) for s in steps)
-
-    if consumes_output_of(tables):
-        code = "RATE_TABLE_MISS"
-    elif consumes_output_of(lookups):
-        code = "REFERENCE_LOOKUP_MISS"
-    else:
-        code = "RATING_EVALUATION_FAILED"
     _raise_named(
         code,
         f"the engine failed evaluating step {step.step_id if step else None!r} (FR-255); "
-        + (
-            "an on_miss='error' step it consumes most likely found no matching row"
-            if code != "RATING_EVALUATION_FAILED"
-            else "the failure is not a table or lookup miss"
-        )
+        + {
+            "RATE_TABLE_CELL_UNPARSEABLE": "it matched a stored cell the rating engine cannot read",
+            "RATE_TABLE_MISS": "the step found no matching row",
+            "REFERENCE_LOOKUP_MISS": "the step found no matching row",
+            "RATING_EVALUATION_FAILED": "the failure is not a table or lookup miss",
+        }[code]
         + f"; the engine error was a {type(exc).__name__}",
     )
 
@@ -734,9 +795,7 @@ def _ladder_inputs(
     )
 
 
-def _build_ladder(
-    inputs: LadderInputs, clamp_reason_codes: Sequence[str]
-) -> list[LadderRung]:
+def _build_ladder(inputs: LadderInputs, clamp_reason_codes: Sequence[str]) -> list[LadderRung]:
     """The Premium Ladder (`RL-1329` §2): each rung carries the engine's exact unrounded
     value, the operation it applied (recovered from two unrounded values), and its own
     value rounded **once**. A displayed value is never computed from another rung's."""
@@ -961,6 +1020,7 @@ def build_scoring_result(
     # (`RL-1628` condition 1), so a clamp inside a purpose mount is in the ladder.
     algorithm = bundle.evaluation_for(ctx.purpose).algorithm
     _check_model_call_sentinel(result)
+    _check_unparseable_cells(algorithm, result)
     _check_lookup_misses(algorithm, result)
     decline_reasons, clamp_reason_codes = _apply_constraints(algorithm, result)
 
@@ -976,7 +1036,10 @@ def build_scoring_result(
     trace_obj: Trace | None = None
     if engine_trace is not None:
         trace_obj = _build_trace(
-            algorithm, engine_trace, rating_version_ref, bundle.content_hash,
+            algorithm,
+            engine_trace,
+            rating_version_ref,
+            bundle.content_hash,
             ctx.quote_id,
         )
 
@@ -1036,11 +1099,15 @@ async def score_one(
     try:
         out = await evaluation.decision.async_evaluate(context, {"trace": trace})
     except RuntimeError as exc:
-        _reraise_engine_failure(algorithm, exc)
+        _reraise_engine_failure(evaluation, context, exc)
     eval_ms = (time.perf_counter() - t_eval) * 1000
 
     scored = build_scoring_result(
-        bundle, ctx, rating_version_ref, out["result"], out.get("trace") if trace else None,
+        bundle,
+        ctx,
+        rating_version_ref,
+        out["result"],
+        out.get("trace") if trace else None,
     )
     total_ms = (time.perf_counter() - t_start) * 1000
     return scored.model_copy(update={"timing_ms": {"total": total_ms, "evaluate": eval_ms}})
@@ -1117,15 +1184,12 @@ def _coerce_output_value(declared_type: str, value: Any) -> int | str | bool:
         return value
     if declared_type == "bool":
         if not isinstance(value, bool):
-            raise ValueError(
-                f"score_batch: a bool output must be bool, got {type(value).__name__}"
-            )
+            raise ValueError(f"score_batch: a bool output must be bool, got {type(value).__name__}")
         return value
     if declared_type in ("string", "date"):
         if not isinstance(value, str):
             raise ValueError(
-                f"score_batch: a {declared_type} output must be str, "
-                f"got {type(value).__name__}"
+                f"score_batch: a {declared_type} output must be str, got {type(value).__name__}"
             )
         return value
     raise AssertionError(f"unreachable: {declared_type!r} is in _KNOWN_OUTPUT_TYPES with no branch")
@@ -1213,11 +1277,13 @@ def _score_context_sync(
     context = _engine_context(algorithm, ctx)
     _check_as_at_values(algorithm, context)
     try:
-        out = evaluation.decision.evaluate(context, {"trace": trace}) if trace else (
-            evaluation.decision.evaluate(context)
+        out = (
+            evaluation.decision.evaluate(context, {"trace": trace})
+            if trace
+            else (evaluation.decision.evaluate(context))
         )
     except RuntimeError as exc:
-        _reraise_engine_failure(algorithm, exc)
+        _reraise_engine_failure(evaluation, context, exc)
 
     return build_scoring_result(
         bundle, ctx, rating_version_ref, out["result"], out.get("trace") if trace else None
@@ -1348,8 +1414,10 @@ def score_batch(
 
         if progress is not None:
             progress.update(
-                rows_done / total_rows, "scoring",
-                rows_scored=rows_done, chunk_index=chunk_index,
+                rows_done / total_rows,
+                "scoring",
+                rows_scored=rows_done,
+                chunk_index=chunk_index,
             )
 
     return pl.concat(scored_chunks).lazy()

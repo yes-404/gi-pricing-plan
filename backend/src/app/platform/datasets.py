@@ -1042,6 +1042,7 @@ async def purge_subject(
                 DatasetVersionRow.workspace_id == workspace_id,
                 DatasetVersionRow.dataset_id == dataset_id,
             )
+            .order_by(DatasetVersionRow.version)
         )
     ).scalars().all()
 
@@ -1063,6 +1064,7 @@ async def purge_subject(
         source=JobSource.API,
         action="dataset.subject_purged",
         entity_ref=f"dataset:{dataset_id}@1",
+        before={"versions": [{"id": str(v.id), "status": v.status} for v in versions]},
         after={"subject_token": subject_token, "versions_affected": len(versions)},
         justification=reason,
     )

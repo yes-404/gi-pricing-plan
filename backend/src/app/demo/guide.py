@@ -31,6 +31,7 @@ from model_schema import (
     DemoView,
     DemoWorkstream,
 )
+from model_schema.table_rows import endpoint_row, split_row
 
 __all__ = ["GuideSourceMissingError", "build_guide", "repository_root"]
 
@@ -57,11 +58,6 @@ _STATUS_TABLE = re.compile(r"^#### (Phase [0-9a-z]+) status\s*$")
 #: by seeing two phases out of five.
 _PHASE_HEADING = re.compile(r"^#{2,3} (?:\d+\. )?(Phase [0-9a-z]+) — (.+?)\s*$")
 _BLOCK_COMMENT = re.compile(r"/\*.*?\*/", re.DOTALL)
-#: `| `GET`/`PUT` | `/api/v1/datasets` | … |` — a spec's §5.1 interface table. Duplicated
-#: from `scripts/scope-audit.py` rather than shared: that is a script and this is the
-#: application, and neither may import the other. Two readers of one table is a smell; a
-#: backend importing from `scripts/` would be worse.
-_SPEC_ENDPOINT = re.compile(r"^\|\s*`?([A-Z]+(?:`?/`?[A-Z]+)*)`?\s*\|([^|]+)\|")
 _PATH_IN_CELL = re.compile(r"`([^`]+)`")
 
 
@@ -81,10 +77,6 @@ def repository_root() -> Path:
     `dev_auth_enabled`).
     """
     return Path(__file__).resolve().parents[4]
-
-
-def _cells(line: str) -> list[str]:
-    return [cell.strip() for cell in line.strip().strip("|").split("|")]
 
 
 def _strip_markdown(text: str) -> str:
@@ -111,7 +103,7 @@ def _spec_views(spec: Path) -> list[tuple[str, str, str]]:
         match = _TABLE_ROW.match(line)
         if not match:
             continue
-        cells = _cells(line)
+        cells = split_row(line)
         if len(cells) < 3 or cells[0] == "View" or set(cells[0]) <= {"-", ":"}:
             continue
         route = _ROUTE_IN_BACKTICKS.search(cells[1])
@@ -218,13 +210,13 @@ def _unpublished(root: Path) -> tuple[DemoEndpoint, ...]:
         if module is None:
             continue
         for line in spec.read_text(encoding="utf-8").splitlines():
-            match = _SPEC_ENDPOINT.match(line)
-            if not match:
+            row = endpoint_row(line)
+            if row is None:
                 continue
-            for path in _PATH_IN_CELL.findall(match.group(2)):
+            for path in _PATH_IN_CELL.findall(row[1]):
                 if not path.startswith("/"):
                     continue
-                for method in re.split(r"`?/`?", match.group(1)):
+                for method in re.split(r"`?/`?", row[0]):
                     key = (method.strip("`"), _normalise_path(path))
                     if key not in published:
                         missing.append(
@@ -267,7 +259,7 @@ def _workstreams(root: Path) -> tuple[DemoWorkstream, ...]:
             continue
         if not _TABLE_ROW.match(line):
             continue
-        cells = _cells(line)
+        cells = split_row(line)
         if len(cells) < 3 or cells[0] == "WS" or set(cells[0]) <= {"-", ":"}:
             continue
         status = _strip_markdown(cells[2])

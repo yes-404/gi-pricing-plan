@@ -303,3 +303,5 @@ below is its output). It reads the 155 `file:line` hits, parses each file with `
 | be:platform/approvals.py:522 | not a format spec (dict or set literal, comment or docstring) |  | n/a |
 
 *(Dated line, 2026-11-05, docs batch 11, by the auditor, on to-lead "2026-11-05 10:31:31 GMT" (second triage c9e75802158f accepted), item (C)(5): the widened item is CARRIED TO P3, a departure from the earlier rulings by this word.)*
+
+*Dated 2026-11-06:* the row reads as fully discharged by SL-1352. SL-2051 (LG-2052) adds `packages/pricing-core/tests/test_metrics.py::test_no_test_pins_a_metric_certificates_measured_text` (plant red), so a test that pins one of the four measured phrases at `metrics.py:122`, `:135` and `:152` fails by name. The source still writes measured numbers into `detail` (`direction_holds`, `scale_behaviour`, `smoke_evaluation`); that is guarded, not fixed. This PR; its number, squash commit and merge date are written at the merge's date-of-record. Status unchanged.

@@ -30,7 +30,7 @@ from model_schema import (
     WeightSpec,
     new_uuid7,
 )
-from pricing_core.modelling import fit_glm
+from pricing_core.modelling import compute_diagnostics, fit_glm, predict_glm
 from pricing_core.modelling.comparison import ComparisonCandidate, compare_models
 from pricing_core.modelling.errors import ModellingError
 
@@ -258,3 +258,38 @@ def test_an_empty_holdout_is_refused(candidates) -> None:
     with pytest.raises(ModellingError) as refused:
         compare_models([good, bad], pl.DataFrame(schema={"claim_count": pl.Float64}))
     assert refused.value.code == "MODELS_NOT_COMPARABLE"
+
+
+@pytest.mark.req("FR-186")
+def test_the_comparison_and_the_diagnostics_page_print_one_ae(book) -> None:
+    """DP-M2 (OQ-1692): a claim-count-weighted severity model's `ae_overall` in the comparison
+    table is its holdout partition's `ae_overall` — one `ae_weights`, one number on both pages
+    — and it is the weighted sum Σ n·y / Σ n·μ, not the per-row ratio."""
+    claims = book.filter(pl.col("claim_count") > 0)
+    cut = claims.height * 2 // 3
+    train, holdout = claims[:cut], claims[cut:]
+    weight = {
+        "response_column": "avg_cost", "family": "gamma",
+        "offset": OffsetSpec(kind="none"),
+        "weight": WeightSpec(kind="column", column="claim_count"),
+    }
+    by_area = _candidate("model:sev-area@1", train, "area", **weight)
+    by_noise = _candidate("model:sev-noise@1", train, "noise", **weight)
+
+    summary = compare_models([by_area, by_noise], holdout)
+
+    ae = next(m for m in summary.metrics if m.metric == "ae_overall")
+    values = {v.model_ref: v.value for v in ae.values}
+    for candidate in (by_area, by_noise):
+        page = compute_diagnostics(
+            candidate.fit, candidate.spec, list(candidate.factors),
+            train=train, holdout=holdout, type_iii=False,
+        ).universal.holdout.ae_overall
+        assert values[candidate.ref] == pytest.approx(page, rel=1e-12)
+    # And the number is the weighted sum, written out from the holdout's rows.
+    n = holdout["claim_count"].to_numpy()
+    y = holdout["avg_cost"].to_numpy()
+    mu = predict_glm(by_area.fit, holdout, list(by_area.factors), by_area.spec)
+    want = float(np.sum(n * y)) / float(np.sum(n * mu))
+    assert values["model:sev-area@1"] == pytest.approx(want, rel=1e-12)
+    assert want != pytest.approx(float(np.sum(y)) / float(np.sum(mu)), rel=1e-6)

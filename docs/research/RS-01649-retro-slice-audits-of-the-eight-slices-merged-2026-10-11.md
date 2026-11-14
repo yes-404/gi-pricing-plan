@@ -3,7 +3,7 @@ id: RS-1649
 family: research
 kind: audit
 title: Retro slice audits of the eight slices merged on 2026-10-11 without a written audit
-status: draft
+status: active
 created: 2026-10-12
 owner: auditor
 tree: 372fa92ae3ab306bc067c234487ce929dc0e2a04
@@ -100,3 +100,5 @@ WK-673), `FD-1652` (SL-1559, MEDIUM, WK-675), `FD-1653` (SL-1600, LOW-MEDIUM, WK
 `FD-1654` (SL-1557, LOW, WK-1178), `FD-1655` (cross-slice, MEDIUM, process backlog). Not
 filed: the B1/B2 generic-text regression (carried by `SL-1601`) and SL-1631's two omitted
 ledger lines (accepted). The record is a proposal; the verdict column is the lead's.
+
+***Dated line, 2026-11-09*** (a status line; the text above is not edited; docs batch 30, written by the executor for the auditor, who is this record's `owner:`). `CR-2071` §Owed row 14 reads "`RS-1649` `status: draft`: filed by a dated line", owner "the auditor, its `owner:`; WK-1178", due "next docs batch". This record is **filed**: `status` moves `draft` to `active` (`document-ids.md` §1.2a, `draft → active → closed | retired`). It stays `active`, not `closed`: `document-ids.md` §1.6 has the lead set `closed` once every `FD-` the record raised is closed, and its Result lists six, `FD-1650` to `FD-1655`. The verdict column remains the lead's, as the Result says.

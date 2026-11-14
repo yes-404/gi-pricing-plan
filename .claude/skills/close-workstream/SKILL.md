@@ -1,7 +1,9 @@
 ---
 name: close-workstream
-description: Audit a workstream (WK-657, WK-658, …) before declaring it closed in docs/roadmap.md. Starts by deriving the expected scope from docs/specs/ with scripts/scope-audit.py and only then looks for evidence — never from recollection of what was built. Also covers running the gate locally, proving new checks fail on broken input, measuring rather than asserting NFRs, and giving every unevidenced requirement a verdict. Use when asked to close, sign off, or confirm a workstream is complete — and before writing any "✔ closed" into the roadmap.
+description: RETIRED 2026-11-13, kept for history, do not follow. Audit a workstream (WK-657, WK-658, …) before declaring it closed in docs/roadmap.md. Starts by deriving the expected scope from docs/specs/ with scripts/scope-audit.py and only then looks for evidence — never from recollection of what was built. Also covers running the gate locally, proving new checks fail on broken input, measuring rather than asserting NFRs, and giving every unevidenced requirement a verdict. Use when asked to close, sign off, or confirm a workstream is complete — and before writing any "✔ closed" into the roadmap.
 ---
+
+> **RETIRED WITH THE RECORD PROCESS on 2026-11-13; kept for history; do not follow.** (ADR-2136.)
 
 # Closing a workstream
 

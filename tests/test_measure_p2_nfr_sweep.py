@@ -370,3 +370,120 @@ def test_the_profile_command_line_defaults_to_every_size_and_parses_a_subset() -
     assert default.mode == "generate-and-profile"
     subset = parser.parse_args(["profile", "--tmpdir", "/x", "--sizes", "2000000"])
     assert subset.sizes == [TWO_M]
+
+
+# --- PL-2095 (SL-2096): seed as the owner, serve as the app --------------------------------------
+
+APP_DSN = "postgresql+asyncpg://gip_app_login:secret@localhost:5432/gipricing_copy"
+OWNER_DSN = "postgresql+asyncpg://gipricing:gipricing@localhost:5432/gipricing_copy"
+
+
+def test_the_seed_runs_on_the_owner_database_and_never_on_the_app_database(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """FD-2093: `grant_demo_principals` writes `workspaces`, roles and members, which the
+    application's login role may not. A recorder stands in for it and says which handle it got."""
+    import asyncio
+    from types import SimpleNamespace
+    from uuid import uuid4
+
+    class Handle:
+        async def dispose(self) -> None:
+            pass
+
+    app_database, owner_database = Handle(), Handle()
+    seen: list[object] = []
+
+    async def grant_demo_principals(database: object, workspace_id: object) -> dict[str, str]:
+        seen.append(database)
+        return {}
+
+    monkeypatch.setattr(
+        m, "_import_seed", lambda: SimpleNamespace(grant_demo_principals=grant_demo_principals)
+    )
+    env = SimpleNamespace(database=app_database, owner_database=owner_database)
+
+    asyncio.run(m._grant(env, uuid4()))
+
+    assert seen == [owner_database], (
+        "the seed was handed "
+        + ("the APP database" if seen == [app_database] else repr(seen))
+        + ", not the owner database"
+    )
+
+
+def test_env_serves_through_the_app_dsn_and_seeds_through_the_owner_dsn(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A4: `create_app` is built on the app DSN alone; the owner DSN reaches `owner_database`
+    only. Dead-port DSNs: nothing connects while the object graph is built."""
+    app = "postgresql+asyncpg://gip_app_login:secret@localhost:1/gipricing_copy"
+    owner = "postgresql+asyncpg://gipricing:gipricing@localhost:1/gipricing_copy"
+    monkeypatch.setenv("GIP_DATABASE_URL", app)
+    monkeypatch.setenv("GIP_MIGRATION_DATABASE_URL", owner)
+
+    env = m._Env()
+
+    assert env.app.state.settings.database_url.get_secret_value() == app
+    assert env.owner_database.engine.url.render_as_string(hide_password=False) == owner
+
+
+def test_env_without_an_owner_dsn_exits_naming_the_variable(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("GIP_DATABASE_URL", APP_DSN)
+    monkeypatch.delenv("GIP_MIGRATION_DATABASE_URL", raising=False)
+
+    with pytest.raises(SystemExit, match="GIP_MIGRATION_DATABASE_URL"):
+        m._Env()
+
+
+# --- DP-2 (a): the DSN guard, one test per refusal ------------------------------------------------
+
+
+def test_dsn_guard_accepts_an_app_and_an_owner_on_one_copy() -> None:
+    assert m.dsn_failure(APP_DSN, OWNER_DSN) is None
+
+
+def test_dsn_guard_refuses_an_unset_owner_dsn() -> None:
+    # The guard's own refusal is the thing under test: a crash on `None` (what removing the
+    # clause gives, from `make_url(None)`) is not a refusal, so it is read as "no refusal" and
+    # fails on the assertion below, not as an error.
+    try:
+        failure = m.dsn_failure(APP_DSN, None)
+    except Exception:  # any raise is "the guard did not refuse"
+        failure = None
+    assert failure is not None, "the guard must return a refusal for an unset owner DSN"
+    assert "GIP_MIGRATION_DATABASE_URL is not set" in failure
+    assert "same -T copy as GIP_DATABASE_URL" in failure
+
+
+def test_dsn_guard_refuses_the_template_database() -> None:
+    template_app = APP_DSN.replace("gipricing_copy", "gipricing")
+    template_owner = OWNER_DSN.replace("gipricing_copy", "gipricing")
+    failure = m.dsn_failure(template_app, template_owner)
+    assert failure is not None
+    assert "template" in failure
+
+
+@pytest.mark.parametrize(
+    "owner",
+    [
+        OWNER_DSN.replace("gipricing_copy", "gipricing_other"),
+        OWNER_DSN.replace("localhost", "db.example"),
+        OWNER_DSN.replace("5432", "5433"),
+    ],
+    ids=["database", "host", "port"],
+)
+def test_dsn_guard_refuses_an_app_and_an_owner_on_different_servers_or_databases(
+    owner: str,
+) -> None:
+    failure = m.dsn_failure(APP_DSN, owner)
+    assert failure is not None
+    assert "same" in failure
+
+
+def test_dsn_guard_refuses_one_user_on_both_dsns() -> None:
+    failure = m.dsn_failure(OWNER_DSN, OWNER_DSN)
+    assert failure is not None
+    assert "user" in failure

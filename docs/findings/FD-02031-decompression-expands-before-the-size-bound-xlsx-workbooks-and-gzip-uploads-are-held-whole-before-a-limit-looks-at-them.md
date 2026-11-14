@@ -35,3 +35,5 @@ Memory at any size; no reproduction was run. This was read at `e75e0f1a`, not ru
 ## Disposition
 
 Open, owner WK-1178. Event that next discharges it: a merged change that bounds the expansion (streamed decompression with a running cap; a workbook entry-size check) with a red-first test of a small file that expands past the cap, or a dated ruling accepting the absence. Related, not yet minted (space form): SL 8325. Filed as working id 8386.
+
+*(Dated line, 2026-11-07, docs batch 16, by the executor, on the lead's residue list for slice A (from-lead "2026-11-07 20:44:10 GMT"): the working id `SL 8325` cited at lines 19 and 37 above is now **SL-2075** (PL-2074, LG-2076), merged as #1456. Those lines are not edited.)*

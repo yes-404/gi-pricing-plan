@@ -141,6 +141,18 @@ def _weights(spec: ModelSpecCommon, data: pl.DataFrame) -> npt.NDArray[np.float6
     return np.ones(data.height, dtype=np.float64)
 
 
+def ae_weights(spec: ModelSpecCommon, data: pl.DataFrame) -> npt.NDArray[np.float64]:
+    """A/E's weight (OQ-1692, as corrected 2026-11-05 11:55:25): the declared weight column, else 1.
+
+    Whatever makes `w·y` the aggregate: an offset has already put the aggregate in `mu`, so a
+    frequency model gets 1 and exposure is never counted twice. This is **not** `_weights`,
+    which is the offset first, for calibration.
+    """
+    if spec.weight.kind == "column" and str(spec.weight.column) in data.columns:
+        return data[str(spec.weight.column)].cast(pl.Float64).to_numpy()
+    return np.ones(data.height, dtype=np.float64)
+
+
 def unit_deviance(
     y: npt.NDArray[np.float64],
     mu: npt.NDArray[np.float64],
@@ -378,10 +390,12 @@ def _partition(
     """
     y = data[spec.response_column].cast(pl.Float64).to_numpy()
     exposure = _weights(spec, data)
+    ae_w = ae_weights(spec, data)
+    weighted = spec.weight.kind == "column"
     scheme = _weighting(spec)
 
-    expected_total = float(np.sum(mu))
-    actual_total = float(np.sum(y))
+    expected_total = float(np.sum(ae_w * mu))
+    actual_total = float(np.sum(ae_w * y))
     ae_overall = actual_total / expected_total if expected_total > 0 else 0.0
 
     matrix = resolve_factors(data, factors, bandings=bandings, groupings=groupings)
@@ -392,16 +406,25 @@ def _partition(
         levels = matrix.frame[column].cast(pl.String)
         for level in sorted({v for v in levels.unique().to_list() if v is not None}):
             mask = (levels == level).to_numpy()
-            actual = float(np.sum(y[mask]))
-            expected = float(np.sum(mu[mask]))
+            actual = float(np.sum(ae_w[mask] * y[mask]))
+            expected = float(np.sum(ae_w[mask] * mu[mask]))
             if expected <= 0:
                 continue
             ratio = actual / expected
-            # The interval is on the ratio, treating the claim count as the only random
-            # quantity — the standard actuarial A/E interval. With no claims in the cell
+            # Without a weight column the interval is on the ratio, treating the claim count
+            # as the only random quantity — the standard actuarial A/E interval — and
+            # `actual` is that count. Under a declared weight column `actual` is a weighted
+            # total, so its root is no standard error (DP-M1): the half-width is
+            # `ratio·z/√Σw`, Σw being the claim count for severity. Where the weight is
+            # exposure that is an approximation. With no claims (or no weight) in the cell
             # there is nothing to build one from, and a zero-width interval would read as
             # certainty rather than absence.
-            half = _NORMAL_975 * math.sqrt(actual) / expected if actual > 0 else None
+            sum_w = float(np.sum(ae_w[mask]))
+            half: float | None
+            if weighted:
+                half = ratio * _NORMAL_975 / math.sqrt(sum_w) if actual > 0 and sum_w > 0 else None
+            else:
+                half = _NORMAL_975 * math.sqrt(actual) / expected if actual > 0 else None
             cells.append(
                 AeCell(
                     factor=slug,

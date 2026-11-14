@@ -272,3 +272,5 @@ own adoption was conditioned on. **The adoption built the mechanisms; it did not
 `open` while their rules had been in force since `97965be`, and RFC-895's read `accepted` after
 its last slice merged. All three are corrected to `landed` — found by the auditor, outside its
 write scope, and fixed here rather than left for a reader to trip over.
+
+*(Dated line, 2026-11-09, docs batch 28, by the executor, on to-lead "2026-11-09 10:09:00 GMT" (delegated decision D-5, filed when made): the user said: "WK-693, WK-674, WK-690 and WK-1178: plz close them on behalf of me if you are happy with the outcome". WK-693 is CLOSED by the maintainer by the user's delegation, on this record's verdicts (every slice delivered-and-tested or carried, C3 discharged by ruling, no fix-before-close).)*

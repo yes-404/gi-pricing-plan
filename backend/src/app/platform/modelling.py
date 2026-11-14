@@ -384,9 +384,13 @@ async def load_factors(
     precisely because an operand contributes no design column of its own — `resolve_factors`
     excludes it — so nothing about the column order changes.
 
-    One level of expansion is enough. An operand that is itself an interaction is loaded
-    here and refused at resolution, which is where the "declare a three-way as one factor"
-    message belongs.
+    The expansion is **transitive, one query per level** (a pinned interaction over plain
+    operands is two queries, as before; a depth-2 chain three). `resolve_factors` refuses an
+    operand that is itself an interaction, which is where the "declare a three-way as one
+    factor" message belongs; the walk loads its operands too, because the control-intent guard
+    (`control_factor_in`, FR-88, FR-240) reads the closure at any depth and a chain it cannot
+    read fails closed with a message naming an operand the platform never loaded (SL 2124
+    review F-3). A cycle cannot loop: an id already loaded is never asked for again.
     """
     async def _load(ids: list[UUID], what: str) -> dict[UUID, FactorRow]:
         rows = (
@@ -411,19 +415,25 @@ async def load_factors(
     by_id = {factor.id: factor for factor in pinned}
     ordered = [by_id[fid] for fid in factor_ids]
 
-    operand_ids = [
-        operand
-        for factor in ordered
-        if factor.type is FactorType.INTERACTION
-        for operand in factor.operand_factor_ids
-        if operand not in by_id
-    ]
-    if not operand_ids:
-        return ordered
-
-    deduped = list(dict.fromkeys(operand_ids))
-    operands = await _load(deduped, "interaction operands")
-    return ordered + [to_factor(operands[fid]) for fid in deduped]
+    loaded = list(ordered)
+    seen = set(by_id)
+    frontier = ordered
+    while True:
+        wanted = list(
+            dict.fromkeys(
+                operand
+                for factor in frontier
+                if factor.type is FactorType.INTERACTION
+                for operand in factor.operand_factor_ids
+                if operand not in seen
+            )
+        )
+        if not wanted:
+            return loaded
+        operands = await _load(wanted, "interaction operands")
+        frontier = [to_factor(operands[fid]) for fid in wanted]
+        seen.update(wanted)
+        loaded.extend(frontier)
 
 
 async def load_factor_by_ref(
@@ -946,6 +956,10 @@ async def record_fit(
 
     row.fit_result = fit_result.model_dump(mode="json")
     row.diagnostics_id = diagnostics_row.id
+    # Read, not typed: the event says what the row was (`draft` for every path that reaches
+    # here today; a path that did not would be recorded truthfully, PL-2059 / ruling of
+    # 2026-11-06 02:27:13 GMT).
+    before_status = row.status
     row.status = ModelStatus.FITTED.value
     row.job_id = job_id
     await session.flush()
@@ -954,7 +968,11 @@ async def record_fit(
     # a coefficient vector, a booster, and an EBM's exported tables. A shared subset — rows
     # and model type — would record the three events identically and leave a reader unable
     # to tell them apart.
-    after: dict[str, object] = {"model_type": fit_result.model_type, "rows": fit_result.rows}
+    after: dict[str, object] = {
+        "status": row.status,
+        "model_type": fit_result.model_type,
+        "rows": fit_result.rows,
+    }
     if isinstance(fit_result, GlmFitResult):
         intercept = fit_result.intercept
         after |= {
@@ -985,6 +1003,7 @@ async def record_fit(
         source=JobSource.SYSTEM if job_id else JobSource.API,
         action="model.fitted",
         entity_ref=f"model:{row.model_family_slug}@{row.version}",
+        before={"status": before_status},
         after=after,
     )
     return row
@@ -1581,12 +1600,16 @@ async def archive(
     the operation that removes one names its replacement (`_supersede_earlier_versions`).
     A model in `review` cannot either — withdraw the request first, so the approver's queue
     does not lose an item without a decision recorded against it.
+
+    Gated on `model:fit`, the Model write right (`06` §4.1), not `model:submit`: archiving
+    retires a model, it does not put one in front of an approver. The transition check below,
+    not the permission, is what keeps an `approved` model out of reach.
     """
     await rbac.require_permission(
         session,
         workspace_id=workspace_id,
         principal=actor,
-        permission=Permission.MODEL_SUBMIT,
+        permission=Permission.MODEL_FIT,
     )
     row = await _for_update(session, workspace_id, model_id)
     before = _require_transition(row, ModelStatus.ARCHIVED)

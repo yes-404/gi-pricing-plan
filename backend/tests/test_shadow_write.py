@@ -16,6 +16,7 @@ from uuid import UUID, uuid4
 
 import pytest
 from backend.tests.test_deployments import (  # noqa: F401
+    _HASH,
     Seat,
     api_settings,
     approved_version,
@@ -30,7 +31,6 @@ from app.db.session import Database
 from model_schema import new_uuid7
 
 _ACTION = "deployment.shadow_configured"
-_HASH = "sha256:" + "a" * 64
 
 
 def put_shadow(client: TestClient, seat: Seat, env: str, ref: str, fraction: float = 0.25):

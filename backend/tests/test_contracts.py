@@ -24,6 +24,7 @@ from typing import Any, Final
 import pytest
 
 from app.api.responses import without_fastapi_validation_error
+from model_schema.table_rows import split_row
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 GENERATED = ROOT / "docs" / "contracts" / "schemas" / "generated"
@@ -242,6 +243,19 @@ def test_the_algorithm_diff_response_is_typed_by_its_model() -> None:
     assert schema == {"$ref": "#/components/schemas/AlgorithmDiff"}
 
 
+@pytest.mark.req("FR-42")
+def test_the_report_route_publishes_its_outcome() -> None:
+    """`01` §4.6's report carries `overall` and `counts`; the route's response must say so
+    (FD-2090: both were plain properties, so the published response omitted them)."""
+    document = _load(OPENAPI)
+    paths = document["paths"]
+    ref = paths["/api/v1/validation-reports/{report_id}"]["get"]["responses"]["200"][
+        "content"
+    ]["application/json"]["schema"]["$ref"]
+    schema = document["components"]["schemas"][ref.rsplit("/", 1)[1]]
+    assert {"overall", "counts"} <= set(schema["required"])
+
+
 SPEC_RATING_ENGINE = ROOT / "docs" / "specs" / "03-rating-engine.md"
 
 
@@ -260,7 +274,7 @@ def test_the_regression_runs_list_route_declares_every_status_03_lists() -> None
         if line.startswith("| `GET` |") and row_key in line
     ]
     assert len(rows) == 1, "03 §5.1 must hold exactly one row for the list route"
-    cell = rows[0].split("|")[3]
+    cell = split_row(rows[0])[2]
     listed = set(re.findall(r"(?<![\w-])([1-5]\d\d)(?![\w-])", re.sub(r"\([^)]*\)", "", cell)))
     assert {"200", "400", "404"} <= listed, f"spec row not read: {listed}"
     declared = set(_load(OPENAPI)["paths"][route]["get"]["responses"])
@@ -733,6 +747,7 @@ def _declared_fields(
         "transparency-artifact",
         "objective-certificate",
         "peril-structure",
+        "validation-report",
     ],
 )
 def test_an_artifact_shape_carries_exactly_what_its_contract_declares(slug: str) -> None:

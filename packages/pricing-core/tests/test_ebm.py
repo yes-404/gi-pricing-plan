@@ -428,7 +428,7 @@ def test_weights_reach_the_estimator() -> None:
     assert not np.array_equal(plain_speed.scores, weighted_speed.scores)
 
 
-@pytest.mark.req("FR-140")
+@pytest.mark.req("FR-11")
 def test_the_fit_is_reproducible_under_the_spec_seed() -> None:
     data = _book()
     first = fit_ebm(data, _spec(), FACTORS, bandings=BANDINGS)

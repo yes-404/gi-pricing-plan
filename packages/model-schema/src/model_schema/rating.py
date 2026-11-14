@@ -50,17 +50,18 @@ class RatingVersionStatus(StrEnum):
     RETIRED = "retired"
 
 
-#: The lifecycle, as data rather than scattered `if` statements. `draft` may skip review
-#: straight to `approved` only where the caller is an approver deciding in one step; the
-#: normal path goes through `review`. `live` and `retired` are unreachable here — their
-#: transitions are WK-674's, because FR-238 makes `live` a property of a Deployment.
+#: The lifecycle, as data rather than scattered `if` statements. A version reaches `approved`
+#: only through `review` (`draft → approved` has no writer and was dropped, PL-2059 DP-11), and
+#: returns to `draft` from `review` on a rejection or a request for changes (FR-355). `live` and
+#: `retired` are never stored: FR-238 makes `live` a property of a Deployment, and what
+#: `retired` means is an open question (PL-2059 DP-11).
 VALID_RATING_VERSION_TRANSITIONS: dict[
     RatingVersionStatus, frozenset[RatingVersionStatus]
 ] = {
-    RatingVersionStatus.DRAFT: frozenset(
-        {RatingVersionStatus.REVIEW, RatingVersionStatus.APPROVED}
+    RatingVersionStatus.DRAFT: frozenset({RatingVersionStatus.REVIEW}),
+    RatingVersionStatus.REVIEW: frozenset(
+        {RatingVersionStatus.APPROVED, RatingVersionStatus.DRAFT}
     ),
-    RatingVersionStatus.REVIEW: frozenset({RatingVersionStatus.APPROVED}),
     RatingVersionStatus.APPROVED: frozenset(),
     RatingVersionStatus.LIVE: frozenset(),
     RatingVersionStatus.RETIRED: frozenset(),
@@ -1415,6 +1416,44 @@ class RebaseToLevelParameters(BaseModel):
     base_level: KeyFilter
 
 
+class BulkOperationContext(BaseModel):
+    """FR-2082 (7): the decimal context a computing bulk operation ran in, recorded with its
+    parameters (04 §4.4). The operation writes it; no request carries it."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    precision: int = Field(ge=1)
+    places: int = Field(ge=0)
+    rounding: Literal["half_even"]
+    version: int = Field(ge=1)
+
+
+class UpliftTableRecordedParameters(UpliftTableParameters):
+    """The record's parameters: the request's, plus the context (FR-2082). `None` on a record
+    written before FR-2082, which reads as ambient 28 digits, factor and product each rounded.
+    It is not dumped when `None`, so a stored record's bytes do not move."""
+
+    context: BulkOperationContext | None = Field(
+        default=None, exclude_if=lambda value: value is None
+    )
+
+
+class UpliftByFilterRecordedParameters(UpliftByFilterParameters):
+    """As `UpliftTableRecordedParameters`, for `uplift_by_filter` (FR-2082)."""
+
+    context: BulkOperationContext | None = Field(
+        default=None, exclude_if=lambda value: value is None
+    )
+
+
+class RebaseToLevelRecordedParameters(RebaseToLevelParameters):
+    """As `UpliftTableRecordedParameters`, for `rebase_to_level` (FR-2082)."""
+
+    context: BulkOperationContext | None = Field(
+        default=None, exclude_if=lambda value: value is None
+    )
+
+
 # The request body of `POST .../bulk-operation` (03 §5.1): the record's `kind` and
 # `parameters`, written once. `applied_to` and `result` are the server's, so they are
 # not request fields and `extra="forbid"` refuses them. Each record below inherits its
@@ -1462,11 +1501,11 @@ BULK_OPERATION_REQUEST_ADAPTER: Final[TypeAdapter[BulkOperationRequest]] = TypeA
 
 
 class UpliftTableOperation(UpliftTableRequest, BulkOperationBase):
-    pass
+    parameters: UpliftTableRecordedParameters
 
 
 class UpliftByFilterOperation(UpliftByFilterRequest, BulkOperationBase):
-    pass
+    parameters: UpliftByFilterRecordedParameters
 
 
 class FloorAndCapOperation(FloorAndCapRequest, BulkOperationBase):
@@ -1474,7 +1513,7 @@ class FloorAndCapOperation(FloorAndCapRequest, BulkOperationBase):
 
 
 class RebaseToLevelOperation(RebaseToLevelRequest, BulkOperationBase):
-    pass
+    parameters: RebaseToLevelRecordedParameters
 
 
 #: The BulkOperation record (04 §4.4), discriminated on `kind`. A version created by a

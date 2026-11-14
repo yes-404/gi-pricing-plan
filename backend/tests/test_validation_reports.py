@@ -116,6 +116,35 @@ async def test_a_stored_report_reads_back_byte_identical(
     assert restored.model_dump_json() == report.model_dump_json()
 
 
+@pytest.mark.req("FR-42", "NFR-469")
+async def test_presenting_a_report_never_writes_its_outcome_into_the_stored_body(
+    database: Database, workspace_id
+) -> None:
+    """The stored body is the artifact; `overall` and `counts` are derived for the response
+    and never assigned (FD-2090, `01` §4.6)."""
+    actor = await _principal_with_role(database, workspace_id, "analyst")
+    version_id = await _version(database, workspace_id, actor)
+    report = _report(version_id, _result(RuleOutcome.PASS), _result(RuleOutcome.WARN))
+
+    async with database.unit_of_work() as session:
+        await validation.store_report(
+            session, workspace_id=workspace_id, actor=actor, report=report
+        )
+    async with database.session() as session:
+        await validation.load_report_view(
+            session, workspace_id=workspace_id, report_id=report.id
+        )
+        row = (
+            await session.execute(
+                select(ValidationReportRow).where(ValidationReportRow.id == report.id)
+            )
+        ).scalar_one()
+
+    assert row.body == report.model_dump(mode="json")
+    assert "overall" not in row.body
+    assert "counts" not in row.body
+
+
 @pytest.mark.req("FR-46")
 async def test_an_analyst_cannot_acknowledge_a_warning(
     database: Database, workspace_id

@@ -2,12 +2,12 @@
 id: FD-1916
 family: finding
 title: register-owed.py reads the whole Decision cell, so a superseded opening kept below the live owner is listed as owed
-status: active
+status: closed
 created: 2026-10-25   # drafted 2026-10-25 under working id 8230; minted 2026-10-25 as FD-1916
 owner: auditor
 tree: ff976406f1bf133cfe040d2c44d383011503988a
 corrected_by: []
-relates: [CR-1907, WK-1178, CR-1247, FD-1165, FD-1166]
+relates: [CR-1907, WK-1178, CR-1247, FD-1165, FD-1166, SL-2066, LG-2067, PL-2065]
 ---
 
 # FD-1916 — register-owed.py reads the whole Decision cell
@@ -59,3 +59,5 @@ Red first: on `ff976406` row 1 matches `review`. Then run the real register: the
 ### Owner and event
 
 Owner **WK-1178** (the maintainer, "2026-10-25 11:47:10 GMT", T1 (1)). Event that discharges it: the fix's merge with the red in row 1 shown on the base tree by its cause, and `register-owed.py review` re-run on the merged tree with the count quoted.
+
+***Resolved 2026-11-07*** — closed in place 2026-11-07 by the auditor's closing act (the audit of 2026-11-05, adopted by the lead in from-lead "2026-11-05 17:08:05 GMT"; the slice minted 2026-11-07), as the closing act of the audit of SL-2066 (WK-1178, LG-2067, PL-2065; this PR; its number, squash commit and merge date are written at the merge's date-of-record), on the lead's brief, the maintainer's GO "2026-11-05 09:58:58 GMT" and the acceptance of the plans "2026-11-05 10:36:35 GMT" (T folded onto the FD-1484 branch and gate) (`to-lead.md`, a local channel file). Delivered remedy: `scripts/register-owed.py` gains `_SUPERSEDED_OPENING` (once) and `_live_text`, which cuts the Decision cell at the register's "supersedes … opening kept below" marker; `_matches_review` and `_matches_work_id` search the live text (the work-item cell unchanged), a row with no marker is read whole, and a live text naming `§14` before the marker still matches; `_is_resolved` and `register-lint.py` are untouched by this slice. Red first, by cause, in LG-2067 at base `c8d85227` (re-run by the auditor): T1 failed because row 1 matched `review`, T2 because row 1 matched `WK-B`; T3 and T4 are green controls at base and head. The real register, `python3 scripts/register-owed.py review`, auditor-run: base `c8d85227` 31 owed, 11 excluded; slice tree `5748acc7` 11 owed, 1 excluded; the 20 rows that left each open "deferred with an owner" above the marker, none names `§14` before it (the essay's 21 of 33 to 12 were at `ff976406`; the numbers had moved). Re-run after this closing act, `python3 scripts/register-owed.py review` through the gate-2 flock on the audit commit's tree (`scratch/exec-mint8343/register-owed-after.log`, `rc=0`): **14 owed, 1 excluded**, the same as the gated tree before the closing act; this row is among the 14, because the FD-1842 form appends the resolution at the end of the Decision cell and `_is_resolved` reads the cell's prefix (the precedent the audit measured), and the 14 are the ruled 11 plus the three rows LG-2070 names under (c). Gate evidence: the full code gate, both halves, SOLO, at `1208ba28` (tree `8f6dab4f`), END 2026-11-06 11:45:10 GMT: the pytest failures are 15, all in the eight docs-audit files and named in LG-2070 (item 31); ruff rc 0, import-linter rc 0, req-coverage rc 0, generate-contracts rc 0, frontend 138 files / 919 tests passed, build rc 0, demo `wf-699` PASS in 1728 s. Its one `mypy` error line (rc 1, two diagnostics at `tests/test_audit_docs_ids.py:2451`) is fixed at `723e5fca`, mypy rc 0 over 255 files.

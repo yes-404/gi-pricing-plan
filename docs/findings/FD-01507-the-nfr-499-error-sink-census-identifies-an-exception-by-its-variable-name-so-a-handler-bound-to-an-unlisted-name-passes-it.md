@@ -2,12 +2,12 @@
 id: FD-1507
 family: finding
 title: The NFR-499 error-sink census identifies an exception by its variable name, so a handler bound to an unlisted name passes it
-status: active
+status: closed
 created: 2026-10-08            # original date 2026-10-05, set at the draft; minted 2026-10-08
 owner: auditor
 tree: 47d770e8fcbd2410fa101019ed8cf3aae69a1baa
 corrected_by: []
-relates: [WK-1178, NFR-499, RL-917]
+relates: [WK-1178, NFR-499, RL-917, SL-2048, LG-2049, PL-2047]
 ---
 
 # FD-1507 — the NFR-499 census finds an exception's text by the variable's name
@@ -30,7 +30,7 @@ the maintainer's (by delegation) and the maintainer's to confirm at the mint.
 
 `backend/tests/test_error_sinks.py` is the guard for NFR-499. It finds the places where an exception's text is
 stored or logged. It finds two of its seven sink kinds by the **variable name** of the exception, and the name
-list is fixed: `("exc", "e", "err")` at `test_error_sinks.py:198` (`str(<name>)`) and `:203` (`{<name>}` in an
+list is fixed: `("exc", "e", "err")` at `test_error_sinks.py:198` (`str(NAME)`) and `:203` (`{NAME}` in an
 f-string). A handler that binds the exception to any other name, and calls `str()` on it or interpolates it,
 is not counted. The test compares the census with `_SINKS` for equality (`:230`), so a sink the census does not
 see is never compared, and the test passes.
@@ -182,18 +182,20 @@ reason (as `("backend/src/app/worker/model_handlers.py", "_fit", "str(exc)")` is
 
 Proposed remedy, for WK-1178's plan to decide:
 
-1. **Identify an exception by binding, not by name.** In `_sinks`, track the `as <name>` of each enclosing
-   `ast.ExceptHandler` and count `str(<name>)` and `{<name>}` only when `<name>` is bound by an enclosing
+1. **Identify an exception by binding, not by name.** In `_sinks`, track the `as NAME` of each enclosing
+   `ast.ExceptHandler` and count `str(NAME)` and `{NAME}` only when `NAME` is bound by an enclosing
    handler. The fixed tuple at `:198` and `:203` goes. This closes the false negative (step 2) and the false
    positive (a variable named `e` that is not an exception is no longer counted, so the `e` → `edge` rename
    becomes unnecessary).
 2. **Widen the shapes** the same change can cheaply see: a bare handler-bound name as an argument of a logging
-   call, `repr(<name>)`, and `<name>.args`. Whether to count them is a scoping choice for the plan; step 4
+   call, `repr(NAME)`, and `NAME.args`. Whether to count them is a scoping choice for the plan; step 4
    gives the evidence that they pass today.
 3. **List the two sites** in step 5 in `_SINKS` with their reasons once the census sees them.
 4. **Prove it on broken input both ways** (CLAUDE.md §13): the step 2 handler must fail the census, and a
    non-exception variable named `e` must not. Both belong in `test_the_census_sees_an_injected_sink`
    (`:248`), which today uses only listed names.
+
+***Resolved 2026-11-06*** — closed in place 2026-11-06 by the auditor, as the closing act of the audit of SL-2048 (WK-1178, LG-2049, PL-2047; this PR; its number, squash commit and merge date are written at the merge's date-of-record), on the lead's brief under the GO "2026-11-05 10:31:31 GMT" (plans C and H accepted, DP-H1 to DP-H5 ruled; `to-lead.md`, a local channel file), on the order of "2026-11-05 09:58:58 GMT". Delivered remedy: the NFR-499 census identifies an exception by what it is. `_sinks` in `backend/tests/test_error_sinks.py` keeps the set of names bound by enclosing `except … as` handlers plus a parameter named `exc`, and counts `str(NAME)` and `{NAME}` only for those; the fixed tuple is gone (`git grep -n '("exc", "e", "err")' -- backend/tests/test_error_sinks.py` prints nothing), so the false positive (`e` as a band edge) and the false negative (`except … as problem`) both close, and the ten function parameters named `exc` stay counted. `_SINKS` gains six rows (`deployments.py` `_prepare`, `rating_algorithms.py` `_accepted_feature_map_values`, `gbm.py` `_compile_custom`, `objectives.py` `_smoke_fit_check`, `compile.py` `_consumed_features`, `runtime.py` `handler`), each with a verdict read from its raise sites (A6: none holds a quote input; `runtime.py`'s `_ModelCallRefusal` has one raise, with the graph-authored step id and the artifact's model type). The essay's two named handlers (`objectives.py`, `gbm.py`) are among the six. Red first: `2636dd39` (`assert {} == {('renamed.py', …): 1}`, `1 failed, 8 passed, 4 errors`), green `d849da2a`; `test_error_sinks.py` at the audit head `9 passed` with the 4 DB-backed tests owed to the gate. DP-H3 (a): the essay's step 2 (the shapes `repr(NAME)`, `NAME.args`, a bare name as a logging argument) is **not** built; it is filed as FD-2029 (LOW, owner WK-1178). Gate evidence: the gate: pytest `13 failed, 7224 passed, 27 skipped, 5 xfailed in 4949.99s` alone, the 13 being the item-31 docs-audit set, every other python and frontend stage rc 0, demo seeded rc 0 (LG-2049).
 
 ## Severity (proposed; the maintainer's)
 

@@ -155,7 +155,7 @@ Terms from `00-overview.md` §2.4 are used unchanged. Additional terms owned her
 
 ### 4.1 `Monitor`
 
-```json
+```json illustrative
 {
   "slug": "motor-gb-prod-weekly",
   "environment": "prod",
@@ -187,7 +187,7 @@ Terms from `00-overview.md` §2.4 are used unchanged. Additional terms owned her
 
 ### 4.2 `MonitoringResult`
 
-```json
+```json illustrative
 {
   "monitor_id": "uuid", "run_id": "uuid",
   "period": {"from": "2026-11-01", "to": "2026-11-30"},
@@ -213,7 +213,7 @@ Terms from `00-overview.md` §2.4 are used unchanged. Additional terms owned her
 
 ### 4.3 `RateAchievedResult`
 
-```json
+```json illustrative
 {
   "rating_version_ref": "rating_version:motor-gb@27",
   "deployed_at": "2026-10-01T06:00:00Z",
@@ -235,7 +235,7 @@ Terms from `00-overview.md` §2.4 are used unchanged. Additional terms owned her
 
 ### 4.4 `Alert`
 
-```json
+```json illustrative
 {
   "monitor_id": "uuid", "monitoring_result_id": "uuid",
   "metric": "ae_ratio", "segment": {"peril": "AD", "driver_age_band": "17-20"},
@@ -257,7 +257,7 @@ Terms from `00-overview.md` §2.4 are used unchanged. Additional terms owned her
 
 ### 4.5 `RefitRecommendation`
 
-```json
+```json illustrative
 {
   "model_ref": "model:motor-ad-frequency@7",
   "raised_by_monitor_id": "uuid",

@@ -44,3 +44,5 @@ Option (i) is a shared pricing-core change, which 11:40:34 item 3 declined for S
 
 **Owner: WK-1178.** Decision: `fix before close with an owner: WK-1178`, or accept at the P2 close. Event that next
 confirms or discharges it: a decision between (i)–(iii) and its slice. Filed by the auditor, 2026-10-11; the lead gives the verdict.
+
+***Dated line, 2026-11-09*** (docs batch 29, by the auditor). `to-lead` "2026-11-09 10:12:52 GMT" (3): the auditor's proposed owner accepted as a proposal: **P3-C**. The fix-or-accept choice among the row's options (i) to (iii) is made in no record, so the decision goes with the carry. P19 (a); `CR-2103` P25 makes P3-C and P3-D WK-1178's successors, and neither has a `### WK-` row yet, so this record is their owner until the rows exist.

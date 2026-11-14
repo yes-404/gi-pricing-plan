@@ -5,6 +5,12 @@ description: Testing discipline for this repo — requirement-traceability marke
 
 # Testing here
 
+> **Under the new frame (from 2026-11-13, ADR-2136).** The traceability markers, the
+> negative-test emphasis and the gate stay. The tests of the retired record process
+> (`tests/test_doc_id_migrate.py`, the register, ruling and ledger tests) are deleted with
+> their scripts; the sections below that cite them describe the retired process. Quote a pass
+> count in the pull request's evidence with its tree and command.
+
 ```bash
 uv run pytest -q
 uv run python scripts/req-coverage.py     # which requirements the suite claims
@@ -19,7 +25,7 @@ def test_money_minor_refuses_floats(): ...
 
 `scripts/req-coverage.py` turns those marks into a traceability report and **fails when a
 test claims a requirement that does not exist** — catching typos and any renumbering that
-breaks the append-only rule (`CLAUDE.md` §5).
+breaks the append-only rule (`CLAUDE.md` §3).
 
 Coverage is currently *reported, not gated*. At 1.7 % a threshold would fail every build
 and teach everyone to ignore it; it earns a floor once a phase's requirements are meant to
@@ -756,7 +762,7 @@ the *same* `propose_grouping` call on the *same* fixture:
 | 8.4 | 20.01 s |
 
 A 2.3x contention factor, which reads exactly like a regression and will be reported as one.
-Two consequences for any NFR measurement (`CLAUDE.md` §13 rule 5):
+Two consequences for any NFR measurement (`CLAUDE.md` §6):
 
 - **Report CPU seconds beside wall-clock, and quote `/proc/loadavg` with every figure.**
   `scripts/bench-model.py` and `bench-data.py` both do; a bespoke timing script must too.
@@ -771,6 +777,24 @@ before the harness was instrumented for it.
 Related: benchmark phases run in **separate processes** (`--only <phase>`), because glibc
 does not return freed arenas to the OS — a peak-RSS reading taken after an earlier phase in
 the same process is that earlier phase's high-water mark, not this one's.
+
+## A slice's GREEN set is the import closure plus what a closure cannot see
+
+Derive the set by import closure, never by hand and never by a text grep of module names: changed modules, then
+their importers, one more level of importers, then every test file importing anything in that set. Then add these,
+which do not import the changed module:
+
+| The change | Add | Why a closure misses it |
+|---|---|---|
+| An API request shape | `backend/tests/test_api_authorisation_sweep.py` | A route-level sweep |
+| A raise site, handler or sink | `backend/tests/test_error_sinks.py`, `backend/tests/test_worker_raise_sites.py`, `packages/pricing-core/tests/test_quote_input_raise_sites.py` | Censuses that read source |
+| What `scripts/` imports or loads by path | Tests that copy `scripts/` (`shutil.copy`, `copytree`), such as `tests/test_doc_id_migrate.py` | A copy is not an import |
+| A spec row | The list from `grep -lE 'docs/specs\|"docs" */ *"specs"' backend/tests tests` | They read the file |
+| The test DB role, a DSN or a shared fixture | The full suite at the re-merged head; a patch-id cover is refused | Tests added on main after the base have never run under the change |
+
+A claim that a field has "no reader" greps `tests/` and `docs/specs/` as well as `src`: an absence can be pinned on
+purpose. (`docs/process/process-backlog.md`, rows of 2026-10-26 07:05, 2026-11-05 18:05, 21:06 and 22:32, and
+2026-11-06 02:27, 06:00 and 07:42, and 2026-11-07 19:52 GMT.)
 
 ## Three patterns from W37-6 migration testing
 
@@ -867,6 +891,8 @@ EXTERNAL_API_ENDPOINT = "https://example.com/v1/very/long/path/that/is/part/of/t
 ```
 
 ## Verified
+
+2026-11-08 (tree `c4ae584a`) — The GREEN-set section added (skills-gap A1); each named test file exists at that tree and each row was read against its process rows. The rest of this file was not re-read.
 
 2026-09-17 (three patterns, W37-6 migration) — pre_migration_root fixture used in 85e31b0 
 (option C ruling, 13:52:10 BST), vacuous-empty test bug found and fixed in test suite 

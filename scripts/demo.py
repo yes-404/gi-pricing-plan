@@ -35,7 +35,7 @@ import sys
 import time
 import urllib.error
 import urllib.request
-from collections.abc import Iterator
+from collections.abc import Iterator, Mapping
 from contextlib import ExitStack, contextmanager, suppress
 from pathlib import Path
 from typing import Any, Final
@@ -68,14 +68,14 @@ class DemoRefusedError(RuntimeError):
     """The demo will not run here."""
 
 
-def check_environment(environ: dict[str, str] | None = None) -> None:
+def check_environment(environ: Mapping[str, str] | None = None) -> None:
     """Refuse anywhere the platform would refuse development identity.
 
     Checked here as well as in the API so the refusal arrives before anything is started:
     a stack brought up and then rejected is a worse message than one never brought up.
     """
-    environ = os.environ if environ is None else environ
-    configured = environ.get("GIP_ENVIRONMENT", "").strip().lower()
+    env = os.environ if environ is None else environ
+    configured = env.get("GIP_ENVIRONMENT", "").strip().lower()
     if configured not in LOCAL_ENVIRONMENTS:
         raise DemoRefusedError(
             f"GIP_ENVIRONMENT is {configured!r}. The demo entrance exists only where "

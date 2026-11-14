@@ -77,11 +77,12 @@ class Decide(BaseModel):
     comment: str | None = None
 
 
-#: `changes_requested` returns to `draft` (FR-355) so a resubmission is a new review
-#: rather than a continuation of the old one — the reviewer's concerns and their resolution
-#: both being visible is the point.
+#: A request is created in `review`, so `draft → review` and `changes_requested → draft` have
+#: no writer and were dropped (PL-2059 DP-12). FR-355's return to `draft` belongs to the
+#: artifact, whose own map carries it; a resubmission is a new request, so the reviewer's
+#: concerns and their resolution both stay visible.
 VALID_APPROVAL_TRANSITIONS: Final[dict[ApprovalStatus, frozenset[ApprovalStatus]]] = {
-    ApprovalStatus.DRAFT: frozenset({ApprovalStatus.REVIEW}),
+    ApprovalStatus.DRAFT: frozenset(),
     ApprovalStatus.REVIEW: frozenset(
         {
             ApprovalStatus.APPROVED,
@@ -90,7 +91,7 @@ VALID_APPROVAL_TRANSITIONS: Final[dict[ApprovalStatus, frozenset[ApprovalStatus]
             ApprovalStatus.WITHDRAWN,
         }
     ),
-    ApprovalStatus.CHANGES_REQUESTED: frozenset({ApprovalStatus.DRAFT}),
+    ApprovalStatus.CHANGES_REQUESTED: frozenset(),
     ApprovalStatus.APPROVED: frozenset({ApprovalStatus.WITHDRAWN}),
     ApprovalStatus.REJECTED: frozenset(),
     ApprovalStatus.WITHDRAWN: frozenset(),

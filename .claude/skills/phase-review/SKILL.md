@@ -1,7 +1,9 @@
 ---
 name: phase-review
-description: Run CLAUDE.md §14's plan review — in full before each phase's exit demo, and at a Work close only when the auditor's replan check fires. Tests whether the plan still says the right thing, rather than whether a workstream did what it said (that is close-workstream). Five questions in fixed order, each with a written answer including "no change"; the output is a short index of proposals, each accepted one routed to an owned record, never an edit to the plan. Use when asked to review the plan, the roadmap, or the phase shape, before every phase exit demo, and when a Work close's replan check fires.
+description: RETIRED 2026-11-13, kept for history, do not follow. Run CLAUDE.md §14's plan review — in full before each phase's exit demo, and at a Work close only when the auditor's replan check fires. Tests whether the plan still says the right thing, rather than whether a workstream did what it said (that is close-workstream). Five questions in fixed order, each with a written answer including "no change"; the output is a short index of proposals, each accepted one routed to an owned record, never an edit to the plan. Use when asked to review the plan, the roadmap, or the phase shape, before every phase exit demo, and when a Work close's replan check fires.
 ---
+
+> **RETIRED WITH THE RECORD PROCESS on 2026-11-13; kept for history; do not follow.** (ADR-2136.)
 
 # Running a plan review
 
@@ -169,7 +171,8 @@ closed: check the id against `docs/roadmap.md` before acting on it, and say so p
 planner; the family is the lead's** (`document-ids.md` §1.6). It is a **short index**, with
 no free-text proposal left without a record:
 1. **Tracking first:** the previous review's records, each with its current state,
-   **derived from the records** (their `status:`, their rows), never recalled.
+   **derived from the records** (their `status:`, their rows), never recalled. `docs/INDEX.md`'s
+   `execution` cell is no verdict (FD-2073): read `status:` and the closure verdicts instead.
 2. A short evidence summary, citing records rather than restating them.
 3. **A table:** proposal → record id → owner → state.
 4. The maintainer's acceptance line.
@@ -197,7 +200,12 @@ each `project`/`phase`-layer `replan`/`fix` entry the phase's Works recorded, an
 in the review — this is the §7 pilot data question 5 ("no change" included) has to answer
 against, once one workstream's worth exists.
 
+*(Dated 2026-11-08, review P12: artifact B was withdrawn on 2026-10-25, with no writer since
+2026-10-05. A review says so and cites no counters until Phase 3 decides whether it returns.)*
+
 ## Verified
+
+2026-11-08 (tree `c4ae584a`) — Review P12 applied. The replan check **has now been exercised**: CR-1999, CR-2000, CR-2071 and CR-2078 each carry one (`grep -i -c 'replan check'`); the 2026-09-29 entry's "not yet exercised" is superseded. Artifact B's withdrawal is stated in Output. The five questions were not re-read. The entries below name no tree; none was recorded (`CLAUDE.md` §13; skills-gap F5).
 
 2026-09-29 — **the trigger, the output and a length cap amended by `RFC-1248`** (option C,
 Part 1 and Part 2), adopted by the maintainer on 2026-09-29 and confirmed by the user. The

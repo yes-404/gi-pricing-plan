@@ -221,11 +221,14 @@ vocabulary; every entity also carries the `ArtifactEnvelope` from `00-overview.m
 
 ### 4.1 `Dataset`
 
-```json
+```json schema=Dataset
 {
+  "id": "0190b5a2-7c3e-7a10-9d21-4f6b8c2e1a01",
+  "workspace_id": "0190b5a2-7c3e-7a10-9d21-4f6b8c2e1a01",
+  "created_at": "2026-08-14T09:00:00Z",
   "slug": "motor-gb-quote-bind",
   "name": "Motor GB — quote & bind",
-  "owner_id": "uuid",
+  "owner_id": "0190b5a2-7c3e-7a10-9d21-4f6b8c2e1a01",
   "line_of_business": "motor",
   "territory": "GB",
   "currency": "GBP",
@@ -236,8 +239,9 @@ vocabulary; every entity also carries the `ArtifactEnvelope` from `00-overview.m
     "driver_age":       {"description": "Age of main driver at inception", "semantic_type": "continuous", "unit": "years"},
     "vehicle_group":    {"description": "ABI group 1-50", "semantic_type": "ordinal", "reference_table": "abi-vehicle-group"}
   },
-  "validation_rule_set_id": "uuid",
-  "latest_version": 12
+  "validation_rule_set_id": "0190b5a2-7c3e-7a10-9d21-4f6b8c2e1a01",
+  "latest_version": 12,
+  "latest_version_status": "validated"
 }
 ```
 
@@ -253,7 +257,7 @@ the single answer to whether the data is fittable *(OQ-565, decided 2026-08-19)*
 
 ### 4.2 `DatasetVersion`
 
-```json
+```json illustrative
 {
   "id": "uuid",
   "workspace_id": "uuid",
@@ -326,8 +330,10 @@ the single answer to whether the data is fittable *(OQ-565, decided 2026-08-19)*
 
 A rule is a tagged union on `layer` + `check`:
 
-```json
+```json schema=ValidationRule
 {
+  "id": "0190b5a2-7c3e-7a10-9d21-4f6b8c2e1a01",
+  "version": 2,
   "slug": "exposure-positive",
   "layer": "actuarial_sanity",
   "check": "range",
@@ -338,18 +344,38 @@ A rule is a tagged union on `layer` + `check`:
   "tolerance": {"max_violating_rows": 0, "max_violating_exposure_fraction": 0.0},
   "message": "Exposure must be > 0 and ≤ 1.05 policy-years per exposure row.",
   "rationale": "Zero/negative exposure breaks the frequency offset; > 1.05 indicates a period-splitting bug.",
-  "owner": "pricing-actuary@example.com",
   "status": "approved"
 }
 ```
 
-```json
+```json schema=ValidationRuleSet
 {
+  "id": "0190b5a2-7c3e-7a10-9d21-4f6b8c2e1a01",
   "slug": "motor-gb-standard",
   "version": 4,
-  "dataset_id": "uuid",
-  "rules": [{"rule_id": "uuid", "rule_version": 2, "enabled": true, "severity_override": null}],
-  "reference_dataset_version_id": "uuid",
+  "dataset_id": "0190b5a2-7c3e-7a10-9d21-4f6b8c2e1a01",
+  "entries": [
+    {
+      "rule": {
+        "id": "0190b5a2-7c3e-7a10-9d21-4f6b8c2e1a01",
+        "version": 2,
+        "slug": "exposure-positive",
+        "layer": "actuarial_sanity",
+        "check": "range",
+        "severity": "fail",
+        "target": {"table": "policy_exposure", "column": "exposure_years"},
+        "params": {"min_exclusive": 0, "max_inclusive": 1.05},
+        "scope": {"filter": null, "skip_on_derived": false},
+        "tolerance": {"max_violating_rows": 0, "max_violating_exposure_fraction": 0.0},
+        "message": "Exposure must be > 0 and ≤ 1.05 policy-years per exposure row.",
+        "rationale": "Zero/negative exposure breaks the frequency offset; > 1.05 indicates a period-splitting bug.",
+        "status": "approved"
+      },
+      "enabled": true,
+      "severity_override": null
+    }
+  ],
+  "reference_dataset_version_id": "0190b5a2-7c3e-7a10-9d21-4f6b8c2e1a01",
   "status": "approved"
 }
 ```
@@ -366,6 +392,12 @@ A rule's thresholds are not overridable at set level either, and for a stronger 
 > unreachable. A downgrade attempt is refused with `RULE_SEVERITY_DOWNGRADE_FORBIDDEN`
 > (409). Found by building §5.3's rule-set editor against the API and having nothing to
 > bind its enable/disable control to.
+
+> **Clarified 2026-11-05 (`RL-2054` row 4, FD-1381).** The read shape is `entries`, not `rules`:
+> `GET` and `PUT /datasets/{slug}/rule-set` return a `ValidationRuleSet` whose `entries` each
+> embed the whole `rule`, with `enabled` and `severity_override`. The `PUT` *body* is `rules`
+> of `rule_id`, `enabled` and `severity_override`. Neither shape has the `rule_version` the
+> example printed before this date, and the example above is now the read shape.
 
 ### 4.4 Built-in rule catalogue
 
@@ -547,34 +579,48 @@ key is one target with several columns.
 
 ### 4.6 `ValidationReport`
 
-```json
+```json schema=ValidationReportView
 {
-  "dataset_version_id": "uuid",
-  "rule_set_id": "uuid",
+  "id": "0190b5a2-7c3e-7a10-9d21-4f6b8c2e1a01",
+  "dataset_version_id": "0190b5a2-7c3e-7a10-9d21-4f6b8c2e1a01",
+  "rule_set_id": "0190b5a2-7c3e-7a10-9d21-4f6b8c2e1a01",
   "rule_set_version": 4,
-  "job_id": "uuid",
+  "job_id": "0190b5a2-7c3e-7a10-9d21-4f6b8c2e1a01",
   "started_at": "2026-08-14T09:12:00Z",
   "finished_at": "2026-08-14T09:14:37Z",
-  "overall": "pass | pass_with_warnings | fail | error",
-  "counts": {"pass": 41, "warn": 3, "fail": 0, "error": 0, "skipped": 1},
+  "overall": "pass_with_warnings",
+  "counts": {"pass": 0, "warn": 1, "fail": 0, "error": 0, "skipped": 0},
   "results": [
     {
-      "rule_id": "uuid", "rule_slug": "psi-driver-age", "rule_version": 2,
+      "rule_id": "0190b5a2-7c3e-7a10-9d21-4f6b8c2e1a01", "rule_slug": "psi-driver-age", "rule_version": 2,
       "layer": "distributional", "severity": "warn", "outcome": "warn",
       "measured": {"psi": 0.148}, "threshold": {"warn_above": 0.10, "fail_above": 0.25},
       "affected_rows": null, "affected_exposure_fraction": null,
       "detail": "Driver age distribution shifted; largest contribution from band 17-21 (+2.1pp).",
       "offending_sample": [{"column": "driver_age"}],
-      "evidence_blob": "blob:sha256:… (bucketed distribution table)",
       "acknowledgement": {
-        "user_id": "uuid", "at": "2026-08-14T10:02:11Z",
+        "user_id": "0190b5a2-7c3e-7a10-9d21-4f6b8c2e1a01", "at": "2026-08-14T10:02:11Z",
         "justification": "Expected: new young-driver telematics product launched 2026-04."
       }
     }
   ],
-  "reference_dataset_version_id": "uuid"
+  "reference_dataset_version_id": "0190b5a2-7c3e-7a10-9d21-4f6b8c2e1a01"
 }
 ```
+
+> **Clarified 2026-11-05 (`RL-2054` row 5, FD-1381).** `overall` is one of `pass`, `pass_with_warnings`,
+> `fail` or `error` (the invariants below). `evidence_blob` is no longer printed: no field carries it and
+> FR-49 does not list one. `overall` and `counts` stay, because the authored `validation-report.schema.json`
+> requires both, but `GET /validation-reports/{report_id}` does not yet serialise them: they are plain
+> properties of the model. That is FD-2090 (working id; owner WK-1178), and until it lands this block is the
+> spec's statement and not what the route returns.
+
+> **Amended 2026-11-07 (FD-2090, WK-1178, SL-2088).** The note above is discharged: `GET /validation-reports/{report_id}`
+> now returns `overall` and `counts`. The block is the **response**, `ValidationReportView`, and is validated as such
+> (`schema=ValidationReportView`); the stored body is `ValidationReport`, the same object without `overall` and
+> `counts`, which are derived from `results`, checked against them, and never stored (NFR-469). The example's counts
+> now agree with its one result: they were `{"pass": 41, "warn": 3, ...}` beside one `warn` result, which the
+> view refuses.
 
 > **Amended 2026-08-26 (W6b-18).** The example previously printed `"offending_sample": []`, which settled nothing about the item encoding (OQ-567, decided 2026-08-26: (b)). The item shape is written out: one object per offending row, property keys are column names, values are the cell value as a string or null — `None` is distinct from `""`. A composite key is one item with several properties. A column-level check emits `{"column": <name>}`.
 
@@ -605,7 +651,7 @@ checked at promotion (FR-46), not baked into `overall`.
 
 ### 4.7 `Profile`
 
-```json
+```json illustrative
 {
   "id": "uuid",
   "dataset_version_id": "uuid",
@@ -752,7 +798,7 @@ checked at promotion (FR-46), not baked into `overall`.
 
 A **table** declares what it is keyed by; a **version** holds effective-dated rows.
 
-```json
+```json illustrative
 {
   "table": {
     "slug": "ons-postcode-directory",
@@ -806,13 +852,13 @@ refused with `REFERENCE_VERSION_NOT_PINNED` rather than falling back.
 required this since Phase 0, and the response was the only documented `01` response with no
 §4 subsection, which is how it stayed an untyped `dict[str, Any]` through six slices.)*
 
-```json
+```json schema=DatasetLineage
 {
-  "version_id": "uuid",
-  "built_from": {"parent_version_id": "uuid", "operation": "sample", "parameters": {}},
+  "version_id": "0190b5a2-7c3e-7a10-9d21-4f6b8c2e1a01",
+  "built_from": {"parent_version_id": "0190b5a2-7c3e-7a10-9d21-4f6b8c2e1a01", "operation": "sample", "parameters": {}},
   "depends_on_this": {
-    "derived_versions": [{"version_id": "uuid", "version": 3, "operation": "split"}],
-    "models": [{"model_id": "uuid", "slug": "motor-freq-2026", "status": "approved"}],
+    "derived_versions": [{"version_id": "0190b5a2-7c3e-7a10-9d21-4f6b8c2e1a01", "version": 3, "operation": "split"}],
+    "models": [{"model_id": "0190b5a2-7c3e-7a10-9d21-4f6b8c2e1a01", "slug": "motor-freq-2026", "status": "approved"}],
     "rating_versions": [],
     "monitoring_baselines": []
   }
@@ -853,7 +899,7 @@ required this since Phase 0, and the response was the only documented `01` respo
 |---|---|---|---|
 | `POST` | `/api/v1/sources` | Register a Source (FR-26) | `dataset:write` |
 | `GET` | `/api/v1/sources` | List sources (credentials redacted) | `dataset:read` |
-| `POST` | `/api/v1/sources/{id}/preview` | Read first N rows + inferred schema without creating a version | `dataset:write` |
+| `POST` | `/api/v1/sources/{id}/preview` | Read first N rows + inferred schema without creating a version. Body capped by `07` FR-450's request-body limit (`413` `PAYLOAD_TOO_LARGE`). | `dataset:write` |
 | `POST` | `/api/v1/datasets` | Create a Dataset (metadata + data dictionary) | `dataset:write` |
 | `GET` | `/api/v1/datasets` | List / filter datasets, each with `latest_version`, `latest_version_status` and `last_validated_at` (FR-55). *(amended 2026-08-25, W6b-3: **and `last_validated_version`.** FR-55's own 2026-08-23 amendment records that it landed as three derived fields rather than two — "the list states which" cannot be satisfied by a bare date — but this row was written when the decision named two and was never brought forward. The endpoint has served four since W32-3. Code and published contract were right; this row was the stale side.)* | `dataset:read` |
 | `GET` | `/api/v1/datasets/{slug}` | Dataset detail incl. `latest_version`. *(amended 2026-08-25, W6b-3: **and `latest_version_status`, `last_validated_at`, `last_validated_version`.** The detail route runs the same two aggregates the list does, over one id, deliberately — `backend/src/app/api/datasets.py` states why: "a detail page that showed nothing where the list showed a date would be its own defect (FR-55)". So it serves the same derived set, and this row named one of four.)* | `dataset:read` |

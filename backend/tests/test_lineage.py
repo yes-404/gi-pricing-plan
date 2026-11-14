@@ -475,6 +475,70 @@ async def test_an_archived_version_stays_readable_and_referenceable(
     assert row.status == DatasetStatus.ARCHIVED
 
 
+@pytest.fixture
+def auditor(workspace_id, principal, grant) -> dict[str, str]:
+    asyncio.get_event_loop().run_until_complete(grant("auditor"))
+    return _headers(principal.id, workspace_id)
+
+
+@pytest.mark.req("FR-80")
+def test_an_auditor_reads_an_archived_version_and_its_model_over_the_api(
+    api_client: TestClient, workspace_id, auditor, database
+) -> None:
+    """FR-80 over the API, which the row test above does not reach.
+
+    The row test proves the archive is soft. This proves the read path does not filter it
+    out: an Auditor reads the archived version, and a Model fitted on it still names a version
+    that resolves.
+    """
+    from app.db.models import ModelRow
+    from model_schema import GlmSpec, OffsetSpec
+
+    loop = asyncio.get_event_loop()
+    analyst = loop.run_until_complete(_with_role(database, workspace_id, "analyst"))
+    _, version_id = loop.run_until_complete(_version(database, workspace_id, analyst))
+    slug = f"fr80-{new_uuid7().hex[-8:]}"
+
+    async def _archive_and_fit() -> None:
+        async with database.unit_of_work() as session:
+            await datasets.archive_version(
+                session, workspace_id=workspace_id, actor=analyst, version_id=version_id,
+                reason="superseded by the 2026H2 extract",
+            )
+        spec = GlmSpec(
+            model_family_slug=slug,
+            dataset_version_id=version_id,
+            response_column="claim_count",
+            offset=OffsetSpec(kind="log_column", column="exposure_years"),
+        )
+        async with database.unit_of_work() as session:
+            session.add(
+                ModelRow(
+                    workspace_id=workspace_id,
+                    model_family_slug=slug,
+                    version=1,
+                    status="draft",
+                    dataset_version_id=version_id,
+                    spec=spec.model_dump(mode="json"),
+                    spec_hash=f"v3:sha256:{new_uuid7().hex}{new_uuid7().hex}",
+                )
+            )
+
+    loop.run_until_complete(_archive_and_fit())
+
+    read = api_client.get(f"/api/v1/dataset-versions/{version_id}", headers=auditor)
+    assert read.status_code == 200, read.text
+    assert read.json()["status"] == "archived"
+
+    model = api_client.get(f"/api/v1/models/{slug}", headers=auditor)
+    assert model.status_code == 200, model.text
+    assert model.json()["dataset_version_id"] == str(version_id)
+    resolved = api_client.get(
+        f"/api/v1/dataset-versions/{model.json()['dataset_version_id']}", headers=auditor
+    )
+    assert resolved.status_code == 200, resolved.text
+
+
 @pytest.mark.req("FR-80")
 async def test_an_archived_version_cannot_be_fitted_on(
     database: Database, workspace_id
@@ -496,13 +560,14 @@ async def test_an_archived_version_cannot_be_fitted_on(
 
 
 @pytest.mark.req("FR-81")
+@pytest.mark.req("NFR-472")
 async def test_a_subject_purge_is_admin_only_and_recorded(
     database: Database, owner_database: Database, workspace_id
 ) -> None:
     """FR-81: the purge is recorded even though the data is gone — especially because
     it is. An erasure with no record is indistinguishable from data that was never there."""
     analyst = await _with_role(database, workspace_id, "analyst")
-    dataset_id, _ = await _version(database, workspace_id, analyst)
+    dataset_id, version_id = await _version(database, workspace_id, analyst)
 
     # `purge_subject` has no application caller: both calls (the refusal and the purge) run
     # as the owner; the setup and the purge/audit reads below stay on the login role.
@@ -528,19 +593,20 @@ async def test_a_subject_purge_is_admin_only_and_recorded(
                 select(SubjectPurgeRow).where(SubjectPurgeRow.dataset_id == dataset_id)
             )
         ).scalars().all()
-        actions = [
-            e.action
-            for e in (
-                await session.execute(
-                    select(AuditEventRow).where(
-                        AuditEventRow.workspace_id == workspace_id
-                    )
-                )
-            ).scalars()
-        ]
+        events = (
+            await session.execute(
+                select(AuditEventRow).where(AuditEventRow.workspace_id == workspace_id)
+            )
+        ).scalars().all()
+        actions = [e.action for e in events]
     assert len(purges) == 1
     assert purges[0].reason == "DSAR 2026-114"
     assert "dataset.subject_purged" in actions
+    # NFR-472: the event carries the state before the erasure -- the affected versions' ids and
+    # statuses, in version order, and nothing the purge erased; `after` is unchanged (FD-1746).
+    (purged,) = [e for e in events if e.action == "dataset.subject_purged"]
+    assert purged.before == {"versions": [{"id": str(version_id), "status": "draft"}]}
+    assert purged.after == {"subject_token": "a" * 32, "versions_affected": 1}
 
 
 @pytest.mark.req("FR-81")

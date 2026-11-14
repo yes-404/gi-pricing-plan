@@ -580,8 +580,8 @@ def test_b3_the_fork_puts_a_pinned_as_at_lookup_in_the_premium() -> None:
     assert lookup["as_at"] == "effective_date"
     assert lookup["on_miss"] == "error"
     # The premium step multiplies by the loading: it is the one step that consumes the rate-table
-    # outputs, the ladder's factor and the lookup's output (so a lookup miss is reported as
-    # RATE_TABLE_MISS today; the journey asserts that exactly and names the finding).
+    # outputs, the ladder's factor and the lookup's output (so the quote's refusal code
+    # must come from what failed, not from what this step consumes: FD-1659, FR-255).
     premium = by_id["s_premium"]
     assert "number(expense_loading)" in premium["expr"]
     assert "expense_loading" in premium["consumes"]

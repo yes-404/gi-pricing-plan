@@ -2,7 +2,7 @@
 id: LG-1879
 family: ledger
 title: WK-1178 slice SL-1878 — FD-1852, a dataset-scoped grant reaches its three scoped writes (PL-1877) (slice ledger)
-status: active                 # active → closed (§1.2a)
+status: closed                 # active → closed (§1.2a)
 created: 2026-10-25                  # drafted 2026-10-22 under working id 8186; minted 2026-10-25 as LG-1879
 owner: executor
 tree: 40de35f5e74127c9ca6f21445c20088da5ba596b
@@ -101,3 +101,5 @@ None yet.
 - **`tree:` correction.** Front matter `tree: 40de35f5…` is the Task 5 commit, not the head. `docs/_templates/LG.md` line 37 says only `tree: <commit-sha this was written against>`; it carries no rule that the field is updated, so the front matter is not rewritten. The tree this ledger is now written against is `01eb5b05` (the audited head, RS-1880), before this commit.
 - **Gate.** The 2026-10-23 aborted run on `7d3f5b09` is not a gate row. Re-run owed on the pushed head of this branch, slot gate-1b, after slice A (#1368) leaves gate-1.
 - **Audit.** RS-1880 (`docs/research/RS-01880-…`, working id 8216, folded into this PR) is the slice audit at `01eb5b05`, proposed CLEAN with conditions B1 to B4. Adopted by the lead 2026-10-25: CLEAN; B1 met as worded by the maintainer's 18:16:19 BST entry of 2026-10-22, (a), SL 8192 reserved and named here; B2 discharged by folding PL-1877 from `origin/draft/pl-8181` (`c6f93d5d`), working id kept; B3 discharged by this block; B4 superseded by the gate re-run. The maintainer confirmed the PL-1877 fold at to-lead "2026-10-25 11:15:40 GMT".
+
+*(Dated line, 2026-11-09, docs batch 27, by the executor, on to-lead "2026-11-09 10:00:22 GMT" item (4): this ledger's front matter reads `status: active` at origin/main `40ba57f4b320` while its slice SL-1878 reads `status: closed` in `docs/roadmap.md` there. The slice's code merged as #1383 (`3ac43364`, "fix(platform): a dataset-scoped grant reaches its three scoped writes — FD-1852 (SL-1878, PL-1877) (#1383)"); its row was set `closed` by #1432 (`2f108b1e`, "docs: docs batch 10 — eleven + one WK-1178 slice closes, the gate and adoption lines, FD-1838 + FD-2001 closing acts, the SL-1736 + SL-1854 audits, process rows (#1432)"). Derived by the predicate: ledger front matter `status: active` and its `slice:` row reading `closed` in `docs/roadmap.md` at `40ba57f4b320`; 13 ledgers, LG-2003 (SL-1736) and LG-1977 (SL-1976) excluded as their slices read `active`. The front matter is flipped to `status: closed` in this batch, per to-lead "2026-11-09 10:28:26 GMT" (LEDGERS), so the record no longer says `active` for a closed slice.)*

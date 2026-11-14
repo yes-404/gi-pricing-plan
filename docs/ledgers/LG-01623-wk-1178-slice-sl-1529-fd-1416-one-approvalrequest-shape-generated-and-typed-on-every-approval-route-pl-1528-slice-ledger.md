@@ -50,7 +50,7 @@ Write set: `PL-1528` §"Write set, and its contention", plus the ruled `scripts/
 
 ### Audit
 
-(Written by the auditor at slice close.)
+*(Dated line, 2026-11-09, docs batch 29, by the auditor, filed under FD-1655 (`to-lead` "2026-11-09 10:12:52 GMT" (1)). Written from this ledger's own red and green lines and the merge, read and not re-run; the merge is an ancestor of `origin/main` at `40ba57f4`. Source: `RS-1649`'s row for the slice. )* SL-1529, #1276 `e3a98c97a55a996f51ba3918dae7e5769e1eea76` (merged 2026-10-11T14:29:31+01:00). **Red then green:** the Gate record (gate-1, 11:33:47 to 12:23:40 BST) at `823a617f1be343364d14c932aad780c8f3f82e77`: six `red_*` stages rc 1, each red by cause with the cause quoted. **Gate:** ruff rc 1 with five OWN errors, fixed after the run and checked per file (all checks passed), not re-gated; audit-docs and the 13 pytest failures are mint artefacts; mypy, import-linter, req-coverage, contracts and the six frontend stages rc 0. **Pointer:** `RS-1649`'s row for SL-1529 reads A1 to A9 and A11 to A13 MET and **A10 PARTIAL** (ruff fixes after the local gate, "not re-gated"; plan delta D1, 4 exempt slugs and not 5, only in this ledger and a channel message). This Audit is the act `FD-1416`'s hold names and `CR-2071`'s owed row 13.
 
 ### Build log
 

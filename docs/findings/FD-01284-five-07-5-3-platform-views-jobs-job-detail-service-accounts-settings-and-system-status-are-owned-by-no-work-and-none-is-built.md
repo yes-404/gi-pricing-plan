@@ -181,3 +181,5 @@ trace at `6987bf9d`. It is a channel entry, not a merged record; the ruling reco
 *(Amended 2026-09-30: citations of the WK-675 map plan re-pointed to PL-1286 after #920 merged; no other change. The mint disclosure above is kept.)*
 
 Ownership shape: event
+
+***Dated line, 2026-11-09*** (docs batch 29, by the auditor). `to-lead` "2026-11-09 10:12:52 GMT" (3): the auditor's proposed owner accepted as a proposal: **per view: Jobs and Job detail P3-C; Service accounts WK-676; Settings and System status P3-C**. The Jobs and Job detail limb was ruled to WK-675 on 2026-09-30, WK-675 is closed, and no `/jobs` route is in `frontend/src/router`, so that limb outlived its owner. P19 (a); `CR-2103` P25 makes P3-C and P3-D WK-1178's successors, and neither has a `### WK-` row yet, so this record is their owner until the rows exist.

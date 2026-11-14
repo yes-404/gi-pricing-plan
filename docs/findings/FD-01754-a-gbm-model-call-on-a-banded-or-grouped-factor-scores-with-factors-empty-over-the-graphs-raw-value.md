@@ -2,7 +2,7 @@
 id: FD-1754
 family: finding
 title: A GBM model_call on a banded or grouped Factor scores with factors=() over the graph's raw value
-status: active
+status: closed
 created: 2026-10-17 # original date 2026-10-16, set at the filing; minted 2026-10-17
 owner: auditor
 tree: a2f77b2dcad5aaec41a5f10aa664383caf421e8b
@@ -119,3 +119,5 @@ test that a pinned banded GBM with no `model_call` still saves and compiles.
 
 **The event that next discharges this finding:** the merge of SL 8071 with its proof recorded in its
 ledger (items 1 and 2); items 3 and 4 stay open with their owners.
+
+***Closed in place 2026-11-08*** (docs batch 26, by the auditor, on to-lead "2026-11-08 10:02:49 GMT" (the maintainer's rulings on the P2 closure-record pass)). The S4 slice is SL-1924 / LG-1925, PR #1394, squash `c0828e24`, an ancestor of main (`git merge-base --is-ancestor c0828e24 origin/main` rc 0 at a8ad2d01). Disposition items 1 and 2 were delivered by SL-1758 (#1322, `539a654f`, LG-1759): the refusal code `MODEL_CALL_GBM_TRANSFORMED_FACTOR`, at compile and at save, and `GbmFitError` caught by name in `runtime.py` as `MODEL_CALL_FAILED`. Item 4, the open limb (interaction, spline, polynomial and expression Factors), was delivered by SL-1924: the refusal now covers every non-IDENTITY Factor type, `RS-1926` adopted CLEAN, per-type verdict quoted at `LG-1925` (Audit). **Carried:** item 3, real GBM Factor support in a `model_call` (a design decision for the decision-maker; "a P2 need: NO"), has owner WK-673, a closed Work, and no live owner; this record does not re-own it: the owner is a closed Work and a new owner is the lead's to name at the P2 closure record.

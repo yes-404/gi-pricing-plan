@@ -429,3 +429,5 @@ beside every group until the build window.** The window and the gate are serial 
 5. **The triage is corrected in three places:** the frontend work is authored, not new (hence 5 h
    against 7 h); the salvaged port line is stale since #1378; and FD-1816's fix has a second site.
 6. **Calendar weekdays** read with `date -d`: 12 Nov 2026 is a Thursday.
+
+*(Dated note, 2026-11-07, docs batch 16, by the executor: the working ids written at line 26, `PL 8319` and `LG 8320`, were minted as **PL-2016** (this plan) and **LG-2017** (slice SL-1689's ledger). PL-2074 cites this plan as `PL 8319` and says it was re-pointed by a dated note at `PL-2016:26`: this is that note. Line 26 is not edited.)*

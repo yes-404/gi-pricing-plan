@@ -164,3 +164,5 @@ What this changes in the record above:
 The finding is discharged when **both** halves are merged; either alone leaves it open.
 
 **Going forward:** every ACK that runs it quotes CI's form with its rc and row line.
+
+***Dated line, 2026-11-09*** (docs batch 29, by the auditor). `to-lead` "2026-11-09 10:12:52 GMT" (2): **CARRIED to P3-D**, P19 (a); `CR-2103` P25 makes P3-C and P3-D WK-1178's successors, and neither has a `### WK-` row yet, so this record is their owner until the rows exist; off the demo path (the lead confirms, `to-lead` "2026-11-09 10:37:56 GMT"). **Unfixed limb, both halves:** `--record-ref` has 0 hits in `.claude/skills/dev-commands/SKILL.md`, `docs/process/delivery-process.md` and `docs/process/delivery-process.core.json`, and `scripts/doc-id.py` carries no refusal of a migrated `--ref`. Read at `40ba57f4`; the instrument was not run.

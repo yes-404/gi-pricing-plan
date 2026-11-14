@@ -2,7 +2,7 @@
 id: FD-1478
 family: finding
 title: A genuine table or lookup miss and another evaluation failure in the same step are indistinguishable, so the score path can misreport RATE_TABLE_MISS
-status: active
+status: closed
 created: 2026-10-08            # original date 2026-09-30, set at the draft; minted 2026-10-08
 owner: auditor
 tree: 47d770e8fcbd2410fa101019ed8cf3aae69a1baa
@@ -98,3 +98,5 @@ main (`docs/rulings/RL-01313-…`, "DP-G4 — (a)+(i), with a stated limit"); `P
 this finding by working id 9888 (its lines 105, 336, 487).
 
 Re-anchored 2026-10-08 at main `0ee8f414`, at the mint: `score.py` last changed at `b6dd96fd` (SL-1427, #1219), which moved the function. By symbol, `_reraise_engine_failure` is at `score.py:503` (docstring `:504-525`, "The stated limit" paragraph at `:519`), and its step lookup picks the miss code from `consumed & produces` only (`:526-547`); the residual still reproduces by code reading, and `test_the_stated_residual_still_reports_the_miss_code` is still at `test_rating_score.py:832`. The lines 18, 27 and 79 above carry these re-pointed cites; the 2026-10-05 notes above keep the cites they were written with.
+
+***Resolved 2026-11-06*** — closed in place 2026-11-06 by the executor, as the closing act of the mint of SL-2038 (WK-1178, LG-2039, PL-2019; this PR; its number, squash commit and merge date are written at the merge's date-of-record), on the lead's adoption of the SL-2038 audit and the decision of "2026-09-30 11:07:11 BST" that owned the residual to WK-1178. **Dated line recording the widening:** the residual was pinned by `test_the_stated_residual_still_reports_the_miss_code` and its remedy named as "the wire-level change that makes the translation fail gracefully"; the maintainer's entries "2026-11-05 10:11:39 GMT" and "10:41:08 GMT" widened the remedy to the diagnostic guarded decision shared with FD-1659 and to a hard error for an unparseable cell (FD-1648 limb (iii)), so a failure in a step that merely consumes a table output is now `RATING_EVALUATION_FAILED` and the miss code is reported only for the step that missed. Delivered: the residual test renamed `test_a_failure_in_a_step_consuming_a_table_is_not_a_miss` and inverted to `^RATING_EVALUATION_FAILED:` (FD-1478 orders it); red at base `662867bb` `RATE_TABLE_MISS` where `RATING_EVALUATION_FAILED` is expected; green at the head; case 1, a genuine miss, stays `RATE_TABLE_MISS` by `test_a_rate_table_miss_is_refused_with_the_right_code`, not edited. `score.py`'s "stated limit" paragraph is replaced by one that says why the live wire has no guards.

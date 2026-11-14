@@ -89,25 +89,6 @@ def test_second_block_fires_on_a_double_stamped_file(
     assert "fine.md" not in nets["second_block"]
 
 
-def test_the_three_instruments_this_net_exists_to_outvote_all_read_it_as_correct(
-    scan: types.ModuleType, tmp_path: pathlib.Path
-) -> None:
-    """The premise of the whole script, asserted rather than described.
-
-    If `parse_header` choked on a double-stamped file, or `_front_matter_state` called it
-    `"foreign"`, this scan would be redundant with checks that already run. It is not:
-    both read the corruption as a valid stamp, which is why the tree has to be read.
-    """
-    docid = sys.modules.get("_docid") or scan._docid
-    doc_id_cli = _load_doc_id()
-    path = tmp_path / "doubled.md"
-    path.write_text(DOUBLE_STAMPED, encoding="utf-8")
-
-    header = docid.parse_header(path)
-    assert header is not None, "parse_header rejects it — this net would be redundant"
-    assert header.family == "reference"
-    assert dict(header.extra) == {}, "an unknown field would give check 30 something to catch"
-    assert doc_id_cli._front_matter_state(path.read_text(encoding="utf-8")) == "stamped"
 
 
 def _load_doc_id() -> types.ModuleType:

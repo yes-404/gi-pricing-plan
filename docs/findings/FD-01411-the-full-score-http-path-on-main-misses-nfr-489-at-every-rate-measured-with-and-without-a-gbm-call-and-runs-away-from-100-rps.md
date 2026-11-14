@@ -179,3 +179,5 @@ This finding is the main-tree confirmation, now at all four rates.
    measurement, or the maintainer amends or carries NFR-489 by a dated line.
 
 *(Dated line, 2026-11-05, docs batch 11, by the auditor, on to-lead "2026-11-05 11:23:52 GMT" item (c): FD-1411 stays HIGH, owner WK-674, tied to FD-1836's resolution.)*
+
+*(Dated line, 2026-11-09, docs batch 32, by the executor, on the maintainer's (by delegation) entry "2026-11-09 16:27:43 GMT" (D-3): FD-1411 is carried by name to P3-A. NFR-489's budgets stand; the P2 exit reading is UNMET on the 8-vCPU non-spec host (D5.12 at an offered 100 rps, n = 1, N = 4: p99 101.915 ms against 15 ms), accepted for the P2 close as an interim under the user's delegation of 2026-11-07 17:30:49, and the remedy question is re-opened on the spec host in P3-A (D-2). FD-1836, FD-1411 and F38 are carried together; the owner on the P3 row is the maintainer's to name at the P2 close. The amendment line is on NFR-489 in `docs/specs/03-rating-engine.md`.)*

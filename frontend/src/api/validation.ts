@@ -1,7 +1,7 @@
 import { request } from "./client";
 import type { components } from "./generated/schema";
 
-export type ValidationReport = components["schemas"]["ValidationReport"];
+export type ValidationReport = components["schemas"]["ValidationReportView"];
 export type RuleResult = components["schemas"]["RuleResult"];
 export type ReportSummary = components["schemas"]["ReportSummary"];
 export type DatasetVersion = components["schemas"]["DatasetVersion"];

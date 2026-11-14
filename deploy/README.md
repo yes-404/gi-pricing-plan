@@ -129,6 +129,21 @@ docker compose -f deploy/docker-compose.yml --profile app up -d --wait --scale a
   0.17.0 that `compose build` needs. A bare `--profile app up` starts `frontend`, so build its image
   first.
 
+- **Upgrading to the build that refuses a stored bundle on a `control` operand** (WK-2113 S3,
+  FD-1495): a stored Rating Version compiled before the `control`-intent guards existed is now
+  refused wherever it is hydrated, and a deploy, a rollback or a deployment request for it is
+  refused too (`CONTROL_FACTOR_IN_RATEABLE_PATH`, a 409 problem; one Audit Event
+  `rating_version.load_refused` per process per bundle). **Before upgrading, run the sweep**, a
+  read-only script that lists every stored version the new build will refuse:
+  `uv run python scripts/sweep-stored-bundles.py [--dsn <read-only URL>] [--workspace <id>]`.
+  It prints its denominators first (`versions`, `with a bundle`, `checked`), one `OFFENDER` line
+  per version (reference, hash, which half found it, the Factor and the interaction), and exits
+  0 (clean), 1 (an offender) or 2 (a bundle could not be read, so it is not shown clean). The
+  remedy for an offender is a **new version** (a compiled version is never mutated: compile is
+  draft-only), not an edit. **Do not enable blob garbage collection (FR-420, OQ-1943) before every existing bundle blob is retained**: versions compiled before this build hold their bundle blob at `ref_count` 0, and the compile Job now retains the blob only for new compiles. **Restart every `api` replica and every `worker` after the upgrade:**
+  a running process holds the bundles it already hydrated and re-validates nothing it holds
+  (`roll-api.sh` keeps the old replicas serving until the new ones pass their healthcheck, so an
+  old process serves until it is removed).
 - **Rolling `api` to a new image is health-gated** (NFR-531). A plain `up --scale api=2`
   recreates every replica at once, so none is healthy until the new ones pass their healthcheck.
   Run `GIP_BUILD=<new> deploy/roll-api.sh [-t <seconds>] <project> <compose-file>...`. `lb`
@@ -145,6 +160,12 @@ docker compose -f deploy/docker-compose.yml --profile app up -d --wait --scale a
 - **`api`** has no dependency on `worker` (FR-434): `up api lb` starts the scoring API with no
   compute worker present (NFR-534). `lb` is the stated topology: one nginx, round-robin over the
   `api` replicas through Docker DNS (`deploy/lb.conf`).
+- **Upload body limit** (FR-450): the API refuses a request body past `GIP_MAX_UPLOAD_BODY_MIB`
+  (default 64) on the two upload routes with an RFC 9457 `413`. `client_max_body_size` in
+  `deploy/lb.conf` and in `deploy/frontend.nginx.conf` is that limit plus 1 MiB (`65m`), so the
+  proxy never answers first: nginx's default of 1 MiB would return its own HTML `413`. A tested
+  default is held to both files; **a deployer who raises `GIP_MAX_UPLOAD_BODY_MIB` raises both
+  nginx values to the new limit plus 1 MiB**, and nothing in the stack does it for them.
 - **`worker`** runs Celery with a container `mem_limit`; a Job's own `resource_budget.memory_gb`
   is checked inside the process and fails the Job naming the budget (FR-412, FR-415).
 - **`scheduler`** is the Celery beat process (FR-432, FR-413, FR-406): the outbox relay is a beat

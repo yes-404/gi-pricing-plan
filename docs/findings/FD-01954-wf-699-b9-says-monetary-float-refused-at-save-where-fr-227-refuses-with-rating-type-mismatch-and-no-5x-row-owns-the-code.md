@@ -37,3 +37,5 @@ A spec decision, which side is wrong is `CLAUDE.md` §0's question: either an ow
 ## Disposition
 
 Open, owner WK-675; decision raised in the Tue 27 Oct 2026 docs PR. Filed under working id FD-1954.
+
+*(Dated line, 2026-11-09, docs batch 32, by the planner (plan-s3fill), on the maintainer's (by delegation) entries "2026-11-09 15:58:49 GMT" and "2026-11-09 16:43:34 GMT" (1): this finding's closure holds; the owed code limb is CARRIED by name, not delivered. The FR-227 route test → P3-C (product). The asserted 422 probe replacing B9's `self.skip("B9")` (`examples/fremtpl2/journey.py:497`) and the journey-test pin `KNOWN GAP B9: FD-1490` (`backend/tests/test_wf699_journey.py:47`) → P3-D, tooling by location, like FD-2106. Red first. The demo prints B9 as a known gap (FD-1490). No code before Wed 11.)*
