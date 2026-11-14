@@ -322,7 +322,7 @@ def _seed_over_an_interaction(
 ) -> Any:
     """POST the seed route for a model that pins ONLY an interaction Factor whose operands are
     `crossed_a` (intent `operand_intent`) and `crossed_b` (risk). The operands are never in
-    `spec.factors`, so the guard sees them only through `load_factors`' transitive load (SL 8429
+    `spec.factors`, so the guard sees them only through `load_factors`' transitive load (SL 2124
     review LOW 3; the core analogues are `test_rating_compile_fr240.py`'s `_seed_cross` tests)."""
     suffix = new_uuid7().hex[-8:]
     cross_slug = f"crossed_{suffix}"

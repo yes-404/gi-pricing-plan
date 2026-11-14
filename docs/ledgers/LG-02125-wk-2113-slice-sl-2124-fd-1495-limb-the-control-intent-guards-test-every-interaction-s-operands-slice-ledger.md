@@ -1,22 +1,22 @@
 ---
-id: LG-8430
+id: LG-2125
 family: ledger
-title: WK-2113 slice SL-8429 — FD-1495 limb: the control-intent guards test every interaction's operands (slice ledger)
+title: WK-2113 slice SL-2124 — FD-1495 limb: the control-intent guards test every interaction's operands (slice ledger)
 status: active                 # active → closed (§1.2a)
 created: 2026-11-13
 owner: executor
 tree: 2ba0d0d53142dacd6550cb314a4d65685b612bd1
 phase: P3
 work: WK-2113
-slice: SL-8429
+slice: SL-2124
 plans: []
 corrected_by: []
-relates: [SL-8429, FD-1495]
+relates: [SL-2124, FD-1495]
 ---
 
-# LG-8430 — WK-2113 slice SL-8429: the control-intent guards test every interaction's operands
+# LG-2125 — WK-2113 slice SL-2124: the control-intent guards test every interaction's operands
 
-Filed 2026-11-13 under working id 8430 (lead-reserved); executed by seat `exec-sl8429`, branch `sl-8429-fd1495-interaction-operands` off `origin/main` `2ba0d0d53142dacd6550cb314a4d65685b612bd1`. Working ids in prose are in space form (SL 8429, OQ 8431) until the mint.
+Filed 2026-11-13 under working id 8430 (lead-reserved); executed by seat `exec-sl8429`, branch `sl-2124-fd1495-interaction-operands` off `origin/main` `2ba0d0d53142dacd6550cb314a4d65685b612bd1`. Working ids in prose are in space form (SL 2124, OQ 2126) until the mint.
 
 **GO:** the maintainer's entry, verbatim:
 
@@ -28,15 +28,15 @@ Filed 2026-11-13 under working id 8430 (lead-reserved); executed by seat `exec-s
 
 ### Scope
 
-WK-2113 has no Work plan yet (the Work is `draft`); the slice's row is `docs/roadmap.md` `#### SL-8429` under WK-2113. Requirements: `FR-88` (`02`), `FR-240` and `FR-239` (`03`). Out of scope by the brief: sweep cells G3, G4, G6 (awaiting rulings); the stricter definition-time rule (OQ 8431, not built); WK-2113's own status line.
+WK-2113 has no Work plan yet (the Work is `draft`); the slice's row is `docs/roadmap.md` `#### SL-2124` under WK-2113. Requirements: `FR-88` (`02`), `FR-240` and `FR-239` (`03`). Out of scope by the brief: sweep cells G3, G4, G6 (awaiting rulings); the stricter definition-time rule (OQ 2126, not built); WK-2113's own status line.
 
 ### Task list
 
 1. **Red first** (condition 1): the tests, committed alone as `575a5a68`, run via `run-small` at that head: 13 failed, 35 passed, rc=1, each failure `Failed: DID NOT RAISE ValueError`. The five positive controls (risk operands compile / pass) passed at the same head, so the harness is proven, not only the failures.
 2. **Fix**: `control_factor_in(factor, pool)` in `packages/pricing-core/src/pricing_core/modelling/factors.py` expands a Factor to itself plus its transitive operands (by `operand_factor_ids` against `pool`) and returns the first `control` Factor; `rateable()` (G5, had no caller) now uses it, so there is one definition. Used by the compile feature guard (`_refuse_control_factor_features`, including the `offset_source` recursion), the compile key guard (`_refuse_control_factor_keys`) and the seed (`rate_tables/operations.py`).
 3. **Backend resolver**: the `factor` branch of the compile resolver (`backend/src/app/platform/rating_versions.py`) returns `factors=` the chain `load_factor_by_ref` already builds (the Factor and its operands). Without it a table key's operands are not visible to compile and the fail-closed rule would refuse every interaction-keyed table. Its DB-backed tests are owed to the gate.
-4. **FR-239 regression** (condition 5): `test_the_control_operand_guards_leave_the_fixture_bundle_hashes_unchanged` pins the freMTPL2 baseline and full-candidate `content_hash` (measured at the pre-fix code and at the fixed code: identical, `scratch/sl-8429-fd1495-interaction-operands/hash_probe.py`). The older pins `_PINNED_PRE_DECIMAL_HASH` and `_SCORE_FIXTURE_HASH` stay green in the GREEN set. The guards only refuse; no scoring arithmetic is touched.
-5. **Spec** (condition 6), same commit: dated clarifications on `FR-240` (`03`) and `FR-88` (`02`); `OQ 8431` in `docs/open-questions.md` and `03` §10, mirrored; FD-1495's register row gains the new limb (HIGH, owner WK-2113, shipped impact "none known: freMTPL2 seed risk Factors only, no interactions; no non-template DB on this box"); the `SL-8429` row, `active`.
+4. **FR-239 regression** (condition 5): `test_the_control_operand_guards_leave_the_fixture_bundle_hashes_unchanged` pins the freMTPL2 baseline and full-candidate `content_hash` (measured at the pre-fix code and at the fixed code: identical, `scratch/sl-2124-fd1495-interaction-operands/hash_probe.py`). The older pins `_PINNED_PRE_DECIMAL_HASH` and `_SCORE_FIXTURE_HASH` stay green in the GREEN set. The guards only refuse; no scoring arithmetic is touched.
+5. **Spec** (condition 6), same commit: dated clarifications on `FR-240` (`03`) and `FR-88` (`02`); `OQ 2126` in `docs/open-questions.md` and `03` §10, mirrored; FD-1495's register row gains the new limb (HIGH, owner WK-2113, shipped impact "none known: freMTPL2 seed risk Factors only, no interactions; no non-template DB on this box"); the `SL-2124` row, `active`.
 
 ### Gate
 
@@ -58,7 +58,7 @@ FAILED test_rating_compile_fr240.py::test_seeding_from_a_nested_interaction_expa
 FAILED test_rating_compile_fr240.py::test_seeding_from_an_interaction_with_a_missing_operand_is_refused
 ```
 
-**Green** (the fixed head; logs under `scratch/sl-8429-fd1495-interaction-operands/`, each `head=` first and `rc=` last):
+**Green** (the fixed head; logs under `scratch/sl-2124-fd1495-interaction-operands/`, each `head=` first and `rc=` last):
 
 | check | head | result | rc |
 |---|---|---|---|
@@ -78,7 +78,7 @@ FAILED test_rating_compile_fr240.py::test_seeding_from_an_interaction_with_a_mis
 | `uv run mypy` (`mypy.log`) | 0 | 257 source files |
 | `uv run lint-imports` (`lint-imports.log`) | 0 | 4 kept, 0 broken |
 | `ruff format --check` on the 7 changed `.py` files | 1 | five are unformatted at `origin/main` too (`operations.py`, `compile.py`, `rating_versions.py`, `test_rating_compile_fr240.py`, `test_quote_input_raise_sites.py`); `factors.py` and `test_fremtpl2_rate_fixture.py`, clean at `origin/main`, are clean |
-| `scripts/idsweep.sh origin/sl-8429-fd1495-interaction-operands` | 0 | no duplicate, no cross-branch number |
+| `scripts/idsweep.sh origin/sl-2124-fd1495-interaction-operands` | 0 | no duplicate, no cross-branch number |
 
 **Spec-reading and docs-audit tests** (`docs-tests.log`, head `30c400bc`, run-small in batches of three, `tests/` only; the list is `grep -lE 'docs/specs|"docs" */ *"specs"' backend/tests tests`, saved as `spec-readers.txt`, plus the eight docs-audit files): `test_doc_id.py`, `test_doc_id_verify.py`, `test_permission_parity.py`, `test_scope_audit.py`, `test_file_census.py`, `test_doc_id_migrate.py`, `test_spec_examples.py`, `test_doc_id_history_input.py`: 325 + 342 + 40 passed, rc 0. The eight docs-audit files: 13 FAILED across three batches, every one in the item-31 set (`test_audit_docs_finding_citations`, `test_audit_docs_ids`, `test_audit_docs_process_core_digest`, `test_audit_docs_w37_11_ceiling`, `test_doc_index` (`test_an_index_skipping_a_reserved_block_breaks_contiguity`), `test_register_lint`, `test_register_owed`, `test_repository_invariants`), each reading the real tree, which `audit-docs` fails only on check 31. They are re-run at the mint. The nine spec-reading files under `backend/tests` need the DB lane and are owed to the gate.
 
@@ -91,12 +91,12 @@ The 107 backend test files the closure reaches need a database and are **owed to
 3. **Offset branch**: `_refuse_control_factor_features` recurses into `offset_source` and now tests the closure there; tests for a control operand and for a missing operand in the offset model.
 4. **Missing operand**: an operand id not among the pin's Factors raises `FactorResolutionError` in `control_factor_in`; every caller converts it to `CONTROL_FACTOR_IN_RATEABLE_PATH` naming the cross and the operand id. Tested for a model, an offset model, an end-to-end `compile_bundle`, a table key and a seed. **What the fixed code does for a consumed feature with NO Factor at all** (`by_slug.get(feature) is None`): kept, it is not refused. A feature with no Factor has no intent to be `control`; `03` FR-222's amendment names "its `feature_order` when it has no Factors" as a legal required-input set (a GBM on raw columns). A Factor the pin carries but whose operand it does not is refused. 
 5. **Same hash, same price**: item 4 of the task list.
-6. **Spec**: item 5; OQ 8431 given options and a recommendation, not built.
+6. **Spec**: item 5; OQ 2126 given options and a recommendation, not built.
 7. **Full gate, ids minted, audit, grant request**: not this seat's; the full gate is owed (no grant yet), ids stay working, no PR.
 
 ### Follow-up by seat `exec-sl8429b` (2026-11-13, six rulings the first builder did not apply)
 
-**Ids of this slice (working, space form until the mint):** SL 8429, LG 8430, OQ 8431, OQ 8438, OQ 8439, FD 8440, FD 8441, FD 8444.
+**Ids of this slice (working, space form until the mint):** SL 2124, LG 2125, OQ 2126, OQ 2127, OQ 2128, FD 2129, FD 2130, FD 2131.
 
 **Rulings applied, each quoted from `to-lead.md`:**
 
@@ -116,9 +116,9 @@ Done: two DB-backed tests in `backend/tests/test_fr240_governance.py`, driving t
 
 **Known interim asymmetry, closed by WK-2113 S3:** after S1, a dislocation run on a pre-fix rating version with a control operand fails at prepare (dislocation recompiles through `compile_bundle`), while `/score` of the same version keeps pricing from its stored bundle until S3's load-time guard and re-validation land. Census on this box: 0 rating versions (gipricing `rating_versions` = 0), so 0 affected.
 
-> ## 2026-11-13 19:58:38 GMT — G3 AND G4 RULED … They are SPEC GAPS, not guard bugs: FR-240 binds intent "by factor_ref" and FR-86/FR-88 make intent a property of a Factor and are silent on columns. So: NO SLICE, and no silent pick. YES — both are filed as OQ rows (8438 G3, 8439 G4) in S1's PR beside OQ 8431, mirrored in the spec §10 and open-questions.md, each with the four options (a) column-level intent, (b) control columns derived at compile over the workspace's Factors, (c) factor_ref required on every rateable key, (d) accept and document … MY RECOMMENDATION for the record: (a) … REGISTER: two candidate rows, owner WK-2113, G3 MEDIUM … G4 LOW … each row says "spec gap, decision owed: OQ <id>" … Until the OQs are ruled, the upgrade note and the FR-240 dated clarification in S1 say in words what the guards do NOT cover: bare-name and banding-only keys, and a risk Factor over a column another Factor calls control.
+> ## 2026-11-13 19:58:38 GMT — G3 AND G4 RULED … They are SPEC GAPS, not guard bugs: FR-240 binds intent "by factor_ref" and FR-86/FR-88 make intent a property of a Factor and are silent on columns. So: NO SLICE, and no silent pick. YES — both are filed as OQ rows (8438 G3, 8439 G4) in S1's PR beside OQ 2126, mirrored in the spec §10 and open-questions.md, each with the four options (a) column-level intent, (b) control columns derived at compile over the workspace's Factors, (c) factor_ref required on every rateable key, (d) accept and document … MY RECOMMENDATION for the record: (a) … REGISTER: two candidate rows, owner WK-2113, G3 MEDIUM … G4 LOW … each row says "spec gap, decision owed: OQ <id>" … Until the OQs are ruled, the upgrade note and the FR-240 dated clarification in S1 say in words what the guards do NOT cover: bare-name and banding-only keys, and a risk Factor over a column another Factor calls control.
 
-Done, no code: OQ 8438 (G3, `03` §10) and OQ 8439 (G4, `02` §10), each also in `docs/open-questions.md`, status open, decision owed, four options, both recommendations recorded as recommendations (the seat's: (c) for G3, (b) for G4; the maintainer's: (a)); register rows FD 8440 (G3, MEDIUM) and FD 8441 (G4, LOW), owner WK-2113, "spec gap, decision owed: OQ 8438" / "OQ 8439"; the FR-240 dated clarification in `03` now says in words what the guards do not cover. The upgrade note is S3's (CHANGELOG), not S1's.
+Done, no code: OQ 2127 (G3, `03` §10) and OQ 2128 (G4, `02` §10), each also in `docs/open-questions.md`, status open, decision owed, four options, both recommendations recorded as recommendations (the seat's: (c) for G3, (b) for G4; the maintainer's: (a)); register rows FD 2129 (G3, MEDIUM) and FD 2130 (G4, LOW), owner WK-2113, "spec gap, decision owed: OQ 2127" / "OQ 2128"; the FR-240 dated clarification in `03` now says in words what the guards do not cover. The upgrade note is S3's (CHANGELOG), not S1's.
 
 **New red/green lines**
 
@@ -155,7 +155,7 @@ Head run: `1 failed, 14 passed` (the failure is test (a) at the old assertion, b
 **What a compiled bundle carries for a rate-table key's Factor (AMENDMENT 2 item 2, AMENDMENT 3 (2)): option (a). It carries none, by design.** Measured: `resolved_payloads` keys are exactly `['rate_table:sl8429-region-x-yoa@1', 'rating_algorithm:minimal@1']` at `2ba0d0d5` and at the head, for the plain and the depth-2 chain. The code decides it: `compile_bundle` (`rating/compile.py`, `payloads`) builds `resolved_payloads` from the algorithm and `pins.rate_tables`, `pins.models`, `pins.reference_tables`, `pins.custom_objectives` and `pins.sub_graphs`; a key's Factor is not a pin, `_refuse_control_factor_keys` resolves it through the resolver for the guard and drops it. FR-239 (`03`) states the hash as a function of the pins and the graph. So S1's resolver change feeds the compile guard, not the bundle. **The original intent of the test:** its first assertion, `set(factor_payloads) == {"factor:region_x_yoa@1"}`, took a Factor payload in the bundle as the proof that the resolver supplied the operand chain; that was a wrong premise about the bundle (it failed at `2ba0d0d5` and at the head alike, `set() == {...}`), not a defect of the fix. The test now asserts what is promised: the table compiles, the bundle's payload keys are the table and the algorithm, the table's rows carry the seeded cells, and the content hash equals the literal measured at `2ba0d0d5`. "A real cell prices": this fixture's algorithm (`minimal`) does not look the table up, so no score is taken; the cells are asserted carried. The rewritten assertions of (a) were written after this window and have not yet run in the DB.
 - **DB window 2 (2026-11-13 21:49:36 to 21:50:21 GMT, DB `gipricing_sl8429c_dbw2`, redis db 11, bucket `gip-test-blobs-sl8429c2`; `window2.out`, `win2/`): a real cell prices; the hash literal was RE-MEASURED for the lookup algorithm.** Test (a) now compiles an algorithm with a `table` step keyed on the cross (`sl8429-lookup`: `premium_in * relativity`). At `2ba0d0d5`'s code (`win2/pre.log`, `head=2ba0d0d53142dacd6550cb314a4d65685b612bd1`) the bundle's content hash is `sha256:3948d954eb79b84aa89f20dca3ecd8e5d9f8b56bf61981b24fa1899c923424f8`, the bundle's payload keys are the table and the algorithm, its rows are the three seeded cells, and the quote `{premium_in: 1000, region_x_yoa: "north | 2011"}` scores `payable` = 1100 (the cell's 1.10 through the arithmetic). At the fixed head the whole-file run's first assertion printed the same hash (`win2/head.log`: `assert 'sha256:3948d...1899c923424f8' == ...`, the literal the test then held being a placeholder); my head probe in this window failed for a fault of its own (it lacked the module's autouse handler fixture, `JOB_HANDLER_NOT_REGISTERED`), so the head's full hash line is the assertion's, not the probe's. The head run was `1 failed, 12 passed` and its one failure is that placeholder. **DB window 3 (2026-11-13 21:51:37 to 21:52:01 GMT, DB `gipricing_sl8429c_dbw3`, redis db 11, bucket `gip-test-blobs-sl8429c3`; `window3.out`, `win3/head.log`): one run of `backend/tests/test_fr240_governance.py` at `head=471f23ae04cb23f3811bea31efd8f8039d89df27` with `-rA`: `13 passed`, rc=0, including the pinned hash and the priced value `payable` = 1100 of test (a), the clean depth-2 compile and the depth-2 control-leaf refusal.** The `ERROR app.worker ... job handler failed` lines in that run are the compile Job logging the refusals those tests expect. Cleanup: redis `-n 11 dbsize` = 0, `pg_database` count = 0, bucket removed through the MinIO API, template guard unchanged.
 - **The new refusal messages carry no exception text, so `safe_error` does not apply (the maintainer accepted the form as built, AMENDMENT 4).** (1) The missing operand is named by its id because it is not loaded: there is no Factor to read a slug from, and `OperandNotSuppliedError` holds only `factor_slug` (the interaction) and `operand_id`. (2) Neither field carries user-supplied free text. `operand_id` is a `UUID`: `Factor.operand_factor_ids: tuple[UUID, ...]` (`packages/model-schema/src/model_schema/modelling.py:166`), and the interaction's own `Factor.id: UUID` (`modelling.py:133`). `factor_slug`: be exact, the `Factor` model declares `slug: str` with no pattern (`modelling.py:134`); the grammar is enforced at the one creation route, `FactorCreate.slug: FactorSlug` (`backend/src/app/api/models.py:212`), whose pattern is `^[a-z0-9][a-z0-9_-]{1,62}$` (`packages/model-schema/src/model_schema/refs.py:50` and `:73`), and a Factor row is written only from that route's body (`backend/src/app/platform/modelling.py:252`; `FactorRow(` is constructed nowhere else under `backend/src`). So the slug is a 2 to 63 character lowercase token with no space or free text, by the route and not by the model.
-- **G6 (R3, 19:53:34):** filed as FD 8444 in `docs/findings/register.md`: candidate LOW, UNPROBED, owner WK-2113, "the model offset column (`spec.offset.column`, `log_column` and `column` kinds) is a `model_call` input that carries no intent".
+- **G6 (R3, 19:53:34):** filed as FD 2131 in `docs/findings/register.md`: candidate LOW, UNPROBED, owner WK-2113, "the model offset column (`spec.offset.column`, `log_column` and `column` kinds) is a `model_call` input that carries no intent".
 - **The 19:54:02 resolver change shares `3f0eebbd` with the pricing-core fix, not a commit of its own, as that ruling allowed. No history rewrite:** the squash makes the split moot, and the lead reports it.
 - **`ruff format --check`:** four of the five files touched were already unformatted at `0edae7a3` (`git show 0edae7a3:<file> | ruff format --check --stdin-filename`: rc=1 for `test_fr240_governance.py`, `platform/modelling.py`, `test_glm.py`, `test_rating_compile_fr240.py`; `factors.py` rc=0 before and after). No file was reformatted, so the diff is the change; `ruff check .` is the enforced half.
 
@@ -163,7 +163,7 @@ Head run: `1 failed, 14 passed` (the failure is test (a) at the old assertion, b
 
 - **LOW 1, accepted:** `rateable()` may now raise `OperandNotSuppliedError` (a closure it cannot read fails closed); it has no production caller (lead-verified), and its docstring now says so and names `control_factor_in` as the function callers use.
 - **LOW 2, accepted:** the rate-table key guard's `Factor.model_validate` is stricter than the earlier `.get("intent")`; unreachable with both in-tree resolvers.
-- **LOW 3, fixed:** `test_the_seed_route_refuses_an_interaction_over_a_control_operand` and its instrument control `test_the_seed_route_seeds_an_interaction_over_risk_operands` (`backend/tests/test_fr240_governance.py`) run the seed route over a model that pins only an interaction Factor, so the operands arrive through `load_factors`' transitive load. Red-first is not possible at the fixed head (the fix is already in); the planted-flip proof is in the build log.
+- **LOW 3, fixed:** `test_the_seed_route_refuses_an_interaction_over_a_control_operand` and its instrument control `test_the_seed_route_seeds_an_interaction_over_risk_operands` (`backend/tests/test_fr240_governance.py`) run the seed route over a model that pins only an interaction Factor, so the operands arrive through `load_factors`' transitive load. Red-first is not possible at the fixed head (the fix is already in); the planted-flip proof, quoted from the DB window 4 run of exec-sl8429c (2026-11-14): the refusal test `test_the_seed_route_refuses_an_interaction_over_a_control_operand` with the operand's intent flipped CONTROL to RISK failed `assert 201 == 422`; the file was then restored byte-identical from its copy before the commit.
 - **LOW 4 and INFO 5-7:** read, no action.
 
 ### Audit
@@ -173,10 +173,11 @@ Not yet written; the auditor re-checks.
 ### Build log
 
 - 2026-11-13: `575a5a68` red tests (13 failed, rc=1). Pushed.
-- 2026-11-13: `3f0eebbd` the fix, the backend resolver line, the FR-240/FR-88 clarifications, OQ 8431, the register limb and the `SL-8429` row.
+- 2026-11-13: `3f0eebbd` the fix, the backend resolver line, the FR-240/FR-88 clarifications, OQ 2126, the register limb and the `SL-2124` row.
 - 2026-11-13: `ae216c91` the raise-site census counts the two new raise sites (found by the closure run: item 11 of the common brief).
-- 2026-11-13: seat `exec-sl8429b` continues: R1, the two real-resolver tests, the asymmetry line, OQ 8438 and OQ 8439, FD 8440 and FD 8441 (commit below); B2 not done (S3).
+- 2026-11-13: seat `exec-sl8429b` continues: R1, the two real-resolver tests, the asymmetry line, OQ 2127 and OQ 2128, FD 2129 and FD 2130 (commit below); B2 not done (S3).
 - Note: the first docs-only commands of this seat used `cd` inside a compound command (the harness resets the cwd each call), against the no-`cd` rule; no write followed from a changed directory.
+- 2026-11-14 02:05 GMT (exec-mint-s1): MINT. Working ids became final ids: SL 8429 to SL-2124, LG 8430 to LG-2125, OQ 8431 to OQ-2126, OQ 8438 to OQ-2127, OQ 8439 to OQ-2128, FD 8440 to FD 2129, FD 8441 to FD 2130, FD 8444 to FD 2131. Text quoted verbatim from tool output earlier in this ledger (for example the audit-docs lines "gap in the full allocation between 2115 and 8429" and "between 2120 and 8429") is left as printed, with the working number. The mint also filed S2's FD 2121, FD 2122 and FD 2123, which S2 left as register rows without a finding file, as finding files under `docs/findings/` (the files whose names begin with the padded ids of those three), and gave this slice's three FDs files the same way; check 31 reads the ids in `docs/INDEX.md` and found no id for 2121 to 2123.
 
 ## PRs
 

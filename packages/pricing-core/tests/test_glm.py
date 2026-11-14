@@ -317,7 +317,7 @@ def test_control_factors_are_fitted_but_not_rateable() -> None:
 @pytest.mark.req("FR-88")
 def test_only_risk_factors_are_rateable() -> None:
     """FR-88: "Rating Versions may only use `risk` factors" — an `offset` or `diagnostic`
-    Factor is no more rateable than a `control` one (review F-1, SL 8429)."""
+    Factor is no more rateable than a `control` one (review F-1, SL 2124)."""
     from pricing_core.modelling.factors import rateable
 
     risk = _factor("area", "area")
