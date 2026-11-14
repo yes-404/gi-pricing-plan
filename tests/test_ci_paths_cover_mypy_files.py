@@ -37,9 +37,13 @@ def _trigger_paths(workflow: str) -> dict[str, list[str]]:
     paths: dict[str, list[str]] = {}
     trigger: str | None = None
     in_paths = False
+    top: str | None = None
     for line in workflow.splitlines():
         if re.match(r"^\S", line):
+            top = line.split(":")[0]
             trigger, in_paths = None, False
+        if top != "on":
+            continue
         if m := re.match(r"^  (\w+):\s*$", line):
             trigger, in_paths = m.group(1), False
         elif re.match(r"^    paths:\s*$", line) and trigger:
