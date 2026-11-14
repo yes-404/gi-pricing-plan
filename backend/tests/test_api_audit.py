@@ -14,7 +14,14 @@ from app.config import Environment, Settings
 from app.db.session import Database
 from app.main import create_app
 from app.platform import audit
-from model_schema import ActorKind, JobSource, Principal, new_uuid7
+from model_schema import (
+    BUILTIN_ROLES,
+    ActorKind,
+    JobSource,
+    Permission,
+    Principal,
+    new_uuid7,
+)
 
 
 @pytest.fixture
@@ -255,6 +262,14 @@ async def test_an_analyst_cannot_read_the_audit_log(
         },
     )
     assert response.status_code == 403
+
+
+@pytest.mark.req("FR-371")
+def test_audit_read_is_held_by_exactly_the_four_read_everything_roles() -> None:
+    """Pins the holder set `06` §4.1 records (#1548 (b), OQ-1726), so the spec sentence fails
+    when it goes stale. Today's behaviour, pinned: it is green at the base by design."""
+    holders = {role for role, perms in BUILTIN_ROLES.items() if Permission.AUDIT_READ in perms}
+    assert holders == {"approver", "deployer", "auditor", "admin"}
 
 
 @pytest.mark.req("FR-369")
