@@ -68,7 +68,7 @@ def _rating_compile(parameters: dict[str, Any], callback: ProgressCallback) -> J
             payload = bundle.model_dump_json().encode()
             ref = await progress.blob_store.put(session, payload, "application/json")
             # The version holds a reference to its bundle blob for as long as it exists, so FR-420's
-            # collector (`ref_count == 0`) can never take it (WK-2113 S3, FD 8447). Released on
+            # collector (`ref_count == 0`) can never take it (WK-2113 S3, FD 2135). Released on
             # nothing today: a version is immutable and never deleted. Same unit of work as the
             # put and `record_bundle_blob` below.
             await blobs.retain(session, ref.sha256)

@@ -765,7 +765,7 @@ def test_a_risk_by_risk_interaction_keyed_table_compiles_with_an_unchanged_hash(
 def test_a_compiled_bundle_blob_is_retained_so_the_collector_can_never_take_it(
     api_client, workspace_id, principal, grant, database, blob_store
 ) -> None:
-    """WK-2113 S3 (FD 8447, amendment 4): the compile Job takes a reference to the bundle blob in
+    """WK-2113 S3 (FD 2135, amendment 4): the compile Job takes a reference to the bundle blob in
     the unit of work that stores it. RED before the fix (`blob_store.put` leaves `ref_count` 0);
     released on nothing today, since a version is immutable and never deleted."""
     _run(grant("analyst"))

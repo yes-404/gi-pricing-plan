@@ -1,22 +1,22 @@
 ---
-id: LG-8437
+id: LG-2133
 family: ledger
-title: WK-2113 slice SL-8436 — FD-1495 limb B1/B2: a stored bundle that prices on a control operand is re-validated and refused (slice ledger)
+title: WK-2113 slice SL-2132 — FD-1495 limb B1/B2: a stored bundle that prices on a control operand is re-validated and refused (slice ledger)
 status: active                 # active → closed (§1.2a)
 created: 2026-11-13
 owner: executor
 tree: 5d2189a363b7ec781b772f7fe3d3aae6f2c55385
 phase: P3
 work: WK-2113
-slice: SL-8436
+slice: SL-2132
 plans: []
 corrected_by: []
-relates: [SL-8436, FD-1495, SL-2124, LG-2125]
+relates: [SL-2132, FD-1495, SL-2124, LG-2125]
 ---
 
-# LG-8437 — WK-2113 slice SL-8436: a stored bundle that prices on a control operand is re-validated and refused
+# LG-2133 — WK-2113 slice SL-2132: a stored bundle that prices on a control operand is re-validated and refused
 
-Filed 2026-11-13 under working id 8437 (lead-reserved); executed by seat `exec-sl8436`, branch `sl-8436-stored-bundle-guard` stacked on S1 (`origin/sl-8429-fd1495-interaction-operands` @`5d2189a363b7ec781b772f7fe3d3aae6f2c55385`). Working ids in prose are in space form (SL 8436, LG 8437) until the mint; front matter keeps the hyphen form.
+Filed 2026-11-13 under working id 8437 (lead-reserved); executed by seat `exec-sl8436`, branch `sl-8436-stored-bundle-guard` stacked on S1 (`origin/sl-8429-fd1495-interaction-operands` @`5d2189a363b7ec781b772f7fe3d3aae6f2c55385`). Working ids were written in space form in prose until the mint; the mint note below maps them to the final ids.
 
 **GO:** the maintainer's "2026-11-13 21:17:39 GMT — Maintainer: S3 PLAN READ" (quoted whole below, with the "19:58:03 GMT — S3 RULED" and "21:23:21 GMT — S3 PREP READ" entries it builds on).
 
@@ -26,7 +26,7 @@ Filed 2026-11-13 under working id 8437 (lead-reserved); executed by seat `exec-s
 
 ### Scope
 
-Quoting the slice's row, `docs/roadmap.md` `#### SL-8436` under WK-2113: stored Rating Version bundles that price on a `control`-intent operand (FD-1495, limb B1, aud-intent2 cell B1; and B2, the algorithm save). Design (C)+(B), fail closed, the maintainer's "19:58:03 GMT — S3 RULED"; the build plan is `scratch/pln-s3/S3-plan.md` (sha256 ef6b1adaed39) as amended by "21:17:39 GMT" and "21:23:21 GMT". Requirements: `FR-88` (`02`), `FR-240`, `FR-243`, `FR-267`, `FR-269`, `NFR-489`, `NFR-498` (`03`). Stacked on S1 (`origin/sl-8429-fd1495-interaction-operands` @`5d2189a363b7ec781b772f7fe3d3aae6f2c55385`); the re-merge is the lead's (stacking rule).
+Quoting the slice's row, `docs/roadmap.md` `#### SL-2132` under WK-2113: stored Rating Version bundles that price on a `control`-intent operand (FD-1495, limb B1, aud-intent2 cell B1; and B2, the algorithm save). Design (C)+(B), fail closed, the maintainer's "19:58:03 GMT — S3 RULED"; the build plan is `scratch/pln-s3/S3-plan.md` (sha256 ef6b1adaed39) as amended by "21:17:39 GMT" and "21:23:21 GMT". Requirements: `FR-88` (`02`), `FR-240`, `FR-243`, `FR-267`, `FR-269`, `NFR-489`, `NFR-498` (`03`). Stacked on S1 (`origin/sl-8429-fd1495-interaction-operands` @`5d2189a363b7ec781b772f7fe3d3aae6f2c55385`); the re-merge is the lead's (stacking rule).
 
 ### Task list (what was built)
 
@@ -36,7 +36,7 @@ Quoting the slice's row, `docs/roadmap.md` `#### SL-8436` under WK-2113: stored 
 4. **Re-validation** (S3-c/d). `check_rateable_intent` (compile.py; shares `_inline_pinned` with `compile_bundle`, so the resolution is compile's own, and runs only the two intent guards) and `revalidate` (`bundle_hydration.py`): the stored blob through `hydrate`, then the pins re-resolved for what a Bundle cannot carry. Called at `submit_request`, `deploy` and `rollback` (a required `revalidate=` argument, never defaulted, so a caller cannot skip it silently); PREPARE is `hydrate_for_switch` -> `_fetch_bundle` -> `hydrate`.
 5. **B2 (i)**. `_accepted_feature_map_values` (algorithm save) runs the same `refuse_control_in_features`; 422 naming the Factor. The pinned test `test_a_compile_over_a_gbm_fitted_on_a_control_factor_fails_with_its_code` now inserts the algorithm row directly (as a save made before the check would have left it) and still proves compile refuses; `test_a_save_over_a_gbm_fitted_on_a_control_factor_is_refused_with_its_code` is the new save-side test.
 6. **Sweep** `scripts/sweep-stored-bundles.py` (condition 4), read-only, one `SET TRANSACTION READ ONLY` transaction; denominators first.
-7. **Docs.** `03` FR-240, FR-243, FR-267, FR-269, §4.3 (the audit action), §5.1 (the error code's registration, the save route row) carry dated lines; FD-1495's register row carries the B1 limb; the SL 8436 row; `deploy/README.md` carries the upgrade note.
+7. **Docs.** `03` FR-240, FR-243, FR-267, FR-269, §4.3 (the audit action), §5.1 (the error code's registration, the save route row) carry dated lines; FD-1495's register row carries the B1 limb; the SL 2132 row; `deploy/README.md` carries the upgrade note.
 
 ## Rulings that shaped the build (quoted whole)
 
@@ -109,7 +109,7 @@ The two FAILED censuses were found by the closure run (common brief items 11 and
 
 **Amendment 3 (a).** The system actor for a load refusal on a scoring or job path is permitted by the contract: `model_schema/jobs.py` `ActorKind` has `SYSTEM` and `Principal.id` is "null only for `system`"; `model_schema/audit.py` `AuditEvent.actor: Principal`; `06` FR-369 lists the source `system`. The requesting principal is recorded in `after.requested_by` on `/score` and `/score/compare` (the routes that have one). **(b)** Changed as ruled: `revalidate` passes the acting principal (`caller.principal`) to `hydrate(..., acting=...)`, which writes its own event every time, as that principal, and never touches the memo. Tests: `test_a_governance_refusal_is_audited_every_time_as_the_acting_principal` (DB, one worker's slot: deploy, score, deploy, score = 3 events, the two deploys as the deployer, the scoring one `system` with `requested_by`) and its no-DB twin in `test_bundle_hydration.py`. **(c)** The no-declared-pins skip stays on this proof: `compile_bundle` raises `RATING_VERSION_UNPINNED` when `algorithm_ref` or `pins` is None (`compile.py`, first lines of `compile_bundle`), resolves artifacts only from `pins`' lists, and `check_step_refs_pinned` refuses any step ref not pinned at its exact version (`compile.py`, in the per-algorithm loop); `compile_rating_version` is the only writer of `row.bundle` (`rating_versions.py`, `row.bundle = {`), so a version with a bundle was compiled over declared pins. Tests: `test_a_version_with_no_pins_is_refused_before_any_revalidation`, `test_an_unpinned_version_is_refused` and `test_a_step_ref_not_pinned_at_its_exact_version_is_refused_at_compile`.
 
-**Amendment 4.** (ii) `rating_handlers.py` now calls `blobs.retain` on the bundle blob in the same unit of work as the put and `record_bundle_blob`; the reference is released on nothing today, since a version is immutable and never deleted. Red first as a DB test, `test_a_compiled_bundle_blob_is_retained_so_the_collector_can_never_take_it` (`ref_count` 0 before the fix, at least 1 after; written, owed to the DB window, so the red line is not yet measured). (i) FD 8447 (MEDIUM, WK-2113) in `docs/findings/register.md`; the named limb on OQ-1943 in `docs/open-questions.md` and `07` §10, mirrored; the OQ row `OQ 8448` in `docs/open-questions.md` and `03` §10; the `deploy/README.md` line. The CHANGELOG line is in the entry text below; CHANGELOG.md itself waits for S2 (**NOT**).
+**Amendment 4.** (ii) `rating_handlers.py` now calls `blobs.retain` on the bundle blob in the same unit of work as the put and `record_bundle_blob`; the reference is released on nothing today, since a version is immutable and never deleted. Red first as a DB test, `test_a_compiled_bundle_blob_is_retained_so_the_collector_can_never_take_it` (`ref_count` 0 before the fix, at least 1 after; written, owed to the DB window, so the red line is not yet measured). (i) FD 2135 (MEDIUM, WK-2113) in `docs/findings/register.md`; the named limb on OQ-1943 in `docs/open-questions.md` and `07` §10, mirrored; the OQ row `OQ 2134` in `docs/open-questions.md` and `03` §10; the `deploy/README.md` line. The CHANGELOG line is in the entry text below; CHANGELOG.md itself waits for S2 (**NOT**).
 
 ## CHANGELOG entry text (waiting for S2's `CHANGELOG.md`)
 
@@ -131,6 +131,35 @@ refused at **save** (422), where it used to save and fail at compile.
 4. **Restart every api replica and every worker after the upgrade.** A running process keeps the bundles it
    already hydrated; the guard runs when a process hydrates a bundle, so a process that is not restarted
    keeps serving what it held.
+
+## Hydrate cost (item 9): the two window-4 readings, and window 3's side-run reading
+
+Dislocation attribution (FR-266 in `03`) re-rates a policy under subset bundles of the declared changes; the slice changes the door a stored bundle is loaded through (`hydrate` now fronts `_compiled` and `_exact_twin` in `dislocation_handlers`), not the attribution maths, and a stored bundle that prices on a `control` operand is refused there like anywhere else. The guard's cost is paid once per hydrate, so it is measured on the load path.
+
+**Window 4** (timed, nothing else running beside it; the STOP branch on `pgrep` passed). Tree `c3e17853` (tree object `e403e1b9edb4`), branch `sl-8436-stored-bundle-guard`, N = 200 timed loads per arm. Logs in `~/gi-pricing-plan.local/scratch/sl8436-w4/`: `run.log`, `a-hydrate.txt`, `b1-hydrate.txt`, `b2-hydrate.txt`, `b3-hydrate.txt`. The harness is `measure_hydrate_a.py` / `measure_hydrate_b.py` with `hydrate_plugin.py` in the same directory; the readings are of `load_bundle` with the guard, `load_bundle` without it, and the guard alone on the scorers already built.
+
+| Reading | Bundle (shape, size) | Denominators (GLMs walked / carried Factors / operand edges) | guard alone, median, p99 | load_bundle with guard, median, p99 | alone as a share of load_bundle, median / p99 | with minus without, median |
+|---|---|---|---|---|---|---|
+| (a) the WF-699 bundle `fremtpl2-wf699@3` | 46985 bytes | 3 / 7 / 0 | 0.074 ms, 0.224 ms | 2.056 ms, 3.386 ms | 3.61 % / 6.61 % | 0.080 ms = 3.76 % |
+| (b1) interaction-operand fixture `clean.bundle.json` | 10887 bytes | 1 / 3 / 2 | 0.022 ms, 0.131 ms | 0.219 ms, 0.347 ms | 9.94 % / 37.72 % | 0.031 ms = 11.58 % |
+| (b2) the same fixture | 10887 bytes | 1 / 3 / 2 | 0.022 ms, 0.129 ms | 0.222 ms, 0.396 ms | 9.82 % / 32.49 % | 0.033 ms = 11.53 % |
+| (b3) the same fixture | 10887 bytes | 1 / 3 / 2 | 0.022 ms, 0.134 ms | 0.215 ms, 0.376 ms | 10.26 % / 35.51 % | 0.031 ms = 12.02 % |
+
+(a) carries no operand edge, so the closure walk over operands does not run; (b) carries two, so it does. (b) is the fixture `backend/tests/fixtures/stored_bundles/clean.bundle.json`, a compiled bundle with an interaction over two risk operands. Load line and balloon counters, from `run.log` (the START line, `cpus=4` as `nproc` printed it) and from each reading's own file (`cpu_count=8`, the figure the harness prints): START load 0.57 0.83 1.17; (a) load1 0.96, (b1) 0.97, (b2) 0.97, (b3) 1.05. The balloon counters read `balloon_inflate 73202878` and `balloon_deflate 73202878` before and after every run, so neither moved during any timing.
+
+**The share on (b) is at or above 10 % because the fixture is 10.9 KB**: the load it is measured against is itself 0.2 ms, so a fixed 0.022 ms walk is a large share of a small number. The with-minus-without delta reads 11.5 to 12.0 % on all three (b) runs and the p99 share 32 to 38 %; the alone-median share is 9.82, 9.94 and 10.26 % and is not claimed beyond that. In absolute terms the guard is 0.022 ms on (b) and 0.074 ms on (a). The maintainer accepted item 9 on these readings with three conditions (`to-lead` "2026-11-14 02:32:50 GMT"); the follow-up is a row in the lead's stage-4 mapping file, not a finding and not built.
+
+**Window 3's reading, kept as a reading and not as a measurement**: 0.072 ms for the guard alone on the WF-699 bundle (p99 0.223 ms; with minus without 0.146 ms, 3.72 %; `scratch/sl8436-w3/r6-hydrate.txt`), taken while a DB-free pytest ran beside it. Window 4 replaces it.
+
+## Re-gate and the earlier gate attempts
+
+- The red gate at 2026-11-14T03:42:46Z: see the 2026-11-14 build-log entry above (64 failed = 13 docs-audit class + 51 real, both causes fixed in `d0ce7ac1`).
+- The aborted START at 2026-11-14T04:13:47Z: the DB0 GUARD read 55 against 56 (the baseline was moved to 55 by the maintainer's ruling, `to-lead` "2026-11-14 04:16:46 GMT"); no test ran.
+- The re-gate at `d0ce7ac1`, its END line as the lead quoted it: `END 2026-11-14T05:24:17+00:00 1.21 1.66 1.64 (date l1 l5 l15) rc=1` with `| END rc parts | python max=1 fe max=0 demo=0 restore rc_kc=0 role rc_role=0 skip rc_skip=0 infra rc_infra=0 template rc_tg=0 db0 rc_db0=0 |`; pytest `13 failed, 7797 passed, 28 skipped, 5 xfailed, 156 warnings in 2940.49s (0:49:00)` (the 13 are the docs-audit class); audit-docs `FAILED (1): check 31: gap in the full allocation between 2131 and 8436`; redis db 0 at 55 at start and at end. Log: `~/gi-pricing-plan.local/scratch/sl8436-gate/gate/`. The gate STANDS for the code under the common brief's item 31, on the condition that the mint at its turn clears check 31 (this commit).
+
+## Mint note (2026-11-14)
+
+Minted in one commit after the re-gate. Working id to final id: SL 8436 to SL-2132, LG 8437 to LG-2133, OQ 8448 to OQ-2134, FD 8447 to FD-2135. Only citations moved. The maintainer's entries quoted above and the scratch directory names (`sl-8436`, `sl8436`) keep the working number they were written with. FD-2135's register row had been lost in the re-merge of S1 and is restored from its own commit (`c5161013`) in the hyphen form, with its finding file.
 
 ## Audit
 
