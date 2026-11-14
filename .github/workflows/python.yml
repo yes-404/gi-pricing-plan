@@ -43,6 +43,10 @@ on:
       # Scoped to this one skill's scripts, not all of .claude/**, so an unrelated
       # skill edit does not drag every skill through the Python gate.
       - '.claude/skills/reporter-cycle/**'
+      # The two other skill directories `[tool.mypy] files` lists (F26): a change to either
+      # ran no mypy here. tests/test_ci_paths_cover_mypy_files.py holds the pairing.
+      - '.claude/skills/balance-watch/**'
+      - '.claude/skills/watcher-runtime-state/**'
       - '.github/workflows/python.yml'
   pull_request:
     paths:
@@ -81,6 +85,10 @@ on:
       # Scoped to this one skill's scripts, not all of .claude/**, so an unrelated
       # skill edit does not drag every skill through the Python gate.
       - '.claude/skills/reporter-cycle/**'
+      # The two other skill directories `[tool.mypy] files` lists (F26): a change to either
+      # ran no mypy here. tests/test_ci_paths_cover_mypy_files.py holds the pairing.
+      - '.claude/skills/balance-watch/**'
+      - '.claude/skills/watcher-runtime-state/**'
       - '.github/workflows/python.yml'
 
 concurrency:
