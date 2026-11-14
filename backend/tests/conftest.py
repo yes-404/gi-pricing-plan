@@ -7,6 +7,8 @@ them for every test module without each one importing them.
 from __future__ import annotations
 
 import gc
+import os
+from urllib.parse import parse_qs, urlsplit
 
 import pytest
 from fastapi import FastAPI
@@ -16,6 +18,50 @@ from pydantic import SecretStr
 from app.api.health import clear_probes
 from app.config import Environment, Settings
 from app.main import create_app
+
+_REDIS_URL_EXAMPLE = "export GIP_REDIS_URL=redis://localhost:6379/12"
+
+
+def refuse_live_redis(url: str | None) -> str | None:
+    """The refusal message for a test run whose Redis URL could reach database 0, else None.
+
+    `Settings.redis_url` defaults to database 0, the live one on a shared box, and a test run
+    once deleted a Celery list from it that way (#1806). So the run must NAME a scratch
+    database (index 1 or higher) in `GIP_REDIS_URL`: an unset or empty value, an index of 0,
+    and a URL with no index (redis-py reads that as 0) are all refused. An unreadable index is
+    refused too, since it cannot be shown to be safe. The message never repeats the URL:
+    it can carry a password.
+    """
+    if not url or not url.strip():
+        return (
+            "GIP_REDIS_URL is unset or empty, and the app's default is Redis database 0, the "
+            f"live one. Name a scratch database (1 or higher) first, e.g. `{_REDIS_URL_EXAMPLE}`."
+        )
+    try:
+        parts = urlsplit(url.strip())
+        path = parts.path.strip("/")
+        raw = path if path else (parse_qs(parts.query).get("db") or [""])[0]
+        db = int(raw) if raw else 0
+        where = f"host {parts.hostname or '?'!r}"
+    except ValueError:
+        return (
+            "GIP_REDIS_URL does not name a readable database index, so it cannot be shown "
+            "not to be database 0. Set it to a scratch database (1 or higher), "
+            f"e.g. `{_REDIS_URL_EXAMPLE}`."
+        )
+    if db < 1:
+        return (
+            f"GIP_REDIS_URL names database {db} on {where}; database 0 is the live one. "
+            f"Set a scratch database (1 or higher), e.g. `{_REDIS_URL_EXAMPLE}`."
+        )
+    return None
+
+
+def pytest_configure(config: pytest.Config) -> None:
+    """End the run, before any test or app starts, if its Redis URL could reach database 0."""
+    message = refuse_live_redis(os.environ.get("GIP_REDIS_URL"))
+    if message is not None:
+        pytest.exit(message, returncode=4)
 
 
 @pytest.fixture
