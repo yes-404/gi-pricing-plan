@@ -5,6 +5,15 @@ description: Git and GitHub working discipline for this repo — what belongs in
 
 # Git hygiene
 
+> **Under the new frame (from 2026-11-13, ADR-2136).** The merge rules are in
+> `CONTRIBUTING.md` ("Pull requests", "Review"): one pull request per Work, squash at merge,
+> nobody merges their own pull request, the core lead merges one at a time. The section
+> "merge only the maintainer's own pull requests" below is a 2026-08-30 instruction kept as
+> history; the review tiers replace it. The slice grammar (`sl-<n>-<slug>`, `SL-<n>:` titles)
+> is RETIRED: no `SL-` id is minted. Name a branch for its Work issue number and a short slug,
+> and write a Conventional Commit title. Where a section below says "ledger", "mint" or
+> `docs/process/document-ids.md`, it describes the retired record process: do not follow it.
+
 ## `main` is governed by a ruleset: squash is the only merge method, and nobody can bypass
 
 Set by the maintainer **2026-08-30 14:04Z** as ruleset **`main-protection`** (id 21860967),
@@ -103,7 +112,7 @@ gh pr merge <n> --squash                      # CLAUDE.md §10
 
 **Always target `main`.** This is the rule that cost the most to learn.
 
-### The slice grammar: branch `sl-<n>-<slug>`, PR title `SL-<n>: <title>`
+### The slice grammar: branch `sl-<n>-<slug>`, PR title `SL-<n>: <title>` — RETIRED, kept for history
 
 Once a slice has an `SL-` id, its branch and its pull request are named from it:
 
@@ -731,6 +740,11 @@ blob store (ID-4), not in git.
 If a secret is ever committed, **rotate it** — removing the commit does not un-leak it.
 
 ## Commit messages
+
+### Never bypass a commit hook
+
+- **Never bypass a commit hook**: no `--no-verify`, no `core.hooksPath` override. A commit the
+  hook refuses is fixed, or reported to the maintainer; it is never worked around.
 
 ### Never let a `claude.ai/code/session_…` link reach GitHub
 

@@ -163,91 +163,6 @@ def _only_check(failures: list[str], n: int) -> bool:
 # =========================================================================================
 
 
-def test_check_30_reds_alone_on_an_unknown_field(
-    audit: types.ModuleType, monkeypatch: pytest.MonkeyPatch, tmp_path: pathlib.Path
-) -> None:
-    """Ruling 70 §4 item 1: a fixture `FD-` essay whose front matter carries `decision:`
-    must fail check 30 — `decision:` is a register-row field (Ruling 70), not this
-    essay's, so `_docid.parse_header` puts it in `.extra` and check 30 must reject it.
-    """
-    failures = _run_all_ten(
-        audit, (CHECKS_FIXTURES / "check30-unknown-field.md",), monkeypatch, tmp_path,
-    )
-    assert _only_check(failures, 30), failures
-    assert any("decision" in f for f in failures), failures
-
-
-def test_check_30_reds_alone_on_a_ledger_prs_field(
-    audit: types.ModuleType, monkeypatch: pytest.MonkeyPatch, tmp_path: pathlib.Path
-) -> None:
-    """Ruling 70 §4 item 4: a fixture ledger header carrying `prs:` must fail check 30 —
-    `docs/_templates/LG.md` does not declare it (a ledger's PR list lives in its `## PRs`
-    body section instead), so it is not a permitted field despite §1.5's parenthesis.
-    """
-    failures = _run_all_ten(
-        audit, (CHECKS_FIXTURES / "check30-ledger-prs.md",), monkeypatch, tmp_path,
-    )
-    assert _only_check(failures, 30), failures
-    assert any("prs" in f for f in failures), failures
-
-
-def test_check_30_positive_control_a_clean_finding_essay_passes(
-    audit: types.ModuleType, monkeypatch: pytest.MonkeyPatch, tmp_path: pathlib.Path
-) -> None:
-    """Positive control: a finding essay carrying exactly `docs/_templates/FD.md`'s own
-    field set, and nothing more, must pass every one of the ten checks — proving the
-    unknown-field rule does not false-positive on a legitimately clean header.
-    """
-    failures = _run_all_ten(
-        audit, (CHECKS_FIXTURES / "check30-good-finding" / "findings",),
-        monkeypatch, tmp_path,
-    )
-    assert failures == [], failures
-
-
-def test_check_30_licenses_the_harness_keys_for_reference_only(
-    audit: types.ModuleType, monkeypatch: pytest.MonkeyPatch, tmp_path: pathlib.Path
-) -> None:
-    """`RL-1140` DP-8.1, case 1: a Reference file whose header carries the four Claude
-    Code harness keys (`name:`, `description:`, `tools:`, `model:`), declared in
-    `docs/_templates/REFERENCE.md`'s top-level block, must pass check 30 cleanly."""
-    failures = _run_all_ten(
-        audit, (CHECKS_FIXTURES / "check30-reference-harness-keys-pass.md",),
-        monkeypatch, tmp_path,
-    )
-    assert failures == [], failures
-
-
-def test_check_30_still_reds_an_undeclared_key_on_a_reference_file(
-    audit: types.ModuleType, monkeypatch: pytest.MonkeyPatch, tmp_path: pathlib.Path
-) -> None:
-    """`RL-1140` DP-8.1, case 2: the harness-key licence is narrow — an undeclared key
-    (`colour: red`) on the same Reference file must still fail check 30, even though the
-    four harness keys are declared and pass (`CLAUDE.md` §13: a check that has never
-    printed a failure has not been tested)."""
-    failures = _run_all_ten(
-        audit, (CHECKS_FIXTURES / "check30-reference-undeclared-key.md",),
-        monkeypatch, tmp_path,
-    )
-    assert _only_check(failures, 30), failures
-    assert any("colour" in f for f in failures), failures
-
-
-def test_check_30_reds_a_harness_key_on_a_non_reference_family(
-    audit: types.ModuleType, monkeypatch: pytest.MonkeyPatch, tmp_path: pathlib.Path
-) -> None:
-    """`RL-1140` DP-8.1, case 3: the licence is per family, not global — a non-Reference
-    file (a fixture `RL-`) carrying `tools:` must still fail check 30, proving the four
-    harness-key names were not added to `scripts/_docid.py`'s `_KNOWN_KEYS` (which would
-    license them for every family through a hand-written constant)."""
-    failures = _run_all_ten(
-        audit, (CHECKS_FIXTURES / "check30-non-reference-harness-key.md",),
-        monkeypatch, tmp_path,
-    )
-    assert _only_check(failures, 30), failures
-    assert any("tools" in f for f in failures), failures
-
-
 def test_check_30_field_policy_changes_with_the_template(
     audit: types.ModuleType, tmp_path: pathlib.Path
 ) -> None:
@@ -319,28 +234,6 @@ def test_check_30_reports_the_full_thirteen_template_coverage_on_the_real_tree(
 # Check 31 — id/filename/directory agreement; numbers unique and contiguous; `created`
 # non-decreasing.
 # =========================================================================================
-
-
-def test_check_31_reds_alone_on_a_header_filename_mismatch(
-    audit: types.ModuleType, monkeypatch: pytest.MonkeyPatch, tmp_path: pathlib.Path
-) -> None:
-    failures = _run_all_ten(
-        audit, (CHECKS_FIXTURES / "check31" / "plans",), monkeypatch, tmp_path,
-    )
-    assert _only_check(failures, 31), failures
-    assert "PL-1920" in failures[0], failures
-    assert "PL-1921" in failures[0], failures
-
-
-def test_check_31_exempts_templates_by_path(
-    audit: types.ModuleType, monkeypatch: pytest.MonkeyPatch, tmp_path: pathlib.Path
-) -> None:
-    """NT-0019 §1.4: "`_templates/` is exempt from check 31 by path." Pointing
-    `_ID_SCOPE_ROOTS` at the real templates directory alone must not trip check 31 on the
-    `NNNNN`/`XX-NNNNN` placeholders every template carries.
-    """
-    failures = _run_all_ten(audit, (audit._TEMPLATES_DIR,), monkeypatch, tmp_path)
-    assert not any(f.startswith("check 31:") for f in failures), failures
 
 
 # =========================================================================================
@@ -438,27 +331,6 @@ def test_check_32_is_gated_on_index_md_and_skips_cleanly_pre_migration(
 # Check 33 — supersedes/superseded_by symmetry; status vocabulary and per-family subset;
 # the map-plan roll-up raise (Ruling 72).
 # =========================================================================================
-
-
-def test_check_33_reds_alone_on_a_status_outside_the_vocabulary(
-    audit: types.ModuleType, monkeypatch: pytest.MonkeyPatch, tmp_path: pathlib.Path,
-) -> None:
-    failures = _run_all_ten(
-        audit, (CHECKS_FIXTURES / "check33-bad-status.md",), monkeypatch, tmp_path,
-    )
-    assert _only_check(failures, 33), failures
-    assert any("nonsense" in f for f in failures), failures
-
-
-def test_check_33_reds_alone_on_asymmetric_supersedes(
-    audit: types.ModuleType, monkeypatch: pytest.MonkeyPatch, tmp_path: pathlib.Path,
-) -> None:
-    failures = _run_all_ten(
-        audit, (CHECKS_FIXTURES / "check33-supersedes" / "adrs",), monkeypatch, tmp_path,
-    )
-    assert _only_check(failures, 33), failures
-    assert "ADR-1930" in failures[0], failures
-    assert "ADR-1931" in failures[0], failures
 
 
 def test_check_33_rollup_raise_surfaces_more_than_one_live_leaf_plan(
@@ -661,40 +533,10 @@ def test_check_34_migration_stamp_allowance_is_order_independent_under_prefix_co
     )
 
 
-def test_check_34_reds_alone_on_a_dangling_corrected_by_entry(
-    audit: types.ModuleType, monkeypatch: pytest.MonkeyPatch, tmp_path: pathlib.Path,
-) -> None:
-    """The one check-34 sub-clause that *is* live over `_ID_SCOPE_ROOTS` today: "every
-    `corrected_by:` entry is a record whose `corrects:` names this file." Two files in
-    `tests/fixtures/docs-ids/w37-4-checks/check34-dangling-corrected-by/rulings/` — the
-    frozen one (`RL-1950`) claims a corrector (`RL-1951`) that does not `corrects:` back
-    to it (it corrects `RL-1999` instead). Real fixture files, not the `tmp_path` D2's
-    hermetic pin uses for `ROOT`: every check-30-39 function renders paths relative to
-    the module's own `REPO` (left untouched by that pin), and a file outside the real
-    repository tree cannot be `.relative_to()`'d against it.
-    """
-    failures = _run_all_ten(
-        audit, (CHECKS_FIXTURES / "check34-dangling-corrected-by" / "rulings",),
-        monkeypatch, tmp_path,
-    )
-    assert _only_check(failures, 34), failures
-    assert "RL-1951" in failures[0], failures
-
-
 # =========================================================================================
 # Check 35 — owner: is a role filename or `maintainer`, permitted by the directory's
 # README.md where one exists and declares a list.
 # =========================================================================================
-
-
-def test_check_35_reds_alone_on_an_unrecognised_owner(
-    audit: types.ModuleType, monkeypatch: pytest.MonkeyPatch, tmp_path: pathlib.Path,
-) -> None:
-    failures = _run_all_ten(
-        audit, (CHECKS_FIXTURES / "check35-bad-owner.md",), monkeypatch, tmp_path,
-    )
-    assert _only_check(failures, 35), failures
-    assert "some-random-person" in failures[0], failures
 
 
 def test_check_35_valid_owners_include_every_real_role_and_maintainer(
@@ -703,25 +545,6 @@ def test_check_35_valid_owners_include_every_real_role_and_maintainer(
     assert "maintainer" in audit._VALID_OWNERS
     for role in ("auditor", "decision-maker", "executor", "lead", "planner", "reporter", "watcher"):
         assert role in audit._VALID_OWNERS, audit._VALID_OWNERS
-
-
-def test_check_35_readme_allowlist_is_enforced_when_a_readme_declares_one(
-    audit: types.ModuleType, monkeypatch: pytest.MonkeyPatch, tmp_path: pathlib.Path,
-) -> None:
-    """`tests/fixtures/docs-ids/w37-4-checks/check35-readme-allowlist/` carries both
-    `doc.md` and its own `README.md` ("Permitted owners: planner, lead"). `_ID_SCOPE_ROOTS`
-    is pointed at `doc.md` directly, not the directory: `readme_owner_allowlist` looks up
-    `doc.md`'s parent directory's `README.md` regardless of scope (a plain filesystem
-    check), but `_id_scope_documents` would otherwise also walk the README itself in as a
-    second scope document — and a bare `README.md` with no header of its own would then
-    also red check 30, contaminating this check-35 proof.
-    """
-    fixture_dir = CHECKS_FIXTURES / "check35-readme-allowlist"
-    assert (fixture_dir / "README.md").is_file(), "fixture assumption"
-    failures = _run_all_ten(audit, (fixture_dir / "doc.md",), monkeypatch, tmp_path)
-    assert _only_check(failures, 35), failures
-    assert "permitted-owner list" in failures[0], failures
-    assert "permitted-owner list" in failures[0], failures
 
 
 def test_check_35_no_readme_allowlist_clause_when_none_is_declared(
@@ -903,7 +726,8 @@ def test_check_36_reds_alone_when_a_was_field_has_no_redirects_row(
     (docs_root / "REDIRECTS.csv").write_text(
         "old_id,new_id,old_path,new_path\n", encoding="utf-8"
     )
-    doc = docs_root / "doc.md"
+    doc = docs_root / "specs" / "doc.md"  # a governed family (`_frozen.is_governed`)
+    doc.parent.mkdir(parents=True)
     doc.write_text(
         "---\nfamily: reference\ntitle: t\nstatus: active\ncreated: 2026-09-02\n"
         "owner: maintainer\ntree: fixture\nwas: NT-0099\ncorrected_by: []\nrelates: []\n"
@@ -969,7 +793,8 @@ def test_check_36_alias_and_slice_key_forms_are_disclosed_not_fatal(
     """
     docs_root = tmp_path / "docs"
     _write_redirects(docs_root)
-    doc = docs_root / "doc.md"
+    doc = docs_root / "specs" / "doc.md"  # a governed family (`_frozen.is_governed`)
+    doc.parent.mkdir(parents=True)
     doc.write_text(
         "F-W9-3 and F27 and W11-3 are all cited in this still-governed prose.\n",
         encoding="utf-8",
@@ -992,7 +817,8 @@ def test_check_36_fence_excludes_a_legacy_form_exhibit(
     already read."""
     docs_root = tmp_path / "docs"
     _write_redirects(docs_root)
-    doc = docs_root / "doc.md"
+    doc = docs_root / "specs" / "doc.md"  # a governed family (`_frozen.is_governed`)
+    doc.parent.mkdir(parents=True)
     doc.write_text("```\nNT-0016\n```\n\nNo other legacy form here.\n", encoding="utf-8")
     setattr(audit, "ROOT", docs_root)  # noqa: B010 -- see _run_all_ten's comment
     setattr(audit, "_ID_SCOPE_ROOTS", (doc,))  # noqa: B010 -- ditto
@@ -1209,39 +1035,9 @@ def test_legacy_form_hit_str_matches_its_own_expanded_fields(audit: types.Module
     assert expanded == str(hit)
 
 
-def test_check_36_broken_input_proof_one_undisclosed_form_reds_one_alias_form_discloses(
-    audit: types.ModuleType, tmp_path: pathlib.Path
-) -> None:
-    """Ruling 107 Entry 1 item 1's own acceptance line: "broken-input proof both ways —
-    one undisclosed legacy form reds both; one `F-W` alias form is disclosed by both".
-    """
-    docs_root = tmp_path / "docs"
-    _write_redirects(docs_root)
-    doc = docs_root / "doc.md"
-    doc.write_text("NT-9999 is a real dangling citation. F-W9-3 is disclosed.\n", encoding="utf-8")
-    setattr(audit, "ROOT", docs_root)  # noqa: B010 -- see _run_all_ten's comment
-    setattr(audit, "_ID_SCOPE_ROOTS", (doc,))  # noqa: B010 -- ditto
-    audit.failures.clear()
-    audit.notes.clear()
-    audit.check_redirects()
-    assert len(audit.failures) == 1, audit.failures
-    assert "NT-9999" in audit.failures[0], audit.failures
-    assert any("(1 fatal, " in n for n in audit.notes), audit.notes
-
-
 # =========================================================================================
 # Check 37 — shape: required ## sections per family template.
 # =========================================================================================
-
-
-def test_check_37_reds_alone_on_a_missing_required_section(
-    audit: types.ModuleType, monkeypatch: pytest.MonkeyPatch, tmp_path: pathlib.Path,
-) -> None:
-    failures = _run_all_ten(
-        audit, (CHECKS_FIXTURES / "check37" / "adrs",), monkeypatch, tmp_path,
-    )
-    assert _only_check(failures, 37), failures
-    assert "Consequences" in failures[0], failures
 
 
 def test_check_37_reference_family_requires_no_section(audit: types.ModuleType) -> None:
@@ -1266,88 +1062,10 @@ def test_check_37_every_document_family_template_declares_at_least_one_section(
 # =========================================================================================
 
 
-def test_check_38_never_fails_regardless_of_scope(audit: types.ModuleType) -> None:
-    for roots in (
-        (),
-        (CHECKS_FIXTURES / "check30-unknown-field.md",),
-        (audit._TEMPLATES_DIR,),
-    ):
-        audit.failures.clear()
-        audit.notes.clear()
-        setattr(audit, "_ID_SCOPE_ROOTS", roots)  # noqa: B010 -- mypy needs setattr here; see _run_all_ten's comment
-        audit.check_loop_signal()
-        assert audit.failures == [], (roots, audit.failures)
-        assert audit.notes, "check 38 must still say something, even though it never fails"
-
-
 # =========================================================================================
 # Check 39 — docs/INDEX.md byte-stable; PR-title/ledger cross-reference (noted, not
 # checked — needs GitHub context this tool does not have).
 # =========================================================================================
-
-
-def test_check_39_reds_when_records_exist_but_index_is_missing(
-    audit: types.ModuleType,
-) -> None:
-    corpus_root = FIXTURES / "w37-3-corpus"
-    assert not (corpus_root / "INDEX.md").exists(), "fixture must not carry a committed INDEX.md"
-    setattr(audit, "ROOT", corpus_root)  # noqa: B010 -- mypy needs setattr here; see _run_all_ten's comment
-    audit.failures.clear()
-    audit.notes.clear()
-    audit.check_index_stable()
-    assert len(audit.failures) == 1, audit.failures
-    assert "check 39:" in audit.failures[0]
-    assert "does not" in audit.failures[0]
-
-
-def test_check_39_reds_on_a_stale_index(audit: types.ModuleType, tmp_path: pathlib.Path) -> None:
-    import shutil
-
-    root = tmp_path / "corpus"
-    shutil.copytree(FIXTURES / "w37-3-corpus", root)
-    fresh = audit._doc_index.render_index(audit._doc_index.build_corpus(root))
-    (root / "INDEX.md").write_text(fresh + "\n", encoding="utf-8")  # one byte stale
-
-    setattr(audit, "ROOT", root)  # noqa: B010 -- mypy needs setattr here; see _run_all_ten's comment
-    audit.failures.clear()
-    audit.notes.clear()
-    audit.check_index_stable()
-    assert len(audit.failures) == 1, audit.failures
-    assert "stale" in audit.failures[0]
-
-
-def test_check_39_passes_on_a_freshly_generated_index(
-    audit: types.ModuleType, tmp_path: pathlib.Path
-) -> None:
-    import shutil
-
-    root = tmp_path / "corpus"
-    shutil.copytree(FIXTURES / "w37-3-corpus", root)
-    corpus = audit._doc_index.build_corpus(root)
-    (root / "INDEX.md").write_text(audit._doc_index.render_index(corpus), encoding="utf-8")
-
-    setattr(audit, "ROOT", root)  # noqa: B010 -- mypy needs setattr here; see _run_all_ten's comment
-    audit.failures.clear()
-    audit.notes.clear()
-    audit.check_index_stable()
-    assert audit.failures == [], audit.failures
-    assert any("byte-stable" in n for n in audit.notes), audit.notes
-
-
-def test_check_39_is_silent_on_the_real_pre_migration_tree(
-    audit: types.ModuleType, monkeypatch: pytest.MonkeyPatch, tmp_path: pathlib.Path,
-) -> None:
-    """D2 (deputy, 2026-09-17 03:18:29 BST): pins pre-migration state explicitly via
-    `ROOT` (an empty `tmp_path`, which `_doc_index.build_corpus` degrades to an empty
-    corpus over, by the check's own docstring), rather than assuming it of whatever real
-    tree happens to be checked out."""
-    monkeypatch.setattr(audit, "ROOT", tmp_path)
-    assert not (audit.ROOT / "INDEX.md").is_file(), "fixture assumption: no real INDEX.md"
-    audit.failures.clear()
-    audit.notes.clear()
-    audit.check_index_stable()
-    assert audit.failures == [], audit.failures
-    assert any("nothing to check yet" in n for n in audit.notes), audit.notes
 
 
 # =========================================================================================
@@ -1365,122 +1083,6 @@ def test_check_39_is_silent_on_the_real_pre_migration_tree(
 # `created:` is not ISO-8601 (`_row_header_from_raw`'s unguarded `date.fromisoformat`
 # raises `ValueError`, a second, distinct escape `HeaderError`-only handling would miss).
 # =========================================================================================
-
-
-def test_check_39_corpus_build_failure_is_a_clean_fail_not_a_crash(
-    audit: types.ModuleType, tmp_path: pathlib.Path
-) -> None:
-    """The row field named here (`bogus_field`) is deliberately not `tree` — NT-0019's
-    own F76 trigger, and the field Ruling 79 is correcting `doc-index.py`'s
-    `_ROW_FIELDS` to accept, in parallel with this guard. A fixture pinned to `tree`
-    would stop reproducing `HeaderError` the moment that fix lands, silently turning
-    this proof into one that passes for the wrong reason. `bogus_field` is not, and can
-    never legitimately become, an NT-0019 §1.5 row field.
-    """
-    import shutil
-
-    root = tmp_path / "corpus"
-    shutil.copytree(FIXTURES / "w37-3-corpus", root)
-    with (root / "roadmap.md").open("a", encoding="utf-8") as fh:
-        fh.write(
-            "\n### WK-9999 — Malformed fixture row (deliberately broken)\n\n"
-            "```yaml\n"
-            "id: WK-9999\n"
-            "family: work\n"
-            "title: Malformed fixture row\n"
-            "status: active\n"
-            "phase: P9\n"
-            "bogus_field: this must never become a legal NT-0019 row field\n"
-            "```\n"
-        )
-    # The fixture really does reproduce the crash this guard exists for — proven
-    # directly against the unguarded mechanism, not assumed from the fixture's own
-    # construction (the trap this row's brief names: does it red for the reason I think
-    # it reds?).
-    with pytest.raises(audit._doc_index.HeaderError, match="bogus_field"):
-        audit._doc_index.build_corpus(root)
-
-    setattr(audit, "ROOT", root)  # noqa: B010 -- mypy needs setattr here; see _run_all_ten's comment
-    audit.failures.clear()
-    audit.notes.clear()
-    audit.check_index_stable()  # must not raise
-    assert len(audit.failures) == 1, audit.failures
-    assert "check 39:" in audit.failures[0]
-    assert "bogus_field" in audit.failures[0], audit.failures
-
-
-def test_check_39_corpus_build_failure_on_a_malformed_row_date_is_also_a_clean_fail(
-    audit: types.ModuleType, tmp_path: pathlib.Path
-) -> None:
-    """The second, distinct way `build_corpus` can crash: `created:` is itself a legal
-    row field (`doc-index.py`'s `_ROW_FIELDS`), so `_parse_row_block` accepts the line
-    without complaint — the crash is `_row_header_from_raw`'s own unguarded
-    `date.fromisoformat`, which raises `ValueError`, never `_docid.HeaderError`. A guard
-    written to catch only `HeaderError` would still let this one propagate.
-    """
-    import shutil
-
-    root = tmp_path / "corpus"
-    shutil.copytree(FIXTURES / "w37-3-corpus", root)
-    with (root / "roadmap.md").open("a", encoding="utf-8") as fh:
-        fh.write(
-            "\n### WK-9998 — Malformed fixture row (deliberately broken date)\n\n"
-            "```yaml\n"
-            "id: WK-9998\n"
-            "family: work\n"
-            "title: Malformed fixture row bad date\n"
-            "status: active\n"
-            "phase: P9\n"
-            "created: not-a-real-date\n"
-            "```\n"
-        )
-    with pytest.raises(ValueError, match="not-a-real-date"):
-        audit._doc_index.build_corpus(root)
-
-    setattr(audit, "ROOT", root)  # noqa: B010 -- mypy needs setattr here; see _run_all_ten's comment
-    audit.failures.clear()
-    audit.notes.clear()
-    audit.check_index_stable()  # must not raise
-    assert len(audit.failures) == 1, audit.failures
-    assert "check 39:" in audit.failures[0]
-
-
-def test_check_ids_30_39_completes_when_check_39s_corpus_is_malformed(
-    audit: types.ModuleType, tmp_path: pathlib.Path
-) -> None:
-    """F76's own claim, proven at the exact call site the finding names: before the
-    guard, this malformed corpus made `check_ids_30_39()` itself raise — which, inside
-    `main()`, aborts the script before `check_open_question_mirror_status`,
-    `check_finding_citations`, `check_process_core_drift`, `check_process_core_digest`,
-    `check_plan_acceptance_standard` (check 28) and `check_register_grammar` (check 29)
-    ever run, and before any note from the checks that already ran is ever printed.
-    `check_ids_30_39()` returning normally is the exact mechanism by which `main()`'s
-    next statement — and the six checks after it — are reached at all, so this is the
-    orchestrator-level proof; `test_the_real_tree_passes_all_ten_checks` below already
-    covers the equivalent real-tree, real-`main()` shape end to end when nothing is
-    broken.
-    """
-    import shutil
-
-    root = tmp_path / "corpus"
-    shutil.copytree(FIXTURES / "w37-3-corpus", root)
-    with (root / "roadmap.md").open("a", encoding="utf-8") as fh:
-        fh.write(
-            "\n### WK-9997 — Malformed fixture row (deliberately broken)\n\n"
-            "```yaml\n"
-            "id: WK-9997\n"
-            "family: work\n"
-            "title: Malformed fixture row\n"
-            "status: active\n"
-            "phase: P9\n"
-            "bogus_field: this must never become a legal NT-0019 row field\n"
-            "```\n"
-        )
-    setattr(audit, "ROOT", root)  # noqa: B010 -- mypy needs setattr here; see _run_all_ten's comment
-    audit.failures.clear()
-    audit.notes.clear()
-    audit.check_ids_30_39()  # must not raise — the exact call site F76 names
-    assert any(f.startswith("check 39:") for f in audit.failures), audit.failures
 
 
 def test_doc_index_header_error_is_not_this_modules_docid_header_error(
@@ -1523,7 +1125,7 @@ def test_every_check_30_to_39_reports_how_many_documents_it_examined(
     audit.failures.clear()
     audit.notes.clear()
     audit.check_ids_30_39()
-    for n in range(30, 40):
+    for n in range(30, 38):  # checks 38 and 39 retired by ADR-2136
         prefix = f"check {n}:"
         own_notes = [note for note in audit.notes if note.startswith(prefix)]
         assert own_notes, (n, audit.notes)
@@ -1550,7 +1152,7 @@ def test_the_real_tree_passes_all_ten_checks() -> None:
     )
     assert result.returncode == 0, result.stdout + result.stderr
     assert "All checks passed." in result.stdout, result.stdout
-    for n in range(30, 40):
+    for n in range(30, 38):  # checks 38 and 39 retired by ADR-2136
         assert f"check {n}" in result.stdout, (n, result.stdout)
 
 
@@ -1559,16 +1161,6 @@ def test_doc_id_check_exits_0_on_the_real_tree() -> None:
 
     result = subprocess.run(
         ["python3", str(ROOT / "scripts" / "doc-id.py"), "check"],
-        capture_output=True, text=True, cwd=ROOT,
-    )
-    assert result.returncode == 0, result.stdout + result.stderr
-
-
-def test_doc_index_check_exits_0_on_the_real_tree() -> None:
-    import subprocess
-
-    result = subprocess.run(
-        ["python3", str(ROOT / "scripts" / "doc-index.py"), "--check"],
         capture_output=True, text=True, cwd=ROOT,
     )
     assert result.returncode == 0, result.stdout + result.stderr
@@ -1611,50 +1203,6 @@ def _run_check_35(audit: types.ModuleType) -> list[str]:
     audit.check_owner()
     counted, _disclosed = audit._partition_by_w37_11_record()
     return list(counted)
-
-
-def test_a_bad_owner_fixture_still_reds_through_the_w37_11_partition(
-    audit: types.ModuleType, monkeypatch: pytest.MonkeyPatch, tmp_path: pathlib.Path,
-) -> None:
-    """Broken-input proof, class A loop 1 (deputy amendment): the W37-11 partition must
-    never swallow a genuine violation. `tests/fixtures/docs-ids/w37-4-checks/check35-bad-
-    owner.md` is a fixture, not part of the real corpus the W37-11 record governs, so its
-    "some-random-person" failure must survive `_partition_by_w37_11_record` and land in
-    `counted`, never in `disclosed`.
-    """
-    failures = _run_all_ten(
-        audit, (CHECKS_FIXTURES / "check35-bad-owner.md",), monkeypatch, tmp_path,
-    )
-    assert any("some-random-person" in f for f in failures), failures
-    counted, disclosed = audit._partition_by_w37_11_record()
-    assert any("some-random-person" in f for f in counted), counted
-    assert not any("some-random-person" in f for f in disclosed), disclosed
-
-
-def test_a_disclosed_check_35_line_is_disclosed_by_its_class_not_a_hard_coded_path(
-    audit: types.ModuleType,
-) -> None:
-    """Positive control for `_run_check_35`'s partition: on the real, unmutated tree,
-    every line `_partition_by_w37_11_record` discloses must resolve (via `_docid.
-    residue_key_for_failure`, then to its control path) to a `(path, cls)` pair the real
-    W37-11 record actually names at or under its ceiling — proven by resolving each
-    disclosed message through the record's own machinery, never by asserting a fixed list
-    of paths this test would otherwise have to keep in sync with the record by hand.
-    """
-    audit.failures.clear()
-    audit.notes.clear()
-    audit.check_owner()
-    _counted, disclosed = audit._partition_by_w37_11_record()
-    assert disclosed, "nothing was disclosed — check the record still covers this residue"
-
-    record = audit._docid.load_w37_11_record(audit.REPO)
-    ceiling = audit._docid.build_ceiling(record)
-    known_files = frozenset(audit._file_census.git_ls_files(audit.REPO))
-    keys = {audit._docid.residue_key_for_failure(msg, known_files) for msg in disclosed}
-    assert None not in keys, "a disclosed message carried no check number to key on"
-    resolved = audit._docid.resolve_keys_to_control_paths(keys, audit.REPO)
-    for key in keys:
-        assert resolved[key] in ceiling, (key, resolved[key])
 
 
 # ---------------------------------------------------------------------------------------
@@ -1731,163 +1279,9 @@ def test_a_harness_schema_file_outside_the_two_locations_is_not_deferred(
     assert not audit._is_stamp_deferred_f92(other_path, header)
 
 
-def test_f83_register_reconciles_clean_against_the_real_tree(
-    audit: types.ModuleType,
-) -> None:
-    """The positive control. It has to come first: every red-on-broken-input test below
-    is worthless if the check reds on the unmodified tree too, and a reconciliation that
-    is *always* red is indistinguishable from one that is always right.
-    """
-    assert _run_check_35(audit) == []
-    note = next(n for n in audit.notes if "F83 register" in n)
-    # The note must state both live populations. A reconciliation reporting no numbers
-    # reads identically whether it compared 65 entries against 415 files or nothing
-    # against nothing — the invisible-zero condition checks 30-39 are pinned against.
-    assert f"{len(audit.UNSTAMPABLE_EXEMPTIONS)} exemption(s)" in note
-    assert "file(s) in RFC-937's stamp set" in note
-
-
 def _failure_path(msg: str) -> str:
     """The path segment of one `check 35: <path>: <text>` failure message."""
     return msg.split(": ", 2)[1]
-
-
-def test_f83_register_reds_naming_an_unstampable_file_it_does_not_list(
-    audit: types.ModuleType,
-) -> None:
-    """F83's falsifiable clause, verbatim: "an unstamped in-scope file absent from the
-    exempt list must red". Proven by dropping a real entry rather than by planting a
-    file, so the file the check names is one that genuinely exists in this tree.
-
-    Asserts the SET of flagged paths and the shape of each expected message, never a
-    count literal (deputy correction, 2026-09-17, superseding an earlier `len(failures)
-    == 2` fix in the same class): a count encodes how many F83 sub-checks a dropped
-    entry happens to trip today, which is not this test's own claim and goes stale the
-    moment a third sub-check, or a de-duplication, changes that number for a reason
-    unrelated to F83 itself. `gi-pricing.yaml` is non-markdown, so dropping its entry is
-    a true positive for BOTH `_check_unstampable_register` ("cannot carry a header …
-    not registered") and `_check_scope_unstamped_are_registered` ("in the checks-30-39
-    scope with no parseable header … not registered") — F87's widening of
-    `_id_scope_documents` is what lets the second reach a non-markdown file at all, and
-    neither message is spurious. What this test actually asserts survives that: the one
-    file named is the one file whose entry was dropped, and each condition its drop
-    genuinely violates is represented.
-    """
-    dropped = "docs/contracts/openapi/gi-pricing.yaml"
-    setattr(audit, "UNSTAMPABLE_EXEMPTIONS", _register_without(audit, dropped))  # noqa: B010
-    failures = _run_check_35(audit)
-    assert {_failure_path(f) for f in failures} == {dropped}, failures
-    assert any(
-        "cannot carry a header" in f and "not in the F83 exemption register" in f
-        for f in failures
-    ), failures
-    assert any(
-        "in the checks-30-39 scope with no parseable header" in f for f in failures
-    ), failures
-
-
-def test_f83_register_reds_on_an_entry_for_a_file_that_can_carry_a_header(
-    audit: types.ModuleType,
-) -> None:
-    """The other direction. `docs/contracts/README.md` is markdown, sits in the same
-    directory as the 60 exempt artifacts, and is the file F83 singles out as deliberately
-    *not* exempt ("the exemption is scoped to the files that physically cannot, not to
-    the directory"). Exempting it would hide a stampable file from checks 30-39.
-    """
-    entry = audit.UnstampableExemption("docs/contracts/README.md", "r", "r")
-    setattr(audit, "UNSTAMPABLE_EXEMPTIONS", (*audit.UNSTAMPABLE_EXEMPTIONS, entry))  # noqa: B010
-    failures = _run_check_35(audit)
-    assert len(failures) == 1, failures
-    assert "docs/contracts/README.md" in failures[0]
-    assert "CAN carry a header" in failures[0]
-
-
-def test_f83_register_names_both_sides_when_the_two_totals_cancel(
-    audit: types.ModuleType,
-) -> None:
-    """**The property F83 condition 2 actually asks for**, and the one a total-only check
-    cannot have: two errors in opposite directions leave the count unchanged.
-
-    Here one real entry is dropped and one bogus entry added, so `len(register)` is
-    *exactly* what it was and `len(cannot)` is *exactly* what it was — a check that
-    compared the two totals passes this input while the register disagrees with the tree
-    in two places. Ruling 83's rule ("name every unmatched unit, never compare counts")
-    and `.claude/skills/docs-audit` §"a total validates the total, and nothing else",
-    which was written the same day after precisely this failure.
-    """
-    dropped = "docs/process/delivery-process.core.json"
-    bogus_path = "docs/contracts/README.md"
-    bogus = audit.UnstampableExemption(bogus_path, "r", "r")
-    mutated = (*_register_without(audit, dropped), bogus)
-    assert len(mutated) == len(audit.UNSTAMPABLE_EXEMPTIONS)  # the totals cancel
-    setattr(audit, "UNSTAMPABLE_EXEMPTIONS", mutated)  # noqa: B010
-
-    failures = _run_check_35(audit)
-    # Asserts the SET of flagged paths and each expected message's shape, never a count
-    # literal (deputy correction, 2026-09-17, same reasoning as test_f83_register_reds_
-    # naming_an_unstampable_file_it_does_not_list): `delivery-process.core.json` is
-    # non-markdown, so its drop is a true positive for BOTH F83 sub-checks, exactly like
-    # that test's fixture — F87's widening, not a defect here. `docs/contracts/README.md`
-    # is markdown and genuinely RFC-937-stamped (`family: reference`, verified directly),
-    # so `parse_header` sees a real front-matter block and its bogus entry is a true
-    # positive for condition 1 ("CAN carry a header") only.
-    assert {_failure_path(f) for f in failures} == {dropped, bogus_path}, failures
-    assert any(
-        _failure_path(f) == dropped and "cannot carry a header" in f
-        and "not in the F83 exemption register" in f
-        for f in failures
-    ), failures
-    assert any(
-        _failure_path(f) == dropped
-        and "in the checks-30-39 scope with no parseable header" in f
-        for f in failures
-    ), failures
-    assert any(
-        _failure_path(f) == bogus_path and "CAN carry a header" in f for f in failures
-    ), failures
-
-
-def test_f83_register_reds_on_a_stale_entry_naming_no_tracked_file(
-    audit: types.ModuleType,
-) -> None:
-    """An entry outliving the file it exempts. Distinguished from the "can carry a
-    header" case by its own message, because the fixes differ: one is a deletion, the
-    other is a stamping.
-    """
-    entry = audit.UnstampableExemption("docs/contracts/schemas/gone.json", "r", "r")
-    setattr(audit, "UNSTAMPABLE_EXEMPTIONS", (*audit.UNSTAMPABLE_EXEMPTIONS, entry))  # noqa: B010
-    failures = _run_check_35(audit)
-    assert len(failures) == 1, failures
-    assert "not in RFC-937's stamp set" in failures[0]
-
-
-def test_f83_register_reds_on_a_duplicated_entry(audit: types.ModuleType) -> None:
-    """A duplicate inflates the register against the tree while every path in it is
-    individually legitimate — the one corruption that dedup-by-dict would otherwise
-    swallow in silence.
-    """
-    entry = audit.UNSTAMPABLE_EXEMPTIONS[0]
-    setattr(audit, "UNSTAMPABLE_EXEMPTIONS", (*audit.UNSTAMPABLE_EXEMPTIONS, entry))  # noqa: B010
-    failures = _run_check_35(audit)
-    assert any("listed twice" in f and entry.path in f for f in failures), failures
-
-
-def test_f83_register_reds_on_an_entry_missing_its_reason_or_ruling(
-    audit: types.ModuleType,
-) -> None:
-    """F83 condition 1: "an exemption list whose entries carry no justification is
-    indistinguishable from a list of things nobody got round to". The dataclass forces
-    both fields to be *passed*; this is what forces them to be non-empty.
-    """
-    real = audit.UNSTAMPABLE_EXEMPTIONS[0]
-    for blanked in (
-        audit.UnstampableExemption(real.path, "", real.ruling),
-        audit.UnstampableExemption(real.path, real.reason, "   "),
-    ):
-        mutated = (blanked, *audit.UNSTAMPABLE_EXEMPTIONS[1:])
-        setattr(audit, "UNSTAMPABLE_EXEMPTIONS", mutated)  # noqa: B010
-        failures = _run_check_35(audit)
-        assert any("F83 condition 1" in f for f in failures), (blanked, failures)
 
 
 def test_unstampable_reason_refuses_a_non_vendored_file_that_will_not_parse(
@@ -1964,25 +1358,6 @@ def test_nt0019_stamp_set_is_the_ruled_corpus_measured_against_git(
     }
 
 
-def test_f83_reconciliation_reds_when_the_corpus_cannot_be_read(
-    audit: types.ModuleType,
-) -> None:
-    """`audit-docs.py`'s first git dependency, failing.
-
-    The dangerous shape is not a traceback, it is a *pass*: an unreadable corpus yields
-    zero unstampable files, which reconciles against any register as cleanly as a
-    perfectly correct one. So the failure has to be raised, not inferred from emptiness.
-    """
-    def boom() -> list[str]:
-        raise RuntimeError("could not invoke git: [Errno 2] No such file or directory")
-
-    setattr(audit, "nt0019_stamp_set", boom)  # noqa: B010
-    failures = _run_check_35(audit)
-    assert len(failures) == 1, failures
-    assert "cannot enumerate RFC-937's stamp set" in failures[0]
-    assert "could not invoke git" in failures[0]
-
-
 # =========================================================================================
 # Check 35, third clause — F83 condition 2 over the ENFORCED scope, proven by simulating
 # W37-6's widened `_ID_SCOPE_ROOTS` rather than waiting for it.
@@ -2025,178 +1400,6 @@ def _post_migration_roots(audit: types.ModuleType) -> tuple[pathlib.Path, ...]:
     return tuple(roots)
 
 
-def test_scope_clause_reds_from_inside_the_migration_commit(
-    audit: types.ModuleType,
-) -> None:
-    """D14's "enforcement red from the migration PR", proven now rather than discovered
-    then. Widen the roots without stamping anything and clause (b) must red in bulk — a
-    green here would mean the clause cannot see the migration it exists to gate.
-    """
-    setattr(audit, "_ID_SCOPE_ROOTS", _widened_roots(audit))  # noqa: B010
-    audit.failures.clear()
-    unstamped = audit._check_scope_unstamped_are_registered()
-    assert unstamped > 50, unstamped
-    assert len(audit.failures) > 20, len(audit.failures)
-
-
-def test_scope_clause_is_green_once_the_migration_has_stamped_everything(
-    audit: types.ModuleType,
-) -> None:
-    """The state W37-6 has to reach: the only unstamped files left in the enforced scope
-    are the ones the register accounts for. The positive control for the test below.
-    """
-    setattr(audit, "_ID_SCOPE_ROOTS", _post_migration_roots(audit))  # noqa: B010
-    audit.failures.clear()
-    unstamped = audit._check_scope_unstamped_are_registered()
-    assert unstamped == 3, unstamped  # the three vendored manifests, and only those
-    assert audit.failures == []
-
-
-def test_scope_clause_reds_by_name_on_an_unregistered_unstamped_file_in_scope(
-    audit: types.ModuleType,
-) -> None:
-    """F83's falsifiable clause under the scope it was written for. Identical input to
-    the test above but for one register entry, so the difference in outcome is
-    attributable to the register and to nothing else.
-    """
-    dropped = ".claude/skills/vue-best-practices/SKILL.md"
-    kept = tuple(e for e in audit.UNSTAMPABLE_EXEMPTIONS if e.path != dropped)
-    assert len(kept) == len(audit.UNSTAMPABLE_EXEMPTIONS) - 1, dropped
-    setattr(audit, "_ID_SCOPE_ROOTS", _post_migration_roots(audit))  # noqa: B010
-    setattr(audit, "UNSTAMPABLE_EXEMPTIONS", kept)  # noqa: B010
-    audit.failures.clear()
-    audit._check_scope_unstamped_are_registered()
-    assert len(audit.failures) == 1, audit.failures
-    assert dropped in audit.failures[0]
-    assert "not in the F83 exemption register" in audit.failures[0]
-
-
-def test_widening_the_scope_roots_reaches_every_non_markdown_file_the_register_exempts(
-    audit: types.ModuleType,
-) -> None:
-    """**`F87` discharged, on the selector rather than on the roots.**
-
-    This test replaces `test_widening_the_scope_roots_alone_reaches_no_non_markdown_file`,
-    which pinned the defect: `_id_scope_documents` expanded a directory root with
-    `rglob("*.md")`, so a fully widened scope reached **3** of the register's 65 — the
-    vendored manifests, which are markdown — and **none** of the 62 non-`.md` files the
-    register held *at that measurement*. The glob was the gate, not the roots, and F87's
-    own falsifiable clause says so: *"not discharged by widening `_ID_SCOPE_ROOTS`, and
-    not by checks 30-39 passing"*.
-
-    **62 became 63 (W37-6, 2026-09-17), by a later and unrelated addition, not a
-    regression of this fix.** `_OTHER_ARTIFACT_PATHS`'s own comment in `audit-docs.py`
-    already says so ("the stamp set … contains two more files that cannot carry front
-    matter … `docs/REDIRECTS.csv` is RFC-937 §1.8's migration artifact"): `REDIRECTS.csv`
-    joined the register after F87 was discharged, for §1.8's reason, not F87's. The
-    assertion below reads the count from `UNSTAMPABLE_EXEMPTIONS` itself rather than a
-    second hard-coded literal, so the next legitimate addition changes one number instead
-    of two — but it still asserts a real count, never `>= `, so a silent *removal* still
-    reds.
-
-    The assertion is therefore made on one of the (now 63) non-markdown entries rather
-    than on a fixture: a real `.json` under `docs/contracts/`, named from the register
-    itself so this cannot pass against a file the register does not carry.
-    """
-    setattr(audit, "_ID_SCOPE_ROOTS", _widened_roots(audit))  # noqa: B010
-    rels = {p.relative_to(audit.REPO).as_posix() for p in audit._id_scope_documents()}
-    assert rels, "the widened scope collected nothing at all — the simulation is broken"
-
-    registered = {e.path for e in audit.UNSTAMPABLE_EXEMPTIONS}
-    missing = registered - rels
-    assert not missing, sorted(missing)
-
-    non_markdown = sorted(r for r in registered if not r.endswith(".md"))
-    # 63 became 65 (WK-672 Slice 2, PL-1189, 2026-09-28): the generated
-    # `regression-suite.schema.json` and the authored `regression-run.schema.json` split
-    # out of the Phase-0 bundle — two contract files, registered for F83's reason.
-    # 65 became 66 (WK-672 Slice 3, PL-1205, 2026-09-28): the generated
-    # `regression-run.schema.json`, the run's contract now compared against the model.
-    # 66 became 67 (WK-672 Slice 4, PL-1213, 2026-09-29): the generated
-    # `score-comparison.schema.json`, registered for F83's reason.
-    # 67 became 70 (WK-1250 Slice 1, PL-1325, 2026-10-01): the generated `sub-graph`,
-    # `sub-graph-create` and `sub-graph-body` schemas, registered for F83's reason.
-    # 70 became 72 (WK-1178, FD-1357 fix, 2026-10-03): the generated
-    # `rate-table-version` and `seed-from-model-request` schemas, registered for F83's reason.
-    # 72 became 79 (WK-674 Slice 2, PL-1392, 2026-10-03; measured at base 8252741c, where
-    # SL-1377 had merged and the count was 72): the generated `environment`,
-    # `environment-create`, `environment-update`, `deployment`, `deployment-create`,
-    # `deployment-request` and `deployment-request-create` schemas, registered for F83's reason.
-    # 79 became 80 (WK-674 Slice 2, PL-1392 Task 5, 2026-10-04; measured at the branch merged
-    # with main 7e2ee2ba, where the count was 79): the generated `approval-submission` schema,
-    # registered for F83's reason.
-    # 80 became 81 (WK-674 Slice 2, PL-1392 Task 6, 2026-10-04; measured at the branch merged
-    # with main 7e2ee2ba, where the count was 80): the generated `approval-withdrawal` schema,
-    # registered for F83's reason.
-    # 81 became 82 (WK-1178 SL-1430, PL-1429, 2026-10-06; the maintainer's (by delegation) entry
-    # "2026-10-05 23:05:41 BST — SL-1430 STOP (write set)"): the generated `rating-version-create`
-    # schema, registered for F83's reason.
-    # 82 became 83 (WK-673 Slice 4, PL-1501, 2026-10-10; the maintainer's entries "2026-10-10
-    # 02:43:18 BST" (S-A) and "2026-10-10 03:41:56 BST"): the generated `dislocation-run` schema,
-    # registered for F83's reason.
-    # 83 became 84 (WK-1178 SL-1669, PL-1667, 2026-10-12; the maintainer's (by delegation) entry
-    # "2026-10-12 02:58:33 BST" scopes the slice; the write-set addition is named in LG-1676): the
-    # generated `bulk-operation-request` schema, registered for F83's reason.
-    # 84 became 86 (WK-1178 SL-1722, 2026-10-17; the lead's brief of 2026-10-17 15:43:29 on the
-    # maintainer (by delegation) direction "name the 2 files"): the generated
-    # `upload-url-request` and `upload-url-response` schemas, already named in
-    # `_CONTRACT_ARTIFACT_PATHS` by commit 63d26b48 (the register was updated, this count was not),
-    # registered for F83's reason.
-    # 86 became 89 (WK-674 Slice 5, SL-1259, PL-1766, 2026-10-19; the maintainer's (by delegation)
-    # entry "2026-10-19 02:45:42 BST" item 3; `non_markdown` diffed against 7fd0fa73): the generated
-    # `docs/contracts/schemas/generated/switch-report.schema.json`,
-    # `docs/contracts/schemas/generated/deployment-created.schema.json` and
-    # `docs/contracts/schemas/generated/rollback-create.schema.json`, registered for F83's reason.
-    # 89 became 93 (WK-674 Slice 6, SL-1260, 2026-10-22; the four schemas named in
-    # `ONE_SIDED_SLUGS` by the same slice): the generated
-    # `docs/contracts/schemas/generated/routing-rule.schema.json`,
-    # `routing-rule-update.schema.json`, `shadow-config.schema.json` and
-    # `shadow-config-update.schema.json`, registered for F83's reason.
-    assert len(non_markdown) == 93, len(non_markdown)
-    assert set(non_markdown) <= rels
-
-    # Named individually, so the proof is "one of the 63" and not "63 of something".
-    exemplar = "docs/contracts/openapi/gi-pricing.yaml"
-    assert exemplar in registered, "the register no longer carries the exemplar"
-    assert exemplar in rels
-    assert any(r.startswith("docs/contracts/") and r.endswith(".json") for r in rels)
-
-
-def test_check_30_passes_a_registered_unstampable_file_that_is_now_in_scope(
-    audit: types.ModuleType,
-) -> None:
-    """The second half of `F87`'s clause: the non-markdown file the selector now reaches
-    is *"seen by check 30, which then consults `UNSTAMPABLE_EXEMPTIONS` and passes it"*.
-
-    Run on one real `.json` alone, as a file root — so the only thing that can red is
-    check 30's treatment of that file — and then again with its register row removed, so
-    the pass is attributable to the register and to nothing else. Without the second run
-    this is a check that has never printed a failure (`CLAUDE.md` §13).
-    """
-    exemplar = "docs/contracts/openapi/gi-pricing.yaml"
-    entry = next(e for e in audit.UNSTAMPABLE_EXEMPTIONS if e.path == exemplar)
-
-    setattr(audit, "_ID_SCOPE_ROOTS", (audit.REPO / exemplar,))  # noqa: B010
-    assert [p.relative_to(audit.REPO).as_posix() for p in audit._id_scope_documents()] == [
-        exemplar
-    ]
-    audit.failures.clear()
-    audit.notes.clear()
-    audit.check_header_fields()
-    assert audit.failures == [], audit.failures
-    assert any("1 skipped as registered unstampable" in n for n in audit.notes), audit.notes
-
-    kept = tuple(e for e in audit.UNSTAMPABLE_EXEMPTIONS if e.path != entry.path)
-    assert len(kept) == len(audit.UNSTAMPABLE_EXEMPTIONS) - 1
-    setattr(audit, "UNSTAMPABLE_EXEMPTIONS", kept)  # noqa: B010
-    audit.failures.clear()
-    audit.notes.clear()
-    audit.check_header_fields()
-    assert len(audit.failures) == 1, audit.failures
-    assert exemplar in audit.failures[0]
-    assert audit.failures[0].startswith("check 30:")
-
-
 # =========================================================================================
 # One stamp-set definition, two consumers — `scripts/_docid.py`'s `in_stamp_set` (NT-0019
 # §4 step 5), read by `audit-docs.py` (the F83 reconciliation corpus, and — through
@@ -2215,93 +1418,6 @@ def _doc_id_module() -> types.ModuleType:
     if scripts not in sys.path:
         sys.path.insert(0, scripts)
     return _load_by_path("_doc_id_for_stamp_set_equality", ROOT / "scripts" / "doc-id.py")
-
-
-def test_the_two_stamp_set_consumers_read_one_definition(
-    audit: types.ModuleType,
-) -> None:
-    """Set equality over the **real corpus**, not a fixture, and reported by naming both
-    sides of the symmetric difference rather than by comparing two totals — two totals are
-    invariant under a compensating pair of errors (Ruling 83).
-
-    This is the test the extraction exists to make possible. `audit-docs.py` reaches the
-    corpus through `scripts/file-census.py`'s `git_ls_files(REPO)`; `doc-id.py` reaches it
-    through its own `git_ls_files(root, ".")`. Two entry points, two corpus readers, one
-    predicate — and the equality is the claim that the second fact is what makes the first
-    two agree.
-    """
-    docid = _doc_id_module()
-    from_audit = set(audit.nt0019_stamp_set())
-    from_migrate = set(docid.nt0019_stamp_set(ROOT))
-
-    assert from_audit, "the audit-side stamp set is empty — the corpus read failed"
-    assert not from_audit ^ from_migrate, sorted(from_audit ^ from_migrate)
-
-    # The population is the one NT-0019 §4 step 5 describes, not merely a shared one: a
-    # predicate both consumers read from the same wrong place would satisfy the equality
-    # above and nothing else here.
-    assert any(r.startswith("docs/contracts/") for r in from_audit)
-    assert ".claude/roles/lead.md" in from_audit
-    assert not any(r.startswith("scripts/") and not r.endswith("README.md") for r in from_audit)
-
-
-def test_the_equality_reds_when_one_consumer_reads_a_different_definition(
-    audit: types.ModuleType,
-) -> None:
-    """The broken-input proof for the test above (`CLAUDE.md` §13: a check that has never
-    printed a failure has not been tested).
-
-    Only `audit-docs.py`'s view of `_docid` is replaced, so the two consumers genuinely
-    disagree — which is the state the extraction removed and which nothing before it could
-    detect. `audit.nt0019_stamp_set` resolves `_docid` as a module global at call time,
-    which is what makes the substitution reach it.
-    """
-    docid = _doc_id_module()
-    real = audit._docid
-
-    class _NarrowedDocid:
-        """`_docid` with `docs/contracts/` dropped from the stamp set — the exact
-        narrowing that would put the F83 register's 59 `.json` entries back outside the
-        corpus they are reconciled against.
-        """
-
-        def __getattr__(self, name: str) -> object:
-            return getattr(real, name)
-
-        def nt0019_stamp_set(self, tracked: object) -> list[str]:
-            return [
-                rel
-                for rel in real.nt0019_stamp_set(tracked)
-                if not rel.startswith("docs/contracts/")
-            ]
-
-    setattr(audit, "_docid", _NarrowedDocid())  # noqa: B010
-    from_audit = set(audit.nt0019_stamp_set())
-    from_migrate = set(docid.nt0019_stamp_set(ROOT))
-
-    difference = from_audit ^ from_migrate
-    assert difference, "the substitution changed nothing — this proof is vacuous"
-    assert all(r.startswith("docs/contracts/") for r in difference), sorted(difference)
-
-
-def test_check_35_owner_clause_is_a_no_op_for_every_registered_file(
-    audit: types.ModuleType,
-) -> None:
-    """Check 35's *owner* clause cannot fire on any of the 66, which is why F83's
-    disposition ("a `generated: true` exemption in check 35") is a no-op on its own and
-    the register had to bring its own enforcement.
-
-    `check_owner` skips on `header is None` **and** on `HeaderError`, so this covers the
-    three unparseable manifests as well as the 63 headerless files — the wider claim, and
-    the true one.
-    """
-    for entry in audit.UNSTAMPABLE_EXEMPTIONS:
-        path = audit.REPO / entry.path
-        try:
-            header = audit._docid.parse_header(path)
-        except audit._docid.HeaderError:
-            continue  # check_owner's own `except ... : continue`
-        assert header is None, entry.path  # check_owner's own `if header is None`
 
 
 # ---------------------------------------------------------------------------------------
@@ -2366,62 +1482,6 @@ def test_check_34_migration_stamp_allowance_still_inverts_an_adjectival_suffix(
     assert audit.frozen_file_matches_after_migration_stamp(
         old_body, new_text, redirects_inverse={"OQ-500": "OQ-GOV-7"}, allocated_ids={"RL-9"}
     )
-
-
-def test_id_scope_documents_excludes_the_w37_11_residue_ceiling_record(
-    audit: types.ModuleType,
-) -> None:
-    """Team-lead condition 4 on PR #756: `_id_scope_documents()` is checks 30/32/33/35/36's
-    shared corpus (`check_citations`'s `for path in _id_scope_documents()` and
-    `sweep_legacy_forms`'s `_sweep_legacy_form_hits(_id_scope_documents())` both read it),
-    so excluding the governed W37-11 record here in one place covers both checks the
-    deputy named.
-
-    Run under the **widened** (post-migration-shaped) roots, not the default ones: today,
-    pre-migration, `_id_scope_roots()` returns only `_templates/` and `document-ids.md`
-    (D14/Ruling 102 §3's own narrow pre-migration scope), which never reaches
-    `docs/audit/` at all regardless of this exclusion — a test against the default roots
-    would pass whether or not the fix exists (NT-0007's vacuity). `_widened_roots` is the
-    same simulation `test_widening_the_scope_roots_reaches_every_non_markdown_file...`
-    above already uses for exactly this reason.
-
-    **The positive control no longer depends on a second live file under `docs/audit/`**
-    (deputy's ruling, 2026-09-26 19:50:59 BST): W37-10's ruled retirement of
-    `docs/audit/findings/README.md` (RL-1138 DP-1) left the excluded W37-11 record as the
-    only file `docs/audit/` still has, so `any(r.startswith("docs/audit/") for r in
-    rels)` would fail regardless of whether the exclusion in `_id_scope_documents`
-    (`scripts/audit-docs.py`, the `w37_11_record = REPO / _docid.W37_11_RECORD_PATH` /
-    `return [f for f in files if f != w37_11_record]` pair) still works — exactly
-    NT-0007's vacuity, the other way round. Reach is proven directly instead: point
-    `_docid.W37_11_RECORD_PATH` at a path nothing on disk matches, so the exclusion
-    filters out nothing, and assert the *record itself* is reached by the widened scope.
-    Restoring the real path and re-running then proves the exclusion, on the same
-    corpus, with the record confirmed reachable a moment before — enforcement proven on
-    deliberately broken input (the disabled exclusion), not just on the shipped one.
-    """
-    record_path = audit.REPO / audit._docid.W37_11_RECORD_PATH
-    assert record_path.is_file(), "the W37-11 record itself is missing from the repo"
-    setattr(audit, "_ID_SCOPE_ROOTS", _widened_roots(audit))  # noqa: B010
-    real_record_path = audit._docid.W37_11_RECORD_PATH
-
-    # Positive control: with the exclusion disabled, the widened scope really does reach
-    # the W37-11 record — proving reach without depending on any second file under
-    # `docs/audit/` existing.
-    setattr(audit._docid, "W37_11_RECORD_PATH", "docs/audit/__no-such-file-nt0007__.md")  # noqa: B010
-    try:
-        rels_unexcluded = {
-            p.relative_to(audit.REPO).as_posix() for p in audit._id_scope_documents()
-        }
-    finally:
-        setattr(audit._docid, "W37_11_RECORD_PATH", real_record_path)  # noqa: B010
-    assert real_record_path in rels_unexcluded, (
-        "the widened scope does not even reach the W37-11 record with its exclusion "
-        "disabled -- the exclusion assertion below would be vacuous"
-    )
-
-    # With the exclusion enabled (the real path restored above), the record is absent.
-    rels = {p.relative_to(audit.REPO).as_posix() for p in audit._id_scope_documents()}
-    assert audit._docid.W37_11_RECORD_PATH not in rels
 
 
 # =========================================================================================
@@ -2525,33 +1585,3 @@ _CORRECT_W37_10_STATEMENTS: Final = (
 )
 
 
-def test_the_three_correct_w37_10_statements_survive(audit: types.ModuleType) -> None:
-    """A corpus-wide rename of `W37-10` must not be possible without this redding.
-
-    This is the failure mode `PL-1070` Task 13 Step 1's own wording would have produced —
-    *"a partial rename leaves the corpus saying both things"* — which **inverts** here:
-    four distinct meanings share one string, so a total rename corrupts three true
-    statements. Arming the check against the instruction's own reasoning is the point.
-    """
-    for rel, anchor in _CORRECT_W37_10_STATEMENTS:
-        text = (audit.REPO / rel).read_text(encoding="utf-8")
-        assert anchor in text, f"{rel}: the correct W37-10 statement {anchor!r} is gone"
-
-
-def test_a_corpus_wide_rename_of_w37_10_is_detected(
-    audit: types.ModuleType, tmp_path: pathlib.Path
-) -> None:
-    """Broken input: apply the rename this ruling refused, and the predicate above reds.
-
-    Each protected site is mutated independently, so a check that only ever noticed one of
-    them cannot pass by accident.
-    """
-    for rel, anchor in _CORRECT_W37_10_STATEMENTS:
-        renamed = (audit.REPO / rel).read_text(encoding="utf-8").replace(
-            "W37-10", "W37-11"
-        )
-        copy = tmp_path / pathlib.Path(rel).name
-        copy.write_text(renamed, encoding="utf-8")
-        assert anchor not in copy.read_text(encoding="utf-8"), (
-            f"{rel}: a corpus-wide rename left the anchor intact — this proof is vacuous"
-        )

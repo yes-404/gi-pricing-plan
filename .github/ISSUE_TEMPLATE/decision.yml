@@ -1,0 +1,47 @@
+name: Decision needed
+description: A design choice the specification leaves open. The maintainer decides.
+title: "Decision: "
+labels: ["needs-decision"]
+body:
+  - type: textarea
+    id: question
+    attributes:
+      label: Question
+      description: One sentence that a yes or no, or a choice of option, answers.
+    validations:
+      required: true
+  - type: textarea
+    id: options
+    attributes:
+      label: Options and trade-offs
+      description: At least two. For each, what it costs and what it rules out.
+      value: |
+        **A.**
+        **B.**
+    validations:
+      required: true
+  - type: textarea
+    id: recommendation
+    attributes:
+      label: Recommendation
+      description: Which option and why.
+    validations:
+      required: true
+  - type: input
+    id: blocks
+    attributes:
+      label: Blocks
+      description: The Work issue or slice that waits on this, and from when.
+    validations:
+      required: true
+  - type: textarea
+    id: references
+    attributes:
+      label: Requirement ids and records
+      description: Requirement ids, specification sections and earlier decisions this touches.
+  - type: markdown
+    attributes:
+      value: |
+        The maintainer closes this with a comment starting `Decided:` and the date.
+        A decision that binds the product is then written as a decision record in the
+        pull request that enacts it.

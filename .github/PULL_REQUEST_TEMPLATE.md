@@ -1,24 +1,47 @@
-<!--
-This repository merges only pull requests authored by the maintainer's own account
-(see CONTRIBUTING.md). If you're an outside contributor opening this without a prior
-invitation, please open an issue instead — see CONTRIBUTING.md for why.
--->
+<!-- One Work = one pull request = one commit per slice.
+     Title: a Conventional Commit line, e.g. `feat(frontend): platform administration views`. -->
 
-## Scope
+Closes #<!-- Work issue number -->. Plan accepted in: <!-- link to the maintainer's "Plan accepted" comment -->
 
-<!-- What does this PR change, in one or two sentences? -->
+## Commits
 
-## Work item
+Review commit by commit. Each commit builds and passes the gate on its own.
 
-<!-- Required: the slice this PR delivers, `SL-<n>: <title>`, and the plan it comes from
-     (a docs/plans/ PL-<n> path). Until the first `SL-` row
-     is minted, name the `WK-` work item instead.
+| # | Commit | Slice | Requirement ids | What it changes |
+|---|--------|-------|-----------------|-----------------|
+| 1 | `abc1234` | | | |
 
-     No slice yet? A hotfix, an external contributor's PR, or a dependency bump without one
-     gets a slice minted by the lead at triage, under the current phase's standing maintenance
-     Work (`docs/roadmap.md`, the `WK-` row titled "standing maintenance"). Bot-authored PRs are exempt from this line. -->
+Changes since the last review round: <!-- per commit, or "first round" -->
 
-## Evidence
+## Paths
 
-<!-- Name the command you ran, its totals, and the tree it ran against — never a bare
-     "tests pass". -->
+- [ ] Every changed file is inside the Work issue's permitted paths.
+- [ ] This pull request touches a high-risk area (see CONTRIBUTING, "Review"): yes / no.
+- Exceptions, each with a link to the maintainer's agreement: <!-- or "None" -->
+
+## Gate evidence
+
+Range: `origin/main...<branch>` at head `<sha>`
+
+| Command | Exit code |
+|---------|-----------|
+| | |
+
+Not run, and why: <!-- or "None" -->
+
+## Changelog
+
+<!-- One line a user would read. Write NONE if there is no user-facing change. -->
+
+## Decisions
+
+<!-- Decisions reached in the Work issue. Each one that binds the product is written to
+     docs/adrs/ in this pull request. List them, or write "None". -->
+
+## AI use and accountability
+
+- AI use: <!-- NO, or YES with the tool, the model version and what it did (code, tests, docs) -->
+- [ ] A person has read and understood every change in this pull request.
+- Accountable person: @<!-- the person who answers review questions and owns defects -->
+
+## Notes for the reviewer

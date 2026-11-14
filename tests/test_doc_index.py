@@ -726,11 +726,6 @@ def test_a_reserved_mark_the_index_omits_is_detected(tmp_path: Path) -> None:
     root = tmp_path / "docs"
     shutil.copytree(ROOT / "docs", root)
 
-    reserved_before = _reserved_numbers(root / "REDIRECTS.csv")
-    unseen = max(reserved_before) + 1000
-    with (root / "REDIRECTS.csv").open("a", encoding="utf-8") as fh:
-        fh.write(f"F-W99-9,FD-{unseen},docs/audit/register.md,docs/findings/register.md,,title:Probe\n")
-
     # The emission is deliberately bypassed here: the corpus is built from the ORIGINAL
     # tree, so the appended reservation is one the index does not carry.
     indexed = {
@@ -739,6 +734,12 @@ def test_a_reserved_mark_the_index_omits_is_detected(tmp_path: Path) -> None:
         if record.header.id
         and (m := doc_index.ID_RE.fullmatch(record.header.id)) is not None
     }
+    reserved_before = _reserved_numbers(root / "REDIRECTS.csv")
+    # Above every number the tree carries, reserved or indexed: a probe derived from the
+    # reservations alone met the real ADR-2136 (max reserved 1136 + 1000).
+    unseen = max(reserved_before | indexed) + 1000
+    with (root / "REDIRECTS.csv").open("a", encoding="utf-8") as fh:
+        fh.write(f"F-W99-9,FD-{unseen},docs/audit/register.md,docs/findings/register.md,,title:Probe\n")
     reserved_after = _reserved_numbers(root / "REDIRECTS.csv")
 
     assert unseen in reserved_after, "the probe row did not parse -- the proof is vacuous"

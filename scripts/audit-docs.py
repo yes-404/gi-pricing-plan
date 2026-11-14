@@ -17,39 +17,25 @@ Checks (all non-destructive, exit 1 on any failure):
  12. Money fields (*_minor) are never written as fractional numbers.
  13. Terms are not redefined in a module glossary after 00-overview defines them.
  14. Every module is exercised by at least one workflow, above a coverage floor.
- 15. Every open-question row has an owner and a status from a known set.
- 16. Every working note carries the header block docs/rfcs/README.md requires.
- 17. Note numbering is well-formed and unique, and matches each file's own heading.
- 18. The notes index and the directory agree, in both directions.
- 19. Every reference a note makes resolves — links, FR-/NFR- ids, OQ- ids, ADRs, NT- ids.
- 20. No note defines a requirement id; only docs/specs/ may do that.
+ 15. (retired by ADR-2136: the open-question mirror.)
+ 16-20. (retired by ADR-2136: the working notes are the frozen rfcs family.)
  21. Every endpoint and pricing-core function a workflow journey cites is declared
      in the owning module's §5.1 or §5.2 (FR-19, OQ-543).
  22. Every markdown table row has its own header's cell count — catching a literal
      `|` inside a cell, which shifts every column after it while still rendering.
- 23. Every spec §10 open-question mirror row carries a status token matching the
-     findings register's status for that question, not just a bare, unstatused mirror.
+ 23. (retired by ADR-2136: the open-question mirror.)
  24. Every route `00` §5.6 declares as canonical for a module appears in that module's
      own §5.3 view table (FR-25); §5.6 is canonical, so a mismatch is a §5.3 error.
- 25. Every `(F<n>)` / `(F-W<n>-<n>)` finding id cited in docs/research/, docs/plans/ or
-     docs/notes/ resolves against docs/findings/register.md, an archived phase register, or
-     a docs/audit/work/*/README.md (or closure-records.md) work-item closure record.
+ 25. (retired by ADR-2136: it audited citations between frozen record families only.)
  26. Every `source` citation in docs/process/delivery-process.core.json resolves to a
      real section, or numbered step, of docs/process/delivery-process.md (RFC-895 §3).
  27. The process core extract's recorded digest (`meta.derived_from_digest`) matches the
      current bytes of docs/process/delivery-process.md, paired with the commit it was last
      reconciled against (`meta.verified_against_tree`) — the other half of check 26's own
      "cheap half of a drift check" (RL-905).
- 28. Every filed plan (the `writing-plans` file kind, dated on or after 2026-08-31) states
-     an explicit "Acceptance Standard" heading with content under it (RFC-895 §2 C1,
-     RL-906). Plans dated before the cutoff, and the `-ledger`/`-final-review`/
-     `-verified`/`-handover` file kinds, are out of scope by design — never retro-red-gated.
- 29. Every Decision cell in docs/findings/register.md opens with the register's own disposition
-     vocabulary, a CLAUDE.md §13 verdict, or the negated fix-before-close shape; every
-     resolution annotation names a date and a PR/commit/doc reference; every unowned row
-     says more than the bare word (RL-910, `scripts/register-lint.py`). Also prints, as a
-     note rather than a failure, the count of rows not yet migrated to
-     docs/audit/findings/<F-id>.md against the migration threshold (RL-911, RFC-896 P4).
+ 28. (retired by ADR-2136: the plan acceptance standard; plans are a frozen family.)
+ 29. (retired by ADR-2136: the findings register is frozen; register-lint.py is removed.)
+
 
 RFC-937
 (docs/rfcs/RFC-00937-one-id-per-governed-thing-one-sequence-integer-identity-a-self-describing-layout-and-roles-per-family.md)
@@ -69,7 +55,8 @@ entirely.
      fields per family, read from docs/_templates/ (RL-981) — never transcribed from
      RFC-937 §1.5's own parenthesis, which diverges from the templates in both directions.
  31. Header `id` prefix and integer equal the filename's; directory equals family;
-     numbers unique and contiguous in scope; `created` non-decreasing with the number.
+     numbers unique in scope (contiguity retired by ADR-2136); `created` non-decreasing
+     with the number.
      `docs/_templates/` is exempt by path (RFC-937 §1.4).
  32. Every `<PREFIX>-<n>` in prose resolves in docs/INDEX.md and its prefix matches the
      number's family; no padded id outside a link target; a link's text and target cite
@@ -83,8 +70,10 @@ entirely.
      `plans:` entry (DP-7); every `corrected_by:` entry is a record whose `corrects:` names
      this file.
  35. `owner:` is a role filename under .claude/roles/, or `maintainer`, and one the
-     directory's README.md permits where that README declares a permitted-owner list;
-     and F83's register of files that cannot carry a header at all (60 generated
+     directory's README.md permits where that README declares a permitted-owner list.
+     (ADR-2136 retired the rest: F83's register of unstampable files and the stamping
+     completeness clause. The original text follows, kept for the record:)
+     F83's register of files that cannot carry a header at all (60 generated
      artifacts under docs/ in formats with no comment syntax, 3 unparseable vendored
      SKILL.md manifests, 2 more surfaced by the check itself) reconciled against
      RFC-937's stamp set by name — every entry citing its reason and its ruling
@@ -92,20 +81,20 @@ entirely.
      (condition 2). Naming, never a total: two errors that cancel pass a total-only
      check, which is RL-985's reason and `.claude/skills/docs-audit`
      §"a total validates the total, and nothing else".
- 36. Redirects (renamed from `check_notes_tombstone`, see above): every `was:` has a
+ 36. (ADR-2136: scoped to the governed families; a legacy form the change introduces
+     fails, a pre-existing one is counted.)
+     Redirects (renamed from `check_notes_tombstone`, see above): every `was:` has a
      REDIRECTS.csv row; every row's target exists; no pre-migration id or path form
      survives outside REDIRECTS.csv and `was:` lines (RL-988/DP-2) — one shared
      pattern-and-exclusion constant, reused unscoped by RFC-937 §7 acceptance item (d)
      once the migration lands.
  37. Shape: a document carries every `##` section its family's template body declares —
      the ten-section spec rule, generalised.
- 38. Loop signal, warn-only — never fails the gate. Notes only in S1: no PL-/RS-/RFC-
+ 38. (retired by ADR-2136.)
+     Loop signal, warn-only — never fails the gate. Notes only in S1: no PL-/RS-/RFC-
      population exists in scope yet to check coverage, freeze-gate dates or superseded/
      retired citations against.
- 39. docs/INDEX.md byte-stable against a fresh regeneration (also its own `doc-id.py
-     doc-index.py --check` CI step); a merged PR's title names its `SL-` and the slice's
-     ledger records the PR — needs GitHub PR context this tree-snapshot tool does not have,
-     so noted rather than checked here.
+ 39. (retired by ADR-2136: docs/INDEX.md is a frozen citation resolver, no longer regenerated.)
  40. Every fence in docs/specs/ declares a language, and every `json` block declares
      `schema=<Class>` or `illustrative` and parses when classed (FD-1381). Validation
      against model-schema is tests/test_spec_examples.py's, so this script stays stdlib.
@@ -121,11 +110,14 @@ import hashlib
 import importlib.util
 import itertools
 import json
+import os
 import pathlib
 import re
+import subprocess
 import sys
+import tempfile
 import types
-from collections.abc import Collection, Iterable, Mapping, Sequence
+from collections.abc import Callable, Collection, Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import date
 from typing import Final
@@ -174,9 +166,6 @@ def _first_file(*candidates: pathlib.Path) -> pathlib.Path:
     return candidates[0]
 
 
-#: `docs/notes/` pre-migration, `docs/rfcs/` after it (RFC-937 D7: notes become the `RFC`
-#: family). Resolved by what is on disk, never by a flag — see `migrated_tree`.
-NOTES = _first_dir(ROOT / "notes", ROOT / "rfcs")
 #: The findings register: `docs/findings/register.md` pre-migration, `docs/findings/register.md`
 #: after it (RFC-937 §5.2 — the two registers merge into one). Written as a *constant* and
 #: not spelled inline at each use, because the migration rewrites the path **string** in this
@@ -261,38 +250,6 @@ def fail(msg: str) -> None:
 
 # scripts/register-lint.py — check 29's implementation. A hyphenated filename cannot be
 # `import`ed; loaded by path, as `bench-trace-size.py` already does for `bench-rating.py`.
-def _load_register_lint() -> types.ModuleType:
-    spec = importlib.util.spec_from_file_location(
-        "_register_lint", REPO / "scripts" / "register-lint.py"
-    )
-    assert spec is not None
-    assert spec.loader is not None
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
-
-
-def check_register_grammar() -> None:
-    """Check 29: docs/findings/register.md's Decision-cell grammar (RL-910), plus the P4
-    findings-file migration residue line (RL-911) — a note, never a failure, so the
-    "opportunistic migration" claim stays falsifiable everywhere the docs gate runs, not
-    only when `register-lint.py` is invoked directly.
-    """
-    register = REGISTER
-    if not register.exists():
-        notes.append(
-            f"no {register.relative_to(REPO).as_posix()} — check 29 skipped"
-        )
-        return
-    register_lint = _load_register_lint()
-    violations = register_lint.lint_register(register)
-    for v in violations:
-        fail(f"check 29: {v}")
-    notes.append(f"check 29: register grammar — {len(violations)} violation(s)")
-    rows, _problems = register_lint.parse_register(register)
-    notes.append(f"check 29: {register_lint.residue_line(register, rows)}")
-
-
 def _path_segments(path: str) -> tuple[str, ...]:
     """A path as comparable segments, with `{placeholders}` collapsed.
 
@@ -329,271 +286,6 @@ def _placeholder_match(
         if all(d == s or d == "{}" for d, s in zip(ds, segments, strict=True)):
             return owner
     return None
-
-def check_open_question_columns() -> None:
-    """15. Every OQ row has an owner and a status drawn from a known set.
-
-    Added after an edit wrote "decided" into the *owner* column and left the status as
-    "open": the register then disagreed with the spec about whether a question was settled,
-    and all fourteen existing checks passed. A malformed row here is not a typo — this file
-    is the project's record of what has been decided.
-    """
-    allowed = {"open", "decided", "deferred", "superseded"}
-    path = ROOT / "open-questions.md"
-    for number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
-        match = _OQ_ROW.match(line)
-        if not match:
-            continue
-        cells = _docid.table_rows.split_row(line)
-        if len(cells) < 3:
-            fail(f"check 15: open-questions.md:{number}: {match.group(1)} has too few columns")
-            continue
-        owner = cells[-2].replace("*", "").strip().lower()
-        status = cells[-1].replace("*", "").replace("~", "").strip().lower()
-        first = status.split()[0] if status else ""
-        if first not in allowed:
-            fail(
-                f"check 15: open-questions.md:{number}: {match.group(1)} status "
-                f"{cells[-1]!r} is not one of {sorted(allowed)}"
-            )
-        if not owner or owner in allowed:
-            fail(
-                f"check 15: open-questions.md:{number}: {match.group(1)} owner "
-                f"{cells[-2]!r} looks like a status — the columns may be shifted"
-            )
-
-
-def check_open_question_mirror_status(specs: list[pathlib.Path]) -> None:
-    """23. Every spec §10 mirror row carries a status token matching the register's.
-
-    Check 4 proves every question is mirrored in both directions, but nothing looks at
-    what the mirror row *says*. A bare row — the question, no status, no consequence —
-    is audit-clean by construction, even when the register has long since decided the
-    question; OQ-544's two bodies had diverged so far they named different things
-    while every check passed. The register is the source of truth (check 15 constrains
-    its status vocabulary), so each mirror row must state its status in the register's
-    own words: a decided question's row must carry "decided" (or a mirror-side
-    synonym), an open one "open", a deferred one "deferred".
-
-    Scoped to each spec's §10: a requirement row citing an OQ id elsewhere in the spec
-    is a reference, not a mirror. Anchored to the row: the status token must follow the
-    id on the same row, so a neighbouring row's status never satisfies it.
-    """
-    register: dict[str, str] = {}
-    path = ROOT / "open-questions.md"
-    for line in path.read_text(encoding="utf-8").splitlines():
-        match = _OQ_ROW.match(line)
-        if not match:
-            continue
-        cells = _docid.table_rows.split_row(line)
-        status = cells[-1].replace("*", "").replace("~", "").strip().lower()
-        register[match.group(1)] = status.split()[0] if status else ""
-
-    # The register's own vocabulary is check 15's {open, decided, deferred, superseded};
-    # mirrors have historically written a decided question as "resolved" or "determined".
-    groups = {
-        "open": {"open"},
-        "decided": {"decided", "resolved", "determined"},
-        "deferred": {"deferred"},
-        "superseded": {"superseded"},
-    }
-
-    checked = ok = 0
-    for f in specs:
-        lines = f.read_text(encoding="utf-8").splitlines()
-        start = next(
-            (i for i, ln in enumerate(lines) if re.match(r"^## 10\.", ln)), None
-        )
-        if start is None:
-            continue
-        for i in range(start + 1, len(lines)):
-            line = lines[i]
-            if line.startswith("## "):
-                break
-            m = _OQ_DEFINED.search(line)
-            if not m:
-                continue
-            oq = m.group(1)
-            reg_status = register.get(oq)
-            if not reg_status:
-                continue  # the both-ways mirror itself is check 4's
-            checked += 1
-            after = line[m.end():]
-            if not any(
-                re.search(rf"\b{re.escape(word)}\b", after, re.IGNORECASE)
-                for word in groups.get(reg_status, {reg_status})
-            ):
-                fail(
-                    f"check 23: {f.name}:{i + 1}: {oq} mirror row carries no status token "
-                    f"matching the register's {reg_status!r} status"
-                )
-            else:
-                ok += 1
-    # The verdict belongs in the summary line, not just the failure list: a note reading
-    # "all carry" above a FAILED block is the shape this audit exists to catch.
-    notes.append(f"{ok} of {checked} §10 mirror rows carry their register status")
-
-
-def check_notes(defined: set[str], questions: set[str], adrs: set[int]) -> None:
-    """16-20. The working notes in docs/notes/, against that directory's README.
-
-    The notes are not the specification, so most of their audit standard is judgement — is
-    this status still true of the repository, is this deliverable still right for the phase
-    the project is now in. A script cannot answer either. What it *can* answer is every
-    mechanical part, and those are precisely the ones that rot without anyone noticing: a
-    reference to a file that has been renamed, a number reused after a deletion, an index
-    that no longer lists what the directory holds.
-
-    Two limits are worth stating rather than implying. **Number reuse across a deletion is
-    not detectable here** — a snapshot cannot see the retired number, so that check stays
-    manual and stays in the README. And gaps in the sequence are *legal*: a deleted note
-    retires its number, so contiguity is deliberately not asserted. A missing `NOTES` root is
-    an **error**, not a legitimate absence: unlike an artifact the repository may not have
-    built yet, this directory is unconditionally present, so its disappearance can only mean
-    a move or a deletion that forgot to update this check.
-    """
-    if not NOTES.is_dir():
-        fail(
-            f"{NOTES.relative_to(REPO).as_posix()} does not exist — checks 16-20 cannot run"
-        )
-        return
-
-    if migrated_tree():
-        # Post-migration the note family is `RFC-` (RFC-937 D7) and every mechanical duty
-        # checks 16-20 discharge has a successor that covers *every* family rather than this
-        # one directory: the prose `| **Raised** |` header block becomes YAML front matter
-        # (check 30), `RFC-842` becomes an `id:` field that must equal the filename
-        # (check 31), the five-word status vocabulary is check 33's, citations resolving is
-        # check 32's, and the hand-maintained README index table is replaced by the generated
-        # `docs/INDEX.md` that check 39 holds byte-stable.
-        #
-        # This says so **with the population count** rather than returning silently. A check
-        # whose parsers no longer match anything reports `0 working notes, indexed and
-        # numbered` and reads as a pass; naming the successor and the denominator is the
-        # difference between "superseded" and "blind".
-        population = sorted(
-            p for p in NOTES.glob("*.md") if p.name != "README.md"
-        )
-        notes.append(
-            f"checks 16-20: {len(population)} document(s) in "
-            f"{NOTES.relative_to(REPO).as_posix()} — the RFC family's header, id, status, "
-            "citations and index are checked by 30, 31, 33, 32 and 39 on a migrated tree; "
-            "the NT- prose-header and README-index parsers do not run here"
-        )
-        return
-
-    def rel(path: pathlib.Path) -> str:
-        return path.relative_to(REPO).as_posix()
-
-    def head_word(cell: str) -> str:
-        """First word of a status cell, stripped of markdown emphasis."""
-        cleaned = cell.replace("`", "").replace("*", "").replace("~", "").strip().lower()
-        return cleaned.split()[0].rstrip(",.;:") if cleaned else ""
-
-    allowed = {"open", "accepted", "landed", "superseded", "dropped"}
-    required = ("Raised", "Status", "Deliverable", "Owner", "Lands in")
-    files = sorted(p for p in NOTES.glob("*.md") if p.name != "README.md")
-    seen: dict[str, pathlib.Path] = {}
-    status_of: dict[str, str] = {}
-    cited: dict[pathlib.Path, set[str]] = {}
-
-    for f in files:
-        text = f.read_text(encoding="utf-8")
-        fields = dict(re.findall(r"^\| \*\*(.+?)\*\* \| (.+?) \|\s*$", text, re.M))
-
-        # 16. the header block README.md requires
-        for name in required:
-            if name not in fields:
-                fail(f"check 16: {rel(f)}: header block is missing the **{name}** field")
-        if not any(k.startswith(("Sequencing", "Trigger")) for k in fields):
-            fail(f"check 16: {rel(f)}: header block needs a **Sequencing** or **Trigger** field")
-        status = head_word(fields.get("Status", ""))
-        if status not in allowed:
-            fail(
-                f"check 16: {rel(f)}: status {fields.get('Status', '(absent)')!r} is not "
-                f"one of {sorted(allowed)}"
-            )
-
-        # 17. numbering, and the heading that must agree with it
-        match = re.match(r"^(\d{4})-[a-z0-9]+(?:-[a-z0-9]+)*\.md$", f.name)
-        if not match:
-            fail(f"check 17: {rel(f)}: filename is not of the form NNNN-kebab-title.md")
-        else:
-            number = match.group(1)
-            heading = re.search(r"^# NT-(\d{4})\b", text, re.M)
-            if not heading:
-                fail(f"check 17: {rel(f)}: first heading must read '# NT-{number} — <title>'")
-            elif heading.group(1) != number:
-                fail(
-                    f"check 17: {rel(f)}: heading says NT-{heading.group(1)} but the "
-                    f"filename says {number} — a note has one identity"
-                )
-            if number in seen:
-                fail(
-                    f"check 17: note number NT-{number} is used by both {rel(seen[number])} "
-                    f"and {rel(f)} — numbers are unique and never reused"
-                )
-            seen[number] = f
-            status_of[number] = status
-
-        # 19. every reference resolves
-        for m in re.finditer(r"\[[^\]]*\]\(([^)#\s]+)(#[^)]*)?\)", text):
-            target = m.group(1)
-            if target.startswith(("http://", "https://", "mailto:")):
-                continue
-            if not (f.parent / target).resolve().exists():
-                fail(f"check 19: {rel(f)}: broken link: {target}")
-        for rid in sorted(set(_REQ_CITED.findall(text)) - defined):
-            fail(f"check 19: {rel(f)}: references {rid}, which no spec defines")
-        for oq in sorted(set(_OQ_CITED.findall(text)) - questions):
-            fail(f"check 19: {rel(f)}: references {oq}, which open-questions.md does not list")
-        for ref in sorted({int(n) for n in _ADR_CITED.findall(text)} - adrs):
-            fail(f"check 19: {rel(f)}: references ADR-{ref}, for which no file exists")
-        # NT- ids are resolved after the loop: a note may cite one numbered above it.
-        cited[f] = set(re.findall(r"\bNT-(\d{4})\b", text)) - {f.name[:4]}
-
-        # 20. a note may propose a requirement; it may never define one
-        for rid in sorted(set(_REQ_DEFINED.findall(text))):
-            fail(
-                f"check 20: {rel(f)}: defines {rid} in the bold form reserved for "
-                "docs/specs/ — a note may propose a requirement, never carry one"
-            )
-
-    # 18. the index and the directory, in both directions
-    readme = NOTES / "README.md"
-    if not readme.is_file():
-        fail("check 18: docs/rfcs/README.md is missing — the index is part of the standard")
-        return
-    indexed: dict[str, tuple[str, str]] = {}
-    for line in readme.read_text(encoding="utf-8").splitlines():
-        row = re.match(r"^\| \[NT-(\d{4})\]\(([^)]+)\)", line)
-        if not row:
-            continue
-        cells = _docid.table_rows.split_row(line)
-        indexed[row.group(1)] = (row.group(2), cells[3] if len(cells) > 3 else "")
-    for number, path in sorted(seen.items()):
-        if number not in indexed:
-            fail(f"check 18: {rel(path)} is not listed in the docs/rfcs/README.md index")
-        elif indexed[number][0] != path.name:
-            fail(
-                f"check 18: index row NT-{number} links to {indexed[number][0]}, but the "
-                f"file is {path.name}"
-            )
-        elif head_word(indexed[number][1]) != status_of[number]:
-            fail(
-                f"check 18: note NT-{number}: index says status "
-                f"{head_word(indexed[number][1])!r}, the file says {status_of[number]!r}"
-            )
-    for number in sorted(set(indexed) - set(seen)):
-        fail(f"check 18: index lists note NT-{number}, but no such file exists in docs/notes/")
-
-    # 19, second pass: a note citing another note — a `superseded` row must name a real one,
-    # and a retired number must not be quietly resurrected by a reference to it.
-    for f, refs in sorted(cited.items()):
-        for ref in sorted(refs - set(seen)):
-            fail(f"check 19: {rel(f)}: references NT-{ref}, for which no note exists")
-    notes.append(f"{len(files)} working notes, indexed and numbered")
-
 
 def check_table_rows(md: list[pathlib.Path]) -> None:
     r"""Check 22: every table row has as many cells as its own header.
@@ -664,156 +356,6 @@ _FINDING_CITED = re.compile(r"\((" + _FINDING_ID + r")\)")
 _FINDING_HEADING = re.compile(r"^#{1,6}\s+(" + _FINDING_ID + r")\b", re.M)
 _FINDING_TABLE_CELL = re.compile(r"^\|\s*(" + _FINDING_ID + r")\s*\|", re.M)
 _FINDING_BOLD_LEAD = re.compile(r"^\*\*(" + _FINDING_ID + r")\b", re.M)
-
-
-def check_finding_citations() -> None:
-    r"""25. Every finding id cited outside the register resolves to a row there.
-
-    `docs/findings/register.md` is the single register of open findings (`CLAUDE.md` §13), and
-    until now nothing checked it from the *citing* side: a plan, a research spike or a working
-    note can write `(F42)` for a withdrawn finding, or `(F45)` for one a tombstone note had
-    just promised but no row yet existed for, and nothing complained. Both happened for real
-    on 2026-08-29, caught only because someone happened to remember the register's actual
-    contents rather than by anything mechanical.
-
-    **Scope is deliberately narrow: `docs/research/`, `docs/plans/` and `docs/notes/` only**
-    — where a citation is *made*. Not `docs/audit/` itself, where findings are *filed* and a
-    retired id or a not-yet-filed one is legitimately named in the prose explaining exactly
-    that (the F42 tombstone note names both F42 and F45 in plain, unparenthesised text for
-    this reason). Not `docs/roadmap.md` or `docs/closures/CR-00709-phase-0-specification-status.md`
-    either, though both carry `(F..)` tokens: building this check found
-    `closures/CR-00709-phase-0-specification-status.md`'s `(F13)` citing
-    `docs/research/track-a-findings.md`'s own local F13 (`FR-129`) — a real collision with the
-    register's *unrelated* F13 (`FR-25`) that a wider scan would have silently resolved against the
-    wrong row instead of catching. Narrowing to where the incident this check answers actually
-    happened is what keeps that kind of false confidence out.
-
-    **All three scan roots are unconditionally present, so a missing one is an error, not a
-    legitimate absence.** Unlike an artifact the repository may not have built yet, `research/`,
-    `plans/` and `docs/notes/` are the same three named just above as this check's
-    deliberate, symmetric scope — none of them is optional relative to the other two, so a
-    `git mv` of any one would silently narrow this check's coverage were its disappearance
-    only skipped rather than reported.
-
-    **Only the register's own citation form is matched**: an id in parentheses immediately
-    after the text it concerns, `(F32)` or `(F-W9-1)` — exactly how every register row names
-    itself, and how every genuine cross-document citation found while writing this check was
-    written
-    (`docs/plans/PL-00849-wk-671-slice-3-batch-scoring-the-pure-transform-the-checkpointing-handler-and-the-route.md`
-    and its WK-671 siblings). A bare
-    `F1` with no parentheses is deliberately never matched: dozens of unrelated documents
-    number their *own* local findings from one — every WK-661 and WK-664 task plan's own "Findings"
-    section, `track-a-findings.md`'s spike log, the phase 1b predecision plan before it became
-    that phase's register — and a bare-token scan over `docs/plans/` and `docs/research/`
-    flagged several hundred of those as dangling register references against the corpus this
-    check was actually written against. Parenthesising is the one marker that survived contact
-    with the real corpus; the cost is a real citation written some other way (a comma-separated
-    list, a bare id) is not checked, which is preferred over a check that cries wolf.
-
-    **A file citing its own locally-defined finding is not citing the register.** A plan that
-    opens `### F1 — …` (a heading), or `**F-W11-1-2 — … .**` (a bold paragraph lead-in, the
-    form
-    `docs/plans/PL-00846-wk-671-slice-1-evaluator-core-its-prerequisites-and-the-latency-harness.md`
-    uses for its own four findings), and later writes `(F1)` or `(F-W11-1-2)` again further down,
-    refers to itself, not to `docs/findings/register.md`. `_FINDING_HEADING`, `_FINDING_TABLE_CELL`
-    and `_FINDING_BOLD_LEAD` collect a file's own local ids (all three defining forms seen in the
-    real corpus), same-file only: a citation resolved by a *different* file's local heading (the
-    `closures/CR-00709-phase-0-specification-status.md` collision above) is exactly the false match
-    this check must not make, which is a second, independent reason that file sits outside this
-    check's scope.
-
-    **A finding resolves against the live register, an archived phase register, or a closure
-    record — never only the first.** `docs/findings/register.md`'s own header states the
-    contract: one row per *open* finding, removed when a close resolves it. A finding can
-    therefore be real, correctly resolved, and correctly cited, while having never had a row
-    in the live register at all — the ordinary case for one closed during a slice's own audit
-    rather than carried forward. `F-W9-3-2` is exactly this shape: resolved the same day it
-    was raised (`docs/closures/CR-00837-work-item-record-w9-3-bundle-compilation.md`'s Findings
-    table), cited from the spec sentence it corrected (`03-rating-engine.md:671`), never filed to
-    `register.md` because filing a *closed* finding there would violate the header's own contract.
-    Ruling, 2026-08-30 (relayed from the lead, who cannot reach this script directly): treating that
-    citation as dangling — the check's first version did — is a worse defect than the gap the check
-    exists to catch, since it fires on correct behaviour. Resolution therefore checks three sources
-    in order: `register.md` (open findings, parenthesised `(F<n>)` form), every
-    `docs/audit/phases/*/register.md` (archived-phase snapshots, bare-id table-cell form), and every
-    `docs/audit/work/*/README.md` plus `docs/audit/closure-records.md` (ordinary work-item closure
-    records, the same bare-id table-cell form — confirmed against `W9-3`'s own Findings table before
-    relying on it, not assumed from the name).
-
-    **The reverse direction — a register row citing a document that does not exist — is
-    deliberately not built here.** A genuine `[text](path)` link inside `docs/findin
-    gs/register.md` is already covered by check 1, which scans all of `docs/` including
-    `docs/audit/`. Past that, the register's backtick spans are not reliably file paths: one
-    row alone mixes a real path, a code symbol, a `file.py:NNN` citation, a shell command and
-    an error-code name with no syntactic marker telling them apart — the same false-positive
-    risk the citation side above was narrowed to avoid, not yet worth the same risk twice in
-    one check.
-    """
-    registered: set[str] = set()
-    if REGISTER.is_file():
-        registered |= set(_FINDING_CITED.findall(REGISTER.read_text(encoding="utf-8")))
-        registered |= set(_FINDING_TABLE_CELL.findall(REGISTER.read_text(encoding="utf-8")))
-    else:
-        fail(
-            f"check 25: {REGISTER.relative_to(REPO).as_posix()} does not exist — check 25 "
-            "has no register to resolve against and would pass every citation vacuously"
-        )
-    for phase_register in sorted((ROOT / "audit" / "phases").glob("*/register.md")):
-        registered |= set(
-            _FINDING_TABLE_CELL.findall(phase_register.read_text(encoding="utf-8"))
-        )
-    # Work-item closure records: a finding closed during its own slice's audit never gets a
-    # register.md row at all (the register holds only open findings) but is no less real, no
-    # less resolved, and no less a legitimate thing to cite -- confirmed against W9-3's own
-    # Findings table, whose id is the bare first cell, the same shape a phase register uses.
-    #
-    # Both layouts: `docs/audit/work/*/README.md` + `closure-records.md` before the RFC-937
-    # migration, `docs/closures/CR-*.md` after it (§5.2 -- the work-item READMEs and the two
-    # split files all become `CR-` documents).
-    closure_sources = sorted((ROOT / "audit" / "work").glob("*/README.md"))
-    closure_records = ROOT / "audit" / "closure-records.md"
-    if closure_records.is_file():
-        closure_sources.append(closure_records)
-    closure_sources.extend(sorted((ROOT / "closures").glob("*.md")))
-    for source in closure_sources:
-        registered |= set(_FINDING_TABLE_CELL.findall(source.read_text(encoding="utf-8")))
-
-    # The directories a finding gets cited from. `docs/rulings/` and `docs/ledgers/` are the
-    # post-migration homes of records that were `docs/plans/*.md` files before it, so leaving
-    # them out would quietly shrink the scanned corpus at the migration commit -- the exact
-    # shape of defect this whole pass exists to remove.
-    scan_dirs = [ROOT / "research", ROOT / "plans", NOTES]
-    scan_dirs += [d for d in (ROOT / "rulings", ROOT / "ledgers") if d.is_dir()]
-    scanned_files: set[pathlib.Path] = set()
-    for d in scan_dirs:
-        if not d.is_dir():
-            fail(
-                f"check 25: {d.relative_to(REPO).as_posix()} does not exist — check 25 "
-                "cannot scan it"
-            )
-            continue
-        scanned_files |= set(d.rglob("*.md"))
-    scanned = sorted(scanned_files)
-    for f in scanned:
-        text = f.read_text(encoding="utf-8")
-        cited = set(_FINDING_CITED.findall(text))
-        local = (
-            set(_FINDING_HEADING.findall(text))
-            | set(_FINDING_TABLE_CELL.findall(text))
-            | set(_FINDING_BOLD_LEAD.findall(text))
-        )
-        for fid in sorted(cited - registered - local):
-            fail(
-                f"check 25: {f.relative_to(REPO)}: cites finding {fid}, which resolves "
-                "nowhere -- not docs/findings/register.md, not an archived phase register, "
-                "not a docs/audit/work/*/README.md or closure-records.md closure record, "
-                "and not defined locally in this file"
-            )
-    notes.append(
-        f"check 25: {len(scanned)} file(s) scanned for finding citations against "
-        f"{len(registered)} registered finding id(s) from "
-        f"{REGISTER.relative_to(REPO).as_posix()} and {len(closure_sources)} closure record(s)"
-    )
 
 
 PROCESS_SPEC = REPO / "docs" / "process" / "delivery-process.md"
@@ -1070,144 +612,6 @@ _PLAN_TERMINAL_KINDS = frozenset({"review", "handover"})
 _ACCEPTANCE_STANDARD_HEADING = re.compile(r"^#{1,6}\s+.*acceptance standard", re.IGNORECASE)
 
 
-def check_plan_acceptance_standard() -> None:
-    """28. A filed plan (the `writing-plans` file kind) states an explicit acceptance standard.
-
-    Mechanises RFC-895's C1 and `delivery-process.md` §5 step 4 / §6 step 1: the lead's
-    replan-vs-proceed check that "an acceptance standard was actually defined, not just
-    implied." A bare heading is not "actually defined" either, so the check also requires
-    content under it — but it cannot judge whether that content is a *good* standard; that
-    stays the lead's read (`.claude/roles/lead.md`).
-
-    **The discriminator is RL-906's, not a warn-then-red switch**: a plan's own filename
-    date against `PLAN_ACCEPTANCE_STANDARD_CUTOFF`, a constant. Nothing here reads the clock
-    or git history, so the same file gets the same verdict in any clone at any revision —
-    the property a time-of-run switch cannot have. C1 and the `writing-plans` field it
-    validates land in the same commit, so the cutoff is that commit's date and zero plans
-    filed before today are ever in scope: **no warn phase, because there is nothing to warn
-    about.**
-
-    Scope is the plan *kind* only — the file `writing-plans` produces, discriminated by the
-    four documented suffixes in `docs/plans/README.md`, never by guessing at content. Widen
-    it past that and it reds on every future ledger, ruling record or handover file, which
-    the "no warn phase" design above cannot excuse (RL-906 §2's own warning about a check
-    that guesses).
-
-    Legacy plans (filed before the cutoff) get **one aggregate note line**, not one warning
-    each — RL-906 §2 took this from the same principle a hundred per-file lines would
-    violate: a check nobody reads because it never says anything new is worse than no check.
-    """
-    plans_dir = ROOT / "plans"
-    legacy = 0
-    checked = 0
-    post_migration = migrated_tree()
-    for f in sorted(plans_dir.glob("*.md")):
-        name = f.name
-        # `INDEX.md` joins `README.md` here: both are generated, neither is a filed plan.
-        # RL-1042 clause 1 puts a split-source index in the family directory of the
-        # split's targets, and a plan that splits into a `PL-` plus nested `RL-` rulings
-        # sorts to `plans` — so `docs/plans/INDEX.md` is a shape a clean migration now
-        # produces. Without this line check 28 fails it for carrying no `YYYY-MM-DD-`
-        # prefix, which is a rule about *filed plans* and was never meant to reach a
-        # generated artifact.
-        if name in ("README.md", "INDEX.md"):
-            continue
-
-        if post_migration:
-            # After the RFC-937 migration a plan is `PL-<nnnnn>-<slug>.md`: the date left the
-            # filename (that is what the migration is *for*) and the kind stopped being a
-            # suffix. Both now come from the front matter, which is a strictly better source
-            # than either -- a parsed field rather than a substring of a name.
-            #
-            # Reading them from the filename regardless is not a graceful degradation: every
-            # migrated plan fails the `YYYY-MM-DD-` test, so on the migrated tree the
-            # un-fixed check emitted 110 failures **and** reported "0 plan(s) checked for an
-            # acceptance standard". Both halves wrong at once, in opposite directions.
-            try:
-                header = _docid.parse_header(f)
-            except _docid.HeaderError as exc:
-                fail(f"check 28: docs/plans/{name}: check 28 cannot read the header — {exc}")
-                continue
-            if header is None:
-                fail(
-                    f"check 28: docs/plans/{name}: no front-matter header — check 28 takes "
-                    "a filed plan's kind and filing date from `kind:` and `created:` after "
-                    "the RFC-937 migration, and can classify or date nothing without them"
-                )
-                continue
-            if header.kind in _PLAN_TERMINAL_KINDS:
-                continue
-            if header.created is None:
-                fail(
-                    f"check 28: docs/plans/{name}: header has no `created:` date — check "
-                    "28 cannot place it against the "
-                    f"{PLAN_ACCEPTANCE_STANDARD_CUTOFF.isoformat()} cutoff"
-                )
-                continue
-            filed = header.created
-        else:
-            if name.endswith(_PLAN_KIND_EXCLUDED_SUFFIXES):
-                continue
-
-            m = _PLAN_FILENAME_DATE.match(name)
-            if not m:
-                fail(
-                    f"check 28: docs/plans/{name}: not one of the four documented "
-                    "kind-suffixes (-ledger/-final-review/-verified/-handover) and "
-                    "carries no `YYYY-MM-DD-` date prefix either — "
-                    "docs/plans/README.md §Naming requires the prefix on every filed "
-                    "plan, and check 28 cannot classify or date this file without it"
-                )
-                continue
-            filed = date.fromisoformat(m.group(1))
-
-        if filed < PLAN_ACCEPTANCE_STANDARD_CUTOFF:
-            legacy += 1
-            continue
-
-        checked += 1
-        lines = f.read_text(encoding="utf-8").splitlines()
-        heading_idx = next(
-            (i for i, line in enumerate(lines) if _ACCEPTANCE_STANDARD_HEADING.match(line)),
-            None,
-        )
-        if heading_idx is None:
-            fail(
-                f"check 28: docs/plans/{name}: no \"Acceptance Standard\" heading — every "
-                f"plan filed on or after {PLAN_ACCEPTANCE_STANDARD_CUTOFF.isoformat()} "
-                "must state one explicitly (delivery-process.md §5 step 4 / §6 step 1; "
-                "field format in .claude/skills/writing-plans/SKILL.md)"
-            )
-            continue
-
-        # Stop scanning at the next heading of any level; a bare heading followed
-        # immediately by another heading is exactly the "implied, not defined" case.
-        body_has_content = False
-        for line in lines[heading_idx + 1 :]:
-            if re.match(r"^#{1,6}\s", line):
-                break
-            if line.strip():
-                body_has_content = True
-                break
-        if not body_has_content:
-            fail(
-                f"check 28: docs/plans/{name}: \"Acceptance Standard\" heading has no "
-                "content before the next heading — a bare heading is \"implied\", not "
-                "\"actually defined\" (delivery-process.md §5 step 4)"
-            )
-
-    if legacy:
-        notes.append(
-            f"{legacy} legacy plan(s) filed before "
-            f"{PLAN_ACCEPTANCE_STANDARD_CUTOFF.isoformat()} exempted from check 28 "
-            "(RL-906 — never retro-red-gated)"
-        )
-    notes.append(
-        f"check 28: {checked} plan(s) filed on/after "
-        f"{PLAN_ACCEPTANCE_STANDARD_CUTOFF.isoformat()} checked for an acceptance standard"
-    )
-
-
 ####################################################################################
 # RFC-937 checks 30-39 — one id per governed thing.
 #
@@ -1255,6 +659,15 @@ def _load_module(name: str, path: pathlib.Path) -> types.ModuleType:
 
 
 _docid = _load_module("_docid", _DOCID_PATH)
+_frozen = _load_module("_frozen", REPO / "scripts" / "_frozen.py")
+
+
+def _is_frozen_file(path: pathlib.Path) -> bool:
+    """True for a file under a frozen record path (`scripts/_frozen.py`)."""
+    try:
+        return bool(_frozen.is_frozen(path.relative_to(REPO).as_posix()))
+    except ValueError:
+        return False
 _doc_index = _load_module("_doc_index_for_audit_docs", _DOC_INDEX_PATH)
 
 #: Roots checks 30-39 apply to. In W37-4 this is the set of paths that exist *after* the
@@ -1363,7 +776,111 @@ def _id_scope_documents(
     # legacy-path/token quotations would otherwise be counted as the very residue it
     # exists to disclose (deputy's condition on PR #756).
     w37_11_record = REPO / _docid.W37_11_RECORD_PATH
-    return [f for f in files if f != w37_11_record]
+    # ADR-2136: a frozen record is not audited; it is the evidence of what was believed.
+    return [f for f in files if f != w37_11_record and not _is_frozen_file(f)]
+
+
+def _governed_documents() -> list[pathlib.Path]:
+    """The documents checks 30, 35 and 36 apply to: the families the new frame still
+    governs (`_frozen.is_governed`: docs/specs, docs/adrs, docs/workflows and the kept
+    process pages) and nothing else. Skill front matter, generated contracts and the frozen
+    records are out by family, never by an exemption list (ADR-2136, maintainer's residue
+    ruling)."""
+    return [f for f in _id_scope_documents() if _frozen.is_governed(_repo_rel(f))]
+
+
+def _repo_rel(path: pathlib.Path) -> str:
+    """`path` relative to the repository (or to the docs root's parent, for a fixture tree)."""
+    for base in (REPO, ROOT.parent):
+        try:
+            return path.relative_to(base).as_posix()
+        except ValueError:
+            continue
+    return path.as_posix()
+
+
+_BASE_REF: Final = os.environ.get("AUDIT_DOCS_BASE", "origin/main")
+_freeze_check: types.ModuleType | None = None
+
+
+def _touched_paths() -> set[str] | None:
+    """Paths this change touches (`<base>...HEAD`), from freeze-check.py's own range code
+    (one range implementation, not two); `None` when the diff cannot be computed."""
+    global _freeze_check
+    if _freeze_check is None:
+        scripts = pathlib.Path(__file__).resolve().parent  # this script's own directory
+        if str(scripts) not in sys.path:
+            sys.path.insert(0, str(scripts))
+        _freeze_check = _load_module("_freeze_check_for_audit_docs", scripts / "freeze-check.py")
+    try:
+        _head, paths = _freeze_check.changed_paths(_BASE_REF, str(REPO))
+    except (subprocess.CalledProcessError, OSError):
+        return None
+    return set(paths)
+
+
+def _text_at_base(rel: str) -> str | None:
+    """`rel` as it was at the merge-base of `<base>...HEAD`, or `None` if it did not exist."""
+    out = subprocess.run(
+        ["git", "-C", str(REPO), "show", f"{_merge_base()}:{rel}"], capture_output=True, text=True
+    )
+    return out.stdout if out.returncode == 0 else None
+
+
+def _merge_base() -> str:
+    return subprocess.run(
+        ["git", "-C", str(REPO), "merge-base", _BASE_REF, "HEAD"],
+        capture_output=True, text=True, check=True,
+    ).stdout.strip()
+
+
+def _residue_gate(
+    check: str,
+    found: Mapping[str, Sequence[tuple[str, str]]],
+    at_base: Callable[[pathlib.Path, str], Collection[str]],
+) -> None:
+    """Fail only what this change introduces; count what was already there.
+
+    `found` maps a governed file to its `(key, message)` violations at HEAD. A violation is
+    *pre-existing* when its file exists at the merge-base of `<base>...HEAD` and either the
+    change does not touch it or the same key was already there (a multiset difference, so a
+    second copy of an old violation is new). Everything else is *introduced* and fails, and
+    so is everything when the diff cannot be computed (loud, never a pass). The pre-existing
+    count is printed so it can only go down. Every message must carry its `check N: `
+    prefix (`tests/test_audit_docs_check_prefixes.py` holds this gate to it).
+    """
+    total = sum(len(v) for v in found.values())
+    if not total:
+        notes.append(f"{check}: 0 violation(s) in scope")
+        return
+    touched = _touched_paths()
+    introduced = 0
+    for rel, items in sorted(found.items()):
+        base_text = _text_at_base(rel) if touched is not None else None
+        if base_text is None:
+            base_keys: collections.Counter[str] = collections.Counter()
+        elif rel not in (touched or set()):
+            base_keys = collections.Counter(key for key, _ in items)
+        else:
+            with tempfile.TemporaryDirectory() as tmp:
+                old = pathlib.Path(tmp) / rel
+                old.parent.mkdir(parents=True, exist_ok=True)
+                old.write_text(base_text, encoding="utf-8")
+                base_keys = collections.Counter(at_base(old, tmp))
+        for key, message in items:
+            if base_keys[key] > 0:
+                base_keys[key] -= 1
+                continue
+            introduced += 1
+            if not message.startswith(f"{check}: "):
+                raise ValueError(f"{check}: gate message without its prefix: {message!r}")
+            fail(message)
+    where = f"{_BASE_REF}...HEAD" if touched is not None else f"no diff against {_BASE_REF}"
+    notes.append(
+        f"{check}: {total - introduced} pre-existing violation(s) in scope (counted, not "
+        f"failed; this number can only go down), {introduced} introduced by this change "
+        f"({where}) and failed"
+    )
 
 
 def _safe_header(path: pathlib.Path) -> object | None:
@@ -1668,68 +1185,66 @@ def check_header_fields() -> None:
     # The register is the ruled answer to "why not", and `_check_unstampable_register`
     # holds it to set equality with the files that genuinely cannot be stamped, so this
     # skip cannot be widened by adding a row without that reconciliation failing.
-    exempt = {entry.path for entry in UNSTAMPABLE_EXEMPTIONS}
-    checked = 0
-    exempted = 0
-    for path in _id_scope_documents():
+    found: dict[str, list[tuple[str, str]]] = {}
+    for path in _governed_documents():
         rel = path.relative_to(REPO).as_posix()
-        if rel in exempt:
-            exempted += 1
-            continue
-        try:
-            header = _docid.parse_header(path)
-        except _docid.HeaderError as exc:
-            fail(f"check 30: {exc}")
-            continue
-        if header is None:
-            fail(f"check 30: {rel}: no `---` front-matter header found")
-            continue
-        checked += 1
-
-        policy = policies.get(header.family)
-        if policy is None:
-            fail(
-                f"check 30: {rel}: family {header.family!r} has no known template under "
-                f"{_TEMPLATES_DIR.relative_to(REPO).as_posix()}"
-            )
-            continue
-
-        for extra_key in header.extra:
-            if extra_key in policy.permitted:
-                continue
-            fail(
-                f"check 30: {rel}: unknown field `{extra_key}:` — not in family "
-                f"{header.family!r}'s permitted set (docs/_templates/ does not declare "
-                "it for this family; RL-1140 DP-8.1: an extra is licensed per family, "
-                "never globally)"
-            )
-
-        for field in _OPTIONAL_HEADER_FIELDS:
-            if field in policy.permitted:
-                continue
-            if _is_populated(header, field):
-                fail(
-                    f"check 30: {rel}: field `{field}:` is populated but not permitted "
-                    f"for family {header.family!r} (docs/_templates/ does not declare it)"
-                )
-
-        for required_field in sorted(policy.required):
-            if required_field == "id":
-                present = header.id is not None
-            elif required_field == "created":
-                present = header.created is not None
-            else:
-                present = bool(getattr(header, required_field))
-            if not present:
-                fail(
-                    f"check 30: {rel}: missing required field `{required_field}:` for "
-                    f"family {header.family!r}"
-                )
-
-    notes.append(
-        f"check 30: {checked} governed document(s) checked in scope, "
-        f"{exempted} skipped as registered unstampable (F83)"
+        msgs = _header_problems(path, rel, policies)
+        if msgs:
+            found[rel] = [(m, m) for m in msgs]
+    _residue_gate(
+        "check 30",
+        found,
+        lambda old, tmp: _header_problems(old, old.relative_to(tmp).as_posix(), policies),
     )
+
+
+def _header_problems(
+    path: pathlib.Path, rel: str, policies: Mapping[str, _FieldPolicy]
+) -> list[str]:
+    """Every check-30 problem in one governed document (empty when it passes)."""
+    try:
+        header = _docid.parse_header(path)
+    except _docid.HeaderError as exc:
+        return [f"check 30: {rel}: {exc}"]
+    if header is None:
+        return [f"check 30: {rel}: no `---` front-matter header found"]
+    out: list[str] = []
+    policy = policies.get(header.family)
+    if policy is None:
+        return [
+            f"check 30: {rel}: family {header.family!r} has no known template under "
+            f"{_TEMPLATES_DIR.relative_to(REPO).as_posix()}"
+        ]
+    for extra_key in header.extra:
+        if extra_key in policy.permitted:
+            continue
+        out.append(
+            f"check 30: {rel}: unknown field `{extra_key}:` — not in family "
+            f"{header.family!r}'s permitted set (docs/_templates/ does not declare "
+            "it for this family; RL-1140 DP-8.1: an extra is licensed per family, "
+            "never globally)"
+        )
+    for field in _OPTIONAL_HEADER_FIELDS:
+        if field in policy.permitted:
+            continue
+        if _is_populated(header, field):
+            out.append(
+                f"check 30: {rel}: field `{field}:` is populated but not permitted "
+                f"for family {header.family!r} (docs/_templates/ does not declare it)"
+            )
+    for required_field in sorted(policy.required):
+        if required_field == "id":
+            present = header.id is not None
+        elif required_field == "created":
+            present = header.created is not None
+        else:
+            present = bool(getattr(header, required_field))
+        if not present:
+            out.append(
+                f"check 30: {rel}: missing required field `{required_field}:` for "
+                f"family {header.family!r}"
+            )
+    return out
 
 
 # =========================================================================================
@@ -1813,24 +1328,9 @@ def check_id_filename_directory() -> None:
         else:
             seen[number] = (canon, rel)
 
-    # Contiguity check: read full allocation from docs/INDEX.md (RL-1061)
-    # When INDEX.md exists, read contiguity from it (same as doc-id.py check row (b));
-    # pre-migration, check contiguity within the scoped set only (RL-1061).
-    if migrated_tree():
-        # Read full allocation from INDEX.md to avoid false gaps between document families
-        index_numbers = sorted({int(m.group(2)) for m in _docid.ID_RE.finditer(
-            (ROOT / "INDEX.md").read_text(encoding="utf-8"))})
-        for lower, upper in itertools.pairwise(index_numbers):
-            if upper != lower + 1:
-                fail(f"check 31: gap in the full allocation between {lower} and {upper}")
-        scoped_count = len(seen)
-    else:
-        # Pre-migration: check contiguity within the scoped set only
-        numbers = sorted(seen)
-        for lower, upper in itertools.pairwise(numbers):
-            if upper != lower + 1:
-                fail(f"check 31: gap in the scoped id sequence between {lower} and {upper}")
-        scoped_count = len(numbers)
+    # ADR-2136 (ND-3): uniqueness of the one id sequence is what is guarded; contiguity
+    # over docs/INDEX.md is dropped, because INDEX is frozen and a new id never enters it.
+    scoped_count = len(seen)
 
     dated = sorted((n, c) for n, _canon, _rel, c in entries if c is not None)
     for (n1, c1), (n2, c2) in itertools.pairwise(dated):
@@ -1938,6 +1438,25 @@ def citation_problems_in_file(path: pathlib.Path, index_ids: set[str]) -> list[s
     return problems
 
 
+def _header_ids() -> set[str]:
+    """Canonical ids carried by the front matter of every governed document in scope."""
+    found: set[str] = set()
+    for path in _id_scope_documents():
+        try:
+            header = _docid.parse_header(path)
+        except _docid.HeaderError:
+            continue  # check 30 already reports a malformed header
+        if header is None or header.id is None:
+            continue
+        m = _docid.ID_RE.fullmatch(header.id.strip())
+        if m is not None:
+            found.add(_docid.canonical(m.group(1), int(m.group(2))))
+    return found
+
+
+_LINENO_RE: Final = re.compile(r":\d+:")  # a line number moves when text above it is edited
+
+
 def check_citations() -> None:
     """32. Every `<PREFIX>-<n>` in prose resolves in `docs/INDEX.md` and its prefix
     matches the number's family (the prefix is a checksum — `_docid.ID_RE` already
@@ -1967,11 +1486,14 @@ def check_citations() -> None:
             "ids would otherwise false-positive)"
         )
         return
+    # ADR-2136 (ND-4): a frozen-family id resolves against the frozen INDEX; an id minted
+    # after the freeze never enters INDEX, so it resolves against the governed headers.
     index_ids = {
         _docid.canonical(m.group(1), int(m.group(2)))
         for m in _docid.ID_RE.finditer(index_path.read_text(encoding="utf-8"))
-    }
+    } | _header_ids()
     checked = 0
+    found: dict[str, list[tuple[str, str]]] = {}
     for path in _id_scope_documents():
         rel = path.relative_to(REPO).as_posix()
         # F103, 2026-09-17: the generated-contract tier
@@ -1997,9 +1519,22 @@ def check_citations() -> None:
             or _docid.governance_record_reason(rel) is not None
         ):
             continue
-        for problem in citation_problems_in_file(path, index_ids):
-            fail(f"check 32: {rel}:{problem}")
+        problems = [
+            f"check 32: {rel}:{problem}" for problem in citation_problems_in_file(path, index_ids)
+        ]
+        if problems:
+            found[rel] = [(_LINENO_RE.sub(":", m, count=1), m) for m in problems]
         checked += 1
+    # ADR-2136: a citation that does not resolve and was already there (the one in a skill's
+    # prose) is counted, never rewritten away; one this change introduces fails.
+    _residue_gate(
+        "check 32",
+        found,
+        lambda old, tmp: [
+            _LINENO_RE.sub(":", f"check 32: {old.relative_to(tmp).as_posix()}:{problem}", count=1)
+            for problem in citation_problems_in_file(old, index_ids)
+        ],
+    )
     notes.append(f"check 32: {checked} file(s) checked against {len(index_ids)} indexed id(s)")
 
 
@@ -2579,212 +2114,6 @@ def readme_owner_allowlist(readme: pathlib.Path) -> frozenset[str] | None:
 _FILE_CENSUS_PATH: Final = REPO / "scripts" / "file-census.py"
 _file_census = _load_module("_file_census_for_audit_docs", _FILE_CENSUS_PATH)
 
-
-@dataclass(frozen=True)
-class UnstampableExemption:
-    """One file that cannot carry a YAML front-matter header at all.
-
-    `reason` and `ruling` are required rather than optional because F83 condition 1 is
-    that every entry carries both: a bare path list records that a file is unstamped
-    without recording whether anyone decided it should be.
-    """
-
-    path: str
-    reason: str
-    ruling: str
-
-
-_CONTRACTS_REASON: Final = (
-    "generated artifact under docs/contracts/ in a format with no comment syntax — front "
-    "matter makes the file invalid and breaks json.load, the OpenAPI toolchain and "
-    "frontend/src/api/generated's generator"
-)
-_CONTRACTS_RULING: Final = (
-    "F83, ruled by the maintainer 2026-09-02: `generated: true` exemption rather than a "
-    "sidecar (docs/findings/FD-01020-63-in-scope-files-cannot-carry-a-header-and-their-custody-is-a"
-    "n-exemption-rather-than-a-sidecar.md §'The decision, and the option not taken')"
-)
-
-#: The 61 `.json` + 1 `.yaml` under `docs/contracts/` (59 until 2026-09-28, when PL-1189
-#: added the generated `regression-suite` and the authored `regression-run` contracts).
-#: Enumerated as literal paths, not
-#: matched by a directory-and-extension rule: a rule would silently absorb every future
-#: file of the same shape, which is precisely the silent growth condition 2 exists to make
-#: impossible. The verbosity is the mechanism. `docs/contracts/README.md` is deliberately
-#: absent — it is markdown, it can carry a header, and F83 scopes the exemption to the
-#: files that physically cannot, not to the directory.
-_CONTRACT_ARTIFACT_PATHS: Final = (
-    "docs/contracts/openapi/generated.json",
-    "docs/contracts/openapi/gi-pricing.yaml",
-    "docs/contracts/schemas/audit-event.schema.json",
-    "docs/contracts/schemas/banding.schema.json",
-    "docs/contracts/schemas/common/artifact-envelope.schema.json",
-    "docs/contracts/schemas/common/artifact-ref.schema.json",
-    "docs/contracts/schemas/common/blob-ref.schema.json",
-    "docs/contracts/schemas/common/money.schema.json",
-    "docs/contracts/schemas/common/provenance.schema.json",
-    "docs/contracts/schemas/custom-objective.schema.json",
-    "docs/contracts/schemas/dataset-version.schema.json",
-    "docs/contracts/schemas/diagnostics.schema.json",
-    "docs/contracts/schemas/dislocation-run.schema.json",
-    "docs/contracts/schemas/dossier.schema.json",
-    "docs/contracts/schemas/generated/approval-request.schema.json",
-    "docs/contracts/schemas/generated/artifact-envelope.schema.json",
-    "docs/contracts/schemas/generated/artifact-ref.schema.json",
-    "docs/contracts/schemas/generated/audit-event.schema.json",
-    "docs/contracts/schemas/generated/backtest.schema.json",
-    "docs/contracts/schemas/generated/banding.schema.json",
-    "docs/contracts/schemas/generated/blob-ref.schema.json",
-    "docs/contracts/schemas/generated/custom-metric.schema.json",
-    "docs/contracts/schemas/generated/custom-objective.schema.json",
-    "docs/contracts/schemas/generated/dataset-lineage.schema.json",
-    "docs/contracts/schemas/generated/dataset-split.schema.json",
-    "docs/contracts/schemas/generated/dataset-version.schema.json",
-    "docs/contracts/schemas/generated/diagnostics.schema.json",
-    "docs/contracts/schemas/generated/dislocation-run.schema.json",
-    "docs/contracts/schemas/generated/grouping.schema.json",
-    "docs/contracts/schemas/generated/job.schema.json",
-    "docs/contracts/schemas/generated/metric-certificate.schema.json",
-    "docs/contracts/schemas/generated/model-comparison.schema.json",
-    "docs/contracts/schemas/generated/model-spec.schema.json",
-    "docs/contracts/schemas/generated/model.schema.json",
-    "docs/contracts/schemas/generated/objective-certificate.schema.json",
-    "docs/contracts/schemas/generated/objective-usage.schema.json",
-    "docs/contracts/schemas/generated/oidc-auth-config.schema.json",
-    "docs/contracts/schemas/generated/peril-structure.schema.json",
-    # 2026-09-28, PL-1189
-    "docs/contracts/schemas/generated/regression-suite.schema.json",
-    # 2026-09-28, PL-1205
-    "docs/contracts/schemas/generated/regression-run.schema.json",
-    # 2026-09-29, PL-1213
-    "docs/contracts/schemas/generated/score-comparison.schema.json",
-    # 2026-10-01, PL-1325 (WK-1250 Slice 1)
-    "docs/contracts/schemas/generated/sub-graph.schema.json",
-    "docs/contracts/schemas/generated/sub-graph-create.schema.json",
-    "docs/contracts/schemas/generated/sub-graph-body.schema.json",
-    # 2026-10-03, FD-1357 fix (RL-1375 DP-4)
-    "docs/contracts/schemas/generated/rate-table-version.schema.json",
-    "docs/contracts/schemas/generated/seed-from-model-request.schema.json",
-    "docs/contracts/schemas/generated/bulk-operation-request.schema.json",
-    # 2026-10-03, PL-1392 (WK-674 Slice 2)
-    "docs/contracts/schemas/generated/environment.schema.json",
-    "docs/contracts/schemas/generated/environment-create.schema.json",
-    "docs/contracts/schemas/generated/environment-update.schema.json",
-    "docs/contracts/schemas/generated/deployment.schema.json",
-    "docs/contracts/schemas/generated/deployment-create.schema.json",
-    "docs/contracts/schemas/generated/deployment-request.schema.json",
-    "docs/contracts/schemas/generated/deployment-request-create.schema.json",
-    # 2026-10-04, PL-1392 Task 5 (WK-674 Slice 2)
-    "docs/contracts/schemas/generated/approval-submission.schema.json",
-    # 2026-10-04, PL-1392 Task 6 (WK-674 Slice 2)
-    "docs/contracts/schemas/generated/approval-withdrawal.schema.json",
-    # 2026-10-05, PL-1429 (WK-1178 SL-1430)
-    "docs/contracts/schemas/generated/rating-version-create.schema.json",
-    # 2026-10-16, DP-1722-WIRE (a) (WK-1178 SL-1722)
-    "docs/contracts/schemas/generated/upload-url-request.schema.json",
-    "docs/contracts/schemas/generated/upload-url-response.schema.json",
-    # 2026-10-18, PL-1766 D5.6 (WK-674 Slice 5)
-    "docs/contracts/schemas/generated/deployment-created.schema.json",
-    "docs/contracts/schemas/generated/switch-report.schema.json",
-    "docs/contracts/schemas/generated/rollback-create.schema.json",
-    # 2026-10-22, RL-1834 (WK-674 Slice 6)
-    "docs/contracts/schemas/generated/routing-rule.schema.json",
-    "docs/contracts/schemas/generated/routing-rule-update.schema.json",
-    "docs/contracts/schemas/generated/shadow-config.schema.json",
-    "docs/contracts/schemas/generated/shadow-config-update.schema.json",
-    "docs/contracts/schemas/generated/problem-detail.schema.json",
-    "docs/contracts/schemas/generated/profile.schema.json",
-    "docs/contracts/schemas/generated/transparency-artifact.schema.json",
-    "docs/contracts/schemas/generated/validation-report.schema.json",
-    "docs/contracts/schemas/generated/validation-rule.schema.json",
-    "docs/contracts/schemas/gipp-check.schema.json",
-    "docs/contracts/schemas/grouping.schema.json",
-    "docs/contracts/schemas/job.schema.json",
-    "docs/contracts/schemas/model-spec.schema.json",
-    "docs/contracts/schemas/model.schema.json",
-    "docs/contracts/schemas/monitoring.schema.json",
-    "docs/contracts/schemas/objective-certificate.schema.json",
-    "docs/contracts/schemas/optimisation-run.schema.json",
-    "docs/contracts/schemas/peril-structure.schema.json",
-    "docs/contracts/schemas/profile.schema.json",
-    "docs/contracts/schemas/rate-table.schema.json",
-    "docs/contracts/schemas/rating-algorithm.schema.json",
-    "docs/contracts/schemas/rating-version.schema.json",
-    "docs/contracts/schemas/regression-run.schema.json",  # 2026-09-28, PL-1189
-    "docs/contracts/schemas/regression-suite.schema.json",
-    "docs/contracts/schemas/scoring.schema.json",
-    "docs/contracts/schemas/transparency-artifact.schema.json",
-    "docs/contracts/schemas/validation-report.schema.json",
-    "docs/contracts/schemas/validation-rule.schema.json",
-)
-
-_OTHER_ARTIFACT_REASON: Final = (
-    "generated artifact under docs/ in a format with no comment syntax — the same format "
-    "impossibility F83 measured for docs/contracts/, in a file its census did not reach"
-)
-_OTHER_ARTIFACT_RULING: Final = (
-    "F83 condition 2 applied to F83's own population: surfaced by this check, NOT in the "
-    "63 the maintainer ruled — awaiting ratification, and reversible by deleting this "
-    "tuple's entries"
-)
-
-#: The three non-markdown files in the stamp set that F83's population of 63 does not name.
-#: F83 measured `docs/contracts/**` and the vendored manifests; the stamp set RFC §4 rules
-#: (`docs/plans/PL-00967-rfc-the-readme-row-the-cell-extent-rule-and-4-step-5-s-stamp-set.md` §4,
-#: "every file under `docs/`, …") is wider than that, and contains two more files that cannot carry
-#: front matter for exactly the reason F83 gives for the contracts. `delivery-process.core.json` is
-#: CLAUDE.md §15's machine-readable process extract; the census CSV is a dated audit artifact;
-#: `REDIRECTS.csv` is RFC-937 §1.8's migration artifact, written by `doc-id.py migrate` and read
-#: by checks 31, 32, 36 and 39 — generated, and CSV, so front matter would break every reader.
-#: Listed here rather than left out so the register equals the tree — the alternative was a red gate
-#: or a predicate narrowed until the two disappeared, which would blind the check to the growth it
-#: exists to catch.
-_OTHER_ARTIFACT_PATHS: Final = (
-    "docs/research/file-census-5ef559d.csv",
-    "docs/process/delivery-process.core.json",
-    "docs/REDIRECTS.csv",
-)
-
-_VENDORED_MANIFEST_REASON: Final = (
-    "vendored skill manifest whose upstream front matter does not parse under the closed "
-    "field set (RFC-937 §1.5); CLAUDE.md §12 forbids editing it — vendored files stay as "
-    "upstream wrote them"
-)
-_VENDORED_MANIFEST_RULING: Final = (
-    "F83, ruled by the maintainer 2026-09-02: exempt by path rather than by edit "
-    "(docs/plans/PL-00957-w37-5c-the-slice-decision-and-gap-2-ruled.md §5, "
-    "'a manifest that won't parse gets "
-    "its header from a sidecar or an exemption, never an edit')"
-)
-
-#: The three vendored `SKILL.md` manifests that raise `HeaderError`. Two carry an indented
-#: upstream `author:` (a nested mapping the closed field set refuses); the third fails on
-#: `user-invocable: true`. Enumerated rather than derived from "raises HeaderError" for the
-#: same reason as the contracts: a predicate would absorb the next one silently. A vendored
-#: manifest that *does* parse is not here and is not exempt.
-_VENDORED_MANIFEST_PATHS: Final = (
-    ".claude/skills/create-adaptable-composable/SKILL.md",
-    ".claude/skills/planning-with-files/SKILL.md",
-    ".claude/skills/vue-best-practices/SKILL.md",
-)
-
-#: F83's exemption register. Public: W37-6's widened check 30 is its intended consumer.
-UNSTAMPABLE_EXEMPTIONS: Final[tuple[UnstampableExemption, ...]] = (
-    *(
-        UnstampableExemption(p, _CONTRACTS_REASON, _CONTRACTS_RULING)
-        for p in _CONTRACT_ARTIFACT_PATHS
-    ),
-    *(
-        UnstampableExemption(p, _OTHER_ARTIFACT_REASON, _OTHER_ARTIFACT_RULING)
-        for p in _OTHER_ARTIFACT_PATHS
-    ),
-    *(
-        UnstampableExemption(p, _VENDORED_MANIFEST_REASON, _VENDORED_MANIFEST_RULING)
-        for p in _VENDORED_MANIFEST_PATHS
-    ),
-)
-
-
 def nt0019_stamp_set(tracked: Sequence[str] | None = None) -> list[str]:
     """Every tracked file in RFC-937's stamp set, as repo-relative posix paths.
 
@@ -2833,121 +2162,6 @@ def unstampable_reason(rel: str) -> str | None:
     return None
 
 
-def _check_scope_unstamped_are_registered() -> int:
-    """F83 condition 2 over the **enforced** scope — the clause that goes live with W37-6.
-
-    `_check_unstampable_register` above ranges over RFC-937's whole stamp set and asks
-    which files *cannot* be stamped. This one ranges over `_id_scope_documents()` — what
-    checks 30-39 actually enforce today — and asks which files *are not* stamped, which is
-    F83 condition 2's own wording. The two coincide only after the migration; before it,
-    this clause is the one that will red from inside W37-6's commit if that commit widens
-    the scope without stamping or registering something.
-
-    **This clause and `_check_unstampable_register` now range over one population, and
-    that is a change (`F87`).** `_id_scope_documents` used to expand a directory root with
-    `rglob("*.md")`, so widening the roots brought in *no* non-markdown file: pointed at
-    `docs/` it reached none of the 62 non-`.md` files `UNSTAMPABLE_EXEMPTIONS` mostly
-    consists of, and this clause could not see them however the roots were drawn. It now
-    expands through `_docid.stamp_set_files`, the same RFC-937 §4 step 5 predicate
-    `nt0019_stamp_set` reads, so a fully widened scope reaches all 65 and this clause is
-    live over them. The two instruments remain distinct — this one asks *"is it
-    stamped?"* over the enforced scope, `_check_unstampable_register` asks *"can it be?"*
-    over the whole stamp set — and they coincide only once the roots widen.
-
-    Returns the number of unstamped in-scope files it found, for the caller's note.
-    """
-    registered = {entry.path for entry in UNSTAMPABLE_EXEMPTIONS}
-    unstamped = 0
-    for path in _id_scope_documents():
-        try:
-            header = _docid.parse_header(path)
-        except _docid.HeaderError:
-            header = None  # a header block that will not parse is not a stamp
-        if header is not None:
-            continue
-        unstamped += 1
-        rel = path.relative_to(REPO).as_posix()
-        if rel not in registered:
-            fail(
-                f"check 35: {rel}: in the checks-30-39 scope with no parseable header, "
-                "and not in the F83 exemption register — stamp it, or register it with "
-                "its reason and the ruling that permits it"
-            )
-    return unstamped
-
-
-def _check_unstampable_register() -> int:
-    """F83 condition 2: the register equals the set of files that cannot be stamped.
-
-    Set equality, reported by **naming both sides of the symmetric difference** — never by
-    comparing two totals, which is invariant under a compensating pair of errors and so
-    cannot detect the thing it is asked to detect (RL-985; `.claude/skills/docs-audit`
-    §"a total validates the total, and nothing else").
-
-    Returns the size of the stamp set it examined, for the caller's note.
-    """
-    try:
-        stamp_set = nt0019_stamp_set()
-    except RuntimeError as exc:
-        # `file-census.py`'s `GitLsFilesError`, which subclasses `RuntimeError`. This is
-        # the first git dependency `audit-docs.py` has; the corpus has to come from
-        # `git ls-files` rather than a walk (a walk picks up `.venv/` and `graphify-out/`),
-        # so the tool now needs a repository. Reported as a named failure rather than
-        # left to surface as a traceback, and never as a silent pass: an unreadable
-        # corpus reconciles to zero unstampable files, which is exactly the shape of a
-        # register that is perfectly correct.
-        fail(f"check 35: cannot enumerate RFC-937's stamp set: {exc}")
-        return 0
-    registered = {entry.path: entry for entry in UNSTAMPABLE_EXEMPTIONS}
-
-    if len(registered) != len(UNSTAMPABLE_EXEMPTIONS):
-        seen: set[str] = set()
-        for entry in UNSTAMPABLE_EXEMPTIONS:
-            if entry.path in seen:
-                fail(
-                    f"check 35: {entry.path}: listed twice in the F83 exemption register — "
-                    "a duplicated entry inflates the register against the tree"
-                )
-            seen.add(entry.path)
-
-    cannot: dict[str, str] = {}
-    for rel in stamp_set:
-        why = unstampable_reason(rel)
-        if why is not None:
-            cannot[rel] = why
-
-    for rel in sorted(set(cannot) - set(registered)):
-        fail(
-            f"check 35: {rel}: in RFC-937's stamp set and cannot carry a header "
-            f"({cannot[rel]}), but is not in the F83 exemption register — add it with its "
-            "reason and the ruling that permits it, or make the file stampable"
-        )
-
-    tracked_set = set(stamp_set)
-    for rel in sorted(set(registered) - set(cannot)):
-        if rel not in tracked_set:
-            fail(
-                f"check 35: {rel}: in the F83 exemption register but not in RFC-937's "
-                "stamp set — the file is untracked, deleted or moved, and the entry is "
-                "stale"
-            )
-        else:
-            fail(
-                f"check 35: {rel}: in the F83 exemption register but CAN carry a header — "
-                "an exemption for a stampable file hides it from checks 30-39; stamp it "
-                "and drop the entry"
-            )
-
-    for entry in UNSTAMPABLE_EXEMPTIONS:
-        if not entry.reason.strip() or not entry.ruling.strip():
-            fail(
-                f"check 35: {entry.path}: F83 condition 1 — an exemption register entry "
-                "must cite both its reason and the ruling that permits it"
-            )
-
-    return len(stamp_set)
-
-
 def check_owner() -> None:
     """35. `owner:` is a role filename under `.claude/roles/`, or `maintainer`, and one
     the directory's `README.md` permits (RFC-937 §1.11).
@@ -2963,9 +2177,9 @@ def check_owner() -> None:
     not the owner (RL-1075). The count is printed by the note below rather than stated
     here, because a pasted count is what goes stale (`CLAUDE.md` §13).
     """
-    checked = 0
+    found: dict[str, list[tuple[str, str]]] = {}
     deferred = 0
-    for path in _id_scope_documents():
+    for path in _governed_documents():
         try:
             header = _docid.parse_header(path)
         except _docid.HeaderError:
@@ -2975,35 +2189,45 @@ def check_owner() -> None:
         if _is_stamp_deferred_f92(path, header):
             deferred += 1
             continue
-        checked += 1
         rel = path.relative_to(REPO).as_posix()
-        if header.owner not in _VALID_OWNERS:
-            fail(
-                f"check 35: {rel}: owner {header.owner!r} is not a role filename under "
-                f".claude/roles/ or 'maintainer' ({sorted(_VALID_OWNERS)})"
-            )
-            continue
-        readme = path.parent / "README.md"
-        if readme.is_file():
-            allow_list = readme_owner_allowlist(readme)
-            if allow_list is not None and header.owner not in allow_list:
-                fail(
-                    f"check 35: {rel}: owner {header.owner!r} is not in "
-                    f"{readme.relative_to(REPO).as_posix()}'s permitted-owner list "
-                    f"{sorted(allow_list)}"
-                )
-
-    stamp_set_size = _check_unstampable_register()
-    unstamped_in_scope = _check_scope_unstamped_are_registered()
+        msgs = _owner_problems(path, rel)
+        if msgs:
+            found[rel] = [(m, m) for m in msgs]
     notes.append(
-        f"check 35: {checked} owner(s) checked in scope; {deferred} owner check(s) "
-        f"deferred (F92's stamp-deferred population, owner {_F92_OWNER_OF_RECORD} per "
-        "docs/findings/register.md; non-fatal here under RL-1046 §B, which ruled the "
-        "disclosure and not the owner); "
-        f"{len(UNSTAMPABLE_EXEMPTIONS)} exemption(s) in the F83 register reconciled "
-        f"against {stamp_set_size} file(s) in RFC-937's stamp set; "
-        f"{unstamped_in_scope} unstamped file(s) in the enforced checks-30-39 scope"
+        f"check 35: {deferred} owner check(s) deferred (F92's stamp-deferred population, owner "
+        f"{_F92_OWNER_OF_RECORD} per docs/findings/register.md; non-fatal here under RL-1046 §B)"
     )
+    _residue_gate(
+        "check 35",
+        found,
+        lambda old, tmp: _owner_problems(old, old.relative_to(tmp).as_posix()),
+    )
+
+
+def _owner_problems(path: pathlib.Path, rel: str) -> list[str]:
+    """Every check-35 problem in one governed document: an owner that is not a role file
+    or 'maintainer', or not in its directory README's permitted-owner list."""
+    try:
+        header = _docid.parse_header(path)
+    except _docid.HeaderError:
+        return []
+    if header is None:
+        return []
+    if header.owner not in _VALID_OWNERS:
+        return [
+            f"check 35: {rel}: owner {header.owner!r} is not a role filename under "
+            f".claude/roles/ or 'maintainer' ({sorted(_VALID_OWNERS)})"
+        ]
+    readme = path.parent / "README.md"
+    if readme.is_file():
+        allow_list = readme_owner_allowlist(readme)
+        if allow_list is not None and header.owner not in allow_list:
+            return [
+                f"check 35: {rel}: owner {header.owner!r} is not in "
+                f"{readme.relative_to(REPO).as_posix()}'s permitted-owner list "
+                f"{sorted(allow_list)}"
+            ]
+    return []
 
 
 # =========================================================================================
@@ -3240,7 +2464,7 @@ def check_redirects() -> None:
                 )
 
     was_values: set[str] = set()
-    for path in _id_scope_documents():
+    for path in _governed_documents():
         try:
             header = _docid.parse_header(path)
         except _docid.HeaderError:
@@ -3273,31 +2497,31 @@ def check_redirects() -> None:
             "every citation in scope is to a currently-correct, not-yet-renumbered id)"
         )
     else:
-        legacy_hits = _sweep_legacy_form_hits(_id_scope_documents())
+        legacy_hits = _sweep_legacy_form_hits(_governed_documents())
 
+    # ADR-2136: scoped to the governed families; a legacy form this change introduces fails,
+    # one that was already there is counted by `_residue_gate`.
     fatal_hits = 0
+    found: dict[str, list[tuple[str, str]]] = {}
     disclosed_by_class: collections.Counter[str] = collections.Counter()
     for hit in legacy_hits:
         reason = _legacy_form_disclosure_reason(hit, repo_root=REPO)
         if reason is None:
             fatal_hits += 1
-            # `check N: <path>: <prose>` — the shape every other check's fail() message
-            # already uses (`_docverify._h1_residue_by_file`'s own per-file extraction
-            # depends on it; team-lead's ruling on PR #758: normalise the source rather
-            # than special-case the extractor). Fields expanded in `_LegacyFormHit.
-            # __str__`'s own exact order (`f"{rel}:{lineno}: {label} {token!r}"`) rather
-            # than interpolating `{hit}` — byte-identical output, but this way the path
-            # is its own AST-visible interpolation immediately followed by a literal
-            # `":"`, which a static "path-first" check can verify without evaluating
-            # `__str__` (pin-3, PR #756/#758/#759's own follow-up); see
-            # `test_legacy_form_hit_str_matches_its_own_expanded_fields` for the pin that
-            # keeps the two in agreement.
-            fail(
-                f"check 36: {hit.rel}:{hit.lineno}: {hit.label} {hit.token!r} "
-                "(legacy pre-migration form survives)"
+            found.setdefault(hit.rel, []).append(
+                (f"{hit.label}|{hit.token}", f"check 36: {hit}")
             )
         else:
             disclosed_by_class[f"{hit.label} ({reason})"] += 1
+
+    def _at_base(old: pathlib.Path, tmp: str) -> list[str]:
+        return [
+            f"{h.label}|{h.token}"
+            for h in _sweep_legacy_form_hits([old], repo_root=pathlib.Path(tmp))
+            if _legacy_form_disclosure_reason(h, repo_root=REPO) is None
+        ]
+
+    _residue_gate("check 36", found, _at_base)
 
     disclosed_total = sum(disclosed_by_class.values())
     disclosed_text = (
@@ -3462,134 +2686,6 @@ def check_shape() -> None:
 # =========================================================================================
 
 
-def check_loop_signal() -> None:
-    """38. Loop signal, warn-only (RFC-937 §1.11) — never fails the gate, only notes.
-
-    Every sub-clause (a `PL-`/`RS-`/`RFC-` cited by nothing outside `INDEX.md`, a
-    `PL-` still `draft` past its phase's plan-freeze gate, an active plan or slice citing
-    a superseded/retired requirement, a phase gate date passed with a `draft` plan or
-    `active` slice behind it) needs a corpus this check does not have inside
-    `_ID_SCOPE_ROOTS` in S1 — `document-ids.md` is none of a `PL-`/`RS-`/`RFC-`/phase
-    section. Recorded as a note so the check exists and is silent for the right reason
-    (nothing to warn about yet), not because it was skipped.
-    """
-    if not migrated_tree():
-        notes.append(
-            "check 38: 0 document(s) examined — warn-only loop signal, no PL-/RS-/RFC-/phase "
-            "population in scope yet (pre-migration); nothing to warn about"
-        )
-        return
-    # Post-migration the corpus exists, so "nothing to warn about" would be a false reason
-    # for the same silence — the population is not empty, the sub-clauses are unwritten. Say
-    # which, with the count, so the difference is visible in the summary rather than
-    # inferred: a warn-only check that never warns is indistinguishable from one that cannot.
-    population = [
-        f
-        for f in _id_scope_documents()
-        if (h := _safe_header(f)) is not None and h.id is not None
-        and h.id.split("-")[0] in {"PL", "RS", "RFC"}
-    ]
-    notes.append(
-        f"check 38: {len(population)} PL-/RS-/RFC- document(s) in scope — the four "
-        "warn-only sub-clauses (uncited record, stale `draft` past a plan-freeze gate, "
-        "active plan citing a superseded requirement, passed gate with work behind it) are "
-        "not implemented yet; this line reports the population they will run over, not a "
-        "clean result"
-    )
-
-
-# =========================================================================================
-# Check 39 — docs/INDEX.md byte-stable; PR-title/ledger cross-reference (needs GitHub
-# context this tool does not have).
-# =========================================================================================
-
-
-def check_index_stable() -> None:
-    """39. `docs/INDEX.md` byte-stable against a fresh regeneration; a merged PR's title
-    names its `SL-`; the slice's ledger records the PR (RFC-937 §1.11).
-
-    The byte-stability clause runs over the *whole* real `docs/` tree, not
-    `_ID_SCOPE_ROOTS` — `docs/INDEX.md` is by definition a whole-corpus artifact, and
-    `doc_index.build_corpus` already degrades gracefully to an empty corpus pre-migration
-    (the same fact `python3 scripts/doc-index.py --check` relies on as its own, separate
-    gate step; this is a second, cheap presence-and-freshness check folded into the one
-    `audit-docs.py` report, not a second implementation of `render_index`'s byte
-    comparison). The PR-title/ledger clause needs a merged PR's title and a slice's
-    ledger, neither of which a tree-snapshot tool can read, and `docs/ledgers/` does not
-    exist in scope either — noted, not silently absent.
-
-    `build_corpus` is guarded (F76): one malformed header anywhere in the real tree —
-    `_docid.parse_header`'s `HeaderError` on a whole-document front-matter block, or a
-    `WK-`/`SL-` roadmap row block's own two failure modes, `_parse_row_block`'s
-    `HeaderError` (an unknown/duplicate field, or a non-`key: value` line) and
-    `_row_header_from_raw`'s unguarded `date.fromisoformat` (`ValueError` on a
-    non-ISO `created:`) — must not propagate. This is the *last* of the ten calls
-    `check_ids_30_39()` makes, which `main()` runs immediately before six further checks
-    with no exception boundary between any of them (`check_open_question_mirror_status`,
-    `check_finding_citations`, `check_process_core_drift`, `check_process_core_digest`,
-    `check_plan_acceptance_standard` [check 28], `check_register_grammar` [check 29]): an
-    uncaught exception here would abort `main()` before any of the six ever run, and
-    before the module-level `notes`/`failures` accumulated by every check that already
-    ran are ever printed — a traceback in place of the structured report, over exactly
-    the condition this check exists to make loud.
-    """
-    index_path = ROOT / "INDEX.md"
-    try:
-        corpus = _doc_index.build_corpus(ROOT)
-    except (_doc_index.HeaderError, ValueError) as exc:
-        # Caught as `_doc_index.HeaderError`, never this module's own `_docid.HeaderError`
-        # (imported above): `doc-index.py` reloads `scripts/_docid.py` under its own
-        # module instance (`scripts/doc-index.py:85-90`) rather than sharing this
-        # module's, so its `HeaderError` is a distinct class object — `except
-        # _docid.HeaderError` here would type-check but silently fail to match, and the
-        # exception would still propagate. Verified directly: `_docid.HeaderError is
-        # _doc_index.HeaderError` is `False` even though both load the same source file.
-        fail(f"check 39: docs/INDEX.md corpus could not be built — {exc}")
-        return
-    if not index_path.is_file():
-        # `doc-index.py`'s own `_pre_migration_records` — a `- **DEP-<n>**` dependency-rule
-        # bullet already in canonical bare-numeric form (three of `00-overview.md` §7's
-        # four, pre-dating this migration entirely) is picked up by the corpus scan
-        # regardless of migration state, and this check exists to catch a migration
-        # *draft* going unindexed, not a pre-existing, stable bullet no migration ever
-        # touches — see that function's own docstring for the mechanism and why the
-        # fourth bullet, `DEP-537`, never needs telling apart from the other three here.
-        _new_records = _doc_index._pre_migration_records(corpus.records)
-        if not _new_records:
-            # "0 governed record(s)" stated with the same numeral every other check 30-39
-            # note uses, not the word "zero" — a reader (or a script) scanning for a
-            # digit to confirm a check actually examined something must not have to
-            # special-case this one's spelling.
-            notes.append(
-                "check 39: 0 governed record(s) examined — no docs/INDEX.md, nothing "
-                "to check yet (pre-migration)"
-            )
-        else:
-            fail(
-                f"check 39: {len(_new_records)} governed record(s) exist but "
-                "docs/INDEX.md does not"
-            )
-    else:
-        fresh = _doc_index.render_index(corpus)
-        current = index_path.read_text(encoding="utf-8")
-        if current != fresh:
-            fail(
-                f"check 39: docs/INDEX.md is stale against a fresh regeneration "
-                f"({len(corpus.records)} governed record(s))"
-            )
-        else:
-            notes.append(
-                f"check 39: docs/INDEX.md is byte-stable "
-                f"({len(corpus.records)} governed record(s) examined)"
-            )
-
-    notes.append(
-        "check 39: PR-title/ledger cross-reference needs GitHub PR context this "
-        "tree-snapshot tool does not have, and docs/ledgers/ does not exist in scope yet "
-        "— not checked here"
-    )
-
-
 def check_ids_30_39() -> None:
     """Run every RFC-937 id-standard check (30-39) — one function per the plan's own
     "ten broken-input proofs, one per check" framing, called together here so `main`
@@ -3603,93 +2699,6 @@ def check_ids_30_39() -> None:
     check_owner()
     check_redirects()
     check_shape()
-    check_loop_signal()
-    check_index_stable()
-
-
-def _partition_by_w37_11_record() -> tuple[list[str], list[str]]:
-    """Split `failures` into `(counted, disclosed)` against the governed W37-11 record.
-
-    This is the substantive half of honouring that record in the reader CI actually runs.
-    Before 2026-09-06 this script's entire knowledge of the record was excluding the record
-    file itself from `_id_scope_documents()`' corpus; it never read a ceiling row, so every
-    governed failure the record ceilings still counted into `FAILED(n)` and the `docs` gate
-    was red on every migrated tree for the whole of W37-11's duration. This implements the
-    2026-09-05 box-end ruling here rather than only in `doc-id.py migrate --verify`.
-
-    The rule, and it is deliberately asymmetric: a `(path, cls)` whose whole measured
-    population is **at or under** its recorded ceiling is disclosed — printed by name under
-    a named header, and not counted. **Over** its ceiling, or in a file the record does not
-    name for that class, it fails exactly as it did before, in full: disclosing the first
-    `limit` of `limit + 1` hits would report a ceiling still being honoured at the very
-    moment it stopped being. `_docid.disclosed_by_w37_11_record` is where that is decided,
-    shared with the instrument rather than restated here.
-
-    Keying is `_docid.residue_key_for_failure`, the same rule `_docverify._h1_residue_by_
-    file` uses, so checks 29/30/35 and every other check reach the record through one
-    keying rule rather than a parallel path. `known_files` is this repository's tracked set
-    — resolution, not shape: a token names a real file here or it does not.
-
-    The record itself is keyed by control (pre-migration) path, never by the path this
-    run's own id allocation assigned — an allocation is a fact about the run, not about
-    the file (W37-6 handover 2026-09-06 §3 item 5). Every key `residue_key_for_failure`
-    resolves is therefore translated through `REPO`'s own `docs/REDIRECTS.csv` before it
-    is compared against the record — empty, and so a no-op, until `REPO` has actually
-    been migrated.
-
-    A record naming a class no extractor produces is fatal, and `_docid.
-    load_w37_11_record` raises rather than degrading: an unloadable governance table must
-    not silently become an empty one, which would count everything and read as an ordinary
-    regression while the real fault — a row governing nothing, forever — went unnamed. The
-    exception is deliberately NOT turned into a `fail()` here and is left for `main` to
-    report under its own heading, because every `fail()` message in this script must open
-    with its own `check N: ` prefix (`tests/test_audit_docs_check_prefixes.py`) so that row
-    (h1)'s per-file extraction can key it. This fault belongs to no check and names no
-    document: it is the audit's own governance input being invalid.
-    """
-    record = _docid.load_w37_11_record(REPO)
-    if not record:
-        return list(failures), []
-    known_files = frozenset(_file_census.git_ls_files(REPO))
-    keys = [_docid.residue_key_for_failure(msg, known_files) for msg in failures]
-    # The record is keyed by control (pre-migration) path, never by the path a given run's
-    # own id allocation produced (`_docid.resolve_to_control_paths`'s own docstring: an
-    # allocation is a fact about the run, not about the file). `REPO`'s own
-    # `docs/REDIRECTS.csv` — empty until this repository has actually been migrated — is
-    # what resolves this run's migrated-path keys into the record's coordinate system.
-    #
-    # D1b (deputy, 2026-09-16 22:47:56 BST): this used to build its own one-shot reverse
-    # map from `_docid.redirects_path_map` — a dict that can hold only ONE `new_path` per
-    # `old_path` by construction (that function's own docstring: "Lossy by construction
-    # for a fan-out source"). For a genuine split source (`docs/audit/plan-reviews.md`,
-    # 13 migrated targets) that reverse map held exactly one of the 13, so the other 12
-    # never resolved to their control path at all — every one of their failures was
-    # counted, never disclosed, regardless of `part_slug` or `part_ordinal`, because this
-    # function never reached the fan-out-aware resolver in the first place. Condition 1
-    # ("refuse ambiguity, never first-match, in the ceiling and audit-docs") applies here
-    # via the identical shared resolver `_docverify.py`'s own h1-residue instrument calls
-    # — `resolve_keys_to_control_paths`/`resolve_to_control_paths`, one implementation,
-    # so the instrument and this reader can no longer disagree on which composite key one
-    # message belongs to.
-    non_none_keys = {key for key in keys if key is not None}
-    resolved_by_key = _docid.resolve_keys_to_control_paths(non_none_keys, REPO)
-    control_keys = [
-        resolved_by_key[key] if key is not None else None
-        for key in keys
-    ]
-    measured: dict[tuple[str, str], int] = {}
-    for key in control_keys:
-        if key is not None:
-            measured[key] = measured.get(key, 0) + 1
-    disclosed_keys = _docid.disclosed_by_w37_11_record(measured, record)
-    counted: list[str] = []
-    disclosed: list[str] = []
-    for msg, key in zip(failures, control_keys, strict=True):
-        if key is not None and key in disclosed_keys:
-            disclosed.append(msg)
-        else:
-            counted.append(msg)
-    return counted, disclosed
 
 
 _SPEC_FENCE_RE: Final = re.compile(r"^\s{0,3}```(?P<info>.*)$")
@@ -3770,7 +2779,7 @@ def check_spec_examples(specs: list[pathlib.Path]) -> None:
 
 
 def main() -> int:
-    md = sorted(ROOT.rglob("*.md"))
+    md = sorted(f for f in ROOT.rglob("*.md") if not _is_frozen_file(f))
     specs = sorted(ROOT.glob("specs/*.md"))
 
     # 1. relative links
@@ -3864,21 +2873,8 @@ def main() -> int:
                 "in its status line — check 14 groups workflow coverage by it"
             )
 
-    # 4. open questions
-    in_specs = set()
-    for f in specs:
-        in_specs |= set(_OQ_DEFINED.findall(f.read_text(encoding="utf-8")))
-    oq_file = ROOT / "open-questions.md"
-    in_file = set(_OQ_DEFINED.findall(oq_file.read_text(encoding="utf-8")))
-    for q in sorted(in_specs - in_file):
-        fail(f"check 4: {q} raised in a spec but not mirrored into open-questions.md")
-    for q in sorted(in_file - in_specs):
-        fail(f"check 4: {q} listed in open-questions.md but raised in no spec")
-    # The verdict goes in the summary line, not just in the failure list (check 21's
-    # pattern): a note reading "all mirrored" above a FAILED block hides the failure.
-    unmirrored = len(in_specs - in_file) + len(in_file - in_specs)
-    verdict = "all mirrored" if not unmirrored else f"**{unmirrored} not mirrored**"
-    notes.append(f"{len(in_file)} open questions, {verdict}")
+    # 4. (retired by ADR-2136: the open-question mirror. Each spec's §10 is the home of its
+    #    questions; docs/open-questions.md is frozen.)
 
     # 5. ADRs
     #
@@ -4114,9 +3110,6 @@ def main() -> int:
                  f"the {coverage_floor:.0%} floor — no user journey exercises this module")
     notes.append("workflow coverage: " + ", ".join(summary))
 
-    # 15. open-question rows have an owner and a recognised status
-    check_open_question_columns()
-
     # 21. journey citations resolve to a declared interface (FR-19, OQ-543)
     #
     # `scope-audit.py --endpoints` compares a spec's §5.1 table against the published
@@ -4260,18 +3253,11 @@ def main() -> int:
                     "is canonical)"
                 )
 
-    # 16-20. the working notes in docs/rfcs/
-    check_notes(set(defined), in_file, adrs)
-
     # 30-39. RFC-937's id-standard checks, path-scoped to _ID_SCOPE_ROOTS (Slice W37-4).
     check_ids_30_39()
 
-    # 23. every spec §10 mirror row carries the register's status for that question
-    check_open_question_mirror_status(specs)
-
     # 25. every F-nn finding id cited in docs/research/, docs/plans/ or a working note
     # resolves against the register, an archived phase register, or a closure record
-    check_finding_citations()
 
     # 26. the process core extract's citations resolve in the process spec
     check_process_core_drift()
@@ -4279,38 +3265,13 @@ def main() -> int:
     # 27. the process core extract's recorded digest matches delivery-process.md's bytes
     check_process_core_digest()
 
-    # 28. every filed plan dated on/after the cutoff states an acceptance standard
-    check_plan_acceptance_standard()
-
-    # 29. every docs/findings/register.md Decision cell conforms to its own header grammar
-    check_register_grammar()
-
     # 40. every spec fence declares a language; every json block declares its class (FD-1381)
     check_spec_examples(specs)
 
-    # Last, after every check has had its say: the governed W37-11 residue ceiling
-    # decides which of the failures above are disclosed rather than counted.
-    try:
-        counted, disclosed = _partition_by_w37_11_record()
-    except (_docid.InvalidResidueClassError, _docid.AmbiguousResidueKeyError) as exc:
-        # Loud and fatal, under its own heading rather than as a `check N: ` failure —
-        # it is the governance input that is invalid, not any document under audit.
-        # `AmbiguousResidueKeyError` (loop 1's fix): more than one record row shares a
-        # `(path, cls)` key without a disambiguating `part_slug` — never resolved by
-        # first-match, named here with every colliding row.
-        print(f"\nW37-11 RECORD CANNOT BE LOADED:\n  - {exc}")
-        return 1
+    counted = failures
 
     for note in notes:
         print(f"  {note}")
-
-    # Printed whether or not anything is counted below, and by name rather than as a
-    # tally: a ceilinged failure stops being fatal, it does not stop being true, and a
-    # population nothing reports is a population nothing can disposition.
-    if disclosed:
-        print(f"\n{_docid.w37_11_disclosed_header(len(disclosed))}")
-        for msg in disclosed:
-            print(f"  - {msg}")
 
     if counted:
         print(f"\nFAILED ({len(counted)}):")

@@ -1,0 +1,61 @@
+name: Finding or bug
+description: Something is wrong, or differs from the specification.
+title: "Finding: "
+labels: ["finding", "needs-triage"]
+body:
+  - type: checkboxes
+    id: gate
+    attributes:
+      label: Before you file
+      description: >
+        If this could produce a wrong price or expose data, STOP. Do not file it here.
+        Report it privately at https://github.com/yes-404/gi-pricing-plan/security/advisories/new
+      options:
+        - label: This cannot produce a wrong price and cannot expose data, as far as I can tell.
+          required: true
+        - label: I searched open and closed issues and this is not already reported.
+          required: true
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Severity (your estimate; the maintainer sets the label)
+      options:
+        - "Major: wrong behaviour with a workaround, or a broken workflow"
+        - "Minor: cosmetic, documentation or low impact"
+    validations:
+      required: true
+  - type: input
+    id: tree
+    attributes:
+      label: Version or commit
+      description: The commit SHA you observed this on, or the release tag.
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      description: The smallest commands or code that show it. Public or synthetic data only.
+      render: shell
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected
+      description: Cite the requirement id or specification section if there is one.
+    validations:
+      required: true
+  - type: textarea
+    id: observed
+    attributes:
+      label: Observed
+      description: Paste the output, including the full error.
+      render: shell
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Context and related ids
+      description: Environment, the Work issue it belongs to, and whether it worked in an earlier commit.

@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Possible wrong price, data exposure or security hole (private)
+    url: https://github.com/yes-404/gi-pricing-plan/security/advisories/new
+    about: Report privately. Do not open a public issue.
+  - name: Coordination issue
+    url: https://github.com/yes-404/gi-pricing-plan/issues?q=is%3Aissue+is%3Aopen+label%3Acoordination
+    about: Anything that crosses Works - availability, re-planning, a date that moves.

@@ -1,7 +1,9 @@
 ---
 name: watcher-runtime-state
-description: No writer since 2026-10-05; Phase 3 decides whether it returns. Write and maintain the RFC-895 runtime state file (artifact B) — position and the in-flight expensive-verifications list, re-derived every cycle rather than compared against a separate tally, so a dead or unwired writer cannot masquerade as a healthy zero. Use when standing up a new session's watcher, when a role needs to announce or check an expensive verification in flight (spec §8), or when a role needs the current phase/work/slice without reconstructing it from `docs/roadmap.md` itself.
+description: RETIRED 2026-11-13, kept for history, do not follow. No writer since 2026-10-05; Phase 3 decides whether it returns. Write and maintain the RFC-895 runtime state file (artifact B) — position and the in-flight expensive-verifications list, re-derived every cycle rather than compared against a separate tally, so a dead or unwired writer cannot masquerade as a healthy zero. Use when standing up a new session's watcher, when a role needs to announce or check an expensive verification in flight (spec §8), or when a role needs the current phase/work/slice without reconstructing it from `docs/roadmap.md` itself.
 ---
+
+> **RETIRED WITH THE RECORD PROCESS on 2026-11-13; kept for history; do not follow.** (ADR-2136.)
 
 # watcher-runtime-state: the RFC-895 runtime state file, re-derived not compared
 
