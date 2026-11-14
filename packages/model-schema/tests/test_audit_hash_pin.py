@@ -5,9 +5,10 @@ if anything that feeds the hash changes, and none of them recomputes its expecta
 code under test.
 
 1. `test_a_fixed_events_hash_is_a_literal_digest`: one fixed event, its digest written here.
-2. `test_the_hashed_fields_and_their_order_are_pinned`: the fields `AuditEventCore` hashes. The
-   canonical form sorts keys, so reordering alone does not move the bytes today; the order is
-   pinned anyway, so that a change to the field set or to the form is read, not inferred.
+2. The field set. The canonical form sorts keys, so order does not move the bytes, and
+   `test_field_order_does_not_move_the_digest` pins that property against the literal digest.
+   `test_the_hashed_fields_and_their_order_are_pinned` pins the field set (and, harmlessly, the
+   declaration order); a renamed, dropped or added field also turns the digest test red.
 3. `test_a_chain_written_before_slice_5_verifies_now`: `fixtures/audit-chain-base.jsonl` was
    written by the code at base `5ba4f404` and is verified here by the current verifier.
 """
@@ -16,6 +17,7 @@ from __future__ import annotations
 
 import pathlib
 from datetime import UTC, datetime
+from typing import Any
 from uuid import UUID
 
 import pytest
@@ -61,6 +63,27 @@ def _fixed_core() -> AuditEventCore:
 @pytest.mark.req("FR-372")
 def test_a_fixed_events_hash_is_a_literal_digest() -> None:
     assert compute_event_hash(_fixed_core(), prev_event_hash=_PREV) == BASE_DIGEST
+
+
+class _Reordered:
+    """A core whose `model_dump` yields the same fields in reverse order."""
+
+    def __init__(self, core: AuditEventCore) -> None:
+        self._core = core
+
+    def model_dump(self, *, mode: str) -> dict[str, Any]:
+        dumped = self._core.model_dump(mode=mode)
+        return dict(reversed(list(dumped.items())))
+
+
+@pytest.mark.req("FR-372")
+def test_field_order_does_not_move_the_digest() -> None:
+    """Order-independence is a pinned property: the canonical form sorts keys, so the same
+    fields in any order give the literal digest above. (The fields themselves are what the
+    digest depends on; the next test pins them.)"""
+    reordered = _Reordered(_fixed_core())
+    digest = compute_event_hash(reordered, prev_event_hash=_PREV)  # type: ignore[arg-type]
+    assert digest == BASE_DIGEST
 
 
 @pytest.mark.req("FR-372")
