@@ -198,6 +198,9 @@ testpaths = [
 # requirement-traceability record (scripts/req-coverage.py).
 addopts = "--import-mode=importlib --strict-markers"
 asyncio_mode = "auto"
+# Stated explicitly: "function" is what pytest-asyncio uses when the option is unset, and from
+# pytest 9.2.0 an unset value emits a deprecation warning in every test session.
+asyncio_default_fixture_loop_scope = "function"
 markers = [
     # Requirement traceability: mark each test with the requirement it satisfies.
     # skills-map §9.1 "spec-to-implementation conformance".
