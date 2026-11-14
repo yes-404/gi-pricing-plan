@@ -34,8 +34,8 @@ from model_schema import (
 FIXTURE = pathlib.Path(__file__).parent / "fixtures" / "audit-chain-base.jsonl"
 
 #: The digest of `_fixed_core()` with `_PREV`, computed by the code at base `5ba4f404` and
-#: quoted here. TODO-BASE-DIGEST: replaced with the real digest after the base run.
-BASE_DIGEST = "sha256:TODO-BASE-DIGEST"
+#: quoted here (run log: scratch run4-base-fixture.log).
+BASE_DIGEST = "sha256:33f771dffeeac293ece9789c6199f6f3512a72ba63cd4deddeac40bc4855b896"
 _PREV = "sha256:" + "3b8e" * 16
 
 
