@@ -741,6 +741,11 @@ If a secret is ever committed, **rotate it** — removing the commit does not un
 
 ## Commit messages
 
+### Never bypass a commit hook
+
+- **Never bypass a commit hook**: no `--no-verify`, no `core.hooksPath` override. A commit the
+  hook refuses is fixed, or reported to the maintainer; it is never worked around.
+
 ### Never let a `claude.ai/code/session_…` link reach GitHub
 
 The agent runtime emits a `Claude-Session:` trailer by default. **It is configured nowhere in
