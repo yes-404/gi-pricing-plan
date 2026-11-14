@@ -184,3 +184,77 @@ def test_a_direct_ref_count_write_is_found(tmp_path: Path) -> None:
         "def f(row):\n    row.ref_count = 0\n    q = 'UPDATE blobs SET ref_count = 0'\n",
     )
     assert len(found["outside_blobs"]) == 2
+
+
+# --- copying owners (#1504 D1) -------------------------------------------------------------
+#
+# `put` takes the reference of every owner that *writes* a blob. An owner that *copies* a blob
+# reference from another row (`child.tables = parent.tables`) never calls `put`, so nothing took
+# its reference, and the census above cannot see it. This check finds the copies and requires
+# each to be registered below and to call `retain` in the same function.
+#
+# LIMIT, stated so a green result is not read wider than it is: the walker sees only a direct
+# attribute-to-attribute assignment of a field named in `COPY_FIELDS` (`a.tables = b.tables`).
+# A copy through a helper, a dict comprehension, a field with another name, or a JSONB path
+# `BLOB_OWNERS` does not list is not seen (N1; the JSONB limit is the last test of
+# `test_blob_owner_registry.py`). Adding such an owner is a review step, not a check.
+
+#: The fields that carry blob references, by the name this schema gives them.
+COPY_FIELDS = frozenset(
+    {"tables", "cells", "fit_result", "bundle", "evidence", "movers_blob_sha256",
+     "cases_blob_sha256", "blob_sha256"}
+)
+
+#: `"<file relative to the repo>:<function>": "how it takes its reference"`.
+COPYING_OWNERS: dict[str, str] = {
+    "backend/src/app/platform/datasets.py:derive_version": (
+        "`blobs.retain` per copied table blob, in the same transaction"
+    ),
+}
+
+
+def scan_copies(roots: tuple[Path, ...], repo: Path) -> tuple[list[str], list[str]]:
+    """`(copies, copies_without_retain)` as `"<file>:<function>"`, over every `.py` under `roots`."""
+    copies: set[str] = set()
+    unretained: set[str] = set()
+    for root in roots:
+        for path in sorted(root.rglob("*.py")):
+            tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+            rel = _rel(path, repo)
+            for fname, fn in _functions(tree):
+                for node in ast.walk(fn):
+                    if (
+                        isinstance(node, ast.Assign)
+                        and isinstance(node.value, ast.Attribute)
+                        and node.value.attr in COPY_FIELDS
+                        and any(
+                            isinstance(t, ast.Attribute) and t.attr == node.value.attr
+                            for t in node.targets
+                        )
+                    ):
+                        copies.add(f"{rel}:{fname}")
+                        if not any(
+                            isinstance(c, ast.Call) and _name(c.func) == "retain"
+                            for c in ast.walk(fn)
+                        ):
+                            unretained.add(f"{rel}:{fname}")
+    return sorted(copies), sorted(unretained)
+
+
+@pytest.mark.req("FR-420")
+def test_every_copying_owner_is_registered_and_retains() -> None:
+    copies, unretained = scan_copies(SOURCE_ROOTS, REPO)
+    assert copies == sorted(COPYING_OWNERS)
+    assert unretained == []
+
+
+@pytest.mark.req("FR-420")
+def test_a_planted_unregistered_copy_without_a_retain_is_found(tmp_path: Path) -> None:
+    root = tmp_path / "src"
+    root.mkdir()
+    (root / "planted.py").write_text(
+        "def clone(new, old):\n    new.cells = old.cells\n", encoding="utf-8"
+    )
+    copies, unretained = scan_copies((root,), tmp_path)
+    assert copies == ["src/planted.py:clone"]
+    assert unretained == ["src/planted.py:clone"]

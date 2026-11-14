@@ -446,6 +446,12 @@ _GENERIC_ERROR_CODES: Final[frozenset[str]] = frozenset(
         "INTERNAL_ERROR",
         # FR-21; owned by `00` §5.3's block (audit-docs check 10 reads it there).
         "DECIMAL_OUT_OF_RANGE",
+        # FR-420's second line of defence (#1504 D1): `blobs.release` would take a blob's count
+        # to 0 while a row `BLOB_OWNERS` can see still names it. An internal invariant breach
+        # (500), never a caller's mistake: it is raised only by a writer that failed to take a
+        # reference. Deliberately not in a spec's error block (the maintainer's ruling,
+        # 2026-11-14): no client can act on it.
+        "BLOB_REFERENCE_INVARIANT_BREACHED",
     }
 )
 

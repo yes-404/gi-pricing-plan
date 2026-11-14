@@ -478,9 +478,7 @@ async def correct_schema(
     buffer = io.BytesIO()
     recast.write_parquet(buffer, compression="zstd")
     ref = await blob_store.put(session, buffer.getvalue(), PARQUET_MEDIA_TYPE)
-    # The table's old blob is replaced, so its reference is released in the same unit of work
-    # (FR-420): the new one was taken by `put`, and leaving this one counted would leak it.
-    await blobs.release(session, BlobRef.model_validate(target["blob"]).sha256)
+    replaced_sha256 = BlobRef.model_validate(target["blob"]).sha256
 
     before = dict(target["arrow_schema"])
     target["blob"] = ref.model_dump(mode="json", by_alias=True)
@@ -491,6 +489,12 @@ async def correct_schema(
     # JSONB list, so an in-place edit commits nothing and reports success.
     version.tables = tables
     await session.flush()
+    # The table's old blob is replaced, so its reference is released in the same unit of work
+    # (FR-420): the new one was taken by `put`, and leaving this one counted would leak it.
+    # After the flush, not before: `release` refuses to reach 0 while a row still names the
+    # digest, and until this version's `tables` is written it still does. A derived draft
+    # holds a reference it took in `derive`, so the parent's own is never the one released.
+    await blobs.release(session, replaced_sha256)
 
     await audit.record(
         session,

@@ -18,8 +18,8 @@ cost is that legacy true orphans are never collected until a later backfill rele
 It never lowers a count and writes no other column. The blob row's content columns are
 immutable (`blobs_content_immutable`); `ref_count` is the one column that moves.
 
-Reversibility (FR-416): there is no schema change to reverse. `downgrade()` is a no-op by
-design: a pin is indistinguishable from a reference a later `put` took on the same blob, so
+Reversibility (FR-416): irreversible: a no-op. There is no schema change to reverse, and
+`downgrade()` does nothing by design: a pin is indistinguishable from a reference a later `put` took on the same blob, so
 unpinning could release a blob a slice 1 writer now holds, while a count left too high only makes
 the collector more conservative (a leak never loses data). It touches no row. The pinned set is
 printed by the upgrade, so an operator can find it again.
@@ -77,4 +77,4 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    """A no-op, by design (see the module docstring): it never lowers a count."""
+    """Irreversible: a no-op (see the module docstring). It never lowers a count."""

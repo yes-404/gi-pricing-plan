@@ -327,6 +327,10 @@ async def delete_trace(
 
     # A pending row (Task 4B) has no blob yet — nothing to release. Every other status
     # does, and `write_trace`/`complete_pending_trace` both `retain` on the way in.
-    if row.blob_sha256 is not None:
-        await blobs.release(session, row.blob_sha256)
+    # The row is deleted and flushed first: `release` refuses to reach 0 while a row still
+    # names the digest (FR-420), and this row does until it is gone.
+    blob_sha256 = row.blob_sha256
     await session.delete(row)
+    if blob_sha256 is not None:
+        await session.flush()
+        await blobs.release(session, blob_sha256)

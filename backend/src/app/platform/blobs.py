@@ -73,6 +73,7 @@ __all__ = [
     "blob_not_found",
     "blob_probe",
     "blob_readable_by",
+    "owner_count",
     "to_ref",
 ]
 
@@ -668,8 +669,41 @@ async def release(session: AsyncSession, sha256: str) -> int:
 
     A count that would go negative violates the check constraint and fails the transaction,
     rather than quietly reaching zero and making the blob eligible for deletion.
+
+    **A release that reaches 0 while a row `BLOB_OWNERS` can see still names the blob is an
+    internal invariant breach** (FR-420's second line of defence, #1504 D1): some writer made
+    that owner without taking a reference, and finishing the release would let the collector
+    delete a blob the owner reads. It raises `BLOB_REFERENCE_INVARIANT_BREACHED` (500), logs the
+    digest and the owner count, and the caller's transaction rolls back with the decrement. The
+    owner's own row must therefore stop naming the blob (and be flushed) before the release.
+    Owners no query can see (`INSIDE_BLOB_OWNERS`) are outside the check.
     """
-    return await _adjust_ref_count(session, sha256, -1)
+    count = await _adjust_ref_count(session, sha256, -1)
+    if count == 0:
+        # The session does not autoflush, so the owner query would not see a pending change.
+        await session.flush()
+        owners = await owner_count(session, sha256)
+        if owners:
+            _log.error(
+                "blob release would reach zero while an owner still names it",
+                extra={"sha256": sha256, "owner_count": owners},
+            )
+            raise PlatformError(
+                "BLOB_REFERENCE_INVARIANT_BREACHED",
+                "Internal error",
+                500,
+                "A blob reference count and its owners disagree.",
+            )
+    return count
+
+
+async def owner_count(session: AsyncSession, sha256: str) -> int:
+    """How many owner places `BLOB_OWNERS` finds naming this digest right now."""
+    result = await session.execute(
+        text(f"SELECT count(*) FROM ({_OWNER_ROWS_SQL}) AS owned WHERE sha256 = :sha"),
+        {"sha": sha256},
+    )
+    return int(result.scalar_one())
 
 
 async def _adjust_ref_count(session: AsyncSession, sha256: str, delta: int) -> int:
@@ -805,10 +839,12 @@ INSIDE_BLOB_OWNERS: dict[str, str] = {
     ),
 }
 
+#: One row per reference, in a column named `sha256`, over every owner place.
+_OWNER_ROWS_SQL = " UNION ALL ".join(f"({owner.digests})" for owner in BLOB_OWNERS)
+
 _OWNER_COUNTS_SQL = (
-    "SELECT sha256, count(*) AS n FROM ("
-    + " UNION ALL ".join(f"({owner.digests})" for owner in BLOB_OWNERS)
-    + ") AS owned WHERE sha256 IS NOT NULL GROUP BY sha256"
+    f"SELECT sha256, count(*) AS n FROM ({_OWNER_ROWS_SQL}) AS owned "
+    "WHERE sha256 IS NOT NULL GROUP BY sha256"
 )
 
 

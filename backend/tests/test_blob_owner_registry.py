@@ -18,6 +18,7 @@ from sqlalchemy import func, select, text
 
 from app.db.models import Base, BlobRow
 from app.db.session import Database
+from app.errors import PlatformError
 from app.platform import blobs
 from app.platform.blobs import BLOB_OWNERS, BlobStore
 from model_schema import new_uuid7
@@ -169,3 +170,81 @@ async def test_after_the_backfill_the_collector_selects_nothing_any_row_mentions
             ).first()
         ]
     assert mentioned == []
+
+
+@pytest.mark.req("FR-420")
+async def test_a_release_that_would_reach_zero_while_an_owner_names_the_blob_is_refused(
+    database: Database, blob_store: BlobStore, workspace_id
+) -> None:
+    """The second line of defence (#1504 D1). `put` took the one reference; a job result names
+    the blob; releasing it to 0 would make the collector's selector take a blob the job reads.
+
+    The refusal is an internal 500-class error, and the caller's transaction rolls back with the
+    decrement, so the count is still 1. Breaker: drop the owner check in `blobs.release` -> the
+    release commits at 0 and the blob is collectable.
+    """
+    async with database.unit_of_work() as session:
+        ref = await blob_store.put(session, b"owned blob " + str(new_uuid7()).encode(), "text/plain")
+    await job_result_owner(database, workspace_id, ref.sha256)
+
+    with pytest.raises(PlatformError) as caught:
+        async with database.unit_of_work() as session:
+            await blobs.release(session, ref.sha256)
+    assert caught.value.code == "BLOB_REFERENCE_INVARIANT_BREACHED"
+    assert caught.value.status_code == 500
+    assert await _count(database, ref.sha256) == 1
+
+
+@pytest.mark.req("FR-420")
+async def test_a_release_of_an_unowned_blob_still_reaches_zero(
+    database: Database, blob_store: BlobStore
+) -> None:
+    """Positive control for the guard: with no owner row the same release is allowed."""
+    sha = await _blob(database, blob_store, b"unowned")  # put, then release to 0
+    assert await _count(database, sha) == 0
+    async with database.session() as session:
+        assert await blobs.owner_count(session, sha) == 0
+
+
+@pytest.mark.req("FR-420")
+async def test_owner_count_counts_each_owner_place(
+    database: Database, blob_store: BlobStore, workspace_id
+) -> None:
+    sha = await _blob(database, blob_store, b"two owners")
+    for _ in range(2):
+        await job_result_owner(database, workspace_id, sha)
+    async with database.session() as session:
+        assert await blobs.owner_count(session, sha) == 2
+        assert await blobs.owner_count(session, "0" * 64) == 0
+
+
+@pytest.mark.req("FR-420")
+async def test_a_digest_at_an_unregistered_jsonb_path_is_not_an_owner_the_registry_sees(
+    database: Database, blob_store: BlobStore, workspace_id
+) -> None:
+    """N1's limit, proven red on a planted row: a digest stored at a JSONB path no `BLOB_OWNERS`
+    entry names (here `jobs.parameters.blob`, the ingest input) is invisible to `owner_count`, so
+    neither the backfill nor the release guard protects it. The column-name census above cannot
+    see a JSONB path either: a new path becomes an owner only by adding its entry to
+    `BLOB_OWNERS`, which is a review step, not a check."""
+    from datetime import UTC, datetime
+
+    from app.db.models import JobRow
+    from model_schema import JobKind, JobQueue, JobSource, JobStatus
+
+    sha = await _blob(database, blob_store, b"unregistered path")
+    async with database.unit_of_work() as session:
+        session.add(
+            JobRow(
+                workspace_id=workspace_id,
+                kind=JobKind.RATE_TABLE_DIFF,
+                status=JobStatus.SUCCEEDED,
+                queue=JobQueue.DEFAULT,
+                source=JobSource.API,
+                submitted_by={"kind": "user", "id": str(new_uuid7())},
+                parameters={"blob": sha},
+                finished_at=datetime.now(UTC),
+            )
+        )
+    async with database.session() as session:
+        assert await blobs.owner_count(session, sha) == 0
