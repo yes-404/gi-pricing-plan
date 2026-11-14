@@ -11,7 +11,7 @@ work: WK-2113
 slice: SL-8436
 plans: []
 corrected_by: []
-relates: [SL-8436, FD-1495, SL-8429, LG-8430]
+relates: [SL-8436, FD-1495, SL-2124, LG-2125]
 ---
 
 # LG-8437 — WK-2113 slice SL-8436: a stored bundle that prices on a control operand is re-validated and refused
