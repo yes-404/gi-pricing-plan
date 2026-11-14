@@ -1243,7 +1243,8 @@ async def submit_rating_version(
         # last-known-good bundle when metadata storage is down, and a governance gate
         # refuses rather than degrades (FR-260; audit finding F5).
         return await score_api._fetch_bundle(
-            database, blob_store, slot, workspace_id=caller.workspace_id, ref=ref
+            database, blob_store, slot, database=database, workspace_id=caller.workspace_id,
+            ref=ref,
         )
 
     async with database.unit_of_work() as session:

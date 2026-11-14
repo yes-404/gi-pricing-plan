@@ -15,18 +15,19 @@ from uuid import UUID
 
 from app.db.models import BlobRow
 from app.errors import PlatformError
-from app.platform import audit
+from app.platform import audit, blobs
 from app.platform import rating_versions as rating_versions_service
 from app.platform import regression_runs as regression_runs_service
 from app.platform import regression_suites as regression_suites_service
 from app.platform.blobs import to_ref
+from app.platform.bundle_hydration import hydrate
+from app.platform.bundle_slot import BundleSlot
 from app.worker.data_handlers import _actor, _bridge, _workspace
 from app.worker.handlers import HANDLERS, register_handler
 from model_schema import ArtifactRef, JobKind, JobResult, JobSource, cases_log_bytes
 from pricing_core.progress import ProgressCallback
 from pricing_core.rating.compile import Bundle
 from pricing_core.rating.properties import UnsweepableProperty
-from pricing_core.rating.runtime import load_bundle
 from pricing_core.rating.testing import run_regression
 
 __all__ = ["register_rating_handlers"]
@@ -66,6 +67,11 @@ def _rating_compile(parameters: dict[str, Any], callback: ProgressCallback) -> J
             )
             payload = bundle.model_dump_json().encode()
             ref = await progress.blob_store.put(session, payload, "application/json")
+            # The version holds a reference to its bundle blob for as long as it exists, so FR-420's
+            # collector (`ref_count == 0`) can never take it (WK-2113 S3, FD 2135). Released on
+            # nothing today: a version is immutable and never deleted. Same unit of work as the
+            # put and `record_bundle_blob` below.
+            await blobs.retain(session, ref.sha256)
             # RL-915: the key goes on the version's own metadata, in this same
             # transaction. Without it the only record of where the bundle lives is this
             # Job's result — an operational row with its own pruning, so a trimmed Job
@@ -172,7 +178,14 @@ def _rating_regression(parameters: dict[str, Any], callback: ProgressCallback) -
                     f"{ref}'s compiled bundle is no longer in the blob store.",
                 )
             payload = await progress.blob_store.read(to_ref(blob_row))
-        return load_bundle(Bundle.model_validate_json(payload)), suite, ref
+        compiled = await hydrate(
+            Bundle.model_validate_json(payload),
+            slot=BundleSlot(),
+            database=progress.database,
+            workspace_id=workspace_id,
+            ref=ref,
+        )
+        return compiled, suite, ref
 
     bundle, suite, ref = progress.run_on_loop(prepare())
     progress.update(0.2, "running")

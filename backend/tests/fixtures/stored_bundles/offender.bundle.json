@@ -1,0 +1,504 @@
+{
+ "algorithm_ref": "rating_algorithm:glm-golden@1",
+ "compiled_at": "2026-11-13T21:16:22.279746Z",
+ "content_hash": "sha256:4e04f3a3aca3948c6ceabc6c96c8a7abaf054f9dd8184cbec5769ec918661ce0",
+ "graph": {
+  "input_contract": [
+   {
+    "description": null,
+    "domain": [
+     "A",
+     "B"
+    ],
+    "max": null,
+    "min": null,
+    "name": "region",
+    "nullable": false,
+    "pattern": null,
+    "type": "enum"
+   },
+   {
+    "description": null,
+    "domain": [
+     "2010",
+     "2011"
+    ],
+    "max": null,
+    "min": null,
+    "name": "yoa",
+    "nullable": false,
+    "pattern": null,
+    "type": "enum"
+   },
+   {
+    "description": null,
+    "domain": [
+     "A:2010",
+     "A:2011",
+     "B:2010",
+     "B:2011"
+    ],
+    "max": null,
+    "min": null,
+    "name": "region_x_yoa",
+    "nullable": false,
+    "pattern": null,
+    "type": "enum"
+   },
+   {
+    "description": null,
+    "domain": null,
+    "max": null,
+    "min": null,
+    "name": "exposure_years",
+    "nullable": false,
+    "pattern": null,
+    "type": "decimal"
+   }
+  ],
+  "nodes": {
+   "s_exposure_years": {
+    "consumes": [],
+    "input_name": "exposure_years",
+    "label": "exposure_years",
+    "note": null,
+    "on_missing": "error",
+    "produces": [
+     "exposure_years"
+    ],
+    "type": "input"
+   },
+   "s_out": {
+    "consumes": [
+     "risk"
+    ],
+    "label": "Risk",
+    "note": null,
+    "output_name": "risk_out",
+    "produces": [],
+    "rounding": {
+     "dp": 6,
+     "mode": "half_even"
+    },
+    "type": "output"
+   },
+   "s_region": {
+    "consumes": [],
+    "input_name": "region",
+    "label": "region",
+    "note": null,
+    "on_missing": "error",
+    "produces": [
+     "region"
+    ],
+    "type": "input"
+   },
+   "s_region_x_yoa": {
+    "consumes": [],
+    "input_name": "region_x_yoa",
+    "label": "region_x_yoa",
+    "note": null,
+    "on_missing": "error",
+    "produces": [
+     "region_x_yoa"
+    ],
+    "type": "input"
+   },
+   "s_risk": {
+    "consumes": [
+     "region",
+     "yoa",
+     "region_x_yoa",
+     "exposure_years"
+    ],
+    "feature_map": {
+     "exposure_years": "exposure_years",
+     "region": "region",
+     "region_x_yoa": "region_x_yoa",
+     "yoa": "yoa"
+    },
+    "label": "Risk",
+    "mode": "exact",
+    "model_ref": "model:motor-freq-glm@1",
+    "note": null,
+    "peril_structure_ref": null,
+    "produces": [
+     "risk"
+    ],
+    "result_type": "decimal",
+    "type": "model_call"
+   },
+   "s_yoa": {
+    "consumes": [],
+    "input_name": "yoa",
+    "label": "yoa",
+    "note": null,
+    "on_missing": "error",
+    "produces": [
+     "yoa"
+    ],
+    "type": "input"
+   }
+  },
+  "outputs": [
+   {
+    "name": "risk_out",
+    "required": true,
+    "type": "decimal"
+   }
+  ],
+  "slug": "glm-golden",
+  "version": 1
+ },
+ "pins": {
+  "custom_objectives": [],
+  "models": [
+   "model:motor-freq-glm@1"
+  ],
+  "rate_tables": [],
+  "reference_tables": []
+ },
+ "resolved_payloads": {
+  "factor:region@1": {
+   "banding_id": null,
+   "base_level": null,
+   "base_level_method": "largest_exposure",
+   "dataset_id": "7292d8d6-7909-4a61-9999-5d663388a0f5",
+   "expression": null,
+   "grouping_id": null,
+   "id": "135596dc-8220-4613-bc1e-168f5cde4333",
+   "intent": "risk",
+   "monotonic_direction": "none",
+   "monotonic_rationale": null,
+   "operand_factor_ids": [],
+   "prohibited": false,
+   "prohibited_reason": null,
+   "slug": "region",
+   "source_columns": [
+    "region"
+   ],
+   "type": "identity",
+   "version": 1
+  },
+  "factor:region_x_yoa@1": {
+   "banding_id": null,
+   "base_level": null,
+   "base_level_method": "largest_exposure",
+   "dataset_id": "7292d8d6-7909-4a61-9999-5d663388a0f5",
+   "expression": null,
+   "grouping_id": null,
+   "id": "32f1bd33-086f-4f79-90e1-0cfe511f1f34",
+   "intent": "risk",
+   "monotonic_direction": "none",
+   "monotonic_rationale": null,
+   "operand_factor_ids": [
+    "135596dc-8220-4613-bc1e-168f5cde4333",
+    "07f6cd0b-84a8-4cca-9d6d-08c0b1da95fb"
+   ],
+   "prohibited": false,
+   "prohibited_reason": null,
+   "slug": "region_x_yoa",
+   "source_columns": [],
+   "type": "interaction",
+   "version": 1
+  },
+  "factor:yoa@1": {
+   "banding_id": null,
+   "base_level": null,
+   "base_level_method": "largest_exposure",
+   "dataset_id": "7292d8d6-7909-4a61-9999-5d663388a0f5",
+   "expression": null,
+   "grouping_id": null,
+   "id": "07f6cd0b-84a8-4cca-9d6d-08c0b1da95fb",
+   "intent": "control",
+   "monotonic_direction": "none",
+   "monotonic_rationale": null,
+   "operand_factor_ids": [],
+   "prohibited": false,
+   "prohibited_reason": null,
+   "slug": "yoa",
+   "source_columns": [
+    "yoa"
+   ],
+   "type": "identity",
+   "version": 1
+  },
+  "model:motor-freq-glm@1": {
+   "approval_request_id": null,
+   "change_reason": null,
+   "dataset_version_id": "57209ea5-fe2e-4076-a499-dd3cb49f209d",
+   "diagnostics_id": null,
+   "fit_result": {
+    "banding_warnings": [],
+    "coefficients": [
+     {
+      "ci_95": [
+       -2.4362675193063685,
+       -2.065331961326563
+      ],
+      "estimate": -2.2507997403164657,
+      "p_value": 4.692826493293806e-125,
+      "relativity": 0.10531496624953354,
+      "std_error": 0.09462815666657592,
+      "term": "intercept",
+      "z": -23.785729529184433
+     },
+     {
+      "ci_95": [
+       0.7488139575548957,
+       1.1864458311037769
+      ],
+      "estimate": 0.9676298943293362,
+      "p_value": 4.429076154403766e-18,
+      "relativity": 2.6316996555778593,
+      "std_error": 0.11164283553189384,
+      "term": "region_x_yoa[A | 2011]",
+      "z": 8.667192030006316
+     },
+     {
+      "ci_95": [
+       0.25943096926955533,
+       0.7308173243553487
+      ],
+      "estimate": 0.49512414681245204,
+      "p_value": 3.832947866628331e-05,
+      "relativity": 1.6407019143268122,
+      "std_error": 0.12025383088771753,
+      "term": "region_x_yoa[B | 2010]",
+      "z": 4.117325353857171
+     },
+     {
+      "ci_95": [
+       1.0259409056756963,
+       1.4484204241034704
+      ],
+      "estimate": 1.2371806648895833,
+      "p_value": 1.6813789886642205e-30,
+      "relativity": 3.445884653227656,
+      "std_error": 0.10777736778844879,
+      "term": "region_x_yoa[B | 2011]",
+      "z": 11.47903952635017
+     }
+    ],
+    "converged": true,
+    "covariance_blob": {
+     "bytes_": 457,
+     "media_type": "application/json",
+     "part_count": null,
+     "sha256": "ccdba1962ab280646efa142c474b5d24da7733eb119ff4f45c5d1dab07bd9d1e"
+    },
+    "deviance": null,
+    "dispersion": 0.9564540818852485,
+    "fit_seconds": 0.271,
+    "iterations": 4,
+    "library_versions": {
+     "glum": "3.4.1",
+     "polars": "1.44.2"
+    },
+    "model_type": "glm",
+    "offset_model_ref": null,
+    "relativities": {
+     "region_x_yoa": [
+      {
+       "estimate": 0.0,
+       "exposure": 1016.0,
+       "is_base": true,
+       "level": "A | 2010",
+       "relativity": 1.0
+      },
+      {
+       "estimate": 0.9676298943293362,
+       "exposure": 985.0,
+       "is_base": false,
+       "level": "A | 2011",
+       "relativity": 2.6316996555778593
+      },
+      {
+       "estimate": 0.49512414681245204,
+       "exposure": 1007.0,
+       "is_base": false,
+       "level": "B | 2010",
+       "relativity": 1.6407019143268122
+      },
+      {
+       "estimate": 1.2371806648895833,
+       "exposure": 992.0,
+       "is_base": false,
+       "level": "B | 2011",
+       "relativity": 3.445884653227656
+      }
+     ]
+    },
+    "rows": 4000,
+    "tweedie": null
+   },
+   "flags": [],
+   "id": "23400de9-b5de-4a62-9626-67042f46d0bd",
+   "model_family_slug": "probe",
+   "parent_model_id": null,
+   "spec": {
+    "alpha": 0.0,
+    "approximates_model": null,
+    "approximates_model_id": null,
+    "cv": null,
+    "dataset_version_id": "7292d8d6-7909-4a61-9999-5d663388a0f5",
+    "factors": [
+     "135596dc-8220-4613-bc1e-168f5cde4333",
+     "07f6cd0b-84a8-4cca-9d6d-08c0b1da95fb",
+     "32f1bd33-086f-4f79-90e1-0cfe511f1f34"
+    ],
+    "family": "poisson",
+    "family_params": {},
+    "l1_ratio": 0.0,
+    "link": "log",
+    "loss_treatment": {
+     "cap_minor": null,
+     "evidence_blob": null,
+     "kind": "none",
+     "restoration_loading": null
+    },
+    "max_iter": 200,
+    "model_family_slug": "probe",
+    "model_type": "glm",
+    "offset": {
+     "column": "exposure_years",
+     "kind": "log_column",
+     "offset_model_ref": null
+    },
+    "peril": null,
+    "response": null,
+    "response_column": "claim_count",
+    "seed": 0,
+    "select_by": "fixed",
+    "split_ref": null,
+    "tolerance": 1e-08,
+    "tweedie": null,
+    "weight": {
+     "column": null,
+     "kind": "none"
+    }
+   },
+   "spec_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+   "status": "approved",
+   "version": 1
+  },
+  "rating_algorithm:glm-golden@1": {
+   "input_contract": [
+    {
+     "domain": [
+      "A",
+      "B"
+     ],
+     "name": "region",
+     "nullable": false,
+     "type": "enum"
+    },
+    {
+     "domain": [
+      "2010",
+      "2011"
+     ],
+     "name": "yoa",
+     "nullable": false,
+     "type": "enum"
+    },
+    {
+     "domain": [
+      "A:2010",
+      "A:2011",
+      "B:2010",
+      "B:2011"
+     ],
+     "name": "region_x_yoa",
+     "nullable": false,
+     "type": "enum"
+    },
+    {
+     "name": "exposure_years",
+     "nullable": false,
+     "type": "decimal"
+    }
+   ],
+   "outputs": [
+    {
+     "name": "risk_out",
+     "required": true,
+     "type": "decimal"
+    }
+   ],
+   "slug": "glm-golden",
+   "steps": [
+    {
+     "input_name": "region",
+     "label": "region",
+     "on_missing": "error",
+     "produces": "region",
+     "step_id": "s_region",
+     "type": "input"
+    },
+    {
+     "input_name": "yoa",
+     "label": "yoa",
+     "on_missing": "error",
+     "produces": "yoa",
+     "step_id": "s_yoa",
+     "type": "input"
+    },
+    {
+     "input_name": "region_x_yoa",
+     "label": "region_x_yoa",
+     "on_missing": "error",
+     "produces": "region_x_yoa",
+     "step_id": "s_region_x_yoa",
+     "type": "input"
+    },
+    {
+     "input_name": "exposure_years",
+     "label": "exposure_years",
+     "on_missing": "error",
+     "produces": "exposure_years",
+     "step_id": "s_exposure_years",
+     "type": "input"
+    },
+    {
+     "consumes": [
+      "region",
+      "yoa",
+      "region_x_yoa",
+      "exposure_years"
+     ],
+     "feature_map": {
+      "exposure_years": "exposure_years",
+      "region": "region",
+      "region_x_yoa": "region_x_yoa",
+      "yoa": "yoa"
+     },
+     "label": "Risk",
+     "mode": "exact",
+     "model_ref": "model:motor-freq-glm@1",
+     "produces": [
+      "risk"
+     ],
+     "result_type": "decimal",
+     "step_id": "s_risk",
+     "type": "model_call"
+    },
+    {
+     "consumes": [
+      "risk"
+     ],
+     "label": "Risk",
+     "output_name": "risk_out",
+     "rounding": {
+      "dp": 6,
+      "mode": "half_even"
+     },
+     "step_id": "s_out",
+     "type": "output"
+    }
+   ],
+   "sub_graphs": [],
+   "version": 1
+  }
+ }
+}

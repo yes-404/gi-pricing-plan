@@ -155,6 +155,15 @@ async def test_an_unpinned_version_is_refused() -> None:
         await compile_bundle(version, _resolver())
 
 
+@pytest.mark.req("FR-237")
+async def test_a_version_with_no_pins_is_refused_before_any_revalidation() -> None:
+    """WK-2113 S3 (amendment 3 (c)): `revalidate` skips the pin re-resolution for a row with no
+    declared pins only because compile cannot produce a bundle for one; this is that refusal."""
+    version = _version().model_copy(update={"pins": None})
+    with pytest.raises(ValueError, match="RATING_VERSION_UNPINNED"):
+        await compile_bundle(version, _resolver())
+
+
 @pytest.mark.req("FR-20")
 @pytest.mark.req("FR-240")
 async def test_an_unapproved_pin_is_refused() -> None:

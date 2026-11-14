@@ -19,7 +19,6 @@ from __future__ import annotations
 
 import asyncio
 import random
-import types
 import typing
 from collections.abc import Iterator
 from decimal import ROUND_HALF_EVEN, Decimal, localcontext
@@ -32,8 +31,9 @@ from fastapi.testclient import TestClient
 
 from app.api import deps as deps_module
 from app.api import score as score_module
+from app.api.deps import Caller
 from app.errors import install_error_handlers
-from model_schema import QuoteContext, RatingVersion
+from model_schema import ActorKind, Principal, QuoteContext, RatingVersion
 from pricing_core.rating.compile import ResolvedArtifact, compile_bundle
 from pricing_core.rating.runtime import CompiledBundle, load_bundle
 
@@ -169,7 +169,14 @@ def client(seen: list[dict[str, Any]]) -> Iterator[TestClient]:
         return {k: type(v).__name__ for k, v in body.items()}
 
     app.include_router(echo, prefix="/api/v1")
-    caller = types.SimpleNamespace(workspace_id=uuid4(), environment=None)
+    # The real caller type both score dependencies return (`Caller`, app/api/deps.py:77, via
+    # `ScoreExecuteDep` score.py:200 and `RatingReadDep` rating_algorithms.py:32), with the
+    # `principal` the routes pass on as `requester` (score.py:659, :754).
+    caller = Caller(
+        principal=Principal(kind=ActorKind.USER, id=uuid4(), display="scorer@insurer.example"),
+        workspace_id=uuid4(),
+        environment=None,
+    )
     overrides = app.dependency_overrides
     overrides[typing.get_args(score_module.ScoreExecuteDep)[1].dependency] = lambda: caller
     overrides[typing.get_args(score_module.RatingReadDep)[1].dependency] = lambda: caller

@@ -79,6 +79,7 @@ from pricing_core.rating.compile import (
     cell_parses,
     check_step_refs_pinned,
     peril_component_refs,
+    refuse_control_in_features,
 )
 from pricing_core.rating.inline import inline_mounts, mounted_fragments
 from pricing_core.safe_error import CodedError
@@ -1050,6 +1051,29 @@ def _load_glm_scorers(
     return scorers
 
 
+def refuse_control_in_bundle(
+    payloads: Mapping[str, Any], scorers: Mapping[str, _GlmScorer]
+) -> None:
+    """Refuse a stored Bundle whose GLMs price on a `control`-intent Factor (FR-88, FR-240).
+
+    The Bundle carries each GLM pin's Factors (`_carry_glm_inputs`), so the compile-time test
+    (`refuse_control_in_features`, one definition) runs again here: a Bundle compiled before
+    that guard existed keeps pricing otherwise, since nothing between compile and price re-reads
+    an intent. It covers a GLM and the model its offset reads. It cannot see what the Bundle
+    does not carry: a GBM's features and a rate table key's Factor (re-validation at approval
+    and deploy, and the stored-bundle sweep, cover those).
+    """
+    pool = list(_carried(payloads, "factor", Factor).values())
+
+    def check(ref: str, scorer: _GlmScorer) -> None:
+        refuse_control_in_features(ref, payloads[ref].get("fit_result"), scorer.factors, pool)
+        if scorer.offset_source is not None:
+            check(str(scorer.spec.offset.offset_model_ref), scorer.offset_source)
+
+    for ref, scorer in scorers.items():
+        check(ref, scorer)
+
+
 def _load_boosters(
     algorithms: Sequence[RatingAlgorithm], payloads: Mapping[str, Any]
 ) -> dict[str, object]:
@@ -1166,6 +1190,9 @@ def load_bundle(bundle: Bundle) -> CompiledBundle:
     (RL-873) — `resolved_payloads`, never a blob reference — so nothing here reaches a
     database, a blob store, or the network (NFR-491).
 
+    Refuses with `CONTROL_FACTOR_IN_RATEABLE_PATH` a bundle whose carried GLM Factors reach a
+    `control`-intent Factor (`refuse_control_in_bundle`; FD-1495, stored bundles).
+
     Refuses with `RATING_VERSION_UNPINNED` a bundle whose step ref is not pinned at its exact
     version, so a bundle compiled before that check existed cannot price silently (FR-237).
 
@@ -1195,6 +1222,7 @@ def load_bundle(bundle: Bundle) -> CompiledBundle:
         check_step_refs_pinned(each, bundle.pins)
     boosters = _load_boosters(every, bundle.resolved_payloads)
     scorers = _load_glm_scorers(every, bundle.resolved_payloads)
+    refuse_control_in_bundle(bundle.resolved_payloads, scorers)
 
     def evaluation(graph: JdmGraph, inlined: RatingAlgorithm) -> PurposeEvaluation:
         handler = _model_call_handler(inlined, bundle.resolved_payloads, boosters, scorers)

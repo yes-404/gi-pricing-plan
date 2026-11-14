@@ -4581,6 +4581,25 @@ relates: [FD-1495, LG-2125, OQ-2126, OQ-2127, OQ-2128, FD-2129, FD-2130, FD-2131
 *Dated 2026-11-13 by the executor (exec-sl8429), on the maintainer's GO "2026-11-13 19:51:15 GMT — Maintainer: FD-1495 PROBE READ" in `to-lead.md` (severity HIGH, seven conditions): the slice is `active`. `FR-88` and `FR-240` are clarified, the ledger is `LG 2125`, the open question is `OQ 2126`. WK-2113's own status line is not changed by this row.*
 
 
+#### SL-2132 — WK-2113 S3 — FD-1495 limb B1/B2: stored bundles are re-validated and refused
+
+```yaml
+id: SL-2132
+family: slice
+title: WK-2113 S3 — FD-1495 limb B1/B2 — a stored bundle that prices on a control operand is refused at load, at submit, deploy and rollback, and by the algorithm save (design (C)+(B), fail closed); the read-only sweep
+status: active                 # draft → active → closed | retired (§1.2a)
+created: 2026-11-13
+owner: lead
+tree: 5d2189a363b7ec781b772f7fe3d3aae6f2c55385
+phase: P3
+work: WK-2113
+corrected_by: []
+relates: [FD-1495, LG-2133, SL-2124, FD-2135, OQ-2134]
+```
+
+*Dated 2026-11-13 by the executor (exec-sl8436), on the maintainer's entries "2026-11-13 19:58:03 GMT — Maintainer: S3 RULED" (design (C)+(B), eight conditions), "21:17:39 GMT — S3 PLAN READ" (the GO; B2 (i), DP-1 to DP-3) and "21:23:21 GMT — S3 PREP READ" (hash-only versions fail closed; re-validation at submit and deploy, not at the decision): the slice is `active`, stacked on SL 2124 (S1). The ledger is `LG 2133`. WK-2113's own status line is not changed by this row.*
+
+
 #### SL-1601 — WK-1178 P3 carry — FD-1589 row 8, remedy (c), B1 and B2: the model-schema validator messages no request reaches, rewritten input-free
 
 ```yaml
