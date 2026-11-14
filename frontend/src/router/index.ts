@@ -330,6 +330,14 @@ export const routes: RouteRecordRaw[] = [
     component: () => import("@/views/ReferenceView.vue"),
   },
   {
+    // `06` FR-371: the audit explorer. The route's permission is `audit:read`, which the
+    // server enforces; a caller without it sees the refusal as a problem, not a hidden page.
+    path: "/audit",
+    name: "audit-explorer",
+    meta: { requiresAuth: true },
+    component: () => import("@/views/AuditExplorerView.vue"),
+  },
+  {
     // The OIDC redirect target (Task 4's `redirect_uri`). Never guarded — the guard's
     // refusal is what sent the browser out, and a guarded callback is an unclosable loop.
     path: "/callback",

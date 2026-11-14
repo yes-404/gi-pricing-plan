@@ -123,3 +123,9 @@ describe("the /models routes", () => {
     expect(router().resolve("/metrics").matched.map((r) => r.name)).toContain("metric-library");
   });
 });
+
+describe("the audit explorer route", () => {
+  it("resolves /audit to the explorer", () => {
+    expect(matchedNames("/audit")).toContain("audit-explorer");
+  });
+});
