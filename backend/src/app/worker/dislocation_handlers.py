@@ -35,6 +35,8 @@ from app.db.models import RatingVersionRow
 from app.errors import PlatformError
 from app.platform import datasets as dataset_service
 from app.platform import rating_versions as rating_versions_service
+from app.platform.bundle_hydration import hydrate
+from app.platform.bundle_slot import BundleSlot
 from app.platform.dislocation_runs import (
     DISLOCATION_RATINGS_PER_WORKER_HOUR,
     DISLOCATION_SINGLE_JOB_MAX_HOURS,
@@ -69,7 +71,7 @@ from pricing_core.rating.compile import (
     ResolvedArtifact,
     compile_bundle,
 )
-from pricing_core.rating.runtime import CompiledBundle, load_bundle
+from pricing_core.rating.runtime import CompiledBundle
 from pricing_core.safe_error import safe_error_text
 
 __all__ = [
@@ -197,7 +199,13 @@ async def _exact_twin(
         WorkspaceResolver(session, workspace_id, progress.blob_store), version.algorithm_ref
     )
     bundle = await compile_bundle(version, resolver)
-    return load_bundle(bundle), bundle.content_hash
+    return (
+        await hydrate(
+            bundle, slot=BundleSlot(), database=progress.database, workspace_id=workspace_id,
+            ref=ArtifactRef(type="rating_version", slug=row.slug, version=row.version),
+        ),
+        bundle.content_hash,
+    )
 
 
 @dataclass(frozen=True)
@@ -224,7 +232,8 @@ def _rating_version_ref(ref: ArtifactRef) -> ArtifactRef:
 
 
 async def _compiled(
-    progress: JobProgress, session: Any, row: RatingVersionRow, ref: ArtifactRef
+    progress: JobProgress, session: Any, workspace_id: UUID, row: RatingVersionRow,
+    ref: ArtifactRef,
 ) -> tuple[CompiledBundle, str]:
     """The compiled bundle a version already holds, and its content hash (the regression
     handler's text for a version with none, `rating_handlers.py`)."""
@@ -238,7 +247,10 @@ async def _compiled(
         session, progress.blob_store, sha256, f"{ref}'s compiled bundle"
     )
     bundle = Bundle.model_validate_json(payload)
-    return load_bundle(bundle), bundle.content_hash
+    compiled = await hydrate(
+        bundle, slot=BundleSlot(), database=progress.database, workspace_id=workspace_id, ref=ref
+    )
+    return compiled, bundle.content_hash
 
 
 def _dislocation_run(parameters: dict[str, Any], callback: ProgressCallback) -> JobResult:
@@ -272,10 +284,10 @@ def _dislocation_run(parameters: dict[str, Any], callback: ProgressCallback) -> 
                 )
             else:
                 baseline_bundle, baseline_hash = await _compiled(
-                    progress, session, rows[0], baseline_ref
+                    progress, session, workspace_id, rows[0], baseline_ref
                 )
             candidate_bundle, candidate_hash = await _compiled(
-                progress, session, rows[1], candidate_ref
+                progress, session, workspace_id, rows[1], candidate_ref
             )
             version = await dataset_service.read_version(
                 session, workspace_id=workspace_id, version_id=spec.portfolio_dataset_version_id

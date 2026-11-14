@@ -27,7 +27,7 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 SCRIPT = ROOT / "scripts" / "audit-docs.py"
 SPEC = ROOT / "docs" / "process" / "delivery-process.md"
 CORE = ROOT / "docs" / "process" / "delivery-process.core.json"
-ROADMAP = ROOT / "docs" / "roadmap.md"
+UNRELATED = ROOT / "docs" / "process" / "process-backlog.md"
 
 
 def _run() -> subprocess.CompletedProcess[str]:
@@ -77,14 +77,14 @@ def test_an_unrelated_file_edit_is_the_negative_control_and_stays_green() -> Non
     *different* file must stay green — proof the check is reading `delivery-process.md`
     specifically, not failing on any repository change whatsoever.
     """
-    original = ROADMAP.read_text(encoding="utf-8")
+    original = UNRELATED.read_text(encoding="utf-8")
     try:
-        ROADMAP.write_text(original + "\n", encoding="utf-8")
+        UNRELATED.write_text(original + "\n", encoding="utf-8")
         result = _run()
         assert result.returncode == 0, result.stdout + result.stderr
         assert "check 27: process core digest matches" in result.stdout, result.stdout
     finally:
-        ROADMAP.write_text(original, encoding="utf-8")
+        UNRELATED.write_text(original, encoding="utf-8")
 
 
 def test_the_committed_digest_currently_matches_the_committed_spec() -> None:

@@ -36,7 +36,7 @@ from zipfile import BadZipFile
 from openpyxl import Workbook, load_workbook  # type: ignore[import-untyped]
 from openpyxl.utils.exceptions import InvalidFileException  # type: ignore[import-untyped]
 
-from model_schema.modelling import Factor, FactorIntent, GlmFitResult, Model, RelativityLevel
+from model_schema.modelling import Factor, GlmFitResult, Model, RelativityLevel
 from model_schema.money import MAX_POSITIONAL_EXPONENT
 from model_schema.rating import (
     BulkOperation,
@@ -66,6 +66,7 @@ from model_schema.rating import (
     UpliftTableRecordedParameters,
 )
 from model_schema.refs import ArtifactRef, slug_is_admitted
+from pricing_core.modelling.factors import OperandNotSuppliedError, control_factor_in
 from pricing_core.rating.compile import ValidationIssue, cell_parses
 
 _APPROVED_OR_BETTER = frozenset({"approved", "live", "retired"})
@@ -228,10 +229,19 @@ def seed_from_model(
             "binds to exactly one"
         )
     bound = pinned[0]
-    if bound.intent is FactorIntent.CONTROL:
+    try:
+        control = control_factor_in(bound, factors)
+    except OperandNotSuppliedError as error:
         raise ValueError(
-            f"CONTROL_FACTOR_IN_RATEABLE_PATH: Factor {bound.slug}@{bound.version} has intent "
-            "'control' and cannot be rated on (FR-88)"
+            f"CONTROL_FACTOR_IN_RATEABLE_PATH: Factor {bound.slug}@{bound.version} crosses "
+            f"{error.operand_id}, which is not among the Factors supplied, so it cannot be "
+            "shown not to be rated on a `control` Factor (FR-88)"
+        ) from error
+    if control is not None:
+        via = "" if control is bound else f" through the interaction {bound.slug!r}"
+        raise ValueError(
+            f"CONTROL_FACTOR_IN_RATEABLE_PATH: Factor {control.slug}@{control.version}{via} has "
+            "intent 'control' and cannot be rated on (FR-88)"
         )
     if not slug_is_admitted("factor", bound.slug):
         # `Factor.slug` is an unconstrained `str` (FD-1384); a reference to it could not be

@@ -37,7 +37,6 @@ import re
 import shutil
 import sys
 import types
-from datetime import date
 from typing import Any
 
 import pytest
@@ -572,89 +571,3 @@ def test_phase_section_fields_change_with_the_phase_template(
     )
 
 
-def test_restructure_roadmap_writer_round_trips_through_doc_index_readers(
-    doc_index: types.ModuleType, tmp_path: pathlib.Path
-) -> None:
-    """RL-977 (`docs/rulings/RL-00977-the-fix-is-inert-on-the-real-corpus-so-the-
-    boundary-is-free-it-lands-on-its-own-and-the-reader-and-the-writer-land-together.md`) §4: "take
-    migrate's emitted row block and phase section, feed each to scan_roadmap_rows and
-    scan_phase_sections, and require the fields to survive ... This must be a test in the branch
-    that lands the fix, not a task carried into W37-6."
-
-    Exercises `doc-id.py`'s `_restructure_roadmap` — the writer half of Rulings 79 §3 item
-    4 and 80 §3 item 4 — directly against `doc-index.py`'s own readers, rather than through
-    the full `migrate()` pipeline (`tests/test_doc_id_migrate.py::
-    test_roadmap_restructure_is_readable_by_doc_index` already covers that end to end; this
-    is the narrower, Ruling-81-cited proof that the writer and reader this branch changes
-    together still agree). RL-977 §2's rejected option — "fix the reader and leave the
-    writer ... migrate emits blocks its own reader rejects" — is exactly the failure this
-    would catch: a `HeaderError` here means the split happened.
-
-    Rulings 90-92 (`docs/plans/2026-09-02-w37-roadmap-transform-rulings.md`) turned
-    `_restructure_roadmap` from a function that *created* `docs/roadmap.md` (a stub built
-    only from its draft arguments) into one that edits an *existing* file in place,
-    surgically — removing exactly the leading rows its drafts supersede and leaving
-    everything else untouched (RL-992 obligation 3). This fixture writes that existing
-    file itself, with a real leading row for `WK-657` and trailing narrative after it, so the
-    round-trip below exercises the in-place edit the writer actually performs now, and
-    the final assertion — that the trailing narrative survives — is what would have caught
-    the writer regressing back to a full overwrite (this file's own fixture used to rely
-    on that overwrite to conjure `docs/roadmap.md` out of nothing, which is the defect
-    RL-992 exists to remove).
-    """
-    doc_id_cli = _load_by_path("_doc_id_for_template_headers", DOC_ID_MODULE_PATH)
-
-    root = tmp_path
-    templates_copy = root / "docs" / "_templates"
-    shutil.copytree(TEMPLATES_DIR, templates_copy)
-
-    docs_dir = root / "docs"
-    docs_dir.mkdir(exist_ok=True)
-    trailing_narrative = "Trailing narrative that must survive the in-place edit untouched."
-    (docs_dir / "roadmap.md").write_text(
-        "# Roadmap (fixture)\n\n"
-        "## Phase 2 — Rating Engine\n\n"
-        "| WS | Scope | Status |\n"
-        "|---|---|---|\n"
-        "| **WK-657** | Existing workstream, superseded by this restructure | active |\n\n"
-        f"{trailing_narrative}\n",
-        encoding="utf-8",
-    )
-
-    work = doc_id_cli._Draft(
-        materialize="roadmap_row", prefix="WK", kind=None, title="Round-trip work",
-        status="active", created=date(2026, 9, 2), owner="maintainer",
-        tie_break=("roadmap.md", 0), old_token="WK-657", phase="P2", number=1,
-    )
-    slice_ = doc_id_cli._Draft(
-        materialize="roadmap_row", prefix="SL", kind=None, title="Round-trip slice",
-        status="draft", created=date(2026, 9, 2), owner="planner",
-        tie_break=("roadmap.md", 1), old_token="W1-1", phase="P2", number=1,
-        work_token="WK-657",
-    )
-    occurrences = doc_id_cli._scan_roadmap_rows(
-        (docs_dir / "roadmap.md").read_text(encoding="utf-8")
-    )
-    doc_id_cli._restructure_roadmap(root, [work, slice_], {"2": "Round-trip phase"}, occurrences)
-
-    roadmap = root / "docs" / "roadmap.md"
-    restructured = roadmap.read_text(encoding="utf-8")
-    assert trailing_narrative in restructured, (
-        "content placed after the superseded row did not survive the in-place edit -- "
-        "this is the assertion that would have caught a regression back to the old "
-        "full-file overwrite"
-    )
-    assert "Existing workstream, superseded by this restructure" not in restructured, (
-        "the row this draft supersedes should have been removed, not left duplicated "
-        "alongside the new WK- block"
-    )
-
-    rows = doc_index.scan_roadmap_rows(roadmap)
-    assert {r.header.id for r in rows} == {"WK-1", "SL-1"}, rows
-    slice_header = next(r.header for r in rows if r.header.id == "SL-1")
-    assert slice_header.work == "WK-1"
-
-    sections = doc_index.scan_phase_sections(roadmap)
-    assert len(sections) == 1, sections
-    assert sections[0].phase == "P2"
-    assert sections[0].works == ("WK-1",)

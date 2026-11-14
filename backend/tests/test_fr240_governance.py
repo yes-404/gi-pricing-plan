@@ -10,8 +10,9 @@ from __future__ import annotations
 
 import asyncio
 import json
+from decimal import Decimal
 from typing import Any
-from uuid import UUID
+from uuid import UUID, uuid5
 
 import pytest
 from backend.tests.approved_rows import mark_approved
@@ -34,12 +35,21 @@ from backend.tests.test_rating_version_compile import (
     _headers,
     _insert_version,
     _minimal_algorithm,
+    _read_blob,
     _run_compile_job,
 )
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.models import FactorRow, ModelRow, RateTableRow, RateTableVersionRow
+from app.db.models import (
+    BlobRow,
+    FactorRow,
+    ModelRow,
+    RateTableCellRow,
+    RateTableRow,
+    RateTableVersionRow,
+    RatingAlgorithmRow,
+)
 from app.db.session import Database
 from app.errors import PlatformError
 from app.platform import approvals as approval_service
@@ -57,6 +67,8 @@ from model_schema import (
     ObjectiveStatus,
     new_uuid7,
 )
+from pricing_core.rating.compile import Bundle
+from pricing_core.rating.runtime import load_bundle
 
 
 @pytest.fixture(autouse=True)
@@ -183,17 +195,16 @@ def _run(coro: Any) -> Any:
 
 def _compile_with_pins(
     api_client, principal, workspace_id, database, blob_store, *, models=(), objectives=(),
-    rate_tables=(),
+    rate_tables=(), algorithm=None,
 ) -> Any:
     headers = _headers(principal, workspace_id)
-    created = api_client.post(
-        "/api/v1/rating-algorithms", json=_minimal_algorithm(), headers=headers
-    )
+    algorithm = algorithm or _minimal_algorithm()
+    created = api_client.post("/api/v1/rating-algorithms", json=algorithm, headers=headers)
     assert created.status_code == 201, created.text
     row = _run(
         _insert_version(
             database, workspace_id, principal.id,
-            algorithm_ref="rating_algorithm:minimal@1",
+            algorithm_ref=f"rating_algorithm:{algorithm['slug']}@1",
             pins={
                 "rate_tables": list(rate_tables), "models": list(models), "reference_tables": [],
                 "custom_objectives": list(objectives),
@@ -308,6 +319,81 @@ def test_the_seed_route_refuses_a_control_factor_with_its_code(
     assert response.json()["code"] == "CONTROL_FACTOR_IN_RATEABLE_PATH"
 
 
+def _seed_over_an_interaction(
+    api_client, workspace_id, principal, *, operand_intent: FactorIntent
+) -> Any:
+    """POST the seed route for a model that pins ONLY an interaction Factor whose operands are
+    `crossed_a` (intent `operand_intent`) and `crossed_b` (risk). The operands are never in
+    `spec.factors`, so the guard sees them only through `load_factors`' transitive load (SL 2124
+    review LOW 3; the core analogues are `test_rating_compile_fr240.py`'s `_seed_cross` tests)."""
+    suffix = new_uuid7().hex[-8:]
+    cross_slug = f"crossed_{suffix}"
+
+    async def _insert(session: AsyncSession) -> None:
+        dataset_id = new_uuid7()
+        operands = [
+            Factor(
+                id=new_uuid7(), slug=f"{name}_{suffix}", dataset_id=dataset_id, version=1,
+                type=FactorType.IDENTITY, source_columns=(f"{name}_{suffix}",), intent=intent,
+            )
+            for name, intent in (("crossed_a", operand_intent), ("crossed_b", FactorIntent.RISK))
+        ]
+        cross = Factor(
+            id=new_uuid7(), slug=cross_slug, dataset_id=dataset_id, version=1,
+            type=FactorType.INTERACTION, source_columns=(),
+            operand_factor_ids=tuple(operand.id for operand in operands),
+        )
+        for factor in (*operands, cross):
+            session.add(
+                FactorRow(
+                    id=factor.id, workspace_id=workspace_id, dataset_id=dataset_id,
+                    slug=factor.slug, version=1,
+                    body=factor.model_dump(mode="json", exclude={"id", "version", "dataset_id"}),
+                )
+            )
+        await session.flush()
+
+    _run_with_database(_insert)
+    family = f"mf-{suffix}"
+    _seed_approved_model(workspace_id, family, {cross_slug: [("A | 2010", 1.1)]})
+    return api_client.post(
+        f"/api/v1/rate-tables/{_table_slug()}/seed-from-model",
+        json=_seed_body(family, factor=cross_slug),
+        headers=_headers(principal, workspace_id),
+    )
+
+
+@pytest.mark.req("FR-88")
+@pytest.mark.req("FR-230")
+@pytest.mark.req("FR-240")
+def test_the_seed_route_refuses_an_interaction_over_a_control_operand(
+    api_client, workspace_id, principal, grant
+) -> None:
+    """The route refuses with the core path's named error, naming the OPERAND."""
+    _run(grant("pricing_actuary"))
+    response = _seed_over_an_interaction(
+        api_client, workspace_id, principal, operand_intent=FactorIntent.CONTROL
+    )
+    assert response.status_code == 422, response.text
+    assert response.json()["code"] == "CONTROL_FACTOR_IN_RATEABLE_PATH"
+    assert "crossed_a_" in response.text
+
+
+@pytest.mark.req("FR-88")
+@pytest.mark.req("FR-230")
+@pytest.mark.req("FR-240")
+def test_the_seed_route_seeds_an_interaction_over_risk_operands(
+    api_client, workspace_id, principal, grant
+) -> None:
+    """The instrument control: the same shape over a RISK operand seeds, so the refusal above
+    is the intent and not the interaction."""
+    _run(grant("pricing_actuary"))
+    response = _seed_over_an_interaction(
+        api_client, workspace_id, principal, operand_intent=FactorIntent.RISK
+    )
+    assert response.status_code == 201, response.text
+
+
 @pytest.mark.req("FR-88")
 @pytest.mark.req("FR-240")
 def test_a_compile_over_a_control_keyed_table_fails_with_its_code(
@@ -394,11 +480,48 @@ def _model_call_algorithm(model_ref: str) -> dict[str, Any]:
 
 @pytest.mark.req("FR-88")
 @pytest.mark.req("FR-240")
+def test_a_save_over_a_gbm_fitted_on_a_control_factor_is_refused_with_its_code(
+    api_client, workspace_id, principal, grant, database, blob_store
+) -> None:
+    """WK-2113 S3, B2 (i) (ruling 2026-11-13 21:17:39): the algorithm SAVE runs the closure test
+    compile runs, so a `model_call` over a model fitted on a `control` Factor answers 422 naming
+    the Factor, instead of saving green (and instead of REQUIRING that Factor as an input)."""
+    _run(grant("analyst"))
+
+    async def _arrange() -> str:
+        model_id, fit_status = await _fitted_gbm(
+            database, blob_store, workspace_id, area_intent=FactorIntent.CONTROL
+        )
+        assert fit_status is JobStatus.SUCCEEDED
+        async with database.unit_of_work() as session:
+            row = await session.get(ModelRow, model_id)
+            assert row is not None
+            await mark_approved(session, row)
+            return f"model:{row.model_family_slug}@{row.version}"
+
+    model_ref = _run(_arrange())
+    refused = api_client.post(
+        "/api/v1/rating-algorithms",
+        json=_model_call_algorithm(model_ref),
+        headers=_headers(principal, workspace_id),
+    )
+    assert refused.status_code == 422, refused.text
+    body = refused.json()
+    assert body["code"] == "CONTROL_FACTOR_IN_RATEABLE_PATH"
+    assert "area" in body["detail"]
+
+
+@pytest.mark.req("FR-88")
+@pytest.mark.req("FR-240")
 def test_a_compile_over_a_gbm_fitted_on_a_control_factor_fails_with_its_code(
     api_client, workspace_id, principal, grant, database, blob_store
 ) -> None:
     """FD 9639 (DP-7): the GBM is fitted on `area`, which is then a `control` Factor; the
-    approved model is pinned by a `model_call` and the Job refuses it."""
+    approved model is pinned by a `model_call` and the Job refuses it.
+
+    WK-2113 S3, B2 (i): the algorithm SAVE refuses this model too (the next test), so the algorithm
+    is inserted directly here, as a save made before that check would have left it: compile stays
+    the gate of record and still refuses a model saved before the save-time check existed."""
     _run(grant("analyst"))
 
     async def _arrange() -> str:
@@ -414,10 +537,16 @@ def test_a_compile_over_a_gbm_fitted_on_a_control_factor_fails_with_its_code(
 
     model_ref = _run(_arrange())
     headers = _headers(principal, workspace_id)
-    created = api_client.post(
-        "/api/v1/rating-algorithms", json=_model_call_algorithm(model_ref), headers=headers
-    )
-    assert created.status_code == 201, created.text
+    async def _saved_before_the_save_check() -> None:
+        async with database.unit_of_work() as session:
+            session.add(
+                RatingAlgorithmRow(
+                    workspace_id=workspace_id, slug="mc-control", version=1,
+                    content=_model_call_algorithm(model_ref), created_by=principal.id,
+                )
+            )
+
+    _run(_saved_before_the_save_check())
     row = _run(
         _insert_version(
             database, workspace_id, principal.id,
@@ -427,5 +556,278 @@ def test_a_compile_over_a_gbm_fitted_on_a_control_factor_fails_with_its_code(
         )
     )
     job_row = _run_compile_job(api_client, headers, database, blob_store, row.id)
+    assert job_row.status is JobStatus.FAILED
+    assert job_row.error["code"] == "CONTROL_FACTOR_IN_RATEABLE_PATH"
+
+
+# -- An interaction-keyed table through the REAL compile resolver (FD-1495, WK-2113 S1) ------
+#
+# The `factor` branch of `WorkspaceResolver` returns the Factor plus the operands it crosses
+# (`load_factor_by_ref`), which is what lets the pricing-core key guard test every operand's
+# intent. These two tests drive that branch end to end, not a hand-built `ResolvedArtifact`.
+
+
+# Every id and value below is fixed or derived from the workspace id, so a run is repeatable: the
+# bundle's content hash reads the pinned refs (slugs and versions) and the graph, never a row id.
+_TABLE_SLUG = "sl8429-region-x-yoa"
+_CELLS = (("north | 2010", "1.05"), ("north | 2011", "1.10"), ("south | 2010", "0.95"))
+# The content hash of the risk-by-risk compile test's
+# bundle, measured at 2ba0d0d5's code (before the control-intent guards read an interaction's
+# operands) in the DB lane, 2026-11-13 21:50 GMT, for the lookup algorithm; the fixed head's
+# first assertion printed the same value.
+# A change to it is a change to what FR-239 promises: the same pins, the same hash.
+_PRE_FIX_RISK_BY_RISK_HASH = (
+    "sha256:3948d954eb79b84aa89f20dca3ecd8e5d9f8b56bf61981b24fa1899c923424f8"
+)
+
+
+_LOOKUP_ALGORITHM_SLUG = "sl8429-lookup"
+
+
+def _lookup_algorithm(key_name: str) -> dict[str, Any]:
+    """`premium_in * <relativity looked up on the cross's level>`: a real cell prices."""
+    return {
+        "slug": _LOOKUP_ALGORITHM_SLUG,
+        "version": 1,
+        "input_contract": [
+            {"name": "premium_in", "type": "int", "nullable": False},
+            {"name": key_name, "type": "string", "nullable": False},
+        ],
+        "outputs": [{"name": "payable_premium_minor", "type": "money_minor", "required": True}],
+        "steps": [
+            {"step_id": "s_in", "type": "input", "label": "Premium", "input_name": "premium_in",
+             "on_missing": "error", "produces": "premium_in"},
+            {"step_id": "s_key", "type": "input", "label": "Level", "input_name": key_name,
+             "on_missing": "error", "produces": key_name},
+            {"step_id": "s_tbl", "type": "table", "label": "Relativity",
+             "rate_table_ref": f"rate_table:{_TABLE_SLUG}@1", "key_expr": [key_name],
+             "on_miss": "error", "consumes": [key_name], "produces": "relativity"},
+            {"step_id": "s_expr", "type": "expression", "label": "Apply",
+             "expr": "premium_in * relativity", "result_type": "decimal",
+             "consumes": ["premium_in", "relativity"], "produces": "payable"},
+            {"step_id": "s_out", "type": "output", "label": "Out",
+             "output_name": "payable_premium_minor", "rounding": {"mode": "half_even", "dp": 0},
+             "consumes": ["payable"]},
+        ],
+        "sub_graphs": [],
+    }
+
+
+def _factor_row(workspace_id: Any, dataset_id: UUID, factor: Factor) -> FactorRow:
+    return FactorRow(
+        id=factor.id, workspace_id=workspace_id, dataset_id=dataset_id, slug=factor.slug,
+        version=1, body=factor.model_dump(mode="json", exclude={"id", "version", "dataset_id"}),
+    )
+
+
+async def _cross_factors(
+    session: AsyncSession, workspace_id: Any, *, second_operand_intent: FactorIntent,
+    nested: bool = False,
+) -> str:
+    """Factors `region` (risk) and `yoa` (`second_operand_intent`) and the interaction
+    `region_x_yoa` crossing them; returns the interaction's ref.
+
+    With `nested`, `region_x_yoa` is itself an operand of the pinned `outer_x_plan` (depth 2),
+    the shape `load_factors` once loaded one level of only; the ref returned is the outer one."""
+    dataset_id = uuid5(workspace_id, "dataset")
+
+    def _id(name: str) -> UUID:
+        return uuid5(workspace_id, name)
+
+    operands = []
+    for slug, intent in (("region", FactorIntent.RISK), ("yoa", second_operand_intent)):
+        factor = Factor(
+            id=_id(slug), slug=slug, dataset_id=dataset_id, version=1,
+            type=FactorType.IDENTITY, source_columns=(slug,), intent=intent,
+        )
+        session.add(_factor_row(workspace_id, dataset_id, factor))
+        operands.append(factor)
+    cross = Factor(
+        id=_id("region_x_yoa"), slug="region_x_yoa", dataset_id=dataset_id, version=1,
+        type=FactorType.INTERACTION, source_columns=(),
+        operand_factor_ids=tuple(operand.id for operand in operands),
+    )
+    session.add(_factor_row(workspace_id, dataset_id, cross))
+    if not nested:
+        await session.flush()
+        return f"factor:{cross.slug}@{cross.version}"
+    plan = Factor(
+        id=_id("plan"), slug="plan", dataset_id=dataset_id, version=1,
+        type=FactorType.IDENTITY, source_columns=("plan",),
+    )
+    outer = Factor(
+        id=_id("outer_x_plan"), slug="outer_x_plan", dataset_id=dataset_id, version=1,
+        type=FactorType.INTERACTION, source_columns=(),
+        operand_factor_ids=(cross.id, plan.id),
+    )
+    session.add(_factor_row(workspace_id, dataset_id, plan))
+    session.add(_factor_row(workspace_id, dataset_id, outer))
+    await session.flush()
+    return f"factor:{outer.slug}@{outer.version}"
+
+
+async def _table_keyed_on(
+    session: AsyncSession, workspace_id: Any, principal: Any, factor_ref: str, key_name: str
+) -> str:
+    """A rateable rows-stored table with real cells whose one key names `factor_ref`; returns
+    its pin."""
+    table_id, version_id = uuid5(workspace_id, "table"), uuid5(workspace_id, "table-version")
+    session.add(
+        RateTableRow(
+            id=table_id, workspace_id=workspace_id, slug=_TABLE_SLUG, current_version=1,
+            created_by=principal.id,
+        )
+    )
+    await session.flush()
+    session.add(
+        RateTableVersionRow(
+            id=version_id, workspace_id=workspace_id, rate_table_id=table_id, version_number=1,
+            storage="rows",
+            definition={
+                "slug": _TABLE_SLUG, "version": 1, "rateable": True, "storage": "rows",
+                "keys": [
+                    {"name": key_name, "type": "string", "banding_ref": None,
+                     "factor_ref": factor_ref}
+                ],
+                "value": {"name": "relativity", "type": "relativity", "unit": "factor",
+                          "min": None, "max": None},
+                "default_row": None,
+            },
+            change_note="interaction-keyed, FD-1495",
+            created_by=principal.id,
+        )
+    )
+    await session.flush()
+    session.add_all(
+        RateTableCellRow(version_id=version_id, key=[key], value=value) for key, value in _CELLS
+    )
+    await session.flush()
+    return f"rate_table:{_TABLE_SLUG}@1"
+
+
+def _compile_interaction_keyed(
+    api_client, principal, workspace_id, database, blob_store, *,
+    second_operand_intent: FactorIntent, nested: bool = False, lookup: bool = False,
+) -> Any:
+    async def _arrange() -> str:
+        async with database.unit_of_work() as session:
+            ref = await _cross_factors(
+                session, workspace_id, second_operand_intent=second_operand_intent,
+                nested=nested,
+            )
+            return await _table_keyed_on(
+                session, workspace_id, principal, ref, ref.removeprefix("factor:").split("@")[0]
+            )
+
+    pin = _run(_arrange())
+    return _compile_with_pins(
+        api_client, principal, workspace_id, database, blob_store, rate_tables=[pin],
+        algorithm=_lookup_algorithm("region_x_yoa") if lookup else None,
+    )
+
+
+@pytest.mark.req("FR-88")
+@pytest.mark.req("FR-239")
+@pytest.mark.req("FR-240")
+def test_a_risk_by_risk_interaction_keyed_table_compiles_with_an_unchanged_hash(
+    api_client, workspace_id, principal, grant, database, blob_store
+) -> None:
+    """The green guard: the fix must not refuse what was priceable, and must not move the hash
+    (FR-239: the same pins and graph, the same content hash). The fixture is deterministic and the
+    table has real cells; `_PRE_FIX_RISK_BY_RISK_HASH` is what 2ba0d0d5's code printed for it."""
+    _run(grant("analyst"))
+    job_row = _compile_interaction_keyed(
+        api_client, principal, workspace_id, database, blob_store,
+        second_operand_intent=FactorIntent.RISK, lookup=True,
+    )
+    assert job_row.status is JobStatus.SUCCEEDED, job_row.error
+    bundle = Bundle.model_validate_json(_read_blob(database, blob_store, job_row.result["ref"]))
+    # What a bundle carries is the pinned artifacts only (`compile_bundle`: `payloads` is the
+    # algorithm and every pin). The key's Factor is resolved for the guard and not carried, so
+    # the interaction chain is NOT in `resolved_payloads`; the table, with its real cells, is.
+    table = f"rate_table:{_TABLE_SLUG}@1"
+    assert set(bundle.resolved_payloads) == {
+        table, f"rating_algorithm:{_LOOKUP_ALGORITHM_SLUG}@1"
+    }
+    rows = bundle.resolved_payloads[table]["rows"]
+    carried = {(row["region_x_yoa"], row["relativity"]) for row in rows}
+    assert carried == set(_CELLS)
+    assert bundle.content_hash == _PRE_FIX_RISK_BY_RISK_HASH
+    # A real cell prices: `north | 2011` carries 1.10, so a premium of 1000 prices to 1100.
+    scored = load_bundle(bundle).decision.evaluate(
+        {"premium_in": 1000, "region_x_yoa": "north | 2011"}
+    )["result"]
+    assert Decimal(str(scored["payable"])) == Decimal(1100)
+
+
+@pytest.mark.req("FR-420")
+@pytest.mark.req("FR-239")
+def test_a_compiled_bundle_blob_is_retained_so_the_collector_can_never_take_it(
+    api_client, workspace_id, principal, grant, database, blob_store
+) -> None:
+    """WK-2113 S3 (FD 2135, amendment 4): the compile Job takes a reference to the bundle blob in
+    the unit of work that stores it. RED before the fix (`blob_store.put` leaves `ref_count` 0);
+    released on nothing today, since a version is immutable and never deleted."""
+    _run(grant("analyst"))
+    job_row = _compile_interaction_keyed(
+        api_client, principal, workspace_id, database, blob_store,
+        second_operand_intent=FactorIntent.RISK,
+    )
+    assert job_row.status is JobStatus.SUCCEEDED, job_row.error
+
+    async def _ref_count() -> int:
+        async with database.session() as session:
+            row = await session.get(BlobRow, job_row.result["ref"])
+            assert row is not None
+            return int(row.ref_count)
+
+    assert _run(_ref_count()) >= 1
+
+
+@pytest.mark.req("FR-88")
+@pytest.mark.req("FR-240")
+def test_a_clean_depth_two_interaction_keyed_table_compiles(
+    api_client, workspace_id, principal, grant, database, blob_store
+) -> None:
+    """F-3 (a): `outer_x_plan` crosses `region_x_yoa` crosses two risk leaves. Loading the whole
+    chain means a legitimate table is not refused for a loader reason."""
+    _run(grant("analyst"))
+    job_row = _compile_interaction_keyed(
+        api_client, principal, workspace_id, database, blob_store,
+        second_operand_intent=FactorIntent.RISK, nested=True,
+    )
+    assert job_row.status is JobStatus.SUCCEEDED, job_row.error
+
+
+@pytest.mark.req("FR-88")
+@pytest.mark.req("FR-240")
+def test_a_depth_two_interaction_keyed_table_with_a_control_leaf_is_refused_by_the_guard(
+    api_client, workspace_id, principal, grant, database, blob_store
+) -> None:
+    """F-3: `outer_x_plan` crosses `region_x_yoa` crosses `yoa` (control). The real resolver loads
+    the whole chain, so the refusal is the named control one and names `yoa`, not the
+    fail-closed "not among the Factors supplied" a one-level load produced."""
+    _run(grant("analyst"))
+    job_row = _compile_interaction_keyed(
+        api_client, principal, workspace_id, database, blob_store,
+        second_operand_intent=FactorIntent.CONTROL, nested=True,
+    )
+    assert job_row.status is JobStatus.FAILED
+    assert job_row.error["code"] == "CONTROL_FACTOR_IN_RATEABLE_PATH"
+    assert "yoa" in json.dumps(job_row.error)
+
+
+@pytest.mark.req("FR-88")
+@pytest.mark.req("FR-240")
+def test_an_interaction_keyed_table_with_a_control_operand_fails_to_compile_with_its_code(
+    api_client, workspace_id, principal, grant, database, blob_store
+) -> None:
+    """The same table as the test above with `yoa` declared `control`: refused with the named
+    error, which is only possible because the resolver supplies the operand chain."""
+    _run(grant("analyst"))
+    job_row = _compile_interaction_keyed(
+        api_client, principal, workspace_id, database, blob_store,
+        second_operand_intent=FactorIntent.CONTROL,
+    )
     assert job_row.status is JobStatus.FAILED
     assert job_row.error["code"] == "CONTROL_FACTOR_IN_RATEABLE_PATH"
