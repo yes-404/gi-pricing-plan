@@ -64,6 +64,23 @@ def _load_table_rows() -> types.ModuleType:
 
 
 _table_rows = _load_table_rows()
+
+
+def _load_req_coverage() -> types.ModuleType:
+    """`req-coverage.py` by path (a hyphenated name is not importable): its `markers_in` is the
+    one reader of `@pytest.mark.req`, so the two reports cannot disagree on what is marked."""
+    path = ROOT / "scripts" / "req-coverage.py"
+    spec = importlib.util.spec_from_file_location("_req_coverage", path)
+    assert spec is not None
+    assert spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+_req_coverage = _load_req_coverage()
+
 SPECS = ROOT / "docs" / "specs"
 
 _REQUIREMENT = re.compile(r"^\| \*\*((?:FR|NFR)-\d+)\*\*")
@@ -79,7 +96,6 @@ _MODULE_CODE = re.compile(r"\*\*Module code:\*\* `([A-Z]+)`")
 # is the reason to do that before trusting a new check.
 _SECTION = re.compile(r"^(#{2,3}) (\d+(?:\.\d+)?)\.?\s+(.+)")
 _NFR_HEADING = re.compile(r"^#{2,3} \d+(?:\.\d+)?\.?\s+Non-functional requirements")
-_MARKER = re.compile(r'@pytest\.mark\.req\("([^"]+)"\)')
 #: Every backticked token in the path cell. The cell may hold **several** paths —
 #: `07` §5.1's health row is ``| `GET` | `/healthz`, `/readyz`, `/version` | …``. Capturing
 #: one backticked token matched that row not at all, so three published, working endpoints
@@ -119,7 +135,7 @@ def evidence() -> dict[str, list[str]]:
         if not root.is_dir():
             continue
         for test in sorted(root.rglob("test_*.py")):
-            for rid in _MARKER.findall(test.read_text(encoding="utf-8")):
+            for rid in _req_coverage.markers_in(test.read_text(encoding="utf-8")):
                 claimed[rid].append(str(test.relative_to(ROOT)))
     return dict(claimed)
 

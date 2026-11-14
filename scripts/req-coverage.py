@@ -12,6 +12,7 @@ the phase's requirements are meant to be complete.
 
 from __future__ import annotations
 
+import ast
 import pathlib
 import re
 import sys
@@ -25,6 +26,35 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 #: across ~1 988 sites -- is rewritten by the same migration commit and a marker in the old
 #: form on a migrated tree must still be reported as unknown, not silently unparsed.
 _REQ_DEFINED = re.compile(r"\*\*((?:FR|NFR)-(?:[A-Z]+-)?\d+)\*\*")
+
+
+def _is_req_mark(node: ast.expr) -> bool:
+    """`pytest.mark.req` or `mark.req`, as the callee of a marker call."""
+    if not (isinstance(node, ast.Attribute) and node.attr == "req"):
+        return False
+    owner = node.value
+    return (isinstance(owner, ast.Attribute) and owner.attr == "mark") or (
+        isinstance(owner, ast.Name) and owner.id == "mark"
+    )
+
+
+def markers_in(source: str) -> list[str]:
+    """Every requirement id a test source marks, in all three forms: the decorator
+    `@pytest.mark.req("FR-1")`, the multi-argument call `pytest.mark.req("FR-1", "FR-2")`, and
+    the module-level `pytestmark = pytest.mark.req(...)` (alone or inside a list). It reads the
+    syntax tree, not the text, so each form is one call node, and `scope-audit.py` uses this same
+    function (FD-1725: a regex read the decorator with one string argument only, so a marker in
+    either other form was never checked against the specs). An argument that is not a string
+    literal names no id and is skipped."""
+    found: list[str] = []
+    for node in ast.walk(ast.parse(source)):
+        if isinstance(node, ast.Call) and _is_req_mark(node.func):
+            found += [
+                arg.value
+                for arg in node.args
+                if isinstance(arg, ast.Constant) and isinstance(arg.value, str)
+            ]
+    return found
 
 
 def _test_roots() -> list[pathlib.Path]:
@@ -55,7 +85,7 @@ def main() -> int:
     for root in _test_roots():
         for test in sorted(root.rglob("test_*.py")):
             source = test.read_text(encoding="utf-8")
-            for rid in re.findall(r'@pytest\.mark\.req\("([^"]+)"\)', source):
+            for rid in markers_in(source):
                 claimed.setdefault(rid, []).append(str(test.relative_to(ROOT)))
 
     unknown = sorted(set(claimed) - specified)
