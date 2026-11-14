@@ -674,9 +674,12 @@ _doc_index = _load_module("_doc_index_for_audit_docs", _DOC_INDEX_PATH)
 def _load_doc_id() -> types.ModuleType:
     """`doc-id.py` by path, once — its `scan_spec_bold_ids` is the one reading of a spec's
     bold requirement ids (check 32 resolves against it rather than re-typing the regex).
-    Loaded on first use: only check 32 needs it."""
+    Loaded on first use: only check 32 needs it. Loaded from this script's own directory,
+    not `REPO / "scripts"`: `REPO` is the tree being audited (a test points it at a tmp
+    tree), and the reader of a tree is the tool beside this script, not one inside the
+    tree. The audited tree is what `scan_spec_bold_ids` is then called on."""
     return sys.modules.get("_doc_id_for_audit_docs") or _load_module(
-        "_doc_id_for_audit_docs", REPO / "scripts" / "doc-id.py"
+        "_doc_id_for_audit_docs", pathlib.Path(__file__).resolve().parent / "doc-id.py"
     )
 
 
