@@ -26,15 +26,16 @@ from __future__ import annotations
 import asyncio
 import hashlib
 from collections.abc import AsyncIterator, Iterable
+from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
-from typing import TYPE_CHECKING, Any, Final
+from typing import TYPE_CHECKING, Any, Final, cast
 from uuid import UUID
 
 import boto3
 from botocore.client import Config as BotoConfig
 from botocore.exceptions import ClientError
 from pydantic import BaseModel, ConfigDict, Field
-from sqlalchemy import select, update
+from sqlalchemy import CursorResult, select, text, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -59,9 +60,12 @@ if TYPE_CHECKING:  # pragma: no cover
     from app.db.session import Database
 
 __all__ = [
+    "BLOB_OWNERS",
+    "INSIDE_BLOB_OWNERS",
     "QUOTE_INPUT_BLOB_COLUMNS",
     "STAGING_EXPIRY_DAYS",
     "UPLOAD_COMPLETE_WITHIN",
+    "BlobOwner",
     "BlobStore",
     "GarbageCollectionReport",
     "PresignedUpload",
@@ -719,6 +723,106 @@ QUOTE_INPUT_BLOB_COLUMNS: tuple[Any, ...] = (
     ScoringTraceRow.blob_sha256,
     RegressionRunRow.cases_blob_sha256,
 )
+
+
+@dataclass(frozen=True)
+class BlobOwner:
+    """One place an artifact references a blob digest.
+
+    `digests` is a `SELECT` returning one row per reference, in one column named `sha256`.
+    """
+
+    name: str
+    digests: str
+
+
+#: Every persisted place that references a blob by digest and is readable from PostgreSQL
+#: (FR-420's precondition: every owner holds a reference). `put` takes the reference for a
+#: new owner; this list is what a backfill recounts for owners that predate that, and what
+#: the census test holds against the schema. An owner is added here when a table gains a
+#: digest column or a JSONB path that carries one.
+#:
+#: Owners that name a blob from *inside another blob* are not here, because no query can see
+#: them: the rate-table cell-diff chunks (named by the manifest blob) and a score batch's
+#: output parquet (named by the Job's summary blob). See `INSIDE_BLOB_OWNERS`.
+BLOB_OWNERS: tuple[BlobOwner, ...] = (
+    BlobOwner(
+        "dataset_versions.tables[*].blob",
+        "SELECT t->'blob'->>'sha256' AS sha256 FROM dataset_versions, "
+        "jsonb_array_elements(tables) AS t",
+    ),
+    BlobOwner(
+        "jobs.result (kind = blob)",
+        "SELECT result->>'ref' AS sha256 FROM jobs WHERE result->>'kind' = 'blob'",
+    ),
+    BlobOwner(
+        "blob_uploads.sha256",
+        "SELECT sha256 FROM blob_uploads",
+    ),
+    BlobOwner(
+        "models.fit_result.booster_blob",
+        "SELECT fit_result->'booster_blob'->>'sha256' AS sha256 FROM models",
+    ),
+    BlobOwner(
+        "models.fit_result.covariance_blob",
+        "SELECT fit_result->'covariance_blob'->>'sha256' AS sha256 FROM models",
+    ),
+    BlobOwner(
+        "rate_table_versions.cells",
+        "SELECT cells->>'sha256' AS sha256 FROM rate_table_versions",
+    ),
+    BlobOwner(
+        "rating_versions.bundle.blob_sha256",
+        "SELECT bundle->>'blob_sha256' AS sha256 FROM rating_versions",
+    ),
+    BlobOwner(
+        "rating_versions.evidence.structural_diff_blob",
+        "SELECT evidence->>'structural_diff_blob' AS sha256 FROM rating_versions",
+    ),
+    BlobOwner(
+        "regression_runs.cases_blob_sha256",
+        "SELECT cases_blob_sha256 AS sha256 FROM regression_runs",
+    ),
+    BlobOwner(
+        "dislocation_runs.movers_blob_sha256",
+        "SELECT movers_blob_sha256 AS sha256 FROM dislocation_runs",
+    ),
+    BlobOwner(
+        "scoring_traces.blob_sha256",
+        "SELECT blob_sha256 AS sha256 FROM scoring_traces",
+    ),
+)
+
+#: Owners no query can see: they name the blob from inside another blob's body in S3.
+#: `{name: reason}`. Blobs they hold are referenced by `put` when written (slice 1); the
+#: legacy ones are the migration's conservative pin (see the revision that backfills).
+INSIDE_BLOB_OWNERS: dict[str, str] = {
+    "rate_table cell-diff chunks (manifest blob 'chunks')": (
+        "named by the manifest blob that the Job's `result.ref` points at"
+    ),
+    "score batch output parquet (summary blob 'output_blob_sha256')": (
+        "named by the summary blob that the Job's `result.ref` points at"
+    ),
+}
+
+_OWNER_COUNTS_SQL = (
+    "SELECT sha256, count(*) AS n FROM ("
+    + " UNION ALL ".join(f"({owner.digests})" for owner in BLOB_OWNERS)
+    + ") AS owned WHERE sha256 IS NOT NULL GROUP BY sha256"
+)
+
+
+async def backfill_ref_counts(session: AsyncSession) -> int:
+    """Raise every blob's `ref_count` to the number of owners that reference it; return how
+    many rows moved. Never lowers a count: a reference that is held and not counted is a
+    leak, and a leak can never lose data (FR-420)."""
+    result = await session.execute(
+        text(
+            "UPDATE blobs SET ref_count = owned.n FROM (" + _OWNER_COUNTS_SQL + ") AS owned "
+            "WHERE blobs.sha256 = owned.sha256 AND blobs.ref_count < owned.n"
+        )
+    )
+    return int(cast("CursorResult[Any]", result).rowcount)
 
 
 def blob_not_found(sha256: str) -> PlatformError:
