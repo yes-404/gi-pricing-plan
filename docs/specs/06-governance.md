@@ -176,7 +176,7 @@ auditor, or a regulator:
 
 | ID | Requirement |
 |---|---|
-| **FR-383** | Every governed artifact exposes a uniform **history view**: versions, transitions, actors, timestamps, justifications, and diffs, in one place with one shape regardless of type. |
+| **FR-383** | Every governed artifact exposes a uniform **history view**: versions, transitions, actors, timestamps, justifications, and diffs, in one place with one shape regardless of type. *(Amended 2026-11-14, #1497 slice 7, on Q1 (a) and Q2 (a): `{ref}` is a full `ArtifactRef`, and the response is that one version's events, read from the audit log by exact `entity_ref`, oldest first (§4.6). "Versions" is navigation: a view moves to `@v-1` and `@v+1`, because versions are sequential from 1 (ID-2). A **diff** is the field-level difference of each event's `before` and `after`; an artifact's own content diff between versions belongs to its owning module, and `06` may not import `01`–`05` (§7.1). A `{ref}` that is not an `ArtifactRef` is `422`; a ref with no recorded event in the workspace is `404` `NOT_FOUND`.)* |
 | **FR-384** | **Blast-radius queries** are available for any artifact: "what depends on this?" spanning datasets → models → peril structures → rating versions → deployments, and "what does this depend on?" in the other direction (`01` FR-75, `02` FR-164). |
 | **FR-385** | Emergency changes follow the same path with an `expedited` marker: the same evidence is required, but the Approval Policy may permit a reduced approver count for `expedited` requests, and every expedited approval is reported in a standing exception log reviewed at the next committee. |
 | **FR-386** | **Submission resolves the artifact it pins.** `POST /approval-requests` must refuse a reference naming an artifact version that does not exist, with `NOT_FOUND`. *(Appended 2026-08-17, WK-661, from building the model lifecycle — where the spec is right and the code is not, the spec gains the obligation rather than being edited down to what was built.* `CLAUDE.md` *§14.)* FR-356 makes an approval **pinned** to an exact artifact version; a request pinned to a version that was never created is pinned to nothing, and it can be submitted today because the endpoint validates only the `{type}:{slug}@{version}` grammar. The consequence is worse than a bad row: the owning module cannot move an artifact that does not exist, so the request decides without effect and there is nothing for a reader to reconcile the decision against. **Not fixable from the owning module** — resolution needs a lookup per artifact type and DEP-1 forbids `GOV` importing `DATA`–`MON`, so this is a resolver registered *with* governance by each owning module, or a check in each module's own submit path. **Owner: WK-661's peril-structure slice**, which is the first to add a second artifact type to this path and therefore the first where a per-type resolver pays for itself. Until then, a `model:` reference produced by any route in this platform resolves by construction (`02` FR-202's submission holds the row it names), and a decision on a request naming a model that does not exist moves nothing rather than failing — a request nobody can close being the worse of the two. *(Amended 2026-08-22, WK-661's audit-remediation slice.* **Built — and in neither of the two shapes this requirement names.** The fan-out lives in the **route**. `api/approvals.py` already fans out per artifact type for the *decide* direction — `_carry_to_the_artifact`, one call per type, each module's function returning `None` for a request that is not its own — and the route sits above both governance and the owning modules, so DEP-1 is satisfied with no registry and no per-module submit check. `_resolve_the_artifact` mirrors it for the *submit* direction, and `approvals.submit` gained an optional `resolve` callback so governance keeps the **order**: the policy check answers first, because "no approval policy for this artifact type" is the actionable half of the two correct refusals an unpolicied reference earns. This requirement's two options were not wrong so much as incomplete — a resolver registry would have been a second mechanism for a seam that already had one, and the one registry precedent in the codebase, `worker/handlers.register_handler`, is registered from the worker entrypoint and never runs on the API path.* **Six of the twenty artifact types resolve**: `model`, `custom_objective`, `custom_metric`, `peril_structure`, `validation_rule`, `dataset_version`. **A type no module in this build can resolve fails closed**, with the `06`-owned `ARTIFACT_TYPE_NOT_RESOLVABLE` (422). `rating_version` has a policy entry and no module because `03` is unbuilt; thirteen more types have neither. `07`'s `JOB_HANDLER_NOT_REGISTERED` settles what is owed — a platform deployable before every kind has an implementation must **say the capability is absent** rather than accept work it cannot move, and accepting the submission would recreate this very defect one level up. The code is deliberately not `VALIDATION_FAILED`, which the malformed-reference branch still uses correctly: there the caller's input is bad, here it is not. **One divergence stands and is deliberate**: `metrics.resolve_ref` raises `METRIC_REF_UNRESOLVED` where this requirement names `NOT_FOUND`, because `02` §4.13's fit-path caller must tell a stale reference from a missing artifact; the route translates it at the boundary rather than changing the fit path's answer. **Owner for the durable fix: WK-677** — a sibling `resolve_artifact_ref` on `platform.metrics` raising `NOT_FOUND`, alongside moving the three route adapters into their own modules and making `resolve` a required parameter, which is the shape that would be fail-closed by construction rather than by every caller remembering. |
@@ -572,6 +572,33 @@ Generated sections, in order (R3). Each cites the artifacts it drew from.
 *`entity_ref` names the subject of the event: an `ArtifactRef` when the subject is an artifact, a scoped `type:name` otherwise. *(Recorded 2026-08-26, OQ-653.)*
 
 *(Dated note, 2026-11-14, #1497 slice 4, on #1783 C1 and Q3 (a2): a return from `review` is written as `<type>.returned` for `model`, `custom_objective`, `custom_metric` and `peril_structure`. Before, these four wrote the forward state's name for the return (`model.fitted`, `custom_objective.certified`, `custom_metric.certified`, `peril_structure.reconciled`), so one name meant two transitions. Stored rows keep that spelling (FR-370); a query with `action=<type>.returned` also matches the legacy rows, which are the legacy name with `before.status` `review`. The Validation Rule return (`validation_rule.draft`) and `rating_version.returned_to_draft` are unchanged.)*
+
+### 4.6 `ArtifactHistory`
+
+*(Added 2026-11-14, #1497 slice 7, FR-383.)* The response of `GET /api/v1/artifacts/{ref}/history` (§5.1): the events written under exactly one `ArtifactRef`, oldest first. Each entry has the same shape for every artifact type. `transition` is `{from, to}` read from `before.status` and `after.status` when both are present and differ, else `null`. `diff` lists the fields the event changed, with a dotted `path` for nested state; a list is one value. An event stored before §4.5's `<type>.returned` rename, whose `before.status` is `review`, is shown under its new name.
+
+```json schema=ArtifactHistory
+{
+  "ref": "rating_version:motor-gb@27",
+  "events": [
+    {
+      "sequence": 41,
+      "at": "2026-09-13T10:11:00.482Z",
+      "actor": {"kind": "user", "id": "0190b5a2-7c3e-7a10-9d21-4f6b8c2e1a01", "display": "a.actuary@insurer.example"},
+      "source": "ui",
+      "action": "rating_version.approved",
+      "transition": {"from": "review", "to": "approved"},
+      "justification": "Dislocation within the agreed envelope; GIPP clean.",
+      "diff": [
+        {"path": "approvers_recorded", "before": 1, "after": 2},
+        {"path": "status", "before": "review", "after": "approved"}
+      ],
+      "job_id": null,
+      "trace_id": "4bf92f3577b34da6a3ce929d0e0e4736"
+    }
+  ]
+}
+```
 
 ---
 

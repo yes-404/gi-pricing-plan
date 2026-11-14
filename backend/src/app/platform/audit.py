@@ -26,10 +26,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.models import AuditEventRow
 from app.observability.trace import current_trace_id
 from model_schema import (
+    ArtifactHistory,
+    ArtifactHistoryEntry,
+    ArtifactRef,
     AuditEvent,
     AuditEventCore,
+    FieldChange,
     JobSource,
     Principal,
+    StatusTransition,
     compute_event_hash,
     new_uuid7,
 )
@@ -38,6 +43,8 @@ __all__ = [
     "RETURNED_LEGACY_ACTIONS",
     "ChainBrokenError",
     "VerifiedSpan",
+    "artifact_history",
+    "field_diff",
     "record",
     "verify_chain",
     "verify_range",
@@ -335,3 +342,81 @@ async def verify_range(
         events_checked=checked,
         whole_chain=whole,
     )
+
+
+def _flatten(value: dict[str, Any] | None, prefix: str = "") -> dict[str, Any]:
+    """`{"a": {"b": 1}}` as `{"a.b": 1}`. A list or a scalar is one value."""
+    flat: dict[str, Any] = {}
+    for key, item in (value or {}).items():
+        path = f"{prefix}{key}"
+        if isinstance(item, dict) and item:
+            flat.update(_flatten(item, f"{path}."))
+        else:
+            flat[path] = item
+    return flat
+
+
+def field_diff(
+    before: dict[str, Any] | None, after: dict[str, Any] | None
+) -> list[FieldChange]:
+    """The fields an event changed, from its `before` and `after` (#1497 Q2 (a)).
+
+    A field present on one side only reads as `None` on the other. Governance sees only what
+    the event carries; an artifact's own content diff is its owning module's (`06` §7.1).
+    """
+    old, new = _flatten(before), _flatten(after)
+    return [
+        FieldChange(path=path, before=old.get(path), after=new.get(path))
+        for path in sorted(old.keys() | new.keys())
+        if old.get(path) != new.get(path)
+    ]
+
+
+_LEGACY_RETURN_NAMES: Final = {legacy: new for new, legacy in RETURNED_LEGACY_ACTIONS.items()}
+
+
+def _history_entry(row: AuditEventRow) -> ArtifactHistoryEntry:
+    before_status = (row.before or {}).get("status")
+    after_status = (row.after or {}).get("status")
+    action = row.action
+    if action in _LEGACY_RETURN_NAMES and before_status == "review":
+        action = _LEGACY_RETURN_NAMES[action]  # C1: a pre-rename return reads as `returned`
+    both = isinstance(before_status, str) and isinstance(after_status, str)
+    return ArtifactHistoryEntry(
+        sequence=row.sequence,
+        at=row.at,
+        actor=Principal.model_validate(row.actor),
+        source=row.source,
+        action=action,
+        transition=(
+            StatusTransition(from_=before_status, to=after_status)
+            if both and before_status != after_status
+            else None
+        ),
+        justification=row.justification,
+        diff=field_diff(row.before, row.after),
+        job_id=row.job_id,
+        trace_id=row.trace_id,
+    )
+
+
+async def artifact_history(
+    session: AsyncSession, workspace_id: UUID, ref: ArtifactRef
+) -> ArtifactHistory:
+    """Every event written under exactly `ref`, oldest first (FR-383).
+
+    By exact `entity_ref`, on `ix_audit_events_entity_ref`: no prefix match, so the history
+    of `model:motor@2` never includes `model:motor@20`. It is the audit log's own reading, so
+    it needs nothing from the modules that own the artifact types (`06` §7.1, DEP-1).
+    """
+    rows = (
+        await session.execute(
+            select(AuditEventRow)
+            .where(
+                AuditEventRow.workspace_id == workspace_id,
+                AuditEventRow.entity_ref == str(ref),
+            )
+            .order_by(AuditEventRow.sequence)
+        )
+    ).scalars()
+    return ArtifactHistory(ref=ref, events=[_history_entry(row) for row in rows])

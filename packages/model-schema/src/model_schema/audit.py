@@ -28,8 +28,18 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from model_schema.input_free import InputFreeError
 from model_schema.jobs import JobSource, Principal
+from model_schema.refs import ArtifactRef
 
-__all__ = ["AuditEvent", "AuditEventRecord", "canonical_payload", "compute_event_hash"]
+__all__ = [
+    "ArtifactHistory",
+    "ArtifactHistoryEntry",
+    "AuditEvent",
+    "AuditEventRecord",
+    "FieldChange",
+    "StatusTransition",
+    "canonical_payload",
+    "compute_event_hash",
+]
 
 HASH_PREFIX = "sha256:"
 _HASH_PATTERN = r"^sha256:[a-f0-9]{64}$"
@@ -117,6 +127,58 @@ class AuditEventRecord(AuditEvent):
     """
 
     sequence: int = Field(ge=1, description="Position in the workspace's chain, from 1.")
+
+
+class FieldChange(BaseModel):
+    """One field whose value an event changed (`06` §4.6): the `before`/`after` difference.
+
+    `path` is dotted for nested state (`terms.region`); a list is one value, not diffed.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    path: str
+    before: Any | None = None
+    after: Any | None = None
+
+
+class StatusTransition(BaseModel):
+    """A lifecycle move, read from `before.status` and `after.status` (`06` §4.6)."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid", populate_by_name=True)
+
+    from_: str = Field(alias="from")
+    to: str
+
+
+class ArtifactHistoryEntry(BaseModel):
+    """One audit event of an artifact version, in the shape every artifact type shares."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    sequence: int = Field(ge=1)
+    at: datetime
+    actor: Principal
+    source: JobSource
+    action: str = Field(pattern=ACTION_PATTERN)
+    transition: StatusTransition | None = None
+    justification: str | None = None
+    diff: list[FieldChange] = Field(default_factory=list)
+    job_id: UUID | None = None
+    trace_id: str | None = Field(default=None, pattern="^[0-9a-f]{32}$")
+
+
+class ArtifactHistory(BaseModel):
+    """The uniform history of one artifact version (`06` §4.6, FR-383).
+
+    Read from the audit log by exact `entity_ref`, so it holds exactly the events written
+    under that reference: the history of one `{type}:{slug}@{version}`, oldest first.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    ref: ArtifactRef
+    events: list[ArtifactHistoryEntry]
 
 
 def canonical_payload(core: AuditEventCore, prev_event_hash: str | None) -> bytes:

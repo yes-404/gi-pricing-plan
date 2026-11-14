@@ -22,9 +22,13 @@ from model_schema.approvals import (
     promotion_order_refusal,
 )
 from model_schema.audit import (
+    ArtifactHistory,
+    ArtifactHistoryEntry,
     AuditEvent,
     AuditEventCore,
     AuditEventRecord,
+    FieldChange,
+    StatusTransition,
     canonical_payload,
     compute_event_hash,
 )
@@ -505,6 +509,8 @@ __all__ = [
     "ApprovalWithdrawal",
     "ApproximatedModel",
     "ArtifactEnvelope",
+    "ArtifactHistory",
+    "ArtifactHistoryEntry",
     "ArtifactRef",
     "AuditEvent",
     "AuditEventCore",
@@ -594,6 +600,7 @@ __all__ = [
     "FactorIntent",
     "FactorType",
     "FeatureImportance",
+    "FieldChange",
     "FieldError",
     "FitResult",
     "FloorAndCapRequest",
@@ -804,6 +811,7 @@ __all__ = [
     "SpecProblemKind",
     "SpecValidation",
     "SplitRef",
+    "StatusTransition",
     "StepChange",
     "SubGraph",
     "SubGraphBody",
