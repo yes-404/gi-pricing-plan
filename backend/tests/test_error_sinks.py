@@ -246,9 +246,17 @@ _SINKS: dict[tuple[str, str, str], tuple[int, str]] = {
     ("backend/src/app/platform/deployments.py", "_prepare", "{exc}"): (
         1, "a `SwitchIncompleteError`, raised only by `deployment_switch.prepare_round` with the "
         "process ids that did not acknowledge: no quote input reaches the switch"),
-    ("backend/src/app/platform/rating_algorithms.py", "_accepted_feature_map_values", "{exc}"): (
-        1, "a `ValueError` from `consumed_features` of a stored model artifact: fixed texts, "
-        "naming a fit-result field or a model_type, never a quote value"),
+    ("backend/src/app/platform/rating_algorithms.py", "_accepted_feature_map_values",
+     "str(exc)"): (
+        1, "the `CodedError` of `refuse_control_in_features` over a stored model artifact (WK-2113 "
+        "S3, B2): fixed texts naming a model ref, a feature, a Factor slug@version and an "
+        "interaction, or a fit-result field; split at the code and returned in a 422 at save, "
+        "where no quote exists (NFR-499)"),
+    ("backend/src/app/platform/bundle_hydration.py", "_control_refusal", "str(exc)"): (
+        1, "the `CodedError` of `load_bundle` / `check_rateable_intent`, split at its code: the "
+        "text names a model ref, a feature, a Factor slug@version and an interaction, all from "
+        "stored artifacts, never a quote input; it reaches the 409 detail and the audit `after` "
+        "(WK-2113 S3, NFR-499)"),
     ("packages/pricing-core/src/pricing_core/modelling/gbm.py", "_compile_custom", "str(exc)"): (
         1, "an `ObjectiveError` from compiling a Custom Objective's declared source: the "
         "objective's own text, no quote exists at compile"),

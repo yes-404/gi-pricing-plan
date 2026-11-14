@@ -47,7 +47,8 @@ from pricing_core.modelling.factors import (
     gbm_transformed_factors,
     required_model_inputs,
 )
-from pricing_core.rating.compile import validate_algorithm
+from pricing_core.rating.compile import refuse_control_in_features, validate_algorithm
+from pricing_core.safe_error import CodedError
 
 __all__ = [
     "create_algorithm",
@@ -143,17 +144,20 @@ async def _accepted_feature_map_values(
         return None
     spec = MODEL_SPEC_ADAPTER.validate_python(row.spec)
     factors = await load_factors(session, workspace_id=workspace_id, factor_ids=list(spec.factors))
+    # FR-88 / FR-240 at save (WK-2113 S3, B2 (i)): the same closure test compile runs, so a model
+    # fitted on a `control` Factor (or an interaction crossing one) is refused here, with the
+    # Factor named, instead of being mapped (save used to REQUIRE the control operand as an
+    # input). Compile stays the gate of record: a model absent at save returns `None` above.
     try:
-        feature_order = consumed_features(row.fit_result)
-    except ValueError as error:
+        refuse_control_in_features(str(ref), row.fit_result, factors, factors)
+    except CodedError as error:
         raise PlatformError(
             "CONTROL_FACTOR_IN_RATEABLE_PATH",
-            "A model_call's model has no derivable consumed Factors",
+            "A model_call's model prices on a control-intent Factor",
             422,
-            f"{ref} cannot be mapped: the Factors it consumes cannot be derived "
-            f"({error}), so it cannot be shown not to price on a `control`-intent "
-            "Factor (FR-88, FR-240).",
+            str(error).partition(": ")[2],
         ) from None
+    feature_order = consumed_features(row.fit_result)
     accepted = set(required_model_inputs(factors, feature_order))
     offset = spec.offset
     if offset.kind in ("log_column", "column") and offset.column is not None:

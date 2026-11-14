@@ -17,7 +17,7 @@ from __future__ import annotations
 import hashlib
 import json
 import re
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Callable, Iterable, Mapping, Sequence
 from datetime import UTC, datetime
 from decimal import Decimal, InvalidOperation
 from typing import Any, NoReturn, Protocol
@@ -34,7 +34,7 @@ from pydantic import (
     model_serializer,
 )
 
-from model_schema.modelling import Banding, Factor, FactorIntent, Grouping
+from model_schema.modelling import Banding, Factor, Grouping
 from model_schema.perils import LargeLossKind, PerilStructure
 from model_schema.rating import (
     AlgorithmOutput,
@@ -58,7 +58,9 @@ from model_schema.refs import ArtifactRef
 from model_schema.sub_graphs import SubGraph, SubGraphInputPort
 from pricing_core.modelling.factors import (
     GBM_MODEL_TYPES,
+    OperandNotSuppliedError,
     consumed_features,
+    control_factor_in,
     gbm_transformed_factors,
     required_model_inputs,
 )
@@ -808,12 +810,26 @@ async def _refuse_control_factor_keys(
             factor_ref = key.get("factor_ref") if isinstance(key, dict) else None
             if factor_ref is None:
                 continue
-            factor = (await resolver.resolve(ArtifactRef.model_validate(factor_ref))).payload
-            if factor.get("intent") == FactorIntent.CONTROL.value:
+            resolved = await resolver.resolve(ArtifactRef.model_validate(factor_ref))
+            bound = Factor.model_validate(resolved.payload)
+            try:
+                control = control_factor_in(bound, resolved.factors)
+            except OperandNotSuppliedError as error:
                 _raise_named(
                     "CONTROL_FACTOR_IN_RATEABLE_PATH",
-                    f"{table_ref} key {key.get('name')!r} is bound to {factor_ref}, a "
-                    "`control`-intent Factor, which cannot be rated on (FR-88, FR-240)",
+                    f"{table_ref} key {key.get('name')!r} is bound to {factor_ref}, whose "
+                    f"interaction {error.factor_slug!r} crosses {error.operand_id}, a Factor "
+                    "not among those supplied, "
+                    "so it cannot be shown not to be rated on a `control`-intent Factor "
+                    "(FR-88, FR-240)",
+                )
+            if control is not None:
+                via = "" if control.id == bound.id else f" through the interaction {bound.slug!r}"
+                _raise_named(
+                    "CONTROL_FACTOR_IN_RATEABLE_PATH",
+                    f"{table_ref} key {key.get('name')!r} is bound to {factor_ref}, "
+                    f"the `control`-intent Factor {control.slug}@{control.version}{via}, "
+                    "which cannot be rated on (FR-88, FR-240)",
                 )
 
 
@@ -884,10 +900,10 @@ def _refuse_control_factor_model_calls(
             _refuse_control_factor_features(str(model_ref), resolved_pins[str(model_ref)])
 
 
-def _consumed_features(model_ref: str, resolved: ResolvedArtifact) -> tuple[str, ...]:
+def _consumed_features(model_ref: str, fit_result: object) -> tuple[str, ...]:
     """`consumed_features` of a pinned model, its failure named as the refusal (fail closed)."""
     try:
-        return consumed_features(resolved.payload.get("fit_result"))
+        return consumed_features(fit_result)
     except ValueError as error:
         _raise_named(
             "CONTROL_FACTOR_IN_RATEABLE_PATH",
@@ -896,18 +912,50 @@ def _consumed_features(model_ref: str, resolved: ResolvedArtifact) -> tuple[str,
         )
 
 
-def _refuse_control_factor_features(model_ref: str, resolved: ResolvedArtifact) -> None:
-    """Refuse a pinned model, and the model its GLM offset reads, fitted on a `control` Factor."""
-    by_slug = {factor.slug: factor for factor in resolved.factors}
-    for feature in _consumed_features(model_ref, resolved):
+def refuse_control_in_features(
+    model_ref: str, fit_result: object, factors: Iterable[Factor], pool: Iterable[Factor]
+) -> None:
+    """Refuse a model whose consumed features reach a `control`-intent Factor (FR-88, FR-240).
+
+    The one definition compile (over a pin's resolved Factors) and `load_bundle` (over the
+    Factors a stored Bundle carries) both call, so the two cannot drift. A consumed feature is
+    matched by slug among `factors` and tested through its closure (`control_factor_in`, against
+    `pool`): an interaction's operands get no term of their own, so the cross's slug is all
+    `consumed_features` reports. A consumed feature with no Factor at all (a GBM column) has no
+    intent to test and is not refused here; an operand `pool` does not carry is refused (fail
+    closed).
+    """
+    pool = list(pool)
+    by_slug = {factor.slug: factor for factor in factors}
+    for feature in _consumed_features(model_ref, fit_result):
         factor = by_slug.get(feature)
-        if factor is not None and factor.intent is FactorIntent.CONTROL:
+        if factor is None:
+            continue
+        try:
+            control = control_factor_in(factor, pool)
+        except OperandNotSuppliedError as error:
+            _raise_named(
+                "CONTROL_FACTOR_IN_RATEABLE_PATH",
+                f"{model_ref} was fitted on feature {feature!r}, whose interaction "
+                f"{error.factor_slug!r} crosses {error.operand_id}, a Factor not among those "
+                "supplied, so it cannot be "
+                "shown not to price on a `control`-intent Factor (FR-88, FR-240)",
+            )
+        if control is not None:
+            via = "" if control is factor else f" through the interaction {factor.slug!r}"
             _raise_named(
                 "CONTROL_FACTOR_IN_RATEABLE_PATH",
                 f"{model_ref} was fitted on feature {feature!r}, the "
-                f"`control`-intent Factor {factor.slug}@{factor.version}, which "
+                f"`control`-intent Factor {control.slug}@{control.version}{via}, which "
                 "cannot be rated on (FR-88, FR-240)",
             )
+
+
+def _refuse_control_factor_features(model_ref: str, resolved: ResolvedArtifact) -> None:
+    """Refuse a pinned model, and the model its GLM offset reads, fitted on a `control` Factor."""
+    refuse_control_in_features(
+        model_ref, resolved.payload.get("fit_result"), resolved.factors, resolved.factors
+    )
     source = resolved.offset_source
     if source is not None:
         offset = (resolved.payload.get("spec") or {}).get("offset") or {}
@@ -1048,7 +1096,10 @@ def check_model_call_coverage(
                         targets.append((component, where))
         for model_ref, where in targets:
             pin = resolved_pins[str(model_ref)]
-            required = required_model_inputs(pin.factors, _consumed_features(str(model_ref), pin))
+            fit_result = pin.payload.get("fit_result")
+            required = required_model_inputs(
+                pin.factors, _consumed_features(str(model_ref), fit_result)
+            )
             missing = [feature for feature in required if feature not in mapped]
             if missing:
                 _raise_named(
@@ -1113,7 +1164,7 @@ def _model_factors(resolved: ResolvedArtifact) -> tuple[Factor, ...]:
 
 def _model_slugs(model_ref: str, resolved: ResolvedArtifact) -> set[str]:
     """The feature slugs a pinned model reads: required inputs, offset model's, offset column."""
-    order = _consumed_features(str(model_ref), resolved)
+    order = _consumed_features(str(model_ref), resolved.payload.get("fit_result"))
     slugs = set(required_model_inputs(resolved.factors, order))
     if resolved.offset_source is not None:
         offset_ref = (resolved.payload.get("spec") or {}).get("offset", {}).get("offset_model_ref")
@@ -1198,6 +1249,34 @@ def _same_input(names: set[str], produced_by: Mapping[str, Any]) -> bool:
     return len(inputs) == len(steps) and len({(s.input_name, s.on_missing) for s in inputs}) == 1
 
 
+async def _inline_pinned(
+    algorithm: RatingAlgorithm, pins: Pins, resolver: ArtifactResolver
+) -> tuple[
+    dict[str, ResolvedArtifact], dict[str, SubGraph], RatingAlgorithm, dict[str, RatingAlgorithm]
+]:
+    """Resolve the mounted sub-graphs and inline them: the front half compile and
+    `check_rateable_intent` share, so both read the same algorithms.
+
+    Each mounted sub-graph is resolved once and kept for compile's pin loop (the algorithm itself
+    is not fetched twice either). A mount whose ref is not pinned is not resolved:
+    `mounted_fragments` refuses it (`RL-1309` G1). Returns the resolved mounts, the fragments, the
+    base graph (unconditional mounts) and one more per purpose some mount selects (FR-218,
+    `RL-1628` DP-S3-2 (a)): every check runs over every one.
+    """
+    mounted: dict[str, ResolvedArtifact] = {}
+    for mount in algorithm.sub_graphs:
+        if mount.ref in pins.sub_graphs and str(mount.ref) not in mounted:
+            mounted[str(mount.ref)] = await resolver.resolve(mount.ref)
+    fragments = mounted_fragments(
+        algorithm, pins, {key: artifact.payload for key, artifact in mounted.items()}
+    )
+    inlined = inline_mounts(algorithm, fragments)
+    purpose_inlined = {
+        p: inline_mounts(algorithm, fragments, p) for p in selected_purposes(algorithm)
+    }
+    return mounted, fragments, inlined, purpose_inlined
+
+
 async def compile_bundle(version: RatingVersion, resolver: ArtifactResolver) -> Bundle:
     """Compile a pinned `RatingVersion` to a self-contained Bundle (FR-239/240).
 
@@ -1243,24 +1322,8 @@ async def compile_bundle(version: RatingVersion, resolver: ArtifactResolver) -> 
             "better (FR-20)",
         )
 
-    # Each mounted sub-graph is resolved once, here, and kept for the pin loop below (the same
-    # reason as above). A mount whose ref is not pinned is not resolved: `mounted_fragments`
-    # refuses it (`RL-1309` G1).
     pins = version.pins
-    mounted: dict[str, ResolvedArtifact] = {}
-    for mount in algorithm.sub_graphs:
-        if mount.ref in pins.sub_graphs and str(mount.ref) not in mounted:
-            mounted[str(mount.ref)] = await resolver.resolve(mount.ref)
-    fragments = mounted_fragments(
-        algorithm, pins, {key: artifact.payload for key, artifact in mounted.items()}
-    )
-    # The base graph (unconditional mounts) and one more per purpose some mount selects (FR-218,
-    # `RL-1628` DP-S3-2 (a)). Every check runs over every one, so a fragment refused for one
-    # purpose is refused at compile.
-    inlined = inline_mounts(algorithm, fragments)
-    purpose_inlined = {
-        p: inline_mounts(algorithm, fragments, p) for p in selected_purposes(algorithm)
-    }
+    mounted, fragments, inlined, purpose_inlined = await _inline_pinned(algorithm, pins, resolver)
     every_inlined = [inlined, *purpose_inlined.values()]
     _refuse_mount_port_type_mismatch(algorithm, fragments)
 
@@ -1343,12 +1406,49 @@ __all__ = [
     "check_model_call_columns",
     "check_model_call_coverage",
     "check_model_call_gbm_factors",
+    "check_rateable_intent",
     "check_step_refs_pinned",
     "compile_bundle",
     "fragment_output_type_issues",
     "output_type_issues",
     "peril_component_refs",
     "producer_types",
+    "refuse_control_in_features",
     "to_jdm",
     "validate_algorithm",
 ]
+
+
+async def check_rateable_intent(version: RatingVersion, resolver: ArtifactResolver) -> None:
+    """Re-run compile's two `control`-intent guards over a version's pins as they resolve now.
+
+    FR-88 / FR-240, for a version compiled before those guards existed and for the half a stored
+    Bundle cannot show `load_bundle`: a rate table key's Factor and a GBM's features (a Bundle
+    carries neither). Only `_refuse_control_factor_keys` and `_refuse_control_factor_model_calls`
+    run, so a version is not refused at deploy for a rule unrelated to FR-88; the resolution and
+    inlining are compile's own (`_inline_pinned`). Raises `CodedError` named
+    `CONTROL_FACTOR_IN_RATEABLE_PATH`.
+    """
+    if version.algorithm_ref is None or version.pins is None:
+        _raise_named("RATING_VERSION_UNPINNED", "the rating version has no pins (FR-237)")
+    pins = version.pins
+    algorithm = RatingAlgorithm.model_validate(
+        (await resolver.resolve(version.algorithm_ref)).payload
+    )
+    _, _, inlined, purpose_inlined = await _inline_pinned(algorithm, pins, resolver)
+    payloads: dict[str, Any] = {}
+    resolved_pins: dict[str, ResolvedArtifact] = {}
+    for ref in (*pins.rate_tables, *pins.models):
+        resolved = await resolver.resolve(ref)
+        payloads[str(ref)] = resolved.payload
+        resolved_pins[str(ref)] = resolved
+    for ref in pins.models:
+        if ref.type == "peril_structure":
+            components = await _resolve_peril_components(
+                ref, resolved_pins[str(ref)].payload, resolver, resolved_pins
+            )
+            for component_ref, component in components.items():
+                resolved_pins.setdefault(component_ref, component)
+    await _refuse_control_factor_keys(version, payloads, resolver)
+    for each in [inlined, *purpose_inlined.values()]:
+        _refuse_control_factor_model_calls(each, resolved_pins)
