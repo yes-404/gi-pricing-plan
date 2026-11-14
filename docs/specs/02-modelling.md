@@ -97,6 +97,12 @@ Terms from `00-overview.md` §2.2 are used unchanged. Additional terms owned her
 | **FR-94** | **A backtest is readable.** `GET /api/v1/models/backtests/{id}` returns the stored artifact, or a 404 naming it. Added 2026-08-18 (WK-661, the backtest slice): §5.1 declared the `POST` and no read, which is a 202 whose artifact nothing can fetch — complete to the endpoint audit, since that compares the spec against the contract and an endpoint missing from both is in neither, and unusable to every caller. **The fourth time**: FR-139 repaired it for the transparency artifact, FR-186 for the comparison, FR-192 for the peril structure. By backtest id rather than by model, because unlike `Diagnostics` a model has many — one per period it has been measured against — and the Job's result names the one just produced (`backtest:{id}`). A **list** by model is what `05-monitoring.md` will read and is deliberately not built here: nothing consumes it yet, and `CLAUDE.md` §0 puts a later phase's capability in the spec rather than the code. **Evidenced 2026-08-23 (W32-6).** The prior marker sat on an OpenAPI-presence assertion (`test_backtests.py`'s "both backtest routes are in the published contract"), which asserts the two paths are spelled correctly and would have stayed green against a route returning 500 on every call. The cross-workspace 404 and the "naming it" clause are now tested over HTTP in `backend/tests/test_api_backtests.py`, and the fold was proven load-bearing by removing it and watching the test return 200 (§13 rule 4). |
 | **FR-95** | `expression` factors use the restricted grammar of §4.6 — the same grammar as custom objectives and preparation recipes — evaluated over dataset columns only. **Amended 2026-10-16 (`RL-1615`, WK-690 Slice 4): the result-type rule.** Creation answers 422 at the edge for a parse error (with its position), an undeclared column, a pinned Banding whose `source_expression` differs from the expression (FR-97), and an expression that is **certainly numeric** and names no `banding_id`; the last refusal names FR-210. Certainly numeric means the root is an arithmetic operator (`+ - * / **`, unary `-`), a numeric literal, or a numeric-only function (`log exp sqrt abs clip log1p expm1`); a bare symbol, and a `where`, `min` or `max` at the root, are not refused at creation, because their type is the column's. Resolution (FR-208) decides by the result's dtype on the Dataset Version: numeric and unbanded is refused naming FR-210 (`RL-1265` DP-4), string and banded is refused (a category is not banded), numeric and banded goes through `apply_banding`, and string and unbanded is a categorical Factor with FR-113's relativity table. *(Clarified 2026-10-16, `RL-1700` (a): "dataset columns only" means the Factor's own `source_columns`. They are the bound symbols of the `factor` profile's parse, so a name the expression reads that is not among them is refused at creation with its position, in `RL-1362` DP-S3-3's form (one field error on `expression`, its message beginning `line <L>, column <C>:`). FR-87 then refuses at resolution a declared column that the Dataset Version lacks. A declared column that the expression does not read is not refused.)* |
 | **FR-96** | Factor definitions are reusable across Models and Model Families and are versioned independently; a Model Spec pins the exact Factor version it used. |
+| **FR-PROXY-1** | **The proxy assessment of FR-91 is a Proxy Assessment: an optional, model-scoped, immutable evidence artifact (§4.14).** *Working id, added 2026-11-14 for #1501 (WK-691); the global id is assigned at the merge turn.* Its input is a Model (by id), optionally a subset of that Model's Factors (default: all), and a Reference Population (FR-PROXY-2). It never changes a Model's status, is never part of the approval floor (`06` FR-364), and is never required by the platform. A workspace may require its *existence* as evidence (`06` FR-363's note); what it measured never gates anything. Delivered in P3 (`docs/roadmap.md` WK-691). `04` FR-302's outcome disparity report is **not** part of this requirement: its input is an Optimisation Run's proposed price changes (`04`), which belong to the optimisation Works. |
+| **FR-PROXY-2** | **A Reference Population names one Protected Characteristic with a closed list of classes, and is keyed.** *Working id (FR-PROXY-1).* It declares a `reference_key` column, which is joined to a declared `dataset_key` column of the Model's Dataset Version — a Dataset Version, never a Dataset (`00` §2). It has one of two granularities. **`subject`**: each key value carries exactly one class (an individual-level table). **`area`**: each key value carries a share for every class, the shares lying in [0, 1] and summing to 1 within 1e-6 (for example census proportions per postcode district). A table that fits neither, repeats a key, names a class outside the list, or carries a share outside [0, 1] is refused with the rows named. A `subject` table is an `area` table whose shares are all 0 or 1, so one computation serves both. A Dataset Version row with no match in the reference is **unmatched**: it is excluded from every measure and counted in the coverage (FR-PROXY-3). |
+| **FR-PROXY-3** | **Per Factor, the assessment reports four numbers, all exposure-weighted.** *Working id (FR-PROXY-1).* Let a Factor's resolved Level be *l* (a continuous Factor is assessed on its Banding, as `02` FR-93 treats an interaction operand), the class be *c*, and a matched row's share of *c* be *pᶜ* (0 or 1 for `subject`). The **expected joint weight** is `W(l, c) = Σ exposure × pᶜ` over the matched rows at Level *l*. (1) **Mutual information**, in bits, of the Level and the class under `W`. (2) **Normalised mutual information**: (1) divided by the entropy of the class under `W`'s class marginal, null when that entropy is 0. (3) **One-vs-rest AUC per class**: the score of a row is the `W`-share of class *c* at its Level (in-sample, the best a Level-wise rule could do); a matched row contributes positive weight `exposure × pᶜ` and negative weight `exposure × (1 − pᶜ)`; tied scores are averaged. Independent inputs give MI 0 and AUC 0.5; a Factor whose Levels separate the classes completely gives MI equal to the class entropy and AUC 1. (4) **Coverage**: matched exposure over total exposure, with the matched exposure and the reference row count, so a reader can see how much data stands behind the figures. No confidence interval is reported in this requirement; the AUC is in-sample, which FR-PROXY-4's record states. Money never enters: exposure is a Decimal in the rating path and a float only inside the measure. |
+| **FR-PROXY-4** | **What an assessment records, and what it does not keep.** *Working id (FR-PROXY-1).* It records the Model, the Factors assessed, the Dataset Version, the characteristic, its classes, the granularity, both key names, the Reference Population's **source** (free text) and **as-at date**, its **row count**, its **SHA-256 digest** (the content address of the upload, `07` FR-418), and the measures of FR-PROXY-3. **The reference rows are never persisted.** The Job reads the upload once and releases its reference to the blob at completion, so that `07` FR-420's collector may delete it. The cost is stated rather than hidden: an assessment cannot be reproduced from the platform alone. This departs from the platform's reproducibility default for data minimisation of special-category data (UK GDPR Art. 9); the digest still proves which data was used when the insurer supplies it again. |
+| **FR-PROXY-5** | **A Proxy Assessment has no threshold and no verdict.** *Working id (FR-PROXY-1).* Its contract (§4.14) has no field that says pass, fail, flagged, or acceptable, and no value that any platform code compares with a limit. A Factor with a `prohibited` flag (FR-90) is assessed like any other. An assessment whose AUC is 1.0 refuses nothing. This restates FR-91's "it never refuses a Factor" as a property of the shape: there is nothing to compare against. Whether an association amounts to unlawful discrimination is a legal judgement (FR-91, OQ-581). |
+| **FR-PROXY-6** | **Running an assessment needs its own permission, and the reference data is special-category data.** *Working id (FR-PROXY-1).* `POST /api/v1/models/{id}/proxy-assessments` requires `reference_population:upload` (`06` §5), because supplying protected-characteristic data is a different act from fitting a Model. It returns **202** and a Job of kind `model.proxy_assessment`. `GET` requires `model:read`, because the stored result holds aggregates only. Both are audited. No non-public reference data may enter a deployed environment until the backup, secrets and recovery requirements of `07` (FR-423, FR-424 to FR-426 and NFR-530) are delivered; until then the capability is demonstrated on synthetic data only. |
 
 ### 3.2 Bandings
 
@@ -1917,6 +1923,41 @@ describe what happens where the curvature is negative, and a metric is never
 differentiated. `Applicability`, `ObjectiveTemplate`, `TemplateParameter` and `YDomain` are
 imported from §4.5 rather than restated — the same catalogue, read two ways.
 
+### 4.14 `ProxyAssessment`
+
+*Working shape, added 2026-11-14 for #1501 (WK-691); FR-PROXY-1 to FR-PROXY-6.*
+
+```json
+{
+  "id": "0190b5a2-7c3e-7a10-9d21-4f6b8c2e1a02", "model_id": "0190b5a2-7c3e-7a10-9d21-4f6b8c2e1a03",
+  "dataset_version_id": "0190b5a2-7c3e-7a10-9d21-4f6b8c2e1a04",
+  "reference": {
+    "characteristic": "age_group", "classes": ["under_30", "30_to_59", "60_plus"],
+    "granularity": "area", "reference_key": "postcode_district", "dataset_key": "postcode_district",
+    "source": "ONS Census 2021, table TS007A", "as_at": "2021-03-21",
+    "row_count": 2284, "digest": "sha256:9f2c…e1"
+  },
+  "matched_exposure": "812344.25", "total_exposure": "845901.50", "coverage": "0.9603",
+  "factors": [
+    {"factor_id": "0190b5a2-7c3e-7a10-9d21-4f6b8c2e1a05", "factor_slug": "vehicle_group",
+     "mutual_information_bits": 0.0312, "normalised_mutual_information": 0.0221,
+     "auc_by_class": {"under_30": 0.54, "30_to_59": 0.49, "60_plus": 0.53}}
+  ],
+  "created_at": "2026-11-14T12:00:00Z"
+}
+```
+
+**Invariants.** The shape is immutable and append-only. **It has no threshold, flag or
+verdict field, and none may be added** (FR-PROXY-5): a field that says "high" or "fail"
+would turn evidence into a gate, which FR-91 rules out. `reference` carries the source,
+as-at date, row count and digest and **never the rows** (FR-PROXY-4). `coverage` is
+`matched_exposure / total_exposure`; the exposures are Decimal strings (`00` §4.3), the
+information and AUC values are numbers in [0, log₂ *k*] and [0, 1], and
+`normalised_mutual_information` is null when the class entropy is 0. `auc_by_class` has
+exactly one entry per class of `reference.classes`. `model_id` and `dataset_version_id`
+name the immutable versions the assessment was taken against, never a Model Family or a
+Dataset.
+
 ---
 
 ## 5. Interfaces
@@ -1942,6 +1983,8 @@ imported from §4.5 rather than restated — the same catalogue, read two ways.
 | `GET` | `/api/v1/models/{slug}/diagnostics?version=` | Diagnostics artifact — latest version, or a named one, exactly as `GET /models/{slug}` selects | `model:read` |
 | `POST` | `/api/v1/models/{id}/transparency` | **202** Build a transparency artifact (FR-132) | `model:fit` |
 | `GET` | `/api/v1/models/{id}/transparency` | The model's most recent artifact (FR-139) | `model:read` |
+| `POST` | `/api/v1/models/{id}/proxy-assessments` | **202** Run a Proxy Assessment → Job `model.proxy_assessment` (FR-PROXY-1, FR-PROXY-6). The body names the uploaded Reference Population blob, the keys, the characteristic and its granularity. It returns no verdict, and no value of it refuses a Factor. | `reference_population:upload` |
+| `GET` | `/api/v1/models/{id}/proxy-assessments` | The model's Proxy Assessments, newest first, each the §4.14 artifact (aggregates only) | `model:read` |
 | `POST` | `/api/v1/models/{id}/backtest` | **202** Backtest against another dataset version (FR-187) | `model:fit` |
 | `GET` | `/api/v1/models/backtests/{id}` | The stored backtest artifact (§4.12, FR-94) | `model:read` |
 | `POST` | `/api/v1/models/compare` | **202** Comparison artifact for 2+ models on a shared holdout (FR-186) | `model:fit` |
@@ -2606,6 +2649,14 @@ def make_xgb_objective(fns: ObjectiveFns) -> Callable[[NDArray[float64], xgb.DMa
 def make_lgb_objective(fns: ObjectiveFns) -> Callable[[NDArray[float64], lgb.Dataset],
                                                       tuple[NDArray[float64], NDArray[float64]]]
 
+# pricing_core/modelling/proxy.py   (FR-PROXY-2, FR-PROXY-3)
+def assess_proxies(frame: pl.DataFrame, factors: Sequence[str], reference: pl.DataFrame, *,
+                   key: str, reference_key: str, classes: Sequence[str],
+                   exposure: str = "exposure_years") -> ProxyAssessmentResult
+    # `frame` carries each Factor already resolved to its Level (resolve_factors); `reference`
+    # holds one share column per class, so `subject` and `area` are one call. Pure Polars;
+    # no threshold, no verdict, nothing persisted.
+
 # pricing_core/modelling/diagnostics.py
 def compute_diagnostics(fit: GlmFitResult, spec: GlmSpec, factors: Sequence[Factor], *,
                         train: pl.DataFrame, holdout: pl.DataFrame,
@@ -2896,6 +2947,13 @@ def make_xgb_objective(fns: ObjectiveFns):
 | Peril structure | `/peril-structures/{id}` | Per-peril model pins, large-loss treatment, reconciliation panel |
 | Backtest | `/models/:slug/backtests/:backtestId` | *(registered 2026-08-23; **declared-prose**, FR-24)* Period-by-period A/E and lift ~~against the held-out window~~ **on the Dataset Version the backtest names**, the backtest's own definition (~~split,~~ periods, exposure basis) shown beside its results, and the fit it was run against. Addressed by backtest id, not by model — a model has many (FR-94). *(Amended 2026-08-25, WK-664. **The struck words describe a split this artifact does not have**, and they are how this was found: a builder scoping the view read them and hand-wrote a `"Holdout"` caption. §4.12 and FR-187 both settled on 2026-08-18 that a backtest holds one `PartitionDiagnostics`, and that naming it a holdout "would claim a split nobody made"; `BacktestSummary` carries no split field at all. This cell was registered five days after that amendment, to close a roadmap gap, and imported the pre-amendment vocabulary — which is how a cell that binds nothing still produces a defect. **The single partition's caption is "Backtest".** Not the period and not the `slug@version`: the four shared instruments interpolate the caption into their own column headings (`${label} A/E`, `${label} exposure years`), and the view is addressed by one backtest id, so there is nothing to disambiguate inside it. Dating the series is what `05-monitoring.md` reads §4.12's many-per-model backtests for, and captioning for that here would be building ahead of the phase. Not "out-of-time" either: FR-187 requires only a version *other than* the one fitted on, so a caption asserting *later* claims an invariant the type does not enforce — the same defect as "Holdout", at a smaller scale. **This cell binds none of that**, and correcting prose leaves it prose (FR-24). What binds is **FR-187, extended on the same date** to state the rule the caption is an instance of: a caption for that partition may not assert a relationship the artifact does not carry. It went there rather than into a new requirement because the rule governs any surface naming the partition — this view, an export, `05-monitoring.md` later — and because a new frontend-only id is what this table's 2026-08-23 note argues against: `req-coverage.py` scans backend tests only, so it would arrive permanently unbacked, while FR-187 is already evidenced over HTTP. OQ-587's contract-is-the-floor rule is not what is at work here either — it governs a view needing *data the contract does not carry*, its words being "if WK-664's diagnostic view needs those fields", and a caption needs no field, no computation and nothing persisted. `PartitionLabel` is the control: a hand-authored caption over two contract fields, built with the Diagnostics view, for which no requirement was ever raised or owed.)* |
 | Prediction | `/models/:slug/predict` | *(registered 2026-08-23)* Ad-hoc scoring against a fitted Model: input row or uploaded batch, the prediction with its interval where the model type offers one, and the refusal by name where it does not (FR-180) |
+
+> **Proxy assessment panel, added 2026-11-14 for #1501 (WK-691).** A panel on Model detail
+> (`/models/:slug`) and on the approval request view (`06`) shows, per Factor, the mutual
+> information, the normalised mutual information, the AUC per class and the coverage, with the
+> Reference Population's source and as-at date (FR-PROXY-3, FR-PROXY-4). It is a panel on those
+> two routes, not a route of its own. **It uses no red/amber/green colour and no threshold
+> marker**, because there is no verdict to colour (FR-PROXY-5).
 
 **Interaction requirement:** the banding/grouping editors must show the *consequence* of an
 edit before it is saved — band stats and CI widths update live, and merging levels shows

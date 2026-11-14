@@ -120,6 +120,14 @@ auditor, or a regulator:
 | **Rating Version** | Structural diff; rate table diffs; passing regression suite; dislocation run with attribution; GIPP check where enabled; change summary (`03` FR-257) |
 | **Deployment to `prod`** | A complete Rating Version approval; a successful `uat` deployment; Deployer permission (`03` FR-267) |
 
+> **`proxy_assessment` is an optional evidence kind, added 2026-11-14 for #1501 (WK-691).**
+> `02` FR-91's Proxy Assessment (`02` §4.14) is evidence, never a gate. It is **not** in this
+> table's floor and never enters `EVIDENCE_FLOOR`. A workspace's `ApprovalPolicy` may add
+> `proxy_assessment` to the `model` entry (FR-364), and submission then checks that an assessment
+> **naming the model exists**, and nothing else. **Its numbers are never read**: requiring the
+> existence of the evidence is the insurer's own governance, and what the evidence measured never
+> refuses a submission, a Factor or an approval (`02` FR-PROXY-5, OQ-581).
+
 > **`custom_metric` added 2026-08-22 (WK-661, the audit-remediation slice).** §4.2's
 > `DEFAULT_POLICY` has named `metric_certificate` for `custom_metric` since 2026-08-20 and
 > this table had no row for it — so `EVIDENCE_FLOOR` had no key for the type,
@@ -277,6 +285,7 @@ Notably absent from Pricing Actuary: ~~every `*:approve` permission~~ `approval:
 > | `model:read` | Reading Models, Model Specs and their diagnostics (the superseded note above: "the built surface checks `model:read`, `model:fit` and `model:submit`") |  |
 > | `model:fit` | Fitting a Model, and writing Factors, Bandings and Groupings (`RL-1236` DP-A). It governs catalogue Custom Objectives (FR-366) |  |
 > | `model:submit` | Submitting a Model, or a catalogue Custom Objective, for approval (the notes above; FR-367) |  |
+> | `reference_population:upload` | Supplying a Reference Population for a Proxy Assessment (`02` FR-PROXY-6; `POST /api/v1/models/{id}/proxy-assessments`). The input is special-category data (UK GDPR Art. 9), so it is distinct from `model:fit` and, like `custom_objective:author`, granted to no built-in role by default. Reading a stored assessment is `model:read`, because it holds aggregates only. *Added 2026-11-14 for #1501 (WK-691).* |  |
 > | `custom_objective:author` | Authoring, editing or versioning an `expression` Custom Objective (FR-367) |  |
 > | `rating:read` | Reading Rating Algorithms, Sub-graphs, Regression Suites, Rate Tables, Rating Versions and scoring traces, and an Environment's Deployment history (`03` §4.12; `GET /api/v1/environments/{env}/deployments`, WK-674 Slice 2). *(Amended 2026-10-04, `RL-1404`: a Deployment is a rating record; the Environment's own record is `settings:read`'s.)* |  |
 > | `rating:write` | Writing Rating Algorithms and Rate Tables, and creating a Rating Version (`RL-1236` DP-A) |  |
