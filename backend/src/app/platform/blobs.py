@@ -209,7 +209,13 @@ class BlobStore:
         content: bytes | Iterable[bytes],
         media_type: str,
     ) -> BlobRef:
-        """Store content and return its reference. Identical content is a no-op (FR-419).
+        """Store content, take one reference for the caller, return its reference (FR-419, FR-420).
+
+        Identical content stores no second object (FR-419) but still takes the caller's
+        reference: a new row is written at `ref_count=1`, an existing one is retained. The
+        caller is the owner, and writes the owning record in the same unit of work; a caller
+        that does not leaks a reference, which can never lose data. No caller retains after
+        a `put`.
 
         Requires the caller's transaction: the row is accounting, and accounting that
         commits independently of the change it belongs to is how a reference count drifts.
@@ -237,6 +243,7 @@ class BlobStore:
                         "requested_media_type": media_type,
                     },
                 )
+            await retain(session, digest)
             return to_ref(existing)
 
         key = blob_key(digest)
@@ -249,7 +256,7 @@ class BlobStore:
         )
 
         session.add(
-            BlobRow(sha256=digest, bytes_=len(body), media_type=media_type, ref_count=0)
+            BlobRow(sha256=digest, bytes_=len(body), media_type=media_type, ref_count=1)
         )
         await session.flush()
         return BlobRef(sha256=digest, bytes=len(body), media_type=media_type)

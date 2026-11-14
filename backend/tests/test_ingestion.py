@@ -578,3 +578,43 @@ async def test_a_column_the_dictionary_does_not_forbid_is_not_refused(
             data=PII_CSV, filename="exposure.csv",
         )
     assert outcome.run.rows_written == 2
+
+
+@pytest.mark.req("FR-29")
+@pytest.mark.req("FR-420")
+async def test_correcting_a_schema_releases_the_replaced_blob(
+    database: Database, blob_store: BlobStore, workspace_id
+) -> None:
+    """The recast table is a new blob; the one it replaces loses its only reference.
+
+    Breaker: remove the `blobs.release` in `correct_schema` -> the old blob stays at 1.
+    """
+    from app.data.ingestion import correct_schema
+    from app.db.models import BlobRow
+
+    actor = await _analyst(database, workspace_id)
+    dataset_id = await _dataset(database, workspace_id, actor)
+    unique = CSV + f"P{new_uuid7().hex},2026-03-01,0.25\n".encode()
+
+    async with database.unit_of_work() as session:
+        outcome = await ingest_upload(
+            session, blob_store,
+            workspace_id=workspace_id, actor=actor, dataset_id=dataset_id,
+            data=unique, filename="exposure.csv",
+        )
+        version_id = outcome.version.id
+        old = outcome.version.tables[0]["blob"]["sha256"]
+    async with database.session() as session:
+        assert (await session.get(BlobRow, old)).ref_count == 1
+
+    async with database.unit_of_work() as session:
+        corrected = await correct_schema(
+            session, blob_store,
+            workspace_id=workspace_id, actor=actor, version_id=version_id,
+            table="policy_exposure", columns={"exposure_years": "float"},
+        )
+        new = corrected.tables[0]["blob"]["sha256"]
+    assert new != old
+    async with database.session() as session:
+        assert (await session.get(BlobRow, old)).ref_count == 0
+        assert (await session.get(BlobRow, new)).ref_count == 1

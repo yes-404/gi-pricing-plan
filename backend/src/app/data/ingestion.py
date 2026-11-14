@@ -32,7 +32,7 @@ from app.data.formats import read_tabular
 from app.db.models import DatasetVersionRow, IngestionRunRow
 from app.errors import PlatformError
 from app.observability.logging import get_logger
-from app.platform import audit, datasets, rbac
+from app.platform import audit, blobs, datasets, rbac
 from app.platform.blobs import BlobStore
 from model_schema import BlobRef, DatasetKind, JobSource, Permission, Principal, new_uuid7
 from pricing_core.data.ingest import (
@@ -478,6 +478,9 @@ async def correct_schema(
     buffer = io.BytesIO()
     recast.write_parquet(buffer, compression="zstd")
     ref = await blob_store.put(session, buffer.getvalue(), PARQUET_MEDIA_TYPE)
+    # The table's old blob is replaced, so its reference is released in the same unit of work
+    # (FR-420): the new one was taken by `put`, and leaving this one counted would leak it.
+    await blobs.release(session, BlobRef.model_validate(target["blob"]).sha256)
 
     before = dict(target["arrow_schema"])
     target["blob"] = ref.model_dump(mode="json", by_alias=True)
