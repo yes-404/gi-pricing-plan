@@ -387,7 +387,8 @@ async def test_verify_with_no_range_is_the_whole_chain(
     body = client.get("/api/v1/audit/verify", headers=auditor_headers).json()
     assert body["whole_chain"] is True
     assert (body["first_sequence"], body["last_sequence"]) == (1, 3)
-    assert body["from"] is None and body["to"] is None
+    assert body["from"] is None
+    assert body["to"] is None
 
 
 @pytest.mark.req("FR-372")

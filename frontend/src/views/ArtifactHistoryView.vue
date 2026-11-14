@@ -135,25 +135,34 @@ watch(() => props.artifactRef, () => void load(), { immediate: true });
           {{ entry.justification }}
         </p>
         <table
-          v-if="entry.diff.length > 0"
+          v-if="(entry.diff ?? []).length > 0"
           class="mt-3 w-full text-left text-xs"
         >
           <thead class="text-slate-500">
             <tr>
-              <th scope="col" class="py-1 font-medium">
+              <th
+                scope="col"
+                class="py-1 font-medium"
+              >
                 Field
               </th>
-              <th scope="col" class="py-1 font-medium">
+              <th
+                scope="col"
+                class="py-1 font-medium"
+              >
                 Before
               </th>
-              <th scope="col" class="py-1 font-medium">
+              <th
+                scope="col"
+                class="py-1 font-medium"
+              >
                 After
               </th>
             </tr>
           </thead>
           <tbody>
             <tr
-              v-for="change in entry.diff"
+              v-for="change in entry.diff ?? []"
               :key="change.path"
             >
               <td class="py-1 font-mono">

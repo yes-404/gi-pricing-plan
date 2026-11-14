@@ -389,7 +389,7 @@ def _history_entry(row: AuditEventRow) -> ArtifactHistoryEntry:
         source=row.source,
         action=action,
         transition=(
-            StatusTransition(from_=before_status, to=after_status)
+            StatusTransition.model_validate({"from": before_status, "to": after_status})
             if both and before_status != after_status
             else None
         ),

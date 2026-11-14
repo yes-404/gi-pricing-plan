@@ -300,22 +300,40 @@ onMounted(() => void load());
     >
       <thead class="border-b border-slate-200 text-xs uppercase tracking-wide text-slate-500">
         <tr>
-          <th scope="col" class="py-2 font-medium">
+          <th
+            scope="col"
+            class="py-2 font-medium"
+          >
             Seq
           </th>
-          <th scope="col" class="py-2 font-medium">
+          <th
+            scope="col"
+            class="py-2 font-medium"
+          >
             At (UTC)
           </th>
-          <th scope="col" class="py-2 font-medium">
+          <th
+            scope="col"
+            class="py-2 font-medium"
+          >
             Actor
           </th>
-          <th scope="col" class="py-2 font-medium">
+          <th
+            scope="col"
+            class="py-2 font-medium"
+          >
             Action
           </th>
-          <th scope="col" class="py-2 font-medium">
+          <th
+            scope="col"
+            class="py-2 font-medium"
+          >
             Entity
           </th>
-          <th scope="col" class="py-2 font-medium">
+          <th
+            scope="col"
+            class="py-2 font-medium"
+          >
             Justification
           </th>
         </tr>

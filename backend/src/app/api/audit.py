@@ -243,6 +243,8 @@ async def verify_chain(
         raise PlatformError(
             "VALIDATION_FAILED", "Invalid range", 422, "`from` is after `to`."
         )
+    # The request, echoed: `from` is an alias, which the mypy plugin will not take as a keyword.
+    requested: dict[str, Any] = {"workspace_id": caller.workspace_id, "from": from_, "to": to}
     async with database.session() as session:
         try:
             span = await audit_service.verify_range(
@@ -250,9 +252,7 @@ async def verify_chain(
             )
         except audit_service.ChainBrokenError as exc:
             return ChainVerification(
-                workspace_id=caller.workspace_id,
-                from_=from_,
-                to=to,
+                **requested,
                 whole_chain=from_ is None and to is None,
                 first_sequence=exc.first_sequence,
                 last_sequence=exc.sequence - 1 if exc.checked else None,
@@ -262,9 +262,7 @@ async def verify_chain(
                 reason=exc.reason,
             )
     return ChainVerification(
-        workspace_id=caller.workspace_id,
-        from_=from_,
-        to=to,
+        **requested,
         whole_chain=span.whole_chain,
         first_sequence=span.first_sequence,
         last_sequence=span.last_sequence,
