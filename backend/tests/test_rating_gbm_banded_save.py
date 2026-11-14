@@ -156,6 +156,21 @@ async def test_a_grouped_factor_is_refused_at_save(monkeypatch: pytest.MonkeyPat
 
 
 @pytest.mark.req("FR-222")
+@pytest.mark.parametrize("kind", [FactorType.SPLINE, FactorType.POLYNOMIAL])
+async def test_a_spline_or_polynomial_factor_is_refused_at_save(
+    monkeypatch: pytest.MonkeyPatch, kind: FactorType,
+) -> None:
+    """FR-222 as widened 2026-10-25: every non-IDENTITY type is refused, naming the kind."""
+    factor = _factor(f"age_{kind.value}", "driver_age", kind)
+    _serve(monkeypatch, (factor,))
+    with pytest.raises(PlatformError) as caught:
+        await _check(_gbm_row((factor,)), _step({"driver_age": factor.slug}))
+    assert caught.value.code == CODE
+    assert caught.value.status_code == 422
+    assert f"{factor.slug} ({kind.value})" in caught.value.detail
+
+
+@pytest.mark.req("FR-222")
 async def test_an_expression_factor_is_refused_at_save(monkeypatch: pytest.MonkeyPatch) -> None:
     """S4 (FD-1754): every non-IDENTITY type is refused, the message naming the cause."""
     expr = _factor("age_sq", "driver_age", FactorType.EXPRESSION)
