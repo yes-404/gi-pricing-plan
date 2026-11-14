@@ -11,13 +11,14 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from types import SimpleNamespace
 from typing import Any
 from uuid import uuid4
 
 import pytest
 
 from app.api import score as score_module
+from app.api.deps import Caller
+from model_schema import ActorKind, Principal
 
 _SENTINEL = "SENTINEL-quote-input-5c91d2e7"
 
@@ -37,7 +38,12 @@ def test_a_shadow_decision_failure_logs_no_quote_input(
         _boom()
 
     monkeypatch.setattr(score_module.settings_service, "resolve", boom)
-    caller = SimpleNamespace(environment="uat", workspace_id=uuid4())
+    # The real caller type (`Caller`, app/api/deps.py:77) the score routes hand `_shadow_task`.
+    caller = Caller(
+        principal=Principal(kind=ActorKind.USER, id=uuid4(), display="scorer@insurer.example"),
+        workspace_id=uuid4(),
+        environment="uat",
+    )
     with caplog.at_level(logging.DEBUG):
         task = asyncio.run(
             score_module._shadow_task(  # type: ignore[arg-type]
