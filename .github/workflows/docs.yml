@@ -83,6 +83,10 @@ jobs:
       # Positive control: the frozen list must match a known frozen path, so a check that
       # reads an empty or broken list cannot report "none frozen" and pass.
       - name: freeze check positive control
+        # freeze-check.py imports its sibling `_frozen`; loaded through importlib from the
+        # repository root, the scripts directory must be on the path.
+        env:
+          PYTHONPATH: scripts
         run: python3 -c "import importlib.util as u; s=u.spec_from_file_location('fc','scripts/freeze-check.py'); m=u.module_from_spec(s); s.loader.exec_module(m); assert m.is_frozen('docs/plans/x.md') and m.is_frozen('docs/INDEX.md') and not m.is_frozen('docs/specs/x.md')"
       - name: freeze check
         id: freezecheck
