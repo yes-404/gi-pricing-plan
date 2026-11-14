@@ -91,6 +91,8 @@ from app.platform import reference as reference_service
 from app.platform import validation as validation_service
 from app.platform import validation_rules as rule_service
 from app.platform.blobs import BlobStore
+from app.platform.bundle_hydration import Revalidate, revalidator
+from app.platform.bundle_slot import BundleSlot
 from app.worker.data_handlers import register_data_handlers
 from app.worker.model_handlers import register_model_handlers
 from app.worker.rating_handlers import register_rating_handlers
@@ -1586,6 +1588,20 @@ async def _no_revalidation(_session: AsyncSession, *, ref: ArtifactRef) -> None:
     caller cannot skip the guard silently (WK-2113 S3)."""
 
 
+def _route_revalidator(database: Database, workspace_id: UUID, actor: Principal) -> Revalidate:
+    """The revalidator `POST /deployment-requests` builds (`app.api.deployments`), from the same
+    factory over the test's own objects: a pass-through would hide the guard under test."""
+    from backend.tests.conftest_db import test_blob_bucket
+
+    return revalidator(
+        database=database,
+        blob_store=BlobStore(Settings(blob_bucket=test_blob_bucket())),
+        slot=BundleSlot(),
+        workspace_id=workspace_id,
+        actor=actor,
+    )
+
+
 async def _deployment_request(env: Env, *, upto: str) -> Ctx:
     deployer = await _principal(env.database, env.workspace_id, "deployer")
     version_ref = await approved_version(env.database, env.workspace_id, new_uuid7())
@@ -1610,6 +1626,7 @@ async def _deployment_request(env: Env, *, upto: str) -> Ctx:
             actor=deployer,
             environment="prod",
             body=DeploymentRequestCreate(rating_version_ref=rating_ref, change_summary="FR-7"),
+            revalidate=_route_revalidator(env.database, env.workspace_id, deployer),
         )
     async with env.database.session() as session:
         approval = (
@@ -1886,6 +1903,7 @@ async def _creates_deployment_request(session: AsyncSession, env: Env, ctx: Ctx)
         body=DeploymentRequestCreate(
             rating_version_ref=ctx.data["rating_ref"], change_summary="FR-7"
         ),
+        revalidate=_route_revalidator(env.database, env.workspace_id, ctx.data["deployer"]),
     )
 
 
