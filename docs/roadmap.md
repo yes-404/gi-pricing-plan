@@ -5175,3 +5175,5 @@ not when its requirements are individually ticked off.
 *(Dated line, 2026-11-09, docs batch 32, by the planner (plan-s3fill), P22, on the maintainer's (by delegation) entry "2026-11-09 16:27:43 GMT": §12 row 2 "meeting NFR-489": NOT MET by D5.12 (n = 1, N = 4, at offered rate 100 of target 200 rps, p99 101.915 ms against 15 ms, no-GBM limb; Intel(R) Xeon(R) CPU @ 2.20GHz; 8 vCPU; lower bound on a non-spec host). FD-1836 and FD-1411 carried by name to P3-A (draft; opened at the P2 close, CR-2103 P16), F38 with them. Whether P2 exits with row 2 unmet is the user's word, asked at the user's P2 acceptance line after the exit demo.)*
 
 The workflow documents were written with timing tables for exactly this purpose.
+
+<!-- Throwaway pull request: proves the freeze check fails on an edit to a frozen record. Not for merge. -->
