@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import importlib.util
 import pathlib
+import re
 import sys
 import types
 
@@ -117,3 +118,24 @@ def test_scope_audit_evidence_reads_the_same_forms(
         "FR-273": ["tests/test_b.py"],
         "NFR-5": ["tests/test_c.py"],
     }
+
+
+def test_the_count_is_distinct_files_not_markers(
+    tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """F36: the row says "test file(s)". Two markers for one id in one file are one file; the
+    same id in a second file is two."""
+    twice = DECORATOR + DECORATOR.replace("test_a", "test_a2")
+    root = _tree(tmp_path, one=twice, two=DECORATOR)
+    monkeypatch.setattr(req_coverage, "ROOT", root)
+    assert req_coverage.main() == 0
+    rows = {
+        line.split()[0]: line.split()[1]
+        for line in capsys.readouterr().out.splitlines()
+        if line.strip().startswith(("FR-", "NFR-"))
+    }
+    assert rows == {"FR-272": "2"}
+    only_one = _tree(tmp_path / "solo", one=twice)
+    monkeypatch.setattr(req_coverage, "ROOT", only_one)
+    assert req_coverage.main() == 0
+    assert re.search(r"FR-272\s+1 test file\(s\)", capsys.readouterr().out)

@@ -81,12 +81,14 @@ def main() -> int:
         body = spec.read_text(encoding="utf-8")
         specified |= set(_REQ_DEFINED.findall(body))
 
-    claimed: dict[str, list[str]] = {}
+    # Distinct files per id, not markers: the report's label is "test file(s)" (F36: 239 of 329
+    # rows counted markers, so a file marking one id twice read as two files).
+    claimed: dict[str, set[str]] = {}
     for root in _test_roots():
         for test in sorted(root.rglob("test_*.py")):
             source = test.read_text(encoding="utf-8")
             for rid in markers_in(source):
-                claimed.setdefault(rid, []).append(str(test.relative_to(ROOT)))
+                claimed.setdefault(rid, set()).add(str(test.relative_to(ROOT)))
 
     unknown = sorted(set(claimed) - specified)
     print(f"  requirements specified : {len(specified)}")
@@ -110,7 +112,7 @@ def main() -> int:
         # typo, or a requirement that was renumbered in violation of the append-only rule.
         print("\n  FAIL: tests claim requirements that do not exist:")
         for rid in unknown:
-            print(f"      {rid}  <- {', '.join(claimed[rid])}")
+            print(f"      {rid}  <- {', '.join(sorted(claimed[rid]))}")
         return 1
     return 0
 
