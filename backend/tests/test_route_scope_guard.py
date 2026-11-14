@@ -144,16 +144,11 @@ ROUTE_SCOPES: dict[Route, ScopeType] = {
 
 _RL_8182 = ("RL-1849", "the slice RL-1849 cuts")
 _FD_8184 = ("FD-1853", "the slice RL-1849 cuts (FD-1853 joins it)")
-_THIS = ("SL-8192", "SL 8192 (SL-1878 Task 4 follow-on), after SL-1736 merges")
 
-#: The rule-set row is paired with four strict xfails in `test_dataset_scoped_writes.py`
-#: (`_RULE_SET_OWED`): when SL 8192 fixes the route both XPASS and this row stops failing, so the
-#: run goes red until the mark and the row are deleted together.
 #: Route -> (owner record, the slice that removes the row). A row means: this route fails the
 #: predicate today, the failure is owned, and that slice deletes the row. Working ids are written
 #: in hyphen form until minted (`test_every_known_gap_names_an_owner_in_the_index`).
 KNOWN_SCOPE_GAPS: dict[Route, tuple[str, str]] = {
-    ("PUT", "/api/v1/datasets/{slug}/rule-set"): _THIS,
     **{
         route: _RL_8182
         for route in (
@@ -417,8 +412,8 @@ def _app_failures(routes: dict[Route, APIRoute]) -> dict[Route, list[str]]:
 def test_no_route_gate_contradicts_the_scope_its_handler_checks(
     routes: dict[Route, APIRoute],
 ) -> None:
-    """The app-wide guard. Red at base: names exactly the three FD-1852 routes (dictionary,
-    rule-set, acknowledge), which `KNOWN_SCOPE_GAPS` then carries only for rule-set."""
+    """The app-wide guard. Red at base: named exactly the three FD-1852 routes (dictionary,
+    rule-set, acknowledge), all now fixed, so `KNOWN_SCOPE_GAPS` carries none of them."""
     bad = {k: v for k, v in _app_failures(routes).items() if k not in KNOWN_SCOPE_GAPS}
     assert not bad, "\n" + "\n".join(
         f"{m} {p}: {'; '.join(r)}" for (m, p), r in sorted(bad.items())
