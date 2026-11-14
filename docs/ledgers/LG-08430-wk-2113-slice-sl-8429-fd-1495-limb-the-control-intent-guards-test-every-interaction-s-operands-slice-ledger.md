@@ -159,6 +159,13 @@ Head run: `1 failed, 14 passed` (the failure is test (a) at the old assertion, b
 - **The 19:54:02 resolver change shares `3f0eebbd` with the pricing-core fix, not a commit of its own, as that ruling allowed. No history rewrite:** the squash makes the split moot, and the lead reports it.
 - **`ruff format --check`:** four of the five files touched were already unformatted at `0edae7a3` (`git show 0edae7a3:<file> | ruff format --check --stdin-filename`: rc=1 for `test_fr240_governance.py`, `platform/modelling.py`, `test_glm.py`, `test_rating_compile_fr240.py`; `factors.py` rc=0 before and after). No file was reformatted, so the diff is the change; `ruff check .` is the enforced half.
 
+### Fresh review rulings (seat `exec-sl8429d`, 2026-11-14; review `scratch/aud-s1rev/review.md`, sha256 prefix feee60c192d6, at `82e306b1`: MET 14, PARTLY 1, NOT MET 0)
+
+- **LOW 1, accepted:** `rateable()` may now raise `OperandNotSuppliedError` (a closure it cannot read fails closed); it has no production caller (lead-verified), and its docstring now says so and names `control_factor_in` as the function callers use.
+- **LOW 2, accepted:** the rate-table key guard's `Factor.model_validate` is stricter than the earlier `.get("intent")`; unreachable with both in-tree resolvers.
+- **LOW 3, fixed:** `test_the_seed_route_refuses_an_interaction_over_a_control_operand` and its instrument control `test_the_seed_route_seeds_an_interaction_over_risk_operands` (`backend/tests/test_fr240_governance.py`) run the seed route over a model that pins only an interaction Factor, so the operands arrive through `load_factors`' transitive load. Red-first is not possible at the fixed head (the fix is already in); the planted-flip proof is in the build log.
+- **LOW 4 and INFO 5-7:** read, no action.
+
 ### Audit
 
 Not yet written; the auditor re-checks.

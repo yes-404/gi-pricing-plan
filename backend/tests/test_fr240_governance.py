@@ -317,6 +317,81 @@ def test_the_seed_route_refuses_a_control_factor_with_its_code(
     assert response.json()["code"] == "CONTROL_FACTOR_IN_RATEABLE_PATH"
 
 
+def _seed_over_an_interaction(
+    api_client, workspace_id, principal, *, operand_intent: FactorIntent
+) -> Any:
+    """POST the seed route for a model that pins ONLY an interaction Factor whose operands are
+    `crossed_a` (intent `operand_intent`) and `crossed_b` (risk). The operands are never in
+    `spec.factors`, so the guard sees them only through `load_factors`' transitive load (SL 8429
+    review LOW 3; the core analogues are `test_rating_compile_fr240.py`'s `_seed_cross` tests)."""
+    suffix = new_uuid7().hex[-8:]
+    cross_slug = f"crossed_{suffix}"
+
+    async def _insert(session: AsyncSession) -> None:
+        dataset_id = new_uuid7()
+        operands = [
+            Factor(
+                id=new_uuid7(), slug=f"{name}_{suffix}", dataset_id=dataset_id, version=1,
+                type=FactorType.IDENTITY, source_columns=(f"{name}_{suffix}",), intent=intent,
+            )
+            for name, intent in (("crossed_a", operand_intent), ("crossed_b", FactorIntent.RISK))
+        ]
+        cross = Factor(
+            id=new_uuid7(), slug=cross_slug, dataset_id=dataset_id, version=1,
+            type=FactorType.INTERACTION, source_columns=(),
+            operand_factor_ids=tuple(operand.id for operand in operands),
+        )
+        for factor in (*operands, cross):
+            session.add(
+                FactorRow(
+                    id=factor.id, workspace_id=workspace_id, dataset_id=dataset_id,
+                    slug=factor.slug, version=1,
+                    body=factor.model_dump(mode="json", exclude={"id", "version", "dataset_id"}),
+                )
+            )
+        await session.flush()
+
+    _run_with_database(_insert)
+    family = f"mf-{suffix}"
+    _seed_approved_model(workspace_id, family, {cross_slug: [("A | 2010", 1.1)]})
+    return api_client.post(
+        f"/api/v1/rate-tables/{_table_slug()}/seed-from-model",
+        json=_seed_body(family, factor=cross_slug),
+        headers=_headers(principal, workspace_id),
+    )
+
+
+@pytest.mark.req("FR-88")
+@pytest.mark.req("FR-230")
+@pytest.mark.req("FR-240")
+def test_the_seed_route_refuses_an_interaction_over_a_control_operand(
+    api_client, workspace_id, principal, grant
+) -> None:
+    """The route refuses with the core path's named error, naming the OPERAND."""
+    _run(grant("pricing_actuary"))
+    response = _seed_over_an_interaction(
+        api_client, workspace_id, principal, operand_intent=FactorIntent.CONTROL
+    )
+    assert response.status_code == 422, response.text
+    assert response.json()["code"] == "CONTROL_FACTOR_IN_RATEABLE_PATH"
+    assert "crossed_a_" in response.text
+
+
+@pytest.mark.req("FR-88")
+@pytest.mark.req("FR-230")
+@pytest.mark.req("FR-240")
+def test_the_seed_route_seeds_an_interaction_over_risk_operands(
+    api_client, workspace_id, principal, grant
+) -> None:
+    """The instrument control: the same shape over a RISK operand seeds, so the refusal above
+    is the intent and not the interaction."""
+    _run(grant("pricing_actuary"))
+    response = _seed_over_an_interaction(
+        api_client, workspace_id, principal, operand_intent=FactorIntent.RISK
+    )
+    assert response.status_code == 201, response.text
+
+
 @pytest.mark.req("FR-88")
 @pytest.mark.req("FR-240")
 def test_a_compile_over_a_control_keyed_table_fails_with_its_code(
