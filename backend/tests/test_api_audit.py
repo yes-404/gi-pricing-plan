@@ -108,6 +108,37 @@ async def test_filters_narrow_by_action_entity_actor_and_text(
 
 
 @pytest.mark.req("FR-371")
+async def test_the_returned_filter_finds_legacy_and_new_rows(
+    client: TestClient, database: Database, workspace_id, principal, auditor_headers
+) -> None:
+    """C1 (#1783, Q3 (a2)): `<type>.returned` also finds the pre-rename spelling.
+
+    Before the rename a return from review was written as the forward state's name, with
+    `before.status == "review"`. The stored rows keep it (FR-370), so the filter has to find
+    both, and must not match a forward `model.fitted` (draft → fitted).
+    """
+    async with database.unit_of_work() as session:
+        for action, before, ref in (
+            ("model.fitted", "draft", "model:fam@1"),  # forward: never a return
+            ("model.fitted", "review", "model:fam@2"),  # legacy return
+            ("model.returned", "review", "model:fam@3"),  # new return
+        ):
+            await audit.record(
+                session,
+                workspace_id=workspace_id,
+                actor=principal,
+                source=JobSource.API,
+                action=action,
+                entity_ref=ref,
+                before={"status": before},
+            )
+    body = client.get("/api/v1/audit?action=model.returned", headers=auditor_headers).json()
+    assert sorted(i["entity_ref"] for i in body["items"]) == ["model:fam@2", "model:fam@3"]
+    forward = client.get("/api/v1/audit?action=model.fitted", headers=auditor_headers).json()
+    assert sorted(i["entity_ref"] for i in forward["items"]) == ["model:fam@1", "model:fam@2"]
+
+
+@pytest.mark.req("FR-371")
 async def test_the_query_is_cursor_paginated(
     client: TestClient, database: Database, workspace_id, principal, auditor_headers
 ) -> None:

@@ -571,6 +571,8 @@ Generated sections, in order (R3). Each cites the artifacts it drew from.
 
 *`entity_ref` names the subject of the event: an `ArtifactRef` when the subject is an artifact, a scoped `type:name` otherwise. *(Recorded 2026-08-26, OQ-653.)*
 
+*(Dated note, 2026-11-14, #1497 slice 4, on #1783 C1 and Q3 (a2): a return from `review` is written as `<type>.returned` for `model`, `custom_objective`, `custom_metric` and `peril_structure`. Before, these four wrote the forward state's name for the return (`model.fitted`, `custom_objective.certified`, `custom_metric.certified`, `peril_structure.reconciled`), so one name meant two transitions. Stored rows keep that spelling (FR-370); a query with `action=<type>.returned` also matches the legacy rows, which are the legacy name with `before.status` `review`. The Validation Rule return (`validation_rule.draft`) and `rating_version.returned_to_draft` are unchanged.)*
+
 ---
 
 ## 5. Interfaces

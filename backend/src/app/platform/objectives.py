@@ -877,7 +877,10 @@ async def apply_approval_decision(
         workspace_id=workspace_id,
         actor=actor,
         source=JobSource.API,
-        action=f"custom_objective.{target.value}",
+        # A return from review is `custom_objective.returned`, not the forward state's name (C1).
+        action="custom_objective.returned"
+        if before is ObjectiveStatus.REVIEW and target is ObjectiveStatus.CERTIFIED
+        else f"custom_objective.{target.value}",
         entity_ref=str(ref),
         before={"status": before.value},
         after={"status": target.value, "approval_request_id": str(request.id)},

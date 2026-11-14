@@ -26,7 +26,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Query, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, ConfigDict, Field
-from sqlalchemy import Select, func, or_, select
+from sqlalchemy import Select, and_, func, or_, select
 
 from app.api.authz import requires
 from app.api.deps import Caller
@@ -135,7 +135,22 @@ def _filtered(
     if entity is not None:
         conditions.append(AuditEventRow.entity_ref == entity)
     if action is not None:
-        conditions.append(AuditEventRow.action == action)
+        legacy = audit_service.RETURNED_LEGACY_ACTIONS.get(action)
+        if legacy is None:
+            conditions.append(AuditEventRow.action == action)
+        else:
+            # C1 (Q3 (a2)): rows written before the rename spell the return as the forward
+            # state's name; the stored rows are never rewritten (FR-370), so the filter
+            # finds both. A forward transition has `before.status` other than `review`.
+            conditions.append(
+                or_(
+                    AuditEventRow.action == action,
+                    and_(
+                        AuditEventRow.action == legacy,
+                        AuditEventRow.before["status"].astext == "review",
+                    ),
+                )
+            )
     if from_ is not None:
         conditions.append(AuditEventRow.at >= from_)
     if to is not None:

@@ -15,7 +15,7 @@ workspaces have independent chains and must not queue behind each other.
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Final
 from uuid import UUID
 
 from sqlalchemy import func, select, text
@@ -32,7 +32,18 @@ from model_schema import (
     new_uuid7,
 )
 
-__all__ = ["ChainBrokenError", "record", "verify_chain"]
+__all__ = ["RETURNED_LEGACY_ACTIONS", "ChainBrokenError", "record", "verify_chain"]
+
+#: C1 (#1783): a return from review is `<type>.returned`. Before it, these four types wrote
+#: the forward state's name for the return too, so one name meant two transitions. Stored
+#: rows keep that spelling (FR-370); this maps each new name to the legacy one, which a
+#: query tells apart by `before.status == "review"`.
+RETURNED_LEGACY_ACTIONS: Final = {
+    "model.returned": "model.fitted",
+    "custom_objective.returned": "custom_objective.certified",
+    "custom_metric.returned": "custom_metric.certified",
+    "peril_structure.returned": "peril_structure.reconciled",
+}
 
 # Namespace for pg_advisory_xact_lock, so the audit chain lock cannot collide with any
 # other advisory lock the platform takes later.
