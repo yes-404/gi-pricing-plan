@@ -388,14 +388,14 @@ def test_a_monotone_constraint_lands_on_the_right_feature() -> None:
         assert len(term.scores) == len(plain_by_feature[term.term_features[0]].scores)
 
 
-@pytest.mark.req("FR-140")
+@pytest.mark.req("FR-122")
 def test_a_monotone_constraint_on_a_categorical_feature_is_refused_by_name() -> None:
     with pytest.raises(EbmFitError) as error:
         fit_ebm(_book(), _spec(monotone_constraints={"area": 1}), FACTORS, bandings=BANDINGS)
     assert error.value.code == "EBM_MONOTONE_CONSTRAINT_INCOMPLETE"
 
 
-@pytest.mark.req("FR-140")
+@pytest.mark.req("FR-122")
 def test_a_monotone_constraint_naming_an_unknown_slug_is_refused_by_name() -> None:
     with pytest.raises(EbmFitError) as error:
         fit_ebm(
@@ -445,7 +445,6 @@ def test_the_fit_is_reproducible_under_the_spec_seed() -> None:
     assert not np.array_equal(other_speed.scores, different_speed.scores)
 
 
-@pytest.mark.req("FR-140")
 def test_fit_seconds_and_library_versions_are_recorded() -> None:
     result = fit_ebm(_book(), _spec(), FACTORS, bandings=BANDINGS)
     assert result.fit_seconds >= 0.0
