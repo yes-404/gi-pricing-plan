@@ -1,15 +1,15 @@
 """Proxy assessment: how strongly a Factor is associated with a protected characteristic
-(`02` FR-91, FR-PROXY-1 to FR-PROXY-6).
+(`02` FR-91, FR-2137 to FR-2142).
 
 **This is evidence, never a gate.** Nothing here compares a number with a limit, and the
-result has no field that says pass, fail or flagged (FR-PROXY-5). Whether an association
+result has no field that says pass, fail or flagged (FR-2141). Whether an association
 amounts to unlawful discrimination is a legal judgement, so the module measures and stops.
 
-**One computation serves both granularities** (FR-PROXY-2). A reference table holds, per
+**One computation serves both granularities** (FR-2138). A reference table holds, per
 key, a share for every class. An individual-level table is the case whose shares are all 0
 or 1, so there is no second code path for it. A matched row's exposure is split across the
 classes by those shares, which gives the *expected joint weight* ``W(level, class)`` that
-every measure reads (FR-PROXY-3):
+every measure reads (FR-2139):
 
 * **Mutual information**, in bits, of level and class under ``W``, and the same divided by
   the class entropy (null when that entropy is 0).
@@ -21,7 +21,7 @@ every measure reads (FR-PROXY-3):
 * **Coverage**: matched exposure over total exposure.
 
 Pure Polars and NumPy, no new dependency, and nothing is persisted: the reference rows are
-read and dropped (FR-PROXY-4). The scoring path is untouched.
+read and dropped (FR-2140). The scoring path is untouched.
 """
 
 from __future__ import annotations
@@ -34,7 +34,7 @@ import numpy as np
 import polars as pl
 from numpy.typing import NDArray
 
-#: Shares must sum to one within this, and lie in [0, 1] (FR-PROXY-2).
+#: Shares must sum to one within this, and lie in [0, 1] (FR-2138).
 SHARE_TOLERANCE = 1e-6
 
 
@@ -78,7 +78,7 @@ def assess_proxies(
 
     ``reference`` holds ``reference_key`` and one share column per class. Rows of ``frame``
     whose ``key`` is not in the reference are unmatched: excluded from every measure and
-    counted in the coverage (FR-PROXY-2).
+    counted in the coverage (FR-2138).
     """
     class_list = list(classes)
     _validate(frame, factors, reference, key, reference_key, class_list, exposure)

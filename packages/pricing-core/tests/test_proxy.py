@@ -1,4 +1,4 @@
-"""Proxy assessment against answers known independently (`02` FR-PROXY-2, FR-PROXY-3, FR-PROXY-5).
+"""Proxy assessment against answers known independently (`02` FR-2138, FR-2139, FR-2141).
 
 The measures are checked three ways: closed-form answers (an independent characteristic
 carries no information, a perfect proxy carries all of it), equivalence (an integer exposure
@@ -42,7 +42,7 @@ def _assess(frame: pl.DataFrame, ref: pl.DataFrame, classes: list[str]) -> Proxy
     return assess_proxies(frame, ["level"], ref, key="k", reference_key="k", classes=classes)
 
 
-@pytest.mark.req("FR-PROXY-3")
+@pytest.mark.req("FR-2139")
 def test_an_independent_characteristic_gives_mi_zero_and_auc_one_half() -> None:
     keys = ["k1", "k2", "k3", "k4"]
     frame = _frame(keys, ["A", "A", "B", "B"], [1.0] * 4)
@@ -53,7 +53,7 @@ def test_an_independent_characteristic_gives_mi_zero_and_auc_one_half() -> None:
     assert only.auc_by_class == {"x": 0.5, "y": 0.5}
 
 
-@pytest.mark.req("FR-PROXY-3")
+@pytest.mark.req("FR-2139")
 def test_a_perfect_proxy_gives_mi_equal_to_the_class_entropy_and_auc_one() -> None:
     keys = ["k1", "k2", "k3", "k4"]
     frame = _frame(keys, ["A", "A", "B", "B"], [1.0] * 4)
@@ -64,7 +64,7 @@ def test_a_perfect_proxy_gives_mi_equal_to_the_class_entropy_and_auc_one() -> No
     assert only.auc_by_class == {"x": 1.0, "y": 1.0}
 
 
-@pytest.mark.req("FR-PROXY-3")
+@pytest.mark.req("FR-2139")
 def test_a_single_class_has_nothing_to_normalise_by() -> None:
     keys = ["k1", "k2"]
     frame = _frame(keys, ["A", "B"], [1.0, 1.0])
@@ -95,7 +95,7 @@ def _replicate(frame: pl.DataFrame) -> pl.DataFrame:
     return pl.DataFrame(rows).with_columns(pl.lit(1.0).alias("exposure_years"))
 
 
-@pytest.mark.req("FR-PROXY-3")
+@pytest.mark.req("FR-2139")
 def test_integer_exposure_is_equivalent_to_replicated_rows() -> None:
     frame, ref = _random_subject_case(7)
     weighted = _assess(frame, ref, CLASSES).factors[0]
@@ -107,7 +107,7 @@ def test_integer_exposure_is_equivalent_to_replicated_rows() -> None:
         assert weighted.auc_by_class[c] == pytest.approx(replicated.auc_by_class[c], abs=1e-12)
 
 
-@pytest.mark.req("FR-PROXY-3")
+@pytest.mark.req("FR-2139")
 @pytest.mark.parametrize("seed", [1, 2, 3])
 def test_subject_results_agree_with_scikit_learn_on_the_replicated_frame(seed: int) -> None:
     frame, ref = _random_subject_case(seed)
@@ -128,7 +128,7 @@ def test_subject_results_agree_with_scikit_learn_on_the_replicated_frame(seed: i
         assert got.auc_by_class[c] == pytest.approx(roc_auc_score(y, score), abs=1e-10)
 
 
-@pytest.mark.req("FR-PROXY-2", "FR-PROXY-3")
+@pytest.mark.req("FR-2138", "FR-2139")
 def test_area_shares_agree_with_the_expanded_weighted_frame() -> None:
     rng = np.random.default_rng(11)
     n_rows, n_areas = 80, 6
@@ -162,7 +162,7 @@ def test_area_shares_agree_with_the_expanded_weighted_frame() -> None:
         )
 
 
-@pytest.mark.req("FR-PROXY-2", "FR-PROXY-3")
+@pytest.mark.req("FR-2138", "FR-2139")
 def test_unmatched_rows_are_excluded_and_counted_in_the_coverage() -> None:
     frame = _frame(["k1", "k2", "k3", "ghost"], ["A", "A", "B", "B"], [1.0, 1.0, 2.0, 4.0])
     ref = _subject_reference(["k1", "k2", "k3"], ["x", "y", "x"], ["x", "y"])
@@ -173,7 +173,7 @@ def test_unmatched_rows_are_excluded_and_counted_in_the_coverage() -> None:
     assert result.coverage == 0.5
 
 
-@pytest.mark.req("FR-PROXY-2")
+@pytest.mark.req("FR-2138")
 @pytest.mark.parametrize(
     ("ref", "match"),
     [
@@ -191,7 +191,7 @@ def test_a_reference_table_that_fits_neither_granularity_is_refused(
         _assess(frame, ref, ["x", "y"])
 
 
-@pytest.mark.req("FR-PROXY-3")
+@pytest.mark.req("FR-2139")
 def test_negative_exposure_is_refused() -> None:
     frame = _frame(["k1", "k2"], ["A", "B"], [1.0, -1.0])
     ref = _subject_reference(["k1", "k2"], ["x", "y"], ["x", "y"])
@@ -199,7 +199,7 @@ def test_negative_exposure_is_refused() -> None:
         _assess(frame, ref, ["x", "y"])
 
 
-@pytest.mark.req("FR-PROXY-5")
+@pytest.mark.req("FR-2141")
 def test_the_result_has_no_threshold_or_verdict_and_a_perfect_proxy_refuses_nothing() -> None:
     allowed = {
         "ProxyAssessmentResult": {
