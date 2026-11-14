@@ -87,11 +87,7 @@ def _random_subject_case(seed: int) -> tuple[pl.DataFrame, pl.DataFrame]:
 
 def _replicate(frame: pl.DataFrame) -> pl.DataFrame:
     """One row per unit of integer exposure, each of exposure 1."""
-    rows = [
-        row
-        for row in frame.to_dicts()
-        for _ in range(int(row["exposure_years"]))
-    ]
+    rows = [row for row in frame.to_dicts() for _ in range(int(row["exposure_years"]))]
     return pl.DataFrame(rows).with_columns(pl.lit(1.0).alias("exposure_years"))
 
 
@@ -145,8 +141,11 @@ def test_area_shares_agree_with_the_expanded_weighted_frame() -> None:
     p = shares[row_area]  # each row's expected class shares
     levels = np.unique(level)
     joint = np.array([[(exposure * p[:, j])[level == lv].sum() for j in range(3)] for lv in levels])
+    # scikit-learn casts a contingency table to integers, so scale before the cast: MI is
+    # invariant to a common factor, and rounding at 1e9 costs under 1e-8 bits.
+    scaled = np.round(joint * 1e9).astype(np.int64)
     assert got.mutual_information_bits == pytest.approx(
-        mutual_info_score(None, None, contingency=joint) / math.log(2), abs=1e-10
+        mutual_info_score(None, None, contingency=scaled) / math.log(2), abs=1e-7
     )
     level_total = joint.sum(axis=1)
     for j, c in enumerate(CLASSES):
@@ -157,9 +156,7 @@ def test_area_shares_agree_with_the_expanded_weighted_frame() -> None:
         y = np.concatenate([np.ones(n_rows), np.zeros(n_rows)])
         s = np.concatenate([score, score])
         w = np.concatenate([exposure * p[:, j], exposure * (1 - p[:, j])])
-        assert got.auc_by_class[c] == pytest.approx(
-            roc_auc_score(y, s, sample_weight=w), abs=1e-10
-        )
+        assert got.auc_by_class[c] == pytest.approx(roc_auc_score(y, s, sample_weight=w), abs=1e-10)
 
 
 @pytest.mark.req("FR-2138", "FR-2139")
@@ -203,10 +200,17 @@ def test_negative_exposure_is_refused() -> None:
 def test_the_result_has_no_threshold_or_verdict_and_a_perfect_proxy_refuses_nothing() -> None:
     allowed = {
         "ProxyAssessmentResult": {
-            "matched_rows", "matched_exposure", "total_exposure", "coverage", "factors",
+            "matched_rows",
+            "matched_exposure",
+            "total_exposure",
+            "coverage",
+            "factors",
         },
         "FactorProxyResult": {
-            "factor", "mutual_information_bits", "normalised_mutual_information", "auc_by_class",
+            "factor",
+            "mutual_information_bits",
+            "normalised_mutual_information",
+            "auc_by_class",
         },
     }
     assert {f.name for f in dataclasses.fields(ProxyAssessmentResult)} == allowed[
