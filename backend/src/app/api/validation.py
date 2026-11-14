@@ -70,6 +70,8 @@ WriteDatasets = Annotated[Caller, Depends(requires(Perm.DATASET_WRITE))]
 AcknowledgeWarnings = Annotated[
     Caller, Depends(requires(Perm.DATASET_ACKNOWLEDGE_WARNING, held_anywhere=True))
 ]
+#: `dataset:write` held under any scope; the service checks it on the Dataset and counts (FR-345).
+WriteNamedDataset = Annotated[Caller, Depends(requires(Perm.DATASET_WRITE, held_anywhere=True))]
 #: The one route whose permission is check-dependent; see `create_rule`.
 DecideApprovals = Annotated[Caller, Depends(requires(Perm.APPROVAL_DECIDE))]
 
@@ -435,17 +437,29 @@ async def get_rule_set(
     responses=problems(401, 403, 404, 409, 422),
 )
 async def put_rule_set(
-    slug: str, body: RuleSetReplace, caller: WriteDatasets, database: DatabaseDep
+    slug: str,
+    body: RuleSetReplace,
+    caller: WriteNamedDataset,
+    count: Annotated[CountAfterCheck, Depends(management_counter)],
+    database: DatabaseDep,
 ) -> ValidationRuleSet:
     """FR-51: a replace creates a **new rule-set version**.
 
     Never an edit in place. A Validation Report records the exact `rule_set_version` it
     ran, so mutating a rule set would change what every past report was a report *of*.
     """
+    # The gate holds `dataset:write` under any scope; the service checks it on this Dataset
+    # (FR-345). A load 404 is counted here, since the caller passed the gate and FR-452 exempts
+    # only 401 and 403; the service awaits `count` after its scoped check, so a 403 is not.
     async with database.unit_of_work() as session:
-        dataset = await dataset_service.load_dataset(
-            session, workspace_id=caller.workspace_id, slug=slug
-        )
+        try:
+            dataset = await dataset_service.load_dataset(
+                session, workspace_id=caller.workspace_id, slug=slug
+            )
+        except PlatformError as exc:
+            if exc.status_code == 404:
+                await count()
+            raise
         return await rule_service.replace_rule_set(
             session,
             workspace_id=caller.workspace_id,
@@ -461,4 +475,5 @@ async def put_rule_set(
                 for member in body.rules
             ],
             reference_dataset_version_id=body.reference_dataset_version_id,
+            count_management=count,
         )

@@ -196,15 +196,6 @@ def _unknown(route: str, client: TestClient, headers: dict[str, str]):
     )
 
 
-_RULE_SET_OWED = pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "FD 8177 rule-set limb: owned by SL 8192 (SL-1878 Task 4 follow-on), "
-        "activates when SL-1736 merges"
-    ),
-)
-
-
 # route -> (call, the scoped-to-X principal's key in `world.headers`, the success status)
 ROUTES: dict[str, tuple[Callable[..., Any], str, int]] = {
     "dictionary": (_dictionary, "analyst_x", 200),
@@ -212,14 +203,8 @@ ROUTES: dict[str, tuple[Callable[..., Any], str, int]] = {
     "acknowledge": (_acknowledge, "actuary_x", 201),
 }
 
-#: The routes for the tests that are red at base. The rule-set limb is carried to SL 8192: its four
-#: tests are STRICT xfails, so the day the fix lands they XPASS and fail the run, forcing this mark
-#: and the rule-set row of `test_route_scope_guard.KNOWN_SCOPE_GAPS` out together.
-RED_ROUTES = [
-    "dictionary",
-    pytest.param("rule-set", marks=_RULE_SET_OWED),
-    "acknowledge",
-]
+#: The routes for the tests that were red at base (FD-1852's three routes).
+RED_ROUTES = ["dictionary", "rule-set", "acknowledge"]
 
 
 @pytest.mark.req("FR-345")
