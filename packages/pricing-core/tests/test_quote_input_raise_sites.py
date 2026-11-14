@@ -94,6 +94,13 @@ _INPUT_FREE = {
     ("rating/score.py", "_check_model_call_sentinel"): 1,
     ("rating/runtime.py", "_load_boosters"): 1,  # step id and ref string, no quote
     ("rating/runtime.py", "_check_graph_matches_inlined_algorithm"): 1,  # a node id
+    # FR-193 / FR-243 (#1741): the load-time refusal of a GLM level indicator its Factor cannot
+    # produce. It reads no row: the text is the code, the Bundle ref, the term and the Factor
+    # slug, never a quote value (`test_a_level_an_identity_factor_over_a_number_cannot_produce_is_
+    # refused_on_both_paths` drives the per-call twin with a sentinel row value and asserts it is
+    # absent; `test_a_bundle_whose_glm_term_its_banding_cannot_produce_is_refused_at_load` pins
+    # the load text's parts).
+    ("rating/runtime.py", "_glm_scorer"): 1,
     # `_model_call_failure`: step id and the pinned model_type; and, for a Peril Structure pin
     # (PL-1461 Task 4), step id and ref string, no quote; the refusal text of `_ModelCallRefusal`;
     # and, for a GLM or peril component scorer failure (PL-1464, the 2026-10-10 03:20:34 BST
