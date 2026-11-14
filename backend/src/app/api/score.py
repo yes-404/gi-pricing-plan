@@ -45,11 +45,15 @@ and to translate the request body into the `score.batch` handler's parameter sha
 
 from __future__ import annotations
 
+import json
 import random
+from collections.abc import Callable, Coroutine
+from decimal import Decimal
 from typing import Annotated, Any, Final
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Request, Response, status
+from fastapi.routing import APIRoute
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.background import BackgroundTask
@@ -89,13 +93,51 @@ from model_schema import (
 )
 from pricing_core.rating.compile import Bundle
 from pricing_core.rating.runtime import CompiledBundle, load_bundle
-from pricing_core.rating.score import score_one
+from pricing_core.rating.score import decimals_as_floats, score_one
 from pricing_core.rating.trace_diff import diff_traces
 from pricing_core.safe_error import CodedError
 
 _log = get_logger("app.api.score")
 
+
+class _DecimalJSONRequest(Request):
+    """A request whose JSON body reads every number with a fraction or an exponent as `Decimal`.
+
+    A decimal Rating Input is a JSON number. Starlette's `json.loads` rounds it to a `float`
+    before `pricing-core`'s FR-273 guard (`_engine_context`: a `decimal` input is lossless as a
+    float, else refused by name) can see it, so a text of more than about 15 significant digits
+    priced as the rounded value. Read as `Decimal`, the text reaches that guard, the one
+    definition, and the route refuses exactly as core does (FD-1671, the maintainer's
+    (by delegation) "2026-11-13 19:53:34 GMT" (R2), design (b)). `NaN`, `Infinity` and
+    `-Infinity` are read as `Decimal` too (`parse_float` is not called for them), so the guard
+    refuses them by key path. Integers, booleans and strings parse as before.
+    """
+
+    async def json(self) -> Any:
+        if not hasattr(self, "_json"):
+            self._json = json.loads(await self.body(), parse_float=Decimal, parse_constant=Decimal)
+        return self._json
+
+
+class _DecimalInputRoute(APIRoute):
+    """The route class of the two routes that take a Quote Context (`/score`, `/score/compare`).
+
+    Scoped to them on purpose: no other route's JSON numbers become `Decimal`, and
+    `/score/batch` takes no Rating Input over JSON (its rows are read from a Dataset Version).
+    """
+
+    def get_route_handler(self) -> Callable[[Request], Coroutine[Any, Any, Response]]:
+        handler = super().get_route_handler()
+
+        async def decimal_route_handler(request: Request) -> Response:
+            return await handler(_DecimalJSONRequest(request.scope, request.receive))
+
+        return decimal_route_handler
+
+
 router = APIRouter(tags=["rating"])
+#: Where the Quote Context routes are declared; included into `router` at the foot of the module.
+_quote_router = APIRouter(route_class=_DecimalInputRoute)
 
 #: The per-quote codes `score_one` raises as code-named `ValueError`s, each already owned by
 #: `03` §5.1 and registered in `app.errors`. A code outside this set is not a per-quote
@@ -544,7 +586,7 @@ def _as_platform_error(exc: ValueError) -> PlatformError | None:
     return PlatformError(code, code.replace("_", " ").title(), _PER_QUOTE_STATUS, detail or None)
 
 
-@router.post(
+@_quote_router.post(
     "/score",
     summary="Score one Quote Context against an explicit Rating Version",
     status_code=200,
@@ -644,7 +686,7 @@ def _naming_side(problem: PlatformError, side: str) -> PlatformError:
     return PlatformError(problem.code, problem.title, problem.status_code, detail)
 
 
-@router.post(
+@_quote_router.post(
     "/score/compare",
     summary="Score one Quote Context against two Rating Versions, with a step-level diff",
     status_code=200,
@@ -703,6 +745,19 @@ async def score_compare(
         ),
     )
     return Response(content=comparison.model_dump_json(), media_type="application/json")
+
+
+def _stored_context(ctx: QuoteContext) -> dict[str, Any]:
+    """`ctx` as the JSON a sampled trace stores and the off-path re-score reads back.
+
+    The score routes read an input as a `Decimal` (`_DecimalJSONRequest`), which pydantic dumps in
+    JSON mode as a *string*; the re-score would refuse that as not numeric. A quote is stored only
+    after it priced, so every `Decimal` here, nested ones included, has passed FR-273's lossless
+    check; `decimals_as_floats` is the one crossing the live quote used, so a re-score reads the
+    same floats the quote priced.
+    """
+    inputs = {k: decimals_as_floats(v, k) for k, v in ctx.inputs.items()}
+    return ctx.model_copy(update={"inputs": inputs}).model_dump(mode="json")
 
 
 async def _maybe_sample_trace(
@@ -772,7 +827,7 @@ async def _maybe_sample_trace(
                 bundle_hash=result.bundle_hash,
                 sample_reason=reason,
                 environment=caller.environment,
-                quote_context=ctx.model_dump(mode="json"),
+                quote_context=_stored_context(ctx),
                 served_summary=traces_service.summarise_result(result),
                 deployment_id=deployment_id,
             )
@@ -865,3 +920,6 @@ async def score_batch(
     response.status_code = status.HTTP_202_ACCEPTED
     response.headers["Location"] = f"/api/v1/jobs/{job.id}"
     return job
+
+
+router.include_router(_quote_router)
