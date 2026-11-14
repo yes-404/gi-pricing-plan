@@ -21,7 +21,7 @@ on:
       - 'examples/**'
       - 'docs/contracts/**'
       # docs/** because every one of tests/'s root test files reads content under
-      # docs/ — the working notes, the register, the roadmap or the spec suite — so a
+      # docs/ — the specs, the ADRs, the workflows or the process pages — so a
       # change confined to docs/ is exactly the change this suite exists to check, not
       # an unrelated directory. Noticed 2026-09-01: PR #555 filed a new working note,
       # growing docs/notes/ from 18 to 19 files and breaking two tests that assert on
@@ -59,7 +59,7 @@ on:
       - 'examples/**'
       - 'docs/contracts/**'
       # docs/** because every one of tests/'s root test files reads content under
-      # docs/ — the working notes, the register, the roadmap or the spec suite — so a
+      # docs/ — the specs, the ADRs, the workflows or the process pages — so a
       # change confined to docs/ is exactly the change this suite exists to check, not
       # an unrelated directory. Noticed 2026-09-01: PR #555 filed a new working note,
       # growing docs/notes/ from 18 to 19 files and breaking two tests that assert on
