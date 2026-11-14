@@ -32,6 +32,35 @@ END
 $do$;
 ALTER ROLE gip_app_login VALID UNTIL 'infinity' CONNECTION LIMIT -1;
 ALTER ROLE gip_app VALID UNTIL 'infinity' CONNECTION LIMIT -1;
+-- THE NEXT BLOCK REVOKES EVERY OTHER MEMBERSHIP HELD BY THESE TWO ROLES, on purpose (#1760):
+-- RE-RUNNING THIS FILE REMOVES ANY ROLE AN OPERATOR OR DEPLOYER GRANTED TO gip_app_login OR
+-- gip_app BY HAND, whoever granted it. A membership kept silently keeps granting the
+-- application whatever that role holds. If the provisioning role may not revoke one, the run
+-- FAILS and names the role pair. Roles that are members OF gip_app are not touched.
+-- GRANTED BY is load-bearing: a membership row is per grantor, and a plain REVOKE removes only
+-- the row the current role granted.
+DO $do$
+DECLARE
+  m record;
+BEGIN
+  FOR m IN
+    SELECT r.rolname AS role_name, u.rolname AS member_name, g.rolname AS grantor_name
+    FROM pg_auth_members a
+    JOIN pg_roles r ON r.oid = a.roleid
+    JOIN pg_roles u ON u.oid = a.member
+    JOIN pg_roles g ON g.oid = a.grantor
+    WHERE u.rolname IN ('gip_app_login', 'gip_app')
+      AND NOT (r.rolname = 'gip_app' AND u.rolname = 'gip_app_login')
+  LOOP
+    BEGIN
+      EXECUTE format('REVOKE %I FROM %I GRANTED BY %I', m.role_name, m.member_name, m.grantor_name);
+    EXCEPTION WHEN insufficient_privilege THEN
+      RAISE EXCEPTION 'cannot revoke membership of role % in role %: no privilege',
+        m.member_name, m.role_name;
+    END;
+  END LOOP;
+END
+$do$;
 -- SET FALSE: the login role never needs SET ROLE gip_app; it inherits gip_app's grants.
 GRANT gip_app TO gip_app_login WITH INHERIT TRUE, SET FALSE;
 -- No credential here: `scripts/provision-app-role.py` sets it, as a SCRAM verifier.
