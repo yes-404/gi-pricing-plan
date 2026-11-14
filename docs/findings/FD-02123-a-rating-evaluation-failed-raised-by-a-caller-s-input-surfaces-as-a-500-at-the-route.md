@@ -12,7 +12,11 @@ relates: [WK-2113, SL-2118, LG-2119, FD-2122, FR-273]
 
 # FD-2123 — A `RATING_EVALUATION_FAILED` raised by a caller's input surfaces as a 500 at the route
 
+*Filed late, 2026-11-14, by WK-2113 S1's mint (SL-2124): S2's mint (merge 112, #1490) recorded this finding as a register row only; this file adds no content beyond that row and S2's records.*
+
 *Working id 8446, allocated by lead 34; minted as FD-2123 (WK-2113 S2). This document files, as a finding file, the register row that carried the finding as a row only. Every statement below is the register row's, quoted; nothing is added to it.*
+
+*Filed late, 2026-11-14, by WK-2113 S1's mint: S2's mint (merge 112) recorded this finding as a register row only.*
 
 ## Finding
 

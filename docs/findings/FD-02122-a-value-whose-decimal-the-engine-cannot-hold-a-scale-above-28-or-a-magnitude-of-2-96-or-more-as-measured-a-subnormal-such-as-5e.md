@@ -12,7 +12,11 @@ relates: [WK-2113, SL-2118, LG-2119, FR-273, FD-1671]
 
 # FD-2122 — A value whose decimal the engine cannot hold (a scale above 28, or a magnitude of 2^96 or more, as measured: a subnormal such as `5e-324`, the smallest normal double, `1e-29`, `1e29`) passed FR-273's guard and failed in the engine as `RATING_EVALUATION_FAILED`, a 500 `INTERNAL_ERROR` at the route, an internal error for a caller's input
 
+*Filed late, 2026-11-14, by WK-2113 S1's mint (SL-2124): S2's mint (merge 112, #1490) recorded this finding as a register row only; this file adds no content beyond that row and S2's records.*
+
 *Working id 8445, allocated by lead 34; minted as FD-2122 (WK-2113 S2). This document files, as a finding file, the register row that carried the finding as a row only. Every statement below is the register row's, quoted; nothing is added to it.*
+
+*Filed late, 2026-11-14, by WK-2113 S1's mint: S2's mint (merge 112) recorded this finding as a register row only.*
 
 ## Finding
 
