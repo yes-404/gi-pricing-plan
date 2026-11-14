@@ -377,3 +377,46 @@ async def test_an_event_carries_everything_the_requirement_lists(
     assert item["justification"].startswith("Dislocation")
     assert item["trace_id"] == "4bf92f3577b34da6a3ce929d0e0e4736"
     assert item["event_hash"].startswith("sha256:")
+
+
+@pytest.mark.req("FR-372")
+async def test_verify_with_no_range_is_the_whole_chain(
+    client: TestClient, database: Database, workspace_id, principal, auditor_headers
+) -> None:
+    await _events(database, workspace_id, principal)
+    body = client.get("/api/v1/audit/verify", headers=auditor_headers).json()
+    assert body["whole_chain"] is True
+    assert (body["first_sequence"], body["last_sequence"]) == (1, 3)
+    assert body["from"] is None and body["to"] is None
+
+
+@pytest.mark.req("FR-372")
+async def test_verify_takes_a_range_and_reports_what_it_checked(
+    client: TestClient, database: Database, workspace_id, principal, auditor_headers
+) -> None:
+    await _events(database, workspace_id, principal)
+    far_future = "2999-01-01T00:00:00Z"
+    body = client.get(
+        f"/api/v1/audit/verify?from={far_future}", headers=auditor_headers
+    ).json()
+    assert body["whole_chain"] is False
+    assert body["intact"] is True
+    assert body["events_checked"] == 0
+    assert body["first_sequence"] is None
+    assert body["from"].startswith("2999-01-01")
+    spanning = client.get(
+        "/api/v1/audit/verify?from=2000-01-01T00:00:00Z&to=2999-01-01T00:00:00Z",
+        headers=auditor_headers,
+    ).json()
+    assert (spanning["first_sequence"], spanning["last_sequence"]) == (1, 3)
+
+
+@pytest.mark.req("FR-372")
+async def test_verify_refuses_a_range_that_ends_before_it_starts(
+    client: TestClient, auditor_headers
+) -> None:
+    response = client.get(
+        "/api/v1/audit/verify?from=2026-02-01T00:00:00Z&to=2026-01-01T00:00:00Z",
+        headers=auditor_headers,
+    )
+    assert response.status_code == 422

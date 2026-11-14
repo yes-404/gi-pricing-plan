@@ -7,6 +7,7 @@ mock would test the wrong thing.
 from __future__ import annotations
 
 import json
+from datetime import UTC, datetime, timedelta
 
 import pytest
 from backend.tests.conftest_db import _EMPTY_THE_DATABASE
@@ -356,3 +357,146 @@ async def test_system_principal_needs_no_id_but_a_user_does() -> None:
     Principal(kind=ActorKind.SYSTEM)
     with pytest.raises(ValueError, match="must carry an id"):
         Principal(kind=ActorKind.USER)
+
+
+# -- verify_range: a span of the chain, streaming, and NFR-521's proof (#1497 slice 6) ----------
+
+
+async def _seed(database: Database, workspace_id, principal, ats: list[datetime]) -> None:
+    """A valid chain whose events carry the given `at`s (`record()` stamps now())."""
+    prev: str | None = None
+    rows: list[AuditEventRow] = []
+    for sequence, at in enumerate(ats, start=1):
+        core = AuditEventCore(
+            id=new_uuid7(),
+            workspace_id=workspace_id,
+            at=at,
+            actor=principal,
+            source=JobSource.API,
+            action="job.submitted",
+            entity_ref=f"job:seed@{sequence}",
+        )
+        event_hash = compute_event_hash(core, prev_event_hash=prev)
+        rows.append(
+            AuditEventRow(
+                **core.model_dump(exclude={"actor"}),
+                actor=principal.model_dump(mode="json"),
+                prev_event_hash=prev,
+                event_hash=event_hash,
+                sequence=sequence,
+            )
+        )
+        prev = event_hash
+    async with database.unit_of_work() as session:
+        session.add_all(rows)
+
+
+_DAY0 = datetime(2026, 1, 1, tzinfo=UTC)
+
+
+def _days(n: int) -> list[datetime]:
+    return [_DAY0 + timedelta(days=i) for i in range(n)]
+
+
+async def _tamper(owner_database: Database, workspace_id, sequence: int) -> None:
+    async with owner_database.unit_of_work() as session:
+        await session.execute(text("SET LOCAL session_replication_role = replica"))
+        await session.execute(
+            text(
+                "UPDATE audit_events SET action = 'job.failed' "
+                "WHERE workspace_id = :ws AND sequence = :seq"
+            ).bindparams(ws=workspace_id, seq=sequence)
+        )
+
+
+@pytest.mark.req("FR-372")
+async def test_a_tamper_outside_the_range_does_not_break_a_ranged_verify(
+    owner_database: Database, workspace_id, principal
+) -> None:
+    await _seed(owner_database, workspace_id, principal, _days(5))
+    await _tamper(owner_database, workspace_id, 5)
+    async with owner_database.session() as session:
+        span = await audit.verify_range(
+            session, workspace_id, from_=_days(5)[1], to=_days(5)[2]
+        )
+        assert (span.first_sequence, span.last_sequence, span.events_checked) == (2, 3, 2)
+        assert not span.whole_chain
+        with pytest.raises(ChainBrokenError) as exc:
+            await audit.verify_range(session, workspace_id)
+    assert exc.value.sequence == 5
+
+
+@pytest.mark.req("FR-372")
+async def test_a_tamper_inside_the_range_is_caught_at_its_sequence(
+    owner_database: Database, workspace_id, principal
+) -> None:
+    await _seed(owner_database, workspace_id, principal, _days(5))
+    await _tamper(owner_database, workspace_id, 3)
+    async with owner_database.session() as session:
+        with pytest.raises(ChainBrokenError) as exc:
+            await audit.verify_range(
+                session, workspace_id, from_=_days(5)[1], to=_days(5)[3]
+            )
+        assert (exc.value.sequence, exc.value.first_sequence, exc.value.checked) == (3, 2, 1)
+        # The event before a span is not itself verified: 3 is tampered, yet 4..5 is intact,
+        # because 4's link names 3's stored hash, which a content edit did not change.
+        span = await audit.verify_range(session, workspace_id, from_=_days(5)[3])
+    assert (span.first_sequence, span.last_sequence) == (4, 5)
+
+
+@pytest.mark.req("FR-372")
+async def test_a_row_deleted_inside_the_range_is_caught_as_a_gap(
+    owner_database: Database, workspace_id, principal
+) -> None:
+    await _seed(owner_database, workspace_id, principal, _days(5))
+    async with owner_database.unit_of_work() as session:
+        await session.execute(text("SET LOCAL session_replication_role = replica"))
+        await session.execute(
+            text("DELETE FROM audit_events WHERE workspace_id = :ws AND sequence = 3")
+            .bindparams(ws=workspace_id)
+        )
+    async with owner_database.session() as session:
+        with pytest.raises(ChainBrokenError) as exc:
+            await audit.verify_range(session, workspace_id, from_=_days(5)[0], to=_days(5)[4])
+    assert exc.value.sequence == 4
+    assert "expected sequence 3" in exc.value.reason
+
+
+@pytest.mark.req("FR-372")
+async def test_a_range_holding_no_event_verifies_nothing(
+    database: Database, workspace_id, principal
+) -> None:
+    await _seed(database, workspace_id, principal, _days(3))
+    async with database.session() as session:
+        span = await audit.verify_range(session, workspace_id, from_=_DAY0 + timedelta(days=99))
+    assert (span.first_sequence, span.last_sequence, span.events_checked) == (None, None, 0)
+
+
+@pytest.mark.req("NFR-521")
+async def test_a_chain_older_than_seven_years_verifies_whole(
+    database: Database, workspace_id, principal
+) -> None:
+    """NFR-521: retention is >= 7 years and the chain verifies over the whole retained range.
+
+    FR-370 leaves no delete path, so retention holds by construction; what needs proving is
+    that an old chain still verifies. The proof form is a verify with no range.
+    """
+    eight_years_ago = datetime.now(UTC) - timedelta(days=8 * 365)
+    await _seed(
+        database, workspace_id, principal, [eight_years_ago + timedelta(days=i) for i in range(3)]
+    )
+    async with database.session() as session:
+        span = await audit.verify_range(session, workspace_id)
+    assert span.whole_chain
+    assert (span.first_sequence, span.last_sequence, span.events_checked) == (1, 3, 3)
+
+
+@pytest.mark.req("NFR-521")
+async def test_a_five_thousand_event_chain_verifies_whole_while_streaming(
+    database: Database, workspace_id, principal
+) -> None:
+    """Rows are streamed in batches of 1,000; the chain is not held in memory. Not timed."""
+    ats = [_DAY0 + timedelta(minutes=i) for i in range(5000)]
+    await _seed(database, workspace_id, principal, ats)
+    async with database.session() as session:
+        assert await audit.verify_chain(session, workspace_id) == 5000

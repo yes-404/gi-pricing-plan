@@ -63,9 +63,25 @@ DatabaseDep = Annotated[Database, Depends(_database)]
 class ChainVerification(BaseModel):
     """The result of recomputing the chain (FR-372)."""
 
-    model_config = ConfigDict(frozen=True, extra="forbid")
+    model_config = ConfigDict(frozen=True, extra="forbid", populate_by_name=True)
 
     workspace_id: UUID
+    from_: datetime | None = Field(
+        default=None, alias="from", description="The requested lower bound on `at`, if any."
+    )
+    to: datetime | None = Field(
+        default=None, description="The requested upper bound on `at`, if any."
+    )
+    whole_chain: bool = Field(
+        description="True when no range was given: the whole chain, NFR-521's proof."
+    )
+    first_sequence: int | None = Field(
+        default=None,
+        description="Where the check began. The event before it is not itself verified.",
+    )
+    last_sequence: int | None = Field(
+        default=None, description="The last event verified, or `None` if none was."
+    )
     events_checked: int
     intact: bool
     broken_at_sequence: int | None = Field(
@@ -207,26 +223,53 @@ async def query_audit(
     summary="Recompute the hash chain (FR-372)",
     responses=problems(401, 403, 422),
 )
-async def verify_chain(caller: ReadAudit, database: DatabaseDep) -> ChainVerification:
-    """Recompute every hash for this workspace and report the first break.
+async def verify_chain(
+    caller: ReadAudit,
+    database: DatabaseDep,
+    from_: Annotated[datetime | None, Query(alias="from")] = None,
+    to: datetime | None = None,
+) -> ChainVerification:
+    """Recompute the hashes of this workspace's chain and report the first break.
+
+    With neither `from` nor `to` the whole chain is verified, and that is NFR-521's proof.
+    With either, the contiguous sequence span they select is verified (`first_sequence` and
+    `last_sequence` say which); the event just before the span is not itself verified.
 
     Returns `200` with `intact: false` rather than an error status. A broken chain is a
     *finding*, and an auditor asking the question needs the answer and the sequence number
     — not a 500 that looks like the endpoint is broken.
     """
+    if from_ is not None and to is not None and from_ > to:
+        raise PlatformError(
+            "VALIDATION_FAILED", "Invalid range", 422, "`from` is after `to`."
+        )
     async with database.session() as session:
         try:
-            checked = await audit_service.verify_chain(session, caller.workspace_id)
+            span = await audit_service.verify_range(
+                session, caller.workspace_id, from_=from_, to=to
+            )
         except audit_service.ChainBrokenError as exc:
             return ChainVerification(
                 workspace_id=caller.workspace_id,
-                events_checked=exc.sequence - 1,
+                from_=from_,
+                to=to,
+                whole_chain=from_ is None and to is None,
+                first_sequence=exc.first_sequence,
+                last_sequence=exc.sequence - 1 if exc.checked else None,
+                events_checked=exc.checked,
                 intact=False,
                 broken_at_sequence=exc.sequence,
                 reason=exc.reason,
             )
     return ChainVerification(
-        workspace_id=caller.workspace_id, events_checked=checked, intact=True
+        workspace_id=caller.workspace_id,
+        from_=from_,
+        to=to,
+        whole_chain=span.whole_chain,
+        first_sequence=span.first_sequence,
+        last_sequence=span.last_sequence,
+        events_checked=span.events_checked,
+        intact=True,
     )
 
 
