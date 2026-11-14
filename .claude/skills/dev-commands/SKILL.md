@@ -11,8 +11,8 @@ part that was learned by something failing, and the part a bare command list can
 > **Under the new frame (from 2026-11-13, ADR-8449).** The gate is the one in
 > `CONTRIBUTING.md`: both halves, run before pushing. No ledger is kept, so every "record in
 > the ledger" below means "say it in the pull request's evidence". Retired and not to be run:
-> `doc-id.py migrate` (including `--verify` and its slot wrapper), `register-owed.py`,
-> `register-lint.py`, `doc-index.py` generation and `--check`, and every other record-process
+> `doc-id.py migrate` (including `--verify` and its slot wrapper), the owed-list generator,
+> the register linter, `doc-index.py` generation and `--check`, and every other record-process
 > command in the sections marked RETIRED. `doc-id.py next` and `doc-id.py check` stay.
 
 ## Setup — `--all-packages` is not optional
@@ -780,7 +780,7 @@ claimed` as a floor on attention, not a measure of test quality.
 
 ## The RFC-937 id instruments — `doc-id.py` and `doc-index.py`
 
-> **Retired by ADR 8449.** The record families (plans, ledgers, rulings, closures, findings, rfcs), `docs/roadmap.md`, `docs/INDEX.md` and `docs/open-questions.md` are frozen and no longer audited, minted or regenerated. `doc-id.py migrate`/`widen`, `register-lint.py`, `register-owed.py`, the ruling census and audit-docs checks 4, 15-20, 23, 25, 28, 29, 38 and 39 are removed; `doc-id.py next` and `check` remain, and `doc-index.py` is no longer run. Read any passage below that tells you to run a retired tool as history.
+> **Retired by ADR 8449.** The record families (plans, ledgers, rulings, closures, findings, rfcs), `docs/roadmap.md`, `docs/INDEX.md` and `docs/open-questions.md` are frozen and no longer audited, minted or regenerated. `doc-id.py migrate`/`widen`, the register linter, the owed-list generator, the ruling census and audit-docs checks 4, 15-20, 23, 25, 28, 29, 38 and 39 are removed; `doc-id.py next` and `check` remain, and `doc-index.py` is no longer run. Read any passage below that tells you to run a retired tool as history.
 
 Five commands govern document ids and the generated index. `migrate` is the sixth and is
 **not** here: it is a one-way instrument, its run is done, and re-running it re-migrates
@@ -866,7 +866,7 @@ not add one.** `_enumerate_tree` (`scripts/doc-id.py:3854`) enumerates through
 (`_LS_FILES_ARGS`, `scripts/doc-id.py:3851`), so `--exclude-standard` applies the
 checkout's own `.gitignore` and a gitignored path is never a candidate in the first place.
 There is no `if ".venv" in path` anywhere in `scripts/doc-id.py` or
-`scripts/_docverify.py`; a reader who goes looking for the guard should stop looking rather
+the since-deleted verify module; a reader who goes looking for the guard should stop looking rather
 than write one, because a second, name-based exclusion would drift from `.gitignore` and
 then disagree with it.
 
@@ -893,10 +893,10 @@ uv run python scripts/scope-audit.py DATA --catalogue VR # a spec's named-item c
 The three axes answer different questions and none substitutes for another —
 [`close-workstream`](../close-workstream/SKILL.md) has the method and the incident behind each.
 
-**RETIRED (ADR-8449): `register-owed.py` is deleted; the findings register is frozen. Do not run it.** Kept for history:
+**RETIRED (ADR-8449): the owed-list generator is deleted; the findings register is frozen. Do not run it.** Kept for history:
 
 ```bash
-python3 scripts/register-owed.py <work-id | phase | review>   # e.g. W11, 2, review
+# (deleted) owed-list generator: <work-id | phase | review>   # e.g. W11, 2, review
 ```
 
 RFC-896 P5's owed-list generator (RL-912) — every open `docs/findings/register.md` row
@@ -1250,7 +1250,7 @@ recalled. Two things measured rather than assumed, both of which changed what wa
 - **The venv exclusion is by construction and has no refusal guard.** `_enumerate_tree`
   (`:3854`) enumerates through `git ls-files -z --cached --others --exclude-standard`
   (`_LS_FILES_ARGS`, `:3851`), so `.gitignore` applies before anything is a candidate.
-  Predicate `grep -n '\.venv' scripts/doc-id.py scripts/_docverify.py` at `7d5d6e0` → **4
+  Predicate `grep -n '\.venv' scripts/doc-id.py` at `7d5d6e0` → **4
   lines, all prose in a comment or docstring** (`scripts/doc-id.py:544`, `:3826`, `:5011`,
   `:5028`), no conditional anywhere.
 
@@ -1348,7 +1348,7 @@ its own probe) — corrected before acting; the real count was one `pytest` bina
 worktree throughout, confirmed with `ps -eo pid,args | grep '[/]\.venv/bin/pytest'` (the
 real binary path, never a bare string match).
 
-2026-08-31 — `register-owed.py` added to the closure-audit section, RFC-896 P5 (RL-912).
+2026-08-31 — the owed-list generator added to the closure-audit section, RFC-896 P5 (RL-912).
 Deliberately not added to `CLAUDE.md` §11's gate command list: it is on-demand, the same
 treatment `scope-audit.py` already has here.
 
