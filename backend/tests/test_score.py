@@ -969,6 +969,26 @@ def test_a_quoted_outcome_at_rate_one_is_sampled(
     assert rows[0].sample_reason == "rate"
 
 
+@pytest.mark.req("FR-259")
+def test_a_refused_quote_is_not_traced_even_at_rate_one(
+    client: TestClient, scoring_headers: dict[str, str], compiled_version: Any,
+    database: Any, workspace_id: Any,
+) -> None:
+    """FR-259's 2026-10-21 clarification: the real-time route refuses every quote it cannot price
+    before the sampling decision, so a refusal leaves no pending trace and submits no job, even
+    at the highest sample rate."""
+    _run(_set_trace_sample_rate(database, workspace_id, 1.0))
+    body = _quote({"rating_version_ref": SCORED_REF})
+    body["inputs"] = {"premium_in": "not-a-number"}
+
+    response = client.post(SCORE_URL, json=body, headers=scoring_headers)
+
+    assert response.status_code == 422, response.text
+    assert response.json()["code"] == "INPUT_CONTRACT_VIOLATION"
+    assert _run(_rows_for(database, workspace_id)) == []
+    assert _run(_trace_produce_jobs(database, workspace_id)) == []
+
+
 async def _set_environment_trace_sample_rate(
     database: Any, environment: str, rate: float
 ) -> None:
