@@ -319,7 +319,9 @@ def _sinks(source: str, name: str) -> Counter[tuple[str, str, str]]:
             # FD-2029: a bound exception handed to a logging call as an argument is formatted
             # into the record, so its text is logged exactly as `str(exc)` would log it.
             if called in _LOGGING_METHODS and isinstance(callee, ast.Attribute):
-                for argument in (*node.args, *(keyword.value for keyword in node.keywords)):
+                # `exc_info=` has its own kind above; any other keyword value counts here.
+                keyword_values = (k.value for k in node.keywords if k.arg != "exc_info")
+                for argument in (*node.args, *keyword_values):
                     if isinstance(argument, ast.Name) and argument.id in excs:
                         found[(name, function, "bare exc in logging call")] += 1
             if (
