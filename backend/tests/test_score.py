@@ -1140,6 +1140,55 @@ def test_a_sampled_trace_is_completed_by_the_off_path_job(
     assert body.bundle_hash == served_body["bundle_hash"]
 
 
+@pytest.mark.req("NFR-490")
+def test_sampling_a_quote_never_changes_the_served_result(
+    client: TestClient,
+    scoring_headers: dict[str, str],
+    compiled_version: Any,
+    database: Any,
+    blob_store: Any,
+    workspace_id: Any,
+) -> None:
+    """NFR-490's "never changes the result" limb on the production path (RL-862): the request is
+    served untraced and a sampled outcome is re-scored off the request. The same quote posted at
+    sample rate 0.0 and at 1.0 gets the same body (`timing_ms` is wall-clock and excluded); the
+    sampled row's served summary is that body's priced fields; and the off-path re-score
+    reproduces it (`complete`, not `mismatch`)."""
+    register_trace_handlers()
+    quote = _quote({"rating_version_ref": SCORED_REF})
+
+    _run(_set_trace_sample_rate(database, workspace_id, 0.0))
+    unsampled = client.post(SCORE_URL, json=quote, headers=scoring_headers)
+    assert unsampled.status_code == 200, unsampled.text
+    assert _run(_rows_for(database, workspace_id)) == []
+
+    _run(_set_trace_sample_rate(database, workspace_id, 1.0))
+    sampled = client.post(SCORE_URL, json=quote, headers=scoring_headers)
+    assert sampled.status_code == 200, sampled.text
+
+    def _priced(response: Any) -> dict[str, Any]:
+        return {k: v for k, v in response.json().items() if k != "timing_ms"}
+
+    assert _priced(sampled) == _priced(unsampled)
+    assert sampled.json()["trace"] is None
+
+    (row,) = _run(_rows_for(database, workspace_id))
+    assert row.served_summary == {
+        name: sampled.json()[name]
+        for name in ("outcome", "decline_reasons", "premium_ladder", "outputs")
+    }
+    (job,) = _run(_trace_produce_jobs(database, workspace_id))
+
+    async def _complete() -> ScoringTraceRow:
+        assert await execute_job(database, job.id, blob_store) is JobStatus.SUCCEEDED
+        async with database.session() as session:
+            completed = await session.get(ScoringTraceRow, row.id)
+        assert completed is not None
+        return completed
+
+    assert _run(_complete()).status == "complete"
+
+
 @pytest.mark.req("FR-259")
 def test_a_pinned_bundle_that_no_longer_resolves_is_refused_not_silently_rescored(
     client: TestClient,
