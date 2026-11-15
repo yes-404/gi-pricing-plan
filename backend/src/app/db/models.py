@@ -475,11 +475,6 @@ class ServiceAccountRow(Base):
     permissions: Mapped[list[str]] = mapped_column(JSONB, nullable=False, default=list)
     rate_limit_rps: Mapped[int | None] = mapped_column(Integer)
 
-    # FR-348: the principal that created the account, which `grant_role` refuses to grant
-    # a role to. NULL = owner unknown (a pre-column account whose creation event could not
-    # be matched) and is refused too: deny by default.
-    created_by: Mapped[UUID | None] = mapped_column(PgUUID(as_uuid=True))
-
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )

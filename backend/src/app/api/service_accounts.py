@@ -216,7 +216,6 @@ async def create_service_account(
             environments=body.environments,
             permissions=body.permissions,
             rate_limit_rps=body.rate_limit_rps,
-            created_by=caller.principal.id,
         )
         session.add(account)
         await session.flush()

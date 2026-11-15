@@ -238,12 +238,6 @@ OWNER_FIXTURE_USERS: tuple[tuple[str, str, str], ...] = (
         "creates and migrates a scratch database (CREATE DATABASE, DDL)",
     ),
     (
-        "backend/tests/test_migration_service_account_created_by.py::"
-        "test_the_backfill_sets_the_owner_from_the_creation_event_and_leaves_the_rest_null",
-        "migration",
-        "creates and migrates a scratch database (CREATE DATABASE, DDL)",
-    ),
-    (
         "backend/tests/test_migration_deployments.py::"
         "test_the_application_role_cannot_update_or_delete_a_deployment",
         "owner-subject",
