@@ -804,6 +804,7 @@
         "description": "One audit event of an artifact version, in the shape every artifact type shares.",
         "properties": {
           "action": {
+            "description": "The stored action name, as stored.",
             "pattern": "^[a-z_]+\\.[a-z_]+$",
             "title": "Action",
             "type": "string"
@@ -815,6 +816,19 @@
             "format": "date-time",
             "title": "At",
             "type": "string"
+          },
+          "current_action": {
+            "anyOf": [
+              {
+                "pattern": "^[a-z_]+\\.[a-z_]+$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Derived, not stored, not exported. The name this event would be written under today, set only when it differs from the stored `action` (a pre-rename return from review).",
+            "title": "Current Action"
           },
           "diff": {
             "items": {
@@ -1060,9 +1074,9 @@
         "title": "AttributionSummary",
         "type": "object"
       },
-      "AuditEventRecord": {
+      "AuditEventListing": {
         "additionalProperties": false,
-        "description": "An event as the audit API returns and exports it: `AuditEvent` plus its `sequence`.\n\n`sequence` is the per-workspace position the chain is ordered and verified by. It is not\nhashed (the hash covers `AuditEventCore` and `prev_event_hash` only), so an export line\nvalidates as this class and recomputes with `verify()` outside the platform (FR-372).",
+        "description": "An event as the audit explorer's query returns it: the stored record, plus one derived\nfield for the views.\n\n**The export is the record**, so an exported line is `AuditEventRecord` and carries nothing\nderived; this class is the query response only (`06` §4.5's dated note on C1).",
         "properties": {
           "action": {
             "pattern": "^[a-z_]+\\.[a-z_]+$",
@@ -1100,6 +1114,19 @@
               }
             ],
             "title": "Before"
+          },
+          "current_action": {
+            "anyOf": [
+              {
+                "pattern": "^[a-z_]+\\.[a-z_]+$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Derived, not stored, not exported. The name this event would be written under today, set only when it differs from the stored `action` (a return from review written before the `<type>.returned` rename). `action` is always the stored name.",
+            "title": "Current Action"
           },
           "entity_ref": {
             "description": "Canonical `{type}:{slug}@{version}` form (ID-3).",
@@ -1191,7 +1218,7 @@
           "event_hash",
           "sequence"
         ],
-        "title": "AuditEventRecord",
+        "title": "AuditEventListing",
         "type": "object"
       },
       "Backtest": {
@@ -11561,12 +11588,12 @@
         "title": "Page[ApprovalRequest]",
         "type": "object"
       },
-      "Page_AuditEventRecord_": {
+      "Page_AuditEventListing_": {
         "additionalProperties": false,
         "properties": {
           "items": {
             "items": {
-              "$ref": "#/components/schemas/AuditEventRecord"
+              "$ref": "#/components/schemas/AuditEventListing"
             },
             "title": "Items",
             "type": "array"
@@ -11594,7 +11621,7 @@
           "items",
           "total_estimate"
         ],
-        "title": "Page[AuditEventRecord]",
+        "title": "Page[AuditEventListing]",
         "type": "object"
       },
       "Page_CustomMetric_": {
@@ -21089,7 +21116,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Page_AuditEventRecord_"
+                  "$ref": "#/components/schemas/Page_AuditEventListing_"
                 }
               }
             },
