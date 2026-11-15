@@ -2796,29 +2796,62 @@ def check_spec_examples(specs: list[pathlib.Path]) -> None:
     )
 
 
+_CHECK_1_LINK_RE: Final = re.compile(r"\[[^\]]*\]\(([^)#\s]+)(#[^)]*)?\)")
+_INLINE_CODE_RE: Final = re.compile(r"(?<!`)(`+)(?!`)(.+?)(?<!`)\1(?!`)")
+
+
+def _mask_code(text: str) -> str:
+    """`text` with every fenced block and inline code span blanked to spaces, length kept.
+
+    A link written inside code is a quotation of the syntax, not a link (F66): check 1 would
+    otherwise resolve `[x](y)` in back-ticks as a path. A fence is a line opening with three
+    back-ticks, closed by the next such line; an inline span is a run of back-ticks closed by
+    a run of the same length on the same line.
+    """
+    out: list[str] = []
+    in_fence = False
+    for line in text.splitlines(keepends=True):
+        if _FENCE_LINE_RE.match(line):
+            in_fence = not in_fence
+            out.append(re.sub(r"[^\n]", " ", line))
+        elif in_fence:
+            out.append(re.sub(r"[^\n]", " ", line))
+        else:
+            out.append(_INLINE_CODE_RE.sub(lambda m: re.sub(r"[^\n]", " ", m.group(0)), line))
+    return "".join(out)
+
+
+def broken_relative_links(path: pathlib.Path) -> list[str]:
+    """The relative link targets in `path`'s prose (not in code) that name no file."""
+    broken: list[str] = []
+    for m in _CHECK_1_LINK_RE.finditer(_mask_code(path.read_text(encoding="utf-8"))):
+        target = m.group(1)
+        if target.startswith(("http://", "https://", "mailto:")):
+            continue
+        if not (path.parent / target).resolve().exists():
+            broken.append(target)
+    return broken
+
+
 def main() -> int:
     md = sorted(f for f in ROOT.rglob("*.md") if not _is_frozen_file(f))
     specs = sorted(ROOT.glob("specs/*.md"))
 
     # 1. relative links
     for f in md:
-        for m in re.finditer(r"\[[^\]]*\]\(([^)#\s]+)(#[^)]*)?\)", f.read_text(encoding="utf-8")):
-            target = m.group(1)
-            if target.startswith(("http://", "https://", "mailto:")):
-                continue
-            if not (f.parent / target).resolve().exists():
-                # `check N: <path>: <prose>` — see check 36's identical fix above; PR
-                # #758's `_docverify._h1_residue_by_file` extraction needs the path
-                # immediately after the check number, not after descriptive prose.
-                # `REPO`, not `ROOT` (=`REPO / "docs"`): every other check names its
-                # file relative to the repo root, and a path relative to `docs/` instead
-                # (`rulings/RL-....md`, missing the `docs/` prefix) does not resolve from
-                # the repo root at all — a reader handed it cannot find the file. Found
-                # by `_docverify._h1_residue_by_file`'s resolution-against-the-corpus
-                # check (pin-3, PR #756/#758/#759's own follow-up): the old shape-only
-                # extractor accepted these 235 tokens because they looked path-shaped,
-                # never checking they named a real file.
-                fail(f"check 1: {f.relative_to(REPO)}: broken link to {target}")
+        for target in broken_relative_links(f):
+            # `check N: <path>: <prose>` — see check 36's identical fix above; PR
+            # #758's `_docverify._h1_residue_by_file` extraction needs the path
+            # immediately after the check number, not after descriptive prose.
+            # `REPO`, not `ROOT` (=`REPO / "docs"`): every other check names its
+            # file relative to the repo root, and a path relative to `docs/` instead
+            # (`rulings/RL-....md`, missing the `docs/` prefix) does not resolve from
+            # the repo root at all — a reader handed it cannot find the file. Found
+            # by `_docverify._h1_residue_by_file`'s resolution-against-the-corpus
+            # check (pin-3, PR #756/#758/#759's own follow-up): the old shape-only
+            # extractor accepted these 235 tokens because they looked path-shaped,
+            # never checking they named a real file.
+            fail(f"check 1: {f.relative_to(REPO)}: broken link to {target}")
 
     # 2/3. requirement ids
     defined: dict[str, list[str]] = collections.defaultdict(list)
