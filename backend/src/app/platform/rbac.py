@@ -382,14 +382,22 @@ async def grant_role(
             f"(FR-347); the role {role_slug!r} confers {sorted(barred)}.",
         )
 
-    # `created_by` NULL means the owner is unknown: deny by default.
-    if account is not None and (account.created_by is None or account.created_by == granter.id):
+    if account is not None and account.created_by is None:
+        # The owner is unknown: deny by default. Its own sentence, because the account is
+        # not one the granter owns, and the remedy differs (an Admin sets the owner, #1494).
+        raise PlatformError(
+            "PERMISSION_DENIED",
+            "Cannot grant a role to a service account with no recorded owner",
+            403,
+            "The creator of this service account is not recorded, so it cannot be "
+            "granted a role (FR-348).",
+        )
+    if account is not None and account.created_by == granter.id:
         raise PlatformError(
             "PERMISSION_DENIED",
             "Cannot grant a role to a service account you own",
             403,
-            "A principal cannot grant a role to a service account it owns, or one whose "
-            "owner is unrecorded (FR-348).",
+            "A principal cannot grant a role to a service account it owns (FR-348).",
         )
 
     assignment = RoleAssignmentRow(
