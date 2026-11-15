@@ -892,6 +892,20 @@ OWNER_FIXTURE_USERS: tuple[tuple[str, str, str], ...] = (
     ),
     (
         "backend/tests/test_rbac.py::"
+        "test_a_grant_conferring_permissions_the_granter_lacks_succeeds",
+        "DP-22",
+        "runs a production function with no application caller "
+        "(grant_role, grant_break_glass, ensure_member, ...) as the owner",
+    ),
+    (
+        "backend/tests/test_rbac.py::"
+        "test_a_grant_to_a_service_account_owned_by_another_principal_succeeds",
+        "DP-22",
+        "runs a production function with no application caller "
+        "(grant_role, grant_break_glass, ensure_member, ...) as the owner",
+    ),
+    (
+        "backend/tests/test_rbac.py::"
         "test_break_glass_is_time_boxed_and_expires",
         "DP-22",
         "runs a production function with no application caller "
