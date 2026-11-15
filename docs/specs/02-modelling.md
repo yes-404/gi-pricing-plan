@@ -1941,13 +1941,14 @@ imported from §4.5 rather than restated — the same catalogue, read two ways.
 | `reference.as_at` | date | The date the data describes. |
 | `reference.row_count` | integer | Rows in the upload. |
 | `reference.digest` | string | `sha256:` content address of the upload (`07` FR-418). |
+| `matched_rows` | integer | Rows of the Dataset Version matched to the reference (not `reference.row_count`, which counts the upload's rows). |
 | `matched_exposure`, `total_exposure` | Decimal string | Exposure matched to the reference, and in total (`00` §4.3). |
 | `coverage` | Decimal string | `matched_exposure / total_exposure`. |
 | `factors` | list | One entry per Factor assessed (FR-2139). |
 | `factors[].factor_id`, `factors[].factor_slug` | UUID, string | The Factor. |
 | `factors[].mutual_information_bits` | number | Mutual information, in [0, log₂ *k*]. |
 | `factors[].normalised_mutual_information` | number or null | Null when the class entropy is 0. |
-| `factors[].auc_by_class` | map of class to number | One-vs-rest AUC in [0, 1], one entry per class. |
+| `factors[].auc_by_class` | map of class to number or null | One-vs-rest AUC in [0, 1], one entry per class; null when the class appears on one side only (no positive or no negative weight at all). |
 | `created_at` | timestamp | When the assessment was taken. |
 
 An example: an `area` reference of ONS Census 2021, table TS007A (characteristic `age_group`, classes `under_30`, `30_to_59`, `60_plus`, key `postcode_district`) against a Dataset Version keyed by the same column, with coverage 0.9603. *(This table is replaced by the `json schema=ProxyAssessment` block in slice 3.)*
@@ -1959,7 +1960,7 @@ as-at date, row count and digest and **never the rows** (FR-2140). `coverage` is
 `matched_exposure / total_exposure`; the exposures are Decimal strings (`00` §4.3), the
 information and AUC values are numbers in [0, log₂ *k*] and [0, 1], and
 `normalised_mutual_information` is null when the class entropy is 0. `auc_by_class` has
-exactly one entry per class of `reference.classes`. `model_id` and `dataset_version_id`
+exactly one entry per class of `reference.classes`, null for a class on one side only. `model_id` and `dataset_version_id`
 name the immutable versions the assessment was taken against, never a Model Family or a
 Dataset.
 
