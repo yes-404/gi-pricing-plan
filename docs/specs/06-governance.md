@@ -120,6 +120,14 @@ auditor, or a regulator:
 | **Rating Version** | Structural diff; rate table diffs; passing regression suite; dislocation run with attribution; GIPP check where enabled; change summary (`03` FR-257) |
 | **Deployment to `prod`** | A complete Rating Version approval; a successful `uat` deployment; Deployer permission (`03` FR-267) |
 
+> **`proxy_assessment` is an optional evidence kind, added 2026-11-14 for #1501 (WK-691).**
+> `02` FR-91's Proxy Assessment (`02` §4.14) is evidence, never a gate. It is **not** in this
+> table's floor and never enters `EVIDENCE_FLOOR`. A workspace's `ApprovalPolicy` may add
+> `proxy_assessment` to the `model` entry (FR-364), and submission then checks that an assessment
+> **naming the model exists**, and nothing else. **Its numbers are never read**: requiring the
+> existence of the evidence is the insurer's own governance, and what the evidence measured never
+> refuses a submission, a Factor or an approval (`02` FR-2141, OQ-581).
+
 > **`custom_metric` added 2026-08-22 (WK-661, the audit-remediation slice).** §4.2's
 > `DEFAULT_POLICY` has named `metric_certificate` for `custom_metric` since 2026-08-20 and
 > this table had no row for it — so `EVIDENCE_FLOOR` had no key for the type,
@@ -340,6 +348,15 @@ Notably absent from Pricing Actuary: ~~every `*:approve` permission~~ `approval:
 > | `alert:resolve` | WK-688 |
 > | `optimisation:run` | WK-684 |
 > | `optimisation:materialise` | WK-686 |
+> | `reference_population:upload` | WK-691 |
+>
+> `reference_population:upload` *(added 2026-11-14 for #1501 (WK-691))* governs supplying a
+> Reference Population for a Proxy Assessment (`02` FR-2142; `POST
+> /api/v1/models/{id}/proxy-assessments`). The input is special-category data (UK GDPR
+> Art. 9), so it is distinct from `model:fit` and, like `custom_objective:author`, **granted
+> to no built-in role; a workspace Admin grants it** (decided 2026-11-14 by the lead, on the
+> maintainer's behalf by delegation). Reading a stored assessment is `model:read`, because it
+> holds aggregates only.
 
 ### 4.2 `ApprovalPolicy` (workspace defaults)
 
