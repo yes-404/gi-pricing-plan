@@ -11,7 +11,6 @@ reach, not a live one: the record says its reach is not demonstrated.
 from __future__ import annotations
 
 import asyncio
-import copy
 import traceback
 from contextlib import asynccontextmanager
 from types import SimpleNamespace
@@ -20,7 +19,6 @@ from uuid import uuid4
 import pytest
 from backend.tests.test_prediction import _fitted_glm
 from backend.tests.test_rating_version_compile import _empty_pins, _headers, _minimal_algorithm
-from sqlalchemy import select
 
 from app.config import ConfigInvalidError, load_settings
 from app.db.models import RatingAlgorithmRow
@@ -88,17 +86,22 @@ def test_a_stored_algorithm_that_no_longer_validates_leaks_no_value_at_version_c
     loop = asyncio.get_event_loop()
     loop.run_until_complete(grant("analyst"))
     headers = _headers(principal, workspace_id)
-    saved = api_client.post("/api/v1/rating-algorithms", json=_minimal_algorithm(), headers=headers)
-    assert saved.status_code == 201, saved.text
+    stored = _minimal_algorithm()
+    stored["steps"][0]["type"] = _SENTINEL
 
-    async def _corrupt() -> None:
+    # A saved algorithm is an immutable artifact (no UPDATE, even for the owner), so the stale
+    # row is INSERTed already invalid: what an older validator once accepted and the current one
+    # refuses. The same direct write `test_rating_version_dislocation_gate` makes.
+    async def _store() -> None:
         async with database.unit_of_work() as session:
-            row = (await session.execute(select(RatingAlgorithmRow))).scalars().one()
-            content = copy.deepcopy(row.content)
-            content["steps"][0]["type"] = _SENTINEL
-            row.content = content
+            session.add(
+                RatingAlgorithmRow(
+                    workspace_id=workspace_id, slug="minimal", version=1,
+                    content=stored, created_by=principal.id,
+                )
+            )
 
-    loop.run_until_complete(_corrupt())
+    loop.run_until_complete(_store())
 
     refused = api_client.post(
         "/api/v1/rating-versions",
@@ -137,6 +140,8 @@ async def test_a_body_that_is_not_a_table_carries_no_polars_text(
     """Row 10: `predict_rows`' detail is fixed text, with none of polars' own message."""
     actor, model_id = await _fitted_glm(database, blob_store, workspace_id)
 
+    # The model and its factors resolve (FR-87); the body is the fault. A non-mapping first row
+    # makes `pl.DataFrame` raise a `TypeError` whose text prints the next row's value.
     async with database.session() as session:
         with pytest.raises(PlatformError) as refused:
             await prediction_service.predict_rows(
@@ -144,7 +149,7 @@ async def test_a_body_that_is_not_a_table_carries_no_polars_text(
                 workspace_id=workspace_id,
                 actor=actor,
                 model_id=model_id,
-                rows=[{"exposure_years": 1.0}, {"exposure_years": _SENTINEL}],
+                rows=["urban", {"area": _SENTINEL}],  # type: ignore[list-item]
                 blob_store=blob_store,
             )
     assert refused.value.status_code == 422
