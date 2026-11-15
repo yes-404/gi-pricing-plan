@@ -34,6 +34,7 @@ from app.observability.logging import get_logger
 from app.platform import audit
 from model_schema import (
     BUILTIN_ROLES,
+    ActorKind,
     JobSource,
     Permission,
     Principal,
@@ -171,6 +172,11 @@ async def effective_permissions(
     """
     if principal.id is None:
         return frozenset()
+    if principal.kind is ActorKind.SERVICE_ACCOUNT:
+        # Defence in depth (FR-347, FR-389): a Service Account is never granted a role, and a
+        # role assignment on its id, however it got there, confers nothing. Only the
+        # credential's own grants count.
+        return frozenset(Permission(p) for p in credential_permissions)
 
     now = datetime.now(UTC)
     rows = (
@@ -231,8 +237,8 @@ async def holds_anywhere(
     it "anywhere?" returns nothing and every scoped refusal reads as if the principal never
     held the permission at all.
     """
-    if principal.id is None:
-        return False
+    if principal.id is None or principal.kind is ActorKind.SERVICE_ACCOUNT:
+        return False  # a Service Account holds no role (FR-347, FR-389)
 
     now = datetime.now(UTC)
     rows = (

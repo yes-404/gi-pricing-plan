@@ -607,6 +607,60 @@ async def test_seeding_roles_is_idempotent(owner_database: Database, workspace_i
 
 
 @pytest.mark.req("FR-347")
+async def test_a_role_assignment_on_a_service_account_confers_nothing(
+    database: Database, workspace_id
+) -> None:
+    """Defence in depth, role-isolated: the row is planted through the owner fixture (no
+    `grant_role`, which refuses), and the account's permissions are still its credential's
+    own. The control reads the same row as a USER principal, so the row is real and
+    resolvable by id."""
+    account = await _seed_service_account(workspace_id)
+
+    async def plant(session: AsyncSession) -> None:
+        await rbac.seed_builtin_roles(session, workspace_id)
+        role = (
+            await session.execute(
+                select(RoleRow).where(
+                    RoleRow.workspace_id == workspace_id, RoleRow.slug == "approver"
+                )
+            )
+        ).scalar_one()
+        session.add(
+            RoleAssignmentRow(
+                workspace_id=workspace_id,
+                principal_kind="service_account",
+                principal_id=account.id,
+                role_id=role.id,
+                scope_type=ScopeType.WORKSPACE.value,
+                scope_id=None,
+            )
+        )
+
+    await seed_as_owner(plant)
+    as_account = Principal(kind=ActorKind.SERVICE_ACCOUNT, id=account.id, display="sa")
+    as_user = Principal(kind=ActorKind.USER, id=account.id, display="same id, user kind")
+    async with database.session() as session:
+        held = await rbac.effective_permissions(
+            session,
+            workspace_id=workspace_id,
+            principal=as_account,
+            credential_permissions=frozenset({"score:execute"}),
+        )
+        control = await rbac.effective_permissions(
+            session, workspace_id=workspace_id, principal=as_user
+        )
+        anywhere = await rbac.holds_anywhere(
+            session,
+            workspace_id=workspace_id,
+            principal=as_account,
+            permission=Permission.APPROVAL_DECIDE,
+        )
+    assert held == frozenset({Permission.SCORE_EXECUTE})
+    assert Permission.APPROVAL_DECIDE in control
+    assert anywhere is False
+
+
+@pytest.mark.req("FR-347")
 async def test_a_credentials_own_permissions_are_enforced(
     database: Database, workspace_id, principal
 ) -> None:
