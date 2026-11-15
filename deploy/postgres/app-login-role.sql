@@ -48,8 +48,9 @@ ALTER ROLE gip_app VALID UNTIL 'infinity' CONNECTION LIMIT -1;
 -- application whatever that role holds. If the provisioning role may not revoke one, the run
 -- FAILS and names the role pair, as it does when a grant made through a membership being
 -- revoked depends on it (never CASCADE). Roles that are members OF gip_app are not touched.
--- Run it in ONE transaction (provision-app-role.py does): other sessions then see only the
--- committed end state, never the pair revoked.
+-- THE CALLER MUST RUN THIS FILE IN ONE TRANSACTION: provision-app-role.py does, in one
+-- conn.transaction(). Other sessions then see only the committed end state, never the pair
+-- revoked, and a failed final assertion rolls every change back.
 -- GRANTED BY is load-bearing: a membership row is per grantor, and a plain REVOKE removes only
 -- the row the current role granted.
 DO $do$

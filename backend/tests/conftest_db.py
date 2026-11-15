@@ -1199,6 +1199,36 @@ OWNER_FIXTURE_USERS: tuple[tuple[str, str, str], ...] = (
         "owner-subject",
         "plants a role state as the owner and applies the login-role SQL over it (rolled back)",
     ),
+    (
+        "backend/tests/test_provision_app_role.py::"
+        "test_the_final_assertion_judges_the_end_state[two_rows]",
+        "owner-subject",
+        "plants a role state as the owner and applies the login-role SQL over it (rolled back)",
+    ),
+    (
+        "backend/tests/test_provision_app_role.py::"
+        "test_the_final_assertion_judges_the_end_state[admin_option]",
+        "owner-subject",
+        "plants a role state as the owner and applies the login-role SQL over it (rolled back)",
+    ),
+    (
+        "backend/tests/test_provision_app_role.py::"
+        "test_the_final_assertion_judges_the_end_state[set_option]",
+        "owner-subject",
+        "plants a role state as the owner and applies the login-role SQL over it (rolled back)",
+    ),
+    (
+        "backend/tests/test_provision_app_role.py::"
+        "test_the_final_assertion_judges_the_end_state[no_row]",
+        "owner-subject",
+        "plants a role state as the owner and applies the login-role SQL over it (rolled back)",
+    ),
+    (
+        "backend/tests/test_provision_app_role.py::"
+        "test_the_final_assertion_judges_the_end_state[the_intended_row]",
+        "owner-subject",
+        "plants a role state as the owner and applies the login-role SQL over it (rolled back)",
+    ),
 )
 
 

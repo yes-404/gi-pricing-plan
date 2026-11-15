@@ -43,8 +43,8 @@ _SQL = _ROOT / "deploy" / "postgres" / "app-login-role.sql"
 #: on the live `gip_app` and `gip_app_login` of whatever server it connects to, even inside a
 #: rolled-back transaction (#1760). Such a case runs only where the cluster is a throwaway one,
 #: declared by `GIP_TEST_ROLE_CLUSTER_ISOLATED=1` and nothing else: `CI=true` does not declare
-#: it (#1760 S6b, D3). The CI workflow's `Tests` step and the gate's role-isolated stage set the
-#: flag. Anywhere else the case skips with this one reason, and
+#: it (#1760 S6b, D3). The CI workflow's `Tests` step sets the flag, and so does any run on a
+#: throwaway cluster of one's own. Anywhere else the case skips with this one reason, and
 #: `test_a_role_mutating_case_skips_only_for_the_isolation_reason` pins it.
 ROLE_CLUSTER_SKIP_REASON = (
     "role-mutating case: runs only on an isolated cluster (GIP_TEST_ROLE_CLUSTER_ISOLATED=1); "
@@ -300,9 +300,10 @@ def test_the_provisioner_names_the_role_pair_when_it_cannot_revoke() -> None:
     assert "CASCADE" not in sql.upper().replace("NEVER CASCADE", "")
 
 
-async def _apply_over(owner_database: Database, plant: str) -> None:
-    """Plant a state as the owner, apply the SQL file over it as `provision-app-role.py` does,
-    in one transaction that is always rolled back. Raises what the file raises."""
+async def _apply_over(owner_database: Database, plant: str, sql: str | None = None) -> None:
+    """Plant a state as the owner, apply the SQL file (or `sql`, a piece of it) over it as
+    `provision-app-role.py` does, in one transaction that is always rolled back. Raises what the
+    SQL raises."""
     async with owner_database.engine.connect() as connection:
         transaction = await connection.begin()
         try:
@@ -311,9 +312,54 @@ async def _apply_over(owner_database: Database, plant: str) -> None:
             driver = raw.driver_connection
             assert driver is not None
             await driver.execute(plant)
-            await driver.execute(_SQL.read_text(encoding="utf-8"))
+            await driver.execute(sql if sql is not None else _SQL.read_text(encoding="utf-8"))
         finally:
             await transaction.rollback()
+
+
+#: `{case id: (state the owner plants, whether the end-state assertion must raise)}`.
+_ASSERTION_STATES: dict[str, tuple[str, bool]] = {
+    "two_rows": (
+        "CREATE ROLE gip_scratch_s6k NOLOGIN; "
+        "GRANT gip_app TO gip_scratch_s6k WITH ADMIN OPTION; "
+        "GRANT gip_app TO gip_app_login WITH ADMIN OPTION, INHERIT TRUE, SET TRUE "
+        "GRANTED BY gip_scratch_s6k",
+        True,
+    ),
+    "admin_option": ("GRANT gip_app TO gip_app_login WITH ADMIN OPTION", True),
+    "set_option": ("GRANT gip_app TO gip_app_login WITH SET TRUE", True),
+    "no_row": ("REVOKE gip_app FROM gip_app_login", True),
+    "the_intended_row": (
+        "REVOKE gip_app FROM gip_app_login; "
+        "GRANT gip_app TO gip_app_login WITH INHERIT TRUE, SET FALSE",
+        False,
+    ),
+}
+
+
+@requires_isolated_role_cluster
+@pytest.mark.req("FR-44")
+@pytest.mark.parametrize("case", list(_ASSERTION_STATES))
+async def test_the_final_assertion_judges_the_end_state(
+    owner_database: Database, case: str
+) -> None:
+    """#1760 S6b: the file's last block, run ALONE over a planted state, raises unless the pair
+    holds exactly one INHERIT-only row. Run as part of the whole file the assertion cannot be
+    seen to fail, because the revoke loop and the GRANT before it have already made the state
+    right; alone, it is shown to fail on a second row, on ADMIN OPTION, on SET and on no row."""
+    sql = _SQL.read_text(encoding="utf-8")
+    assertion = "DO $do$" + sql.rsplit("DO $do$", 1)[1]
+    assert "exactly one INHERIT-only row" in assertion
+    assert "GRANT " not in assertion and "REVOKE" not in assertion  # the block only judges
+    plant, must_raise = _ASSERTION_STATES[case]
+    if not must_raise:
+        await _apply_over(owner_database, plant, assertion)
+        return
+    with pytest.raises(asyncpg.PostgresError) as raised:
+        await _apply_over(owner_database, plant, assertion)
+    assert raised.value.sqlstate == "P0001"
+    assert "gip_app_login" in str(raised.value)
+    assert "gip_app" in str(raised.value)
 
 
 @requires_isolated_role_cluster
@@ -321,7 +367,7 @@ async def _apply_over(owner_database: Database, plant: str) -> None:
 async def test_the_provisioner_names_the_role_pair_when_a_dependent_grant_blocks_the_revoke(
     owner_database: Database,
 ) -> None:
-    """#1760 S6b, D2 (probe P5: PostgreSQL's own 2BP01 `dependent privileges exist` escapes a
+    """#1760 S6b, D2 (PostgreSQL's own 2BP01 `dependent privileges exist` escapes a
     42501-only handler). A role granted onward through a membership being revoked fails the
     run, naming the pair; never CASCADE."""
     plant = (
@@ -341,7 +387,7 @@ async def test_the_provisioner_names_the_role_pair_when_a_dependent_grant_blocks
 async def test_a_provisioner_that_is_not_a_superuser_is_refused_first(
     owner_database: Database,
 ) -> None:
-    """#1760 S6b, condition (ii) (probe2: a CREATEROLE role without SUPERUSER fails at the first
+    """#1760 S6b (a CREATEROLE role without SUPERUSER fails at the first
     ALTER ROLE, whatever the state): the file refuses it at its first statement, naming the role."""
     plant = (
         "CREATE ROLE gip_scratch_s6n LOGIN CREATEROLE NOSUPERUSER; SET ROLE gip_scratch_s6n"
