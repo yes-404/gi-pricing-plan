@@ -8,7 +8,7 @@ from backend.tests.conftest_db import seed_as_owner
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.models import AuditEventRow, RoleAssignmentRow, RoleRow
+from app.db.models import AuditEventRow, RoleAssignmentRow, RoleRow, ServiceAccountRow
 from app.db.session import Database
 from app.errors import PlatformError
 from app.platform import rbac
@@ -274,26 +274,153 @@ async def test_granting_requires_the_manage_roles_permission(
             )
 
 
-@pytest.mark.req("FR-348")
-async def test_a_user_cannot_grant_a_permission_they_do_not_hold(
-    database: Database, workspace_id
-) -> None:
-    """The escalation FR-348 forbids: an admin minting an Approver and using it."""
-    admin, target = _user(), _user()
-    await _assign(database, workspace_id, admin, "admin")
+async def _seed_service_account(workspace_id, created_by) -> ServiceAccountRow:
+    account = ServiceAccountRow(
+        workspace_id=workspace_id,
+        slug=f"sa-{new_uuid7().hex[:12]}",
+        environments=["dev"],
+        permissions=[],
+        created_by=created_by,
+    )
 
-    async with database.unit_of_work() as session:
+    async def seed(session: AsyncSession) -> None:
+        session.add(account)
+
+    await seed_as_owner(seed)
+    return account
+
+
+async def _grant_refused(
+    owner_database: Database, workspace_id, granter, *, kind: str, principal_id
+) -> PlatformError:
+    """Attempt the grant, assert it was refused, and that nothing was written or audited."""
+    async with owner_database.unit_of_work() as session:
         with pytest.raises(PlatformError) as exc:
             await rbac.grant_role(
                 session,
                 workspace_id=workspace_id,
-                granter=admin,
-                principal_kind="user",
-                principal_id=target.id,
-                role_slug="approver",
+                granter=granter,
+                principal_kind=kind,
+                principal_id=principal_id,
+                role_slug="analyst",
             )
+    async with owner_database.session() as session:
+        rows = (
+            await session.execute(
+                select(RoleAssignmentRow).where(
+                    RoleAssignmentRow.principal_id == principal_id,
+                    RoleAssignmentRow.granted_by.is_not(None),
+                )
+            )
+        ).scalars().all()
+        events = (
+            await session.execute(
+                select(AuditEventRow).where(
+                    AuditEventRow.workspace_id == workspace_id,
+                    AuditEventRow.action == "role_assignment.granted",
+                )
+            )
+        ).scalars().all()
+    assert rows == []
+    assert events == []
     assert exc.value.code == "PERMISSION_DENIED"
-    assert "approval:decide" in (exc.value.detail or "")
+    return exc.value
+
+
+@pytest.mark.req("FR-348")
+@pytest.mark.parametrize("kind", ["user", "service_account"])
+async def test_a_principal_cannot_grant_a_role_to_itself(
+    database: Database, owner_database: Database, workspace_id, kind: str
+) -> None:
+    """R1 / R1b: refused even when the granter already holds every permission the role
+    confers, and whatever `principal_kind` is passed (assignments resolve by id alone)."""
+    admin = _user()
+    await _assign(database, workspace_id, admin, "admin")
+    await _assign(database, workspace_id, admin, "analyst")
+    await _grant_refused(owner_database, workspace_id, admin, kind=kind, principal_id=admin.id)
+
+
+@pytest.mark.req("FR-348")
+@pytest.mark.parametrize("kind", ["service_account", "user"])
+async def test_a_principal_cannot_grant_a_role_to_a_service_account_it_owns(
+    database: Database, owner_database: Database, workspace_id, kind: str
+) -> None:
+    """R2 / R2b: refused whatever `principal_kind` is passed."""
+    admin = _user()
+    await _assign(database, workspace_id, admin, "admin")
+    await _assign(database, workspace_id, admin, "analyst")
+    account = await _seed_service_account(workspace_id, admin.id)
+    await _grant_refused(owner_database, workspace_id, admin, kind=kind, principal_id=account.id)
+
+
+@pytest.mark.req("FR-348")
+async def test_a_service_account_with_an_unknown_owner_is_refused(
+    database: Database, owner_database: Database, workspace_id
+) -> None:
+    """Deny by default: `created_by` NULL is an owner nobody can rule out."""
+    admin = _user()
+    await _assign(database, workspace_id, admin, "admin")
+    account = await _seed_service_account(workspace_id, None)
+    await _grant_refused(
+        owner_database, workspace_id, admin, kind="service_account", principal_id=account.id
+    )
+
+
+@pytest.mark.req("FR-348")
+async def test_a_grant_conferring_permissions_the_granter_lacks_succeeds(
+    database: Database, owner_database: Database, workspace_id
+) -> None:
+    """G1: the withdrawn "permission subset" rule (#1843, option (A))."""
+    admin, target = _user(), _user()
+    await _assign(database, workspace_id, admin, "admin")
+
+    async with owner_database.unit_of_work() as session:
+        await rbac.grant_role(
+            session,
+            workspace_id=workspace_id,
+            granter=admin,
+            principal_kind="user",
+            principal_id=target.id,
+            role_slug="approver",
+        )
+
+    async with database.session() as session:
+        held = await rbac.effective_permissions(
+            session,
+            workspace_id=workspace_id,
+            principal=Principal(kind=ActorKind.USER, id=target.id, display="t"),
+        )
+        events = (
+            await session.execute(
+                select(AuditEventRow).where(
+                    AuditEventRow.workspace_id == workspace_id,
+                    AuditEventRow.action == "role_assignment.granted",
+                )
+            )
+        ).scalars().all()
+    assert Permission.APPROVAL_DECIDE in held
+    assert len(events) == 1
+
+
+@pytest.mark.req("FR-348")
+async def test_a_grant_to_a_service_account_owned_by_another_principal_succeeds(
+    database: Database, owner_database: Database, workspace_id
+) -> None:
+    """G2: the refusal is keyed on ownership, not on the principal being a service account."""
+    admin, other_admin = _user(), _user()
+    await _assign(database, workspace_id, admin, "admin")
+    account = await _seed_service_account(workspace_id, other_admin.id)
+
+    async with owner_database.unit_of_work() as session:
+        assignment = await rbac.grant_role(
+            session,
+            workspace_id=workspace_id,
+            granter=admin,
+            principal_kind="service_account",
+            principal_id=account.id,
+            role_slug="analyst",
+        )
+    assert assignment.principal_id == account.id
 
 
 @pytest.mark.req("FR-348")

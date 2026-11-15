@@ -14,9 +14,9 @@ Three rules shape the design:
 * **Scope is part of the question.** A principal with `approval:decide` workspace-wide and
   one with it on a single Rating Algorithm are different answers to the same permission
   (FR-345).
-* **No self-elevation.** A principal cannot grant a permission it does not itself hold
-  (FR-348), which is checked here rather than in the route, so every future grant path
-  inherits it.
+* **No self-grant.** A principal cannot grant a role to itself, nor to a Service Account
+  it owns (FR-348), which is checked here rather than in the route, so every future grant
+  path inherits it.
 """
 
 from __future__ import annotations
@@ -28,7 +28,7 @@ from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.models import RoleAssignmentRow, RoleRow
+from app.db.models import RoleAssignmentRow, RoleRow, ServiceAccountRow
 from app.errors import PlatformError
 from app.observability.logging import get_logger
 from app.platform import audit
@@ -315,11 +315,12 @@ async def grant_role(
     scope_type: ScopeType = ScopeType.WORKSPACE,
     scope_id: UUID | None = None,
 ) -> RoleAssignmentRow:
-    """Assign a role, refusing an escalation the granter could not perform (FR-348).
+    """Assign a role, refusing a grant to oneself or to a Service Account one owns (FR-348).
 
-    The granter must hold `admin:manage_roles` **and** every permission the role confers.
-    Without the second check an administrator could mint an Approver role and assign it to
-    themselves, which is separation of duties defeated in two API calls.
+    The granter must hold `admin:manage_roles`; it may then grant any role, including one
+    conferring permissions it does not hold (#1843, option (A)). Separation of duties is
+    held by the two refusals: an administrator cannot assign an Approver role to themselves,
+    nor to a Service Account they created and control.
     """
     await require_permission(
         session,
@@ -340,18 +341,33 @@ async def grant_role(
             "NOT_FOUND", "Role not found", 404, f"No role {role_slug!r} in this workspace."
         )
 
-    conferred = {Permission(p) for p in role.permissions}
-    held = await effective_permissions(
-        session, workspace_id=workspace_id, principal=granter
-    )
-    escalation = conferred - held
-    if escalation:
+    # Compare ids only, never `principal_kind`: `effective_permissions` selects assignments
+    # by `principal_id` alone, so a kind-aware check could be bypassed by passing a
+    # different kind with the granter's own id (or a Service Account's id).
+    if principal_id == granter.id:
         raise PlatformError(
             "PERMISSION_DENIED",
-            "Cannot grant a permission you do not hold",
+            "Cannot grant a role to yourself",
             403,
-            f"Granting {role_slug!r} would confer {sorted(p.value for p in escalation)}, "
-            "which you do not hold (FR-348).",
+            "A principal cannot grant a role to itself (FR-348).",
+        )
+
+    account = (
+        await session.execute(
+            select(ServiceAccountRow).where(
+                ServiceAccountRow.id == principal_id,
+                ServiceAccountRow.workspace_id == workspace_id,
+            )
+        )
+    ).scalar_one_or_none()
+    # `created_by` NULL means the owner is unknown: deny by default.
+    if account is not None and (account.created_by is None or account.created_by == granter.id):
+        raise PlatformError(
+            "PERMISSION_DENIED",
+            "Cannot grant a role to a service account you own",
+            403,
+            "A principal cannot grant a role to a service account it owns, or one whose "
+            "owner is unrecorded (FR-348).",
         )
 
     assignment = RoleAssignmentRow(
@@ -395,7 +411,7 @@ async def grant_break_glass(
 ) -> RoleAssignmentRow:
     """Emergency elevation: time-boxed, reason-required, audited (FR-349).
 
-    Deliberately **not** subject to the no-self-elevation rule of `grant_role` — the point
+    Deliberately **not** subject to the no-self-grant rule of `grant_role` — the point
     of break-glass is to exceed what the granter normally holds. What replaces that
     protection is the expiry, the mandatory reason, the audit event flagged as break-glass,
     and the fact that it cannot be quiet.
