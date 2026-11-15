@@ -99,3 +99,62 @@ def test_the_code_an_all_rows_refusal_carries_is_registered_and_declared() -> No
     assert f"`{code}`" in section
     mapped = model_handlers._all_rows_refusal(error)
     assert mapped.code == literal
+
+
+_STEPS = {
+    "MODEL_TERM_UNRESOLVED": "every column the model's factors read",
+    "MODEL_OFFSET_MISSING": "the model's exposure column",
+    "MODEL_LINK_UNSUPPORTED": "a link the scorer implements",
+    "MODEL_NOT_FITTED": "carries no fit to score",
+}
+_MAPPERS = {"offset": "_offset_refusal", "diagnostics": "_diagnostics_refusal",
+            "backtest": "_backtest_refusal"}
+
+
+def _map(mapper: str, exc: PredictionError) -> model_handlers.PlatformError:
+    result: model_handlers.PlatformError = getattr(model_handlers, _MAPPERS[mapper])(exc)
+    return result
+
+
+@pytest.mark.req("FR-2143")
+@pytest.mark.parametrize("mapper", sorted(_MAPPERS))
+@pytest.mark.parametrize("code", sorted(_STEPS))
+def test_a_refusal_code_stores_its_own_next_step_not_the_unseen_level_advice(
+    mapper: str, code: str
+) -> None:
+    """Each code has its own correct next step; none of them says to declare `map_to_base`, and
+    the stored detail carries no value from the exception's text."""
+    exc = PredictionError(code, f"a term names {SENTINEL!r}", terms=["area"])
+
+    mapped = _map(mapper, exc)
+
+    assert mapped.code == code
+    assert mapped.status_code == 409
+    assert mapped.detail is not None
+    assert _STEPS[code] in mapped.detail
+    assert "map to base" not in mapped.detail
+    assert SENTINEL not in f"{mapped.title} {mapped.detail}"
+
+
+@pytest.mark.req("FR-2143")
+@pytest.mark.parametrize("mapper", sorted(_MAPPERS))
+def test_an_unlisted_refusal_code_gets_the_generic_next_step(mapper: str) -> None:
+    mapped = _map(mapper, PredictionError("MODEL_INTERVAL_UNAVAILABLE", f"{SENTINEL!r}"))
+
+    assert mapped.code == "MODEL_INTERVAL_UNAVAILABLE"
+    assert mapped.detail is not None
+    assert "error code names the refusal." in mapped.detail
+    assert "map to base" not in mapped.detail
+    assert SENTINEL not in f"{mapped.title} {mapped.detail}"
+
+
+@pytest.mark.req("FR-2143")
+def test_the_backtests_unseen_level_advice_names_the_backtest_data_not_a_holdout() -> None:
+    mapped = model_handlers._backtest_refusal(_refusal())
+    offset = model_handlers._offset_refusal(_refusal(), where="the backtest data")
+
+    for stored in (mapped.detail, offset.detail):
+        assert stored is not None
+        assert "backtest data" in stored
+        assert "holdout" not in stored
+        assert "map to base" in stored

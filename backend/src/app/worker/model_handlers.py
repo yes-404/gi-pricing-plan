@@ -81,23 +81,43 @@ _log = get_logger("app.worker.model")
 
 #: A coded Job's error is STORED, and a `PredictionError`'s own text can carry a quote's value
 #: (`rating/runtime.py` passes the code only, for that reason; NFR-499). So these refusals carry a
-#: FIXED, value-free sentence and the code, never `str(exc)` and never a level (FR-2143).
-_OFFSET_REFUSAL_DETAIL = (
-    "The offset model could not be scored for this data. Next step: declare “map to base” on "
-    "that factor, or re-split the data so that the holdout holds no level the offset model "
-    "never saw."
-)
-_DIAGNOSTICS_REFUSAL_DETAIL = (
-    "The fit's diagnostics could not be computed: the model refused rows of this data (the error "
-    "code names the refusal). Declare “map to base” on the factor concerned, or re-split the data."
-)
+#: FIXED, value-free sentence and the code, never `str(exc)` and never a level (FR-2143). The
+#: sentence's next step is chosen BY CODE: each code a scoring path raises has its own advice, and
+#: a code not listed here gets the generic one.
+_NEXT_STEP_BY_CODE = {
+    "MODEL_TERM_UNRESOLVED": (
+        "Check that the data carries every column the model's factors read."
+    ),
+    "MODEL_OFFSET_MISSING": (
+        "Check that the data carries the model's exposure column, with positive values."
+    ),
+    "MODEL_LINK_UNSUPPORTED": "Refit the model with a link the scorer implements.",
+    "MODEL_NOT_FITTED": "Fit the model first: it carries no fit to score.",
+}
+_GENERIC_NEXT_STEP = "The error code names the refusal."
 
 
-def _offset_refusal(exc: Any) -> PlatformError:
-    """The coded failure for an offset model's refusal: its code, a fixed sentence, no value."""
-    return PlatformError(
-        exc.code, "The offset model could not be scored", 409, _OFFSET_REFUSAL_DETAIL
+def _next_step(code: str, unseen_level_step: str) -> str:
+    """The fixed next step for a refusal `code`; `unseen_level_step` is the advice for an unseen
+    level, which differs by what was being scored."""
+    if code == "UNSEEN_LEVEL_BEHAVIOUR_REQUIRED":
+        return unseen_level_step
+    return _NEXT_STEP_BY_CODE.get(code, _GENERIC_NEXT_STEP)
+
+
+def _offset_refusal(exc: Any, *, where: str = "the holdout") -> PlatformError:
+    """The coded failure for an offset model's refusal: its code, a fixed sentence, no value.
+    `where` names the partition the offset model was scored on."""
+    step = _next_step(
+        exc.code,
+        f"Declare “map to base” on that factor, or re-split the data so that {where} holds no "
+        "level the offset model never saw.",
     )
+    detail = (
+        f"The offset model could not be scored for this data. Next step: {step[0].lower()}"
+        f"{step[1:]}"
+    )
+    return PlatformError(exc.code, "The offset model could not be scored", 409, detail)
 
 
 def _all_rows_refusal(exc: Any) -> PlatformError:
@@ -112,10 +132,29 @@ def _all_rows_refusal(exc: Any) -> PlatformError:
 
 def _diagnostics_refusal(exc: Any) -> PlatformError:
     """The coded failure for a refusal escaping the diagnostics: its code, a fixed sentence."""
-    return PlatformError(
-        exc.code, "The fit's diagnostics could not be computed", 409,
-        _DIAGNOSTICS_REFUSAL_DETAIL,
+    step = _next_step(
+        exc.code, "Declare “map to base” on the factor concerned, or re-split the data."
     )
+    detail = (
+        "The fit's diagnostics could not be computed: the model refused rows of this data (the "
+        f"error code names the refusal). {step}"
+    )
+    return PlatformError(exc.code, "The fit's diagnostics could not be computed", 409, detail)
+
+
+def _backtest_refusal(exc: Any) -> PlatformError:
+    """The coded failure for a refusal escaping a backtest: its code, a fixed sentence that names
+    the backtest data, not a holdout."""
+    step = _next_step(
+        exc.code,
+        "Declare “map to base” on the factor concerned, or re-split the data so that the "
+        "backtest data holds no level the model never saw.",
+    )
+    detail = (
+        "The backtest could not be computed: the model refused rows of this data (the error "
+        f"code names the refusal). {step}"
+    )
+    return PlatformError(exc.code, "The backtest could not be computed", 409, detail)
 
 
 @dataclass(frozen=True, slots=True)
@@ -1378,7 +1417,7 @@ def _backtest(parameters: dict[str, Any], callback: ProgressCallback) -> JobResu
             # FR-2143: the offset model refuses a level it never saw. Its rows cannot be dropped
             # here (the offset is the backtest's own input), so the refusal keeps its code and says
             # what to do next, in a fixed sentence (never the exception's text: it is stored).
-            raise _offset_refusal(exc) from exc
+            raise _offset_refusal(exc, where="the backtest data") from exc
 
     progress.update(0.2, "scoring the period")
     try:
@@ -1398,6 +1437,10 @@ def _backtest(parameters: dict[str, Any], callback: ProgressCallback) -> JobResu
     except AllRowsUnseenError as exc:
         # FR-2143: every backtest row is excluded: coded, with the count and the next step.
         raise _all_rows_refusal(exc) from exc
+    except PredictionError as exc:
+        # FR-2143, as a fit's diagnostics: any other refusal keeps its code, with the fixed
+        # value-free sentence chosen by that code (never the exception's text).
+        raise _backtest_refusal(exc) from exc
 
     async def store() -> UUID:
         async with progress.database.unit_of_work() as session:

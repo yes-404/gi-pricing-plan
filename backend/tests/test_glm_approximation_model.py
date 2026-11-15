@@ -824,6 +824,8 @@ async def test_a_refusal_escaping_the_surrogates_diagnostics_keeps_its_code_and_
 
     assert refusal.code == "UNSEEN_LEVEL_BEHAVIOUR_REQUIRED"
     assert refusal.status_code == 409
-    assert refusal.detail == model_handlers._DIAGNOSTICS_REFUSAL_DETAIL
+    assert refusal.detail == model_handlers._diagnostics_refusal(
+        PredictionError("UNSEEN_LEVEL_BEHAVIOUR_REQUIRED", "x")
+    ).detail
     assert sentinel not in f"{refusal.title} {refusal.detail}"
 

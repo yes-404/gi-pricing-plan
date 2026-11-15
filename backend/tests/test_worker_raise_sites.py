@@ -218,9 +218,9 @@ _SITES: dict[_Key, tuple[frozenset[str], str]] = {
         "a named fit refusal on the model path (test_error_sinks.py `_SINKS`); no Quote Context",
     ),
     ("backend/src/app/worker/model_handlers.py", "_offset_refusal", _DYNAMIC): (
-        frozenset({"_OFFSET_REFUSAL_DETAIL"}),
-        "a fixed module sentence; the code is exc.code; never the exception's text (stored on the"
-        " Job); FR-2143",
+        frozenset({"detail"}),
+        "a fixed sentence whose next step is chosen by the code (`_next_step`); the code is"
+        " exc.code; never the exception's text (stored on the Job); FR-2143",
     ),
     ("backend/src/app/worker/model_handlers.py", "_all_rows_refusal", _DYNAMIC): (
         frozenset({"detail"}),
@@ -229,9 +229,15 @@ _SITES: dict[_Key, tuple[frozenset[str], str]] = {
         " the Job); FR-2143",
     ),
     ("backend/src/app/worker/model_handlers.py", "_diagnostics_refusal", _DYNAMIC): (
-        frozenset({"_DIAGNOSTICS_REFUSAL_DETAIL"}),
-        "a fixed module sentence; the code is exc.code; never the exception's text (stored on the"
-        " Job); FR-2143",
+        frozenset({"detail"}),
+        "a fixed sentence whose next step is chosen by the code (`_next_step`); the code is"
+        " exc.code; never the exception's text (stored on the Job); FR-2143",
+    ),
+    ("backend/src/app/worker/model_handlers.py", "_backtest_refusal", _DYNAMIC): (
+        frozenset({"detail"}),
+        "a fixed sentence whose next step is chosen by the code (`_next_step`); the code is"
+        " exc.code; names the backtest data; never the exception's text (stored on the Job);"
+        " FR-2143",
     ),
     ("backend/src/app/worker/model_handlers.py", "_reconcile", _DYNAMIC): (
         frozenset({"str(exc)"}),
