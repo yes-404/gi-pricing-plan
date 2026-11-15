@@ -30,6 +30,12 @@ machine reaches none of them. To use one from another machine, forward it over S
 service is published without the bind. A running container keeps its old binding until it is
 recreated from a checkout that has this change.
 
+*(Dated 2026-11-15, #1510 slice S6b.)* On a fresh volume PostgreSQL runs
+`deploy/postgres/app-login-role.sql` once, at first start, through its `initdb` entry
+(`docker-entrypoint-initdb.d`); that run is not wrapped in one transaction. The provisioner
+`scripts/provision-app-role.py` runs the same file in one transaction, and that is the form to
+use on an existing volume.
+
 ## The local identity provider (FR-398)
 
 Off by default. Three containers start as before; the provider is a fourth, behind a profile:

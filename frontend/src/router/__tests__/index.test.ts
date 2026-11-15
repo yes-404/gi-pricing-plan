@@ -123,3 +123,20 @@ describe("the /models routes", () => {
     expect(router().resolve("/metrics").matched.map((r) => r.name)).toContain("metric-library");
   });
 });
+
+describe("the audit explorer route", () => {
+  it("resolves /audit to the explorer", () => {
+    expect(matchedNames("/audit")).toContain("audit-explorer");
+  });
+});
+
+describe("the artifact history route", () => {
+  it("resolves a percent-encoded ref and hands the view the decoded string", () => {
+    const resolved = router().resolve("/artifacts/model%3Amotor-freq%402/history");
+    expect(resolved.matched.map((r) => r.name)).toContain("artifact-history");
+    expect(resolved.params.ref).toBe("model:motor-freq@2");
+    const record = resolved.matched.find((r) => r.name === "artifact-history")!;
+    const props = record.props.default as (route: typeof resolved) => unknown;
+    expect(props(resolved)).toEqual({ artifactRef: "model:motor-freq@2" });
+  });
+});

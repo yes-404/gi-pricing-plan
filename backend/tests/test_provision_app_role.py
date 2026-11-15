@@ -25,9 +25,11 @@ import importlib.util
 import os
 import subprocess
 import sys
+from collections.abc import Mapping
 from pathlib import Path
 from types import ModuleType
 
+import asyncpg
 import pytest
 from sqlalchemy import text
 
@@ -39,17 +41,23 @@ _SQL = _ROOT / "deploy" / "postgres" / "app-login-role.sql"
 
 #: Roles are cluster-wide in PostgreSQL, so a case that alters, grants or creates a role does so
 #: on the live `gip_app` and `gip_app_login` of whatever server it connects to, even inside a
-#: rolled-back transaction (#1760). Such a case runs only where the cluster is a throwaway one:
-#: GitHub Actions (`CI=true`, a fresh service container per job) or a seat's own container
-#: (`GIP_TEST_ROLE_CLUSTER_ISOLATED=1`). Anywhere else it skips with this one reason, and
+#: rolled-back transaction (#1760). Such a case runs only where the cluster is a throwaway one,
+#: declared by `GIP_TEST_ROLE_CLUSTER_ISOLATED=1` and nothing else: `CI=true` does not declare
+#: it (#1760 S6b, D3). The CI workflow's `Tests` step sets the flag, and so does any run on a
+#: throwaway cluster of one's own. Anywhere else the case skips with this one reason, and
 #: `test_a_role_mutating_case_skips_only_for_the_isolation_reason` pins it.
 ROLE_CLUSTER_SKIP_REASON = (
-    "role-mutating case: runs only on an isolated cluster (CI == 'true' or "
-    "GIP_TEST_ROLE_CLUSTER_ISOLATED=1); roles are cluster-wide"
+    "role-mutating case: runs only on an isolated cluster (GIP_TEST_ROLE_CLUSTER_ISOLATED=1); "
+    "roles are cluster-wide"
 )
-_ROLE_CLUSTER_ISOLATED = (
-    os.environ.get("CI") == "true" or os.environ.get("GIP_TEST_ROLE_CLUSTER_ISOLATED") == "1"
-)
+
+
+def _role_cluster_isolated(environ: Mapping[str, str]) -> bool:
+    """The flag alone declares a throwaway cluster."""
+    return environ.get("GIP_TEST_ROLE_CLUSTER_ISOLATED") == "1"
+
+
+_ROLE_CLUSTER_ISOLATED = _role_cluster_isolated(os.environ)
 requires_isolated_role_cluster = pytest.mark.skipif(
     not _ROLE_CLUSTER_ISOLATED, reason=ROLE_CLUSTER_SKIP_REASON
 )
@@ -231,6 +239,24 @@ _CONVERGENCE: dict[str, tuple[str, str, object]] = {
         "AND inherit_option AND NOT set_option AND NOT admin_option",
         1,
     ),
+    # #1760 S6b: the pair is revoked from EVERY grantor before the one GRANT, so a second
+    # grantor's row of the intended pair (ADMIN + SET) cannot survive beside it.
+    "m5e_second_grantor_of_the_intended_pair": (
+        "CREATE ROLE gip_scratch_s6h NOLOGIN; "
+        "GRANT gip_app TO gip_scratch_s6h WITH ADMIN OPTION; "
+        "GRANT gip_app TO gip_app_login WITH ADMIN OPTION, INHERIT TRUE, SET TRUE "
+        "GRANTED BY gip_scratch_s6h",
+        "SELECT count(*) FROM pg_auth_members "
+        "WHERE roleid = 'gip_app'::regrole AND member = 'gip_app_login'::regrole",
+        1,
+    ),
+    # ADMIN OPTION on the provisioner's own row is cleared too: the revoke-then-GRANT rewrites it.
+    "m5f_admin_option_on_the_provisioners_own_row": (
+        "GRANT gip_app TO gip_app_login WITH ADMIN OPTION",
+        "SELECT bool_or(admin_option) FROM pg_auth_members "
+        "WHERE roleid = 'gip_app'::regrole AND member = 'gip_app_login'::regrole",
+        False,
+    ),
 }
 
 
@@ -267,9 +293,134 @@ def test_the_provisioner_names_the_role_pair_when_it_cannot_revoke() -> None:
     database's owner is a superuser (it may revoke anything), so the file's text is pinned."""
     sql = _SQL.read_text(encoding="utf-8")
     assert "insufficient_privilege" in sql
+    assert "dependent_objects_still_exist" in sql
     assert "GRANTED BY" in sql
     assert "RAISE EXCEPTION" in sql
     assert "cannot revoke membership of role % in role %" in sql
+    assert "CASCADE" not in sql.upper().replace("NEVER CASCADE", "")
+
+
+async def _apply_over(owner_database: Database, plant: str, sql: str | None = None) -> None:
+    """Plant a state as the owner, apply the SQL file (or `sql`, a piece of it) over it as
+    `provision-app-role.py` does, in one transaction that is always rolled back. Raises what the
+    SQL raises."""
+    async with owner_database.engine.connect() as connection:
+        transaction = await connection.begin()
+        try:
+            await connection.execute(text("SELECT 1"))  # opens the transaction on the driver
+            raw = await connection.get_raw_connection()
+            driver = raw.driver_connection
+            assert driver is not None
+            await driver.execute(plant)
+            await driver.execute(sql if sql is not None else _SQL.read_text(encoding="utf-8"))
+        finally:
+            await transaction.rollback()
+
+
+#: `{case id: (state the owner plants, whether the end-state assertion must raise)}`.
+_ASSERTION_STATES: dict[str, tuple[str, bool]] = {
+    "two_rows": (
+        "CREATE ROLE gip_scratch_s6k NOLOGIN; "
+        "GRANT gip_app TO gip_scratch_s6k WITH ADMIN OPTION; "
+        "GRANT gip_app TO gip_app_login WITH ADMIN OPTION, INHERIT TRUE, SET TRUE "
+        "GRANTED BY gip_scratch_s6k",
+        True,
+    ),
+    "admin_option": ("GRANT gip_app TO gip_app_login WITH ADMIN OPTION", True),
+    "set_option": ("GRANT gip_app TO gip_app_login WITH SET TRUE", True),
+    "no_row": ("REVOKE gip_app FROM gip_app_login", True),
+    "the_intended_row": (
+        "REVOKE gip_app FROM gip_app_login; "
+        "GRANT gip_app TO gip_app_login WITH INHERIT TRUE, SET FALSE",
+        False,
+    ),
+}
+
+
+@requires_isolated_role_cluster
+@pytest.mark.req("FR-44")
+@pytest.mark.parametrize("case", list(_ASSERTION_STATES))
+async def test_the_final_assertion_judges_the_end_state(
+    owner_database: Database, case: str
+) -> None:
+    """#1760 S6b: the file's last block, run ALONE over a planted state, raises unless the pair
+    holds exactly one INHERIT-only row. Run as part of the whole file the assertion cannot be
+    seen to fail, because the revoke loop and the GRANT before it have already made the state
+    right; alone, it is shown to fail on a second row, on ADMIN OPTION, on SET and on no row."""
+    sql = _SQL.read_text(encoding="utf-8")
+    assertion = "DO $do$" + sql.rsplit("DO $do$", 1)[1]
+    assert "exactly one INHERIT-only row" in assertion
+    assert "GRANT " not in assertion  # the block only judges
+    assert "REVOKE" not in assertion
+    plant, must_raise = _ASSERTION_STATES[case]
+    if not must_raise:
+        await _apply_over(owner_database, plant, assertion)
+        return
+    with pytest.raises(asyncpg.PostgresError) as raised:
+        await _apply_over(owner_database, plant, assertion)
+    assert raised.value.sqlstate == "P0001"
+    assert "gip_app_login" in str(raised.value)
+    assert "gip_app" in str(raised.value)
+
+
+@requires_isolated_role_cluster
+@pytest.mark.req("FR-44")
+async def test_the_provisioner_names_the_role_pair_when_a_dependent_grant_blocks_the_revoke(
+    owner_database: Database,
+) -> None:
+    """#1760 S6b, D2 (PostgreSQL's own 2BP01 `dependent privileges exist` escapes a
+    42501-only handler). A role granted onward through a membership being revoked fails the
+    run, naming the pair; never CASCADE."""
+    plant = (
+        "CREATE ROLE gip_scratch_s6r NOLOGIN; CREATE ROLE gip_scratch_s6x NOLOGIN; "
+        "GRANT gip_scratch_s6r TO gip_app_login WITH ADMIN OPTION; "
+        "SET ROLE gip_app_login; GRANT gip_scratch_s6r TO gip_scratch_s6x; RESET ROLE"
+    )
+    with pytest.raises(asyncpg.PostgresError) as raised:
+        await _apply_over(owner_database, plant)
+    assert raised.value.sqlstate == "P0001"
+    assert "gip_app_login" in str(raised.value)
+    assert "gip_scratch_s6r" in str(raised.value)
+
+
+@requires_isolated_role_cluster
+@pytest.mark.req("FR-44")
+async def test_a_provisioner_that_is_not_a_superuser_is_refused_first(
+    owner_database: Database,
+) -> None:
+    """#1760 S6b (a CREATEROLE role without SUPERUSER fails at the first
+    ALTER ROLE, whatever the state): the file refuses it at its first statement, naming the role."""
+    plant = (
+        "CREATE ROLE gip_scratch_s6n LOGIN CREATEROLE NOSUPERUSER; SET ROLE gip_scratch_s6n"
+    )
+    with pytest.raises(asyncpg.PostgresError) as raised:
+        await _apply_over(owner_database, plant)
+    assert "must run as a superuser: gip_scratch_s6n is not one" in str(raised.value)
+
+
+@pytest.mark.req("FR-44")
+@pytest.mark.parametrize(
+    ("environ", "isolated"),
+    [
+        ({"CI": "true"}, False),
+        ({}, False),
+        ({"GIP_TEST_ROLE_CLUSTER_ISOLATED": "true"}, False),
+        ({"GIP_TEST_ROLE_CLUSTER_ISOLATED": "1"}, True),
+        ({"CI": "true", "GIP_TEST_ROLE_CLUSTER_ISOLATED": "1"}, True),
+    ],
+)
+def test_the_isolation_guard_is_the_flag_alone(environ: dict[str, str], isolated: bool) -> None:
+    """#1760 S6b, D3: `CI=true` alone does not declare a throwaway cluster."""
+    assert _role_cluster_isolated(environ) is isolated
+
+
+@pytest.mark.req("FR-44")
+def test_ci_sets_the_role_cluster_flag_on_the_tests_step() -> None:
+    """#1760 S6b, condition 4: with the guard the flag alone, CI must set it on the `Tests`
+    step, or every role-mutating case skips there."""
+    workflow = (_ROOT / ".github" / "workflows" / "python.yml").read_text(encoding="utf-8")
+    step = workflow.split("- name: Tests", 1)[1].split("- name:", 1)[0]
+    assert 'GIP_TEST_ROLE_CLUSTER_ISOLATED: "1"' in step
 
 
 @pytest.mark.req("FR-44")
@@ -279,8 +430,8 @@ def test_a_role_mutating_case_skips_only_for_the_isolation_reason() -> None:
     missing fixture) is not mistaken for the guard. Asserts the guard's reason and its
     condition, and that the case carries the guard."""
     assert ROLE_CLUSTER_SKIP_REASON == (
-        "role-mutating case: runs only on an isolated cluster (CI == 'true' or "
-        "GIP_TEST_ROLE_CLUSTER_ISOLATED=1); roles are cluster-wide"
+        "role-mutating case: runs only on an isolated cluster (GIP_TEST_ROLE_CLUSTER_ISOLATED=1); "
+        "roles are cluster-wide"
     )
     mark = requires_isolated_role_cluster.mark
     assert mark.name == "skipif"

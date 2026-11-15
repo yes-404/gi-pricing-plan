@@ -19,6 +19,7 @@ from fastapi import APIRouter, FastAPI
 
 from app.api import (
     approvals,
+    artifacts,
     audit,
     auth_config,
     blobs,
@@ -239,6 +240,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     counted(settings_api.router)
     counted(me.router)
     counted(audit.router)
+    counted(artifacts.router)
     counted(approvals.router)
     # `01` — Data. Order matters only for readability; FastAPI matches on the full path.
     counted(blobs.router)
