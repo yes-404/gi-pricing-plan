@@ -85,9 +85,11 @@
 /backend/src/app/platform/audit.py                         @yes-404 @freynia404
 /backend/src/app/api/audit.py                              @yes-404 @freynia404
 /backend/src/app/api/artifacts.py                          @yes-404 @freynia404
+/scripts/reset-unbacked-rule-approvals.py                  @yes-404 @freynia404
 /backend/tests/test_audit*.py                              @yes-404 @freynia404
 /backend/tests/test_api_audit.py                           @yes-404 @freynia404
 /backend/tests/test_nfr498_audit_events.py                 @yes-404 @freynia404
+/backend/tests/test_auth_failure_audit.py                  @yes-404 @freynia404
 /backend/tests/test_artifact_immutability.py               @yes-404 @freynia404
 
 # Database migrations
