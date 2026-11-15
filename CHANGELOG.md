@@ -18,7 +18,11 @@ about. The format follows [Keep a Changelog 1.1.0](https://keepachangelog.com/en
   can abort above `rating.batch_abort_failure_rate`. A version whose GLM has an indicator term for
   a level its numeric input can never produce refuses every quote on that path, not only the
   affected values; the sweep lists such versions as `NOTEXAMINED-NUMERIC-TERMS` until their models
-  are refitted. Diagnostics, comparisons and backtests leave
+  are refitted. The sweep examines each GLM in a bundle and counts a model of another family (a
+  GBM or an EBM, which keeps the FR-131 refusal) on `not-examined-other-family`; a model with no
+  fit result, no model type or an unknown one makes its version unreadable, and each unreadable
+  line names the version and a reason word or the exception's type only. Diagnostics, comparisons
+  and backtests leave
   rows on such a level out of their figures and report the count and exposure; the model detail
   view lists each banded null level, Grouping target and interaction cell the fit has no
   relativity for.

@@ -149,7 +149,12 @@ docker compose -f deploy/docker-compose.yml --profile app up -d --wait --scale a
   lists such versions as `NOTEXAMINED-NUMERIC-TERMS` until their models are refitted (the line
   lists every identity label that starts like a number, so it is a floor on what the tool
   examined, not a count of faults). The NOTEXAMINED lines are information: they never change the
-  exit code. A version it
+  exit code. The sweep classifies each model in a bundle by its model type: a GLM is examined; a
+  model of another family (a GBM or an EBM) keeps the `02` FR-131 refusal whatever a Factor
+  declares, is not examined, and is counted on the `not-examined-other-family` line; a model with
+  no fit result, no model type or an unknown one makes its version unreadable (exit 2). Every
+  unreadable line names the version and either a fixed reason word or the exception's type, never
+  its text. A version it
   lists will refuse the quotes it names until a new model is approved: a declaration changes only
   by a new Factor version, a refit and a new Rating Version. A batch carrying many such rows can
   abort above `rating.batch_abort_failure_rate`.

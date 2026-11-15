@@ -21,9 +21,25 @@ Output, in this order (a zero over an empty corpus is vacuous, so the denominato
     unreadable: U
     glm refs read: G       GLM models read across the checked bundles
     <CLASS> <ref>          one line per version and class (below)
+    UNREADABLE <ref> (<reason>)   one line per unreadable version (below)
     plain: .. null-level-unfitted: .. grouping-unfitted: .. interaction-unfitted: ..
     interaction-unfitted-lower-bound: .. no-relativities: .. not-examined-interaction: ..
+    not-examined-other-family: n (families: ..)   versions pinning a model of another family
     NOTEXAMINED-CONTRACT n / NOTEXAMINED-GROUPING-SOURCE n   (what the sweep did not classify)
+
+Each `model:` payload of a Bundle is classified by its `fit_result.model_type`:
+
+    glm             validated with the GLM schema and examined as the classes below; a GLM payload
+                    that fails validation makes its version UNREADABLE.
+    another family  a family the fit-result union names (read from model-schema, not listed here):
+                    not examined and counted on `not-examined-other-family`, never a finding. It
+                    keeps FR-131's refusal whatever a Factor declares.
+    anything else   an unknown `model_type`, a payload with no `fit_result` or with no
+                    `model_type`: UNREADABLE.
+
+Every UNREADABLE line carries the version reference and either the exception TYPE (for example
+`ValidationError`) or a fixed reason word (`bundle-unparseable`, `no-fit-result`, `no-model-type`,
+`unknown-model-type`): never the exception's text, a level or a value.
 
 Classes (each counts versions; a version can carry several):
 
@@ -78,13 +94,14 @@ import importlib.util
 import re
 import sys
 from pathlib import Path
-from typing import Any, TextIO
+from typing import Any, TextIO, get_args
 
 from model_schema import (
     FIT_RESULT_ADAPTER,
     Banding,
     Factor,
     FactorType,
+    FitResult,
     GlmFitResult,
     Grouping,
     UnseenCellState,
@@ -122,8 +139,33 @@ EXIT_CLEAN, EXIT_REACHABLE, EXIT_UNREADABLE, EXIT_EMPTY = 0, 1, 2, 3
 EXIT_USAGE, EXIT_INTERNAL = 64, 70
 
 
-def _findings(bundle: Bundle) -> tuple[int, set[str]]:
-    """The GLM models in `bundle` and the classes its fits and Factors fall into."""
+def _model_families() -> frozenset[str]:
+    """Every `model_type` the fit-result union names, read from model-schema's discriminated union
+    (the `Literal` of each member), never typed here."""
+    union = get_args(FitResult)[0]
+    return frozenset(
+        value
+        for member in get_args(union)
+        for value in get_args(member.model_fields["model_type"].annotation)
+    )
+
+
+_FAMILIES = _model_families()
+
+
+class _UnreadableError(Exception):
+    """A model payload the sweep cannot classify. `reason` is a fixed word, never a value."""
+
+    def __init__(self, reason: str) -> None:
+        super().__init__(reason)
+        self.reason = reason
+
+
+def _findings(bundle: Bundle) -> tuple[int, set[str], set[str]]:
+    """The GLM models in `bundle`, the classes its fits and Factors fall into, and the other model
+    families it pins. Each `model:` payload is classified by its `fit_result.model_type`: `glm` is
+    validated and examined; another family the fit-result union names is not examined (FR-131's
+    refusal applies to it whatever a Factor declares); anything else raises `_UnreadableError`."""
     payloads = bundle.resolved_payloads
     all_factors = [
         Factor.model_validate(v) for k, v in payloads.items() if k.startswith("factor:")
@@ -141,13 +183,25 @@ def _findings(bundle: Bundle) -> tuple[int, set[str]]:
         )
     }
     kinds: set[str] = set()
+    other_families: set[str] = set()
     glm_refs = 0
     for key, payload in payloads.items():
-        if not key.startswith("model:") or "fit_result" not in payload:
+        if not key.startswith("model:"):
             continue
-        fit = FIT_RESULT_ADAPTER.validate_python(payload["fit_result"])
+        fit_result = payload.get("fit_result") if isinstance(payload, dict) else None
+        if not isinstance(fit_result, dict):
+            raise _UnreadableError("no-fit-result")
+        model_type = fit_result.get("model_type")
+        if not isinstance(model_type, str):
+            raise _UnreadableError("no-model-type")
+        if model_type != "glm":
+            if model_type not in _FAMILIES:
+                raise _UnreadableError("unknown-model-type")
+            other_families.add(model_type)
+            continue
+        fit = FIT_RESULT_ADAPTER.validate_python(fit_result)
         if not isinstance(fit, GlmFitResult):
-            continue
+            raise _UnreadableError("unknown-model-type")
         glm_refs += 1
         wanted = {str(i) for i in payload.get("spec", {}).get("factors", ())}
         factors = [f for f in all_factors if not wanted or str(f.id) in wanted]
@@ -188,7 +242,7 @@ def _findings(bundle: Bundle) -> tuple[int, set[str]]:
             ):
                 kinds.add("NOTEXAMINED-NUMERIC-TERMS")
                 break
-    return glm_refs, kinds
+    return glm_refs, kinds, other_families
 
 
 def sweep(versions: list[dict[str, Any]], out: TextIO) -> int:
@@ -199,19 +253,33 @@ def sweep(versions: list[dict[str, Any]], out: TextIO) -> int:
     `bundle_hash` set: a hash with no readable bundle, UNREADABLE).
     """
     with_bundle = [v for v in versions if v["bundle_hash"] is not None or v["bundle"] is not None]
-    unreadable = glm_refs = 0
+    unreadable = glm_refs = other_versions = 0
     lines: list[str] = []
+    other_families: set[str] = set()
     counts = {name: 0 for name in (*_REACHABLE, *_NOT_EXAMINED)}
     for each in with_bundle:
         ref = f"{each['slug']}@{each['version']} status={each['status']}"
         try:
             bundle = Bundle.model_validate(each["bundle"])
-            refs, kinds = _findings(bundle)
         except Exception:
             unreadable += 1
-            lines.append(f"UNREADABLE {ref}")
+            lines.append(f"UNREADABLE {ref} (bundle-unparseable)")
+            continue
+        try:
+            refs, kinds, others = _findings(bundle)
+        except _UnreadableError as exc:
+            unreadable += 1
+            lines.append(f"UNREADABLE {ref} ({exc.reason})")
+            continue
+        except Exception as exc:
+            # The exception's TYPE only: its text may carry a level or a value.
+            unreadable += 1
+            lines.append(f"UNREADABLE {ref} ({type(exc).__name__})")
             continue
         glm_refs += refs
+        if others:
+            other_versions += 1
+            other_families |= others
         for kind in sorted(kinds):
             counts[kind] += 1
             if kind != "NOTEXAMINED-GROUPING-SOURCE":  # counted, not listed: it is a reason
@@ -234,6 +302,12 @@ def sweep(versions: list[dict[str, Any]], out: TextIO) -> int:
     )
     print(f"no-relativities: {counts['NORELATIVITIES']}", file=out)
     print(f"not-examined-interaction: {counts['NOTEXAMINED-INTERACTION']}", file=out)
+    print(
+        f"not-examined-other-family: {other_versions} (families: "
+        f"{', '.join(sorted(other_families)) or 'none'}; a model of another family keeps "
+        "FR-131's refusal whatever a Factor declares, so it is not examined here)",
+        file=out,
+    )
     print(
         f"NOTEXAMINED-CONTRACT {counts['PLAIN']} "
         "(PLAIN is an upper bound: closed-enum input contracts are not classified here)",

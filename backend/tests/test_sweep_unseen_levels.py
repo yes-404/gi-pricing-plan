@@ -124,7 +124,7 @@ def test_an_unreadable_bundle_exits_two_and_wins_over_a_reachable_one() -> None:
     )
 
     assert rc == 2
-    assert "UNREADABLE broken@1 status=approved" in lines
+    assert "UNREADABLE broken@1 status=approved (bundle-unparseable)" in lines
     assert "checked: 1" in lines  # M minus unreadable
 
 
@@ -196,6 +196,94 @@ def test_an_internal_failure_exits_seventy_with_the_type_only(
 @pytest.mark.req("FR-2143")
 def test_a_usage_error_exits_sixty_four_not_argparses_two() -> None:
     assert sweep_module._main(["--no-such-option"]) == 64
+
+
+def _with_a_gbm(bundle: dict[str, Any]) -> dict[str, Any]:
+    """`bundle` also pinning a GBM, stored as a compile stores it: the `Model` dump's `fit_result`
+    plus `booster_content`, the booster's own text carried inside the payload."""
+    from model_schema import GbmFitResult
+
+    fit_result: dict[str, Any] = {
+        "model_type": "xgboost",
+        "booster_blob": {"sha256": "a" * 64, "bytes": 2, "media_type": "application/json"},
+        "booster_format": "xgboost_json",
+        "feature_order": ["age_years"],
+        "feature_dtypes": {},
+        "categorical_maps": {},
+        "monotone_constraints": [],
+        "base_margin": {"kind": "none"},
+        "best_iteration": 3,
+        "inverse_link": None,
+        "rows": 5,
+        "fit_seconds": 0.01,
+        "library_versions": {},
+        "dropped_eval_metrics": [],
+    }
+    GbmFitResult.model_validate(fit_result)  # the stored shape is model-schema's own
+    with_gbm = copy.deepcopy(bundle)
+    with_gbm["resolved_payloads"]["model:gbm-challenger@1"] = {
+        "fit_result": {**fit_result, "booster_content": "{}"}
+    }
+    return with_gbm
+
+
+@pytest.mark.req("FR-2143")
+def test_a_bundle_that_also_pins_a_gbm_is_examined_on_its_glm_not_unreadable() -> None:
+    """A GBM payload carries a bundle-only field (`booster_content`) that its fit-result schema
+    forbids. A version pinning one is examined on its GLM; the GBM is not validated as a GLM."""
+    rc, lines = _run([_row(_with_a_gbm(_clean()), "wf699", 1), _row(_clean(), "clean", 2)])
+
+    assert not any(line.startswith("UNREADABLE") for line in lines)
+    assert "checked: 2" in lines
+    assert "unreadable: 0" in lines
+    assert "glm refs read: 2" in lines
+    assert rc != 2
+
+
+@pytest.mark.req("FR-2143")
+def test_a_version_pinning_another_family_is_counted_with_the_family_named() -> None:
+    rc, lines = _run([_row(_with_a_gbm(_clean()), "wf699", 1), _row(_clean(), "clean", 2)])
+
+    other = [ln for ln in lines if ln.startswith("not-examined-other-family:")]
+    assert len(other) == 1
+    assert other[0].startswith("not-examined-other-family: 1 (families: xgboost;")
+    assert not any("wf699@1" in ln and not ln.startswith("not-examined") for ln in lines)
+    assert rc == 0  # a non-GLM model is never a finding
+
+
+@pytest.mark.req("FR-2143")
+@pytest.mark.parametrize(
+    ("reason", "plant"),
+    [
+        ("no-model-type", lambda fit: fit.pop("model_type")),
+        ("unknown-model-type", lambda fit: fit.update(model_type="SENTINEL-family-3b7c")),
+    ],
+)
+def test_a_model_payload_with_no_or_an_unknown_model_type_is_unreadable_by_reason(
+    reason: str, plant: Any
+) -> None:
+    bundle = copy.deepcopy(_clean())
+    plant(bundle["resolved_payloads"][_MODEL]["fit_result"])
+
+    rc, lines = _run([_row(bundle, "glm", 1)])
+
+    assert f"UNREADABLE glm@1 status=approved ({reason})" in lines
+    assert rc == 2
+    assert "SENTINEL-family-3b7c" not in "\n".join(lines)  # a reason word, never a value
+
+
+@pytest.mark.req("FR-2143")
+def test_a_glm_payload_that_does_not_validate_is_unreadable_by_its_exception_type_only() -> None:
+    bundle = copy.deepcopy(_clean())
+    bundle["resolved_payloads"][_MODEL]["fit_result"]["coefficients"][0]["estimate"] = (
+        "SENTINEL-sweep-4f2a"
+    )
+
+    rc, lines = _run([_row(bundle, "glm", 1)])
+
+    assert "UNREADABLE glm@1 status=approved (ValidationError)" in lines
+    assert rc == 2
+    assert "SENTINEL-sweep-4f2a" not in "\n".join(lines)  # the type, never the exception's text
 
 
 @pytest.mark.req("FR-2143")
