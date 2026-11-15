@@ -38,8 +38,9 @@ const universal = computed(() =>
 
 /**
  * FR-2143: rows left out of a partition because a factor that does not declare “map to base”
- * carries a level the fit has no relativity for. `null` is "not recorded" (a fit stored before the
- * rule), `0` is "none": never one for the other. Such a quote is refused, not scored.
+ * carries a level the fit has no relativity for. `null` is "not recorded" (a fit stored ahead of
+ * the rule), `0` is "none": never one for the other. A GLM's fit only: a GBM or an EBM refuses
+ * such a level whatever is declared, and its diagnostics never record these counts.
  */
 const unseenRows = computed(() =>
   universal.value.map(([label, partition]) => {
@@ -217,6 +218,7 @@ onMounted(async () => {
         </table>
 
         <section
+          v-if="diagnostics.glm"
           aria-label="Rows on a level this fit never saw"
           class="mt-4 text-sm text-slate-700"
         >

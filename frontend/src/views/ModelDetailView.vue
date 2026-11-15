@@ -14,6 +14,7 @@ import {
   type Coefficient,
   type Model,
   type TransparencyArtifact,
+  type UnseenLevelReach,
 } from "@/api/models";
 import { isProblem, ProblemError } from "@/api/problem";
 import EbmShapePanel from "@/components/EbmShapePanel.vue";
@@ -67,7 +68,7 @@ const relativities = computed(() => Object.entries(fit.value?.relativities ?? {}
  * FR-2143: each level a Factor can produce that this fit has no relativity for. `null` is "not
  * recorded" (a model fitted before the report existed) and `[]` is "none": never one for the other.
  */
-const REACH_WORDS: Record<string, string> = {
+const REACH_WORDS: Record<UnseenLevelReach, string> = {
   null_value: "a missing value",
   below_range: "a value below the first boundary",
   above_range: "a value above the last boundary",
@@ -76,8 +77,8 @@ const REACH_WORDS: Record<string, string> = {
 const unseenGaps = computed(() => fit.value?.unseen_level_gaps ?? null);
 /** The interaction terms: `null` is "not recorded", `[]` is "no interaction term" (FR-2143). */
 const cellReports = computed(() => fit.value?.unseen_cell_reports ?? null);
-function reachedBy(reasons: readonly string[]): string {
-  return reasons.map((reason) => REACH_WORDS[reason] ?? reason).join(" or ");
+function reachedBy(reasons: readonly UnseenLevelReach[]): string {
+  return reasons.map((reason) => REACH_WORDS[reason]).join(" or ");
 }
 const libraries = computed(() =>
   Object.entries(fit.value?.library_versions ?? {})

@@ -6,6 +6,7 @@ import {
   type RouteLocationNormalizedLoaded,
 } from "vue-router";
 
+import type { Diagnostics } from "@/api/diagnostics";
 import { routes } from "@/router";
 
 import DiagnosticsView from "../DiagnosticsView.vue";
@@ -54,6 +55,20 @@ function stubByUrl(routes: Record<string, { status?: number; body: unknown }>): 
 }
 
 const mounted = { global: { stubs: { RouterLink: { template: "<a><slot /></a>" } } } };
+
+/** The GLM arm of a diagnostics artifact: its presence is what makes the fit a GLM's. */
+const GLM_ARM: NonNullable<Diagnostics["glm"]> = {
+  deviance: 10,
+  null_deviance: 20,
+  dispersion: 1,
+  degrees_of_freedom: 5,
+  type_iii_tests: [],
+  type_iii_omitted: [],
+  monotonicity: [],
+  monotonicity_omitted: [],
+  aliasing: [],
+  vif: {},
+};
 
 /**
  * The view reads two endpoints, not one: the artifact, and the model whose spec carries
@@ -116,9 +131,22 @@ describe("DiagnosticsView", () => {
     expect(cells[1]).toHaveTextContent("0.987");
   });
 
+  it("shows no unseen-level section for a GBM, which refuses such a level whatever is declared", async () => {
+    // FR-2143: a GBM's diagnostics never record the counts, so "not recorded" would be false.
+    stubBoth();
+    render(DiagnosticsView, { props: { slug: "motor-frequency" }, ...mounted });
+    await screen.findByRole("table", { name: /headline metrics/i });
+
+    expect(screen.queryByLabelText("Rows on a level this fit never saw")).not.toBeInTheDocument();
+    expect(screen.queryByText(/not recorded/i)).not.toBeInTheDocument();
+  });
+
   it("says rows on an unseen level were not recorded for a fit stored before the rule", async () => {
     // FR-2143: absent is "not recorded", never "none left out".
-    stubBoth();
+    stubByUrl({
+      "/diagnostics": { body: { ...DIAGNOSTICS, glm: GLM_ARM } },
+      "/models/motor-frequency": { body: GBM_MODEL },
+    });
     render(DiagnosticsView, { props: { slug: "motor-frequency" }, ...mounted });
     const section = await screen.findByLabelText("Rows on a level this fit never saw");
 
@@ -130,6 +158,7 @@ describe("DiagnosticsView", () => {
   it("states the count and exposure left out, and that a quote is refused", async () => {
     const withExcluded = {
       ...DIAGNOSTICS,
+      glm: GLM_ARM,
       universal: {
         train: { ...DIAGNOSTICS.universal.train, rows_excluded_unseen_level: 0,
                  exposure_excluded_unseen_level: "0" },

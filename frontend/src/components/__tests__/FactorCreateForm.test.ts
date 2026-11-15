@@ -1,6 +1,8 @@
-import { render, screen, waitFor } from "@testing-library/vue";
+import { render, screen, waitFor, within } from "@testing-library/vue";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+
+import { UNSEEN_LEVEL_BEHAVIOUR_LABELS } from "@/api/models";
 
 import FactorCreateForm from "../FactorCreateForm.vue";
 
@@ -114,6 +116,30 @@ describe("creating a factor", () => {
 
     await waitFor(() => expect(createFactor).toHaveBeenCalled());
     expect(createFactor.mock.calls[0]?.[0]).not.toHaveProperty("unseen_level_behaviour");
+  });
+
+  it("sends error when the actuary declares it", async () => {
+    const user = userEvent.setup();
+    createFactor.mockResolvedValue({ slug: "area-factor", version: 1 });
+    form();
+
+    await user.selectOptions(screen.getByLabelText("Column"), "area");
+    await user.type(screen.getByLabelText("Slug"), "area-factor");
+    await user.selectOptions(screen.getByLabelText(/A level the fit never saw/), "error");
+    await user.click(screen.getByRole("button", { name: /Create factor/ }));
+
+    await waitFor(() => expect(createFactor).toHaveBeenCalled());
+    expect(createFactor.mock.calls[0]?.[0]).toMatchObject({ unseen_level_behaviour: "error" });
+  });
+
+  it("offers exactly the values the create contract offers, and no other", () => {
+    form();
+
+    const options = within(screen.getByLabelText(/A level the fit never saw/))
+      .getAllByRole("option")
+      .map((option) => (option as HTMLOptionElement).value);
+    expect(options).toEqual(["", ...Object.keys(UNSEEN_LEVEL_BEHAVIOUR_LABELS)]);
+    expect(options).not.toContain("map_to_default");
   });
 
   it("sends map_to_base when the actuary declares it", async () => {
