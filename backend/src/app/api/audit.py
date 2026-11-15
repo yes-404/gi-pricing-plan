@@ -5,10 +5,13 @@
 | `GET` | `/api/v1/audit` — query by actor, entity, action, time range, free text |
 | `GET` | `/api/v1/audit/verify` — recompute the hash chain |
 | `GET` | `/api/v1/audit/export` — CSV or JSON |
+| `POST` | `/api/v1/audit/anchor` — a signed chain head (FR-373) |
 
-Read-only, and there is deliberately no write path: events are emitted by the transactions
-that cause them (`06` R2), never posted. An endpoint that could append to the audit log
-would be a way to write history without doing anything.
+Read-only but for one route, and there is deliberately no way to post an event: events are
+emitted by the transactions that cause them (`06` R2). An endpoint that could append an
+arbitrary event would be a way to write history without doing anything. The anchor is not
+that: it appends one fixed event, `audit.anchored`, whose content is the signed head it
+returns, and it refuses a chain that does not verify.
 
 `audit:read` is the permission, held by the Auditor role and by every read-everything role.
 FR-346 is the reason it is not admin-gated: an Auditor must be able to read the log
@@ -39,11 +42,19 @@ from app.api.pagination import (
     encode_cursor,
 )
 from app.api.responses import problems
+from app.config import load_anchor_signing_key
 from app.db.models import AuditEventRow
 from app.db.session import Database
 from app.errors import PlatformError
 from app.platform import audit as audit_service
-from model_schema import AuditEventListing, AuditEventRecord, Permission, Principal
+from model_schema import (
+    AuditAnchor,
+    AuditEventListing,
+    AuditEventRecord,
+    JobSource,
+    Permission,
+    Principal,
+)
 
 __all__ = ["router"]
 
@@ -302,6 +313,46 @@ async def verify_chain(
         events_checked=span.events_checked,
         intact=True,
     )
+
+
+@router.post(
+    "/anchor",
+    summary="Sign the chain head for external anchoring (FR-373)",
+    responses=problems(401, 403, 409, 503),
+)
+async def anchor_chain(caller: ReadAudit, database: DatabaseDep, request: Request) -> AuditAnchor:
+    """Verify the chain, sign its head, and append the `audit.anchored` checkpoint.
+
+    The customer stores the response somewhere the operator does not control (FR-373 (6)).
+    Unlike `/verify`, a broken chain is **refused** (`409 AUDIT_CHAIN_BROKEN`): signing a
+    tampered head would certify the tampering. No key configured is `503`, with no event.
+    """
+    key_setting = request.app.state.settings.audit_anchor_signing_key
+    if key_setting is None:
+        raise PlatformError(
+            "AUDIT_ANCHOR_KEY_UNCONFIGURED",
+            "Audit anchor signing key not configured",
+            503,
+            "This deployment has no audit anchor signing key (GIP_AUDIT_ANCHOR_SIGNING_KEY).",
+        )
+    key = load_anchor_signing_key(key_setting)
+    try:
+        async with database.unit_of_work() as session:
+            return await audit_service.anchor(
+                session,
+                workspace_id=caller.workspace_id,
+                key=key,
+                actor=caller.principal,
+                source=JobSource.API,
+            )
+    except audit_service.ChainBrokenError as exc:
+        raise PlatformError(
+            "AUDIT_CHAIN_BROKEN",
+            "Audit chain broken",
+            409,
+            f"The chain does not verify at sequence {exc.sequence}: {exc.reason}. "
+            "Nothing was signed.",
+        ) from None
 
 
 @router.get(
