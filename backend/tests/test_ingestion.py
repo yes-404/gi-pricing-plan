@@ -578,3 +578,109 @@ async def test_a_column_the_dictionary_does_not_forbid_is_not_refused(
             data=PII_CSV, filename="exposure.csv",
         )
     assert outcome.run.rows_written == 2
+
+
+@pytest.mark.req("FR-29")
+@pytest.mark.req("FR-420")
+async def test_correcting_a_schema_releases_the_replaced_blob(
+    database: Database, blob_store: BlobStore, workspace_id
+) -> None:
+    """The recast table is a new blob; the one it replaces loses its only reference.
+
+    Breaker: remove the `blobs.release` in `correct_schema` -> the old blob stays at 1.
+    """
+    from app.data.ingestion import correct_schema
+    from app.db.models import BlobRow
+
+    actor = await _analyst(database, workspace_id)
+    dataset_id = await _dataset(database, workspace_id, actor)
+    unique = CSV + f"P{new_uuid7().hex},2026-03-01,0.25\n".encode()
+
+    async with database.unit_of_work() as session:
+        outcome = await ingest_upload(
+            session, blob_store,
+            workspace_id=workspace_id, actor=actor, dataset_id=dataset_id,
+            data=unique, filename="exposure.csv",
+        )
+        version_id = outcome.version.id
+        old = outcome.version.tables[0]["blob"]["sha256"]
+    async with database.session() as session:
+        assert (await session.get(BlobRow, old)).ref_count == 1
+
+    async with database.unit_of_work() as session:
+        corrected = await correct_schema(
+            session, blob_store,
+            workspace_id=workspace_id, actor=actor, version_id=version_id,
+            table="policy_exposure", columns={"exposure_years": "float"},
+        )
+        new = corrected.tables[0]["blob"]["sha256"]
+    assert new != old
+    async with database.session() as session:
+        assert (await session.get(BlobRow, old)).ref_count == 0
+        assert (await session.get(BlobRow, new)).ref_count == 1
+
+
+@pytest.mark.req("FR-29")
+@pytest.mark.req("FR-420")
+async def test_correcting_a_derived_drafts_schema_keeps_the_parents_reference(
+    database: Database, blob_store: BlobStore, workspace_id, principal
+) -> None:
+    """#1504 D1. `derive_version` makes the child a second owner of the parent's table blob, so
+    it takes a reference; correcting the child's schema before its split runs then releases the
+    child's own, never the parent's, and the collector selects nothing the parent names.
+
+    Breaker: remove the `blobs.retain` loop in `derive_version` -> the parent's blob is at 1 for
+    two owners, the correction takes it to 0 (or, with the release guard, fails the correction
+    with BLOB_REFERENCE_INVARIANT_BREACHED), and the dry run selects it.
+    """
+    from sqlalchemy import func
+
+    from app.data.ingestion import correct_schema
+    from app.db.models import BlobRow, DatasetVersionRow
+
+    actor = await _analyst(database, workspace_id)
+    dataset_id = await _dataset(database, workspace_id, actor)
+    unique = CSV + f"P{new_uuid7().hex},2026-03-01,0.25\n".encode()
+
+    async with database.unit_of_work() as session:
+        outcome = await ingest_upload(
+            session, blob_store,
+            workspace_id=workspace_id, actor=actor, dataset_id=dataset_id,
+            data=unique, filename="exposure.csv",
+        )
+        parent_id = outcome.version.id
+        shared = outcome.version.tables[0]["blob"]["sha256"]
+
+    async with database.unit_of_work() as session:
+        child = await datasets.derive_version(
+            session, workspace_id=workspace_id, actor=actor,
+            parent_version_id=parent_id, operation="split", params={"seed": 1},
+        )
+        child_id = child.id
+    async with database.session() as session:
+        assert (await session.get(BlobRow, shared)).ref_count == 2
+
+    async with database.unit_of_work() as session:
+        await correct_schema(
+            session, blob_store,
+            workspace_id=workspace_id, actor=actor, version_id=child_id,
+            table="policy_exposure", columns={"exposure_years": "float"},
+        )
+
+    async with database.unit_of_work() as session:
+        report = await blob_store.collect_garbage(
+            session, actor=principal, workspace_id=workspace_id, dry_run=True, grace_days=0
+        )
+    async with database.session() as session:
+        assert (await session.get(BlobRow, shared)).ref_count >= 1
+        parent = await session.get(DatasetVersionRow, parent_id)
+        assert parent.tables[0]["blob"]["sha256"] == shared
+        selected = (
+            await session.execute(
+                select(BlobRow.sha256).where(
+                    BlobRow.ref_count == 0, BlobRow.created_at < func.now()
+                )
+            )
+        ).scalars().all()
+    assert shared not in selected
+    assert report.dry_run is True
