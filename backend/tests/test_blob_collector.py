@@ -12,6 +12,7 @@ a fixed time. Run them in a window where no other session is waiting on a lock i
 from __future__ import annotations
 
 import asyncio
+import hashlib
 from datetime import UTC, datetime, timedelta
 
 import pytest
@@ -216,6 +217,52 @@ async def test_the_object_step_skips_a_digest_a_concurrent_put_is_re_storing(
     async with database.session() as session:
         assert await session.get(BlobRow, ref.sha256) is not None
     assert await _object_exists(blob_store, ref.sha256)
+
+
+@pytest.mark.req("FR-420")
+async def test_puts_of_the_same_two_digests_in_opposite_orders_both_commit(
+    database: Database, blob_store: BlobStore
+) -> None:
+    """The digest lock is SHARED for writers, so transactions putting {A, B} and {B, A} cannot
+    deadlock; with an exclusive lock one of them is aborted by PostgreSQL."""
+    a, b = _unique(b"order-a"), _unique(b"order-b")
+    barrier = asyncio.Barrier(2)
+
+    async def _put_both(first: bytes, second: bytes) -> None:
+        async with database.unit_of_work() as session:
+            await blob_store.put(session, first, "text/plain")
+            await barrier.wait()  # each now holds its first digest's lock
+            await blob_store.put(session, second, "text/plain")
+
+    await asyncio.wait_for(asyncio.gather(_put_both(a, b), _put_both(b, a)), timeout=30)
+
+    async with database.session() as session:
+        for content in (a, b):
+            row = await session.get(BlobRow, hashlib.sha256(content).hexdigest())
+            assert row is not None
+            assert row.ref_count == 2
+
+
+@pytest.mark.req("FR-420")
+async def test_two_first_time_puts_of_the_same_bytes_both_take_a_reference(
+    database: Database, blob_store: BlobStore
+) -> None:
+    """Writers do not exclude each other, so the second insert meets the first at the unique
+    index: it must retain, not fail."""
+    content = _unique(b"first-time-twice")
+    barrier = asyncio.Barrier(2)
+
+    async def _put() -> None:
+        async with database.unit_of_work() as session:
+            await barrier.wait()
+            await blob_store.put(session, content, "text/plain")
+
+    await asyncio.wait_for(asyncio.gather(_put(), _put()), timeout=30)
+
+    async with database.session() as session:
+        row = await session.get(BlobRow, hashlib.sha256(content).hexdigest())
+    assert row is not None
+    assert row.ref_count == 2
 
 
 @pytest.mark.req("FR-420")

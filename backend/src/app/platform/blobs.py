@@ -234,9 +234,9 @@ class BlobStore:
         body = content if isinstance(content, bytes) else b"".join(content)
         digest = hashlib.sha256(body).hexdigest()
 
-        # Held to the caller's commit: the collector's object delete takes the same lock, so it
-        # cannot delete the object between our read of the row and our insert of it.
-        await _lock_digest(session, digest)
+        # Shared, held to the caller's commit: the collector's object delete takes the same lock
+        # exclusively, so it cannot delete the object between our read of the row and our insert.
+        await _lock_digest(session, digest, shared=True)
         existing = await session.get(BlobRow, digest)
         if existing is not None:
             # FR-419 / ID-4: same content, same reference, no second object. Media type
@@ -263,10 +263,17 @@ class BlobStore:
             ContentType=media_type,
         )
 
-        session.add(
-            BlobRow(sha256=digest, bytes_=len(body), media_type=media_type, ref_count=1)
+        # Two first-time puts of the same bytes no longer exclude each other (the digest lock is
+        # shared), so the second finds the row the first inserted only at the unique index:
+        # on conflict it takes its reference with `retain` instead of failing.
+        inserted = await session.execute(
+            pg_insert(BlobRow)
+            .values(sha256=digest, bytes_=len(body), media_type=media_type, ref_count=1)
+            .on_conflict_do_nothing(index_elements=["sha256"])
+            .returning(BlobRow.sha256)
         )
-        await session.flush()
+        if inserted.first() is None:
+            await retain(session, digest)
         return BlobRef(sha256=digest, bytes=len(body), media_type=media_type)
 
     async def open(self, ref: BlobRef) -> AsyncIterator[bytes]:
@@ -415,7 +422,7 @@ class BlobStore:
                 # The collector may have deleted this digest's row and object since the check
                 # above. Under the digest lock nothing can change that until we commit: if no
                 # row exists, make sure the object does, then insert the row.
-                await _lock_digest(session, digest)
+                await _lock_digest(session, digest, shared=True)
                 if await session.get(BlobRow, digest) is None and not await asyncio.to_thread(
                     self._object_exists, content_key
                 ):
@@ -706,7 +713,7 @@ class BlobStore:
         """
         try:
             async with database.unit_of_work() as session:
-                await _lock_digest(session, digest)
+                await _lock_digest(session, digest, shared=False)
                 if await session.get(BlobRow, digest) is None:
                     await asyncio.to_thread(
                         self._client.delete_object, Bucket=self._bucket, Key=blob_key(digest)
@@ -720,17 +727,23 @@ class BlobStore:
 _DIGEST_LOCK_NAMESPACE: Final = 0x47495042
 
 
-async def _lock_digest(session: AsyncSession, sha256: str) -> None:
+async def _lock_digest(session: AsyncSession, sha256: str, *, shared: bool) -> None:
     """Take the transaction-scoped advisory lock for one digest.
 
-    It serialises everything that decides whether an object exists for a digest: `put` and
-    `promote_upload` (write the object, then the row) against the collector's object delete.
-    Without it a `put` that missed the row just after the collector's commit uploads the object,
-    and the collector then deletes it, leaving a row with no bytes. Two digests that hash to one
-    key only wait for each other. Released at commit or rollback.
+    It separates the writers of an object (`put`, `promote_upload`: write the object, then the
+    row) from the collector's object delete. Without it a `put` that missed the row just after
+    the collector's commit uploads the object, and the collector then deletes it, leaving a row
+    with no bytes.
+
+    **Writers take it SHARED, the collector EXCLUSIVE.** Writers need not exclude each other (the
+    row's primary key does that), so two transactions putting `{A, B}` and `{B, A}` never block
+    each other and cannot deadlock. The collector waits for in-flight writers of that digest, and
+    a writer waits for the collector's object step. Two digests that hash to one key only share
+    or wait for each other. Released at commit or rollback.
     """
+    function = "pg_advisory_xact_lock_shared" if shared else "pg_advisory_xact_lock"
     await session.execute(
-        text("SELECT pg_advisory_xact_lock(:ns, hashtext(:sha))"),
+        text(f"SELECT {function}(:ns, hashtext(:sha))"),
         {"ns": _DIGEST_LOCK_NAMESPACE, "sha": sha256},
     )
 
