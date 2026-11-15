@@ -302,18 +302,38 @@ async def test_a_third_party_error_wearing_our_code_prefix_is_stored_type_only(
 
 
 @pytest.mark.req("NFR-499")
-async def test_a_genuine_coded_error_is_stored_as_it_was_before_minus_its_value(
+@pytest.mark.req("FR-403")
+async def test_a_genuine_coded_error_keeps_its_own_code_and_its_message_part(
     database: Database, workspace_id, principal
 ) -> None:
-    """The positive control, and the byte-identity check for the Job path. `CodedError` is only
-    the allow-list's marker; the stored form is what `origin/main` stored for the same
-    `ValueError`: `worker/tasks.py:229-230` builds `code="JOB_HANDLER_FAILED"` and
-    `message=f"{type(exc).__name__}: {exc}"`, i.e. `ValueError: <CODE: text>`, with no class name
-    of ours in it. The one difference is the value: `origin/main`'s text for this site was
-    `input 'driver_age'=987654321 is above the declared maximum 99`."""
+    """The positive control (FR-403, #1658). A pricing-core `CodedError` is a named refusal: it
+    is stored under its own registered code with the part after `CODE: ` as the message, as the
+    batch path stores it. Before this change it was `JOB_HANDLER_FAILED` with the message
+    `ValueError: <CODE: text>`. The value stays out (NFR-499): the text is the class's own."""
     from pricing_core.safe_error import CodedError
 
-    text = "INPUT_CONTRACT_VIOLATION: input 'driver_age' is above the declared maximum 99"
+    message = "input 'driver_age' is above the declared maximum 99"
+
+    def handler(params: dict[str, Any], progress: ProgressCallback) -> JobResult:
+        raise CodedError(f"INPUT_CONTRACT_VIOLATION: {message}")
+
+    row = await _run(database, workspace_id, principal, handler)
+
+    assert row.error is not None
+    assert row.error["code"] == "INPUT_CONTRACT_VIOLATION"
+    assert row.error["message"] == message
+    assert row.error["retryable"] is False
+
+
+@pytest.mark.req("FR-403")
+async def test_a_coded_error_with_an_unregistered_code_stays_job_handler_failed(
+    database: Database, workspace_id, principal
+) -> None:
+    """Control: a code no catalogue registers is never stored as a code (the rule
+    `PlatformError.__init__` already enforces). It keeps today's code and message."""
+    from pricing_core.safe_error import CodedError
+
+    text = "NOT_A_REGISTERED_CODE: something went wrong"
 
     def handler(params: dict[str, Any], progress: ProgressCallback) -> JobResult:
         raise CodedError(text)
@@ -323,5 +343,23 @@ async def test_a_genuine_coded_error_is_stored_as_it_was_before_minus_its_value(
     assert row.error is not None
     assert row.error["code"] == "JOB_HANDLER_FAILED"
     assert row.error["message"] == f"ValueError: {text}"
-    assert "CodedError" not in row.error["message"]
+
+
+@pytest.mark.req("NFR-499")
+@pytest.mark.req("FR-403")
+async def test_a_plain_value_error_in_the_shape_of_a_coded_one_stays_job_handler_failed(
+    database: Database, workspace_id, principal
+) -> None:
+    """Control: recognition is by class. A plain `ValueError("INPUT_CONTRACT_VIOLATION: <value>")`
+    has the text shape and a registered code but is not a `CodedError`, so it stays
+    `JOB_HANDLER_FAILED` with its type name alone and the sentinel stored nowhere."""
+
+    def handler(params: dict[str, Any], progress: ProgressCallback) -> JobResult:
+        raise ValueError(f"INPUT_CONTRACT_VIOLATION: {_SENTINEL}")
+
+    row = await _run(database, workspace_id, principal, handler)
+
+    assert row.error is not None
+    assert row.error["code"] == "JOB_HANDLER_FAILED"
+    assert row.error["message"] == "ValueError"
 
