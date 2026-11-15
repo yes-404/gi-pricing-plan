@@ -93,13 +93,15 @@ _INPUT_FREE = {
     # static sentence built in `runtime.py`, never a model's or the engine's own error text.
     ("rating/score.py", "_check_model_call_sentinel"): 1,
     ("rating/runtime.py", "_load_boosters"): 1,  # step id and ref string, no quote
-    # #1712 row 3 (RL-1383 item 3): the four seed-from-model refusals name a Factor slug the Model
-    # stores (cut at `FACTOR_NAME_CAP`), a model slug@version or a count; a caller's own key that
-    # the Model does not hold is named only inside the factor slug grammar, else counted. No quote
-    # and no cell value (test_rate_table_operations.py::
-    # test_a_long_stored_factor_slug_is_cut_and_marked_in_a_refusal and
-    # test_a_requested_factor_name_outside_the_grammar_is_counted_not_shown).
-    ("rate_tables/operations.py", "seed_from_model"): 4,
+    # #1712 row 3 (maintainer 2026-11-15, S7 STOP #2 (a)): the seed-from-model refusals name
+    # identifiers only: a Model's Factor slug (through `_named`, cut at `FACTOR_NAME_CAP`), the
+    # model family@version, a fit kind or a count, and never a cell value. A caller's own key that
+    # the Model does not hold is named only inside the factor slug grammar, else counted.
+    # `seed_from_model`: four plain-prose refusals plus the two CONTROL_FACTOR_IN_RATEABLE_PATH
+    # ones (coded by class as tidying); `_glm_relativities`: the non-GLM fit refusal. Driven in
+    # test_rate_table_seed_refusals.py.
+    ("rate_tables/operations.py", "seed_from_model"): 6,
+    ("rate_tables/operations.py", "_glm_relativities"): 1,
     ("rating/runtime.py", "_check_graph_matches_inlined_algorithm"): 1,  # a node id
     # FR-193 / FR-243 (#1741): the load-time refusal of a GLM level indicator its Factor cannot
     # produce. It reads no row: the text is the code, the Bundle ref, the term and the Factor

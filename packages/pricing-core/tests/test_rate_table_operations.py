@@ -32,7 +32,6 @@ from model_schema.rating import (
 )
 from model_schema.refs import ArtifactRef
 from pricing_core.rate_tables.operations import (
-    FACTOR_NAME_CAP,
     SeedResult,
     apply_cell_edits,
     check_model_approved,
@@ -45,7 +44,6 @@ from pricing_core.rate_tables.operations import (
     uplift_table,
     validate_rate_table,
 )
-from pricing_core.safe_error import CodedError
 
 #: One table: driver_age_band → relativity, as a GLM's fit carries it.
 _DRIVER_LEVELS = (
@@ -520,36 +518,6 @@ def test_a_pinned_factor_slug_outside_the_factor_grammar_is_refused_by_name(slug
         _seed(model, slug, [_factor(slug)])
     assert repr(slug) in str(caught.value)
     assert not str(caught.value).partition(": ")[0].isupper()
-
-
-@pytest.mark.req("NFR-499")
-def test_a_long_stored_factor_slug_is_cut_and_marked_in_a_refusal() -> None:
-    """A name the Model stores is named as stored, through `repr`, but never past the cap: a
-    longer one is cut and the cut is marked (#1712 row 3; the refusal is a `CodedError`)."""
-    slug = "R" * (FACTOR_NAME_CAP + 136)
-    model = _glm_model(ModelStatus.APPROVED, relativities={slug: _REGION_LEVELS})
-    with pytest.raises(ValueError, match="outside the factor slug grammar") as caught:
-        _seed(model, slug, [_factor(slug)])
-    text = str(caught.value)
-    assert repr("R" * FACTOR_NAME_CAP) in text, "control: the head of the name is still shown"
-    assert slug not in text
-    assert f"cut at {FACTOR_NAME_CAP} of {len(slug)} characters" in text
-    assert isinstance(caught.value, CodedError), "the allow-list keeps a CodedError's text"
-
-
-@pytest.mark.req("NFR-499")
-@pytest.mark.parametrize("name", ["Bad Name!", "X" * 300])
-def test_a_requested_factor_name_outside_the_grammar_is_counted_not_shown(name: str) -> None:
-    """A name that exists only in the caller's request, and is not in the Model, is named only
-    when it matches the factor slug grammar (#1827 (b)); otherwise it is counted."""
-    model = _glm_model(ModelStatus.APPROVED, relativities=_TWO_FACTORS)
-    with pytest.raises(ValueError, match="names no relativity entry") as caught:
-        _seed(model, name, [_factor("region")])
-    text = str(caught.value)
-    assert name not in text
-    assert name[:8] not in text
-    assert "1 requested factor name outside the factor slug grammar" in text
-    assert isinstance(caught.value, CodedError), "the allow-list keeps a CodedError's text"
 
 
 # --- FR-234: every value is a finite decimal (FD-1803, SL-1810) -----------------------
