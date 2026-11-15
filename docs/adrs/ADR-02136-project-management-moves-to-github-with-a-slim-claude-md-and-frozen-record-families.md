@@ -14,7 +14,7 @@ relates: []                    # ids only — the FR-/NFR-/ADR- this decision to
 
 # ADR-2136 — Project management moves to GitHub, with a slim CLAUDE.md and frozen record families
 
-- **Status:** draft
+- **Status:** accepted (front matter `active`)
 - **Deciders:** the maintainer
 
 ## Context
