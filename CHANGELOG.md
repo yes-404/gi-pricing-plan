@@ -7,11 +7,13 @@ about. The format follows [Keep a Changelog 1.1.0](https://keepachangelog.com/en
 
 ### Changed
 
-- **A GLM refuses a level of a categorical Factor that its fit never saw, unless the Factor
-  declares `map_to_base`.** A Factor gains `unseen_level_behaviour` (`error` or `map_to_base`;
+- **A GLM now refuses a level of a categorical Factor that its fit never saw, unless the Factor
+  declares `map_to_base`; it scored such a level as the base level before.** A Factor gains `unseen_level_behaviour` (`error` or `map_to_base`;
   unset refuses), on `POST /api/v1/factors` and in the factor form. The refusal is
   `UNSEEN_LEVEL_BEHAVIOUR_REQUIRED`: `409` on the prediction route, `MODEL_CALL_FAILED` carrying
-  that code on a quote. A Factor's declaration changes only by a new Factor version, which a
+  that code on a quote. The same Rating Version can therefore refuse a quote it used to price
+  (FR-239). To keep the earlier result, post the Factor again with `map_to_base`, refit, and
+  issue a new Rating Version (FR-2143). A Factor's declaration changes only by a new Factor version, which a
   refit pins in a new model and a new Rating Version pins in a new bundle hash (FR-239,
   FR-2143). Run `scripts/sweep-unseen-levels.py` before upgrading: a version it lists will
   refuse the quotes it names until a new model is approved, and a batch carrying many such rows
@@ -47,6 +49,15 @@ about. The format follows [Keep a Changelog 1.1.0](https://keepachangelog.com/en
   **What a caller must do:** send at most 15 significant digits and at most 28 digits after the
   point, with a magnitude below 2^96 (`7.9e28` is accepted), or zero.
   A value that meets this prices as before; `0` and `-0` are accepted and equal.
+
+### Security
+
+- Two advisories are published for the GLM change above (#1882), both fixed on `main` at
+  `91ff121d`: [GHSA-7cv4-xv7v-54hx](https://github.com/yes-404/gi-pricing-plan/security/advisories/GHSA-7cv4-xv7v-54hx)
+  (a GLM priced a categorical level its fit never saw as the base level, with no error) and
+  [GHSA-43fr-2vhc-hf2p](https://github.com/yes-404/gi-pricing-plan/security/advisories/GHSA-43fr-2vhc-hf2p)
+  (a GLM term on an identity Factor was scored at 0, so the quote was priced at the base level,
+  when the term was not the first of its column and the scoring column was numeric).
 
 ### Upgrade notes
 
