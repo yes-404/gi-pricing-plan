@@ -753,8 +753,10 @@ async def _lock_digest(session: AsyncSession, sha256: str, *, shared: bool) -> N
     with no bytes.
 
     **Writers take it SHARED, the collector EXCLUSIVE.** Writers need not exclude each other (the
-    row's primary key does that), so two transactions putting `{A, B}` and `{B, A}` never block
-    each other and cannot deadlock. The collector waits for in-flight writers of that digest, and
+    row's primary key does that), so two transactions locking `{A, B}` and `{B, A}` never block
+    each other on this lock. (The `blobs` rows they then insert or update are locked until commit,
+    so two `put`s in opposite orders can still deadlock on those rows, as before.) The collector
+    waits for in-flight writers of that digest, and
     a writer waits for the collector's object step. Two digests that hash to one key only share
     or wait for each other. Released at commit or rollback.
 
@@ -966,14 +968,15 @@ _OWNER_COUNTS_SQL = (
 
 #: "No owner row names this blob", correlated to `blobs`. `NOT EXISTS`, not `NOT IN`: a NULL
 #: digest from an owner place (a model with no covariance blob) would make `NOT IN` match nothing.
-_NOT_OWNED = text(
-    f"NOT EXISTS (SELECT 1 FROM ({_OWNER_ROWS_SQL}) AS owned WHERE owned.sha256 = blobs.sha256)"
-)
+def _not_owned() -> Any:
+    return text(
+        f"NOT EXISTS (SELECT 1 FROM ({_OWNER_ROWS_SQL}) AS owned WHERE owned.sha256 = blobs.sha256)"
+    )
 
 
 def _unreferenced(cutoff: datetime) -> tuple[Any, ...]:
     """The collector's predicate, written once: count 0, no owner row, older than `cutoff`."""
-    return (BlobRow.ref_count == 0, BlobRow.created_at < cutoff, _NOT_OWNED)
+    return (BlobRow.ref_count == 0, BlobRow.created_at < cutoff, _not_owned())
 
 
 async def _delete_unreferenced(session: AsyncSession, cutoff: datetime) -> list[tuple[str, int]]:

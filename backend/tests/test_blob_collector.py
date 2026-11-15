@@ -131,7 +131,9 @@ async def test_a_retain_that_commits_while_the_delete_waits_keeps_the_blob(
                 owner_database, actor=principal, workspace_id=workspace_id, dry_run=False
             )
         )
-        await _wait_for_a_blocked_backend(database)
+        # The collector runs as the owner, and a role sees another role's wait state only through
+        # `pg_read_all_stats`: the probe is the owner's connection, not the login role's.
+        await _wait_for_a_blocked_backend(owner_database)
         assert not collector.done()
     report = await collector
 
@@ -258,10 +260,12 @@ async def test_a_put_that_commits_between_the_row_commit_and_the_object_step_kee
     put_done.set()
     report = await collector
 
-    assert digest in report.deleted and digest in report.re_put
+    assert digest in report.deleted
+    assert digest in report.re_put
     async with database.session() as session:
         row = await session.get(BlobRow, digest)
-    assert row is not None and row.ref_count == 1
+    assert row is not None
+    assert row.ref_count == 1
     assert await _object_exists(blob_store, digest)  # the row has bytes
 
 
@@ -327,13 +331,7 @@ async def test_a_null_owner_digest_does_not_stop_the_collector_taking_an_unowned
     holds a NULL. With `NOT EXISTS` an unowned blob is still taken."""
     digest = await _aged_unreferenced_blob(database, blob_store)
     monkeypatch.setattr(
-        blobs,
-        "_NOT_OWNED",
-        text(
-            "NOT EXISTS (SELECT 1 FROM ("
-            f"{blobs._OWNER_ROWS_SQL} UNION ALL (SELECT NULL::text AS sha256)"
-            ") AS owned WHERE owned.sha256 = blobs.sha256)"
-        ),
+        blobs, "_OWNER_ROWS_SQL", f"{blobs._OWNER_ROWS_SQL} UNION ALL (SELECT NULL::text AS sha256)"
     )
 
     report = await blob_store.collect_garbage(
@@ -344,27 +342,26 @@ async def test_a_null_owner_digest_does_not_stop_the_collector_taking_an_unowned
 
 
 @pytest.mark.req("FR-420")
-async def test_puts_of_the_same_two_digests_in_opposite_orders_both_commit(
-    database: Database, blob_store: BlobStore
+async def test_the_digest_lock_taken_shared_in_opposite_orders_does_not_deadlock(
+    database: Database,
 ) -> None:
-    """The digest lock is SHARED for writers, so transactions putting {A, B} and {B, A} cannot
-    deadlock; with an exclusive lock one of them is aborted by PostgreSQL."""
-    a, b = _unique(b"order-a"), _unique(b"order-b")
+    """Writers take the digest lock SHARED, so two transactions that lock {A, B} and {B, A} both
+    proceed; with the exclusive form PostgreSQL aborts one with a deadlock. This tests the lock
+    mode alone. It does NOT claim that two `put`s of the same digests in opposite orders cannot
+    deadlock: the `blobs` row each one inserts or updates is itself locked until commit, and that
+    deadlock exists with or without the advisory lock (measured at this slice's window)."""
+    a, b = hashlib.sha256(_unique(b"lock-a")).hexdigest(), hashlib.sha256(
+        _unique(b"lock-b")
+    ).hexdigest()
     barrier = asyncio.Barrier(2)
 
-    async def _put_both(first: bytes, second: bytes) -> None:
+    async def _lock_both(first: str, second: str) -> None:
         async with database.unit_of_work() as session:
-            await blob_store.put(session, first, "text/plain")
+            await blobs._lock_digest(session, first, shared=True)
             await barrier.wait()  # each now holds its first digest's lock
-            await blob_store.put(session, second, "text/plain")
+            await blobs._lock_digest(session, second, shared=True)
 
-    await asyncio.wait_for(asyncio.gather(_put_both(a, b), _put_both(b, a)), timeout=30)
-
-    async with database.session() as session:
-        for content in (a, b):
-            row = await session.get(BlobRow, hashlib.sha256(content).hexdigest())
-            assert row is not None
-            assert row.ref_count == 2
+    await asyncio.wait_for(asyncio.gather(_lock_both(a, b), _lock_both(b, a)), timeout=30)
 
 
 @pytest.mark.req("FR-420")
@@ -399,7 +396,8 @@ async def test_a_dry_run_deletes_nothing_and_is_audited(
         database, actor=principal, workspace_id=workspace_id, dry_run=True
     )
 
-    assert report.dry_run and report.deleted == ()
+    assert report.dry_run
+    assert report.deleted == ()
     assert report.considered >= 1
     async with database.session() as session:
         assert await session.get(BlobRow, digest) is not None

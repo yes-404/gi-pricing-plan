@@ -405,7 +405,8 @@ async def test_two_concurrent_deletes_release_once(
             assert blocked, "B never waited on A's row lock"
         b_error = await b_task
 
-    assert b_error is not None and b_error.code == "NOT_FOUND"
+    assert b_error is not None
+    assert b_error.code == "NOT_FOUND"
     assert not [w for w in caught if "were matched" in str(w.message)]
     async with database.session() as session:
         blob_row = await session.get(BlobRow, digest)

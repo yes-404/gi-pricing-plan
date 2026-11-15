@@ -40,6 +40,7 @@ from datetime import UTC, datetime, timedelta
 from typing import Any, Final, Literal
 from uuid import UUID
 
+from sqlalchemy import delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models import BlobRow, ScoringTraceRow
@@ -306,13 +307,7 @@ async def delete_trace(
     the blob reference on a permitted delete, mirroring `write_trace`'s `retain`: without
     it the blob would sit at `ref_count > 0` forever and never become GC-eligible.
     """
-    # Locked, so two concurrent deletes of one trace cannot both release its blob reference: the
-    # second waits, reads no row and answers 404 like a sequential second delete (#1855).
-    # `populate_existing` because a row already in the session's identity map would be returned
-    # without a query, and so without the lock.
-    row = await session.get(
-        ScoringTraceRow, trace_id, with_for_update=True, populate_existing=True
-    )
+    row = await session.get(ScoringTraceRow, trace_id)
     if row is None:
         raise PlatformError(
             "NOT_FOUND", "Trace not found", 404, f"No scoring trace with id {trace_id}."
@@ -333,10 +328,27 @@ async def delete_trace(
 
     # A pending row (Task 4B) has no blob yet — nothing to release. Every other status
     # does, and `write_trace`/`complete_pending_trace` both `retain` on the way in.
-    # The row is deleted and flushed first: `release` refuses to reach 0 while a row still
-    # names the digest (FR-420), and this row does until it is gone.
-    blob_sha256 = row.blob_sha256
-    await session.delete(row)
-    if blob_sha256 is not None:
-        await session.flush()
-        await blobs.release(session, blob_sha256)
+    # The row is deleted first: `release` refuses to reach 0 while a row still names the digest
+    # (FR-420), and this row does until it is gone.
+    #
+    # **Release only when this DELETE removed the row** (#1855 fix (ii)): two concurrent deletes of
+    # one trace both pass the read above, the second's DELETE waits on the first's row lock and then
+    # matches nothing, and it must not release the blob reference a second time. It answers 404, as
+    # a sequential second delete does. The row is not read `FOR UPDATE` because the application role
+    # holds no UPDATE on `scoring_traces` (append-only), and `FOR UPDATE` needs that privilege;
+    # DELETE ... RETURNING needs only DELETE, which it has.
+    deleted = (
+        await session.execute(
+            delete(ScoringTraceRow)
+            .where(ScoringTraceRow.id == trace_id)
+            .returning(ScoringTraceRow.blob_sha256)
+            .execution_options(synchronize_session=False)
+        )
+    ).first()
+    session.expunge(row)  # the row is gone: leave no stale instance for a later flush
+    if deleted is None:
+        raise PlatformError(
+            "NOT_FOUND", "Trace not found", 404, f"No scoring trace with id {trace_id}."
+        )
+    if deleted[0] is not None:
+        await blobs.release(session, deleted[0])
