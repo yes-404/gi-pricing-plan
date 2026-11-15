@@ -292,7 +292,9 @@ def load_settings(**overrides: Any) -> Settings:
 
     FR-447 asks for "a clear message rather than failing at first use". A raw
     `ValidationError` names the field but not what the operator should do, so it is
-    re-raised as `ConfigInvalidError` with the environment-variable name attached.
+    re-raised as `ConfigInvalidError` with the environment-variable name attached. The error is
+    raised `from None`: the chained `ValidationError` prints each failing `input_value` in any
+    traceback (FD-1589 row 9, NFR-499), and the lines below keep only each field's `msg`.
     """
     try:
         settings = Settings(**overrides)
@@ -303,6 +305,6 @@ def load_settings(**overrides: Any) -> Settings:
         ]
         raise ConfigInvalidError(
             "configuration is invalid, refusing to start:\n" + "\n".join(lines)
-        ) from exc
+        ) from None
     settings.require_startable()
     return settings

@@ -142,14 +142,14 @@ async def predict_rows(
     try:
         frame = pl.DataFrame(rows)
     except (TypeError, ValueError) as exc:
-        # A ragged or mixed-type body is the caller's mistake, and polars states it more
-        # precisely than a restatement here would: one row with a string where its
-        # neighbours have numbers names the column in the message.
+        # A ragged or mixed-type body is the caller's mistake. Polars' own text can repeat the
+        # offending value, so the detail is fixed text with none of it (FD-1589 row 10, NFR-499).
         raise PlatformError(
             "VALIDATION_FAILED",
             "These rows do not form a table",
             422,
-            f"{exc} Every row must carry the same columns with compatible types.",
+            "These rows do not form a table: every row must carry the same columns with "
+            "compatible types.",
         ) from exc
 
     if isinstance(spec, GbmSpec) and isinstance(fit, GbmFitResult):
