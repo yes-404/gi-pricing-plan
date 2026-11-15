@@ -94,8 +94,10 @@ _INPUT_FREE = {
     ("rating/score.py", "_check_model_call_sentinel"): 1,
     ("rating/runtime.py", "_load_boosters"): 1,  # step id and ref string, no quote
     # #1712 row 3 (maintainer 2026-11-15, S7 STOP #2 (a)): the seed-from-model refusals name
-    # identifiers only: a Model's Factor slug (through `_named`, cut at `FACTOR_NAME_CAP`), the
-    # model family@version, a fit kind or a count, and never a cell value. A caller's own key that
+    # identifiers only: a Model's Factor slug (through `_named`, cut at `FACTOR_NAME_CAP`, except in
+    # the two CONTROL_FACTOR_IN_RATEABLE_PATH texts, which print the stored slugs uncapped, as on
+    # main), the model family@version, a fit kind or a count, and never a cell value. A caller's
+    # own key that
     # the Model does not hold is named only inside the factor slug grammar, else counted.
     # `seed_from_model`: four plain-prose refusals plus the two CONTROL_FACTOR_IN_RATEABLE_PATH
     # ones (coded by class as tidying); `_glm_relativities`: the non-GLM fit refusal. Driven in

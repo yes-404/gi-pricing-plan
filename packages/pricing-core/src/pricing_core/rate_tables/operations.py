@@ -221,8 +221,10 @@ def seed_from_model(
     database). Validates the extracted cells (T3's check runs before the version
     persists), and pins the seed origin so "how far from the technical rate?" is
     answerable. Refusals are `CodedError`s (a `ValueError`) with plain-prose text, which the API
-    maps to 422 `VALIDATION_FAILED` and whose text it keeps (NFR-499); none starts with an
-    `UPPER_SNAKE: ` prefix. A stored name is shown through `_named` (cut at `FACTOR_NAME_CAP`); a
+    maps to 422 `VALIDATION_FAILED` and whose text it keeps (NFR-499). The two
+    `CONTROL_FACTOR_IN_RATEABLE_PATH` refusals keep their `UPPER_SNAKE: ` prefix, so the API keeps
+    that code; the others have none. A stored name is shown through `_named` (cut at
+    `FACTOR_NAME_CAP`); a
     caller's own key that the Model does not hold is shown only if the factor slug grammar admits
     it, otherwise counted.
     """

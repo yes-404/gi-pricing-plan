@@ -106,9 +106,10 @@ _CONSTRAINT_KEYS = ("ge", "gt", "le", "lt", "min_length", "max_length", "pattern
 
 
 class CodedError(ValueError):
-    """A code-named error of ours: its text is `CODE: message`, and the message is input-free.
+    """An error of ours whose text is input-free: either `CODE: message` or plain prose.
 
-    Raised by `pricing_core.rating`'s `_raise_named` and by the model-call sentinel. A
+    Raised by `pricing_core.rating`'s `_raise_named` and by the model-call sentinel (`CODE:
+    message`), and by the rate-table refusals (plain prose, or a `CODE: ` prefix). A
     `ValueError` subclass so existing `except ValueError` handling and the `f"{code}: {message}"`
     text the API parses are unchanged; the allow-list keeps its text by `isinstance`.
     """
