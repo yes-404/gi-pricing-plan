@@ -238,6 +238,24 @@ OWNER_FIXTURE_USERS: tuple[tuple[str, str, str], ...] = (
         "runs the collector's DELETE on blobs, which the application role cannot (OQ-1943)",
     ),
     (
+        "backend/tests/test_blob_collector.py::"
+        "test_a_put_that_commits_between_the_row_commit_and_the_object_step_keeps_the_object",
+        "DP-22",
+        "runs the collector's DELETE on blobs, which the application role cannot (OQ-1943)",
+    ),
+    (
+        "backend/tests/test_blob_collector.py::"
+        "test_a_put_that_starts_during_the_object_step_waits_then_writes_the_object",
+        "DP-22",
+        "runs the collector's DELETE on blobs, which the application role cannot (OQ-1943)",
+    ),
+    (
+        "backend/tests/test_blob_collector.py::"
+        "test_a_null_owner_digest_does_not_stop_the_collector_taking_an_unowned_blob",
+        "DP-22",
+        "runs the collector's DELETE on blobs, which the application role cannot (OQ-1943)",
+    ),
+    (
         "backend/tests/test_migration_deployments.py::"
         "test_the_upgrade_seeds_the_three_environments_and_leaves_existing_traces_alone",
         "migration",

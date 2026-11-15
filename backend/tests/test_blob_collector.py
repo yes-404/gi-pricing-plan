@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
+import threading
 from datetime import UTC, datetime, timedelta
 
 import pytest
@@ -43,10 +44,12 @@ async def _backdate(digest: str, *, days: int = 60) -> None:
     await seed_as_owner(_update)
 
 
-async def _aged_unreferenced_blob(database: Database, blob_store: BlobStore) -> str:
+async def _aged_unreferenced_blob(
+    database: Database, blob_store: BlobStore, content: bytes | None = None
+) -> str:
     """A stored blob at `ref_count` 0 that no owner names and the grace period has passed."""
     async with database.unit_of_work() as session:
-        ref = await blob_store.put(session, _unique(b"collector"), "text/plain")
+        ref = await blob_store.put(session, content or _unique(b"collector"), "text/plain")
     async with database.unit_of_work() as session:
         assert await blobs.release(session, ref.sha256) == 0
     await _backdate(ref.sha256)
@@ -217,6 +220,126 @@ async def test_the_object_step_skips_a_digest_a_concurrent_put_is_re_storing(
     async with database.session() as session:
         assert await session.get(BlobRow, ref.sha256) is not None
     assert await _object_exists(blob_store, ref.sha256)
+
+
+@pytest.mark.req("FR-420")
+async def test_a_put_that_commits_between_the_row_commit_and_the_object_step_keeps_the_object(
+    database: Database,
+    owner_database: Database,
+    blob_store: BlobStore,
+    workspace_id,
+    principal: Principal,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Red-first 1. The collector commits its row delete; a `put` of the same bytes then commits
+    (a new row, the object written again); only then does the object step run. It must re-read,
+    find the row, KEEP the object and report the digest as re-put. A collector that trusted its
+    earlier selection deletes the object and leaves a row with no bytes."""
+    content = _unique(b"between")
+    digest = await _aged_unreferenced_blob(database, blob_store, content)
+    row_committed, put_done = asyncio.Event(), asyncio.Event()
+    original = blob_store._delete_object_if_unreferenced
+
+    async def _after_a_put(db: Database, d: str) -> bool:
+        if d == digest:
+            row_committed.set()
+            await put_done.wait()
+        return await original(db, d)
+
+    monkeypatch.setattr(blob_store, "_delete_object_if_unreferenced", _after_a_put)
+    collector = asyncio.create_task(
+        blob_store.collect_garbage(
+            owner_database, actor=principal, workspace_id=workspace_id, dry_run=False
+        )
+    )
+    await asyncio.wait_for(row_committed.wait(), timeout=30)
+    async with database.unit_of_work() as session:
+        await blob_store.put(session, content, "text/plain")  # row is gone: inserts, re-uploads
+    put_done.set()
+    report = await collector
+
+    assert digest in report.deleted and digest in report.re_put
+    async with database.session() as session:
+        row = await session.get(BlobRow, digest)
+    assert row is not None and row.ref_count == 1
+    assert await _object_exists(blob_store, digest)  # the row has bytes
+
+
+@pytest.mark.req("FR-420")
+async def test_a_put_that_starts_during_the_object_step_waits_then_writes_the_object(
+    database: Database,
+    owner_database: Database,
+    blob_store: BlobStore,
+    workspace_id,
+    principal: Principal,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Red-first 2. The object delete is held open inside the collector's unit of work (it holds
+    the exclusive lock); a `put` of the same bytes starts, is seen waiting on a lock, and only
+    after the delete finishes uploads the object and inserts the row. Without the lock the put's
+    upload lands first and the delete then removes it."""
+    content = _unique(b"during")
+    digest = await _aged_unreferenced_blob(database, blob_store, content)
+    entered, release = threading.Event(), threading.Event()
+    real_delete = blob_store._client.delete_object
+
+    def _held_delete(**kwargs: object) -> object:
+        entered.set()
+        assert release.wait(timeout=30)
+        return real_delete(**kwargs)
+
+    monkeypatch.setattr(blob_store._client, "delete_object", _held_delete)
+    collector = asyncio.create_task(
+        blob_store.collect_garbage(
+            owner_database, actor=principal, workspace_id=workspace_id, dry_run=False
+        )
+    )
+    assert await asyncio.to_thread(entered.wait, 30)
+
+    async def _put() -> None:
+        async with database.unit_of_work() as session:
+            await blob_store.put(session, content, "text/plain")
+
+    put_task = asyncio.create_task(_put())
+    await _wait_for_a_blocked_backend(database)
+    assert not put_task.done()
+    release.set()
+    await asyncio.gather(collector, put_task)
+
+    async with database.session() as session:
+        assert await session.get(BlobRow, digest) is not None
+    assert await _object_exists(blob_store, digest)
+
+
+@pytest.mark.req("FR-420")
+async def test_a_null_owner_digest_does_not_stop_the_collector_taking_an_unowned_blob(
+    database: Database,
+    owner_database: Database,
+    blob_store: BlobStore,
+    workspace_id,
+    principal: Principal,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Red-first for `NOT EXISTS`. An owner place that yields a NULL digest (a model with no
+    covariance blob, an unpromoted upload) is planted as one extra NULL row in the owner query.
+    With `NOT IN` that one NULL makes the predicate match nothing, so nothing is ever collected;
+    with `NOT EXISTS` an unowned blob is still taken and an owned one is still kept."""
+    digest = await _aged_unreferenced_blob(database, blob_store)
+    monkeypatch.setattr(
+        blobs,
+        "_NOT_OWNED",
+        text(
+            "NOT EXISTS (SELECT 1 FROM ("
+            f"{blobs._OWNER_ROWS_SQL} UNION ALL (SELECT NULL::text AS sha256)"
+            ") AS owned WHERE owned.sha256 = blobs.sha256)"
+        ),
+    )
+
+    report = await blob_store.collect_garbage(
+        owner_database, actor=principal, workspace_id=workspace_id, dry_run=False
+    )
+
+    assert digest in report.deleted
 
 
 @pytest.mark.req("FR-420")

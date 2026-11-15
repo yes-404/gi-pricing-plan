@@ -122,6 +122,9 @@ class GarbageCollectionReport(BaseModel):
     considered: int
     deleted: tuple[str, ...] = ()
     bytes_reclaimed: int = 0
+    #: Digests whose row was deleted but whose object was kept because a `put` re-created the
+    #: row before the object step. Set on the returned report only, after the audit event.
+    re_put: tuple[str, ...] = ()
 
 
 class BlobStore:
@@ -701,26 +704,40 @@ class BlobStore:
                 after=report.model_dump(mode="json"),
             )
 
-        for digest in report.deleted:
-            await self._delete_object_if_unreferenced(database, digest)
-        return report
+        re_put = [
+            digest
+            for digest in report.deleted
+            if not await self._delete_object_if_unreferenced(database, digest)
+        ]
+        # `re_put` is known only after the audit event committed, so it is on the returned report
+        # and in the log, not in the event: the event records the rows deleted.
+        return report.model_copy(update={"re_put": tuple(re_put)}) if re_put else report
 
-    async def _delete_object_if_unreferenced(self, database: Database, digest: str) -> None:
-        """Delete one object whose row was just deleted, unless the digest was re-stored.
+    async def _delete_object_if_unreferenced(self, database: Database, digest: str) -> bool:
+        """Delete one object whose row was just deleted; return False when the digest was re-put.
 
-        Takes the digest lock a `put` of the same bytes holds from its read to its commit, then
-        re-reads the row: a `put` that committed meanwhile owns the object again.
+        Takes the digest lock **exclusively** (a `put` of the same bytes holds it shared from
+        before its row read to its commit), then **re-reads that no `blobs` row exists** for the
+        digest. A row that is there was re-created by a `put` after the row delete committed: the
+        object is KEPT and the digest reported as re-put. The lock only orders the two sides; this
+        re-read is what closes the race. Lock sites: see `_lock_digest`.
         """
         try:
             async with database.unit_of_work() as session:
                 await _lock_digest(session, digest, shared=False)
-                if await session.get(BlobRow, digest) is None:
-                    await asyncio.to_thread(
-                        self._client.delete_object, Bucket=self._bucket, Key=blob_key(digest)
+                if await session.get(BlobRow, digest) is not None:
+                    _log.info(
+                        "blob re-put since its row was deleted; object kept",
+                        extra={"sha256": digest},
                     )
+                    return False
+                await asyncio.to_thread(
+                    self._client.delete_object, Bucket=self._bucket, Key=blob_key(digest)
+                )
         except ClientError:
             # The row is gone and committed; the object is an orphan, not a dangling reference.
             _log.warning("blob object delete failed; left as an orphan", extra={"sha256": digest})
+        return True
 
 
 #: Namespace of the per-digest advisory lock, distinct from the audit chain's (`0x47495041`).
@@ -740,6 +757,16 @@ async def _lock_digest(session: AsyncSession, sha256: str, *, shared: bool) -> N
     each other and cannot deadlock. The collector waits for in-flight writers of that digest, and
     a writer waits for the collector's object step. Two digests that hash to one key only share
     or wait for each other. Released at commit or rollback.
+
+    **Protocol** (line numbers are of this file at the commit that added this paragraph):
+
+    - `put`, `blobs.py:242`: SHARED, taken **before** the row read at `:243`, released at the
+      caller's commit or rollback (an advisory `xact` lock has no other release).
+    - `promote_upload`, `blobs.py:428`: SHARED, before its row read at `:429`, released at the
+      commit of its final unit of work.
+    - collector, `_delete_object_if_unreferenced`, `blobs.py:727`: EXCLUSIVE, then the **re-read
+      that no row exists** at `:728`, then the object delete at `:734`; released at that unit of
+      work's commit, after the delete. A row found at `:728` keeps the object.
     """
     function = "pg_advisory_xact_lock_shared" if shared else "pg_advisory_xact_lock"
     await session.execute(
