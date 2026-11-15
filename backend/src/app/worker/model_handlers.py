@@ -79,6 +79,83 @@ __all__ = ["register_model_handlers"]
 
 _log = get_logger("app.worker.model")
 
+#: A coded Job's error is STORED, and a `PredictionError`'s own text can carry a quote's value
+#: (`rating/runtime.py` passes the code only, for that reason; NFR-499). So these refusals carry a
+#: FIXED, value-free sentence and the code, never `str(exc)` and never a level (FR-2143). The
+#: sentence's next step is chosen BY CODE: each code a scoring path raises has its own advice, and
+#: a code not listed here gets the generic one.
+_NEXT_STEP_BY_CODE = {
+    "MODEL_TERM_UNRESOLVED": (
+        "Check that the data carries every column the model's factors read."
+    ),
+    "MODEL_OFFSET_MISSING": (
+        "Check that the data carries the model's exposure column, with positive values."
+    ),
+    "MODEL_LINK_UNSUPPORTED": "Refit the model with a link the scorer implements.",
+    "MODEL_NOT_FITTED": "Fit the model first: it carries no fit to score.",
+}
+_GENERIC_NEXT_STEP = "The error code names the refusal."
+
+
+def _next_step(code: str, unseen_level_step: str) -> str:
+    """The fixed next step for a refusal `code`; `unseen_level_step` is the advice for an unseen
+    level, which differs by what was being scored."""
+    if code == "UNSEEN_LEVEL_BEHAVIOUR_REQUIRED":
+        return unseen_level_step
+    return _NEXT_STEP_BY_CODE.get(code, _GENERIC_NEXT_STEP)
+
+
+def _offset_refusal(exc: Any, *, where: str = "the holdout") -> PlatformError:
+    """The coded failure for an offset model's refusal: its code, a fixed sentence, no value.
+    `where` names the partition the offset model was scored on."""
+    step = _next_step(
+        exc.code,
+        f"Declare “map to base” on that factor, or re-split the data so that {where} holds no "
+        "level the offset model never saw.",
+    )
+    detail = (
+        f"The offset model could not be scored for this data. Next step: {step[0].lower()}"
+        f"{step[1:]}"
+    )
+    return PlatformError(exc.code, "The offset model could not be scored", 409, detail)
+
+
+def _all_rows_refusal(exc: Any) -> PlatformError:
+    """The coded failure when every row of a partition is excluded (`AllRowsUnseenError`): its code
+    and a detail BUILT from its `partition` and `count` attributes (never `str(exc)`: no exception
+    text is stored on a Job), with the next step."""
+    from pricing_core.modelling.predict import ALL_ROWS_UNSEEN_TEXT
+
+    detail = ALL_ROWS_UNSEEN_TEXT.format(count=int(exc.count), partition=str(exc.partition))
+    return PlatformError(exc.code, "No row is left to measure", 409, detail)
+
+
+def _diagnostics_refusal(exc: Any) -> PlatformError:
+    """The coded failure for a refusal escaping the diagnostics: its code, a fixed sentence."""
+    step = _next_step(
+        exc.code, "Declare “map to base” on the factor concerned, or re-split the data."
+    )
+    detail = (
+        "The fit's diagnostics could not be computed: the model refused rows of this data (the "
+        f"error code names the refusal). {step}"
+    )
+    return PlatformError(exc.code, "The fit's diagnostics could not be computed", 409, detail)
+
+
+def _backtest_refusal(exc: Any) -> PlatformError:
+    """The coded failure for a refusal escaping a backtest: its code, a fixed sentence that names
+    the backtest data, not a holdout."""
+    step = _next_step(
+        exc.code,
+        "Declare “map to base” on the factor concerned, or re-split the data so that the "
+        "backtest data holds no level the model never saw.",
+    )
+    detail = (
+        "The backtest could not be computed: the model refused rows of this data (the error "
+        f"code names the refusal). {step}"
+    )
+    return PlatformError(exc.code, "The backtest could not be computed", 409, detail)
+
 
 @dataclass(frozen=True, slots=True)
 class _Transformations:
@@ -319,6 +396,7 @@ def _fit(parameters: dict[str, Any], callback: ProgressCallback) -> JobResult:
         RoundBudgetExceededError,
     )
     from pricing_core.modelling.factors import FactorResolutionError
+    from pricing_core.modelling.predict import AllRowsUnseenError, PredictionError
 
     # The offset-from-another-model arrays (FR-116): the referenced fit's linear
     # predictor on this frame and its holdout. Resolved on the loop, computed here on the
@@ -326,14 +404,20 @@ def _fit(parameters: dict[str, Any], callback: ProgressCallback) -> JobResult:
     model_offset = None
     model_offset_holdout = None
     if offset_source is not None:
-        model_offset = linear_predictor(
-            offset_source.fit, frame, offset_source.factors, offset_source.spec,
-            bandings=offset_source.bandings, groupings=offset_source.groupings,
-        )
-        model_offset_holdout = linear_predictor(
-            offset_source.fit, holdout, offset_source.factors, offset_source.spec,
-            bandings=offset_source.bandings, groupings=offset_source.groupings,
-        )
+        try:
+            model_offset = linear_predictor(
+                offset_source.fit, frame, offset_source.factors, offset_source.spec,
+                bandings=offset_source.bandings, groupings=offset_source.groupings,
+            )
+            model_offset_holdout = linear_predictor(
+                offset_source.fit, holdout, offset_source.factors, offset_source.spec,
+                bandings=offset_source.bandings, groupings=offset_source.groupings,
+            )
+        except PredictionError as exc:
+            # FR-2143: the offset model refuses a level it never saw. Its rows cannot be dropped
+            # here (the offset is the fit's own input), so the refusal keeps its code and says what
+            # to do next, in a fixed sentence (never the exception's text: it is stored).
+            raise _offset_refusal(exc) from exc
 
     # The fit owns the middle of the bar and reports its own `0..1` inside it. Before this
     # it reported nothing, and a long fit sat at 0.35 for its whole duration — which
@@ -442,39 +526,49 @@ def _fit(parameters: dict[str, Any], callback: ProgressCallback) -> JobResult:
     from pricing_core.modelling.diagnostics import compute_ebm_diagnostics
 
     diagnostic_progress = ScaledProgress(progress, start=0.85, end=0.97)
-    if isinstance(spec, GbmSpec) and isinstance(result, GbmFitResult) and booster:
-        computed = compute_gbm_diagnostics(
-            result, booster, spec, factors,
-            train=frame, holdout=holdout, eval_curve=eval_curve,
-            bandings=transformations.bandings,
-            groupings=transformations.groupings,
-            progress=diagnostic_progress,
-        )
-    elif isinstance(spec, EbmSpec) and isinstance(result, EbmFitResult):
-        computed = compute_ebm_diagnostics(
-            result, spec, factors,
-            train=frame, holdout=holdout,
-            bandings=transformations.bandings,
-            groupings=transformations.groupings,
-            progress=diagnostic_progress,
-        )
-    elif isinstance(spec, GlmSpec) and isinstance(result, GlmFitResult):
-        computed = compute_diagnostics(
-            result, spec, factors,
-            train=frame, holdout=holdout,
-            model_offset_train=model_offset,
-            model_offset_holdout=model_offset_holdout,
-            bandings=transformations.bandings,
-            groupings=transformations.groupings,
-            progress=diagnostic_progress,
-        )
-    else:  # pragma: no cover - the unions are checked together at the type
-        raise PlatformError(
-            "MODEL_TYPE_UNSUPPORTED",
-            "This model type cannot be fitted",
-            409,
-            f"{spec.model_type!r} has a spec arm and no fit path.",
-        )
+    try:
+        if isinstance(spec, GbmSpec) and isinstance(result, GbmFitResult) and booster:
+            computed = compute_gbm_diagnostics(
+                result, booster, spec, factors,
+                train=frame, holdout=holdout, eval_curve=eval_curve,
+                bandings=transformations.bandings,
+                groupings=transformations.groupings,
+                progress=diagnostic_progress,
+            )
+        elif isinstance(spec, EbmSpec) and isinstance(result, EbmFitResult):
+            computed = compute_ebm_diagnostics(
+                result, spec, factors,
+                train=frame, holdout=holdout,
+                bandings=transformations.bandings,
+                groupings=transformations.groupings,
+                progress=diagnostic_progress,
+            )
+        elif isinstance(spec, GlmSpec) and isinstance(result, GlmFitResult):
+            computed = compute_diagnostics(
+                result, spec, factors,
+                train=frame, holdout=holdout,
+                model_offset_train=model_offset,
+                model_offset_holdout=model_offset_holdout,
+                bandings=transformations.bandings,
+                groupings=transformations.groupings,
+                progress=diagnostic_progress,
+            )
+        else:  # pragma: no cover - the unions are checked together at the type
+            raise PlatformError(
+                "MODEL_TYPE_UNSUPPORTED",
+                "This model type cannot be fitted",
+                409,
+                f"{spec.model_type!r} has a spec arm and no fit path.",
+            )
+    except AllRowsUnseenError as exc:
+        # FR-2143: every holdout row is excluded: the Job fails coded with the count and the next
+        # step (the text is built from counts only), never with a zero-row partition.
+        raise _all_rows_refusal(exc) from exc
+    except PredictionError as exc:
+        # FR-2143: a refusal that still escapes the diagnostics keeps its name. Without this the
+        # Job stores `JOB_HANDLER_FAILED` and the code is gone (OQ-646); nothing here continues
+        # past it: the Job fails, coded, with a fixed sentence (never the exception's text).
+        raise _diagnostics_refusal(exc) from exc
     diagnostics_seconds = time.perf_counter() - diagnostics_started
     _log.info(
         "diagnostics complete",
@@ -989,6 +1083,7 @@ def _transparency(parameters: dict[str, Any], callback: ProgressCallback) -> Job
         compute_diagnostics,
         fidelity_statement,
     )
+    from pricing_core.modelling.predict import AllRowsUnseenError, PredictionError
 
     # `models.model_family_slug` is a `String(64)` and this Job generates a slug seven
     # characters longer than the one the analyst chose. Refused here, naming the cause,
@@ -1084,13 +1179,22 @@ def _transparency(parameters: dict[str, Any], callback: ProgressCallback) -> Job
         # frames carry the booster's predictions in `SURROGATE_RESPONSE_COLUMN`, so this is
         # the ordinary GLM diagnostics path measuring an extraordinary target, and
         # FR-141's spec invariant is what says so to every later reader.
-        surrogate_diagnostics = compute_diagnostics(
-            approximation.result, approximation.spec, factors,
-            train=approximation.train, holdout=approximation.holdout,
-            bandings=transformations.bandings,
-            groupings=transformations.groupings,
-            progress=ScaledProgress(progress, start=0.50, end=0.62),
-        )
+        try:
+            surrogate_diagnostics = compute_diagnostics(
+                approximation.result, approximation.spec, factors,
+                train=approximation.train, holdout=approximation.holdout,
+                bandings=transformations.bandings,
+                groupings=transformations.groupings,
+                progress=ScaledProgress(progress, start=0.50, end=0.62),
+            )
+        except AllRowsUnseenError as exc:
+            # FR-2143, as the fit's diagnostics: every holdout row is excluded, so the Job fails
+            # coded with the count and the next step.
+            raise _all_rows_refusal(exc) from exc
+        except PredictionError as exc:
+            # FR-2143: a refusal escaping the surrogate's diagnostics keeps its name, with the
+            # fixed value-free sentence (never the exception's text).
+            raise _diagnostics_refusal(exc) from exc
     progress.update(0.62, "tree shap")
     summary = build_shap_summary(
         result, booster, spec, factors, frame,
@@ -1297,31 +1401,46 @@ def _backtest(parameters: dict[str, Any], callback: ProgressCallback) -> JobResu
     ) = progress.run_on_loop(load())
 
     from pricing_core.modelling import backtest_model, linear_predictor
+    from pricing_core.modelling.predict import AllRowsUnseenError, PredictionError
 
     # The offset-from-another-model array (FR-116): the referenced fit's linear
     # predictor on the backtest frame. Resolved on the loop, computed here on the worker
     # thread, because the maths is pricing-core's (ADR-703).
     model_offset = None
     if offset_source is not None:
-        model_offset = linear_predictor(
-            offset_source.fit, frame, offset_source.factors, offset_source.spec,
-            bandings=offset_source.bandings, groupings=offset_source.groupings,
-        )
+        try:
+            model_offset = linear_predictor(
+                offset_source.fit, frame, offset_source.factors, offset_source.spec,
+                bandings=offset_source.bandings, groupings=offset_source.groupings,
+            )
+        except PredictionError as exc:
+            # FR-2143: the offset model refuses a level it never saw. Its rows cannot be dropped
+            # here (the offset is the backtest's own input), so the refusal keeps its code and says
+            # what to do next, in a fixed sentence (never the exception's text: it is stored).
+            raise _offset_refusal(exc, where="the backtest data") from exc
 
     progress.update(0.2, "scoring the period")
-    summary = backtest_model(
-        fit, spec, factors, frame,
-        model_ref=model_ref,
-        dataset_version_ref=target_ref,
-        fitted_on_ref=fitted_on_ref,
-        period_from=period_from,
-        period_to=period_to,
-        booster=booster,
-        model_offset=model_offset,
-        bandings=transformations.bandings,
-        groupings=transformations.groupings,
-        progress=ScaledProgress(progress, start=0.2, end=0.9),
-    )
+    try:
+        summary = backtest_model(
+            fit, spec, factors, frame,
+            model_ref=model_ref,
+            dataset_version_ref=target_ref,
+            fitted_on_ref=fitted_on_ref,
+            period_from=period_from,
+            period_to=period_to,
+            booster=booster,
+            model_offset=model_offset,
+            bandings=transformations.bandings,
+            groupings=transformations.groupings,
+            progress=ScaledProgress(progress, start=0.2, end=0.9),
+        )
+    except AllRowsUnseenError as exc:
+        # FR-2143: every backtest row is excluded: coded, with the count and the next step.
+        raise _all_rows_refusal(exc) from exc
+    except PredictionError as exc:
+        # FR-2143, as a fit's diagnostics: any other refusal keeps its code, with the fixed
+        # value-free sentence chosen by that code (never the exception's text).
+        raise _backtest_refusal(exc) from exc
 
     async def store() -> UUID:
         async with progress.database.unit_of_work() as session:

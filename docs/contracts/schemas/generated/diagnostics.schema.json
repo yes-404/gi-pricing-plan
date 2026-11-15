@@ -821,6 +821,20 @@
           "title": "Calibration",
           "type": "array"
         },
+        "exposure_excluded_unseen_level": {
+          "anyOf": [
+            {
+              "description": "Exact decimal as a string; never a binary float (FR-10).",
+              "pattern": "^-?[0-9]+(\\.[0-9]+)?$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Exposure Excluded Unseen Level"
+        },
         "gini": {
           "title": "Gini",
           "type": "number"
@@ -865,6 +879,19 @@
           ],
           "default": null,
           "title": "Rows Excluded Unknown Response"
+        },
+        "rows_excluded_unseen_level": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Rows Excluded Unseen Level"
         },
         "rows_excluded_zero_weight": {
           "anyOf": [

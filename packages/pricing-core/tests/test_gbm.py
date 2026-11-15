@@ -328,6 +328,28 @@ def test_an_unseen_level_is_refused_by_count_and_position_never_by_value(backend
     assert refused.value.terms == (sentinel,)
 
 
+@pytest.mark.req("FR-2143")
+@pytest.mark.parametrize("backend", BACKENDS)
+def test_a_gbm_refuses_an_unseen_level_whatever_the_factor_declares(backend: str) -> None:
+    """A GBM or an EBM keeps FR-131's refusal whatever is declared: a Factor declaring
+    `map_to_base` does not make a GBM score a level its fit never saw."""
+    declared = [
+        _factor("area", "area", unseen_level_behaviour=UnseenLevelBehaviour.MAP_TO_BASE),
+        _factor("driv_age", "driv_age"),
+    ]
+    data = _frequency_data()
+    fit = fit_gbm(data, _spec(backend, factors=tuple(f.id for f in declared)), declared)
+    scoring = data.head(20).with_columns(
+        pl.when(pl.int_range(pl.len()) < 3)
+        .then(pl.lit("SENTINEL-declared-level-8d2e"))
+        .otherwise(pl.col("area"))
+        .alias("area")
+    )
+    with pytest.raises(GbmFitError) as refused:
+        predict_gbm(fit.result, fit.booster_bytes, scoring, declared)
+    assert refused.value.code == "UNSEEN_LEVEL_BEHAVIOUR_REQUIRED"
+
+
 @pytest.mark.req("FR-121")
 @pytest.mark.parametrize("backend", BACKENDS)
 def test_a_counting_objective_refuses_a_book_with_no_exposure(backend: str) -> None:

@@ -76,9 +76,16 @@
       "description": "A band whose claim count is below `min_claims_per_band`: whole claims.",
       "properties": {
         "band_index": {
-          "minimum": 0,
-          "title": "Band Index",
-          "type": "integer"
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Band Index"
         },
         "band_label": {
           "title": "Band Label",
@@ -655,9 +662,16 @@
       "description": "A band whose exposure is below `min_exposure_per_band`: exact decimals (FR-10).",
       "properties": {
         "band_index": {
-          "minimum": 0,
-          "title": "Band Index",
-          "type": "integer"
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Band Index"
         },
         "band_label": {
           "title": "Band Label",
@@ -1276,6 +1290,36 @@
             }
           ],
           "default": null
+        },
+        "unseen_cell_reports": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/UnseenCellReport"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Unseen Cell Reports"
+        },
+        "unseen_level_gaps": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/UnseenLevelGap"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Unseen Level Gaps"
         }
       },
       "required": [
@@ -1829,6 +1873,116 @@
       ],
       "title": "TweedieProfilePoint",
       "type": "object"
+    },
+    "UnseenCellReport": {
+      "additionalProperties": false,
+      "description": "One `interaction` term: the cells its operands can produce that the fit has no relativity\nfor (FR-2143). `producible` and `unfitted` are `None` exactly when `state` is `not_examined`.",
+      "properties": {
+        "example_cap": {
+          "minimum": 0,
+          "title": "Example Cap",
+          "type": "integer"
+        },
+        "examples": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Examples",
+          "type": "array"
+        },
+        "factor": {
+          "title": "Factor",
+          "type": "string"
+        },
+        "producible": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Producible"
+        },
+        "state": {
+          "$ref": "#/$defs/UnseenCellState"
+        },
+        "unfitted": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Unfitted"
+        }
+      },
+      "required": [
+        "factor",
+        "state",
+        "example_cap"
+      ],
+      "title": "UnseenCellReport",
+      "type": "object"
+    },
+    "UnseenCellState": {
+      "description": "What the fit-time report could say about one interaction term (FR-2143).\n\nFour states, because a report that says nothing where it did not look reads as \"nothing found\":\n`examined` (the count is exact and up to `example_cap` unfitted cells are named),\n`count_only` (exact count; too many producible cells to name any: *not enumerated*),\n`lower_bound` (an operand's levels are the data's and cannot be listed, so its levels are\ntaken from the cross's own fitted cells: the count is a floor, \"at least N pairings of levels\nthe fit saw separately and never together\", and levels the fit never saw at all are NOT\ncounted; up to `example_cap` are named, none when there are too many), and `not_examined`\n(cannot be computed at all: a nested interaction, an artifact not supplied, a level holding\nthe cell separator; there is no count).",
+      "enum": [
+        "examined",
+        "count_only",
+        "lower_bound",
+        "not_examined"
+      ],
+      "title": "UnseenCellState",
+      "type": "string"
+    },
+    "UnseenLevelGap": {
+      "additionalProperties": false,
+      "description": "One level a Factor can produce that the fit has no relativity for (FR-2143).\n\nA quote that reaches it is refused unless the Factor declares `map_to_base`. The cells of an\n`interaction` Factor are not listed here: `UnseenCellReport` carries them, with a count and at\nmost `example_cap` named.",
+      "properties": {
+        "factor": {
+          "title": "Factor",
+          "type": "string"
+        },
+        "level": {
+          "title": "Level",
+          "type": "string"
+        },
+        "reached_by": {
+          "items": {
+            "$ref": "#/$defs/UnseenLevelReach"
+          },
+          "minItems": 1,
+          "title": "Reached By",
+          "type": "array"
+        }
+      },
+      "required": [
+        "factor",
+        "level",
+        "reached_by"
+      ],
+      "title": "UnseenLevelGap",
+      "type": "object"
+    },
+    "UnseenLevelReach": {
+      "description": "How a quote can reach a level the fit has no relativity for (FR-2143).",
+      "enum": [
+        "null_value",
+        "below_range",
+        "above_range",
+        "grouping_target"
+      ],
+      "title": "UnseenLevelReach",
+      "type": "string"
     },
     "WeightSpec": {
       "additionalProperties": false,

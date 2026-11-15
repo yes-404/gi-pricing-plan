@@ -45,6 +45,20 @@ def _factor(**over: object) -> Factor:
     return Factor(**fields)  # type: ignore[arg-type]
 
 
+def test_a_factor_declares_no_unseen_level_behaviour_by_default() -> None:
+    assert _factor().unseen_level_behaviour is None
+
+
+@pytest.mark.parametrize("declared", ["error", "map_to_base"])
+def test_a_factor_may_declare_error_or_map_to_base(declared: str) -> None:
+    assert _factor(unseen_level_behaviour=declared).unseen_level_behaviour == declared
+
+
+def test_a_factor_cannot_declare_map_to_default() -> None:
+    with pytest.raises(pydantic.ValidationError, match="map_to_default"):
+        _factor(unseen_level_behaviour="map_to_default")
+
+
 def _interaction(**over: object) -> Factor:
     fields: dict[str, object] = {
         "slug": "age_x_vehicle",
