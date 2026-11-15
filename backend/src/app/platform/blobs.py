@@ -26,15 +26,16 @@ from __future__ import annotations
 import asyncio
 import hashlib
 from collections.abc import AsyncIterator, Iterable
+from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
-from typing import TYPE_CHECKING, Any, Final
+from typing import TYPE_CHECKING, Any, Final, cast
 from uuid import UUID
 
 import boto3
 from botocore.client import Config as BotoConfig
 from botocore.exceptions import ClientError
 from pydantic import BaseModel, ConfigDict, Field
-from sqlalchemy import select, update
+from sqlalchemy import CursorResult, select, text, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -59,9 +60,12 @@ if TYPE_CHECKING:  # pragma: no cover
     from app.db.session import Database
 
 __all__ = [
+    "BLOB_OWNERS",
+    "INSIDE_BLOB_OWNERS",
     "QUOTE_INPUT_BLOB_COLUMNS",
     "STAGING_EXPIRY_DAYS",
     "UPLOAD_COMPLETE_WITHIN",
+    "BlobOwner",
     "BlobStore",
     "GarbageCollectionReport",
     "PresignedUpload",
@@ -69,6 +73,7 @@ __all__ = [
     "blob_not_found",
     "blob_probe",
     "blob_readable_by",
+    "owner_count",
     "to_ref",
 ]
 
@@ -209,7 +214,13 @@ class BlobStore:
         content: bytes | Iterable[bytes],
         media_type: str,
     ) -> BlobRef:
-        """Store content and return its reference. Identical content is a no-op (FR-419).
+        """Store content, take one reference for the caller, return its reference (FR-419, FR-420).
+
+        Identical content stores no second object (FR-419) but still takes the caller's
+        reference: a new row is written at `ref_count=1`, an existing one is retained. The
+        caller is the owner, and writes the owning record in the same unit of work; a caller
+        that does not leaks a reference, which can never lose data. No caller retains after
+        a `put`.
 
         Requires the caller's transaction: the row is accounting, and accounting that
         commits independently of the change it belongs to is how a reference count drifts.
@@ -237,6 +248,7 @@ class BlobStore:
                         "requested_media_type": media_type,
                     },
                 )
+            await retain(session, digest)
             return to_ref(existing)
 
         key = blob_key(digest)
@@ -249,7 +261,7 @@ class BlobStore:
         )
 
         session.add(
-            BlobRow(sha256=digest, bytes_=len(body), media_type=media_type, ref_count=0)
+            BlobRow(sha256=digest, bytes_=len(body), media_type=media_type, ref_count=1)
         )
         await session.flush()
         return BlobRef(sha256=digest, bytes=len(body), media_type=media_type)
@@ -657,8 +669,41 @@ async def release(session: AsyncSession, sha256: str) -> int:
 
     A count that would go negative violates the check constraint and fails the transaction,
     rather than quietly reaching zero and making the blob eligible for deletion.
+
+    **A release that reaches 0 while a row `BLOB_OWNERS` can see still names the blob is an
+    internal invariant breach** (FR-420's second line of defence, #1504 D1): some writer made
+    that owner without taking a reference, and finishing the release would let the collector
+    delete a blob the owner reads. It raises `BLOB_REFERENCE_INVARIANT_BREACHED` (500), logs the
+    digest and the owner count, and the caller's transaction rolls back with the decrement. The
+    owner's own row must therefore stop naming the blob (and be flushed) before the release.
+    Owners no query can see (`INSIDE_BLOB_OWNERS`) are outside the check.
     """
-    return await _adjust_ref_count(session, sha256, -1)
+    count = await _adjust_ref_count(session, sha256, -1)
+    if count == 0:
+        # The session does not autoflush, so the owner query would not see a pending change.
+        await session.flush()
+        owners = await owner_count(session, sha256)
+        if owners:
+            _log.error(
+                "blob release would reach zero while an owner still names it",
+                extra={"sha256": sha256, "owner_count": owners},
+            )
+            raise PlatformError(
+                "BLOB_REFERENCE_INVARIANT_BREACHED",
+                "Internal error",
+                500,
+                "A blob reference count and its owners disagree.",
+            )
+    return count
+
+
+async def owner_count(session: AsyncSession, sha256: str) -> int:
+    """How many owner places `BLOB_OWNERS` finds naming this digest right now."""
+    result = await session.execute(
+        text(f"SELECT count(*) FROM ({_OWNER_ROWS_SQL}) AS owned WHERE sha256 = :sha"),
+        {"sha": sha256},
+    )
+    return int(result.scalar_one())
 
 
 async def _adjust_ref_count(session: AsyncSession, sha256: str, delta: int) -> int:
@@ -712,6 +757,108 @@ QUOTE_INPUT_BLOB_COLUMNS: tuple[Any, ...] = (
     ScoringTraceRow.blob_sha256,
     RegressionRunRow.cases_blob_sha256,
 )
+
+
+@dataclass(frozen=True)
+class BlobOwner:
+    """One place an artifact references a blob digest.
+
+    `digests` is a `SELECT` returning one row per reference, in one column named `sha256`.
+    """
+
+    name: str
+    digests: str
+
+
+#: Every persisted place that references a blob by digest and is readable from PostgreSQL
+#: (FR-420's precondition: every owner holds a reference). `put` takes the reference for a
+#: new owner; this list is what a backfill recounts for owners that predate that, and what
+#: the census test holds against the schema. An owner is added here when a table gains a
+#: digest column or a JSONB path that carries one.
+#:
+#: Owners that name a blob from *inside another blob* are not here, because no query can see
+#: them: the rate-table cell-diff chunks (named by the manifest blob) and a score batch's
+#: output parquet (named by the Job's summary blob). See `INSIDE_BLOB_OWNERS`.
+BLOB_OWNERS: tuple[BlobOwner, ...] = (
+    BlobOwner(
+        "dataset_versions.tables[*].blob",
+        "SELECT t->'blob'->>'sha256' AS sha256 FROM dataset_versions, "
+        "jsonb_array_elements(tables) AS t",
+    ),
+    BlobOwner(
+        "jobs.result (kind = blob)",
+        "SELECT result->>'ref' AS sha256 FROM jobs WHERE result->>'kind' = 'blob'",
+    ),
+    BlobOwner(
+        "blob_uploads.sha256",
+        "SELECT sha256 FROM blob_uploads",
+    ),
+    BlobOwner(
+        "models.fit_result.booster_blob",
+        "SELECT fit_result->'booster_blob'->>'sha256' AS sha256 FROM models",
+    ),
+    BlobOwner(
+        "models.fit_result.covariance_blob",
+        "SELECT fit_result->'covariance_blob'->>'sha256' AS sha256 FROM models",
+    ),
+    BlobOwner(
+        "rate_table_versions.cells",
+        "SELECT cells->>'sha256' AS sha256 FROM rate_table_versions",
+    ),
+    BlobOwner(
+        "rating_versions.bundle.blob_sha256",
+        "SELECT bundle->>'blob_sha256' AS sha256 FROM rating_versions",
+    ),
+    BlobOwner(
+        "rating_versions.evidence.structural_diff_blob",
+        "SELECT evidence->>'structural_diff_blob' AS sha256 FROM rating_versions",
+    ),
+    BlobOwner(
+        "regression_runs.cases_blob_sha256",
+        "SELECT cases_blob_sha256 AS sha256 FROM regression_runs",
+    ),
+    BlobOwner(
+        "dislocation_runs.movers_blob_sha256",
+        "SELECT movers_blob_sha256 AS sha256 FROM dislocation_runs",
+    ),
+    BlobOwner(
+        "scoring_traces.blob_sha256",
+        "SELECT blob_sha256 AS sha256 FROM scoring_traces",
+    ),
+)
+
+#: Owners no query can see: they name the blob from inside another blob's body in S3.
+#: `{name: reason}`. Blobs they hold are referenced by `put` when written (slice 1); the
+#: legacy ones are the migration's conservative pin (see the revision that backfills).
+INSIDE_BLOB_OWNERS: dict[str, str] = {
+    "rate_table cell-diff chunks (manifest blob 'chunks')": (
+        "named by the manifest blob that the Job's `result.ref` points at"
+    ),
+    "score batch output parquet (summary blob 'output_blob_sha256')": (
+        "named by the summary blob that the Job's `result.ref` points at"
+    ),
+}
+
+#: One row per reference, in a column named `sha256`, over every owner place.
+_OWNER_ROWS_SQL = " UNION ALL ".join(f"({owner.digests})" for owner in BLOB_OWNERS)
+
+_OWNER_COUNTS_SQL = (
+    f"SELECT sha256, count(*) AS n FROM ({_OWNER_ROWS_SQL}) AS owned "
+    "WHERE sha256 IS NOT NULL GROUP BY sha256"
+)
+
+
+async def backfill_ref_counts(session: AsyncSession) -> int:
+    """Raise every blob's `ref_count` to the number of owners that reference it; return how
+    many rows moved. Never lowers a count: a reference that is held and not counted is a
+    leak, and a leak can never lose data (FR-420)."""
+    result = await session.execute(
+        text(
+            "UPDATE blobs SET ref_count = owned.n FROM (" + _OWNER_COUNTS_SQL + ") AS owned "
+            "WHERE blobs.sha256 = owned.sha256 AND blobs.ref_count < owned.n"
+        )
+    )
+    return int(cast("CursorResult[Any]", result).rowcount)
 
 
 def blob_not_found(sha256: str) -> PlatformError:
