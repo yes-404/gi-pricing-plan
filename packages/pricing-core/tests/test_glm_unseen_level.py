@@ -38,6 +38,8 @@ from pricing_core.modelling.predict import (
     predict_glm_row,
 )
 
+pytestmark = pytest.mark.req("FR-2143")
+
 DATASET = uuid4()
 CODE = "UNSEEN_LEVEL_BEHAVIOUR_REQUIRED"
 
@@ -237,6 +239,7 @@ def _with_age(book: pl.DataFrame, rows: int, value: float | None) -> pl.DataFram
     )
 
 
+@pytest.mark.req("FR-100")
 def test_a_fit_over_a_missing_value_in_a_banded_column_is_fitted() -> None:
     """A Banding with a `null_level` fitted on data that holds a null: the null level is a level
     of the design, with its own relativity."""
@@ -245,6 +248,7 @@ def test_a_fit_over_a_missing_value_in_a_banded_column_is_fitted() -> None:
     assert fit.unseen_level_gaps == ()  # the fit saw the null level
 
 
+@pytest.mark.req("FR-100")
 def test_a_fit_over_an_out_of_range_value_mapped_to_the_null_level_is_fitted() -> None:
     fit = _null_level_world(_with_age(_frame(), 40, -5.0)).fit  # below_range = null_level
     assert "unknown" in {entry.level for entry in fit.relativities["age_band"]}
@@ -290,6 +294,7 @@ def _thin_check(book: pl.DataFrame) -> Any:
     return check_banding(frame, banding, min_exposure=Decimal(100))
 
 
+@pytest.mark.req("FR-100")
 def test_the_thin_band_floor_applies_to_the_null_level_with_no_position() -> None:
     """40 rows reach `unknown` (exposure 40, under the floor of 100): its warning names the null
     level and carries no `band_index`. The declared bands, 280 rows each, are not thin."""
@@ -297,6 +302,7 @@ def test_the_thin_band_floor_applies_to_the_null_level_with_no_position() -> Non
     assert [(w.band_label, w.band_index) for w in warnings] == [("unknown", None)]
 
 
+@pytest.mark.req("FR-100")
 def test_the_empty_band_refusal_still_covers_declared_bands_only() -> None:
     """A frame that never reaches `unknown` is not refused for it; one that never reaches a
     declared band is."""
@@ -307,6 +313,7 @@ def test_the_empty_band_refusal_still_covers_declared_bands_only() -> None:
         _thin_check(_frame().filter(pl.col("age") < 10.0))  # no row in `mid`
 
 
+@pytest.mark.req("FR-100")
 def test_a_warning_stored_before_the_null_level_still_validates() -> None:
     from model_schema import ClaimCountBandingWarning, ExposureBandingWarning
 

@@ -25,6 +25,7 @@ from model_schema import (
     FactorType,
     LossTreatment,
     SplitRef,
+    UnseenLevelBehaviour,
     WeightSpec,
 )
 from pricing_core.modelling import BandingError
@@ -326,6 +327,24 @@ def test_an_unseen_level_is_refused_by_name() -> None:
 
     with pytest.raises(PredictionError) as error:
         predict_ebm(fit, frame, FACTORS, bandings=BANDINGS)
+    assert error.value.code == "UNSEEN_LEVEL_BEHAVIOUR_REQUIRED"
+
+
+@pytest.mark.req("FR-2143")
+def test_an_ebm_refuses_an_unseen_level_whatever_the_factor_declares() -> None:
+    """A GBM or an EBM keeps FR-131's refusal whatever is declared: a Factor declaring
+    `map_to_base` does not make an EBM score a level its fit never saw."""
+    declared = [
+        _factor("speed", "speed"),
+        _factor("area", "area", unseen_level_behaviour=UnseenLevelBehaviour.MAP_TO_BASE),
+        _factor("age_band", "age", type=FactorType.BANDING, banding_id=AGE_BANDING.id),
+    ]
+    spec = _spec(factors=tuple(f.id for f in declared))
+    fit = fit_ebm(_book(), spec, declared, bandings=BANDINGS)
+    frame = pl.DataFrame({"speed": [30.0], "area": ["Q"], "age": [40.0]})
+
+    with pytest.raises(PredictionError) as error:
+        predict_ebm(fit, frame, declared, bandings=BANDINGS)
     assert error.value.code == "UNSEEN_LEVEL_BEHAVIOUR_REQUIRED"
     assert "area" in str(error.value)
 

@@ -11,6 +11,7 @@ from typing import Any
 from uuid import uuid4
 
 import polars as pl
+import pytest
 
 from model_schema import (
     Banding,
@@ -24,6 +25,8 @@ from model_schema import (
     RelativityLevel,
 )
 from pricing_core.modelling.predict import linear_predictor, linear_predictor_row
+
+pytestmark = pytest.mark.req("FR-2143")
 
 DATASET = uuid4()
 

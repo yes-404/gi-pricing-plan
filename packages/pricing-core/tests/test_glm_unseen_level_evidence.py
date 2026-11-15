@@ -31,6 +31,8 @@ TRUE = {"a": 1.0, "b": 2.0, "c": 3.0}
 SPLIT = SplitRef(split_artifact_id=new_uuid7(), train_part="train", holdout_part="test")
 UNSEEN_ROWS = 50
 
+pytestmark = pytest.mark.req("FR-2143")
+
 
 def _book(n: int = 3000, seed: int = 20261115) -> pl.DataFrame:
     rng = np.random.default_rng(seed)
