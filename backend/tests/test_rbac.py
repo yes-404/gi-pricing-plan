@@ -348,6 +348,24 @@ async def test_a_principal_cannot_grant_a_role_to_itself(
 
 
 @pytest.mark.req("FR-348")
+async def test_a_self_grant_of_an_unknown_role_is_refused_not_missing(
+    database: Database, workspace_id
+) -> None:
+    """The self-grant check runs before the role lookup: 403, never 404."""
+    admin = _user()
+    await _assign(database, workspace_id, admin, "admin")
+    refusal = await _grant_refused(
+        database,
+        workspace_id,
+        admin,
+        kind="user",
+        principal_id=admin.id,
+        role_slug="no-such-role",
+    )
+    assert refusal.status_code == 403
+
+
+@pytest.mark.req("FR-348")
 @pytest.mark.parametrize("kind", ["service_account", "user"])
 async def test_a_principal_cannot_grant_a_role_to_a_service_account_it_owns(
     database: Database, workspace_id, kind: str

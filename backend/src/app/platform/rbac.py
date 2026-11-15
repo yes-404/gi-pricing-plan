@@ -337,6 +337,18 @@ async def grant_role(
         permission=Permission.ADMIN_MANAGE_ROLES,
     )
 
+    # Compare ids only, never `principal_kind`: `effective_permissions` selects assignments
+    # by `principal_id` alone, so a kind-aware check could be bypassed by passing a
+    # different kind with the granter's own id (or a Service Account's id). Before the role
+    # lookup, so a self-grant of an unknown role answers 403, not 404.
+    if principal_id == granter.id:
+        raise PlatformError(
+            "PERMISSION_DENIED",
+            "Cannot grant a role to yourself",
+            403,
+            "A principal cannot grant a role to itself (FR-348).",
+        )
+
     role = (
         await session.execute(
             select(RoleRow).where(
@@ -347,17 +359,6 @@ async def grant_role(
     if role is None:
         raise PlatformError(
             "NOT_FOUND", "Role not found", 404, f"No role {role_slug!r} in this workspace."
-        )
-
-    # Compare ids only, never `principal_kind`: `effective_permissions` selects assignments
-    # by `principal_id` alone, so a kind-aware check could be bypassed by passing a
-    # different kind with the granter's own id (or a Service Account's id).
-    if principal_id == granter.id:
-        raise PlatformError(
-            "PERMISSION_DENIED",
-            "Cannot grant a role to yourself",
-            403,
-            "A principal cannot grant a role to itself (FR-348).",
         )
 
     account = (
