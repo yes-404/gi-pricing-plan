@@ -184,7 +184,9 @@ async def test_a_release_that_would_reach_zero_while_an_owner_names_the_blob_is_
     release commits at 0 and the blob is collectable.
     """
     async with database.unit_of_work() as session:
-        ref = await blob_store.put(session, b"owned blob " + str(new_uuid7()).encode(), "text/plain")
+        ref = await blob_store.put(
+            session, b"owned blob " + str(new_uuid7()).encode(), "text/plain"
+        )
     await job_result_owner(database, workspace_id, ref.sha256)
 
     with pytest.raises(PlatformError) as caught:

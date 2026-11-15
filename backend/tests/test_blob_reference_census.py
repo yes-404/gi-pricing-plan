@@ -214,7 +214,7 @@ COPYING_OWNERS: dict[str, str] = {
 
 
 def scan_copies(roots: tuple[Path, ...], repo: Path) -> tuple[list[str], list[str]]:
-    """`(copies, copies_without_retain)` as `"<file>:<function>"`, over every `.py` under `roots`."""
+    """`(copies, copies_without_retain)` as `"<file>:<function>"`, over each `.py` under `roots`."""
     copies: set[str] = set()
     unretained: set[str] = set()
     for root in roots:
