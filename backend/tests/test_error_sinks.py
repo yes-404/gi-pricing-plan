@@ -8,8 +8,9 @@ batch handler, the request middleware, the outbox, and `pricing_core.rating`), a
 is added, moved or removed without a matching line in `_SINKS` saying what covers it.
 
 A sink is: a logging call passed `exc_info`, a `.exception(` call, a `JobError(` construction, an
-assignment to `last_error`, a use of an exception's text (`str(exc)`, `{exc}`), and a dict entry
-`error_message`.
+assignment to `last_error`, a use of an exception's text (`str(exc)`, `{exc}`, `repr(exc)`,
+`{exc!r}`, `exc.args`), a bound exception passed bare as an argument of a logging call (the
+logger formats it with `%s`), and a dict entry `error_message`.
 """
 
 from __future__ import annotations
@@ -287,6 +288,13 @@ def _files() -> list[Path]:
     return sorted(p for p in derived if p.relative_to(_ROOT).as_posix() not in _EXCLUDED)
 
 
+#: The methods of a logger that format their arguments into a record. `exception` is counted
+#: by its own kind above.
+_LOGGING_METHODS = frozenset(
+    {"debug", "info", "warning", "warn", "error", "critical", "fatal", "log"}
+)
+
+
 def _sinks(source: str, name: str) -> Counter[tuple[str, str, str]]:
     """Count the failure sinks of one file.
 
@@ -316,6 +324,19 @@ def _sinks(source: str, name: str) -> Counter[tuple[str, str, str]]:
                 found[(name, function, "exc_info")] += 1
             if called == "JobError":
                 found[(name, function, "JobError")] += 1
+            # FD-2029: a bound exception handed to a logging call as an argument is formatted
+            # into the record, so its text is logged exactly as `str(exc)` would log it.
+            if called in _LOGGING_METHODS and isinstance(callee, ast.Attribute):
+                # `exc_info=` has its own kind above; any other keyword value counts here.
+                keyword_values = (k.value for k in node.keywords if k.arg != "exc_info")
+                for argument in (*node.args, *keyword_values):
+                    if isinstance(argument, ast.Name) and argument.id in excs:
+                        found[(name, function, "bare exc in logging call")] += 1
+            if (
+                called == "repr" and node.args and isinstance(node.args[0], ast.Name)
+                and node.args[0].id in excs
+            ):
+                found[(name, function, "repr(exc)")] += 1
             if (
                 called == "str" and node.args and isinstance(node.args[0], ast.Name)
                 and node.args[0].id in excs
@@ -326,6 +347,13 @@ def _sinks(source: str, name: str) -> Counter[tuple[str, str, str]]:
             and node.value.id in excs
         ):
             found[(name, function, "{exc}")] += 1
+            if node.conversion == ord("r"):  # `{exc!r}`: the repr carries the text too
+                found[(name, function, "repr(exc)")] += 1
+        if (
+            isinstance(node, ast.Attribute) and node.attr == "args"
+            and isinstance(node.value, ast.Name) and node.value.id in excs
+        ):
+            found[(name, function, "exc.args")] += 1
         if isinstance(node, ast.Assign):
             for target in node.targets:
                 if isinstance(target, ast.Attribute) and target.attr == "last_error":
@@ -346,6 +374,35 @@ def _census() -> dict[tuple[str, str, str], int]:
     for path in _files():
         total += _sinks(path.read_text(encoding="utf-8"), path.relative_to(_ROOT).as_posix())
     return dict(total)
+
+
+def _handler(body: str) -> str:
+    return f"try:\n    f()\nexcept ValueError as problem:\n    {body}\n"
+
+
+_PLANTED = {
+    "bare exc in logging call": _handler("log.warning(problem)"),
+    "repr(exc)": _handler("x = repr(problem)"),
+    "repr(exc) f-string": _handler("x = f'{problem!r}'"),
+    "exc.args": _handler("x = problem.args"),
+}
+
+
+@pytest.mark.parametrize(
+    ("snippet", "kind"),
+    [
+        ("bare exc in logging call", "bare exc in logging call"),
+        ("repr(exc)", "repr(exc)"),
+        ("repr(exc) f-string", "repr(exc)"),
+        ("exc.args", "exc.args"),
+    ],
+)
+def test_the_census_finds_each_planted_sink_shape(snippet: str, kind: str) -> None:
+    """FD-2029: red on deliberately broken input. Each shape, planted, is counted under its
+    kind; the same shapes over a name that is no exception are not."""
+    assert _sinks(_PLANTED[snippet], "planted.py")[("planted.py", "<module>", kind)] == 1
+    control = _PLANTED[snippet].replace("except ValueError as problem", "except ValueError")
+    assert not _sinks(control.replace("problem", "band"), "planted.py")
 
 
 @pytest.mark.req("NFR-499")

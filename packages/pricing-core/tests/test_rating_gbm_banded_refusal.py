@@ -255,6 +255,23 @@ async def test_a_grouped_factor_is_refused_too() -> None:
 
 
 @pytest.mark.req("FR-222", "FR-240")
+@pytest.mark.parametrize("kind", [FactorType.SPLINE, FactorType.POLYNOMIAL])
+async def test_a_spline_or_polynomial_factor_is_refused_too(kind: FactorType) -> None:
+    """FR-222 as widened 2026-10-25: every type other than IDENTITY is refused, so `spline` and
+    `polynomial` are too. No GBM can be fitted on either today (`resolve_factors` refuses both),
+    so this pins the refusal for the day FR-83's spline arm resolves. The Factor is rebuilt
+    through `Factor.model_validate`, not `model_copy`, so the type validator runs."""
+    world = _age_world("xgboost")
+    rebuilt = Factor.model_validate(
+        {**world.factor.model_dump(), "type": kind, "banding_id": None}
+    )
+    assert rebuilt.type is kind
+    with pytest.raises(ValueError, match=CODE) as caught:
+        await compile_bundle(_version(), _Resolver(world, factor=rebuilt))
+    assert f"{rebuilt.slug} ({kind.value})" in str(caught.value)
+
+
+@pytest.mark.req("FR-222", "FR-240")
 async def test_a_banded_gbm_pinned_but_never_called_still_compiles() -> None:
     """The refusal is keyed on a `model_call` STEP, never on a pin: WF-699 pins the banded demo
     GBM (C1) and recompiles it (C5) with no `model_call` reaching it (journey.py skips B4/C1')."""
