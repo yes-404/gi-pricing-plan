@@ -93,6 +93,13 @@ _INPUT_FREE = {
     # static sentence built in `runtime.py`, never a model's or the engine's own error text.
     ("rating/score.py", "_check_model_call_sentinel"): 1,
     ("rating/runtime.py", "_load_boosters"): 1,  # step id and ref string, no quote
+    # #1712 row 3 (RL-1383 item 3): the four seed-from-model refusals name a Factor slug the Model
+    # stores (cut at `FACTOR_NAME_CAP`), a model slug@version or a count; a caller's own key that
+    # the Model does not hold is named only inside the factor slug grammar, else counted. No quote
+    # and no cell value (test_rate_table_operations.py::
+    # test_a_long_stored_factor_slug_is_cut_and_marked_in_a_refusal and
+    # test_a_requested_factor_name_outside_the_grammar_is_counted_not_shown).
+    ("rate_tables/operations.py", "seed_from_model"): 4,
     ("rating/runtime.py", "_check_graph_matches_inlined_algorithm"): 1,  # a node id
     # FR-193 / FR-243 (#1741): the load-time refusal of a GLM level indicator its Factor cannot
     # produce. It reads no row: the text is the code, the Bundle ref, the term and the Factor

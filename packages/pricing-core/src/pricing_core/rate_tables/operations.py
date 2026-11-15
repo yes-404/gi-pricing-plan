@@ -68,8 +68,20 @@ from model_schema.rating import (
 from model_schema.refs import ArtifactRef, slug_is_admitted
 from pricing_core.modelling.factors import OperandNotSuppliedError, control_factor_in
 from pricing_core.rating.compile import ValidationIssue, cell_parses
+from pricing_core.safe_error import CodedError
 
 _APPROVED_OR_BETTER = frozenset({"approved", "live", "retired"})
+
+#: The most characters of a Factor name a seed refusal shows. The factor slug grammar admits 63,
+#: so a name the grammar holds is never cut; a stored slug outside it can be any length (FD-1384).
+FACTOR_NAME_CAP = 64
+
+
+def _named(name: str) -> str:
+    """`name` as stored, through `repr`, cut at `FACTOR_NAME_CAP` and marked when it is cut."""
+    if len(name) <= FACTOR_NAME_CAP:
+        return repr(name)
+    return f"{name[:FACTOR_NAME_CAP]!r} (cut at {FACTOR_NAME_CAP} of {len(name)} characters)"
 
 #: The plan's named validation failure codes (plan §Slice W10-2 T3). Internal codes:
 #: the API maps them onto 03 §5.1's module error codes at the boundary.
@@ -208,24 +220,35 @@ def seed_from_model(
     the model's Factors and passes them in (`RL-1361` section D; `pricing-core` takes no
     database). Validates the extracted cells (T3's check runs before the version
     persists), and pins the seed origin so "how far from the technical rate?" is
-    answerable. Refusals are plain-prose `ValueError`s, which the API maps to 422
-    `VALIDATION_FAILED`; none starts with an `UPPER_SNAKE: ` prefix.
+    answerable. Refusals are `CodedError`s (a `ValueError`) with plain-prose text, which the API
+    maps to 422 `VALIDATION_FAILED` and whose text it keeps (NFR-499); none starts with an
+    `UPPER_SNAKE: ` prefix. A stored name is shown through `_named` (cut at `FACTOR_NAME_CAP`); a
+    caller's own key that the Model does not hold is shown only if the factor slug grammar admits
+    it, otherwise counted.
     """
     check_model_approved(model)
     if factor not in _glm_relativities(model):
-        raise ValueError(
-            f"factor {factor!r} names no relativity entry of model "
-            f"{model.model_family_slug}@{model.version}"
+        # `factor` is the caller's own key and is not in the Model: it is named only when it is a
+        # slug the grammar admits, otherwise counted (#1827 (b)). The model is a stored name.
+        requested = (
+            f"factor {_named(factor)}"
+            if slug_is_admitted("factor", factor)
+            else "1 requested factor name outside the factor slug grammar"
         )
+        raise CodedError(
+            f"{requested} names no relativity entry of model "
+            f"{_named(model.model_family_slug)}@{model.version}"
+        )
+    # From here `factor` is a relativity entry of the Model, so it is a stored name.
     pinned = [candidate for candidate in factors if candidate.slug == factor]
     if not pinned:
-        raise ValueError(
-            f"relativity entry {factor!r} has no pinned Factor with slug {factor!r} "
-            f"among the factors of model {model.model_family_slug}@{model.version}"
+        raise CodedError(
+            f"relativity entry {_named(factor)} has no pinned Factor with slug {_named(factor)} "
+            f"among the factors of model {_named(model.model_family_slug)}@{model.version}"
         )
     if len(pinned) > 1:
-        raise ValueError(
-            f"{len(pinned)} pinned Factors with slug {factor!r}; a relativity entry "
+        raise CodedError(
+            f"{len(pinned)} pinned Factors with slug {_named(factor)}; a relativity entry "
             "binds to exactly one"
         )
     bound = pinned[0]
@@ -246,8 +269,8 @@ def seed_from_model(
     if not slug_is_admitted("factor", bound.slug):
         # `Factor.slug` is an unconstrained `str` (FD-1384); a reference to it could not be
         # re-read, so refuse by name here rather than 500 on a later read (RL-1383 item 3).
-        raise ValueError(
-            f"the pinned Factor slug {bound.slug!r} is outside the factor slug grammar "
+        raise CodedError(
+            f"the pinned Factor slug {_named(bound.slug)} is outside the factor slug grammar "
             "([a-z0-9][a-z0-9_-]{1,62}); it cannot be referenced"
         )
     cells = tuple(extract_relativity_table(model, value_name=value_name, factor=factor))
