@@ -298,7 +298,8 @@ def test_a_join_key_type_mismatch_is_refused_naming_both_columns() -> None:
     with pytest.raises(ProxyAssessmentError) as caught:
         assess_proxies(frame, ["level"], ref, key="k", reference_key="rk", classes=["x", "y"])
     assert caught.value.code == "PROXY_INPUT_INVALID"
-    assert "'k'" in str(caught.value) and "'rk'" in str(caught.value)
+    assert "'k'" in str(caught.value)
+    assert "'rk'" in str(caught.value)
 
 
 @pytest.mark.req("FR-2138")
