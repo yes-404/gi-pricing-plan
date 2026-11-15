@@ -116,3 +116,61 @@ def test_the_downgrade_says_it_is_irreversible() -> None:
     module = _load()
     assert "Irreversible: a no-op" in (module.downgrade.__doc__ or "")
     assert "irreversible: a no-op" in (module.__doc__ or "").lower()
+
+
+async def _parent_and_child(
+    database: Database, workspace_id, parent_sha: str, child_sha: str
+) -> None:
+    """A dataset's version 1 naming `parent_sha` and its derived version 2 naming `child_sha`."""
+    from app.db.models import DatasetRow, DatasetVersionRow
+    from model_schema import DatasetKind, DatasetStatus
+
+    async with database.unit_of_work() as session:
+        slug = f"ds-{new_uuid7().hex[:8]}"
+        dataset = DatasetRow(workspace_id=workspace_id, slug=slug, name=slug, owner_id=new_uuid7())
+        session.add(dataset)
+        await session.flush()
+
+        def version(number: int, sha: str, **extra):
+            return DatasetVersionRow(
+                workspace_id=workspace_id, dataset_id=dataset.id, version=number,
+                status=DatasetStatus.DRAFT.value, slug=slug, created_by=new_uuid7(),
+                currency="GBP", tables=[{"name": "policies", "blob": {"sha256": sha}}], **extra,
+            )
+
+        parent = version(1, parent_sha, kind=DatasetKind.INGESTED.value)
+        session.add(parent)
+        await session.flush()
+        session.add(
+            version(
+                2, child_sha, kind=DatasetKind.DERIVED.value,
+                derived_from={"parent_version_id": str(parent.id), "operation": "split"},
+            )
+        )
+
+
+@pytest.mark.req("FR-416")
+@pytest.mark.req("FR-420")
+async def test_the_revision_counts_a_derived_child_that_shares_its_parents_blob(
+    database: Database, blob_store: BlobStore, workspace_id
+) -> None:
+    """#1504 D1's legacy rows, as the old `derive_version` left them: the child names the
+    parent's blob and took no reference, so the blob sits at 0 (or at the parent's one).
+    `shared` is named by parent and child (2 owner rows); `child_only` is named by the child
+    alone, the parent's reference having been dropped, so the child's row is the only one.
+    Breaker: remove the `dataset_versions.tables` line from `_OWNERS` -> both stay at 0."""
+    shared = await _unowned(database, blob_store, b"parent and child")
+    child_only = await _unowned(database, blob_store, b"child alone")
+    other = await _unowned(database, blob_store, b"parent's replaced blob")
+    await _parent_and_child(database, workspace_id, parent_sha=shared, child_sha=shared)
+    await _parent_and_child(database, workspace_id, parent_sha=other, child_sha=child_only)
+
+    await _run_upgrade(database)
+    assert await _count(database, shared) == 2
+    assert await _count(database, child_only) == 1
+    assert await _count(database, other) == 1
+
+    await _run_upgrade(database)  # idempotent
+    assert await _count(database, shared) == 2
+    assert await _count(database, child_only) == 1
+    assert await _count(database, other) == 1
