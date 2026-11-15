@@ -51,6 +51,8 @@
 /backend/src/app/platform/rbac.py                          @yes-404 @freynia404
 # returns the caller's identity and permissions
 /backend/src/app/api/me.py                                 @yes-404 @freynia404
+# the separation-of-duties checks: who may approve what
+/backend/src/app/platform/approvals.py                     @yes-404 @freynia404
 # the database's least-privilege check on the connecting role
 /backend/src/app/db/immutability.py                        @yes-404 @freynia404
 # the application's login role, and the script that provisions it
