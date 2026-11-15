@@ -361,6 +361,8 @@ async def test_a_service_account_with_an_unknown_owner_is_refused(
     """Deny by default: `created_by` NULL is an owner nobody can rule out."""
     admin = _user()
     await _assign(database, workspace_id, admin, "admin")
+    # Holds analyst too, so the withdrawn escalation rule cannot be what refuses.
+    await _assign(database, workspace_id, admin, "analyst")
     account = await _seed_service_account(workspace_id, None)
     await _grant_refused(
         database, workspace_id, admin, kind="service_account", principal_id=account.id
