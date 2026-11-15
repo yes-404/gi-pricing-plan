@@ -200,10 +200,13 @@ def test_the_governance_negative_tests_exist_in_ci() -> None:
     """
     import re
 
+    # This file is left out: each required pattern below appears in it as a literal, so a
+    # suite that included it would match its own patterns and could never fail.
     suite = "\n".join(
         path.read_text(encoding="utf-8")
         for root in ("backend/tests", "packages", "tests")
         for path in (ROOT / root).rglob("test_*.py")
+        if path.resolve() != pathlib.Path(__file__).resolve()
     )
 
     required = {
@@ -212,7 +215,10 @@ def test_the_governance_negative_tests_exist_in_ci() -> None:
         "append-only audit": r"def test_update_and_delete_are_rejected_by_the_database",
         "no truncate": r"def test_truncate_is_rejected",
         "permission enforcement": r"def test_a_caller_without_the_role_is_forbidden",
-        "no self-elevation": r"def test_a_user_cannot_grant_a_permission_they_do_not_hold",
+        "no self-grant": r"def test_a_principal_cannot_grant_a_role_to_itself",
+        "no grant to an owned service account": (
+            r"def test_a_principal_cannot_grant_a_role_to_a_service_account_it_owns"
+        ),
     }
     missing = [name for name, pattern in required.items() if not re.search(pattern, suite)]
     assert missing == [], f"negative tests missing for: {missing}"
