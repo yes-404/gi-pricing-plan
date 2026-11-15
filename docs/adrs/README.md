@@ -35,7 +35,7 @@ has already been made and needs recording. Otherwise use
 | [ADR-706](ADR-00706-gorules-zen-engine-executes-rating-dags.md) | GoRules ZEN Engine executes rating DAGs | active |
 | [ADR-707](ADR-00707-polars-duckdb-as-the-data-engine-not-pandas.md) | Polars + DuckDB as the data engine, not pandas | active |
 | [ADR-710](ADR-00710-tenant-isolation-is-a-deployment-boundary.md) | Tenant isolation is a deployment boundary | active |
-| [ADR-2136](ADR-02136-project-management-moves-to-github-with-a-slim-claude-md-and-frozen-record-families.md) | Project management moves to GitHub, with a slim CLAUDE.md and frozen record families | draft |
+| [ADR-2136](ADR-02136-project-management-moves-to-github-with-a-slim-claude-md-and-frozen-record-families.md) | Project management moves to GitHub, with a slim CLAUDE.md and frozen record families | active |
 | [ADR-2145](ADR-02145-audit-read-is-held-by-the-approver-deployer-auditor-and-admin-roles.md) | The audit:read permission is held by the approver, deployer, auditor and admin roles | active |
 | [ADR-2146](ADR-02146-audit-verify-covers-the-whole-chain-by-default-with-an-optional-range.md) | GET /audit/verify verifies the whole chain by default and takes an optional from/to range | active |
 | [ADR-2147](ADR-02147-the-permissions-of-06s-routes-not-yet-built.md) | The permission of each of 06's routes not yet built, with no new permission member | active |
