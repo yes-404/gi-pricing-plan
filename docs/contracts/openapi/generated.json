@@ -351,6 +351,71 @@
         "title": "AlgorithmValidationReport",
         "type": "object"
       },
+      "AnchorStatement": {
+        "additionalProperties": false,
+        "description": "What the audit anchor signs (`06` FR-373 (1)): a chain head, the key and the time.\n\n`head_sequence` 0 with a null `head_event_hash` is an empty chain, and nothing else is.\n`key_id` and `previous_key_id` sit inside the signed bytes, so a signature cannot be\nshown under another key's name and a rotation is visible in the customer's store.",
+        "properties": {
+          "anchor_version": {
+            "const": 1,
+            "default": 1,
+            "title": "Anchor Version",
+            "type": "integer"
+          },
+          "anchored_at": {
+            "format": "date-time",
+            "title": "Anchored At",
+            "type": "string"
+          },
+          "head_event_hash": {
+            "anyOf": [
+              {
+                "pattern": "^sha256:[a-f0-9]{64}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Head Event Hash"
+          },
+          "head_sequence": {
+            "minimum": 0.0,
+            "title": "Head Sequence",
+            "type": "integer"
+          },
+          "key_id": {
+            "pattern": "^sha256:[a-f0-9]{64}$",
+            "title": "Key Id",
+            "type": "string"
+          },
+          "previous_key_id": {
+            "anyOf": [
+              {
+                "pattern": "^sha256:[a-f0-9]{64}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Previous Key Id"
+          },
+          "workspace_id": {
+            "format": "uuid",
+            "title": "Workspace Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "workspace_id",
+          "head_sequence",
+          "head_event_hash",
+          "anchored_at",
+          "key_id"
+        ],
+        "title": "AnchorStatement",
+        "type": "object"
+      },
       "Applicability": {
         "additionalProperties": false,
         "description": "Where an objective may be used (FR-153).\n\nA Model Spec pairing an objective with a response outside `responses`, a backend outside\n`backends`, or no offset where one is required, is refused **at spec validation** —\nbefore any compute is spent, and with a `SpecProblem` naming which of the three it was.",
@@ -1072,6 +1137,38 @@
           "replay_fell_back"
         ],
         "title": "AttributionSummary",
+        "type": "object"
+      },
+      "AuditAnchor": {
+        "additionalProperties": false,
+        "description": "A signed chain head: what `POST /audit/anchor` returns and `audit.anchored` records.\n\n`public_key` is the base64 of the 32 raw bytes and `signature` the base64 of the 64-byte\nEd25519 signature over `anchor_statement_bytes(statement)`. Verifying it, and why the key\nmust be pinned out of band, is `06` FR-373 (6).",
+        "properties": {
+          "algorithm": {
+            "const": "Ed25519",
+            "default": "Ed25519",
+            "title": "Algorithm",
+            "type": "string"
+          },
+          "public_key": {
+            "minLength": 1,
+            "title": "Public Key",
+            "type": "string"
+          },
+          "signature": {
+            "minLength": 1,
+            "title": "Signature",
+            "type": "string"
+          },
+          "statement": {
+            "$ref": "#/components/schemas/AnchorStatement"
+          }
+        },
+        "required": [
+          "statement",
+          "public_key",
+          "signature"
+        ],
+        "title": "AuditAnchor",
         "type": "object"
       },
       "AuditEventListing": {
@@ -21199,6 +21296,123 @@
           }
         },
         "summary": "Query the audit log",
+        "tags": [
+          "governance"
+        ]
+      }
+    },
+    "/api/v1/audit/anchor": {
+      "post": {
+        "description": "Verify the chain, sign its head, and append the `audit.anchored` checkpoint.\n\nThe customer stores the response somewhere the operator does not control (FR-373 (6)).\nUnlike `/verify`, a broken chain is **refused** (`409 AUDIT_CHAIN_BROKEN`): signing a\ntampered head would certify the tampering. No key configured is `503`, with no event.",
+        "operationId": "anchor_chain_api_v1_audit_anchor_post",
+        "parameters": [
+          {
+            "description": "The workspace to act in, as a UUID. Required when the principal is a member of more than one (`07` FR-397); a principal with exactly one, and a Service Account, send nothing. Checked against the principal's own memberships: a workspace it does not belong to yields `403 WORKSPACE_SCOPE_DENIED`, and an absent selection with several memberships yields `403 WORKSPACE_SELECTION_REQUIRED`.",
+            "in": "header",
+            "name": "Workspace-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The workspace to act in, as a UUID. Required when the principal is a member of more than one (`07` FR-397); a principal with exactly one, and a Service Account, send nothing. Checked against the principal's own memberships: a workspace it does not belong to yields `403 WORKSPACE_SCOPE_DENIED`, and an absent selection with several memberships yields `403 WORKSPACE_SELECTION_REQUIRED`.",
+              "title": "Workspace-Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuditAnchor"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not ready"
+          }
+        },
+        "summary": "Sign the chain head for external anchoring (FR-373)",
         "tags": [
           "governance"
         ]
