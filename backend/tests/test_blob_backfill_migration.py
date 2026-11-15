@@ -126,7 +126,7 @@ async def _parent_and_child(
     from model_schema import DatasetKind, DatasetStatus
 
     async with database.unit_of_work() as session:
-        slug = f"ds-{new_uuid7().hex[:8]}"
+        slug = f"ds-{new_uuid7().hex[-8:]}"
         dataset = DatasetRow(workspace_id=workspace_id, slug=slug, name=slug, owner_id=new_uuid7())
         session.add(dataset)
         await session.flush()
