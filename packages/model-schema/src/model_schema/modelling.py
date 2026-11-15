@@ -54,6 +54,7 @@ __all__ = [
     "Factor",
     "FactorIntent",
     "FactorType",
+    "FactorUnseenLevelBehaviour",
     "FitResult",
     "GbmFitResult",
     "GbmFunctionRef",
@@ -81,7 +82,11 @@ __all__ = [
     "SpecProblemKind",
     "SpecValidation",
     "SplitRef",
+    "UnseenCellReport",
+    "UnseenCellState",
     "UnseenLevelBehaviour",
+    "UnseenLevelGap",
+    "UnseenLevelReach",
     "WeightSpec",
 ]
 
@@ -168,6 +173,11 @@ class Factor(BaseModel):
     #: `largest_exposure` cannot be known without the data (FR-113).
     base_level: str | None = None
     base_level_method: str = "largest_exposure"
+    #: What a fitted GLM does with a level of this Factor that the fit never saw. `None`
+    #: means refuse, the same refusal an EBM or a GBM gives (FR-131). `map_to_base` scores
+    #: the level as the base level. `map_to_default` is refused here: a Factor names no fit,
+    #: so it cannot name a default fitted level. Unused by a numeric Factor.
+    unseen_level_behaviour: UnseenLevelBehaviour | None = None
 
     @model_validator(mode="after")
     def _the_type_and_its_transformation_agree(self) -> Factor:
@@ -203,6 +213,12 @@ class Factor(BaseModel):
                     "it, and a transformation recorded on an artifact that ignores it reads "
                     "as one the model used."
                 )
+        if self.unseen_level_behaviour is UnseenLevelBehaviour.MAP_TO_DEFAULT:
+            raise InputFreeError(
+                "a factor cannot declare unseen_level_behaviour 'map_to_default' (`02` FR-2143). "
+                "A Factor names no fit and so cannot name a default fitted level; declare "
+                "'error' or 'map_to_base', or leave it unset to refuse."
+            )
         self._the_interaction_arm()
         self._columns_match_the_type()
         return self
@@ -363,9 +379,11 @@ class _BandingWarningBase(BaseModel):
 
     #: The Banding version checked: on the wire the ID-3 string `banding:{slug}@{version}`.
     banding: ArtifactRef
-    #: One of `Banding.labels`, and its position in them (the labels are unique).
+    #: One of `Banding.labels`, or the Banding's `null_level` (a level outside `labels`, FR-100),
+    #: and its position in `labels` (the labels are unique). `band_index` is `None` for the null
+    #: level, which has no position: a stored warning from before always carries an integer.
     band_label: str
-    band_index: int = Field(ge=0)
+    band_index: int | None = Field(ge=0)
 
     @field_validator("banding")
     @classmethod
@@ -525,6 +543,22 @@ class UnseenLevelBehaviour(enum.StrEnum):
     ERROR = "error"
     MAP_TO_DEFAULT = "map_to_default"
     MAP_TO_BASE = "map_to_base"
+
+
+#: What a Factor may declare for a level its fit never saw (`02` FR-2143). A Factor-specific
+#: type, not the Grouping's enum: `map_to_default` is a Grouping behaviour and a Factor refuses
+#: it, so the Factor's create contract offers exactly these two values and no more.
+FactorUnseenLevelBehaviour = Annotated[
+    Literal["error", "map_to_base"],
+    Field(
+        description=(
+            "What a GLM scores for a level of this Factor that its fit never saw. `error` "
+            "refuses it; `map_to_base` scores it as the base. Unset refuses. A GBM or an "
+            "EBM refuses whatever is declared. `map_to_default` is not offered: a Factor "
+            "names no fit, so it cannot name a default fitted level."
+        )
+    ),
+]
 
 
 class GroupingEvidence(BaseModel):
@@ -1667,6 +1701,65 @@ class Coefficient(BaseModel):
         return self
 
 
+class UnseenLevelReach(enum.StrEnum):
+    """How a quote can reach a level the fit has no relativity for (FR-2143)."""
+
+    NULL_VALUE = "null_value"
+    BELOW_RANGE = "below_range"
+    ABOVE_RANGE = "above_range"
+    GROUPING_TARGET = "grouping_target"
+
+
+class UnseenLevelGap(BaseModel):
+    """One level a Factor can produce that the fit has no relativity for (FR-2143).
+
+    A quote that reaches it is refused unless the Factor declares `map_to_base`. The cells of an
+    `interaction` Factor are not listed here: `UnseenCellReport` carries them, with a count and at
+    most `example_cap` named.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    factor: str
+    level: str
+    reached_by: tuple[UnseenLevelReach, ...] = Field(min_length=1)
+
+
+class UnseenCellState(enum.StrEnum):
+    """What the fit-time report could say about one interaction term (FR-2143).
+
+    Four states, because a report that says nothing where it did not look reads as "nothing found":
+    `examined` (the count is exact and up to `example_cap` unfitted cells are named),
+    `count_only` (exact count; too many producible cells to name any: *not enumerated*),
+    `lower_bound` (an operand's levels are the data's and cannot be listed, so its levels are
+    taken from the cross's own fitted cells: the count is a floor, "at least N pairings of levels
+    the fit saw separately and never together", and levels the fit never saw at all are NOT
+    counted; up to `example_cap` are named, none when there are too many), and `not_examined`
+    (cannot be computed at all: a nested interaction, an artifact not supplied, a level holding
+    the cell separator; there is no count).
+    """
+
+    EXAMINED = "examined"
+    COUNT_ONLY = "count_only"
+    LOWER_BOUND = "lower_bound"
+    NOT_EXAMINED = "not_examined"
+
+
+class UnseenCellReport(BaseModel):
+    """One `interaction` term: the cells its operands can produce that the fit has no relativity
+    for (FR-2143). `producible` and `unfitted` are `None` exactly when `state` is `not_examined`."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    factor: str
+    state: UnseenCellState
+    producible: int | None = Field(default=None, ge=0)
+    unfitted: int | None = Field(default=None, ge=0)
+    #: At most `example_cap` unfitted cells, in sorted order, written as the fit writes a cell.
+    examples: tuple[str, ...] = ()
+    example_cap: int = Field(ge=0)
+
+
 class GlmFitResult(BaseModel):
     """What a fit returns and the Model stores (ADR-705).
 
@@ -1708,6 +1801,15 @@ class GlmFitResult(BaseModel):
     #: What an offset-from-another-model fit was constructed against — the resolved,
     #: pinned ref (FR-116). `None` for every other offset kind.
     offset_model_ref: ModelRef | None = None
+    #: FR-2143. Each banded Factor's `null_level` and each Grouping's target level that this fit has
+    #: no relativity for. **Not** a plain categorical Factor's levels (the data's, which cannot be
+    #: listed). **Optional, and the absence is meaningful:** `None` is "not recorded" (a Model
+    #: fitted before the field existed), and `()` is "none among those", never "the fit saw every
+    #: level". The two must never be read as one another.
+    unseen_level_gaps: tuple[UnseenLevelGap, ...] | None = None
+    #: FR-2143, the interaction terms: one report per `interaction` Factor. `None` is "not
+    #: recorded", `()` is "this fit has no interaction term"; the same rule as above.
+    unseen_cell_reports: tuple[UnseenCellReport, ...] | None = None
 
     @property
     def intercept(self) -> Coefficient | None:

@@ -67,6 +67,17 @@ export function modelsForVersion(page: Paged<Model>, datasetVersionId: string): 
 
 export type FactorIntent = components["schemas"]["FactorIntent"];
 export type MonotonicDirection = components["schemas"]["MonotonicDirection"];
+/** What a Factor may declare for a level its fit never saw: the create contract's own values. */
+export type FactorUnseenLevelBehaviour = NonNullable<
+  components["schemas"]["FactorCreate"]["unseen_level_behaviour"]
+>;
+/** How a quote can reach a level the fit has no relativity for (FR-2143). */
+export type UnseenLevelReach = components["schemas"]["UnseenLevelReach"];
+/** Keyed by the generated type, so a value the contract adds fails the type-check here. */
+export const UNSEEN_LEVEL_BEHAVIOUR_LABELS: Record<FactorUnseenLevelBehaviour, string> = {
+  error: "Refuse (declared)",
+  map_to_base: "Map to base",
+};
 
 /**
  * Every intent the contract publishes, and what to call it.
@@ -128,6 +139,7 @@ export function createFactor(body: {
   intent: FactorIntent;
   monotonic_direction: MonotonicDirection;
   monotonic_rationale?: string | undefined;
+  unseen_level_behaviour?: FactorUnseenLevelBehaviour | undefined;
 }): Promise<Factor> {
   return request<Factor>("/factors", { method: "POST", body });
 }

@@ -81,7 +81,14 @@ from model_schema import (
     Weighting,
 )
 from pricing_core.modelling.factors import resolve_factors
-from pricing_core.modelling.predict import predict_ebm, predict_glm, score_fitted
+from pricing_core.modelling.predict import (
+    AllRowsUnseenError,
+    UnseenLevelExclusion,
+    drop_unseen_level_rows,
+    predict_ebm,
+    predict_glm,
+    score_fitted,
+)
 from pricing_core.modelling.weights import drop_zero_weight_rows
 from pricing_core.progress import NullProgress, ProgressCallback
 
@@ -139,6 +146,14 @@ def _weights(spec: ModelSpecCommon, data: pl.DataFrame) -> npt.NDArray[np.float6
     if spec.weight.kind == "column" and str(spec.weight.column) in data.columns:
         return data[str(spec.weight.column)].cast(pl.Float64).to_numpy()
     return np.ones(data.height, dtype=np.float64)
+
+
+def _unseen_exposure(
+    spec: ModelSpecCommon, data: pl.DataFrame, excluded: UnseenLevelExclusion
+) -> Decimal:
+    """The exposure of the rows an unseen-level exclusion removed from `data` (FR-2143), as the
+    other exposures here are written (six places, an exact decimal)."""
+    return Decimal(str(round(excluded.exposure_of_excluded(_weights(spec, data)), 6)))
 
 
 def ae_weights(spec: ModelSpecCommon, data: pl.DataFrame) -> npt.NDArray[np.float64]:
@@ -375,6 +390,8 @@ def _partition(
     excluded_unknown_response: int | None,
     bandings: Mapping[UUID, Banding] | None,
     groupings: Mapping[UUID, Grouping] | None,
+    excluded_unseen_level: int | None = None,
+    excluded_unseen_exposure: Decimal | None = None,
 ) -> PartitionDiagnostics:
     """Every universal metric for one partition (FR-171).
 
@@ -490,6 +507,8 @@ def _partition(
         rows=data.height,
         rows_excluded_zero_weight=excluded_zero_weight,
         rows_excluded_unknown_response=excluded_unknown_response,
+        rows_excluded_unseen_level=excluded_unseen_level,
+        exposure_excluded_unseen_level=excluded_unseen_exposure,
         ae_overall=ae_overall,
         ae_by_factor=tuple(cells),
         lift=tuple(lift),
@@ -777,6 +796,23 @@ def compute_diagnostics(
     train, holdout = train_rows.data, holdout_rows.data
     model_offset_train = train_rows.take(model_offset_train)
     model_offset_holdout = holdout_rows.take(model_offset_holdout)
+    # FR-2143: a row carrying a level the fit has no relativity for, on a Factor that does not
+    # declare `map_to_base`, is excluded from every statistic and counted (a quote with it is
+    # refused; evidence must not score it as another level, and a diagnostics read must not fail).
+    train_unseen = drop_unseen_level_rows(
+        fit, train, factors, bandings=bandings, groupings=groupings
+    )
+    holdout_unseen = drop_unseen_level_rows(
+        fit, holdout, factors, bandings=bandings, groupings=groupings
+    )
+    train_unseen_exposure = _unseen_exposure(spec, train, train_unseen)
+    holdout_unseen_exposure = _unseen_exposure(spec, holdout, holdout_unseen)
+    if holdout_unseen.excluded > 0 and holdout_unseen.data.height == 0:
+        # Excluding every row would leave a zero-row partition: refuse, coded, with the count.
+        raise AllRowsUnseenError(partition="holdout", rows=holdout_unseen.excluded)
+    train, holdout = train_unseen.data, holdout_unseen.data
+    model_offset_train = train_unseen.take(model_offset_train)
+    model_offset_holdout = holdout_unseen.take(model_offset_holdout)
     power = _power_of(fit, spec)
     theta = _theta_of(spec)
     train_part = _partition(
@@ -788,6 +824,8 @@ def compute_diagnostics(
         family=spec.family, power=power, theta=theta,
         excluded_zero_weight=train_rows.excluded,
         excluded_unknown_response=train_rows.excluded_unknown,
+        excluded_unseen_level=train_unseen.excluded,
+        excluded_unseen_exposure=train_unseen_exposure,
         bandings=bandings, groupings=groupings,
     )
     report.check_cancelled()
@@ -801,6 +839,8 @@ def compute_diagnostics(
         family=spec.family, power=power, theta=theta,
         excluded_zero_weight=holdout_rows.excluded,
         excluded_unknown_response=holdout_rows.excluded_unknown,
+        excluded_unseen_level=holdout_unseen.excluded,
+        excluded_unseen_exposure=holdout_unseen_exposure,
         bandings=bandings, groupings=groupings,
     )
 
@@ -942,6 +982,18 @@ def backtest_model(
     report.update(0.1, "backtest: scoring")
     rows = drop_zero_weight_rows(data, spec)  # FR-111, as at fit time
     data, model_offset = rows.data, rows.take(model_offset)
+    # FR-2143: a GLM's rows on a level the fit has no relativity for (Factor not declaring
+    # `map_to_base`) are excluded and counted, as at fit time. A booster is not a relativity table.
+    unseen_rows: int | None = None
+    unseen_exposure: Decimal | None = None
+    if isinstance(fit, GlmFitResult):
+        unseen = drop_unseen_level_rows(
+            fit, data, factors, bandings=bandings, groupings=groupings
+        )
+        unseen_rows, unseen_exposure = unseen.excluded, _unseen_exposure(spec, data, unseen)
+        if unseen.excluded > 0 and unseen.data.height == 0:
+            raise AllRowsUnseenError(partition="backtest", rows=unseen.excluded)
+        data, model_offset = unseen.data, unseen.take(model_offset)
     mu = score_fitted(
         fit, spec, data, factors,
         model_offset=model_offset, bandings=bandings, groupings=groupings, booster=booster,
@@ -955,6 +1007,8 @@ def backtest_model(
         mu=mu, family=family, power=power, theta=_theta_of(spec),
         excluded_zero_weight=rows.excluded,
         excluded_unknown_response=rows.excluded_unknown,
+        excluded_unseen_level=unseen_rows,
+        excluded_unseen_exposure=unseen_exposure,
         bandings=bandings, groupings=groupings,
     )
 

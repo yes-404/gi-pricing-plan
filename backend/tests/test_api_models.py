@@ -109,6 +109,27 @@ def _factor(api_client: TestClient, actuary: dict[str, str], dataset_id: str) ->
     assert created.status_code == 201, created.text
 
 
+@pytest.mark.req("FR-2143")
+def test_a_factor_may_not_declare_map_to_default(
+    api_client: TestClient, actuary: dict[str, str]
+) -> None:
+    """`Factor` refuses it, so the route answers 422 with the field, not a 500 at fit."""
+    body = {
+        "slug": "area-unseen", "dataset_id": str(new_uuid7()), "source_columns": ["area"],
+    }
+    refused = api_client.post(
+        "/api/v1/factors", json={**body, "unseen_level_behaviour": "map_to_default"},
+        headers=actuary,
+    )
+    assert refused.status_code == 422, refused.text
+    declared = api_client.post(
+        "/api/v1/factors", json={**body, "unseen_level_behaviour": "map_to_base"},
+        headers=actuary,
+    )
+    assert declared.status_code == 201, declared.text
+    assert declared.json()["unseen_level_behaviour"] == "map_to_base"
+
+
 # -- the silent filter ---------------------------------------------------------------------
 
 

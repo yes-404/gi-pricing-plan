@@ -771,3 +771,61 @@ async def test_a_failed_build_leaves_no_reserved_surrogate_behind(
     assert surrogates == [], "a failed build must leave no reserved surrogate behind"
     assert reservations == 0, "nor an audit event for a reservation that did not happen"
 
+
+# -- FR-2143: the surrogate's diagnostics refuse as the fit's diagnostics do -----------
+
+
+@pytest.mark.req("FR-2143")
+async def test_a_surrogate_with_no_row_left_to_measure_fails_the_job_with_the_count(
+    database: Database, blob_store: BlobStore, workspace_id: UUID,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Every holdout row of the surrogate's diagnostics is excluded: the Job's failure is the
+    code, the partition and the count, and the next step."""
+    from pricing_core.modelling.predict import ALL_ROWS_UNSEEN_TEXT, AllRowsUnseenError
+
+    model_id, _ = await _fitted_gbm(database, blob_store, workspace_id)
+    actor = await _actuary(database, workspace_id)
+
+    def _none_left(*_args: object, **_kwargs: object) -> object:
+        raise AllRowsUnseenError(partition="holdout", rows=7)
+
+    monkeypatch.setattr(pricing_modelling, "compute_diagnostics", _none_left)
+
+    refusal = await _transparency_refusal(database, blob_store, workspace_id, model_id, actor)
+
+    assert refusal.code == "UNSEEN_LEVEL_BEHAVIOUR_REQUIRED"
+    assert refusal.status_code == 409
+    assert refusal.detail == ALL_ROWS_UNSEEN_TEXT.format(count=7, partition="holdout")
+
+
+@pytest.mark.req("FR-2143")
+async def test_a_refusal_escaping_the_surrogates_diagnostics_keeps_its_code_and_a_fixed_text(
+    database: Database, blob_store: BlobStore, workspace_id: UUID,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A refusal that escapes the surrogate's diagnostics is the fixed value-free sentence under
+    its own code, never the exception's text."""
+    from app.worker import model_handlers
+    from pricing_core.modelling.predict import PredictionError
+
+    sentinel = "SENTINEL-7c1d"
+    model_id, _ = await _fitted_gbm(database, blob_store, workspace_id)
+    actor = await _actuary(database, workspace_id)
+
+    def _refuse(*_args: object, **_kwargs: object) -> object:
+        raise PredictionError(
+            "UNSEEN_LEVEL_BEHAVIOUR_REQUIRED", f"factor 'area' carries the level {sentinel!r}"
+        )
+
+    monkeypatch.setattr(pricing_modelling, "compute_diagnostics", _refuse)
+
+    refusal = await _transparency_refusal(database, blob_store, workspace_id, model_id, actor)
+
+    assert refusal.code == "UNSEEN_LEVEL_BEHAVIOUR_REQUIRED"
+    assert refusal.status_code == 409
+    assert refusal.detail == model_handlers._diagnostics_refusal(
+        PredictionError("UNSEEN_LEVEL_BEHAVIOUR_REQUIRED", "x")
+    ).detail
+    assert sentinel not in f"{refusal.title} {refusal.detail}"
+

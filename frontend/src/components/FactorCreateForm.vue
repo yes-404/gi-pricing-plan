@@ -28,8 +28,10 @@ import {
   FACTOR_INTENT_LABELS,
   MONOTONIC_DIRECTION_LABELS,
   OFFERED_FACTOR_INTENTS,
+  UNSEEN_LEVEL_BEHAVIOUR_LABELS,
   type Factor,
   type FactorIntent,
+  type FactorUnseenLevelBehaviour,
   type MonotonicDirection,
 } from "@/api/models";
 import { ProblemError } from "@/api/problem";
@@ -43,6 +45,8 @@ const slug = ref("");
 const intent = ref<FactorIntent>("risk");
 const direction = ref<MonotonicDirection>("none");
 const rationale = ref("");
+/** "" is not declared: a level the fit never saw is refused (FR-2143). */
+const unseen = ref<FactorUnseenLevelBehaviour | "">("");
 const busy = ref(false);
 const problem = ref<ProblemError | null>(null);
 const created = ref<Factor | null>(null);
@@ -71,6 +75,7 @@ async function submit(): Promise<void> {
       // Omitted rather than sent empty when there is no direction: the field is
       // `str | None`, and "" is a rationale that says nothing.
       ...(rationaleRequired.value ? { monotonic_rationale: rationale.value.trim() } : {}),
+      ...(unseen.value ? { unseen_level_behaviour: unseen.value } : {}),
     });
     created.value = factor;
     emit("created", factor);
@@ -182,6 +187,36 @@ async function submit(): Promise<void> {
         rows="2"
         class="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm"
       />
+    </FormField>
+
+    <FormField
+      v-slot="{ describedby }"
+      field-id="factor-unseen"
+      label="A level the fit never saw"
+      help="Not declared refuses: a quote carrying such a level is not scored. Declaring
+            refuse says so explicitly. Map to base scores a GLM's quote as the base; a GBM or
+            an EBM refuses whatever is declared. This includes the missing-value level of a
+            banded factor, and the out-of-range level where a banding maps out-of-range
+            values to it: if the fit had no such rows, an undeclared quote with a missing
+            or out-of-range value is refused."
+    >
+      <select
+        id="factor-unseen"
+        v-model="unseen"
+        :aria-describedby="describedby"
+        class="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+      >
+        <option value="">
+          Not declared (refuses)
+        </option>
+        <option
+          v-for="(label, value) in UNSEEN_LEVEL_BEHAVIOUR_LABELS"
+          :key="value"
+          :value="value"
+        >
+          {{ label }}
+        </option>
+      </select>
     </FormField>
 
     <button

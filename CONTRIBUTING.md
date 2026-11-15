@@ -115,12 +115,13 @@ Review is by risk, in four tiers:
    cross-review by hand, and the three working days run from that request.
 4. **The rest of the core team's work:** an independent audit.
 
-The six high-risk areas:
+The seven high-risk areas:
 
 - the rating and scoring path;
 - money handling;
 - the shared data contracts (`packages/model-schema/`, `docs/contracts/`);
 - authentication and roles;
+- the audit trail: how an audit event is recorded and chained, and its routes;
 - database migrations;
 - the project's own rules and CI (`CLAUDE.md`, `CONTRIBUTING.md`, `SECURITY.md`, `.github/`).
 

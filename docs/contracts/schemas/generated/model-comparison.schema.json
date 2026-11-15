@@ -60,6 +60,20 @@
           "title": "Double Lift",
           "type": "array"
         },
+        "exposure_excluded_unseen_level": {
+          "anyOf": [
+            {
+              "description": "Exact decimal as a string; never a binary float (FR-10).",
+              "pattern": "^-?[0-9]+(\\.[0-9]+)?$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Exposure Excluded Unseen Level"
+        },
         "holdout_rows": {
           "minimum": 1,
           "title": "Holdout Rows",
@@ -88,6 +102,19 @@
           },
           "title": "Relativity Differences",
           "type": "array"
+        },
+        "rows_excluded_unseen_level": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Rows Excluded Unseen Level"
         },
         "split_ref": {
           "$ref": "#/$defs/SplitRef"

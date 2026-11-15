@@ -490,6 +490,7 @@ export const DRIVER_AGE_FACTOR: Factor = {
   operand_factor_ids: [],
   base_level_method: "largest_exposure",
   base_level: null,
+  unseen_level_behaviour: null,
   banding_id: null,
   grouping_id: null,
   intent: "risk",

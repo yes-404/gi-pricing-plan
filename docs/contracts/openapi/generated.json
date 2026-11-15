@@ -2362,9 +2362,16 @@
         "description": "A band whose claim count is below `min_claims_per_band`: whole claims.",
         "properties": {
           "band_index": {
-            "minimum": 0.0,
-            "title": "Band Index",
-            "type": "integer"
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Band Index"
           },
           "band_label": {
             "title": "Band Label",
@@ -2739,6 +2746,19 @@
             "title": "Double Lift",
             "type": "array"
           },
+          "exposure_excluded_unseen_level": {
+            "anyOf": [
+              {
+                "description": "Exact decimal as a string; never a binary float (FR-10).",
+                "pattern": "^-?[0-9]+(\\.[0-9]+)?$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exposure Excluded Unseen Level"
+          },
           "holdout_rows": {
             "minimum": 1.0,
             "title": "Holdout Rows",
@@ -2767,6 +2787,18 @@
             },
             "title": "Relativity Differences",
             "type": "array"
+          },
+          "rows_excluded_unseen_level": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rows Excluded Unseen Level"
           },
           "split_ref": {
             "$ref": "#/components/schemas/SplitRef"
@@ -6436,9 +6468,16 @@
         "description": "A band whose exposure is below `min_exposure_per_band`: exact decimals (FR-10).",
         "properties": {
           "band_index": {
-            "minimum": 0.0,
-            "title": "Band Index",
-            "type": "integer"
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Band Index"
           },
           "band_label": {
             "title": "Band Label",
@@ -6601,6 +6640,16 @@
           "type": {
             "$ref": "#/components/schemas/FactorType"
           },
+          "unseen_level_behaviour": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/UnseenLevelBehaviour"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "version": {
             "minimum": 1.0,
             "title": "Version",
@@ -6711,6 +6760,22 @@
           "type": {
             "$ref": "#/components/schemas/FactorType",
             "default": "identity"
+          },
+          "unseen_level_behaviour": {
+            "anyOf": [
+              {
+                "description": "What a GLM scores for a level of this Factor that its fit never saw. `error` refuses it; `map_to_base` scores it as the base. Unset refuses. A GBM or an EBM refuses whatever is declared. `map_to_default` is not offered: a Factor names no fit, so it cannot name a default fitted level.",
+                "enum": [
+                  "error",
+                  "map_to_base"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unseen Level Behaviour"
           }
         },
         "required": [
@@ -7813,6 +7878,34 @@
                 "type": "null"
               }
             ]
+          },
+          "unseen_cell_reports": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/UnseenCellReport"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unseen Cell Reports"
+          },
+          "unseen_level_gaps": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/UnseenLevelGap"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unseen Level Gaps"
           }
         },
         "required": [
@@ -12431,6 +12524,19 @@
             "title": "Calibration",
             "type": "array"
           },
+          "exposure_excluded_unseen_level": {
+            "anyOf": [
+              {
+                "description": "Exact decimal as a string; never a binary float (FR-10).",
+                "pattern": "^-?[0-9]+(\\.[0-9]+)?$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exposure Excluded Unseen Level"
+          },
           "gini": {
             "title": "Gini",
             "type": "number"
@@ -12473,6 +12579,18 @@
               }
             ],
             "title": "Rows Excluded Unknown Response"
+          },
+          "rows_excluded_unseen_level": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rows Excluded Unseen Level"
           },
           "rows_excluded_zero_weight": {
             "anyOf": [
@@ -19067,6 +19185,74 @@
         "title": "UniversalDiagnostics",
         "type": "object"
       },
+      "UnseenCellReport": {
+        "additionalProperties": false,
+        "description": "One `interaction` term: the cells its operands can produce that the fit has no relativity\nfor (FR-2143). `producible` and `unfitted` are `None` exactly when `state` is `not_examined`.",
+        "properties": {
+          "example_cap": {
+            "minimum": 0.0,
+            "title": "Example Cap",
+            "type": "integer"
+          },
+          "examples": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Examples",
+            "type": "array"
+          },
+          "factor": {
+            "title": "Factor",
+            "type": "string"
+          },
+          "producible": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Producible"
+          },
+          "state": {
+            "$ref": "#/components/schemas/UnseenCellState"
+          },
+          "unfitted": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unfitted"
+          }
+        },
+        "required": [
+          "factor",
+          "state",
+          "example_cap"
+        ],
+        "title": "UnseenCellReport",
+        "type": "object"
+      },
+      "UnseenCellState": {
+        "description": "What the fit-time report could say about one interaction term (FR-2143).\n\nFour states, because a report that says nothing where it did not look reads as \"nothing found\":\n`examined` (the count is exact and up to `example_cap` unfitted cells are named),\n`count_only` (exact count; too many producible cells to name any: *not enumerated*),\n`lower_bound` (an operand's levels are the data's and cannot be listed, so its levels are\ntaken from the cross's own fitted cells: the count is a floor, \"at least N pairings of levels\nthe fit saw separately and never together\", and levels the fit never saw at all are NOT\ncounted; up to `example_cap` are named, none when there are too many), and `not_examined`\n(cannot be computed at all: a nested interaction, an artifact not supplied, a level holding\nthe cell separator; there is no count).",
+        "enum": [
+          "examined",
+          "count_only",
+          "lower_bound",
+          "not_examined"
+        ],
+        "title": "UnseenCellState",
+        "type": "string"
+      },
       "UnseenLevelBehaviour": {
         "description": "What scoring does with a Level the Grouping has never seen (FR-104).\n\nMandatory — the field carries no default anywhere in this module. A grouping that\nsilently drops an unseen level prices it as the base, which is the cheapest cell by\nconstruction, and nobody finds out before the loss ratio does.",
         "enum": [
@@ -19075,6 +19261,46 @@
           "map_to_base"
         ],
         "title": "UnseenLevelBehaviour",
+        "type": "string"
+      },
+      "UnseenLevelGap": {
+        "additionalProperties": false,
+        "description": "One level a Factor can produce that the fit has no relativity for (FR-2143).\n\nA quote that reaches it is refused unless the Factor declares `map_to_base`. The cells of an\n`interaction` Factor are not listed here: `UnseenCellReport` carries them, with a count and at\nmost `example_cap` named.",
+        "properties": {
+          "factor": {
+            "title": "Factor",
+            "type": "string"
+          },
+          "level": {
+            "title": "Level",
+            "type": "string"
+          },
+          "reached_by": {
+            "items": {
+              "$ref": "#/components/schemas/UnseenLevelReach"
+            },
+            "minItems": 1,
+            "title": "Reached By",
+            "type": "array"
+          }
+        },
+        "required": [
+          "factor",
+          "level",
+          "reached_by"
+        ],
+        "title": "UnseenLevelGap",
+        "type": "object"
+      },
+      "UnseenLevelReach": {
+        "description": "How a quote can reach a level the fit has no relativity for (FR-2143).",
+        "enum": [
+          "null_value",
+          "below_range",
+          "above_range",
+          "grouping_target"
+        ],
+        "title": "UnseenLevelReach",
         "type": "string"
       },
       "UpdateSettings": {
