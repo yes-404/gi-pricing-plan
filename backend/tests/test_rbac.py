@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import pytest
 from backend.tests.conftest_db import seed_as_owner
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models import AuditEventRow, RoleAssignmentRow, RoleRow, ServiceAccountRow
@@ -344,7 +344,10 @@ async def test_a_principal_cannot_grant_a_role_to_itself(
     admin = _user()
     await _assign(database, workspace_id, admin, "admin")
     await _assign(database, workspace_id, admin, "analyst")
-    await _grant_refused(database, workspace_id, admin, kind=kind, principal_id=admin.id)
+    refusal = await _grant_refused(
+        database, workspace_id, admin, kind=kind, principal_id=admin.id
+    )
+    assert refusal.title == "Cannot grant a role to yourself"
 
 
 @pytest.mark.req("FR-348")
@@ -363,6 +366,7 @@ async def test_a_self_grant_of_an_unknown_role_is_refused_not_missing(
         role_slug="no-such-role",
     )
     assert refusal.status_code == 403
+    assert refusal.title == "Cannot grant a role to yourself"
 
 
 @pytest.mark.req("FR-348")
@@ -375,7 +379,66 @@ async def test_a_principal_cannot_grant_a_role_to_a_service_account_it_owns(
     await _assign(database, workspace_id, admin, "admin")
     await _assign(database, workspace_id, admin, "analyst")
     account = await _seed_service_account(workspace_id, admin.id)
-    await _grant_refused(database, workspace_id, admin, kind=kind, principal_id=account.id)
+    refusal = await _grant_refused(
+        database, workspace_id, admin, kind=kind, principal_id=account.id
+    )
+    assert refusal.title == "Cannot grant a role to a service account you own"
+
+
+@pytest.mark.req("FR-348")
+async def test_grant_role_itself_reads_the_owner_of_the_account(
+    database: Database, owner_database: Database, workspace_id
+) -> None:
+    """The refusal comes from `grant_role` reading `created_by`, not from a helper or a
+    fixture: the same account, the same granter, refused while the granter is the recorded
+    owner and granted once the recorded owner is someone else."""
+    admin, other = _user(), _user()
+    await _assign(database, workspace_id, admin, "admin")
+    account = await _seed_service_account(workspace_id, admin.id)
+    refusal = await _grant_refused(
+        database, workspace_id, admin, kind="service_account", principal_id=account.id
+    )
+    assert refusal.title == "Cannot grant a role to a service account you own"
+
+    async def hand_over(session: AsyncSession) -> None:
+        await session.execute(
+            update(ServiceAccountRow)
+            .where(ServiceAccountRow.id == account.id)
+            .values(created_by=other.id)
+        )
+
+    await seed_as_owner(hand_over)
+    async with owner_database.unit_of_work() as session:
+        assignment = await rbac.grant_role(
+            session,
+            workspace_id=workspace_id,
+            granter=admin,
+            principal_kind="service_account",
+            principal_id=account.id,
+            role_slug="analyst",
+        )
+    assert assignment.principal_id == account.id
+
+
+@pytest.mark.req("FR-348")
+async def test_the_owner_lookup_is_scoped_to_the_granters_workspace(
+    database: Database, owner_database: Database, workspace_id
+) -> None:
+    """An account of ANOTHER workspace that the granter created is not found by the owner
+    lookup (`rbac.py` filters by workspace), so the ownership refusal does not fire."""
+    admin = _user()
+    await _assign(database, workspace_id, admin, "admin")
+    foreign = await _seed_service_account(new_uuid7(), admin.id)
+    async with owner_database.unit_of_work() as session:
+        assignment = await rbac.grant_role(
+            session,
+            workspace_id=workspace_id,
+            granter=admin,
+            principal_kind="service_account",
+            principal_id=foreign.id,
+            role_slug="analyst",
+        )
+    assert assignment.workspace_id == workspace_id
 
 
 @pytest.mark.req("FR-348")
@@ -418,7 +481,8 @@ async def test_a_service_account_is_never_granted_an_approval_or_deployment_role
         principal_id=account.id,
         role_slug=role_slug,
     )
-    assert "FR-347" in refusal.detail
+    assert refusal.title == "Cannot grant this role to a service account"
+    assert "FR-347" in (refusal.detail or "")
 
 
 @pytest.mark.req("FR-348")
