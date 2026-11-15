@@ -303,6 +303,31 @@ def test_a_scoring_frame_without_the_offset_column_is_refused(backend: str) -> N
         predict_gbm(fit.result, fit.booster_bytes, data.drop("exposure_years"))
 
 
+@pytest.mark.req("NFR-499")
+@pytest.mark.parametrize("backend", BACKENDS)
+def test_an_unseen_level_is_refused_by_count_and_position_never_by_value(backend: str) -> None:
+    """FD-1219 (#1657): the refusal's text reaches `JobError.message`, which `GET /jobs/{id}`
+    serves, so it names how many levels the fitted model never saw and where they sit in the
+    frame's sorted levels, and never the level itself. The code is unchanged and `terms` keeps
+    the values for an in-process caller."""
+    sentinel = "SENTINEL-dataset-level-5b1c"
+    data = _frequency_data()
+    fit = fit_gbm(data, _spec(backend), FACTORS)
+    scoring = data.head(20).with_columns(
+        pl.when(pl.int_range(pl.len()) < 3)
+        .then(pl.lit(sentinel))
+        .otherwise(pl.col("area"))
+        .alias("area")
+    )
+    with pytest.raises(GbmFitError) as refused:
+        predict_gbm(fit.result, fit.booster_bytes, scoring)
+    assert refused.value.code == "UNSEEN_LEVEL_BEHAVIOUR_REQUIRED"
+    assert sentinel not in str(refused.value)
+    assert "carries 1 level(s)" in str(refused.value)
+    assert "'area'" in str(refused.value), "control: the factor is still named"
+    assert refused.value.terms == (sentinel,)
+
+
 @pytest.mark.req("FR-121")
 @pytest.mark.parametrize("backend", BACKENDS)
 def test_a_counting_objective_refuses_a_book_with_no_exposure(backend: str) -> None:
