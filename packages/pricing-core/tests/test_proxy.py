@@ -272,6 +272,42 @@ def test_a_non_finite_or_null_share_is_refused_with_the_reference_code(
 
 
 @pytest.mark.req("FR-2139")
+def test_a_sum_of_finite_exposures_that_overflows_is_refused() -> None:
+    """Two finite 1e308 exposures sum to infinity; total_exposure must not be returned as inf."""
+    frame = _frame(["k1", "k2"], ["A", "B"], [1e308, 1e308])
+    with pytest.raises(ProxyAssessmentError) as caught:
+        _assess(frame, _good_reference(), ["x", "y"])
+    assert caught.value.code == "PROXY_INPUT_INVALID"
+    assert "total_exposure" in str(caught.value)
+
+
+@pytest.mark.req("FR-2139")
+def test_an_auc_that_overflows_is_refused_never_returned_as_null_or_a_number() -> None:
+    """Finite total (2e200), but the AUC's pooled products overflow: refused, not None, not 1.0."""
+    frame = _frame(["k1", "k2"], ["A", "B"], [1e200, 1e200])
+    with pytest.raises(ProxyAssessmentError) as caught:
+        _assess(frame, _good_reference(), ["x", "y"])
+    assert caught.value.code == "PROXY_INPUT_INVALID"
+    assert "AUC" in str(caught.value)
+    # names the measure, never a value
+    assert "e+200" not in str(caught.value)
+    assert "1e200" not in str(caught.value)
+
+
+@pytest.mark.req("FR-2139")
+def test_every_returned_measure_is_finite_or_none_on_ordinary_data() -> None:
+    frame = _frame(["k1", "k2", "k3"], ["A", "B", "A"], [1.0, 2.0, 3.0])
+    ref = _subject_reference(["k1", "k2", "k3"], ["x", "y", "x"], ["x", "y"])
+    result = _assess(frame, ref, ["x", "y"])
+    values: list[float | None] = [result.total_exposure, result.matched_exposure, result.coverage]
+    for f in result.factors:
+        values += [f.mutual_information_bits, f.normalised_mutual_information]
+        values += list(f.auc_by_class.values())
+    assert all(v is None or math.isfinite(v) for v in values)
+    assert isinstance(result.matched_rows, int)
+
+
+@pytest.mark.req("FR-2139")
 def test_a_non_numeric_exposure_column_is_refused_naming_the_column() -> None:
     frame = pl.DataFrame({"k": ["k1", "k2"], "level": ["A", "B"], "exposure_years": ["a", "b"]})
     with pytest.raises(ProxyAssessmentError) as caught:

@@ -100,12 +100,10 @@ def assess_proxies(
     if clash:
         raise ProxyAssessmentError(
             "PROXY_INPUT_INVALID", f"class names clash with frame columns {clash}")
+    selected = frame.select([*kept, weight.alias("_w")])
+    reference_side = reference.select([pl.col(reference_key).alias(key), *class_list])
     try:
-        joined = frame.select([*kept, weight.alias("_w")]).join(
-            reference.select([pl.col(reference_key).alias(key), *class_list]),
-            on=key,
-            how="left",
-        )
+        joined = selected.join(reference_side, on=key, how="left")
     except pl.exceptions.PolarsError:
         # Polars' own text can carry a cell value (NFR-499), so it is not passed on.
         raise ProxyAssessmentError(
@@ -114,18 +112,53 @@ def assess_proxies(
             "their types differ",
         ) from None
     total_exposure = float(joined["_w"].sum())
+    # Every exposure is finite, but their sum can overflow; refuse it before it is divided.
+    _require_finite("total_exposure", total_exposure)
     matched = joined.filter(pl.col(class_list[0]).is_not_null())
     matched_exposure = float(matched["_w"].sum())
     coverage = matched_exposure / total_exposure if total_exposure > 0 else 0.0
 
-    results = tuple(_assess_factor(matched, factor, class_list) for factor in factors)
-    return ProxyAssessmentResult(
+    # An overflow inside a measure is the exit check's to report, not a numpy warning's.
+    with np.errstate(over="ignore", invalid="ignore", divide="ignore"):
+        results = tuple(_assess_factor(matched, factor, class_list) for factor in factors)
+    result = ProxyAssessmentResult(
         matched_rows=matched.height,
         matched_exposure=matched_exposure,
         total_exposure=total_exposure,
         coverage=coverage,
         factors=results,
     )
+    _require_finite_result(result)
+    return result
+
+
+def _require_finite(name: str, value: float | None) -> None:
+    """A measure is a finite number or, where its type allows, ``None``; never NaN or infinity.
+
+    The input checks of `_validate` cannot list every way arithmetic goes non-finite (a sum
+    of finite exposures overflows; a product of two large weights does), so this runs on what
+    is about to be returned. The message names the measure and never a value (NFR-499).
+    """
+    if value is not None and not math.isfinite(value):
+        raise ProxyAssessmentError(
+            "PROXY_INPUT_INVALID",
+            f"the assessment is not finite ({name}): the exposures are too large to aggregate",
+        )
+
+
+def _require_finite_result(result: ProxyAssessmentResult) -> None:
+    # `matched_rows` is a row count (an int) and cannot be non-finite.
+    _require_finite("total_exposure", result.total_exposure)
+    _require_finite("matched_exposure", result.matched_exposure)
+    _require_finite("coverage", result.coverage)
+    for factor in result.factors:
+        _require_finite(f"mutual information of {factor.factor!r}", factor.mutual_information_bits)
+        _require_finite(
+            f"normalised mutual information of {factor.factor!r}",
+            factor.normalised_mutual_information,
+        )
+        for cls, auc in factor.auc_by_class.items():
+            _require_finite(f"AUC of {factor.factor!r} for class {cls!r}", auc)
 
 
 def _validate(
@@ -236,4 +269,8 @@ def _auc(joint: NDArray[np.float64], k: int) -> float | None:
     pool_neg = np.bincount(pool, weights=neg[keep])
     below = np.cumsum(pool_neg) - pool_neg
     auc = float((pool_pos * (below + 0.5 * pool_neg)).sum() / (positive * negative))
-    return min(max(auc, 0.0), 1.0) if math.isfinite(auc) else None
+    if not math.isfinite(auc):
+        # Returned as it is, never clamped or turned into None: ``None`` means "one-sided",
+        # and the exit check refuses a non-finite measure.
+        return auc
+    return min(max(auc, 0.0), 1.0)  # rounding can leave 1 + 1e-16
