@@ -304,6 +304,14 @@ async def require_permission(
         raise PermissionDeniedError(permission, resource, held_elsewhere=held_elsewhere)
 
 
+#: FR-347: the permission families a Service Account can never hold.
+_SERVICE_ACCOUNT_BARRED_PREFIXES = ("approval:", "deployment:")
+
+
+def _service_account_barred(permissions: list[str]) -> set[str]:
+    return {p for p in permissions if p.startswith(_SERVICE_ACCOUNT_BARRED_PREFIXES)}
+
+
 async def grant_role(
     session: AsyncSession,
     *,
@@ -360,6 +368,19 @@ async def grant_role(
             )
         )
     ).scalar_one_or_none()
+    # FR-347 by rule: a Service Account never holds an approval or deployment permission.
+    # `effective_permissions` reads role assignments by `principal_id` alone, so an assigned
+    # Approver role would reach a Service Account's credential. Refused for every account,
+    # owned or not, before the ownership rule and before any insert.
+    if account is not None and (barred := _service_account_barred(role.permissions)):
+        raise PlatformError(
+            "PERMISSION_DENIED",
+            "Cannot grant this role to a service account",
+            403,
+            f"A service account never holds an approval or deployment permission "
+            f"(FR-347); the role {role_slug!r} confers {sorted(barred)}.",
+        )
+
     # `created_by` NULL means the owner is unknown: deny by default.
     if account is not None and (account.created_by is None or account.created_by == granter.id):
         raise PlatformError(

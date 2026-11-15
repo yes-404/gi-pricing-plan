@@ -291,7 +291,13 @@ async def _seed_service_account(workspace_id, created_by) -> ServiceAccountRow:
 
 
 async def _grant_refused(
-    database: Database, workspace_id, granter, *, kind: str, principal_id
+    database: Database,
+    workspace_id,
+    granter,
+    *,
+    kind: str,
+    principal_id,
+    role_slug: str = "analyst",
 ) -> PlatformError:
     """Attempt the grant as the application role, assert it was refused, and that nothing
     was written or audited."""
@@ -303,7 +309,7 @@ async def _grant_refused(
                 granter=granter,
                 principal_kind=kind,
                 principal_id=principal_id,
-                role_slug="analyst",
+                role_slug=role_slug,
             )
     async with database.session() as session:
         rows = (
@@ -367,6 +373,31 @@ async def test_a_service_account_with_an_unknown_owner_is_refused(
     await _grant_refused(
         database, workspace_id, admin, kind="service_account", principal_id=account.id
     )
+
+
+@pytest.mark.req("FR-347")
+@pytest.mark.parametrize("owner", ["granter", "another", "unknown"])
+@pytest.mark.parametrize("role_slug", ["approver", "deployer"])
+async def test_a_service_account_is_never_granted_an_approval_or_deployment_role(
+    database: Database, workspace_id, owner: str, role_slug: str
+) -> None:
+    """FR-347 by rule, for an owned, a colleague's and an unowned account alike: the grant
+    is refused before any insert and before the audit record, and the refusal names FR-347
+    (so it is not one of the ownership refusals, which an account owned by another
+    principal would not meet)."""
+    admin, other = _user(), _user()
+    await _assign(database, workspace_id, admin, "admin")
+    created_by = {"granter": admin.id, "another": other.id, "unknown": None}[owner]
+    account = await _seed_service_account(workspace_id, created_by)
+    refusal = await _grant_refused(
+        database,
+        workspace_id,
+        admin,
+        kind="service_account",
+        principal_id=account.id,
+        role_slug=role_slug,
+    )
+    assert "FR-347" in refusal.detail
 
 
 @pytest.mark.req("FR-348")
