@@ -6667,12 +6667,18 @@
           "unseen_level_behaviour": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/UnseenLevelBehaviour"
+                "description": "What a GLM scores for a level of this Factor that its fit never saw. `error` refuses it; `map_to_base` scores it as the base. Unset refuses. A GBM or an EBM refuses whatever is declared. `map_to_default` is not offered: a Factor names no fit, so it cannot name a default fitted level.",
+                "enum": [
+                  "error",
+                  "map_to_base"
+                ],
+                "type": "string"
               },
               {
                 "type": "null"
               }
-            ]
+            ],
+            "title": "Unseen Level Behaviour"
           }
         },
         "required": [

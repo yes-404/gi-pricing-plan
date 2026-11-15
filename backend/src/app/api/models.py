@@ -86,6 +86,7 @@ from model_schema import (
     Factor,
     FactorIntent,
     FactorType,
+    FactorUnseenLevelBehaviour,
     Grouping,
     GroupingEvaluation,
     GroupingProposal,
@@ -105,7 +106,6 @@ from model_schema import (
     Slug,
     SpecValidation,
     TransparencyArtifact,
-    UnseenLevelBehaviour,
 )
 from model_schema import Permission as Perm
 from model_schema.rating import ChangeSummaryDraft
@@ -228,10 +228,9 @@ class FactorCreate(BaseModel):
     #: bound and description cannot drift from the artifact's. The `expression` arm of
     #: `Factor`'s validator answers a missing or misplaced formula as a 422 here.
     expression: str | None = cast(Any, Factor.model_fields["expression"])
-    #: Bound from `Factor` the same way; its validator answers `map_to_default` as a 422.
-    unseen_level_behaviour: UnseenLevelBehaviour | None = cast(
-        Any, Factor.model_fields["unseen_level_behaviour"]
-    )
+    #: model-schema's Factor-specific type, so the create contract offers `error` and
+    #: `map_to_base` and no other value; `map_to_default` is a 422 at validation.
+    unseen_level_behaviour: FactorUnseenLevelBehaviour | None = None
 
     def as_factor(self) -> Factor:
         return Factor(id=uuid4(), version=1, **self.model_dump())

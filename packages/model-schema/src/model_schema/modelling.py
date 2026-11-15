@@ -54,6 +54,7 @@ __all__ = [
     "Factor",
     "FactorIntent",
     "FactorType",
+    "FactorUnseenLevelBehaviour",
     "FitResult",
     "GbmFitResult",
     "GbmFunctionRef",
@@ -542,6 +543,22 @@ class UnseenLevelBehaviour(enum.StrEnum):
     ERROR = "error"
     MAP_TO_DEFAULT = "map_to_default"
     MAP_TO_BASE = "map_to_base"
+
+
+#: What a Factor may declare for a level its fit never saw (`02` FR-2143). A Factor-specific
+#: type, not the Grouping's enum: `map_to_default` is a Grouping behaviour and a Factor refuses
+#: it, so the Factor's create contract offers exactly these two values and no more.
+FactorUnseenLevelBehaviour = Annotated[
+    Literal["error", "map_to_base"],
+    Field(
+        description=(
+            "What a GLM scores for a level of this Factor that its fit never saw. `error` "
+            "refuses it; `map_to_base` scores it as the base. Unset refuses. A GBM or an "
+            "EBM refuses whatever is declared. `map_to_default` is not offered: a Factor "
+            "names no fit, so it cannot name a default fitted level."
+        )
+    ),
+]
 
 
 class GroupingEvidence(BaseModel):
