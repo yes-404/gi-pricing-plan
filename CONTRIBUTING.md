@@ -79,8 +79,11 @@ pnpm --dir frontend test && pnpm --dir frontend build
 ## Pull requests
 
 - **One Work is one pull request**, built as a series of commits, one per slice. Each
-  commit carries its spec change, code and tests, passes the gate on its own, and is
-  reviewed on its own. Fold a fix into the commit it belongs to.
+  slice commit carries its spec change, code and tests, and is reviewed on its own.
+  The pull request squash-merges, and the squash commit is what must pass the gate:
+  it is the tree that CI and the candidate gate run. A fix made during review is a new
+  commit on top, never a rewrite of a pushed branch (no rebase, no force-push); the
+  commit table names which slice each fix belongs to.
 - The title is a Conventional Commit line. Add one type label. Fill in the template: the
   commit table, the gate evidence (range `origin/main...<branch>`), the changelog line,
   the decisions reached, and the AI disclosure.
