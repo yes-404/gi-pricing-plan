@@ -8,6 +8,13 @@ The backfill reads each account's `service_account.created` audit event (workspa
 `entity_ref = service_account:<slug>@1`) and takes the actor's id. An account with no such
 event keeps NULL. The upgrade prints how many rows the backfill leaves NULL.
 
+Reversibility (FR-416): reversible with loss. `downgrade()` drops the column, and the
+owners it holds, backfilled or recorded at creation, are lost with it. Nothing else is
+touched. The audit events are append-only and stay, so a later upgrade derives each owner
+again from its `service_account.created` event; an account with no such event comes back
+NULL. NULL is refused by `grant_role`, so a lost owner makes an account unassignable, never
+over-permitted.
+
 Revision ID: a1d9e47c3b52
 Revises: c3a8e51f7d20
 Create Date: 2026-11-15 12:00:00+00:00
