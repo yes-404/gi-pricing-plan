@@ -16,6 +16,7 @@ relates: [ADR-2136]  # ids only — the FR-/NFR-/ADR- this decision touches
 
 - **Status:** Accepted (front matter `active`). Supersedes nothing.
 - **Deciders:** the maintainer; the detail of the rule was decided on the maintainer's behalf by delegation, 15 Nov 2026.
+- **Decision:** [the maintainer's comment of 15 Nov 2026 on #1489](https://github.com/yes-404/gi-pricing-plan/issues/1489#issuecomment-6900988500).
 - **Amends:** the count of high-risk areas in ADR-2136 ("with six high-risk areas"). ADR-2136 is not edited and not superseded as a whole.
 
 ## Context
