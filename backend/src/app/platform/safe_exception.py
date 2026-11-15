@@ -17,15 +17,23 @@ frames of the logged traceback.
 
 from __future__ import annotations
 
+import re
 import types
 from typing import Any
 
 from sqlalchemy.exc import DBAPIError
 
-from app.errors import PlatformError
-from pricing_core.safe_error import safe_error_text, safe_exc_info
+from app.errors import PlatformError, is_registered_code
+from pricing_core.safe_error import (
+    CodedError,
+    safe_error_detail,
+    safe_error_text,
+    safe_exc_info,
+)
 
-__all__ = ["safe_job_error_text", "safe_job_exc_info"]
+__all__ = ["coded_job_error", "safe_job_error_text", "safe_job_exc_info"]
+
+_CODE_RE = re.compile(r"[A-Z][A-Z0-9_]*")
 
 
 def safe_job_error_text(exc: BaseException) -> str:
@@ -45,6 +53,23 @@ def safe_job_error_text(exc: BaseException) -> str:
             parts.append(f"constraint {constraint}")
         return f"{type(exc).__name__}: {', '.join(parts)}"
     return safe_error_text(exc)
+
+
+def coded_job_error(exc: BaseException) -> tuple[str, str] | None:
+    """`(code, message)` for a pricing-core `CodedError` whose code a catalogue registers.
+
+    Recognition is by class, never by the shape of the text: a library's
+    `ValueError("FOO_BAR: secret")` is not one. The text is `safe_error_detail`'s, which
+    keeps a `CodedError`'s own input-free message, so no new sink is added (NFR-499). An
+    unregistered code returns `None`, as does anything that is not a `CodedError`; the caller
+    then stores `JOB_HANDLER_FAILED` as before.
+    """
+    if not isinstance(exc, CodedError):
+        return None
+    code, sep, message = safe_error_detail(exc).partition(": ")
+    if not sep or not _CODE_RE.fullmatch(code) or not is_registered_code(code):
+        return None
+    return code, message
 
 
 def safe_job_exc_info(

@@ -137,6 +137,46 @@ def test_a_valid_algorithm_saves(api_client, workspace_id, principal, grant) -> 
     assert response.json()["version"] == 1
 
 
+def _with_a_float_input(body: dict) -> None:
+    body["input_contract"][0]["type"] = "float"
+
+
+def _with_a_float_step_result(body: dict) -> None:
+    next(s for s in body["steps"] if s["step_id"] == "s_office")["result_type"] = "float"
+
+
+def _with_a_float_output(body: dict) -> None:
+    body["outputs"][0]["type"] = "float"
+
+
+@pytest.mark.req("FR-227")
+@pytest.mark.parametrize(
+    ("plant", "field"),
+    [
+        (_with_a_float_input, "input_contract.0.type"),
+        (_with_a_float_step_result, "result_type"),
+        (_with_a_float_output, "outputs.0.type"),
+    ],
+    ids=["input", "step_result", "output"],
+)
+def test_a_float_type_is_refused_at_parse_with_422_naming_the_field(
+    api_client, workspace_id, principal, grant, plant, field
+) -> None:
+    """FR-227 (RL-1958): a `float` input, result or port type is refused at parse, before the type
+    check, with 422 `VALIDATION_FAILED` naming the field; `MONETARY_FLOAT_REFUSED` is not raised."""
+    asyncio.get_event_loop().run_until_complete(grant("analyst"))
+    body = valid_algorithm()
+    plant(body)
+    response = api_client.post(
+        "/api/v1/rating-algorithms", json=body, headers=_headers(principal, workspace_id)
+    )
+    assert response.status_code == 422, response.text
+    problem = response.json()
+    assert problem["code"] == "VALIDATION_FAILED", problem
+    assert problem["code"] != "MONETARY_FLOAT_REFUSED"
+    assert any(error["field"].endswith(field) for error in problem["errors"]), problem
+
+
 @pytest.mark.req("FR-212")
 def test_a_cyclic_algorithm_is_refused_at_save_time(
     api_client, workspace_id, principal, grant

@@ -24,6 +24,7 @@ import pytest
 from model_schema import (
     Banding,
     BandingMethod,
+    Coefficient,
     Factor,
     FactorType,
     GlmFitResult,
@@ -47,6 +48,7 @@ from pricing_core.rating.compile import (
 )
 from pricing_core.rating.runtime import MODEL_CALL_ERROR_KEY, load_bundle
 from pricing_core.rating.score import score_one
+from pricing_core.safe_error import CodedError
 
 DATASET = uuid4()
 MODEL_REF = "model:motor-freq-glm@1"
@@ -657,3 +659,24 @@ async def test_a_glm_model_call_without_result_type_rounds_like_any_other(
         )
         assert exact != round(exact)
         assert result["risk"] == round(exact)
+
+
+@pytest.mark.req("FR-193", "FR-243")
+async def test_a_bundle_whose_glm_term_its_banding_cannot_produce_is_refused_at_load(
+    world: GlmWorld,
+) -> None:
+    """A Bundle stored before the guard: its fit names `age_band[25-39]`, the Banding's labels are
+    `b0..b2`. Compile does not read the fit's terms; the load refuses, where it once priced the
+    term at 0 on every quote."""
+    stray = Coefficient(
+        term="age_band[25-39]", estimate=0.5, std_error=0.1, z=5.0, p_value=0.01,
+        ci_95=(0.3, 0.7),
+    )
+    fit = world.fit.model_copy(update={"coefficients": (*world.fit.coefficients, stray)})
+    broken = GlmWorld(world.spec, fit, world.factors, world.bandings, world.groupings)
+    bundle = await compiled_bundle(broken)
+    with pytest.raises(CodedError) as caught:
+        load_bundle(bundle)
+    assert str(caught.value).startswith("MODEL_TERM_UNRESOLVED: ")
+    assert "age_band[25-39]" in str(caught.value)
+    assert MODEL_REF in str(caught.value)  # the text is the code, the ref, the term, the slug

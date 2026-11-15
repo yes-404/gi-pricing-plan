@@ -229,18 +229,18 @@ surprise edit appearing in `git status` from a command labelled as a check.
 `--check`; this block was the odd one out. When `--check` reports drift, regenerate
 deliberately with `uv run python scripts/generate-contracts.py` and commit the result.
 
-**The body sets `GIP_TEST_DATABASE_URL` and nothing else, and that is checked, not
-assumed.** `.github/workflows/python.yml` also exports `GIP_BLOB_ENDPOINT_URL` and
-`GIP_REDIS_URL` for its `Tests` step, and `.claude/agents/gate-runner.md` used to repeat
-both. They are omitted here because `backend/src/app/config.py` already defaults them to
-**exactly the values CI sets** — `blob_endpoint_url: str = "http://localhost:9000"` and
-`redis_url: SecretStr = SecretStr("redis://localhost:6379/0")` — so against the compose
-stack on its default ports, setting them changes nothing. `database_url`'s default is
-*not* the local stack (`postgresql+asyncpg://gip:gip@localhost:5432/gip`), which is why
-`GIP_TEST_DATABASE_URL` above is not optional and why the `alembic` command documented
-separately sets `GIP_DATABASE_URL` explicitly. **If the compose stack is ever moved off
-its default ports, these two come back into this block** — a default that happens to match
-is not the same as a value that is pinned.
+**The body sets `GIP_TEST_DATABASE_URL` and `GIP_REDIS_URL`, and the suite refuses to run without a
+usable `GIP_REDIS_URL`.** `backend/src/app/config.py` defaults `redis_url` to
+`redis://localhost:6379/0`, the live database 0 on a shared box, and a backend test run with the variable
+unset once deleted a Celery list from it (#1806). So `backend/tests/conftest.py`'s `pytest_configure`
+ends the run with **exit code 4** and a message, before any test or app starts, when
+`GIP_REDIS_URL` is unset or empty, names database 0, or has no database index (redis-py reads that as 0).
+Set a scratch database, 1 or higher, for every backend test run outside a gate, e.g.
+`export GIP_REDIS_URL=redis://localhost:6379/12`; the gate template sets its slot's own. The message
+never prints the URL. The default in `config.py` stays: it is the app's, not the suite's. CI's `Tests` step
+sets `/1`. `GIP_BLOB_ENDPOINT_URL` is still omitted from this block, because `config.py` defaults it to
+exactly the value CI sets (`blob_endpoint_url: str = "http://localhost:9000"`); if the compose stack
+moves off its default ports it comes back into this block.
 
 **`nproc` lies inside this body.** GNU `nproc` honours `OMP_NUM_THREADS`, so once the
 caps above are exported it reports `4` on this 16-core box. That is the intended effect
@@ -1179,6 +1179,8 @@ where the tree did not change:
 Verified: 2026-09-17
 
 ## Verified
+
+2026-11-14 (base tree of main `416ab152`; the paragraph on `GIP_REDIS_URL` and the exit-code-4 refusal, read against `backend/tests/conftest.py` `pytest_configure` in the same commit).
 
 2026-11-08 (tree `c4ae584a`) — The fourth `req-coverage` failure mode (review P12, FD-1725), the demo STOP (skills-gap A3) and the DB-window and `run-heavy` section (A7) added; each read against its cited process rows, the two script lines and `run-heavy.sh`'s header. The rest of this file was not re-read.
 

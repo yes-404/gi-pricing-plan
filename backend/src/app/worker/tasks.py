@@ -32,7 +32,11 @@ from app.observability.logging import get_logger
 from app.observability.trace import bind_trace_id, current_trace_id, reset_trace_id
 from app.platform import jobs, outbox
 from app.platform.blobs import BlobStore
-from app.platform.safe_exception import safe_job_error_text, safe_job_exc_info
+from app.platform.safe_exception import (
+    coded_job_error,
+    safe_job_error_text,
+    safe_job_exc_info,
+)
 from app.worker.celery_app import TASK_RELAY_OUTBOX, TASK_RUN_JOB, build_celery
 from app.worker.handlers import handler_for
 from app.worker.logs import JobLogCapture
@@ -243,17 +247,27 @@ async def execute_job(
             # logged traceback, which keeps its frames, the Job id and the trace id.
             # `JobLogCapture` stores only the formatted message, so the persisted Job logs never
             # carried the traceback.
+            #
+            # **A pricing-core `CodedError` is a named refusal, not a handler bug** (FR-403,
+            # #1658): it keeps its own registered code, with its message part, exactly as a
+            # `PlatformError` does above. Any other exception, and a coded one whose code no
+            # catalogue registers, stays `JOB_HANDLER_FAILED`. Done here, not in a clause of
+            # its own, so `execute_job` gains no `JobError(` sink (`test_error_sinks.py`).
+            code, message = coded_job_error(exc) or (
+                "JOB_HANDLER_FAILED",
+                safe_job_error_text(exc),
+            )
             _log.error(
                 "job handler failed",
                 exc_info=safe_job_exc_info(exc),
-                extra={"job_id": str(job_id)},
+                extra={"job_id": str(job_id), "code": code},
             )
             await _fail(
                 database,
                 job_id,
                 JobError(
-                    code="JOB_HANDLER_FAILED",
-                    message=safe_job_error_text(exc),
+                    code=code,
+                    message=message,
                     retryable=False,
                     trace_id=current_trace_id(),
                 ),

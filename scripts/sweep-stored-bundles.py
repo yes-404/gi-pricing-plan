@@ -4,7 +4,8 @@
     uv run python scripts/sweep-stored-bundles.py [--dsn DSN] [--workspace UUID]
 
 Run it BEFORE upgrading to the build that refuses such a bundle at load (`load_bundle`,
-`CONTROL_FACTOR_IN_RATEABLE_PATH`): it names every stored version that build will refuse, so an
+`CONTROL_FACTOR_IN_RATEABLE_PATH`, or `MODEL_TERM_UNRESOLVED` for a GLM level its Factor cannot
+produce): it names every stored version that build will refuse, so an
 operator knows which versions need a NEW version (a compiled version is never mutated).
 
 Each version with a stored bundle gets both halves of the check:
@@ -40,15 +41,17 @@ from pricing_core.rating.compile import Bundle
 from pricing_core.rating.runtime import load_bundle
 from pricing_core.safe_error import CodedError
 
-CODE = "CONTROL_FACTOR_IN_RATEABLE_PATH"
-
 #: `intent_check(version_dict)` -> the refusal text for the keys / GBM half, or `None` (clean).
 IntentCheck = Callable[[dict[str, Any]], "str | None"]
 
 
 def _refusal(exc: CodedError) -> str | None:
+    """The text after the code when `exc` is one of `load_bundle`'s load-guard refusals, else
+    `None`: the set is the backend's (`LOAD_GUARD_CODES`), so a new guard is swept at once."""
+    from app.platform.bundle_hydration import LOAD_GUARD_CODES
+
     code, separator, text = str(exc).partition(": ")
-    return text if separator and code == CODE else None
+    return text if separator and code in LOAD_GUARD_CODES else None
 
 
 def sweep(

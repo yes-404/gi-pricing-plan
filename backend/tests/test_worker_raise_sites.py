@@ -132,8 +132,14 @@ _SITES: dict[_Key, tuple[frozenset[str], str]] = {
     # 257, 265, 269, 277), whose fixed detail is built once in `AuthenticationFailed.__init__`
     # via `super().__init__` (an attribute call, outside `_CALLEES`); no interpolation.
     ("backend/src/app/platform/bundle_hydration.py", "_refuse", _DYNAMIC): (
-        frozenset({"content_hash", "ref", "refusal"}),
-        "WK-2113 S3: the 409 for a stored bundle that prices on a `control` Factor. NFR-499's own "
+        frozenset({"LOAD_GUARD_CODES[code]", "content_hash", "ref", "refusal"}),
+        "WK-2113 S3: the 409 for a stored bundle that prices on a `control` Factor, and (#1741) "
+        "for one that prices a GLM level its Factor cannot produce. `LOAD_GUARD_CODES[code]`: the "
+        "409's fixed title, a constant mapping keyed by the two load-guard codes, no input; "
+        "`refusal` for `MODEL_TERM_UNRESOLVED` is the text after the code from `_glm_scorer`'s "
+        "load-time check: the Bundle ref, the term and the Factor slug, authored identifiers "
+        "(test_bundle_hydration.py::test_every_load_guard_code_is_a_409_and_one_audit_event). "
+        "NFR-499's own "
         "words: \"quote inputs are never logged in full outside sampled traces, which are "
         "access-controlled\", and, in its 2026-08-30 clarification, \"A full quote input may be "
         "held only in an access-controlled artifact this specification names for that purpose, "

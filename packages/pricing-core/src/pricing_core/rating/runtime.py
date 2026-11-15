@@ -70,6 +70,7 @@ from pricing_core.modelling.factors import consumed_features, required_model_inp
 from pricing_core.modelling.gbm import GbmFitError, load_gbm_booster, predict_gbm
 from pricing_core.modelling.predict import (
     PredictionError,
+    check_term_domains,
     linear_predictor_row,
     predict_glm_row,
 )
@@ -1016,6 +1017,11 @@ def _glm_scorer(ref: str, payloads: Mapping[str, Any]) -> _GlmScorer:
                 f"RATING_VERSION_UNPINNED: {ref}'s Factor {factor.slug!r} pins a Grouping the "
                 "bundle does not carry (FR-239)"
             )
+    try:
+        check_term_domains(fit, factors, bandings=bandings, groupings=groupings)
+    except PredictionError as exc:
+        # Once per hydrate, so the one-row path pays nothing per quote (FR-193, FR-243).
+        raise CodedError(f"{exc.code}: {ref}: {exc}") from None
     source: _GlmScorer | None = None
     if spec.offset.kind == "model":
         offset_ref = str(spec.offset.offset_model_ref)
@@ -1192,6 +1198,10 @@ def load_bundle(bundle: Bundle) -> CompiledBundle:
 
     Refuses with `CONTROL_FACTOR_IN_RATEABLE_PATH` a bundle whose carried GLM Factors reach a
     `control`-intent Factor (`refuse_control_in_bundle`; FD-1495, stored bundles).
+
+    Refuses with `MODEL_TERM_UNRESOLVED` a bundle whose carried GLM names a level indicator its
+    Factor cannot produce (`check_term_domains`, FR-193), so a bundle stored before that check
+    cannot price a term at 0.
 
     Refuses with `RATING_VERSION_UNPINNED` a bundle whose step ref is not pinned at its exact
     version, so a bundle compiled before that check existed cannot price silently (FR-237).

@@ -37,6 +37,23 @@ _ROOT = Path(__file__).resolve().parents[2]
 _SCRIPT = _ROOT / "scripts" / "provision-app-role.py"
 _SQL = _ROOT / "deploy" / "postgres" / "app-login-role.sql"
 
+#: Roles are cluster-wide in PostgreSQL, so a case that alters, grants or creates a role does so
+#: on the live `gip_app` and `gip_app_login` of whatever server it connects to, even inside a
+#: rolled-back transaction (#1760). Such a case runs only where the cluster is a throwaway one:
+#: GitHub Actions (`CI=true`, a fresh service container per job) or a seat's own container
+#: (`GIP_TEST_ROLE_CLUSTER_ISOLATED=1`). Anywhere else it skips with this one reason, and
+#: `test_a_role_mutating_case_skips_only_for_the_isolation_reason` pins it.
+ROLE_CLUSTER_SKIP_REASON = (
+    "role-mutating case: runs only on an isolated cluster (CI == 'true' or "
+    "GIP_TEST_ROLE_CLUSTER_ISOLATED=1); roles are cluster-wide"
+)
+_ROLE_CLUSTER_ISOLATED = (
+    os.environ.get("CI") == "true" or os.environ.get("GIP_TEST_ROLE_CLUSTER_ISOLATED") == "1"
+)
+requires_isolated_role_cluster = pytest.mark.skipif(
+    not _ROLE_CLUSTER_ISOLATED, reason=ROLE_CLUSTER_SKIP_REASON
+)
+
 # RFC 7677 §3 example exchange (user "user", password "pencil").
 _SALT = base64.b64decode("W22ZaJ0SNY7soEsUEjb6gQ==")
 _AUTH_MESSAGE = (
@@ -183,9 +200,41 @@ _CONVERGENCE: dict[str, tuple[str, str, object]] = {
         "WHERE r.rolname IN ('gip_app', 'gip_app_login') AND s.setdatabase <> 0",
         0,
     ),
+    # #1760: the provisioner revokes every other membership held by the two roles. Each plant is a
+    # plain NOLOGIN role that `P_OWN` would not refuse, so only the provisioner can remove it.
+    "m5_extra_membership_of_login": (
+        "CREATE ROLE gip_scratch_s6a NOLOGIN; GRANT gip_scratch_s6a TO gip_app_login",
+        "SELECT count(*) FROM pg_auth_members "
+        "WHERE member = 'gip_app_login'::regrole AND roleid <> 'gip_app'::regrole",
+        0,
+    ),
+    "m5b_extra_membership_of_app": (
+        "CREATE ROLE gip_scratch_s6b NOLOGIN; GRANT gip_scratch_s6b TO gip_app",
+        "SELECT count(*) FROM pg_auth_members WHERE member = 'gip_app'::regrole",
+        0,
+    ),
+    # Membership rows are per grantor: a plain REVOKE removes only the current role's grant, so
+    # this plant is granted BY another role and only `REVOKE ... GRANTED BY` removes it.
+    "m5c_other_grantor": (
+        "CREATE ROLE gip_scratch_s6c NOLOGIN; CREATE ROLE gip_scratch_s6g NOLOGIN; "
+        "GRANT gip_scratch_s6c TO gip_scratch_s6g WITH ADMIN OPTION; "
+        "GRANT gip_scratch_s6c TO gip_app_login GRANTED BY gip_scratch_s6g",
+        "SELECT count(*) FROM pg_auth_members "
+        "WHERE member = 'gip_app_login'::regrole AND roleid <> 'gip_app'::regrole",
+        0,
+    ),
+    # The intended membership survives the strip, once, with its options, beside the extras.
+    "m5d_intended_membership_survives": (
+        "CREATE ROLE gip_scratch_s6d NOLOGIN; GRANT gip_scratch_s6d TO gip_app_login",
+        "SELECT count(*) FROM pg_auth_members WHERE roleid = 'gip_app'::regrole "
+        "AND member = 'gip_app_login'::regrole "
+        "AND inherit_option AND NOT set_option AND NOT admin_option",
+        1,
+    ),
 }
 
 
+@requires_isolated_role_cluster
 @pytest.mark.req("FR-44")
 @pytest.mark.parametrize("case", list(_CONVERGENCE))
 async def test_the_login_role_sql_converges_a_planted_state(
@@ -209,3 +258,35 @@ async def test_the_login_role_sql_converges_a_planted_state(
             assert (await connection.execute(text(probe))).scalar_one() == expected
         finally:
             await transaction.rollback()
+
+
+@pytest.mark.req("FR-44")
+def test_the_provisioner_names_the_role_pair_when_it_cannot_revoke() -> None:
+    """#1760, Q1 (a): a membership the provisioning role may not revoke fails the run loudly,
+    naming the role pair and never a value. The refusal cannot be planted when the test
+    database's owner is a superuser (it may revoke anything), so the file's text is pinned."""
+    sql = _SQL.read_text(encoding="utf-8")
+    assert "insufficient_privilege" in sql
+    assert "GRANTED BY" in sql
+    assert "RAISE EXCEPTION" in sql
+    assert "cannot revoke membership of role % in role %" in sql
+
+
+@pytest.mark.req("FR-44")
+def test_a_role_mutating_case_skips_only_for_the_isolation_reason() -> None:
+    """#1760, Q3 (a): a role-mutating case that is not run on an isolated cluster skips with
+    exactly `ROLE_CLUSTER_SKIP_REASON`, so a skip for any other cause (an unreachable server, a
+    missing fixture) is not mistaken for the guard. Asserts the guard's reason and its
+    condition, and that the case carries the guard."""
+    assert ROLE_CLUSTER_SKIP_REASON == (
+        "role-mutating case: runs only on an isolated cluster (CI == 'true' or "
+        "GIP_TEST_ROLE_CLUSTER_ISOLATED=1); roles are cluster-wide"
+    )
+    mark = requires_isolated_role_cluster.mark
+    assert mark.name == "skipif"
+    assert mark.kwargs["reason"] == ROLE_CLUSTER_SKIP_REASON
+    assert mark.args == (not _ROLE_CLUSTER_ISOLATED,)
+    guarded = test_the_login_role_sql_converges_a_planted_state.pytestmark
+    assert any(
+        m.name == "skipif" and m.kwargs["reason"] == ROLE_CLUSTER_SKIP_REASON for m in guarded
+    )

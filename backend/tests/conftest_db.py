@@ -1150,6 +1150,30 @@ OWNER_FIXTURE_USERS: tuple[tuple[str, str, str], ...] = (
         "owner-subject",
         "plants a role state as the owner and applies the login-role SQL over it (rolled back)",
     ),
+    (
+        "backend/tests/test_provision_app_role.py::"
+        "test_the_login_role_sql_converges_a_planted_state[m5_extra_membership_of_login]",
+        "owner-subject",
+        "plants a role state as the owner and applies the login-role SQL over it (rolled back)",
+    ),
+    (
+        "backend/tests/test_provision_app_role.py::"
+        "test_the_login_role_sql_converges_a_planted_state[m5b_extra_membership_of_app]",
+        "owner-subject",
+        "plants a role state as the owner and applies the login-role SQL over it (rolled back)",
+    ),
+    (
+        "backend/tests/test_provision_app_role.py::"
+        "test_the_login_role_sql_converges_a_planted_state[m5c_other_grantor]",
+        "owner-subject",
+        "plants a role state as the owner and applies the login-role SQL over it (rolled back)",
+    ),
+    (
+        "backend/tests/test_provision_app_role.py::"
+        "test_the_login_role_sql_converges_a_planted_state[m5d_intended_membership_survives]",
+        "owner-subject",
+        "plants a role state as the owner and applies the login-role SQL over it (rolled back)",
+    ),
 )
 
 
