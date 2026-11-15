@@ -91,14 +91,19 @@ def test_creation_returns_the_key_exactly_once(client: TestClient, headers) -> N
 
 @pytest.mark.req("FR-348")
 async def test_creation_records_the_creating_principal_as_owner(
-    client: TestClient, headers, principal, database: Database
+    client: TestClient, headers, principal, database: Database, workspace_id
 ) -> None:
     """`grant_role` refuses a grant to an account its granter owns (FR-348), so the owner
     must be stored at creation."""
     assert _create(client, headers).status_code == 201
     async with database.session() as session:
         created_by = (
-            await session.execute(select(ServiceAccountRow.created_by))
+            await session.execute(
+                select(ServiceAccountRow.created_by).where(
+                    ServiceAccountRow.slug == "quote-engine-prod",
+                    ServiceAccountRow.workspace_id == workspace_id,
+                )
+            )
         ).scalar_one()
     assert created_by == principal.id
 
