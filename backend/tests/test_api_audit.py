@@ -5,7 +5,6 @@ from __future__ import annotations
 import base64
 import hashlib
 import json
-import logging
 
 import pytest
 import pytest_asyncio
@@ -630,34 +629,32 @@ async def test_a_signature_does_not_verify_under_another_key_or_after_a_change(
 @pytest.mark.req("FR-373")
 async def test_a_tampered_chain_is_refused_and_nothing_is_appended(
     api_settings: Settings,
-    owner_database: Database,
+    database: Database,
     workspace_id,
     principal,
     auditor_headers,
-    caplog: pytest.LogCaptureFixture,
+    capsys: pytest.CaptureFixture[str],
 ) -> None:
-    await _events(owner_database, workspace_id, principal)
-    async with owner_database.unit_of_work() as session:
-        await session.execute(text("SET LOCAL session_replication_role = replica"))
-        await session.execute(
-            text(
-                "UPDATE audit_events SET justification = 'edited' "
-                "WHERE workspace_id = :ws AND sequence = 2"
-            ).bindparams(ws=workspace_id)
-        )
+    # Event 2 is stored with content its hash does not cover, as an edit below the
+    # application leaves it (`_seed`'s `tampered`). The owner fixture is registered per test
+    # in `OWNER_FIXTURE_USERS`; the stored chain is what the anchor reads either way.
+    await _seed(database, workspace_id, principal, _days(3), tampered=2)
     key = Ed25519PrivateKey.generate()
-    with caplog.at_level(logging.ERROR), _client_with(api_settings, key) as client:
+    with _client_with(api_settings, key) as client:
         response = client.post("/api/v1/audit/anchor", headers=auditor_headers)
         listing = client.get("/api/v1/audit", headers=auditor_headers).json()
+    printed = capsys.readouterr()
     assert response.status_code == 409
     assert response.json()["code"] == "AUDIT_CHAIN_BROKEN"
     assert "sequence 2" in response.json()["detail"]
     assert listing["total_estimate"] == 3
     assert "audit.anchored" not in {i["action"] for i in listing["items"]}
-    # The refusal is logged at ERROR with the sequence (Q-E), and never carries the key.
-    refusals = [r for r in caplog.records if r.levelno == logging.ERROR]
-    assert [getattr(r, "sequence", None) for r in refusals] == [2]
-    assert _pem(key).get_secret_value().splitlines()[1] not in caplog.text
+    # The refusal is logged at ERROR with the sequence (Q-E), and never carries the key. The
+    # app's JSON logger writes to stdout and does not propagate to `caplog`.
+    lines = [json.loads(ln) for ln in printed.out.splitlines() if ln.startswith("{")]
+    refusals = [ln for ln in lines if ln.get("level") == "ERROR"]
+    assert [ln.get("sequence") for ln in refusals] == [2]
+    assert _pem(key).get_secret_value().splitlines()[1] not in printed.out + printed.err
 
 
 @pytest.mark.req("FR-373")
@@ -738,15 +735,18 @@ async def test_the_private_key_is_in_neither_the_response_nor_the_event_nor_the_
     workspace_id,
     principal,
     auditor_headers,
-    caplog: pytest.LogCaptureFixture,
+    capsys: pytest.CaptureFixture[str],
 ) -> None:
     await _events(database, workspace_id, principal)
     key = Ed25519PrivateKey.generate()
     marker = _pem(key).get_secret_value().splitlines()[1]
     raw_private = base64.b64encode(key.private_bytes_raw()).decode()
-    with caplog.at_level(logging.DEBUG), _client_with(api_settings, key) as client:
+    with _client_with(api_settings, key) as client:
         response = client.post("/api/v1/audit/anchor", headers=auditor_headers)
         exported = client.get("/api/v1/audit/export?format=json", headers=auditor_headers).text
-    for surface in (response.text, exported, caplog.text):
+    printed = capsys.readouterr()
+    # The app's JSON logger writes to stdout, so what it logged is in `printed`.
+    assert printed.out, "the request logged nothing, so the log check below would be vacuous"
+    for surface in (response.text, exported, printed.out, printed.err):
         assert marker not in surface
         assert raw_private not in surface
