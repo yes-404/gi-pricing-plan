@@ -200,21 +200,31 @@ def test_the_governance_negative_tests_exist_in_ci() -> None:
     """
     import re
 
+    # This file is left out: each required pattern below appears in it as a literal, so a
+    # suite that included it would match its own patterns and could never fail.
     suite = "\n".join(
         path.read_text(encoding="utf-8")
         for root in ("backend/tests", "packages", "tests")
         for path in (ROOT / root).rglob("test_*.py")
+        if path.resolve() != pathlib.Path(__file__).resolve()
     )
 
+    # Each is a whole function name, anchored at its opening parenthesis: an unanchored
+    # prefix is also satisfied by a longer name (`..._approve_even_holding_the_role`).
     required = {
-        "separation of duties": r"def test_the_submitter_cannot_approve",
-        "distinct approvers": r"def test_two_approvals_must_come_from_distinct_principals",
-        "append-only audit": r"def test_update_and_delete_are_rejected_by_the_database",
-        "no truncate": r"def test_truncate_is_rejected",
-        "permission enforcement": r"def test_a_caller_without_the_role_is_forbidden",
-        "no self-elevation": r"def test_a_user_cannot_grant_a_permission_they_do_not_hold",
+        "separation of duties": "test_the_submitter_cannot_approve_their_own_work",
+        "distinct approvers": "test_two_approvals_must_come_from_distinct_principals",
+        "append-only audit": "test_update_and_delete_are_rejected_by_the_database",
+        "no truncate": "test_truncate_is_rejected",
+        "permission enforcement": "test_a_caller_without_the_role_is_forbidden",
+        "no self-grant": "test_a_principal_cannot_grant_a_role_to_itself",
+        "no grant to a service account": "test_a_service_account_is_never_granted_a_role",
     }
-    missing = [name for name, pattern in required.items() if not re.search(pattern, suite)]
+    missing = [
+        name
+        for name, function in required.items()
+        if not re.search(rf"def {function}\(", suite)
+    ]
     assert missing == [], f"negative tests missing for: {missing}"
 
 
