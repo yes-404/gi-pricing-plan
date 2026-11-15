@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
+
 import pytest
 import pytest_asyncio
 from backend.tests.conftest_db import seed_as_owner
@@ -1057,16 +1059,27 @@ _AFTER = {
     "dataset_version": dict.fromkeys(_OUTCOMES, "validated"),
 }
 
+
+def _returns_as(prefix: str, return_state: str) -> Callable[[str], str]:
+    """A return from review is `<prefix>.returned`; any other move keeps `<prefix>.<state>`.
+
+    `06` §4.5's dated note (06-governance.md:574, #1783 C1, Q3 (a2)): the four types that
+    return to a pre-submission state (reject, request_changes and withdraw alike) record
+    `<type>.returned`, where they used to record the return state's own name.
+    """
+    return lambda to: f"{prefix}.returned" if to == return_state else f"{prefix}.{to}"
+
+
 #: The action each hooked type's decision records on the version.
 _MOVE_ACTION = {
-    "model": lambda to: f"model.{to}",
-    "custom_objective": lambda to: f"custom_objective.{to}",
-    "custom_metric": lambda to: f"custom_metric.{to}",
+    "model": _returns_as("model", "fitted"),
+    "custom_objective": _returns_as("custom_objective", "certified"),
+    "custom_metric": _returns_as("custom_metric", "certified"),
     "rating_version": lambda to: (
         "rating_version.approved" if to == "approved" else "rating_version.returned_to_draft"
     ),
     "validation_rule": lambda to: f"validation_rule.{to}",
-    "peril_structure": lambda to: f"peril_structure.{to}",
+    "peril_structure": _returns_as("peril_structure", "reconciled"),
 }
 
 
