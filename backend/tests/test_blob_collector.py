@@ -322,8 +322,9 @@ async def test_a_null_owner_digest_does_not_stop_the_collector_taking_an_unowned
 ) -> None:
     """Red-first for `NOT EXISTS`. An owner place that yields a NULL digest (a model with no
     covariance blob, an unpromoted upload) is planted as one extra NULL row in the owner query.
-    With `NOT IN` that one NULL makes the predicate match nothing, so nothing is ever collected;
-    with `NOT EXISTS` an unowned blob is still taken and an owned one is still kept."""
+    The red (the base form, `NOT IN`): `x NOT IN (..., NULL)` is never true, so the DELETE
+    matches nothing and collection halts silently, with no error, for as long as any owner place
+    holds a NULL. With `NOT EXISTS` an unowned blob is still taken."""
     digest = await _aged_unreferenced_blob(database, blob_store)
     monkeypatch.setattr(
         blobs,

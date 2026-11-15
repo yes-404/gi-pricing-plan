@@ -758,15 +758,15 @@ async def _lock_digest(session: AsyncSession, sha256: str, *, shared: bool) -> N
     a writer waits for the collector's object step. Two digests that hash to one key only share
     or wait for each other. Released at commit or rollback.
 
-    **Protocol** (line numbers are of this file at the commit that added this paragraph):
+    **Protocol:**
 
-    - `put`, `blobs.py:242`: SHARED, taken **before** the row read at `:243`, released at the
-      caller's commit or rollback (an advisory `xact` lock has no other release).
-    - `promote_upload`, `blobs.py:428`: SHARED, before its row read at `:429`, released at the
-      commit of its final unit of work.
-    - collector, `_delete_object_if_unreferenced`, `blobs.py:727`: EXCLUSIVE, then the **re-read
-      that no row exists** at `:728`, then the object delete at `:734`; released at that unit of
-      work's commit, after the delete. A row found at `:728` keeps the object.
+    - `BlobStore.put`: SHARED, taken **before** its row read, released at the caller's commit or
+      rollback (an advisory `xact` lock has no other release).
+    - `BlobStore.promote_upload`: SHARED, before its row read, released at the commit of its
+      final unit of work.
+    - `BlobStore._delete_object_if_unreferenced`: EXCLUSIVE, then the **re-read that no row
+      exists**, then the object delete; released at that unit of work's commit, after the
+      delete. A row found by the re-read keeps the object.
     """
     function = "pg_advisory_xact_lock_shared" if shared else "pg_advisory_xact_lock"
     await session.execute(
