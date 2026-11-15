@@ -23,9 +23,9 @@ ADR that supersedes it and edit only the old one's `status:` and `superseded_by:
 has already been made and needs recording. Otherwise use
 [`../open-questions.md`](../open-questions.md).
 
-**This table is generated.** [`../INDEX.md`](../INDEX.md) is the complete index across every
-family and is the one that cannot go stale; this table is a convenience view of one family,
-rewritten by `scripts/doc-id.py` rather than maintained by hand.
+**This table is kept by hand**, by the pull request that adds or supersedes an ADR.
+`scripts/doc-id.py` has only `next` and `check` since ADR-2136 retired the rest, and
+[`../INDEX.md`](../INDEX.md) is frozen by ADR-2136 and no longer lists new records.
 
 | ADR | Title | Status |
 |---|---|---|
@@ -35,3 +35,12 @@ rewritten by `scripts/doc-id.py` rather than maintained by hand.
 | [ADR-706](ADR-00706-gorules-zen-engine-executes-rating-dags.md) | GoRules ZEN Engine executes rating DAGs | active |
 | [ADR-707](ADR-00707-polars-duckdb-as-the-data-engine-not-pandas.md) | Polars + DuckDB as the data engine, not pandas | active |
 | [ADR-710](ADR-00710-tenant-isolation-is-a-deployment-boundary.md) | Tenant isolation is a deployment boundary | active |
+| [ADR-2136](ADR-02136-project-management-moves-to-github-with-a-slim-claude-md-and-frozen-record-families.md) | Project management moves to GitHub, with a slim CLAUDE.md and frozen record families | draft |
+| [ADR-2145](ADR-02145-audit-read-is-held-by-the-approver-deployer-auditor-and-admin-roles.md) | The audit:read permission is held by the approver, deployer, auditor and admin roles | active |
+| [ADR-2146](ADR-02146-audit-verify-covers-the-whole-chain-by-default-with-an-optional-range.md) | GET /audit/verify verifies the whole chain by default and takes an optional from/to range | active |
+| [ADR-2147](ADR-02147-the-permissions-of-06s-routes-not-yet-built.md) | The permission of each of 06's routes not yet built, with no new permission member | active |
+| [ADR-2148](ADR-02148-the-1497-work-owns-the-history-routes-permission.md) | Work #1497 owns the permission of GET /artifacts/{ref}/history | active |
+| [ADR-2149](ADR-02149-the-1497-plans-decided-items.md) | The decided items of the audit explorer plan, Work #1497 | active |
+| [ADR-2150](ADR-02150-a-blob-reference-is-taken-inside-put-and-legacy-ownerless-blobs-are-pinned.md) | A blob's reference is taken inside put, and legacy ownerless blobs are pinned at 1 | active |
+| [ADR-2151](ADR-02151-the-login-role-provisioner-revokes-every-grantors-membership-and-only-a-superuser-runs-it.md) | The login-role provisioner revokes every grantor's membership row, and only a superuser runs it | active |
+| [ADR-2152](ADR-02152-proxy-assessment-decided-answers-and-two-error-codes.md) | Proxy assessment — the decided answers, and two error codes for its two kinds of invalid input | active |
