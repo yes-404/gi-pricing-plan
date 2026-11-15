@@ -352,6 +352,9 @@ jobs:
           GIP_TEST_DATABASE_URL: postgresql+asyncpg://gipricing:gipricing@localhost:5432/gipricing
           GIP_BLOB_ENDPOINT_URL: http://localhost:9000
           GIP_REDIS_URL: redis://localhost:6379/1
+          # The job's postgres is a fresh service container: the only cluster where the
+          # role-mutating cases may run (#1760). Set explicitly; CI=true alone does not.
+          GIP_TEST_ROLE_CLUSTER_ISOLATED: "1"
 
       # =====================================================================
       # THE VERDICT. This step, and only this step, decides whether the job is
