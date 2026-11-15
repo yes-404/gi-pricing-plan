@@ -256,15 +256,15 @@ def seed_from_model(
         control = control_factor_in(bound, factors)
     except OperandNotSuppliedError as error:
         raise CodedError(
-            f"CONTROL_FACTOR_IN_RATEABLE_PATH: Factor {_named(bound.slug)}@{bound.version} crosses "
+            f"CONTROL_FACTOR_IN_RATEABLE_PATH: Factor {bound.slug}@{bound.version} crosses "
             f"{error.operand_id}, which is not among the Factors supplied, so it cannot be "
             "shown not to be rated on a `control` Factor (FR-88)"
         ) from error
     if control is not None:
-        via = "" if control is bound else f" through the interaction {_named(bound.slug)}"
+        via = "" if control is bound else f" through the interaction {bound.slug!r}"
         raise CodedError(
-            f"CONTROL_FACTOR_IN_RATEABLE_PATH: Factor {_named(control.slug)}@{control.version}"
-            f"{via} has intent 'control' and cannot be rated on (FR-88)"
+            f"CONTROL_FACTOR_IN_RATEABLE_PATH: Factor {control.slug}@{control.version}{via} has "
+            "intent 'control' and cannot be rated on (FR-88)"
         )
     if not slug_is_admitted("factor", bound.slug):
         # `Factor.slug` is an unconstrained `str` (FD-1384); a reference to it could not be

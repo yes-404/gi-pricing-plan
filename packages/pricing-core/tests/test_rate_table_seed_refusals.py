@@ -105,7 +105,7 @@ def test_a_control_factor_in_the_rateable_path_keeps_its_code_and_is_a_coded_err
         _seed(model, "region", [control])
     text = str(caught.value)
     assert text.startswith("CONTROL_FACTOR_IN_RATEABLE_PATH: ")
-    assert "Factor 'region'@1 has intent 'control'" in text
+    assert "Factor region@1 has intent 'control'" in text, "the text is unchanged by the class"
     assert isinstance(caught.value, CodedError)
 
 
@@ -119,7 +119,7 @@ def test_an_interaction_with_an_unsupplied_operand_keeps_its_code_and_is_a_coded
         _seed(model, "region", [cross])
     text = str(caught.value)
     assert text.startswith("CONTROL_FACTOR_IN_RATEABLE_PATH: ")
-    assert "Factor 'region'@1 crosses " in text
+    assert "Factor region@1 crosses " in text, "the text is unchanged by the class"
     assert str(missing) in text, "control: the operand id is named"
     assert isinstance(caught.value, CodedError)
 
