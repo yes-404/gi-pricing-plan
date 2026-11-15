@@ -51,7 +51,7 @@ It rules out a second serialiser for the signed bytes (the anchor reuses the cha
 ## Consequences
 
 - A customer verifies an anchor with any RFC 8032 implementation and needs the platform only to fetch it and, later, to export the log.
-- A leaked key stays valid mathematically; what the customer relies on is the time it stored the anchor in a store the operator does not control. The rotation runbook says so.
+- A leaked key stays valid mathematically; what the customer relies on is the time it stored the anchor in a store the operator does not control. `deploy/README.md`, "The audit anchor signing key", says so.
 - A new direct dependency is declared, and its licence (Apache-2.0 OR BSD-3-Clause) is compatible with the project's. `uv.lock` changes by `gi-backend`'s two lines only.
 - The key is only as safe as the process environment until FR-424's backend exists. That is a limit of this decision, not a reason to defer the anchor.
 - A refused anchor leaves no record in the chain. The ERROR log is the trace, so an operator who wants the refusals recorded durably needs the log pipeline to keep it.

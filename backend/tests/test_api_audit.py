@@ -649,7 +649,7 @@ async def test_a_tampered_chain_is_refused_and_nothing_is_appended(
     assert "sequence 2" in response.json()["detail"]
     assert listing["total_estimate"] == 3
     assert "audit.anchored" not in {i["action"] for i in listing["items"]}
-    # The refusal is logged at ERROR with the sequence (Q-E), and never carries the key. The
+    # The refusal is logged at ERROR with the sequence (FR-373 (4)), and never carries the key. The
     # app's JSON logger writes to stdout and does not propagate to `caplog`.
     lines = [json.loads(ln) for ln in printed.out.splitlines() if ln.startswith("{")]
     refusals = [ln for ln in lines if ln.get("level") == "ERROR"]

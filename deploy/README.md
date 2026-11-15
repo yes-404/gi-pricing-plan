@@ -187,3 +187,34 @@ docker compose -f deploy/docker-compose.yml --profile app up -d --wait --scale a
 
 `deploy/docker-compose.isolated.yml` is for the runtime tests: it publishes the backing services
 on ephemeral ports so a test project cannot collide with the dev stack.
+
+## The audit anchor signing key (FR-373)
+
+The audit anchor (`POST /api/v1/audit/anchor`) is the customer's ritual: it is offered, never on by
+default. It signs the chain head with an Ed25519 key you hold.
+
+- **The key** is the setting `GIP_AUDIT_ANCHOR_SIGNING_KEY`: an unencrypted PKCS#8 PEM Ed25519
+  private key, for example the output of `openssl genpkey -algorithm ed25519`. It is a secret
+  setting until `07` FR-424's secret backend exists, so keep it out of the compose file you commit.
+  A value that is set and is not an Ed25519 key refuses start-up. With no value the platform starts
+  and the anchor route answers `503` `AUDIT_ANCHOR_KEY_UNCONFIGURED`.
+- **Rotation** is: generate a new key, set the setting, restart. The platform keeps no retired key
+  and needs none: an anchor carries the public key that verifies it, and the first anchor under a
+  new key carries the `previous_key_id` of the one before it, so the rotation is visible in the
+  chain and in what the customer stored. **Rotation does not revoke.** A signature made with a key
+  that later leaked stays valid; what the customer relies on is the time it stored the anchor, in a
+  store you do not control.
+- **How a customer verifies an anchor** (it needs no platform access except steps 1 and 5):
+  1. Call `POST /api/v1/audit/anchor` with an `audit:read` credential and store the whole response,
+     unchanged, in a store the operator does not control.
+  2. Pin the key: check that `key_id` equals `sha256:` plus the hex SHA-256 of the base64-decoded
+     `public_key`, and that this key is one the customer pinned out of band (at onboarding, or
+     announced by the operator at a rotation and matched by `previous_key_id`). A public key taken
+     only from the response proves nothing against the operator.
+  3. Rebuild the signed bytes from `statement`: `json.dumps(statement, sort_keys=True,
+     separators=(",", ":"), ensure_ascii=False).encode()`.
+  4. Verify the Ed25519 signature over those bytes with that public key, using any RFC 8032
+     implementation. A failure means the stored anchor was altered or was not issued by the pinned key.
+  5. Later, to detect a rewrite of history, export the log (`GET /api/v1/audit/export?format=json`)
+     and check that the event at `head_sequence` has an `event_hash` equal to `head_event_hash`, and
+     that `GET /api/v1/audit/verify` is intact over the range.
