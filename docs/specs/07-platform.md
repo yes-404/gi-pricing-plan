@@ -128,7 +128,7 @@ The substrate every other module stands on:
 
 | ID | Requirement |
 |---|---|
-| **FR-424** | Secrets are stored in a pluggable backend: environment variables (local), or an external manager (Vault, AWS/GCP secret managers) in production. The platform never stores a secret value in PostgreSQL. |
+| **FR-424** | Secrets are stored in a pluggable backend: environment variables (local), or an external manager (Vault, AWS/GCP secret managers) in production. The platform never stores a secret value in PostgreSQL. *(Dated line, 2026-11-15, #1839: the audit-anchor signing key (`06` FR-373) is a `SecretStr` setting, `GIP_AUDIT_ANCHOR_SIGNING_KEY`, until this backend exists, and resolves through it afterwards.)* |
 | **FR-425** | Secrets are referenced as `secret:<slug>` in Source configs, webhook routes, and service configuration, and resolved only at the moment of use (R3). |
 | **FR-426** | A secret value is never returned by any API, written to any log, included in any artifact, or recorded in any audit event — only its slug and the fact of its use (R3, `06` FR-375). |
 | **FR-427** | Secret creation, rotation, and deletion are audited by slug; secret *reads* by the platform at point of use are audited at a summary level (which secret, by which job), not per access. |
