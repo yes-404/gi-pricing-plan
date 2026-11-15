@@ -1927,25 +1927,30 @@ imported from §4.5 rather than restated — the same catalogue, read two ways.
 
 *Shape added 2026-11-14 for #1501 (WK-691); FR-2137 to FR-2142.*
 
-```json illustrative
-{
-  "id": "0190b5a2-7c3e-7a10-9d21-4f6b8c2e1a02", "model_id": "0190b5a2-7c3e-7a10-9d21-4f6b8c2e1a03",
-  "dataset_version_id": "0190b5a2-7c3e-7a10-9d21-4f6b8c2e1a04",
-  "reference": {
-    "characteristic": "age_group", "classes": ["under_30", "30_to_59", "60_plus"],
-    "granularity": "area", "reference_key": "postcode_district", "dataset_key": "postcode_district",
-    "source": "ONS Census 2021, table TS007A", "as_at": "2021-03-21",
-    "row_count": 2284, "digest": "sha256:9f2c…e1"
-  },
-  "matched_exposure": "812344.25", "total_exposure": "845901.50", "coverage": "0.9603",
-  "factors": [
-    {"factor_id": "0190b5a2-7c3e-7a10-9d21-4f6b8c2e1a05", "factor_slug": "vehicle_group",
-     "mutual_information_bits": 0.0312, "normalised_mutual_information": 0.0221,
-     "auc_by_class": {"under_30": 0.54, "30_to_59": 0.49, "60_plus": 0.53}}
-  ],
-  "created_at": "2026-11-14T12:00:00Z"
-}
-```
+| Field | Type | Meaning |
+|---|---|---|
+| `id` | UUID | The assessment. |
+| `model_id` | UUID | The Model assessed (an immutable Model, FR-2137). |
+| `dataset_version_id` | UUID | The Dataset Version the assessment was taken against. |
+| `reference` | object | The Reference Population's description, never its rows (FR-2140). |
+| `reference.characteristic` | string | The one Protected Characteristic (FR-2138). |
+| `reference.classes` | list of string | The closed list of classes. |
+| `reference.granularity` | `subject` or `area` | FR-2138. |
+| `reference.reference_key`, `reference.dataset_key` | string | The key column of the reference and of the Dataset Version, joined on. |
+| `reference.source` | string | Free text naming where the data came from. |
+| `reference.as_at` | date | The date the data describes. |
+| `reference.row_count` | integer | Rows in the upload. |
+| `reference.digest` | string | `sha256:` content address of the upload (`07` FR-418). |
+| `matched_exposure`, `total_exposure` | Decimal string | Exposure matched to the reference, and in total (`00` §4.3). |
+| `coverage` | Decimal string | `matched_exposure / total_exposure`. |
+| `factors` | list | One entry per Factor assessed (FR-2139). |
+| `factors[].factor_id`, `factors[].factor_slug` | UUID, string | The Factor. |
+| `factors[].mutual_information_bits` | number | Mutual information, in [0, log₂ *k*]. |
+| `factors[].normalised_mutual_information` | number or null | Null when the class entropy is 0. |
+| `factors[].auc_by_class` | map of class to number | One-vs-rest AUC in [0, 1], one entry per class. |
+| `created_at` | timestamp | When the assessment was taken. |
+
+An example: an `area` reference of ONS Census 2021, table TS007A (characteristic `age_group`, classes `under_30`, `30_to_59`, `60_plus`, key `postcode_district`) against a Dataset Version keyed by the same column, with coverage 0.9603. *(This table is replaced by the `json schema=ProxyAssessment` block in slice 3.)*
 
 **Invariants.** The shape is immutable and append-only. **It has no threshold, flag or
 verdict field, and none may be added** (FR-2141): a field that says "high" or "fail"

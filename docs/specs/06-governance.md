@@ -285,7 +285,6 @@ Notably absent from Pricing Actuary: ~~every `*:approve` permission~~ `approval:
 > | `model:read` | Reading Models, Model Specs and their diagnostics (the superseded note above: "the built surface checks `model:read`, `model:fit` and `model:submit`") |  |
 > | `model:fit` | Fitting a Model, and writing Factors, Bandings and Groupings (`RL-1236` DP-A). It governs catalogue Custom Objectives (FR-366) |  |
 > | `model:submit` | Submitting a Model, or a catalogue Custom Objective, for approval (the notes above; FR-367) |  |
-> | `reference_population:upload` | Supplying a Reference Population for a Proxy Assessment (`02` FR-2142; `POST /api/v1/models/{id}/proxy-assessments`). The input is special-category data (UK GDPR Art. 9), so it is distinct from `model:fit` and, like `custom_objective:author`, **granted to no built-in role; a workspace Admin grants it** (decided 2026-11-14 by the lead, on the maintainer's behalf by delegation). Reading a stored assessment is `model:read`, because it holds aggregates only. *Added 2026-11-14 for #1501 (WK-691).* |  |
 > | `custom_objective:author` | Authoring, editing or versioning an `expression` Custom Objective (FR-367) |  |
 > | `rating:read` | Reading Rating Algorithms, Sub-graphs, Regression Suites, Rate Tables, Rating Versions and scoring traces, and an Environment's Deployment history (`03` §4.12; `GET /api/v1/environments/{env}/deployments`, WK-674 Slice 2). *(Amended 2026-10-04, `RL-1404`: a Deployment is a rating record; the Environment's own record is `settings:read`'s.)* |  |
 > | `rating:write` | Writing Rating Algorithms and Rate Tables, and creating a Rating Version (`RL-1236` DP-A) |  |
@@ -349,6 +348,15 @@ Notably absent from Pricing Actuary: ~~every `*:approve` permission~~ `approval:
 > | `alert:resolve` | WK-688 |
 > | `optimisation:run` | WK-684 |
 > | `optimisation:materialise` | WK-686 |
+> | `reference_population:upload` | WK-691 |
+>
+> `reference_population:upload` *(added 2026-11-14 for #1501 (WK-691))* governs supplying a
+> Reference Population for a Proxy Assessment (`02` FR-2142; `POST
+> /api/v1/models/{id}/proxy-assessments`). The input is special-category data (UK GDPR
+> Art. 9), so it is distinct from `model:fit` and, like `custom_objective:author`, **granted
+> to no built-in role; a workspace Admin grants it** (decided 2026-11-14 by the lead, on the
+> maintainer's behalf by delegation). Reading a stored assessment is `model:read`, because it
+> holds aggregates only.
 
 ### 4.2 `ApprovalPolicy` (workspace defaults)
 
