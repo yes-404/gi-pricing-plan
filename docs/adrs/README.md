@@ -44,3 +44,4 @@ has already been made and needs recording. Otherwise use
 | [ADR-2150](ADR-02150-a-blob-reference-is-taken-inside-put-and-legacy-ownerless-blobs-are-pinned.md) | A blob's reference is taken inside put, and legacy ownerless blobs are pinned at 1 | active |
 | [ADR-2151](ADR-02151-the-login-role-provisioner-revokes-every-grantors-membership-and-only-a-superuser-runs-it.md) | The login-role provisioner revokes every grantor's membership row, and only a superuser runs it | active |
 | [ADR-2152](ADR-02152-proxy-assessment-decided-answers-and-two-error-codes.md) | Proxy assessment — the decided answers, and two error codes for its two kinds of invalid input | active |
+| [ADR-2155](ADR-02155-the-audit-anchor-is-signed-with-ed25519-through-cryptography-and-refuses-a-broken-chain.md) | The audit anchor is signed with Ed25519 through cryptography, and refuses a chain that does not verify | active |
