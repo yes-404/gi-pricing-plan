@@ -273,6 +273,20 @@ def test_a_model_payload_with_no_or_an_unknown_model_type_is_unreadable_by_reaso
 
 
 @pytest.mark.req("FR-2143")
+def test_a_model_payload_with_no_fit_result_is_unreadable_by_reason() -> None:
+    """A pinned model with no `fit_result` cannot be classified: its version is UNREADABLE, never
+    read as having no GLM."""
+    bundle = copy.deepcopy(_clean())
+    bundle["resolved_payloads"][_MODEL].pop("fit_result")
+
+    rc, lines = _run([_row(bundle, "nofit", 1)])
+
+    assert "UNREADABLE nofit@1 status=approved (no-fit-result)" in lines
+    assert "checked: 0" in lines
+    assert rc == 2
+
+
+@pytest.mark.req("FR-2143")
 def test_a_glm_payload_that_does_not_validate_is_unreadable_by_its_exception_type_only() -> None:
     bundle = copy.deepcopy(_clean())
     bundle["resolved_payloads"][_MODEL]["fit_result"]["coefficients"][0]["estimate"] = (
