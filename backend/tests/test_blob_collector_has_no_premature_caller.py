@@ -12,8 +12,9 @@ and the scan over the real tree is proven green by the last test.
 
 A "caller" is any of:
 
-1. a Python call of `collect_garbage` (attribute or bare name) under `backend/src`,
-   `backend/scripts`, `scripts` or `packages/*/src` (tests are not callers);
+1. any Python REFERENCE to `collect_garbage`, not only a call (an attribute, a bare name, or the
+   string `"collect_garbage"` as `getattr` takes it), outside `platform/blobs.py`, under
+   `backend/src`, `backend/scripts`, `scripts` or `packages/*/src` (tests are not callers);
 2. a reference to `JobKind.BLOB_GC` under `backend/src` beyond the one routing-map entry in
    `platform/jobs.py`, or the literal `"blob.gc"` there (a handler registration, a submit);
 3. a beat-schedule entry whose task names a blob or garbage-collection task;
@@ -43,15 +44,29 @@ def _rel(path: Path) -> str:
     return path.relative_to(_REPO).as_posix()
 
 
-def python_call_sites(rel: str, source: str) -> list[str]:
-    """Kind 1: calls of `collect_garbage`."""
+_BLOBS_MODULE = "backend/src/app/platform/blobs.py"
+
+
+def python_references(rel: str, source: str) -> list[str]:
+    """Kind 1: ANY reference to `collect_garbage` outside `platform/blobs.py`, not only a call.
+
+    An `Attribute` named `collect_garbage` (`store.collect_garbage(...)`, `registry[k] =
+    store.collect_garbage`, `functools.partial(store.collect_garbage, ...)`, `to_thread(
+    store.collect_garbage, ...)`), a bare `Name`, and the string `"collect_garbage"`
+    (`getattr(store, "collect_garbage")`, a dispatch table keyed by name). The definition
+    (`def collect_garbage`) is a `FunctionDef`, not a reference, and `blobs.py` is skipped as the
+    module that owns it.
+    """
+    if rel == _BLOBS_MODULE:
+        return []
     hits = []
     for node in ast.walk(ast.parse(source)):
-        if isinstance(node, ast.Call):
-            func = node.func
-            name = func.attr if isinstance(func, ast.Attribute) else getattr(func, "id", None)
-            if name == "collect_garbage":
-                hits.append(f"{rel}:{node.lineno} calls collect_garbage")
+        if isinstance(node, ast.Attribute) and node.attr == "collect_garbage":
+            hits.append(f"{rel}:{node.lineno} references .collect_garbage")
+        elif isinstance(node, ast.Name) and node.id == "collect_garbage":
+            hits.append(f"{rel}:{node.lineno} references the name collect_garbage")
+        elif isinstance(node, ast.Constant) and node.value == "collect_garbage":
+            hits.append(f"{rel}:{node.lineno} names 'collect_garbage' as a string")
     return hits
 
 
@@ -145,7 +160,7 @@ def scan_tree() -> dict[str, list[str]]:
     found: dict[str, list[str]] = {"call": [], "job": [], "beat": [], "route": [], "outside": []}
     for path in _python_files():
         rel, source = _rel(path), path.read_text(encoding="utf-8")
-        found["call"] += python_call_sites(rel, source)
+        found["call"] += python_references(rel, source)
         if rel.startswith("backend/src/"):
             found["job"] += blob_gc_job_references(rel, source)
             found["beat"] += beat_entries(rel, source)
@@ -186,8 +201,18 @@ def test_the_scan_sees_the_tree_it_claims_to_scan() -> None:
 @pytest.mark.parametrize(
     ("scanner", "source"),
     [
-        (python_call_sites, "async def f(s):\n    await store.collect_garbage(s)\n"),
-        (python_call_sites, "def f():\n    collect_garbage()\n"),
+        (python_references, "async def f(s):\n    await store.collect_garbage(s)\n"),
+        (python_references, "def f():\n    collect_garbage()\n"),
+        # A reference that is not a call (#1893 review, point 2): the old guard passed each.
+        (python_references, "REGISTRY['gc'] = store.collect_garbage\n"),
+        (
+            python_references,
+            "import functools\nrun = functools.partial(store.collect_garbage, database)\n",
+        ),
+        (python_references, "async def f(s):\n    await asyncio.to_thread(s.collect_garbage, 1)\n"),
+        (python_references, "fn = getattr(store, 'collect_garbage')\n"),
+        (python_references, "TABLE = {'collect_garbage': 1}\n"),
+        (python_references, "fn = collect_garbage\n"),
         (blob_gc_job_references, "register_handler(JobKind.BLOB_GC, handler)\n"),
         (blob_gc_job_references, "kind = 'blob.gc'\n"),
         (
@@ -200,6 +225,16 @@ def test_the_scan_sees_the_tree_it_claims_to_scan() -> None:
 )
 def test_each_kind_of_python_caller_is_detected(scanner, source: str) -> None:
     assert scanner("backend/src/app/x.py", source)
+
+
+@pytest.mark.req("FR-420")
+def test_the_definition_and_the_owning_module_are_not_references() -> None:
+    """`def collect_garbage` is a definition, and `platform/blobs.py` owns it: neither is a hit."""
+    definition = "class BlobStore:\n    async def collect_garbage(self, database):\n        ...\n"
+    assert python_references("backend/src/app/platform/other.py", definition) == []
+    assert python_references(_BLOBS_MODULE, "x = self.collect_garbage\n") == []
+    other = "backend/src/app/platform/other.py"
+    assert python_references(other, "x = 'collect_garbage_now'\n") == []
 
 
 @pytest.mark.req("FR-420")
