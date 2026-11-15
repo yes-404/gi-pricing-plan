@@ -304,14 +304,6 @@ async def require_permission(
         raise PermissionDeniedError(permission, resource, held_elsewhere=held_elsewhere)
 
 
-#: FR-347: the permission families a Service Account can never hold.
-_SERVICE_ACCOUNT_BARRED_PREFIXES = ("approval:", "deployment:")
-
-
-def _service_account_barred(permissions: list[str]) -> set[str]:
-    return {p for p in permissions if p.startswith(_SERVICE_ACCOUNT_BARRED_PREFIXES)}
-
-
 async def grant_role(
     session: AsyncSession,
     *,
@@ -323,12 +315,12 @@ async def grant_role(
     scope_type: ScopeType = ScopeType.WORKSPACE,
     scope_id: UUID | None = None,
 ) -> RoleAssignmentRow:
-    """Assign a role, refusing a grant to oneself or to a Service Account one owns (FR-348).
+    """Assign a role, refusing a grant to oneself or to a Service Account (FR-348, FR-347).
 
     The granter must hold `admin:manage_roles`; it may then grant any role, including one
-    conferring permissions it does not hold (#1843, option (A)). Separation of duties is
-    held by the two refusals: an administrator cannot assign an Approver role to themselves,
-    nor to a Service Account they created and control.
+    conferring permissions it does not hold (#1843, option (A) as amended). A Service
+    Account is never granted a role (FR-347, FR-389), and no principal grants a role to
+    itself.
     """
     await require_permission(
         session,
@@ -361,43 +353,20 @@ async def grant_role(
             "NOT_FOUND", "Role not found", 404, f"No role {role_slug!r} in this workspace."
         )
 
-    account = (
+    # FR-347 and FR-389: a Service Account is never granted a role. The grantee is looked up
+    # by id, whatever `principal_kind` says (assignments resolve by id alone), and in any
+    # workspace; refused before any insert and before the audit record.
+    is_service_account = (
         await session.execute(
-            select(ServiceAccountRow).where(
-                ServiceAccountRow.id == principal_id,
-                ServiceAccountRow.workspace_id == workspace_id,
-            )
+            select(ServiceAccountRow.id).where(ServiceAccountRow.id == principal_id)
         )
-    ).scalar_one_or_none()
-    # FR-347 by rule: a Service Account never holds an approval or deployment permission.
-    # `effective_permissions` reads role assignments by `principal_id` alone, so an assigned
-    # Approver role would reach a Service Account's credential. Refused for every account,
-    # owned or not, before the ownership rule and before any insert.
-    if account is not None and (barred := _service_account_barred(role.permissions)):
+    ).first() is not None
+    if is_service_account:
         raise PlatformError(
             "PERMISSION_DENIED",
-            "Cannot grant this role to a service account",
+            "Cannot grant a role to a service account",
             403,
-            f"A service account never holds an approval or deployment permission "
-            f"(FR-347); the role {role_slug!r} confers {sorted(barred)}.",
-        )
-
-    if account is not None and account.created_by is None:
-        # The owner is unknown: deny by default. Its own sentence, because the account is
-        # not one the granter owns, and the remedy differs (an Admin sets the owner, #1494).
-        raise PlatformError(
-            "PERMISSION_DENIED",
-            "Cannot grant a role to a service account with no recorded owner",
-            403,
-            "The creator of this service account is not recorded, so it cannot be "
-            "granted a role (FR-348).",
-        )
-    if account is not None and account.created_by == granter.id:
-        raise PlatformError(
-            "PERMISSION_DENIED",
-            "Cannot grant a role to a service account you own",
-            403,
-            "A principal cannot grant a role to a service account it owns (FR-348).",
+            "A service account is never granted a role (FR-347, FR-389).",
         )
 
     assignment = RoleAssignmentRow(

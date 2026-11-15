@@ -218,9 +218,7 @@ def test_the_governance_negative_tests_exist_in_ci() -> None:
         "no truncate": "test_truncate_is_rejected",
         "permission enforcement": "test_a_caller_without_the_role_is_forbidden",
         "no self-grant": "test_a_principal_cannot_grant_a_role_to_itself",
-        "no grant to an owned service account": (
-            "test_a_principal_cannot_grant_a_role_to_a_service_account_it_owns"
-        ),
+        "no grant to a service account": "test_a_service_account_is_never_granted_a_role",
     }
     missing = [
         name

@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import pytest
 from backend.tests.conftest_db import seed_as_owner
-from sqlalchemy import select, update
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models import AuditEventRow, RoleAssignmentRow, RoleRow, ServiceAccountRow
@@ -274,13 +274,12 @@ async def test_granting_requires_the_manage_roles_permission(
             )
 
 
-async def _seed_service_account(workspace_id, created_by) -> ServiceAccountRow:
+async def _seed_service_account(workspace_id) -> ServiceAccountRow:
     account = ServiceAccountRow(
         workspace_id=workspace_id,
         slug=f"sa-{new_uuid7().hex[:12]}",
         environments=["dev"],
         permissions=[],
-        created_by=created_by,
     )
 
     async def seed(session: AsyncSession) -> None:
@@ -371,118 +370,39 @@ async def test_a_self_grant_of_an_unknown_role_is_refused_not_missing(
 
 @pytest.mark.req("FR-348")
 @pytest.mark.parametrize("kind", ["service_account", "user"])
-async def test_a_principal_cannot_grant_a_role_to_a_service_account_it_owns(
-    database: Database, workspace_id, kind: str
+@pytest.mark.parametrize("role_slug", ["analyst", "approver", "deployer"])
+async def test_a_service_account_is_never_granted_a_role(
+    database: Database, workspace_id, kind: str, role_slug: str
 ) -> None:
-    """R2 / R2b: refused whatever `principal_kind` is passed."""
+    """FR-347 and FR-389: refused for any role, whatever `principal_kind` is passed (the
+    grantee is found by id), before any insert and before the audit record."""
     admin = _user()
     await _assign(database, workspace_id, admin, "admin")
-    await _assign(database, workspace_id, admin, "analyst")
-    account = await _seed_service_account(workspace_id, admin.id)
-    refusal = await _grant_refused(
-        database, workspace_id, admin, kind=kind, principal_id=account.id
-    )
-    assert refusal.title == "Cannot grant a role to a service account you own"
-
-
-@pytest.mark.req("FR-348")
-async def test_grant_role_itself_reads_the_owner_of_the_account(
-    database: Database, owner_database: Database, workspace_id
-) -> None:
-    """The refusal comes from `grant_role` reading `created_by`, not from a helper or a
-    fixture: the same account, the same granter, refused while the granter is the recorded
-    owner and granted once the recorded owner is someone else."""
-    admin, other = _user(), _user()
-    await _assign(database, workspace_id, admin, "admin")
-    account = await _seed_service_account(workspace_id, admin.id)
-    refusal = await _grant_refused(
-        database, workspace_id, admin, kind="service_account", principal_id=account.id
-    )
-    assert refusal.title == "Cannot grant a role to a service account you own"
-
-    async def hand_over(session: AsyncSession) -> None:
-        await session.execute(
-            update(ServiceAccountRow)
-            .where(ServiceAccountRow.id == account.id)
-            .values(created_by=other.id)
-        )
-
-    await seed_as_owner(hand_over)
-    async with owner_database.unit_of_work() as session:
-        assignment = await rbac.grant_role(
-            session,
-            workspace_id=workspace_id,
-            granter=admin,
-            principal_kind="service_account",
-            principal_id=account.id,
-            role_slug="analyst",
-        )
-    assert assignment.principal_id == account.id
-
-
-@pytest.mark.req("FR-348")
-async def test_the_owner_lookup_is_scoped_to_the_granters_workspace(
-    database: Database, owner_database: Database, workspace_id
-) -> None:
-    """An account of ANOTHER workspace that the granter created is not found by the owner
-    lookup (`rbac.py` filters by workspace), so the ownership refusal does not fire."""
-    admin = _user()
-    await _assign(database, workspace_id, admin, "admin")
-    foreign = await _seed_service_account(new_uuid7(), admin.id)
-    async with owner_database.unit_of_work() as session:
-        assignment = await rbac.grant_role(
-            session,
-            workspace_id=workspace_id,
-            granter=admin,
-            principal_kind="service_account",
-            principal_id=foreign.id,
-            role_slug="analyst",
-        )
-    assert assignment.workspace_id == workspace_id
-
-
-@pytest.mark.req("FR-348")
-async def test_a_service_account_with_an_unknown_owner_is_refused(
-    database: Database, workspace_id
-) -> None:
-    """Deny by default: `created_by` NULL is an owner nobody can rule out."""
-    admin = _user()
-    await _assign(database, workspace_id, admin, "admin")
-    # Holds analyst too, so the withdrawn escalation rule cannot be what refuses.
-    await _assign(database, workspace_id, admin, "analyst")
-    account = await _seed_service_account(workspace_id, None)
-    refusal = await _grant_refused(
-        database, workspace_id, admin, kind="service_account", principal_id=account.id
-    )
-    assert refusal.title == "Cannot grant a role to a service account with no recorded owner"
-    assert "not recorded" in (refusal.detail or "")
-    assert "you own" not in refusal.title
-
-
-@pytest.mark.req("FR-347")
-@pytest.mark.parametrize("owner", ["granter", "another", "unknown"])
-@pytest.mark.parametrize("role_slug", ["approver", "deployer"])
-async def test_a_service_account_is_never_granted_an_approval_or_deployment_role(
-    database: Database, workspace_id, owner: str, role_slug: str
-) -> None:
-    """FR-347 by rule, for an owned, a colleague's and an unowned account alike: the grant
-    is refused before any insert and before the audit record, and the refusal names FR-347
-    (so it is not one of the ownership refusals, which an account owned by another
-    principal would not meet)."""
-    admin, other = _user(), _user()
-    await _assign(database, workspace_id, admin, "admin")
-    created_by = {"granter": admin.id, "another": other.id, "unknown": None}[owner]
-    account = await _seed_service_account(workspace_id, created_by)
+    account = await _seed_service_account(workspace_id)
     refusal = await _grant_refused(
         database,
         workspace_id,
         admin,
-        kind="service_account",
+        kind=kind,
         principal_id=account.id,
         role_slug=role_slug,
     )
-    assert refusal.title == "Cannot grant this role to a service account"
+    assert refusal.title == "Cannot grant a role to a service account"
     assert "FR-347" in (refusal.detail or "")
+
+
+@pytest.mark.req("FR-347")
+async def test_a_service_account_of_another_workspace_is_refused_too(
+    database: Database, workspace_id
+) -> None:
+    """The grantee lookup is by id alone, not by the granter's workspace."""
+    admin = _user()
+    await _assign(database, workspace_id, admin, "admin")
+    foreign = await _seed_service_account(new_uuid7())
+    refusal = await _grant_refused(
+        database, workspace_id, admin, kind="service_account", principal_id=foreign.id
+    )
+    assert refusal.title == "Cannot grant a role to a service account"
 
 
 @pytest.mark.req("FR-348")
@@ -519,27 +439,6 @@ async def test_a_grant_conferring_permissions_the_granter_lacks_succeeds(
         ).scalars().all()
     assert Permission.APPROVAL_DECIDE in held
     assert len(events) == 1
-
-
-@pytest.mark.req("FR-348")
-async def test_a_grant_to_a_service_account_owned_by_another_principal_succeeds(
-    database: Database, owner_database: Database, workspace_id
-) -> None:
-    """G2: the refusal is keyed on ownership, not on the principal being a service account."""
-    admin, other_admin = _user(), _user()
-    await _assign(database, workspace_id, admin, "admin")
-    account = await _seed_service_account(workspace_id, other_admin.id)
-
-    async with owner_database.unit_of_work() as session:
-        assignment = await rbac.grant_role(
-            session,
-            workspace_id=workspace_id,
-            granter=admin,
-            principal_kind="service_account",
-            principal_id=account.id,
-            role_slug="analyst",
-        )
-    assert assignment.principal_id == account.id
 
 
 @pytest.mark.req("FR-348")
