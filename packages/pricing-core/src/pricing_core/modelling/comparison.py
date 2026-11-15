@@ -62,7 +62,7 @@ from pricing_core.modelling.diagnostics import (
     deviance,
 )
 from pricing_core.modelling.errors import ModellingError
-from pricing_core.modelling.predict import score_fitted
+from pricing_core.modelling.predict import score_fitted, unseen_level_mask
 
 __all__ = ["ComparisonCandidate", "compare_models"]
 
@@ -125,6 +125,28 @@ def compare_models(
             "set is one the reader cannot look up.",
         )
 
+    # FR-2143: one shared row set. A row carrying a level or cell that ANY GLM candidate has no
+    # relativity for (on a Factor not declaring `map_to_base`) is out of every candidate's metrics,
+    # so the table stays comparable, and it is counted. A quote with it is refused, not scored.
+    unseen = np.zeros(holdout.height, dtype=np.bool_)
+    for candidate in candidates:
+        if isinstance(candidate.fit, GlmFitResult):
+            unseen |= unseen_level_mask(
+                candidate.fit, holdout, candidate.factors,
+                bandings=candidate.bandings, groupings=candidate.groupings,
+            )
+    full_exposure = _weights(candidates[0].spec, holdout)
+    excluded_rows = int(np.count_nonzero(unseen))
+    excluded_exposure = Decimal(str(round(float(np.sum(full_exposure[unseen])), 6)))
+    if excluded_rows:
+        holdout = holdout.filter(pl.Series(~unseen))
+        if holdout.height == 0:
+            raise ModellingError(
+                "MODELS_NOT_COMPARABLE",
+                "every holdout row carries a level that a GLM candidate has no relativity for, "
+                "so nothing is left to compare on (FR-2143).",
+            )
+
     scheme = _weighting(candidates[0].spec)
     exposure = _weights(candidates[0].spec, holdout)
     response = candidates[0].spec.response_column
@@ -139,6 +161,8 @@ def compare_models(
         baseline_ref=baseline_ref,
         split_ref=split_ref,
         holdout_rows=holdout.height,
+        rows_excluded_unseen_level=excluded_rows,
+        exposure_excluded_unseen_level=excluded_exposure,
         metrics=_metrics(candidates, holdout, actual, exposure, predicted, scheme),
         double_lift=tuple(
             _double_lift(

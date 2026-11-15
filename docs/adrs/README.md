@@ -45,4 +45,5 @@ has already been made and needs recording. Otherwise use
 | [ADR-2151](ADR-02151-the-login-role-provisioner-revokes-every-grantors-membership-and-only-a-superuser-runs-it.md) | The login-role provisioner revokes every grantor's membership row, and only a superuser runs it | active |
 | [ADR-2152](ADR-02152-proxy-assessment-decided-answers-and-two-error-codes.md) | Proxy assessment — the decided answers, and two error codes for its two kinds of invalid input | active |
 | [ADR-2144](ADR-02144-grant-role-refuses-self-grant-and-any-grant-to-a-service-account.md) | A role grant is refused to oneself and to any Service Account, not by a permission-subset rule | draft |
+| [ADR-2153](ADR-02153-a-factors-unseen-level-behaviour-is-declared-and-the-undeclared-case-refuses.md) | A Factor's unseen-level behaviour is declared, and the undeclared case refuses | active |
 | [ADR-2154](ADR-02154-the-audit-trail-is-the-seventh-high-risk-area.md) | The audit trail is the seventh high-risk area | active |

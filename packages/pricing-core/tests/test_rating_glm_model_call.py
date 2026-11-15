@@ -680,3 +680,162 @@ async def test_a_bundle_whose_glm_term_its_banding_cannot_produce_is_refused_at_
     assert str(caught.value).startswith("MODEL_TERM_UNRESOLVED: ")
     assert "age_band[25-39]" in str(caught.value)
     assert MODEL_REF in str(caught.value)  # the text is the code, the ref, the term, the slug
+
+
+# -- a level the fit never saw (FR-2143) --------------------------------------------------------
+
+
+def _area_world() -> GlmWorld:
+    """An IDENTITY categorical Factor `area` fitted on A and B (B, the larger, is the base)."""
+    rng = np.random.default_rng(11)
+    area = rng.choice(["A", "B", "B"], 900)
+    book = pl.DataFrame(
+        {
+            "area": area, "exposure_years": np.ones(900),
+            "claim_count": rng.poisson(0.1 + 0.1 * (area == "A")).astype(float),
+        }
+    )
+    factor = Factor(
+        id=uuid4(), slug="area", dataset_id=DATASET, version=1, type=FactorType.IDENTITY,
+        source_columns=("area",),
+    )
+    spec = GlmSpec(
+        model_family_slug="motor-freq-glm", dataset_version_id=DATASET,
+        response_column="claim_count",
+        offset=OffsetSpec(kind="log_column", column="exposure_years"),
+        factors=(factor.id,), family="poisson", link="log",
+    )
+    return GlmWorld(spec, fit_glm(book, spec, [factor]).result, (factor,), (), ())
+
+
+def _area_algorithm(model_ref: str = MODEL_REF) -> dict[str, Any]:
+    payload = algorithm_payload(
+        feature_map={"area": "area", "exposure_years": "exposure_years"}, model_ref=model_ref
+    )
+    payload["input_contract"] = [
+        {"name": "area", "type": "string", "nullable": False},
+        {"name": "exposure_years", "type": "decimal", "nullable": False},
+    ]
+    payload["steps"] = [
+        s for s in payload["steps"] if s.get("input_name") != "driver_age"
+        and s.get("input_name") != "region"
+    ]
+    payload["steps"].insert(
+        0, {"step_id": "s_area", "type": "input", "label": "Area", "input_name": "area",
+            "on_missing": "error", "produces": "area"}
+    )
+    call = next(s for s in payload["steps"] if s["type"] == "model_call")
+    call["consumes"] = ["area", "exposure_years"]
+    return payload
+
+
+@pytest.mark.req("FR-2143")
+async def test_a_quote_with_an_unseen_level_is_refused_without_the_level_in_the_text() -> None:
+    world = _area_world()
+    compiled = load_bundle(await compiled_bundle(world, _area_algorithm()))
+    seen = await _value(compiled, area="B", exposure_years=1.0)
+    assert MODEL_CALL_ERROR_KEY not in seen
+    refused = (await _value(compiled, area="UNSEEN-3c9d", exposure_years=1.0))[
+        MODEL_CALL_ERROR_KEY
+    ]
+    assert "UNSEEN_LEVEL_BEHAVIOUR_REQUIRED" in refused
+    assert "UNSEEN-3c9d" not in refused
+
+
+@pytest.mark.req("FR-2143")
+async def test_an_enum_contract_over_the_fitted_levels_refuses_before_the_model() -> None:
+    """The control: a contract whose domain is the fitted levels answers a level outside it
+    with `INPUT_CONTRACT_VIOLATION` (FR-213), so the model is never called."""
+    from datetime import UTC, datetime
+
+    from model_schema.scoring import QuoteContext, QuoteContextOptions
+
+    algorithm = _area_algorithm()
+    algorithm["input_contract"][0] = {
+        "name": "area", "type": "enum", "domain": ["A", "B"], "nullable": False,
+    }
+    compiled = load_bundle(await compiled_bundle(_area_world(), algorithm))
+    ctx = QuoteContext.model_validate({
+        "purpose": "new_business",
+        "quoted_at": datetime(2026, 11, 15, 12, 0, 0, tzinfo=UTC).replace(tzinfo=None),
+        "effective_date": "2026-11-16",
+        "inputs": {"area": "C", "exposure_years": 1.0},
+        "options": QuoteContextOptions(
+            rating_version_ref=ArtifactRef(type="rating_version", slug="glm-golden", version=1)
+        ),
+    })
+    with pytest.raises(ValueError, match="INPUT_CONTRACT_VIOLATION"):
+        await score_one(compiled, ctx)
+
+
+@pytest.mark.req("FR-2143")
+async def test_a_factor_declaring_map_to_base_prices_the_unseen_level_as_the_base() -> None:
+    world = _area_world()
+    declared = world.factors[0].model_copy(
+        update={"unseen_level_behaviour": UnseenLevelBehaviour.MAP_TO_BASE}
+    )
+    world = GlmWorld(world.spec, world.fit, (declared,), (), ())
+    compiled = load_bundle(await compiled_bundle(world, _area_algorithm()))
+    base = await _value(compiled, area="B", exposure_years=1.0)
+    unseen = await _value(compiled, area="C", exposure_years=1.0)
+    assert unseen["risk"] == base["risk"]
+
+
+@pytest.mark.req("FR-2143")
+async def test_an_unseen_level_feeding_an_offset_model_is_refused() -> None:
+    base = _area_world()
+    residual_spec = base.spec.model_copy(
+        update={
+            "model_family_slug": "motor-resid",
+            "offset": OffsetSpec(kind="model", offset_model_ref=MODEL_REF),
+        }
+    )
+    residual = GlmWorld(residual_spec, base.fit, base.factors, base.bandings, base.groupings)
+    resolver_algorithm = _area_algorithm("model:motor-resid@1")
+
+    class _Resolver(_OffsetResolver):
+        async def resolve(self, ref: ArtifactRef) -> ResolvedArtifact:
+            if ref.type == "rating_algorithm":
+                return ResolvedArtifact(
+                    status="no_maturity_concept", payload=resolver_algorithm
+                )
+            return await super().resolve(ref)
+
+    bundle = await compile_bundle(version("model:motor-resid@1"), _Resolver(base, residual))
+    compiled = load_bundle(bundle)
+    result = await _value(compiled, area="C", exposure_years=1.0)
+    assert "UNSEEN_LEVEL_BEHAVIOUR_REQUIRED" in result[MODEL_CALL_ERROR_KEY]
+
+
+@pytest.mark.req("FR-2143", "FR-239")
+async def test_a_bundle_whose_factor_lacks_the_field_loads_and_scores_a_seen_level() -> None:
+    world = _area_world()
+    bundle = await compiled_bundle(world, _area_algorithm())
+    expected = await _value(load_bundle(bundle), area="A", exposure_years=1.0)
+    key = "factor:area@1"
+    stripped = {
+        k: v for k, v in bundle.resolved_payloads[key].items() if k != "unseen_level_behaviour"
+    }
+    assert "unseen_level_behaviour" not in stripped
+    payloads = {**bundle.resolved_payloads, key: stripped}
+    old = bundle.model_copy(update={"resolved_payloads": payloads})
+    assert await _value(load_bundle(old), area="A", exposure_years=1.0) == expected
+
+
+@pytest.mark.req("FR-2143", "FR-239")
+async def test_a_bundle_whose_factor_lacks_the_field_refuses_an_unseen_level() -> None:
+    """The field ABSENT (not null) is "declares nothing": an unseen level is refused, never scored
+    as `map_to_base`."""
+    world = _area_world()
+    bundle = await compiled_bundle(world, _area_algorithm())
+    key = "factor:area@1"
+    stripped = {
+        k: v for k, v in bundle.resolved_payloads[key].items() if k != "unseen_level_behaviour"
+    }
+    assert "unseen_level_behaviour" not in stripped
+    payloads = {**bundle.resolved_payloads, key: stripped}
+    old = bundle.model_copy(update={"resolved_payloads": payloads})
+    result = await _value(load_bundle(old), area="UNSEEN-7f2a", exposure_years=1.0)
+    refused = result[MODEL_CALL_ERROR_KEY]
+    assert "UNSEEN_LEVEL_BEHAVIOUR_REQUIRED" in refused
+    assert "UNSEEN-7f2a" not in refused

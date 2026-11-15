@@ -659,6 +659,8 @@ def check_banding(
         claim_count_column=claim_count_column,
     )
     reached = {row.level for row in stats}
+    # The empty-band refusal covers the DECLARED bands only: `null_level` is not a band, and a fit
+    # whose rows never reach it is fine (a null or out-of-range quote is then an unseen level).
     empty = [level for level in banding.labels if level not in reached]
     if empty:
         raise BandingError(
@@ -671,7 +673,10 @@ def check_banding(
     reference = ArtifactRef(type="banding", slug=banding.slug, version=banding.version)
     warnings: list[BandingWarning] = []
     for row in stats:
-        index = banding.labels.index(row.level)
+        # A row on the null level (a missing value, or an out-of-range one mapped to it) is a level
+        # of the design outside `labels`: the thin-band floors apply to it too, and its warning
+        # carries no position (`band_index` is `None`).
+        index = banding.labels.index(row.level) if row.level in banding.labels else None
         if min_exposure > 0 and row.exposure_years < min_exposure:
             warnings.append(ExposureBandingWarning(
                 banding=reference, band_label=row.level, band_index=index,

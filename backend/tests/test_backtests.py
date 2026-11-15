@@ -467,6 +467,121 @@ async def _run_residual_backtest(
         ).scalar_one()
 
 
+@pytest.mark.req("FR-2143")
+async def test_a_refusal_from_the_offset_model_fails_the_backtest_job_with_its_code(
+    database: Database, blob_store, workspace_id, monkeypatch
+) -> None:
+    """The backtest's offset model refuses a level it never saw: its rows cannot be dropped (the
+    offset is the backtest's own input), so the Job fails with the refusal's code, never
+    `JOB_HANDLER_FAILED`, and stores no backtest."""
+    import pricing_core.modelling as modelling
+    from app.db.models import JobRow
+    from pricing_core.modelling.predict import PredictionError
+
+    pair = await _fitted_residual_pair(database, blob_store, workspace_id)
+    async with database.session() as session:
+        v2 = await session.get(DatasetVersionRow, pair.v2_id)
+    assert v2 is not None
+    later = await _later_residual_period(
+        database, blob_store, workspace_id, pair.actor, v2.dataset_id
+    )
+
+    def refuse(*args, **kwargs):
+        raise PredictionError(
+            "UNSEEN_LEVEL_BEHAVIOUR_REQUIRED",
+            "factor 'area' carries the level 'SENTINEL-4e8b' that the fitted model never saw",
+            terms=["area"],
+        )
+
+    monkeypatch.setattr(modelling, "linear_predictor", refuse)
+
+    async with database.unit_of_work() as session:
+        model, version = await service.request_backtest(
+            session, workspace_id=workspace_id, actor=pair.actor,
+            model_id=pair.residual_id, dataset_version_id=later,
+        )
+        job = await job_service.submit(
+            session,
+            JobKind.MODEL_BACKTEST,
+            {
+                "workspace_id": str(workspace_id),
+                "actor": pair.actor.model_dump(mode="json"),
+                **service.backtest_payload(model, version),
+            },
+            pair.actor,
+            workspace_id=workspace_id,
+        )
+        job_id = job.id
+
+    assert await execute_job(database, job_id, blob_store) is JobStatus.FAILED
+    async with database.session() as session:
+        job_row = await session.get(JobRow, job_id)
+        stored = (
+            await session.execute(select(BacktestRow.id).where(BacktestRow.job_id == job_id))
+        ).scalar_one_or_none()
+    assert job_row is not None
+    assert job_row.error is not None
+    assert job_row.error["code"] == "UNSEEN_LEVEL_BEHAVIOUR_REQUIRED"
+    assert "declare “map to base” on that factor, or re-split the data" in job_row.error["message"]
+    assert "SENTINEL-4e8b" not in str(job_row.error)  # the stored error never carries a level
+    assert stored is None
+
+
+@pytest.mark.req("FR-2143")
+async def test_a_refusal_scoring_the_period_fails_the_backtest_job_with_its_code_and_a_step(
+    database: Database, blob_store, workspace_id, monkeypatch
+) -> None:
+    """Any prediction refusal from the backtest's own scoring keeps its code, as a fit's does, with
+    a fixed sentence chosen by that code that names the backtest data and carries no value."""
+    import pricing_core.modelling as modelling
+    from app.db.models import JobRow
+    from pricing_core.modelling.predict import PredictionError
+
+    pair = await _fitted_residual_pair(database, blob_store, workspace_id)
+    async with database.session() as session:
+        v2 = await session.get(DatasetVersionRow, pair.v2_id)
+    assert v2 is not None
+    later = await _later_residual_period(
+        database, blob_store, workspace_id, pair.actor, v2.dataset_id
+    )
+
+    def refuse(*args, **kwargs):
+        raise PredictionError(
+            "MODEL_TERM_UNRESOLVED", "a term names factor 'SENTINEL-6a2f'", terms=["area"]
+        )
+
+    monkeypatch.setattr(modelling, "backtest_model", refuse)
+
+    async with database.unit_of_work() as session:
+        model, version = await service.request_backtest(
+            session, workspace_id=workspace_id, actor=pair.actor,
+            model_id=pair.residual_id, dataset_version_id=later,
+        )
+        job = await job_service.submit(
+            session,
+            JobKind.MODEL_BACKTEST,
+            {
+                "workspace_id": str(workspace_id),
+                "actor": pair.actor.model_dump(mode="json"),
+                **service.backtest_payload(model, version),
+            },
+            pair.actor,
+            workspace_id=workspace_id,
+        )
+        job_id = job.id
+
+    assert await execute_job(database, job_id, blob_store) is JobStatus.FAILED
+    async with database.session() as session:
+        job_row = await session.get(JobRow, job_id)
+    assert job_row is not None
+    assert job_row.error is not None
+    assert job_row.error["code"] == "MODEL_TERM_UNRESOLVED"
+    assert "every column the model's factors read" in job_row.error["message"]
+    assert "map to base" not in job_row.error["message"]
+    assert "holdout" not in job_row.error["message"]
+    assert "SENTINEL-6a2f" not in str(job_row.error)
+
+
 # -- The whole path -------------------------------------------------------------------------
 
 
