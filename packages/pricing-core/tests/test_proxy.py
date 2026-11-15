@@ -239,9 +239,95 @@ def test_a_refusal_never_carries_a_share_or_a_value_from_the_frame() -> None:
     for frame, ref in cases:
         with pytest.raises(ProxyAssessmentError) as caught:
             _assess(frame, ref, ["x", "y"])
-        text = str(caught.value)
+        # str, repr and args are the three ways an exception's content is read.
+        texts = [str(caught.value), repr(caught.value), *map(str, caught.value.args)]
         for planted in ("7.3141592", "0.3141592", "SENTINEL_LEVEL_ZQX", "987654"):
-            assert planted not in text
+            assert all(planted not in t for t in texts)
+
+
+def _good_reference() -> pl.DataFrame:
+    return _subject_reference(["k1", "k2"], ["x", "y"], ["x", "y"])
+
+
+@pytest.mark.req("FR-2139")
+@pytest.mark.parametrize("bad", [float("nan"), float("inf"), float("-inf"), None])
+def test_a_non_finite_or_null_exposure_is_refused(bad: float | None) -> None:
+    frame = _frame(["k1", "k2"], ["A", "B"], [1.0, bad])  # type: ignore[list-item]
+    with pytest.raises(ProxyAssessmentError) as caught:
+        _assess(frame, _good_reference(), ["x", "y"])
+    assert caught.value.code == "PROXY_INPUT_INVALID"
+    assert "exposure" in str(caught.value)
+
+
+@pytest.mark.req("FR-2138")
+@pytest.mark.parametrize("bad", [float("nan"), float("inf"), None])
+def test_a_non_finite_or_null_share_is_refused_with_the_reference_code(
+    bad: float | None,
+) -> None:
+    ref = pl.DataFrame({"k": ["k1", "k2"], "x": [bad, 0.0], "y": [0.0, 1.0]})
+    frame = _frame(["k1", "k2"], ["A", "B"], [1.0, 1.0])
+    with pytest.raises(ProxyAssessmentError) as caught:
+        _assess(frame, ref, ["x", "y"])
+    assert caught.value.code == "PROXY_REFERENCE_INVALID"
+
+
+@pytest.mark.req("FR-2139")
+def test_a_non_numeric_exposure_column_is_refused_naming_the_column() -> None:
+    frame = pl.DataFrame({"k": ["k1", "k2"], "level": ["A", "B"], "exposure_years": ["a", "b"]})
+    with pytest.raises(ProxyAssessmentError) as caught:
+        _assess(frame, _good_reference(), ["x", "y"])
+    assert caught.value.code == "PROXY_INPUT_INVALID"
+    assert "exposure_years" in str(caught.value)
+
+
+@pytest.mark.req("FR-2138")
+def test_a_non_numeric_share_column_is_refused_naming_the_column() -> None:
+    ref = pl.DataFrame({"k": ["k1", "k2"], "x": ["a", "b"], "y": [0.0, 1.0]})
+    frame = _frame(["k1", "k2"], ["A", "B"], [1.0, 1.0])
+    with pytest.raises(ProxyAssessmentError) as caught:
+        _assess(frame, ref, ["x", "y"])
+    assert caught.value.code == "PROXY_REFERENCE_INVALID"
+    assert "'x'" in str(caught.value)
+    assert "'a'" not in str(caught.value)
+
+
+@pytest.mark.req("FR-2138")
+def test_a_join_key_type_mismatch_is_refused_naming_both_columns() -> None:
+    ref = pl.DataFrame({"rk": [1, 2], "x": [1.0, 0.0], "y": [0.0, 1.0]})
+    frame = _frame(["k1", "k2"], ["A", "B"], [1.0, 1.0])
+    with pytest.raises(ProxyAssessmentError) as caught:
+        assess_proxies(frame, ["level"], ref, key="k", reference_key="rk", classes=["x", "y"])
+    assert caught.value.code == "PROXY_INPUT_INVALID"
+    assert "'k'" in str(caught.value) and "'rk'" in str(caught.value)
+
+
+@pytest.mark.req("FR-2138")
+@pytest.mark.parametrize("classes", [[], ["x", "x"]])
+def test_empty_or_repeated_classes_are_refused(classes: list[str]) -> None:
+    frame = _frame(["k1", "k2"], ["A", "B"], [1.0, 1.0])
+    with pytest.raises(ProxyAssessmentError) as caught:
+        _assess(frame, _good_reference(), classes)
+    assert caught.value.code == "PROXY_INPUT_INVALID"
+
+
+@pytest.mark.req("FR-2138")
+def test_a_frame_missing_a_declared_column_is_refused() -> None:
+    frame = pl.DataFrame({"k": ["k1", "k2"], "exposure_years": [1.0, 1.0]})  # no "level"
+    with pytest.raises(ProxyAssessmentError) as caught:
+        _assess(frame, _good_reference(), ["x", "y"])
+    assert caught.value.code == "PROXY_INPUT_INVALID"
+    assert "level" in str(caught.value)
+
+
+@pytest.mark.req("FR-2138")
+def test_a_class_named_like_a_frame_column_is_refused() -> None:
+    frame = pl.DataFrame(
+        {"k": ["k1", "k2"], "level": ["A", "B"], "exposure_years": [1.0, 1.0]}
+    )
+    ref = pl.DataFrame({"k": ["k1", "k2"], "level": [1.0, 0.0], "y": [0.0, 1.0]})
+    with pytest.raises(ProxyAssessmentError) as caught:
+        _assess(frame, ref, ["level", "y"])
+    assert caught.value.code == "PROXY_INPUT_INVALID"
 
 
 @pytest.mark.req("FR-2141")

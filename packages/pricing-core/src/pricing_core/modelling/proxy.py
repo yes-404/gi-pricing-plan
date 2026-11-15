@@ -100,11 +100,19 @@ def assess_proxies(
     if clash:
         raise ProxyAssessmentError(
             "PROXY_INPUT_INVALID", f"class names clash with frame columns {clash}")
-    joined = frame.select([*kept, weight.alias("_w")]).join(
-        reference.select([pl.col(reference_key).alias(key), *class_list]),
-        on=key,
-        how="left",
-    )
+    try:
+        joined = frame.select([*kept, weight.alias("_w")]).join(
+            reference.select([pl.col(reference_key).alias(key), *class_list]),
+            on=key,
+            how="left",
+        )
+    except pl.exceptions.PolarsError:
+        # Polars' own text can carry a cell value (NFR-499), so it is not passed on.
+        raise ProxyAssessmentError(
+            "PROXY_INPUT_INVALID",
+            f"frame key {key!r} and reference key {reference_key!r} cannot be joined: "
+            "their types differ",
+        ) from None
     total_exposure = float(joined["_w"].sum())
     matched = joined.filter(pl.col(class_list[0]).is_not_null())
     matched_exposure = float(matched["_w"].sum())
@@ -143,8 +151,14 @@ def _validate(
     if reference[reference_key].is_duplicated().any():
         raise ProxyAssessmentError(
             "PROXY_REFERENCE_INVALID", f"reference key {reference_key!r} is repeated")
+    non_numeric = [c for c in classes if not reference.schema[c].is_numeric()]
+    if non_numeric:
+        raise ProxyAssessmentError(
+            "PROXY_REFERENCE_INVALID", f"reference share columns are not numeric {non_numeric}")
     shares = reference.select(classes).to_numpy().astype(np.float64)
     if np.isnan(shares).any():
+        # A null share reaches here as NaN, and so does a NaN one: both are refused before any
+        # comparison, because every comparison with NaN is false and would let it through.
         raise ProxyAssessmentError(
             "PROXY_REFERENCE_INVALID", "reference shares must not be null")
     if (shares < 0).any() or (shares > 1).any():
@@ -155,10 +169,15 @@ def _validate(
         bad = reference[reference_key].filter(pl.Series(off)).head(5).to_list()
         raise ProxyAssessmentError(
             "PROXY_REFERENCE_INVALID", f"reference shares do not sum to 1 for keys {bad}")
-    exposures = frame[exposure].cast(pl.Float64)
-    if exposures.null_count() or (exposures < 0).any():
+    if not frame.schema[exposure].is_numeric():
         raise ProxyAssessmentError(
-            "PROXY_INPUT_INVALID", "exposure must be non-null and non-negative")
+            "PROXY_INPUT_INVALID", f"exposure column {exposure!r} is not numeric")
+    exposures = frame[exposure].cast(pl.Float64)
+    # NaN and infinity pass `< 0` (the comparison is false) and would turn every measure
+    # into NaN or inf, so finiteness is checked on its own.
+    if exposures.null_count() or not exposures.is_finite().all() or (exposures < 0).any():
+        raise ProxyAssessmentError(
+            "PROXY_INPUT_INVALID", "exposure must be finite, non-null and non-negative")
 
 
 def _assess_factor(matched: pl.DataFrame, factor: str, classes: list[str]) -> FactorProxyResult:
