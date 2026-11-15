@@ -6,15 +6,25 @@ import json
 
 import pytest
 import pytest_asyncio
+from backend.tests.test_audit import _days, _seed
 from fastapi.testclient import TestClient
 from sqlalchemy import text
 
 from app.api.deps import DEV_PRINCIPAL_HEADER
 from app.config import Environment, Settings
+from app.db.models import AuditEventRow
 from app.db.session import Database
 from app.main import create_app
 from app.platform import audit
-from model_schema import ActorKind, JobSource, Principal, new_uuid7
+from model_schema import (
+    BUILTIN_ROLES,
+    ActorKind,
+    AuditEventRecord,
+    JobSource,
+    Permission,
+    Principal,
+    new_uuid7,
+)
 
 
 @pytest.fixture
@@ -101,6 +111,81 @@ async def test_filters_narrow_by_action_entity_actor_and_text(
 
 
 @pytest.mark.req("FR-371")
+async def test_the_returned_filter_finds_legacy_and_new_rows(
+    client: TestClient, database: Database, workspace_id, principal, auditor_headers
+) -> None:
+    """C1 (#1783, Q3 (a2)): `<type>.returned` also finds the pre-rename spelling.
+
+    Before the rename a return from review was written as the forward state's name, with
+    `before.status == "review"`. The stored rows keep it (FR-370), so the filter has to find
+    both, and must not match a forward `model.fitted` (draft → fitted).
+    """
+    async with database.unit_of_work() as session:
+        for action, before, ref in (
+            ("model.fitted", "draft", "model:fam@1"),  # forward: never a return
+            ("model.fitted", "review", "model:fam@2"),  # legacy return
+            ("model.returned", "review", "model:fam@3"),  # new return
+        ):
+            await audit.record(
+                session,
+                workspace_id=workspace_id,
+                actor=principal,
+                source=JobSource.API,
+                action=action,
+                entity_ref=ref,
+                before={"status": before},
+            )
+    body = client.get("/api/v1/audit?action=model.returned", headers=auditor_headers).json()
+    assert sorted(i["entity_ref"] for i in body["items"]) == ["model:fam@2", "model:fam@3"]
+    forward = client.get("/api/v1/audit?action=model.fitted", headers=auditor_headers).json()
+    assert sorted(i["entity_ref"] for i in forward["items"]) == ["model:fam@1", "model:fam@2"]
+
+
+@pytest.mark.req("FR-371")
+async def test_the_explorer_and_the_export_show_the_stored_action_with_its_current_name(
+    client: TestClient, database: Database, workspace_id, principal, auditor_headers
+) -> None:
+    """The stored action is always shown as stored (FR-370). A pre-rename return, recognised
+    by its legacy name and `before.status` review, carries `current_action` beside it; a new
+    return and a forward move carry none. `q` matches the stored names only."""
+    async with database.unit_of_work() as session:
+        for action, before, ref in (
+            ("model.fitted", "draft", "model:fam@1"),
+            ("model.fitted", "review", "model:fam@2"),
+            ("model.returned", "review", "model:fam@3"),
+        ):
+            await audit.record(
+                session,
+                workspace_id=workspace_id,
+                actor=principal,
+                source=JobSource.API,
+                action=action,
+                entity_ref=ref,
+                before={"status": before},
+            )
+    expected = {
+        "model:fam@1": ("model.fitted", None),
+        "model:fam@2": ("model.fitted", "model.returned"),
+        "model:fam@3": ("model.returned", None),
+    }
+    page = client.get("/api/v1/audit", headers=auditor_headers).json()["items"]
+    assert {i["entity_ref"]: (i["action"], i["current_action"]) for i in page} == expected
+    # The export is the record: a line is the stored event and nothing derived, so its keys
+    # are the stored event's keys, `current_action` among none of them.
+    exported = client.get("/api/v1/audit/export?format=json", headers=auditor_headers)
+    lines = [json.loads(line) for line in exported.text.splitlines() if line]
+    stored_keys = set(AuditEventRow.__table__.columns.keys())
+    assert all(set(line) == stored_keys for line in lines)
+    assert {i["entity_ref"]: i["action"] for i in lines} == {
+        ref: stored for ref, (stored, _) in expected.items()
+    }
+    csv_export = client.get("/api/v1/audit/export?format=csv", headers=auditor_headers)
+    assert "current_action" not in csv_export.text.splitlines()[0]
+    by_text = client.get("/api/v1/audit?q=returned", headers=auditor_headers).json()["items"]
+    assert [i["entity_ref"] for i in by_text] == ["model:fam@3"]
+
+
+@pytest.mark.req("FR-371")
 async def test_the_query_is_cursor_paginated(
     client: TestClient, database: Database, workspace_id, principal, auditor_headers
 ) -> None:
@@ -167,10 +252,11 @@ async def test_verify_reports_a_break_rather_than_failing(
 
 
 @pytest.mark.req("FR-371")
-async def test_csv_export_carries_the_hashes(
+async def test_csv_export_is_a_report_that_carries_the_hashes(
     client: TestClient, database: Database, workspace_id, principal, auditor_headers
 ) -> None:
-    """The hashes are the point: an auditor recomputes them without the platform's help."""
+    """The CSV is a readable report with both hashes. It is not recomputable: it has no
+    `workspace_id`, `before` or `after`. JSON Lines is the evidence form (next test)."""
     await _events(database, workspace_id, principal)
     response = client.get("/api/v1/audit/export?format=csv", headers=auditor_headers)
     assert response.status_code == 200
@@ -203,6 +289,46 @@ async def test_json_export_is_line_delimited(
     lines = [json.loads(line) for line in response.text.splitlines() if line]
     assert len(lines) == 3
     assert lines[0]["event_hash"].startswith("sha256:")
+
+
+@pytest.mark.req("FR-372")
+async def test_json_export_recomputes_every_hash_without_the_platform(
+    client: TestClient, database: Database, workspace_id, principal, auditor_headers
+) -> None:
+    """The export is evidence: each line validates as the contract's shape, and its hash and
+    link recompute from the line alone, using nothing but `model_schema`."""
+    await _events(database, workspace_id, principal)
+    response = client.get("/api/v1/audit/export?format=json", headers=auditor_headers)
+    events = [
+        AuditEventRecord.model_validate_json(line) for line in response.text.splitlines() if line
+    ]
+    assert [e.sequence for e in events] == [1, 2, 3]
+    assert all(e.verify() for e in events)
+    assert events[0].prev_event_hash is None
+    assert [e.prev_event_hash for e in events[1:]] == [e.event_hash for e in events[:-1]]
+    assert {e.workspace_id for e in events} == {workspace_id}
+
+
+@pytest.mark.req("FR-371")
+async def test_export_honours_the_query_filters(
+    client: TestClient, database: Database, workspace_id, principal, auditor_headers
+) -> None:
+    """FR-371: an export is what the query shows. Every filter the query takes narrows it."""
+    await _events(database, workspace_id, principal)
+    for query in (
+        "action=model.submitted",
+        "entity=model:motor-ad-frequency@2",
+        f"actor={principal.id}&action=rating_version.approved",
+        "q=number 1",
+    ):
+        shown = client.get(f"/api/v1/audit?{query}", headers=auditor_headers).json()["items"]
+        for fmt in ("json", "csv"):
+            body = client.get(
+                f"/api/v1/audit/export?format={fmt}&{query}", headers=auditor_headers
+            ).text
+            rows = [line for line in body.splitlines() if line]
+            assert len(rows) - (fmt == "csv") == len(shown), (query, fmt)
+        assert 0 < len(shown) < 3, query
 
 
 @pytest.mark.req("FR-346")
@@ -257,6 +383,14 @@ async def test_an_analyst_cannot_read_the_audit_log(
     assert response.status_code == 403
 
 
+@pytest.mark.req("FR-371")
+def test_audit_read_is_held_by_exactly_the_four_read_everything_roles() -> None:
+    """Pins the holder set `06` §4.1 records (#1548 (b), OQ-1726), so the spec sentence fails
+    when it goes stale. Today's behaviour, pinned: it is green at the base by design."""
+    holders = {role for role, perms in BUILTIN_ROLES.items() if Permission.AUDIT_READ in perms}
+    assert holders == {"approver", "deployer", "auditor", "admin"}
+
+
 @pytest.mark.req("FR-369")
 async def test_an_event_carries_everything_the_requirement_lists(
     client: TestClient, database: Database, workspace_id, principal, auditor_headers
@@ -289,3 +423,116 @@ async def test_an_event_carries_everything_the_requirement_lists(
     assert item["justification"].startswith("Dislocation")
     assert item["trace_id"] == "4bf92f3577b34da6a3ce929d0e0e4736"
     assert item["event_hash"].startswith("sha256:")
+
+
+@pytest.mark.req("FR-372")
+async def test_verify_with_no_range_is_the_whole_chain(
+    client: TestClient, database: Database, workspace_id, principal, auditor_headers
+) -> None:
+    await _events(database, workspace_id, principal)
+    body = client.get("/api/v1/audit/verify", headers=auditor_headers).json()
+    assert body["whole_chain"] is True
+    assert (body["first_sequence"], body["last_sequence"]) == (1, 3)
+    assert body["from"] is None
+    assert body["to"] is None
+
+
+@pytest.mark.req("FR-372")
+async def test_verify_takes_a_range_and_reports_what_it_checked(
+    client: TestClient, database: Database, workspace_id, principal, auditor_headers
+) -> None:
+    await _events(database, workspace_id, principal)
+    far_future = "2999-01-01T00:00:00Z"
+    body = client.get(
+        f"/api/v1/audit/verify?from={far_future}", headers=auditor_headers
+    ).json()
+    assert body["whole_chain"] is False
+    assert body["intact"] is True
+    assert body["events_checked"] == 0
+    assert body["first_sequence"] is None
+    assert body["from"].startswith("2999-01-01")
+    spanning = client.get(
+        "/api/v1/audit/verify?from=2000-01-01T00:00:00Z&to=2999-01-01T00:00:00Z",
+        headers=auditor_headers,
+    ).json()
+    assert (spanning["first_sequence"], spanning["last_sequence"]) == (1, 3)
+
+
+@pytest.mark.req("FR-372")
+async def test_verify_refuses_a_range_that_ends_before_it_starts(
+    client: TestClient, auditor_headers
+) -> None:
+    response = client.get(
+        "/api/v1/audit/verify?from=2026-02-01T00:00:00Z&to=2026-01-01T00:00:00Z",
+        headers=auditor_headers,
+    )
+    assert response.status_code == 422
+
+
+@pytest.mark.req("FR-372")
+async def test_a_gap_reports_the_last_sequence_actually_verified(
+    client: TestClient, database: Database, workspace_id, principal, auditor_headers
+) -> None:
+    """#1858 L2: with event 3 absent the check verified 1 and 2 and broke at 4. The response
+    must not name 3, a sequence that does not exist and was not verified, as the last one."""
+    await _seed(database, workspace_id, principal, _days(5), missing=3)
+    body = client.get("/api/v1/audit/verify", headers=auditor_headers).json()
+    assert body["intact"] is False
+    assert body["broken_at_sequence"] == 4
+    assert (body["first_sequence"], body["last_sequence"], body["events_checked"]) == (1, 2, 2)
+
+
+@pytest.mark.req("FR-372")
+async def test_a_break_at_the_first_event_verified_nothing(
+    client: TestClient, database: Database, workspace_id, principal, auditor_headers
+) -> None:
+    await _seed(database, workspace_id, principal, _days(3), tampered=1)
+    body = client.get("/api/v1/audit/verify", headers=auditor_headers).json()
+    broke = (body["broken_at_sequence"], body["events_checked"], body["last_sequence"])
+    assert broke == (1, 0, None)
+
+
+@pytest.mark.req("FR-372")
+@pytest.mark.parametrize(
+    "query",
+    [
+        "from=2026-01-01T00:00:00&to=2026-02-01T00:00:00Z",
+        "from=2026-01-01T00:00:00Z&to=2026-02-01T00:00:00",
+        "from=2026-01-01T00:00:00",
+        "to=2026-02-01T00:00:00",
+    ],
+)
+async def test_verify_refuses_a_bound_with_no_timezone(
+    client: TestClient, auditor_headers, query: str
+) -> None:
+    """#1858 L3: a naive bound is ambiguous. It is a 422, never a 500."""
+    response = client.get(f"/api/v1/audit/verify?{query}", headers=auditor_headers)
+    assert response.status_code == 422
+    assert response.json()["code"] == "VALIDATION_FAILED"
+
+
+@pytest.mark.req("FR-371")
+@pytest.mark.parametrize(
+    "path", ["/api/v1/audit", "/api/v1/audit/export", "/api/v1/audit/verify"]
+)
+@pytest.mark.parametrize(
+    ("query", "named"),
+    [
+        ("from=2026-01-01T00:00:00", "from"),
+        ("to=2026-02-01T00:00:00", "to"),
+        ("from=2026-01-01T00:00:00&to=2026-02-01T00:00:00Z", "from"),
+        ("from=2026-01-01T00:00:00Z&to=2026-02-01T00:00:00", "to"),
+    ],
+)
+async def test_every_route_taking_a_range_refuses_a_bound_with_no_offset(
+    client: TestClient, auditor_headers, path: str, query: str, named: str
+) -> None:
+    """#1858 L3, the class: a naive bound, or a pair mixing naive and aware, is a 422 on the
+    query, the export and verify alike. The detail names the parameter and never echoes the
+    value. (A naive bound used to be read in the API process's local timezone.)"""
+    response = client.get(f"{path}?{query}", headers=auditor_headers)
+    assert response.status_code == 422
+    body = response.json()
+    assert body["code"] == "VALIDATION_FAILED"
+    assert f"`{named}` must carry a UTC offset" in body["detail"]
+    assert "2026-0" not in body["detail"]

@@ -1,0 +1,276 @@
+"""Proxy assessment: how strongly a Factor is associated with a protected characteristic
+(`02` FR-91, FR-2137 to FR-2142).
+
+**This is evidence, never a gate.** Nothing here compares a number with a limit, and the
+result has no field that says pass, fail or flagged (FR-2141). Whether an association
+amounts to unlawful discrimination is a legal judgement, so the module measures and stops.
+
+**One computation serves both granularities** (FR-2138). A reference table holds, per
+key, a share for every class. An individual-level table is the case whose shares are all 0
+or 1, so there is no second code path for it. A matched row's exposure is split across the
+classes by those shares, which gives the *expected joint weight* ``W(level, class)`` that
+every measure reads (FR-2139):
+
+* **Mutual information**, in bits, of level and class under ``W``, and the same divided by
+  the class entropy (null when that entropy is 0).
+* **One-vs-rest AUC per class**, where a row's score is its level's ``W``-share of the class
+  (in-sample, so the best a level-wise rule could do). A row contributes positive weight
+  ``exposure * share`` and negative weight ``exposure * (1 - share)`` at its level's score,
+  and tied scores are averaged. This is exactly the AUC of the same rows replicated as a
+  weighted positive and a weighted negative, which is how the tests check it.
+* **Coverage**: matched exposure over total exposure.
+
+Pure Polars and NumPy, no new dependency, and nothing is persisted: the reference rows are
+read and dropped (FR-2140). The scoring path is untouched.
+"""
+
+from __future__ import annotations
+
+import math
+from collections.abc import Mapping, Sequence
+from dataclasses import dataclass
+
+import numpy as np
+import polars as pl
+from numpy.typing import NDArray
+
+#: Shares must sum to one within this, and lie in [0, 1] (FR-2138).
+SHARE_TOLERANCE = 1e-6
+
+
+class ProxyAssessmentError(ValueError):
+    """The frame or the reference table cannot be assessed.
+
+    `code` is the platform error code, carried as data because `pricing-core` cannot import
+    the backend's registry (ADR-703): `PROXY_REFERENCE_INVALID` for the reference table,
+    `PROXY_INPUT_INVALID` for the call. The message names the column and, where it names rows,
+    their key in the reference table. It never carries a share or a value from the frame
+    (NFR-499): the reference is special-category data (FR-2142).
+    """
+
+    def __init__(self, code: str, message: str) -> None:
+        super().__init__(message)
+        self.code = code
+
+
+@dataclass(frozen=True)
+class FactorProxyResult:
+    """One Factor's association measures. There is deliberately no verdict field."""
+
+    factor: str
+    mutual_information_bits: float
+    #: ``None`` when the class entropy is 0, so there is nothing to normalise by.
+    normalised_mutual_information: float | None
+    #: ``None`` for a class with no positive or no negative weight at all.
+    auc_by_class: Mapping[str, float | None]
+
+
+@dataclass(frozen=True)
+class ProxyAssessmentResult:
+    matched_rows: int
+    matched_exposure: float
+    total_exposure: float
+    #: ``matched_exposure / total_exposure``; 0.0 when there is no exposure at all.
+    coverage: float
+    factors: tuple[FactorProxyResult, ...]
+
+
+def assess_proxies(
+    frame: pl.DataFrame,
+    factors: Sequence[str],
+    reference: pl.DataFrame,
+    *,
+    key: str,
+    reference_key: str,
+    classes: Sequence[str],
+    exposure: str = "exposure_years",
+) -> ProxyAssessmentResult:
+    """Measure each of ``factors`` (columns already resolved to Levels) against ``classes``.
+
+    ``reference`` holds ``reference_key`` and one share column per class. Rows of ``frame``
+    whose ``key`` is not in the reference are unmatched: excluded from every measure and
+    counted in the coverage (FR-2138).
+    """
+    class_list = list(classes)
+    _validate(frame, factors, reference, key, reference_key, class_list, exposure)
+
+    weight = pl.col(exposure).cast(pl.Float64)
+    kept = list(dict.fromkeys([*factors, key]))
+    clash = [c for c in [*class_list, "_w"] if c in kept]
+    if clash:
+        raise ProxyAssessmentError(
+            "PROXY_INPUT_INVALID", f"class names clash with frame columns {clash}")
+    selected = frame.select([*kept, weight.alias("_w")])
+    reference_side = reference.select([pl.col(reference_key).alias(key), *class_list])
+    try:
+        joined = selected.join(reference_side, on=key, how="left")
+    except pl.exceptions.PolarsError:
+        # Polars' own text can carry a cell value (NFR-499), so it is not passed on.
+        raise ProxyAssessmentError(
+            "PROXY_INPUT_INVALID",
+            f"frame key {key!r} and reference key {reference_key!r} cannot be joined: "
+            "their types differ",
+        ) from None
+    total_exposure = float(joined["_w"].sum())
+    # Every exposure is finite, but their sum can overflow; refuse it before it is divided.
+    _require_finite("total_exposure", total_exposure)
+    matched = joined.filter(pl.col(class_list[0]).is_not_null())
+    matched_exposure = float(matched["_w"].sum())
+    coverage = matched_exposure / total_exposure if total_exposure > 0 else 0.0
+
+    # An overflow inside a measure is the exit check's to report, not a numpy warning's.
+    with np.errstate(over="ignore", invalid="ignore", divide="ignore"):
+        results = tuple(_assess_factor(matched, factor, class_list) for factor in factors)
+    result = ProxyAssessmentResult(
+        matched_rows=matched.height,
+        matched_exposure=matched_exposure,
+        total_exposure=total_exposure,
+        coverage=coverage,
+        factors=results,
+    )
+    _require_finite_result(result)
+    return result
+
+
+def _require_finite(name: str, value: float | None) -> None:
+    """A measure is a finite number or, where its type allows, ``None``; never NaN or infinity.
+
+    The input checks of `_validate` cannot list every way arithmetic goes non-finite (a sum
+    of finite exposures overflows; a product of two large weights does), so this runs on what
+    is about to be returned. The message names the measure and never a value (NFR-499).
+    """
+    if value is not None and not math.isfinite(value):
+        raise ProxyAssessmentError(
+            "PROXY_INPUT_INVALID",
+            f"the assessment is not finite ({name}): the exposures are too large to aggregate",
+        )
+
+
+def _require_finite_result(result: ProxyAssessmentResult) -> None:
+    # `matched_rows` is a row count (an int) and cannot be non-finite.
+    _require_finite("total_exposure", result.total_exposure)
+    _require_finite("matched_exposure", result.matched_exposure)
+    _require_finite("coverage", result.coverage)
+    for factor in result.factors:
+        _require_finite(f"mutual information of {factor.factor!r}", factor.mutual_information_bits)
+        _require_finite(
+            f"normalised mutual information of {factor.factor!r}",
+            factor.normalised_mutual_information,
+        )
+        for cls, auc in factor.auc_by_class.items():
+            _require_finite(f"AUC of {factor.factor!r} for class {cls!r}", auc)
+
+
+def _validate(
+    frame: pl.DataFrame,
+    factors: Sequence[str],
+    reference: pl.DataFrame,
+    key: str,
+    reference_key: str,
+    classes: list[str],
+    exposure: str,
+) -> None:
+    if not classes or len(set(classes)) != len(classes):
+        raise ProxyAssessmentError(
+            "PROXY_INPUT_INVALID", "classes must be a non-empty list of distinct names")
+    missing = [c for c in [*factors, key, exposure] if c not in frame.columns]
+    if missing:
+        raise ProxyAssessmentError(
+            "PROXY_INPUT_INVALID", f"frame has no column {missing}")
+    missing = [c for c in [reference_key, *classes] if c not in reference.columns]
+    if missing:
+        raise ProxyAssessmentError(
+            "PROXY_REFERENCE_INVALID", f"reference has no column {missing}")
+    if reference[reference_key].is_duplicated().any():
+        raise ProxyAssessmentError(
+            "PROXY_REFERENCE_INVALID", f"reference key {reference_key!r} is repeated")
+    non_numeric = [c for c in classes if not reference.schema[c].is_numeric()]
+    if non_numeric:
+        raise ProxyAssessmentError(
+            "PROXY_REFERENCE_INVALID", f"reference share columns are not numeric {non_numeric}")
+    shares = reference.select(classes).to_numpy().astype(np.float64)
+    if np.isnan(shares).any():
+        # A null share reaches here as NaN, and so does a NaN one: both are refused before any
+        # comparison, because every comparison with NaN is false and would let it through.
+        raise ProxyAssessmentError(
+            "PROXY_REFERENCE_INVALID", "reference shares must not be null")
+    if (shares < 0).any() or (shares > 1).any():
+        raise ProxyAssessmentError(
+            "PROXY_REFERENCE_INVALID", "reference shares must lie in [0, 1]")
+    off = np.abs(shares.sum(axis=1) - 1.0) > SHARE_TOLERANCE
+    if off.any():
+        bad = reference[reference_key].filter(pl.Series(off)).head(5).to_list()
+        raise ProxyAssessmentError(
+            "PROXY_REFERENCE_INVALID", f"reference shares do not sum to 1 for keys {bad}")
+    if not frame.schema[exposure].is_numeric():
+        raise ProxyAssessmentError(
+            "PROXY_INPUT_INVALID", f"exposure column {exposure!r} is not numeric")
+    exposures = frame[exposure].cast(pl.Float64)
+    # NaN and infinity pass `< 0` (the comparison is false) and would turn every measure
+    # into NaN or inf, so finiteness is checked on its own.
+    if exposures.null_count() or not exposures.is_finite().all() or (exposures < 0).any():
+        raise ProxyAssessmentError(
+            "PROXY_INPUT_INVALID", "exposure must be finite, non-null and non-negative")
+
+
+def _assess_factor(matched: pl.DataFrame, factor: str, classes: list[str]) -> FactorProxyResult:
+    grouped = matched.group_by(factor).agg(
+        [(pl.col("_w") * pl.col(c)).sum().alias(c) for c in classes]
+    )
+    joint = grouped.select(classes).to_numpy().astype(np.float64)  # levels x classes
+    return FactorProxyResult(
+        factor=factor,
+        mutual_information_bits=_mutual_information_bits(joint),
+        normalised_mutual_information=_normalised(joint),
+        auc_by_class={c: _auc(joint, k) for k, c in enumerate(classes)},
+    )
+
+
+def _entropy_bits(p: NDArray[np.float64]) -> float:
+    nz = p[p > 0]
+    return float(-(nz * np.log2(nz)).sum())
+
+
+def _mutual_information_bits(joint: NDArray[np.float64]) -> float:
+    total = joint.sum()
+    if total <= 0:
+        return 0.0
+    p = joint / total
+    outer = np.outer(p.sum(axis=1), p.sum(axis=0))
+    nz = p > 0
+    mi = float((p[nz] * np.log2(p[nz] / outer[nz])).sum())
+    return max(mi, 0.0)  # rounding can leave -1e-17 on an independent table
+
+
+def _normalised(joint: NDArray[np.float64]) -> float | None:
+    total = joint.sum()
+    if total <= 0:
+        return None
+    entropy = _entropy_bits(joint.sum(axis=0) / total)
+    if entropy <= 0:
+        return None
+    return _mutual_information_bits(joint) / entropy
+
+
+def _auc(joint: NDArray[np.float64], k: int) -> float | None:
+    """One-vs-rest AUC of class ``k``, scoring each level by its share of that class."""
+    level_total = joint.sum(axis=1)
+    pos = joint[:, k]
+    neg = level_total - pos
+    positive, negative = float(pos.sum()), float(neg.sum())
+    if positive <= 0 or negative <= 0:
+        return None
+    keep = level_total > 0
+    score = pos[keep] / level_total[keep]
+    # Levels with an equal score tie: pool them, then count each pool's positives against
+    # the negatives scored strictly below it plus half of its own (ties averaged).
+    _, pool = np.unique(score, return_inverse=True)
+    pool_pos = np.bincount(pool, weights=pos[keep])
+    pool_neg = np.bincount(pool, weights=neg[keep])
+    below = np.cumsum(pool_neg) - pool_neg
+    auc = float((pool_pos * (below + 0.5 * pool_neg)).sum() / (positive * negative))
+    if not math.isfinite(auc):
+        # Returned as it is, never clamped or turned into None: ``None`` means "one-sided",
+        # and the exit check refuses a non-finite measure.
+        return auc
+    return min(max(auc, 0.0), 1.0)  # rounding can leave 1 + 1e-16

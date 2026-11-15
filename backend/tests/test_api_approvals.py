@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
+
 import pytest
 import pytest_asyncio
 from backend.tests.conftest_db import seed_as_owner
@@ -1057,16 +1059,27 @@ _AFTER = {
     "dataset_version": dict.fromkeys(_OUTCOMES, "validated"),
 }
 
+
+def _returns_as(prefix: str, return_state: str) -> Callable[[str], str]:
+    """A return from review is `<prefix>.returned`; any other move keeps `<prefix>.<state>`.
+
+    `06` §4.5's dated note (06-governance.md:574, #1783 C1, Q3 (a2)): the four types that
+    return to a pre-submission state (reject, request_changes and withdraw alike) record
+    `<type>.returned`, where they used to record the return state's own name.
+    """
+    return lambda to: f"{prefix}.returned" if to == return_state else f"{prefix}.{to}"
+
+
 #: The action each hooked type's decision records on the version.
 _MOVE_ACTION = {
-    "model": lambda to: f"model.{to}",
-    "custom_objective": lambda to: f"custom_objective.{to}",
-    "custom_metric": lambda to: f"custom_metric.{to}",
+    "model": _returns_as("model", "fitted"),
+    "custom_objective": _returns_as("custom_objective", "certified"),
+    "custom_metric": _returns_as("custom_metric", "certified"),
     "rating_version": lambda to: (
         "rating_version.approved" if to == "approved" else "rating_version.returned_to_draft"
     ),
     "validation_rule": lambda to: f"validation_rule.{to}",
-    "peril_structure": lambda to: f"peril_structure.{to}",
+    "peril_structure": _returns_as("peril_structure", "reconciled"),
 }
 
 
@@ -1194,3 +1207,70 @@ async def test_a_decision_moves_the_version_as_fr_355_says_and_records_it_truly(
         assert moves == [
             (_MOVE_ACTION[artifact_type](expected), REVIEWABLE_STATE[artifact_type], expected)
         ]
+
+
+@pytest.mark.req("FR-355")
+@pytest.mark.req("FR-368")
+@pytest.mark.parametrize("outcome", ["reject", "request_changes", "withdraw"])
+@pytest.mark.parametrize(
+    "artifact_type", ["model", "custom_objective", "custom_metric", "peril_structure"]
+)
+async def test_a_returned_event_names_the_approval_request_whose_decision_caused_it(
+    client: TestClient, database: Database, workspace_id, grant, submitter_headers,
+    artifact_type: str, outcome: str,
+) -> None:
+    """The path from a `<type>.returned` event to its decision (`06` §4.5's dated note): the
+    request id in the returned event's `after` names the approval request, and the decision's
+    own event is on the same entity and shares its trace. Rejecting, requesting changes and
+    withdrawing all return the version, so all three are pinned."""
+    from sqlalchemy import select
+
+    from app.db.models import AuditEventRow
+
+    await _allow_the_type(client, workspace_id, grant, database, artifact_type)
+    if artifact_type == "model":
+        ref = MODEL
+    else:
+        ref = await _create_authored(
+            database, workspace_id, artifact_type,
+            f"{artifact_type.replace('_', '-')}-table", 1, new_uuid7(),
+        )
+    created = client.post(
+        "/api/v1/approval-requests",
+        json={"artifact_ref": ref, "change_summary": "Return case."},
+        headers=submitter_headers,
+    )
+    assert created.status_code == 201, created.text
+    request_id = created.json()["id"]
+    approver = new_uuid7()
+    await grant("approver", principal_id=approver)
+    if outcome == "withdraw":
+        response = client.post(
+            f"/api/v1/approval-requests/{request_id}/withdraw",
+            json={"reason": "changed my mind"},
+            headers=_headers(approver, workspace_id),
+        )
+    else:
+        response = client.post(
+            f"/api/v1/approval-requests/{request_id}/decide",
+            json={"decision": outcome, "comment": "Reviewed."},
+            headers=_headers(approver, workspace_id),
+        )
+    assert response.status_code == 200, response.text
+
+    async with database.session() as session:
+        events = (
+            await session.execute(
+                select(AuditEventRow)
+                .where(AuditEventRow.workspace_id == workspace_id, AuditEventRow.entity_ref == ref)
+                .order_by(AuditEventRow.sequence)
+            )
+        ).scalars().all()
+    returned = [e for e in events if e.action == f"{artifact_type}.returned"]
+    assert [(e.after or {}).get("approval_request_id") for e in returned] == [request_id]
+    decision = [
+        e for e in events
+        if e.action.startswith("approval_request.") and e.action != "approval_request.submitted"
+    ]
+    assert len(decision) == 1
+    assert decision[0].trace_id == returned[0].trace_id

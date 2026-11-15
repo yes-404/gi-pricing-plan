@@ -97,6 +97,7 @@ possible. Before this point it was not, and there was no way to make it so.
 | D8 | Analyst | Also fits an XGBoost model on the same factors: `count:poisson`, `base_margin = log(exposure)`, monotone constraints derived from the factor declarations, early stopping on the declared holdout. | `02` FR-119, FR-120, FR-121, FR-122, FR-123, FR-124 |
 | D9 | Worker | Refuses a first attempt that had no offset and no acknowledgement: `OFFSET_REQUIRED_FOR_FREQUENCY`. | `02` FR-121 |
 | D10 | Analyst | `POST /models/{gbm_id}/transparency` → GLM approximation (R² 0.973) + SHAP summary, with a fidelity statement naming where the approximation fails and its exposure share. | `02` FR-132, FR-133, FR-134, FR-136 |
+| D11 | Pricing Actuary | **Optional.** `POST /models/{id}/proxy-assessments` with an insurer-supplied Reference Population: per Factor, mutual information, normalised MI, AUC per class and coverage, with the population's source, as-at date and digest recorded. The rows are not kept. It is evidence for the approval request and refuses nothing, including a Factor flagged `prohibited`. | `02` FR-91, FR-2137 to FR-2142 |
 
 ### Phase E — Selection, structure, approval (Pricing Actuary → Approver)
 
@@ -151,7 +152,7 @@ possible. Before this point it was not, and there was no way to make it so.
 | A — Ingestion | `01` FR-DATA-1..14, 25..28; `07` FR-PLAT-7..14, 21, 25 |
 | B — Validation | `01` FR-42, FR-45, FR-46, FR-47, FR-48, FR-49, FR-50, FR-51, FR-53, FR-54; `06` FR-GOV-2, 20 |
 | C — Factors | `01` FR-73, FR-74, FR-75, FR-76; `02` FR-83, FR-87, FR-88, FR-89, FR-90, FR-95, FR-96, FR-97, FR-98, FR-99, FR-100, FR-101, FR-104, FR-105, FR-107, FR-108, FR-109 |
-| D — Fitting | `02` FR-MODEL-18..37, 49..57, 62..67 |
+| D — Fitting | `02` FR-MODEL-18..37, 49..57, 62..67; the optional D11, `02` FR-91, FR-2137 to FR-2142 |
 | E — Approval | `02` FR-MODEL-56, 58..61, 64; `06` FR-351, FR-352, FR-353, FR-354, FR-355, FR-356, FR-357, FR-358, FR-359, FR-361, FR-363, FR-368, FR-369 |
 
 ## 6. Timing (typical, 5 M-row motor dataset)

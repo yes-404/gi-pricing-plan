@@ -28,8 +28,19 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from model_schema.input_free import InputFreeError
 from model_schema.jobs import JobSource, Principal
+from model_schema.refs import ArtifactRef
 
-__all__ = ["AuditEvent", "canonical_payload", "compute_event_hash"]
+__all__ = [
+    "ArtifactHistory",
+    "ArtifactHistoryEntry",
+    "AuditEvent",
+    "AuditEventListing",
+    "AuditEventRecord",
+    "FieldChange",
+    "StatusTransition",
+    "canonical_payload",
+    "compute_event_hash",
+]
 
 HASH_PREFIX = "sha256:"
 _HASH_PATTERN = r"^sha256:[a-f0-9]{64}$"
@@ -96,7 +107,7 @@ class AuditEvent(AuditEventCore):
     def core(self) -> AuditEventCore:
         """The hashed subset of this event."""
         return AuditEventCore.model_validate(
-            self.model_dump(exclude={"prev_event_hash", "event_hash"})
+            self.model_dump(include=set(AuditEventCore.model_fields))
         )
 
     def recompute_hash(self) -> str:
@@ -106,6 +117,93 @@ class AuditEvent(AuditEventCore):
     def verify(self) -> bool:
         """True when the stored hash matches the content. See `verify_chain` in the backend."""
         return self.recompute_hash() == self.event_hash
+
+
+class AuditEventRecord(AuditEvent):
+    """An event as the audit API returns and exports it: `AuditEvent` plus its `sequence`.
+
+    `sequence` is the per-workspace position the chain is ordered and verified by. It is not
+    hashed (the hash covers `AuditEventCore` and `prev_event_hash` only), so an export line
+    validates as this class and recomputes with `verify()` outside the platform (FR-372).
+    """
+
+    sequence: int = Field(ge=1, description="Position in the workspace's chain, from 1.")
+
+
+class AuditEventListing(AuditEventRecord):
+    """An event as the audit explorer's query returns it: the stored record, plus one derived
+    field for the views.
+
+    **The export is the record**, so an exported line is `AuditEventRecord` and carries nothing
+    derived; this class is the query response only (`06` §4.5's dated note on C1).
+    """
+
+    current_action: str | None = Field(
+        default=None,
+        pattern=ACTION_PATTERN,
+        description="Derived, not stored, not exported. The name this event would be written "
+        "under today, set only when it differs from the stored `action` (a return from review "
+        "written before the `<type>.returned` rename). `action` is always the stored name.",
+    )
+
+
+class FieldChange(BaseModel):
+    """One field whose value an event changed (`06` §4.6): the `before`/`after` difference.
+
+    `path` is dotted for nested state (`terms.region`); a list is one value, not diffed.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    path: str
+    before: Any | None = None
+    after: Any | None = None
+
+
+class StatusTransition(BaseModel):
+    """A lifecycle move, read from `before.status` and `after.status` (`06` §4.6)."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid", populate_by_name=True)
+
+    from_: str = Field(alias="from")
+    to: str
+
+
+class ArtifactHistoryEntry(BaseModel):
+    """One audit event of an artifact version, in the shape every artifact type shares."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    sequence: int = Field(ge=1)
+    at: datetime
+    actor: Principal
+    source: JobSource
+    action: str = Field(pattern=ACTION_PATTERN, description="The stored action name, as stored.")
+    current_action: str | None = Field(
+        default=None,
+        pattern=ACTION_PATTERN,
+        description="Derived, not stored, not exported. The name this event would be written "
+        "under today, set only when it differs from the stored `action` (a pre-rename return "
+        "from review).",
+    )
+    transition: StatusTransition | None = None
+    justification: str | None = None
+    diff: list[FieldChange] = Field(default_factory=list)
+    job_id: UUID | None = None
+    trace_id: str | None = Field(default=None, pattern="^[0-9a-f]{32}$")
+
+
+class ArtifactHistory(BaseModel):
+    """The uniform history of one artifact version (`06` §4.6, FR-383).
+
+    Read from the audit log by exact `entity_ref`, so it holds exactly the events written
+    under that reference: the history of one `{type}:{slug}@{version}`, oldest first.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    ref: ArtifactRef
+    events: list[ArtifactHistoryEntry]
 
 
 def canonical_payload(core: AuditEventCore, prev_event_hash: str | None) -> bytes:
