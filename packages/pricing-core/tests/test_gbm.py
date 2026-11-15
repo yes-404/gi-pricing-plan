@@ -577,12 +577,15 @@ def test_the_categorical_encoding_is_persisted_and_reused(backend: str) -> None:
 @pytest.mark.parametrize("backend", BACKENDS)
 def test_a_level_the_model_never_saw_is_refused_at_scoring(backend: str) -> None:
     """A level absent from the persisted map has no code, and inventing one would score it
-    as whichever level happens to share the number."""
+    as whichever level happens to share the number. The refusal names the factor, the count
+    and the position, never the level: a dataset value does not reach an error text (NFR-499)."""
     data = _frequency_data()
     fit = fit_gbm(data, _spec(backend), FACTORS)
     unseen = data.head(5).with_columns(pl.lit("coastal").alias("area"))
-    with pytest.raises(GbmFitError, match="coastal"):
+    with pytest.raises(GbmFitError, match="never saw") as refused:
         predict_gbm(fit.result, fit.booster_bytes, unseen)
+    assert "'area'" in str(refused.value), "control: the factor is still named"
+    assert "coastal" not in str(refused.value)
 
 
 @pytest.mark.req("FR-120")
