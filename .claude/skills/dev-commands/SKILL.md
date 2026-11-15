@@ -5,8 +5,15 @@ description: The commands that build, gate, migrate, benchmark and demo this rep
 
 # Development commands
 
-`CLAUDE.md` §11 carries the bare invocations. This carries the commentary — which is the
+`CONTRIBUTING.md` ("The gate") carries the bare invocations. This carries the commentary — which is the
 part that was learned by something failing, and the part a bare command list cannot hold.
+
+> **Under the new frame (from 2026-11-13, ADR-2136).** The gate is the one in
+> `CONTRIBUTING.md`: both halves, run before pushing. No ledger is kept, so every "record in
+> the ledger" below means "say it in the pull request's evidence". Retired and not to be run:
+> `doc-id.py migrate` (including `--verify` and its slot wrapper), the owed-list generator,
+> the register linter, `doc-index.py` generation and `--check`, and every other record-process
+> command in the sections marked RETIRED. `doc-id.py next` and `doc-id.py check` stay.
 
 ## Setup — `--all-packages` is not optional
 
@@ -193,9 +200,9 @@ by their own pids before release; check with `fuser <lockfile>` that only your p
 it.** Why: on 2026-10-08 (S2) a pnpm/vite wrapper started inside `flock -c` inherited the
 lock fd and held gate-1 for about 17 minutes after the run ended.
 
-**Gate-2 standing rule: one docs check beside one code gate, and nothing else.** From the entry "2026-10-10 03:41:56 BST — RULINGS: S4's test_audit_docs_ids.py 82→83 YES; evidence form accepted; GATE-2 pairing becomes STANDING (docs ∥ one code gate only)" in `~/gi-pricing-plan.local/channel/to-lead.md`, item 3, verbatim: *"From now on, gate-2 may run ONE DOCS check (audit-docs, doc-index, register-lint, migrate --verify, the docs pytest subset) concurrently with ONE code full gate on gate-1, never beside a measurement. Two concurrent code gates remain NOT allowed (untested). Any timing-sensitive failure while gate-2 is busy is re-run ALONE before it counts."* The rule rests on three clean pairs, and is limited to exactly what they tested: pair 1, #1250's gate beside finisher-s3's docs checks (00:24–01:10); pair 2, S4's gate beside D2's checks (01:53–02:40); pair 3, S4's re-gate beside D3's checks (02:54–03:40), all on 2026-10-10 BST.
+**Gate-2 standing rule: one docs check beside one code gate, and nothing else.** From the entry "2026-10-10 03:41:56 BST — RULINGS: S4's test_audit_docs_ids.py 82→83 YES; evidence form accepted; GATE-2 pairing becomes STANDING (docs ∥ one code gate only)" in `~/gi-pricing-plan.local/channel/to-lead.md`, item 3, verbatim: *"From now on, gate-2 may run ONE DOCS check (audit-docs, (retired: doc-index, the register lint, migrate --verify) the docs pytest subset) concurrently with ONE code full gate on gate-1, never beside a measurement. Two concurrent code gates remain NOT allowed (untested). Any timing-sensitive failure while gate-2 is busy is re-run ALONE before it counts."* The rule rests on three clean pairs, and is limited to exactly what they tested: pair 1, #1250's gate beside finisher-s3's docs checks (00:24–01:10); pair 2, S4's gate beside D2's checks (01:53–02:40); pair 3, S4's re-gate beside D3's checks (02:54–03:40), all on 2026-10-10 BST.
 
-**The rule and the roles' sweep-pause bullet do not conflict** *(added 2026-10-12, on the maintainer's (by delegation) entry "2026-10-11 23:25:12 BST" item 4(a) in `to-lead.md`)*. The charters' bullet pauses a *sweep or batch* of checks (audit-docs, merge-tree or doc-id over many PRs, register-lint loops) for the whole of any held gate slot. The standing rule permits *one* docs check, run **through** `flock /tmp/slots/gate-2` (so two cannot overlap), beside *one* code gate on gate-1. A single gate-2 docs check is not a sweep. It is a breach if two docs checks overlapped, if the gate-2 flock was skipped, or if the run was a batch over many PRs. It never runs beside a measurement or an ALONE window, and a timing-sensitive red seen while gate-2 was busy is re-run alone before it counts. The roles' bullet was never reconciled with this rule until the clarifying line of 2026-10-12 (seven role files); the original paragraph above was owed to "the next docs batch" by the 03:41:56 entry and landed in D6.
+**The rule and the roles' sweep-pause bullet do not conflict** *(added 2026-10-12, on the maintainer's (by delegation) entry "2026-10-11 23:25:12 BST" item 4(a) in `to-lead.md`)*. The charters' bullet pauses a *sweep or batch* of checks (audit-docs, merge-tree or doc-id over many PRs, check loops) for the whole of any held gate slot. The standing rule permits *one* docs check, run **through** `flock /tmp/slots/gate-2` (so two cannot overlap), beside *one* code gate on gate-1. A single gate-2 docs check is not a sweep. It is a breach if two docs checks overlapped, if the gate-2 flock was skipped, or if the run was a batch over many PRs. It never runs beside a measurement or an ALONE window, and a timing-sensitive red seen while gate-2 was busy is re-run alone before it counts. The roles' bullet was never reconciled with this rule until the clarifying line of 2026-10-12 (seven role files); the original paragraph above was owed to "the next docs batch" by the 03:41:56 entry and landed in D6.
 
 **The PreToolUse hook command works from any working directory, and a rename of its script changes `.claude/settings.json` in the same commit.** The `if` filter on `.claude/settings.json`'s retry-cap hook is best-effort **by documented design** (the [hooks reference](https://code.claude.com/docs/en/hooks#bash-if-matching)): a Bash call Claude Code cannot parse statically (a pipe, `$(…)`, a heredoc) runs the hook whatever the pattern says. So the registered command names `scripts/hooks/retry_cap_hook.py` by `"${CLAUDE_PROJECT_DIR:-$(git rev-parse --show-toplevel)}"/…`, not relative to the cwd; a relative path exited 2 (a blocking exit) on every such call after a `cd`. This is documented behaviour, not a Claude Code bug (measured on 2.1.296 for PL 9617). Every session runs the checkout's copy of the script by that path, so moving or renaming it without editing the settings in the same commit locks every Bash call; `tests/test_hook_registration.py` reds the gate if the script named is missing.
 
@@ -222,18 +229,18 @@ surprise edit appearing in `git status` from a command labelled as a check.
 `--check`; this block was the odd one out. When `--check` reports drift, regenerate
 deliberately with `uv run python scripts/generate-contracts.py` and commit the result.
 
-**The body sets `GIP_TEST_DATABASE_URL` and nothing else, and that is checked, not
-assumed.** `.github/workflows/python.yml` also exports `GIP_BLOB_ENDPOINT_URL` and
-`GIP_REDIS_URL` for its `Tests` step, and `.claude/agents/gate-runner.md` used to repeat
-both. They are omitted here because `backend/src/app/config.py` already defaults them to
-**exactly the values CI sets** — `blob_endpoint_url: str = "http://localhost:9000"` and
-`redis_url: SecretStr = SecretStr("redis://localhost:6379/0")` — so against the compose
-stack on its default ports, setting them changes nothing. `database_url`'s default is
-*not* the local stack (`postgresql+asyncpg://gip:gip@localhost:5432/gip`), which is why
-`GIP_TEST_DATABASE_URL` above is not optional and why the `alembic` command documented
-separately sets `GIP_DATABASE_URL` explicitly. **If the compose stack is ever moved off
-its default ports, these two come back into this block** — a default that happens to match
-is not the same as a value that is pinned.
+**The body sets `GIP_TEST_DATABASE_URL` and `GIP_REDIS_URL`, and the suite refuses to run without a
+usable `GIP_REDIS_URL`.** `backend/src/app/config.py` defaults `redis_url` to
+`redis://localhost:6379/0`, the live database 0 on a shared box, and a backend test run with the variable
+unset once deleted a Celery list from it (#1806). So `backend/tests/conftest.py`'s `pytest_configure`
+ends the run with **exit code 4** and a message, before any test or app starts, when
+`GIP_REDIS_URL` is unset or empty, names database 0, or has no database index (redis-py reads that as 0).
+Set a scratch database, 1 or higher, for every backend test run outside a gate, e.g.
+`export GIP_REDIS_URL=redis://localhost:6379/12`; the gate template sets its slot's own. The message
+never prints the URL. The default in `config.py` stays: it is the app's, not the suite's. CI's `Tests` step
+sets `/1`. `GIP_BLOB_ENDPOINT_URL` is still omitted from this block, because `config.py` defaults it to
+exactly the value CI sets (`blob_endpoint_url: str = "http://localhost:9000"`); if the compose stack
+moves off its default ports it comes back into this block.
 
 **`nproc` lies inside this body.** GNU `nproc` honours `OMP_NUM_THREADS`, so once the
 caps above are exported it reports `4` on this 16-core box. That is the intended effect
@@ -286,7 +293,7 @@ tests (`--collect-only` never enters test setup, so the teardown never fires and
 lock). Record in the ledger when this fallback is used; it re-serialises the gates the
 process slots were widened to parallelise, so it is the exception.
 
-Same shape for `migrate --verify`, also two slots:
+**RETIRED (ADR-2136):** the same shape for `migrate --verify`, also two slots; kept for history:
 
 ```bash
 verify_body='POLARS_MAX_THREADS=4 RAYON_NUM_THREADS=4 TOKIO_WORKER_THREADS=4 OMP_NUM_THREADS=4 OPENBLAS_NUM_THREADS=4 MKL_NUM_THREADS=4 python3 scripts/doc-id.py migrate --verify <root>'
@@ -304,7 +311,7 @@ fi
 ( exit "$final" )
 ```
 
-Same announcement shape as `GIP_GATE_SLOT` above: `scripts/_docverify.py`'s `verify()`
+Same announcement shape as `GIP_GATE_SLOT` above: (the deleted verifier)'s `verify()`
 checks `GIP_VERIFY_SLOT` first and skips its own `/tmp/slots/verify-{1,2}` lock when the
 wrapper has already announced one, so a correctly-wrapped `migrate --verify` run never
 double-locks against itself.
@@ -773,6 +780,8 @@ claimed` as a floor on attention, not a measure of test quality.
 
 ## The RFC-937 id instruments — `doc-id.py` and `doc-index.py`
 
+> **Retired by ADR-2136.** The record families (plans, ledgers, rulings, closures, findings, rfcs), `docs/roadmap.md`, `docs/INDEX.md` and `docs/open-questions.md` are frozen and no longer audited, minted or regenerated. `doc-id.py migrate`/`widen`, the register linter, the owed-list generator, the ruling census and audit-docs checks 4, 15-20, 23, 25, 28, 29, 38 and 39 are removed; `doc-id.py next` and `check` remain, and `doc-index.py` is no longer run. Read any passage below that tells you to run a retired tool as history.
+
 Five commands govern document ids and the generated index. `migrate` is the sixth and is
 **not** here: it is a one-way instrument, its run is done, and re-running it re-migrates
 already-migrated text — see *Migration run* below for the only form still permitted.
@@ -857,7 +866,7 @@ not add one.** `_enumerate_tree` (`scripts/doc-id.py:3854`) enumerates through
 (`_LS_FILES_ARGS`, `scripts/doc-id.py:3851`), so `--exclude-standard` applies the
 checkout's own `.gitignore` and a gitignored path is never a candidate in the first place.
 There is no `if ".venv" in path` anywhere in `scripts/doc-id.py` or
-`scripts/_docverify.py`; a reader who goes looking for the guard should stop looking rather
+the since-deleted verify module; a reader who goes looking for the guard should stop looking rather
 than write one, because a second, name-based exclusion would drift from `.gitignore` and
 then disagree with it.
 
@@ -873,7 +882,7 @@ kept deliberately — `migrate`'s own new files (`docs/INDEX.md`, the split inde
 `REDIRECTS.csv`) are untracked until committed. The walk survives only for a `root` that is
 not inside a work tree at all.
 
-## Closure audit — expected scope first, then evidence
+## Closure audit — expected scope first, then evidence (the `scope-audit.py` part stays; the closure record is retired)
 
 ```bash
 uv run python scripts/scope-audit.py PLAT --sections 3.1,3.2,3.3,3.7,3.8
@@ -884,8 +893,10 @@ uv run python scripts/scope-audit.py DATA --catalogue VR # a spec's named-item c
 The three axes answer different questions and none substitutes for another —
 [`close-workstream`](../close-workstream/SKILL.md) has the method and the incident behind each.
 
+**RETIRED (ADR-2136): the owed-list generator is deleted; the findings register is frozen. Do not run it.** Kept for history:
+
 ```bash
-python3 scripts/register-owed.py <work-id | phase | review>   # e.g. W11, 2, review
+# (deleted) owed-list generator: <work-id | phase | review>   # e.g. W11, 2, review
 ```
 
 RFC-896 P5's owed-list generator (RL-912) — every open `docs/findings/register.md` row
@@ -1169,6 +1180,8 @@ Verified: 2026-09-17
 
 ## Verified
 
+2026-11-14 (base tree of main `416ab152`; the paragraph on `GIP_REDIS_URL` and the exit-code-4 refusal, read against `backend/tests/conftest.py` `pytest_configure` in the same commit).
+
 2026-11-08 (tree `c4ae584a`) — The fourth `req-coverage` failure mode (review P12, FD-1725), the demo STOP (skills-gap A3) and the DB-window and `run-heavy` section (A7) added; each read against its cited process rows, the two script lines and `run-heavy.sh`'s header. The rest of this file was not re-read.
 
 2026-10-17, against main `cf509df89dbebff329bb6b319bcc9bcd2a2c2352`. **The template-DB paragraph was added** (the maintainer's ruling, relayed by the lead): `gipricing` is migrations-only, rebuilt after a migration, never seeded. The rebuild at `d4e81b7a2c95` is the lead's report; this author did not query the database.
@@ -1239,7 +1252,7 @@ recalled. Two things measured rather than assumed, both of which changed what wa
 - **The venv exclusion is by construction and has no refusal guard.** `_enumerate_tree`
   (`:3854`) enumerates through `git ls-files -z --cached --others --exclude-standard`
   (`_LS_FILES_ARGS`, `:3851`), so `.gitignore` applies before anything is a candidate.
-  Predicate `grep -n '\.venv' scripts/doc-id.py scripts/_docverify.py` at `7d5d6e0` → **4
+  Predicate `grep -n '\.venv' scripts/doc-id.py scripts/_docverify.py` (script retired 2026-11-13; kept as the command that was run) at `7d5d6e0` → **4
   lines, all prose in a comment or docstring** (`scripts/doc-id.py:544`, `:3826`, `:5011`,
   `:5028`), no conditional anywhere.
 
@@ -1337,7 +1350,7 @@ its own probe) — corrected before acting; the real count was one `pytest` bina
 worktree throughout, confirmed with `ps -eo pid,args | grep '[/]\.venv/bin/pytest'` (the
 real binary path, never a bare string match).
 
-2026-08-31 — `register-owed.py` added to the closure-audit section, RFC-896 P5 (RL-912).
+2026-08-31 — the owed-list generator added to the closure-audit section, RFC-896 P5 (RL-912).
 Deliberately not added to `CLAUDE.md` §11's gate command list: it is on-demand, the same
 treatment `scope-audit.py` already has here.
 

@@ -31,6 +31,7 @@ from model_schema import (
     EbmFitResult,
     EbmNumericBins,
     Factor,
+    FactorType,
     FitResult,
     GbmFitResult,
     GlmFitResult,
@@ -38,10 +39,15 @@ from model_schema import (
     Grouping,
     ModelSpec,
 )
-from pricing_core.modelling.factors import resolve_factor_columns, resolve_factors
+from pricing_core.modelling.factors import (
+    CROSS_SEPARATOR,
+    resolve_factor_columns,
+    resolve_factors,
+)
 
 __all__ = [
     "PredictionError",
+    "check_term_domains",
     "detect_quantile_crossing",
     "linear_predictor",
     "linear_predictor_row",
@@ -110,10 +116,103 @@ def _term_vectors(
     backtest scores the full dataset, and materialising `n x p` there would be hundreds of
     megabytes to compute a dot product that needs one column at a time.
     """
+    check_term_domains(fit, factors, bandings=bandings, groupings=groupings)
     matrix = resolve_factors(data, factors, bandings=bandings, groupings=groupings)
     yield from _design_columns(
         fit, matrix.terms, lambda name: matrix.frame[name], data.height
     )
+
+
+def _level_domain(
+    factor: Factor,
+    bandings: Mapping[UUID, Banding] | None,
+    groupings: Mapping[UUID, Grouping] | None,
+) -> frozenset[str] | None:
+    """The levels `factor` can produce, or `None` when its domain is open (an IDENTITY or an
+    unbanded expression: a level there is the data's, and `_refuse_unproducible_numeric_level`
+    holds the numeric case). A pinned artifact the caller did not supply is also `None`:
+    `resolve_factor_columns` refuses that, by its own name."""
+    if factor.banding_id is not None and factor.type in (
+        FactorType.BANDING,
+        FactorType.EXPRESSION,
+    ):
+        banding = (bandings or {}).get(factor.banding_id)
+        return None if banding is None else frozenset(banding.levels)
+    if factor.type is FactorType.GROUPING and factor.grouping_id is not None:
+        grouping = (groupings or {}).get(factor.grouping_id)
+        return None if grouping is None else frozenset(grouping.target_levels)
+    return None
+
+
+def check_term_domains(
+    fit: GlmFitResult,
+    factors: Sequence[Factor],
+    *,
+    bandings: Mapping[UUID, Banding] | None = None,
+    groupings: Mapping[UUID, Grouping] | None = None,
+) -> None:
+    """Refuse a level indicator its Factor cannot produce (`MODEL_TERM_UNRESOLVED`, FR-193).
+
+    Every `slug[level]` the fit names must be a level that Factor's artifact yields: a Banding's
+    labels and null level, a Grouping's target levels, or, for an interaction, each part against
+    its operand's domain (checked only when the split count equals the operand count, because a
+    level may itself contain the separator). Scoring such a term would give every row an indicator
+    of 0, drop its coefficient and move the prediction toward the base level with no error. Reads
+    the artifacts only, never a row, so the text names the term and the Factor and no quote value
+    (NFR-499).
+    """
+    by_id = {f.id: f for f in factors}
+    by_slug = {f.slug: f for f in factors}
+    for coefficient in fit.coefficients:
+        match = _DUMMY.match(coefficient.term)
+        factor = by_slug.get(match.group("slug")) if match is not None else None
+        if match is None or factor is None:
+            continue
+        level = match.group("level")
+        if factor.type is FactorType.INTERACTION:
+            operands = [by_id.get(i) for i in factor.operand_factor_ids]
+            cells = level.split(CROSS_SEPARATOR)
+            if len(cells) != len(operands):
+                continue
+            unproducible = any(
+                (domain := _level_domain(o, bandings, groupings)) is not None
+                and cell not in domain
+                for o, cell in zip(operands, cells, strict=True)
+                if o is not None
+            )
+        else:
+            domain = _level_domain(factor, bandings, groupings)
+            unproducible = domain is not None and level not in domain
+        if unproducible:
+            raise PredictionError(
+                "MODEL_TERM_UNRESOLVED",
+                f"term {coefficient.term!r} names a level that factor {factor.slug!r} cannot "
+                "produce. Scoring with the term at 0 would silently move every prediction "
+                "toward the base level.",
+                terms=[coefficient.term],
+            )
+
+
+def _refuse_unproducible_numeric_level(
+    term: str, slug: str, level: str, dtype: pl.DataType
+) -> None:
+    """A level on a numeric column must survive Polars' own round trip (`level` → dtype →
+    `String`): `"25-39"` cannot come from an `Int64`, nor `"3"` from a `Float64` (`"3.0"`).
+    Only a numeric column pays the test; a correctly fitted dummy never meets one."""
+    if not dtype.is_numeric():
+        return
+    try:
+        produced = pl.Series([level]).cast(dtype).cast(pl.String).item()
+    except pl.exceptions.PolarsError:
+        produced = None
+    if produced != level:
+        raise PredictionError(
+            "MODEL_TERM_UNRESOLVED",
+            f"term {term!r} names a level that factor {slug!r}, resolved as {dtype}, cannot "
+            "produce. Scoring with the term at 0 would silently move every prediction "
+            "toward the base level.",
+            terms=[term],
+        )
 
 
 def _design_columns(
@@ -149,7 +248,9 @@ def _design_columns(
                     terms=[term],
                 )
             if column not in as_text:
-                as_text[column] = column_of(column).cast(pl.String)
+                series = column_of(column)
+                _refuse_unproducible_numeric_level(term, slug, level, series.dtype)
+                as_text[column] = series.cast(pl.String)
             indicator = (as_text[column] == level).cast(pl.Float64)
             yield coefficient, indicator.to_numpy()
             continue

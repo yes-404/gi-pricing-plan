@@ -36,7 +36,7 @@ from app.db.models import (
 )
 from app.errors import PlatformError
 from app.observability.logging import get_logger
-from app.platform import approvals, audit, rbac
+from app.platform import approvals, audit, blobs, rbac
 from model_schema import (
     VALID_DATASET_TRANSITIONS,
     ArtifactRef,
@@ -921,6 +921,11 @@ async def derive_version(
     # rows are the caller's to materialise: `split` replaces this wholesale (FR-77),
     # and every other operation was refused above (FR-78).
     child.tables = parent.tables
+    # The child is a second owner of every blob it just named, and no `put` took its reference
+    # (FR-420, #1504 D1): without one, correcting the child's schema releases the parent's only
+    # reference and the collector can delete a blob the parent still reads.
+    for table in child.tables:
+        await blobs.retain(session, table["blob"]["sha256"])
     await session.flush()
     return child
 

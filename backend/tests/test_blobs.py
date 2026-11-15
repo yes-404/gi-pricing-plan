@@ -58,7 +58,33 @@ async def test_put_stores_content_and_records_size_and_type(
         row = await session.get(BlobRow, TEXT_SHA)
     assert row is not None
     assert row.bytes_ == len(TEXT)
-    assert row.ref_count == 0
+    # `put` took the caller's reference (FR-420). TEXT is a fixed payload other tests put too,
+    # so the count is at least one; the exact count is asserted on unique content below.
+    assert row.ref_count >= 1
+
+
+@pytest.mark.req("FR-420")
+async def test_put_takes_one_reference_for_its_caller(
+    database: Database, blob_store: BlobStore
+) -> None:
+    """A new blob starts at 1 and a de-duplicated put of the same bytes makes it 2.
+
+    Breaker: create the row at `ref_count=0` (or skip the `retain` on the existing row).
+    """
+    payload = unique(b"owned by its writer")
+    async with database.unit_of_work() as session:
+        ref = await blob_store.put(session, payload, "text/plain")
+    async with database.session() as session:
+        row = await session.get(BlobRow, ref.sha256)
+        assert row is not None
+        assert row.ref_count == 1
+
+    async with database.unit_of_work() as session:
+        await blob_store.put(session, payload, "text/plain")
+    async with database.session() as session:
+        row = await session.get(BlobRow, ref.sha256)
+        assert row is not None
+        assert row.ref_count == 2
 
 
 @pytest.mark.req("FR-419")
@@ -136,9 +162,9 @@ async def test_reference_counting_tracks_retain_and_release(
 ) -> None:
     async with database.unit_of_work() as session:
         ref = await blob_store.put(session, unique(b"counted"), "text/plain")
-        assert await blobs.retain(session, ref.sha256) == 1
         assert await blobs.retain(session, ref.sha256) == 2
-        assert await blobs.release(session, ref.sha256) == 1
+        assert await blobs.retain(session, ref.sha256) == 3
+        assert await blobs.release(session, ref.sha256) == 2
 
 
 @pytest.mark.req("FR-420")
@@ -149,7 +175,8 @@ async def test_releasing_below_zero_fails_the_transaction(
     from sqlalchemy.exc import IntegrityError
 
     async with database.unit_of_work() as session:
-        ref = await blob_store.put(session, unique(b"never retained"), "text/plain")
+        ref = await blob_store.put(session, unique(b"released twice"), "text/plain")
+        assert await blobs.release(session, ref.sha256) == 0
 
     with pytest.raises(IntegrityError):
         async with database.unit_of_work() as session:
@@ -171,6 +198,7 @@ async def test_gc_defaults_to_dry_run_and_deletes_nothing(
     """A destructive sweep whose default is to destroy is one that gets run by accident."""
     async with database.unit_of_work() as session:
         ref = await blob_store.put(session, unique(b"gc dry run"), "text/plain")
+        await blobs.release(session, ref.sha256)
     await _age_blob(database, ref.sha256, days=60)
 
     async with database.unit_of_work() as session:
@@ -193,7 +221,6 @@ async def test_gc_spares_a_referenced_blob(
     """Negative: collecting a referenced blob deletes a dataset someone still points at."""
     async with database.unit_of_work() as session:
         ref = await blob_store.put(session, unique(b"still referenced"), "text/plain")
-        await blobs.retain(session, ref.sha256)
     await _age_blob(database, ref.sha256, days=60)
 
     async with owner_database.unit_of_work() as session:
@@ -213,6 +240,7 @@ async def test_gc_spares_a_young_unreferenced_blob(
     """A blob exists before the artifact that references it — the grace period is that gap."""
     async with database.unit_of_work() as session:
         ref = await blob_store.put(session, unique(b"just uploaded"), "text/plain")
+        await blobs.release(session, ref.sha256)
 
     async with owner_database.unit_of_work() as session:
         report = await blob_store.collect_garbage(
@@ -232,6 +260,7 @@ async def test_gc_deletes_an_old_unreferenced_blob_and_audits_it(
     (OQ-1943: which role runs FR-420 garbage collection), so it runs on the owner."""
     async with database.unit_of_work() as session:
         ref = await blob_store.put(session, unique(b"collect me"), "text/plain")
+        await blobs.release(session, ref.sha256)
     await _age_blob(database, ref.sha256, days=60)
 
     async with owner_database.unit_of_work() as session:

@@ -35,6 +35,7 @@ __all__ = [
     "RATING_ERROR_CODES",
     "PlatformError",
     "install_error_handlers",
+    "is_registered_code",
     "problem_response",
     "unexpected_problem",
 ]
@@ -208,6 +209,10 @@ MODELLING_ERROR_CODES: Final[frozenset[str]] = frozenset(
         # FR-165, WK-690 S3 Task 6: the fit job surfaces Slice 2's two coded errors.
         "OBJECTIVE_NONFINITE_DERIVATIVE",
         "OBJECTIVE_ROUND_BUDGET_EXCEEDED",
+        # #1501 (WK-691), 2026-11-15, on the maintainer's ruling: the two codes of
+        # `pricing-core`'s `ProxyAssessmentError` (FR-2138). No route maps them yet.
+        "PROXY_REFERENCE_INVALID",
+        "PROXY_INPUT_INVALID",
         "MODEL_TERM_UNRESOLVED",
         "MODEL_LINK_UNSUPPORTED",
         "MODEL_OFFSET_MISSING",
@@ -446,6 +451,12 @@ _GENERIC_ERROR_CODES: Final[frozenset[str]] = frozenset(
         "INTERNAL_ERROR",
         # FR-21; owned by `00` §5.3's block (audit-docs check 10 reads it there).
         "DECIMAL_OUT_OF_RANGE",
+        # FR-420's second line of defence (#1504 D1): `blobs.release` would take a blob's count
+        # to 0 while a row `BLOB_OWNERS` can see still names it. An internal invariant breach
+        # (500), never a caller's mistake: it is raised only by a writer that failed to take a
+        # reference. Deliberately not in a spec's error block (the maintainer's ruling,
+        # 2026-11-14): no client can act on it.
+        "BLOB_REFERENCE_INVARIANT_BREACHED",
     }
 )
 
@@ -457,6 +468,11 @@ _KNOWN_CODES: Final[frozenset[str]] = (
     | RATING_ERROR_CODES
     | _GENERIC_ERROR_CODES
 )
+
+
+def is_registered_code(code: str) -> bool:
+    """Whether `code` is enumerated in a module's catalogue, the check `PlatformError` applies."""
+    return code in _KNOWN_CODES
 
 
 def _type_uri(code: str) -> str:

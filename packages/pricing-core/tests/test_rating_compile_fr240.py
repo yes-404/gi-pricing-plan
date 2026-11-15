@@ -21,7 +21,14 @@ from test_rating_compile_bundle import (
     _mounted_version,
 )
 
-from model_schema.modelling import Factor, FactorIntent, ModelStatus
+from model_schema.modelling import (
+    Factor,
+    FactorIntent,
+    FactorType,
+    Model,
+    ModelStatus,
+    RelativityLevel,
+)
 from model_schema.rating import (
     RateTable,
     RateTableKey,
@@ -32,7 +39,12 @@ from model_schema.rating import (
 )
 from model_schema.refs import ArtifactRef
 from pricing_core.rate_tables.operations import seed_from_model
-from pricing_core.rating.compile import ResolvedArtifact, compile_bundle
+from pricing_core.rating.compile import (
+    ResolvedArtifact,
+    _refuse_control_factor_features,
+    _refuse_control_factor_keys,
+    compile_bundle,
+)
 
 OBJ = "custom_objective:asym-loss@1"
 MODEL = "model:motor-ad-frequency@7"
@@ -417,3 +429,321 @@ async def test_a_stored_cell_the_engine_cannot_read_does_not_compile(raw: str) -
 @pytest.mark.parametrize("raw", ["1.36e-7", "1_000", "100"])
 async def test_a_stored_cell_the_engine_reads_compiles(raw: str) -> None:
     await compile_bundle(_version(), _with_cells("1.5", raw))
+
+
+# -- FD-1495's interaction limb (SL 2124): a `control` OPERAND of a `risk` interaction ---------
+#
+# A cross is a design column of its own and its operands get no term (`02` FR-92), so a pinned
+# model that prices through `<cross>[a | x]` consumes only the cross's slug. FR-88's "never
+# rated on" and FR-240's "fitted on a control Factor" reach the operands, at any depth.
+
+def _interaction(slug: str, *operands: Factor) -> Factor:
+    return Factor(
+        id=_factor(slug).id,
+        slug=slug,
+        dataset_id=operands[0].dataset_id,
+        version=1,
+        type=FactorType.INTERACTION,
+        source_columns=(),
+        operand_factor_ids=tuple(operand.id for operand in operands),
+    )
+
+
+def _controlled(slug: str) -> Factor:
+    return _factor(slug).model_copy(update={"intent": FactorIntent.CONTROL})
+
+
+CROSS_TERMS = ("intercept", "region_x_yoa[A | 2010]", "region_x_yoa[B | 2011]")
+
+
+def _crossed() -> tuple[Factor, Factor, Factor]:
+    region, yoa = _factor("region"), _controlled("yoa")
+    return _interaction("region_x_yoa", region, yoa), region, yoa
+
+
+def _glm_pin(factors: tuple[Factor, ...], *terms: str) -> ResolvedArtifact:
+    return ResolvedArtifact(
+        status="approved", payload={"fit_result": _glm_fit(*terms)}, factors=factors
+    )
+
+
+@pytest.mark.req("FR-88")
+@pytest.mark.req("FR-240")
+def test_the_feature_guard_refuses_a_risk_interaction_over_a_control_operand() -> None:
+    cross, region, yoa = _crossed()
+    with pytest.raises(ValueError, match="CONTROL_FACTOR_IN_RATEABLE_PATH") as refused:
+        _refuse_control_factor_features(MODEL, _glm_pin((cross, region, yoa), *CROSS_TERMS))
+    message = str(refused.value)
+    assert "yoa@1" in message  # the OPERAND ...
+    assert "region_x_yoa" in message  # ... and the cross that carries it
+    assert MODEL in message
+
+
+@pytest.mark.req("FR-88")
+@pytest.mark.req("FR-240")
+def test_the_feature_guard_passes_a_risk_interaction_over_risk_operands() -> None:
+    region, plan = _factor("region"), _factor("plan")
+    cross = _interaction("region_x_yoa", region, plan)
+    _refuse_control_factor_features(MODEL, _glm_pin((cross, region, plan), *CROSS_TERMS))
+
+
+@pytest.mark.req("FR-88")
+@pytest.mark.req("FR-240")
+def test_the_feature_guard_expands_a_nested_interaction_to_its_leaves() -> None:
+    """Depth 2: `outer = inner x plan`, `inner = region x yoa(control)`.
+
+    `_cross` refuses an interaction operand at resolution, so a nested cross cannot be scored;
+    the guard still expands it, so no pin can be shown clean by the resolver refusing first.
+    """
+    cross, region, yoa = _crossed()
+    plan = _factor("plan")
+    outer = _interaction("outer_x", cross, plan)
+    with pytest.raises(ValueError, match="CONTROL_FACTOR_IN_RATEABLE_PATH") as refused:
+        _refuse_control_factor_features(
+            MODEL,
+            _glm_pin((outer, cross, region, yoa, plan), "intercept", "outer_x[a | b]"),
+        )
+    assert "yoa@1" in str(refused.value)
+    assert "outer_x" in str(refused.value)
+
+
+@pytest.mark.req("FR-88")
+@pytest.mark.req("FR-240")
+def test_the_feature_guard_refuses_an_operand_that_is_not_among_the_pins_factors() -> None:
+    """Fail closed: an operand the pin does not carry cannot be shown not to be `control`."""
+    cross, region, yoa = _crossed()
+    with pytest.raises(ValueError, match="CONTROL_FACTOR_IN_RATEABLE_PATH") as refused:
+        _refuse_control_factor_features(MODEL, _glm_pin((cross, region), *CROSS_TERMS))
+    assert "region_x_yoa" in str(refused.value)
+    assert str(yoa.id) in str(refused.value)
+
+
+@pytest.mark.req("FR-88")
+@pytest.mark.req("FR-240")
+def test_the_feature_guard_refuses_a_control_operand_in_the_offset_model() -> None:
+    """The `offset_source` branch of the same function."""
+    cross, region, yoa = _crossed()
+    pin = ResolvedArtifact(
+        status="approved",
+        payload={
+            "fit_result": _glm_fit("intercept", "driver_age"),
+            "spec": {"offset": {"kind": "model", "offset_model_ref": OFFSET_MODEL}},
+        },
+        factors=(_factor("driver_age"),),
+        offset_source=_glm_pin((cross, region, yoa), *CROSS_TERMS),
+    )
+    with pytest.raises(ValueError, match="CONTROL_FACTOR_IN_RATEABLE_PATH") as refused:
+        _refuse_control_factor_features(MODEL, pin)
+    assert OFFSET_MODEL in str(refused.value)
+    assert "yoa@1" in str(refused.value)
+
+
+@pytest.mark.req("FR-88")
+@pytest.mark.req("FR-240")
+def test_the_feature_guard_refuses_a_missing_operand_in_the_offset_model() -> None:
+    cross, region, _yoa = _crossed()
+    pin = ResolvedArtifact(
+        status="approved",
+        payload={
+            "fit_result": _glm_fit("intercept", "driver_age"),
+            "spec": {"offset": {"kind": "model", "offset_model_ref": OFFSET_MODEL}},
+        },
+        factors=(_factor("driver_age"),),
+        offset_source=_glm_pin((cross, region), *CROSS_TERMS),
+    )
+    with pytest.raises(ValueError, match="CONTROL_FACTOR_IN_RATEABLE_PATH"):
+        _refuse_control_factor_features(MODEL, pin)
+
+
+def _interaction_resolver(
+    operands_intent: FactorIntent, *, carry_operands: bool = True
+) -> _FactorsResolver:
+    """`compile_bundle`'s harness with a GLM over `region_x_yoa`, fed through the model_call."""
+    region = _factor("region")
+    yoa = _factor("yoa").model_copy(update={"intent": operands_intent})
+    cross = _interaction("region_x_yoa", region, yoa)
+    res = _resolver()
+    res._payloads[MODEL]["fit_result"] = _glm_fit(*CROSS_TERMS)
+    step = next(
+        s for s in res._payloads["rating_algorithm:motor-gb@14"]["steps"] if s["step_id"] == "s_rp"
+    )
+    step["feature_map"] = {"driver_age": "region", "rating_area": "yoa", "channel": "region_x_yoa"}
+    step["consumes"] = ["driver_age", "rating_area", "channel"]
+    res._payloads[MODEL]["feature_map"] = {
+        "region": "region", "yoa": "yoa", "region_x_yoa": "region_x_yoa",
+    }
+    pinned = (cross, region, yoa) if carry_operands else (cross, region)
+    return _FactorsResolver(res, {MODEL: pinned})
+
+
+@pytest.mark.req("FR-88")
+@pytest.mark.req("FR-240")
+async def test_a_model_call_over_a_glm_with_a_control_operand_interaction_is_refused() -> None:
+    res = _interaction_resolver(FactorIntent.CONTROL)
+    with pytest.raises(ValueError, match="CONTROL_FACTOR_IN_RATEABLE_PATH") as refused:
+        await compile_bundle(_version(), res)
+    message = str(refused.value)
+    assert MODEL in message
+    assert "yoa@1" in message
+    assert "region_x_yoa" in message
+
+
+@pytest.mark.req("FR-88")
+@pytest.mark.req("FR-240")
+async def test_a_model_call_over_a_glm_with_a_risk_operand_interaction_compiles() -> None:
+    """The positive control: the same harness, risk operands, compiles."""
+    await compile_bundle(_version(), _interaction_resolver(FactorIntent.RISK))
+
+
+@pytest.mark.req("FR-88")
+@pytest.mark.req("FR-240")
+async def test_a_model_call_over_a_glm_whose_interaction_operand_is_missing_is_refused() -> None:
+    res = _interaction_resolver(FactorIntent.RISK, carry_operands=False)
+    with pytest.raises(ValueError, match="CONTROL_FACTOR_IN_RATEABLE_PATH"):
+        await compile_bundle(_version(), res)
+
+
+def _table_keyed_on_the_cross(cross: Factor) -> dict[str, object]:
+    return _table_keyed_on(cross, rateable=True).model_dump(mode="json")
+
+
+def _keyed_resolver(cross: Factor, chain: tuple[Factor, ...]) -> _FactorsResolver:
+    res = _resolver()
+    ref = f"factor:{cross.slug}@{cross.version}"
+    res._payloads[TABLE] = _table_keyed_on_the_cross(cross)
+    res._payloads[ref] = cross.model_dump(mode="json")
+    res._statuses[ref] = "no_maturity_concept"
+    return _FactorsResolver(res, {ref: chain})
+
+
+@pytest.mark.req("FR-88")
+@pytest.mark.req("FR-240")
+async def test_the_key_guard_refuses_a_table_keyed_on_an_interaction_of_a_control_operand() -> None:
+    cross, region, yoa = _crossed()
+    resolver = _keyed_resolver(cross, (cross, region, yoa))
+    version = _version()
+    payloads = {TABLE: _table_keyed_on_the_cross(cross)}
+    with pytest.raises(ValueError, match="CONTROL_FACTOR_IN_RATEABLE_PATH") as refused:
+        await _refuse_control_factor_keys(version, payloads, resolver)
+    message = str(refused.value)
+    assert TABLE in message
+    assert "yoa@1" in message
+    assert "region_x_yoa" in message
+
+
+@pytest.mark.req("FR-88")
+@pytest.mark.req("FR-240")
+async def test_the_key_guard_expands_a_nested_interaction_to_its_leaves() -> None:
+    cross, region, yoa = _crossed()
+    plan = _factor("plan")
+    outer = _interaction("outer_x", cross, plan)
+    resolver = _keyed_resolver(outer, (outer, cross, region, yoa, plan))
+    payloads = {TABLE: _table_keyed_on_the_cross(outer)}
+    with pytest.raises(ValueError, match="CONTROL_FACTOR_IN_RATEABLE_PATH") as refused:
+        await _refuse_control_factor_keys(_version(), payloads, resolver)
+    assert "yoa@1" in str(refused.value)
+
+
+@pytest.mark.req("FR-88")
+@pytest.mark.req("FR-240")
+async def test_the_key_guard_refuses_an_interaction_whose_operand_is_not_resolved() -> None:
+    cross, region, _yoa = _crossed()
+    resolver = _keyed_resolver(cross, (cross, region))
+    payloads = {TABLE: _table_keyed_on_the_cross(cross)}
+    with pytest.raises(ValueError, match="CONTROL_FACTOR_IN_RATEABLE_PATH"):
+        await _refuse_control_factor_keys(_version(), payloads, resolver)
+
+
+@pytest.mark.req("FR-88")
+@pytest.mark.req("FR-240")
+async def test_the_key_guard_passes_an_interaction_of_risk_operands() -> None:
+    region, plan = _factor("region"), _factor("plan")
+    cross = _interaction("region_x_plan", region, plan)
+    resolver = _keyed_resolver(cross, (cross, region, plan))
+    payloads = {TABLE: _table_keyed_on_the_cross(cross)}
+    await _refuse_control_factor_keys(_version(), payloads, resolver)
+
+
+def _cross_model() -> Model:
+    levels = (RelativityLevel(level="A | 2010", relativity=1.1, estimate=0.1),)
+    return _glm_model(ModelStatus.APPROVED, relativities={"region_x_yoa": levels})
+
+
+def _seed_cross(factors: list[Factor]) -> None:
+    seed_from_model(
+        _cross_model(),
+        factor="region_x_yoa",
+        factors=factors,
+        table_slug="motor-relativity",
+        change_note="seed",
+        seeded_at=datetime(2026, 11, 13, 10, 0, tzinfo=UTC),
+    )
+
+
+@pytest.mark.req("FR-88")
+@pytest.mark.req("FR-230")
+@pytest.mark.req("FR-240")
+def test_seeding_from_an_interaction_of_a_control_operand_is_refused() -> None:
+    cross, region, yoa = _crossed()
+    with pytest.raises(ValueError, match="CONTROL_FACTOR_IN_RATEABLE_PATH") as refused:
+        _seed_cross([cross, region, yoa])
+    assert "yoa@1" in str(refused.value)
+    assert "region_x_yoa" in str(refused.value)
+
+
+@pytest.mark.req("FR-88")
+@pytest.mark.req("FR-230")
+@pytest.mark.req("FR-240")
+def test_seeding_from_a_nested_interaction_expands_to_the_leaves() -> None:
+    cross, region, yoa = _crossed()
+    plan = _factor("plan")
+    outer = _interaction("region_x_yoa", cross, plan)  # the bound slug is the outer one
+    inner = cross.model_copy(update={"slug": "inner_x"})
+    outer = outer.model_copy(update={"operand_factor_ids": (inner.id, plan.id)})
+    with pytest.raises(ValueError, match="CONTROL_FACTOR_IN_RATEABLE_PATH"):
+        _seed_cross([outer, inner, region, yoa, plan])
+
+
+@pytest.mark.req("FR-88")
+@pytest.mark.req("FR-230")
+@pytest.mark.req("FR-240")
+def test_seeding_from_an_interaction_with_a_missing_operand_is_refused() -> None:
+    cross, region, _yoa = _crossed()
+    with pytest.raises(ValueError, match="CONTROL_FACTOR_IN_RATEABLE_PATH"):
+        _seed_cross([cross, region])
+
+
+@pytest.mark.req("FR-88")
+@pytest.mark.req("FR-230")
+@pytest.mark.req("FR-240")
+def test_seeding_from_an_interaction_of_risk_operands_succeeds() -> None:
+    region, plan = _factor("region"), _factor("plan")
+    _seed_cross([_interaction("region_x_yoa", region, plan), region, plan])
+
+
+@pytest.mark.req("FR-88")
+def test_rateable_drops_an_interaction_whose_closure_holds_a_control_factor() -> None:
+    """G5: `rateable()` is the one definition, so it reads the operands too."""
+    from pricing_core.modelling.factors import rateable
+
+    cross, region, yoa = _crossed()
+    plan = _factor("plan")
+    fine = _interaction("region_x_plan", region, plan)
+    assert rateable([cross, region, yoa, plan, fine]) == (region, plan, fine)
+
+
+@pytest.mark.req("FR-88")
+@pytest.mark.req("FR-240")
+def test_control_factor_in_terminates_and_decides_on_a_cyclic_operand_graph() -> None:
+    """F-2: A crosses B and B crosses A. The walk must end, and still find a `control` leaf
+    reachable from the cycle and report none when there is none."""
+    from pricing_core.modelling.factors import control_factor_in
+
+    leaf, filler = _factor("leaf"), _factor("filler")
+    a, b = _interaction("a_x", leaf, filler), _interaction("b_x", leaf, filler)
+    a = a.model_copy(update={"operand_factor_ids": (b.id, leaf.id)})
+    b = b.model_copy(update={"operand_factor_ids": (a.id, leaf.id)})
+    assert control_factor_in(a, [a, b, leaf]) is None
+    control = _controlled("yoa")
+    b = b.model_copy(update={"operand_factor_ids": (a.id, control.id)})
+    assert control_factor_in(a, [a, b, leaf, control]) is control

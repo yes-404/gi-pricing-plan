@@ -70,11 +70,6 @@ _docid = _load_docid()
 #: deliberately does not exist in this repository. Named file by file, with the reason, so
 #: the exemption cannot widen into a directory the way a `tests/`-shaped rule would.
 FIXTURE_PATH_SOURCES: dict[str, str] = {
-    "tests/test_audit_docs_w37_11_ceiling.py": (
-        "builds two synthetic `REDIRECTS.csv` allocations whose rows are the basenames the "
-        "one-step test measured on `e6eb278`/`394a0d7`; those files are the migration's "
-        "*inputs* and do not exist in the migrated tree, which is the point of the fixture"
-    ),
 }
 
 #: `docs/<family-dir>/<PREFIX>-<padded>-<slug>.md`, with the prefix alternation and the

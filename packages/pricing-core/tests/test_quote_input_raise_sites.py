@@ -73,6 +73,9 @@ _INPUT_FREE = {
     # FR-273 lossless-float refusal: the declared input name only, never the value
     # (test_rating_score_decimal_input.py drives it with a sentinel-free value assert)
     ("rating/score.py", "_engine_context"): 1,
+    # SL 2118: the same refusal for every numeric value, nested included: the key path only
+    # (test_rating_score_undeclared_input_precision.py asserts the value is not echoed)
+    ("rating/score.py", "decimals_as_floats"): 1,
     ("rating/score.py", "_check_lookup_misses"): 2,  # step ids only
     ("rating/score.py", "_check_unparseable_cells"): 1,  # FD-1648 (b): a step id only
     ("rating/score.py", "_reraise_engine_failure"): 1,  # engine error is reduced to its type name
@@ -91,6 +94,13 @@ _INPUT_FREE = {
     ("rating/score.py", "_check_model_call_sentinel"): 1,
     ("rating/runtime.py", "_load_boosters"): 1,  # step id and ref string, no quote
     ("rating/runtime.py", "_check_graph_matches_inlined_algorithm"): 1,  # a node id
+    # FR-193 / FR-243 (#1741): the load-time refusal of a GLM level indicator its Factor cannot
+    # produce. It reads no row: the text is the code, the Bundle ref, the term and the Factor
+    # slug, never a quote value (`test_a_level_an_identity_factor_over_a_number_cannot_produce_is_
+    # refused_on_both_paths` drives the per-call twin with a sentinel row value and asserts it is
+    # absent; `test_a_bundle_whose_glm_term_its_banding_cannot_produce_is_refused_at_load` pins
+    # the load text's parts).
+    ("rating/runtime.py", "_glm_scorer"): 1,
     # `_model_call_failure`: step id and the pinned model_type; and, for a Peril Structure pin
     # (PL-1461 Task 4), step id and ref string, no quote; the refusal text of `_ModelCallRefusal`;
     # and, for a GLM or peril component scorer failure (PL-1464, the 2026-10-10 03:20:34 BST
@@ -107,12 +117,17 @@ _INPUT_FREE = {
     # PL-1471 (SL-1472), each at compile time over pinned artifacts, never a quote:
     # model ref, objective ref and its status
     ("rating/compile.py", "_refuse_unapproved_objectives"): 1,
-    # rate table ref, key name and Factor ref
-    ("rating/compile.py", "_refuse_control_factor_keys"): 1,
+    # rate table ref, key name, Factor ref and the interaction operand (slug@version) or its id
+    ("rating/compile.py", "_refuse_control_factor_keys"): 2,
     # FD-1648 (SL-2020): rate table ref, key values and the stored cell text, at compile
     ("rating/compile.py", "_refuse_unparseable_cells"): 1,
-    # model ref, a fitted feature name and the Factor's slug@version
-    ("rating/compile.py", "_refuse_control_factor_features"): 1,
+    # model ref, a fitted feature name, the Factor or operand slug@version, or an operand id
+    # (WK-2113 S3: the one definition compile and `load_bundle` share, moved out of
+    # `_refuse_control_factor_features`)
+    ("rating/compile.py", "refuse_control_in_features"): 2,
+    # WK-2113 S3: the re-validation front half's unpinned refusal: names no input, only that the
+    # version declares no pins
+    ("rating/compile.py", "check_rateable_intent"): 1,
     # FD-1495 (SL-1985): model ref and the fit-result field that could not be read: authored
     # identifiers at compile time, never a quote
     ("rating/compile.py", "_consumed_features"): 1,

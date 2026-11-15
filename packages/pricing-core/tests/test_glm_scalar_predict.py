@@ -287,6 +287,77 @@ def test_an_unresolved_term_is_refused_with_the_same_code_on_both_paths(world: W
         assert frame_code == "MODEL_TERM_UNRESOLVED"
 
 
+def _coefficient(term: str, estimate: float = 0.5) -> Coefficient:
+    return Coefficient(
+        term=term, estimate=estimate, std_error=0.1, z=5.0, p_value=0.01, ci_95=(0.3, 0.7)
+    )
+
+
+def _with_terms(world: World, *terms: str) -> World:
+    """`world` with extra hand-built coefficients: a model whose terms its Factors may not
+    produce, which the platform's own fit never writes (FD-1798)."""
+    fit = world.fit.model_copy(
+        update={"coefficients": (*world.fit.coefficients, *map(_coefficient, terms))}
+    )
+    return World(fit, world.spec, world.factors, world.bandings, world.groupings)
+
+
+def _identity_world(world: World, column: str, *terms: str) -> World:
+    """An intercept plus `terms` over one IDENTITY Factor on `column`."""
+    intercept = next(c for c in world.fit.coefficients if c.term == "intercept")
+    fit = world.fit.model_copy(
+        update={"coefficients": (intercept, *map(_coefficient, terms))}
+    )
+    return World(fit, world.spec, (_factor("age", column),), {}, {})
+
+
+@pytest.mark.req("FR-193")
+def test_a_level_an_identity_factor_over_a_number_cannot_produce_is_refused_on_both_paths(
+    world: World,
+) -> None:
+    """FD-1798's probe: a raw `25` casts to `"25"`, never the band label `"25-39"`, so the
+    indicator was 0 on every row and the coefficient silently dropped."""
+    broken = _identity_world(world, "driver_age_int", "age[25-39]", "age[40+]")
+    sentinel = 9137531  # a recognisable quote value: the refusal names the term, never this
+    row = {"driver_age_int": sentinel, "exposure_years": 1.0}
+    with pytest.raises(PredictionError) as frame_error:
+        broken.frame(row)
+    with pytest.raises(PredictionError) as scalar_error:
+        broken.scalar(row)
+    assert frame_error.value.code == scalar_error.value.code == "MODEL_TERM_UNRESOLVED"
+    assert str(scalar_error.value) == str(frame_error.value)
+    assert str(sentinel) not in str(scalar_error.value)
+
+
+@pytest.mark.req("FR-193")
+@pytest.mark.parametrize(
+    ("term", "factor"),
+    [
+        ("veh_band[huge]", "a Banding whose labels lack the fitted level"),
+        ("brand_group[G9]", "a Grouping without that target level"),
+        ("age_x_region[18-29 | WEST]", "an interaction cell with an unproducible part"),
+    ],
+    ids=["banding", "grouping", "interaction"],
+)
+def test_a_level_its_artifact_cannot_produce_is_refused_on_the_frame_path(
+    world: World, term: str, factor: str
+) -> None:
+    with pytest.raises(PredictionError) as caught:
+        _with_terms(world, term).frame(QUOTES[0])
+    assert caught.value.code == "MODEL_TERM_UNRESOLVED", factor
+    assert caught.value.terms == (term,)
+
+
+@pytest.mark.req("FR-193")
+@pytest.mark.parametrize("column", ["trips_int", "trips_text"])
+def test_a_level_that_round_trips_is_still_scored(world: World, column: str) -> None:
+    """Negative control: `"3"` from an `Int64`, and any level of a `String` Factor."""
+    ok = _identity_world(world, column, "age[3]")
+    value = 3 if column == "trips_int" else "3"
+    row = {column: value, "exposure_years": 1.0}
+    assert _same(ok.scalar(row), ok.frame(row))
+
+
 @pytest.mark.req("FR-116")
 def test_an_offset_failure_is_refused_with_the_same_code_on_both_paths(world: World) -> None:
     no_exposure = {k: v for k, v in QUOTES[0].items() if k != "exposure_years"}

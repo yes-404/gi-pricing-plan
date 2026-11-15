@@ -829,8 +829,12 @@ async def replace_rule_set(
     slug: str,
     members: Sequence[RuleSetMember],
     reference_dataset_version_id: UUID | None = None,
+    count_management: Callable[[], Awaitable[None]] | None = None,
 ) -> ValidationRuleSet:
     """Create the next rule-set version (FR-51).
+
+    `count_management`, when given, is awaited right after the scoped permission check
+    passes, so a `403` is never counted (FR-452, FR-345).
 
     Never an in-place edit. A Validation Report records the exact `rule_set_version` it
     ran; mutating a set would change what every past report was a report *of*, and "it
@@ -843,6 +847,8 @@ async def replace_rule_set(
         permission=Permission.DATASET_WRITE,
         resource=rbac.ResourceRef(scope_type=ScopeType.DATASET, scope_id=dataset_id),
     )
+    if count_management is not None:
+        await count_management()
 
     rule_ids = [member.rule_id for member in members]
     by_id = await _rules_by_id(session, workspace_id=workspace_id, rule_ids=rule_ids)

@@ -15,7 +15,8 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 from backend.tests.conftest_db import seed_as_owner
-from sqlalchemy import ColumnElement, update
+from sqlalchemy import ColumnElement, text, update
+from sqlalchemy.exc import DBAPIError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models import BlobRow, ScoringTraceRow
@@ -570,3 +571,21 @@ async def test_a_completed_trace_still_carries_the_deployment_it_was_written_wit
         refetched = await session.get(ScoringTraceRow, pending_id)
         assert refetched is not None
         assert refetched.deployment_id == deployment_id
+
+
+@pytest.mark.req("FR-44")
+async def test_the_application_role_cannot_update_a_scoring_trace(database: Database) -> None:
+    """#1593 limb (b): the migration revokes `UPDATE` on `scoring_traces` from the application
+    role, and `complete_pending_trace` relies on it (DELETE + INSERT, never UPDATE). This is the
+    enforcement: an attempted write is refused. PostgreSQL checks the privilege when the executor
+    starts, so `WHERE false` is refused all the same and writes nothing under any role. It creates,
+    alters and grants nothing. Red form: `GIP_TEST_APP_DATABASE_URL=<owner DSN>` (the owner is not
+    refused)."""
+    async with database.session() as session:
+        who = (await session.execute(text("SELECT current_user"))).scalar_one()
+        assert who == "gip_app_login"
+        with pytest.raises(DBAPIError) as refused:
+            await session.execute(
+                text("UPDATE scoring_traces SET created_at = created_at WHERE false")
+            )
+        assert "permission denied for table scoring_traces" in str(refused.value)

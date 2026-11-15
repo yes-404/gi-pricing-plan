@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
 """Generate `docs/INDEX.md` — RFC-937 §1.4's "one row per id, rows and documents alike".
 
+KEPT, NOT RUN (ADR-2136): `docs/INDEX.md` is frozen and is no longer regenerated or checked.
+This module stays because `scripts/audit-docs.py` check 33 loads it by path
+(`_doc_index_for_audit_docs`: `Corpus`, `derive_execution`). Do not run it to regenerate the index.
+
 `docs/plans/PL-00939-wk-697-one-id-per-governed-thing-map-plan.md`, Slice W37-3. Three things this
 script generates, none of them hand-editable (`CLAUDE.md` §2's model-schema rule applied to
 governance data instead of API shapes):

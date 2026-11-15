@@ -21,7 +21,7 @@ on:
       - 'examples/**'
       - 'docs/contracts/**'
       # docs/** because every one of tests/'s root test files reads content under
-      # docs/ — the working notes, the register, the roadmap or the spec suite — so a
+      # docs/ — the specs, the ADRs, the workflows or the process pages — so a
       # change confined to docs/ is exactly the change this suite exists to check, not
       # an unrelated directory. Noticed 2026-09-01: PR #555 filed a new working note,
       # growing docs/notes/ from 18 to 19 files and breaking two tests that assert on
@@ -43,6 +43,10 @@ on:
       # Scoped to this one skill's scripts, not all of .claude/**, so an unrelated
       # skill edit does not drag every skill through the Python gate.
       - '.claude/skills/reporter-cycle/**'
+      # The two other skill directories `[tool.mypy] files` lists (F26): a change to either
+      # ran no mypy here. tests/test_ci_paths_cover_mypy_files.py holds the pairing.
+      - '.claude/skills/balance-watch/**'
+      - '.claude/skills/watcher-runtime-state/**'
       - '.github/workflows/python.yml'
   pull_request:
     paths:
@@ -59,7 +63,7 @@ on:
       - 'examples/**'
       - 'docs/contracts/**'
       # docs/** because every one of tests/'s root test files reads content under
-      # docs/ — the working notes, the register, the roadmap or the spec suite — so a
+      # docs/ — the specs, the ADRs, the workflows or the process pages — so a
       # change confined to docs/ is exactly the change this suite exists to check, not
       # an unrelated directory. Noticed 2026-09-01: PR #555 filed a new working note,
       # growing docs/notes/ from 18 to 19 files and breaking two tests that assert on
@@ -81,6 +85,10 @@ on:
       # Scoped to this one skill's scripts, not all of .claude/**, so an unrelated
       # skill edit does not drag every skill through the Python gate.
       - '.claude/skills/reporter-cycle/**'
+      # The two other skill directories `[tool.mypy] files` lists (F26): a change to either
+      # ran no mypy here. tests/test_ci_paths_cover_mypy_files.py holds the pairing.
+      - '.claude/skills/balance-watch/**'
+      - '.claude/skills/watcher-runtime-state/**'
       - '.github/workflows/python.yml'
 
 concurrency:
@@ -343,7 +351,10 @@ jobs:
           GIP_DATABASE_URL: postgresql+asyncpg://gip_app_login:gip_app_login@localhost:5432/gipricing
           GIP_TEST_DATABASE_URL: postgresql+asyncpg://gipricing:gipricing@localhost:5432/gipricing
           GIP_BLOB_ENDPOINT_URL: http://localhost:9000
-          GIP_REDIS_URL: redis://localhost:6379/0
+          GIP_REDIS_URL: redis://localhost:6379/1
+          # The job's postgres is a fresh service container: the only cluster where the
+          # role-mutating cases may run (#1760). Set explicitly; CI=true alone does not.
+          GIP_TEST_ROLE_CLUSTER_ISOLATED: "1"
 
       # =====================================================================
       # THE VERDICT. This step, and only this step, decides whether the job is
