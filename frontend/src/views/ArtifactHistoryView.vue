@@ -121,6 +121,12 @@ watch(() => props.artifactRef, () => void load(), { immediate: true });
       >
         <p class="text-sm">
           <span class="font-mono text-xs">{{ entry.action }}</span>
+          <span
+            v-if="entry.current_action"
+            class="ml-1 text-xs text-slate-500"
+          >
+            (stored name; now written {{ entry.current_action }})
+          </span>
           <template v-if="entry.transition">
             · {{ entry.transition.from }} → {{ entry.transition.to }}
           </template>

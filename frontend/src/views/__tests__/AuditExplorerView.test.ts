@@ -156,6 +156,16 @@ describe("the audit explorer (FR-371, FR-372, FR-373)", () => {
     );
   });
 
+  it("shows a pre-rename return under its stored name, with its current name beside it", async () => {
+    const legacy = { ...PAGE.items[0]!, action: "model.fitted", current_action: "model.returned" };
+    replies.push({ body: { ...PAGE, items: [legacy, { ...PAGE.items[0]!, id: "x", sequence: 3 }] } });
+    render(AuditExplorerView, { global: { stubs: ROUTER_LINK } });
+    await screen.findByRole("table");
+    expect(screen.getByText(/model\.fitted/)).toBeInTheDocument();
+    expect(screen.getAllByText(/stored name; now written model\.returned/)).toHaveLength(1);
+    expect(screen.getByText(/model\.approved/)).toBeInTheDocument();
+  });
+
   it("renders a refusal as the problem it is", async () => {
     replies.push({
       status: 403,

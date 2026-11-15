@@ -127,6 +127,14 @@ class AuditEventRecord(AuditEvent):
     """
 
     sequence: int = Field(ge=1, description="Position in the workspace's chain, from 1.")
+    current_action: str | None = Field(
+        default=None,
+        pattern=ACTION_PATTERN,
+        description="The name this event would be written under today, set only when it "
+        "differs from the stored `action` (a return from review written before the "
+        "`<type>.returned` rename). Derived, never stored and never hashed: `action` is "
+        "always the stored name.",
+    )
 
 
 class FieldChange(BaseModel):
@@ -160,7 +168,13 @@ class ArtifactHistoryEntry(BaseModel):
     at: datetime
     actor: Principal
     source: JobSource
-    action: str = Field(pattern=ACTION_PATTERN)
+    action: str = Field(pattern=ACTION_PATTERN, description="The stored action name, as stored.")
+    current_action: str | None = Field(
+        default=None,
+        pattern=ACTION_PATTERN,
+        description="The name this event would be written under today, set only when it "
+        "differs from the stored `action` (a pre-rename return from review). Derived.",
+    )
     transition: StatusTransition | None = None
     justification: str | None = None
     diff: list[FieldChange] = Field(default_factory=list)

@@ -44,6 +44,7 @@ __all__ = [
     "ChainBrokenError",
     "VerifiedSpan",
     "artifact_history",
+    "current_action_of",
     "field_diff",
     "record",
     "verify_chain",
@@ -375,19 +376,29 @@ def field_diff(
 _LEGACY_RETURN_NAMES: Final = {legacy: new for new, legacy in RETURNED_LEGACY_ACTIONS.items()}
 
 
+def current_action_of(action: str, before: dict[str, Any] | None) -> str | None:
+    """The `<type>.returned` name of a pre-rename return from review, else `None`.
+
+    C1 (#1783): the stored `action` is never replaced. A view shows it as stored and carries
+    this beside it, so the old and the new spelling of one kind of event stay distinguishable
+    and neither view names the same event differently from the other.
+    """
+    if action in _LEGACY_RETURN_NAMES and (before or {}).get("status") == "review":
+        return _LEGACY_RETURN_NAMES[action]
+    return None
+
+
 def _history_entry(row: AuditEventRow) -> ArtifactHistoryEntry:
     before_status = (row.before or {}).get("status")
     after_status = (row.after or {}).get("status")
-    action = row.action
-    if action in _LEGACY_RETURN_NAMES and before_status == "review":
-        action = _LEGACY_RETURN_NAMES[action]  # C1: a pre-rename return reads as `returned`
     both = isinstance(before_status, str) and isinstance(after_status, str)
     return ArtifactHistoryEntry(
         sequence=row.sequence,
         at=row.at,
         actor=Principal.model_validate(row.actor),
         source=row.source,
-        action=action,
+        action=row.action,
+        current_action=current_action_of(row.action, row.before),
         transition=(
             StatusTransition.model_validate({"from": before_status, "to": after_status})
             if both and before_status != after_status

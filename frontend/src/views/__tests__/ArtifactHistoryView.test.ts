@@ -75,6 +75,20 @@ describe("the artifact history view (FR-383)", () => {
     );
   });
 
+  it("shows a pre-rename return under its stored name, with its current name beside it", async () => {
+    reply(200, {
+      ...HISTORY,
+      events: [
+        { ...HISTORY.events[0]!, action: "model.fitted", current_action: "model.returned" },
+        HISTORY.events[1]!,
+      ],
+    });
+    show();
+    expect(await screen.findByText("model.fitted")).toBeInTheDocument();
+    expect(screen.getAllByText(/stored name; now written model\.returned/)).toHaveLength(1);
+    expect(screen.getByText("model.approved")).toBeInTheDocument();
+  });
+
   it("moves to the adjacent versions", async () => {
     show("model:motor-freq@2");
     await screen.findByText(/fitted → review/);

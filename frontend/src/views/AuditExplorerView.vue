@@ -355,6 +355,14 @@ onMounted(() => void load());
           </td>
           <td class="py-2 font-mono text-xs">
             {{ event.action }}
+            <!-- The stored name is always shown as stored; a pre-rename return says what it is
+                 called today (FR-370: stored events are never rewritten). -->
+            <span
+              v-if="event.current_action"
+              class="ml-1 font-sans text-slate-500"
+            >
+              (stored name; now written {{ event.current_action }})
+            </span>
           </td>
           <td class="py-2">
             <button

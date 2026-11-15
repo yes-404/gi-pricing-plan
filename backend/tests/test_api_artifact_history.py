@@ -111,15 +111,25 @@ async def test_history_is_read_by_exact_ref_not_by_prefix(
 
 
 @pytest.mark.req("FR-383")
-async def test_a_pre_rename_return_reads_as_returned(
+async def test_a_pre_rename_return_is_shown_as_stored_with_its_current_name_beside_it(
     client: TestClient, database: Database, workspace_id, principal, auditor_headers
 ) -> None:
-    """C1: a stored `model.fitted` whose `before.status` is review is a return."""
+    """C1: a stored `model.fitted` whose `before.status` is review is a return. The history
+    shows the stored name, and `current_action` carries `model.returned` beside it. A new
+    return and a forward fit carry none."""
     await _record(database, workspace_id, principal, "model:motor-freq@2", "model.fitted",
                   {"status": "review"}, {"status": "fitted"})
-    body = _history(client, auditor_headers, "model:motor-freq@2").json()
-    assert body["events"][0]["action"] == "model.returned"
-    assert body["events"][0]["transition"] == {"from": "review", "to": "fitted"}
+    await _record(database, workspace_id, principal, "model:motor-freq@2", "model.returned",
+                  {"status": "review"}, {"status": "fitted"})
+    await _record(database, workspace_id, principal, "model:motor-freq@2", "model.fitted",
+                  {"status": "draft"}, {"status": "fitted"})
+    events = _history(client, auditor_headers, "model:motor-freq@2").json()["events"]
+    assert [(e["action"], e["current_action"]) for e in events] == [
+        ("model.fitted", "model.returned"),
+        ("model.returned", None),
+        ("model.fitted", None),
+    ]
+    assert events[0]["transition"] == {"from": "review", "to": "fitted"}
 
 
 @pytest.mark.req("FR-383")

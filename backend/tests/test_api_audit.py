@@ -141,6 +141,42 @@ async def test_the_returned_filter_finds_legacy_and_new_rows(
 
 
 @pytest.mark.req("FR-371")
+async def test_the_explorer_and_the_export_show_the_stored_action_with_its_current_name(
+    client: TestClient, database: Database, workspace_id, principal, auditor_headers
+) -> None:
+    """The stored action is always shown as stored (FR-370). A pre-rename return, recognised
+    by its legacy name and `before.status` review, carries `current_action` beside it; a new
+    return and a forward move carry none. `q` matches the stored names only."""
+    async with database.unit_of_work() as session:
+        for action, before, ref in (
+            ("model.fitted", "draft", "model:fam@1"),
+            ("model.fitted", "review", "model:fam@2"),
+            ("model.returned", "review", "model:fam@3"),
+        ):
+            await audit.record(
+                session,
+                workspace_id=workspace_id,
+                actor=principal,
+                source=JobSource.API,
+                action=action,
+                entity_ref=ref,
+                before={"status": before},
+            )
+    expected = {
+        "model:fam@1": ("model.fitted", None),
+        "model:fam@2": ("model.fitted", "model.returned"),
+        "model:fam@3": ("model.returned", None),
+    }
+    page = client.get("/api/v1/audit", headers=auditor_headers).json()["items"]
+    assert {i["entity_ref"]: (i["action"], i["current_action"]) for i in page} == expected
+    exported = client.get("/api/v1/audit/export?format=json", headers=auditor_headers)
+    lines = [json.loads(line) for line in exported.text.splitlines() if line]
+    assert {i["entity_ref"]: (i["action"], i["current_action"]) for i in lines} == expected
+    by_text = client.get("/api/v1/audit?q=returned", headers=auditor_headers).json()["items"]
+    assert [i["entity_ref"] for i in by_text] == ["model:fam@3"]
+
+
+@pytest.mark.req("FR-371")
 async def test_the_query_is_cursor_paginated(
     client: TestClient, database: Database, workspace_id, principal, auditor_headers
 ) -> None:

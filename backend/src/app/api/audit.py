@@ -105,6 +105,7 @@ def _view(row: AuditEventRow) -> AuditEventRecord:
         actor=Principal.model_validate(row.actor),
         source=row.source,
         action=row.action,
+        current_action=audit_service.current_action_of(row.action, row.before),
         entity_ref=row.entity_ref,
         before=row.before,
         after=row.after,
