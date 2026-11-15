@@ -350,7 +350,8 @@ async def test_the_final_assertion_judges_the_end_state(
     sql = _SQL.read_text(encoding="utf-8")
     assertion = "DO $do$" + sql.rsplit("DO $do$", 1)[1]
     assert "exactly one INHERIT-only row" in assertion
-    assert "GRANT " not in assertion and "REVOKE" not in assertion  # the block only judges
+    assert "GRANT " not in assertion  # the block only judges
+    assert "REVOKE" not in assertion
     plant, must_raise = _ASSERTION_STATES[case]
     if not must_raise:
         await _apply_over(owner_database, plant, assertion)
