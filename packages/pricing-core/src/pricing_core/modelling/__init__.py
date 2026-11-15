@@ -72,6 +72,12 @@ from pricing_core.modelling.predict import (
     linear_predictor,
     predict_glm,
 )
+from pricing_core.modelling.proxy import (
+    FactorProxyResult,
+    ProxyAssessmentError,
+    ProxyAssessmentResult,
+    assess_proxies,
+)
 from pricing_core.modelling.transparency import (
     GlmApproximationFit,
     approximation_spec,
@@ -88,6 +94,7 @@ __all__ = [
     "DiagnosticsResult",
     "EbmFitError",
     "FactorMatrix",
+    "FactorProxyResult",
     "FactorResolutionError",
     "GbmFit",
     "GbmFitError",
@@ -100,11 +107,14 @@ __all__ = [
     "ObjectiveError",
     "ObjectiveFns",
     "PredictionError",
+    "ProxyAssessmentError",
+    "ProxyAssessmentResult",
     "RoundBudgetExceededError",
     "apply_banding",
     "apply_grouping",
     "apply_loss_treatment",
     "approximation_spec",
+    "assess_proxies",
     "backtest_model",
     "band_statistics",
     "build_glm_approximation",

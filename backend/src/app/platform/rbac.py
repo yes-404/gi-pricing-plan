@@ -14,9 +14,9 @@ Three rules shape the design:
 * **Scope is part of the question.** A principal with `approval:decide` workspace-wide and
   one with it on a single Rating Algorithm are different answers to the same permission
   (FR-345).
-* **No self-elevation.** A principal cannot grant a permission it does not itself hold
-  (FR-348), which is checked here rather than in the route, so every future grant path
-  inherits it.
+* **No self-grant.** A principal cannot grant a role to itself, nor to a Service Account
+  it owns (FR-348), which is checked here rather than in the route, so every future grant
+  path inherits it.
 """
 
 from __future__ import annotations
@@ -28,12 +28,13 @@ from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.models import RoleAssignmentRow, RoleRow
+from app.db.models import RoleAssignmentRow, RoleRow, ServiceAccountRow
 from app.errors import PlatformError
 from app.observability.logging import get_logger
 from app.platform import audit
 from model_schema import (
     BUILTIN_ROLES,
+    ActorKind,
     JobSource,
     Permission,
     Principal,
@@ -171,6 +172,11 @@ async def effective_permissions(
     """
     if principal.id is None:
         return frozenset()
+    if principal.kind is ActorKind.SERVICE_ACCOUNT:
+        # Defence in depth (FR-347, FR-389): a Service Account is never granted a role, and a
+        # role assignment on its id, however it got there, confers nothing. Only the
+        # credential's own grants count.
+        return frozenset(Permission(p) for p in credential_permissions)
 
     now = datetime.now(UTC)
     rows = (
@@ -231,8 +237,8 @@ async def holds_anywhere(
     it "anywhere?" returns nothing and every scoped refusal reads as if the principal never
     held the permission at all.
     """
-    if principal.id is None:
-        return False
+    if principal.id is None or principal.kind is ActorKind.SERVICE_ACCOUNT:
+        return False  # a Service Account holds no role (FR-347, FR-389)
 
     now = datetime.now(UTC)
     rows = (
@@ -315,11 +321,12 @@ async def grant_role(
     scope_type: ScopeType = ScopeType.WORKSPACE,
     scope_id: UUID | None = None,
 ) -> RoleAssignmentRow:
-    """Assign a role, refusing an escalation the granter could not perform (FR-348).
+    """Assign a role, refusing a grant to oneself or to a Service Account (FR-348, FR-347).
 
-    The granter must hold `admin:manage_roles` **and** every permission the role confers.
-    Without the second check an administrator could mint an Approver role and assign it to
-    themselves, which is separation of duties defeated in two API calls.
+    The granter must hold `admin:manage_roles`; it may then grant any role, including one
+    conferring permissions it does not hold (#1843, option (A) as amended). A Service
+    Account is never granted a role (FR-347, FR-389), and no principal grants a role to
+    itself.
     """
     await require_permission(
         session,
@@ -327,6 +334,18 @@ async def grant_role(
         principal=granter,
         permission=Permission.ADMIN_MANAGE_ROLES,
     )
+
+    # Compare ids only, never `principal_kind`: `effective_permissions` selects assignments
+    # by `principal_id` alone, so a kind-aware check could be bypassed by passing a
+    # different kind with the granter's own id (or a Service Account's id). Before the role
+    # lookup, so a self-grant of an unknown role answers 403, not 404.
+    if principal_id == granter.id:
+        raise PlatformError(
+            "PERMISSION_DENIED",
+            "Cannot grant a role to yourself",
+            403,
+            "A principal cannot grant a role to itself (FR-348).",
+        )
 
     role = (
         await session.execute(
@@ -340,18 +359,20 @@ async def grant_role(
             "NOT_FOUND", "Role not found", 404, f"No role {role_slug!r} in this workspace."
         )
 
-    conferred = {Permission(p) for p in role.permissions}
-    held = await effective_permissions(
-        session, workspace_id=workspace_id, principal=granter
-    )
-    escalation = conferred - held
-    if escalation:
+    # FR-347 and FR-389: a Service Account is never granted a role. The grantee is looked up
+    # by id, whatever `principal_kind` says (assignments resolve by id alone), and in any
+    # workspace; refused before any insert and before the audit record.
+    is_service_account = (
+        await session.execute(
+            select(ServiceAccountRow.id).where(ServiceAccountRow.id == principal_id)
+        )
+    ).first() is not None
+    if is_service_account:
         raise PlatformError(
             "PERMISSION_DENIED",
-            "Cannot grant a permission you do not hold",
+            "Cannot grant a role to a service account",
             403,
-            f"Granting {role_slug!r} would confer {sorted(p.value for p in escalation)}, "
-            "which you do not hold (FR-348).",
+            "A service account is never granted a role (FR-347, FR-389).",
         )
 
     assignment = RoleAssignmentRow(
@@ -395,7 +416,7 @@ async def grant_break_glass(
 ) -> RoleAssignmentRow:
     """Emergency elevation: time-boxed, reason-required, audited (FR-349).
 
-    Deliberately **not** subject to the no-self-elevation rule of `grant_role` — the point
+    Deliberately **not** subject to the no-self-grant rule of `grant_role` — the point
     of break-glass is to exceed what the granter normally holds. What replaces that
     protection is the expiry, the mandatory reason, the audit event flagged as break-glass,
     and the fact that it cannot be quiet.

@@ -26,7 +26,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Query, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, ConfigDict, Field
-from sqlalchemy import Select, func, or_, select
+from sqlalchemy import Select, and_, func, or_, select
 
 from app.api.authz import requires
 from app.api.deps import Caller
@@ -43,7 +43,7 @@ from app.db.models import AuditEventRow
 from app.db.session import Database
 from app.errors import PlatformError
 from app.platform import audit as audit_service
-from model_schema import Permission
+from model_schema import AuditEventListing, AuditEventRecord, Permission, Principal
 
 __all__ = ["router"]
 
@@ -60,38 +60,28 @@ def _database(request: Request) -> Database:
 DatabaseDep = Annotated[Database, Depends(_database)]
 
 
-class AuditEventView(BaseModel):
-    """An event as returned by the API (`06` §4.5).
-
-    Includes `event_hash` and `prev_event_hash`: an auditor exporting the log must be able
-    to recompute the chain outside the platform, which is what makes it evidence rather
-    than a report (FR-372).
-    """
-
-    model_config = ConfigDict(frozen=True, extra="forbid")
-
-    id: UUID
-    sequence: int
-    at: datetime
-    actor: dict[str, Any]
-    source: str
-    action: str
-    entity_ref: str
-    before: dict[str, Any] | None = None
-    after: dict[str, Any] | None = None
-    justification: str | None = None
-    trace_id: str | None = None
-    job_id: UUID | None = None
-    prev_event_hash: str | None = None
-    event_hash: str
-
-
 class ChainVerification(BaseModel):
     """The result of recomputing the chain (FR-372)."""
 
-    model_config = ConfigDict(frozen=True, extra="forbid")
+    model_config = ConfigDict(frozen=True, extra="forbid", populate_by_name=True)
 
     workspace_id: UUID
+    from_: datetime | None = Field(
+        default=None, alias="from", description="The requested lower bound on `at`, if any."
+    )
+    to: datetime | None = Field(
+        default=None, description="The requested upper bound on `at`, if any."
+    )
+    whole_chain: bool = Field(
+        description="True when no range was given: the whole chain, NFR-521's proof."
+    )
+    first_sequence: int | None = Field(
+        default=None,
+        description="Where the check began. The event before it is not itself verified.",
+    )
+    last_sequence: int | None = Field(
+        default=None, description="The last event verified, or `None` if none was."
+    )
     events_checked: int
     intact: bool
     broken_at_sequence: int | None = Field(
@@ -100,13 +90,20 @@ class ChainVerification(BaseModel):
     reason: str | None = None
 
 
-def _view(row: AuditEventRow) -> AuditEventView:
-    return AuditEventView(
+def _record(row: AuditEventRow) -> AuditEventRecord:
+    """The stored row as `model_schema.AuditEventRecord`, hashes included, and nothing else.
+
+    The export's shape: an auditor exporting the log recomputes the chain outside the platform
+    from exactly these fields (FR-372), which is what makes it evidence rather than a report.
+    It is the stored event and nothing derived, and it is the contract's shape, not a copy.
+    """
+    return AuditEventRecord(
         id=row.id,
+        workspace_id=row.workspace_id,
         sequence=row.sequence,
         at=row.at,
-        actor=row.actor,
-        source=row.source.value,
+        actor=Principal.model_validate(row.actor),
+        source=row.source,
         action=row.action,
         entity_ref=row.entity_ref,
         before=row.before,
@@ -117,6 +114,35 @@ def _view(row: AuditEventRow) -> AuditEventView:
         prev_event_hash=row.prev_event_hash,
         event_hash=row.event_hash,
     )
+
+
+def _listing(row: AuditEventRow) -> AuditEventListing:
+    """What the explorer's query returns: the stored record plus the derived `current_action`.
+
+    The derived field is for the views only and is never exported (see `_record`).
+    """
+    return AuditEventListing(
+        **_record(row).model_dump(),
+        current_action=audit_service.current_action_of(row.action, row.before),
+    )
+
+
+def _require_aware(from_: datetime | None, to: datetime | None) -> None:
+    """Refuse a `from` or `to` that carries no UTC offset, on every route that takes them.
+
+    A bound without an offset is ambiguous: the driver reads it in the API process's local
+    timezone (asyncpg encodes a naive `datetime` through `astimezone`), so a query's range, or
+    an export's, could shift without notice, and comparing it with an aware bound raises.
+    The detail names the parameter and never echoes the value (NFR-499).
+    """
+    for name, bound in (("from", from_), ("to", to)):
+        if bound is not None and bound.tzinfo is None:
+            raise PlatformError(
+                "VALIDATION_FAILED",
+                "Invalid range",
+                422,
+                f"`{name}` must carry a UTC offset, for example a trailing Z.",
+            )
 
 
 def _filtered(
@@ -135,7 +161,22 @@ def _filtered(
     if entity is not None:
         conditions.append(AuditEventRow.entity_ref == entity)
     if action is not None:
-        conditions.append(AuditEventRow.action == action)
+        legacy = audit_service.RETURNED_LEGACY_ACTIONS.get(action)
+        if legacy is None:
+            conditions.append(AuditEventRow.action == action)
+        else:
+            # C1 (Q3 (a2)): rows written before the rename spell the return as the forward
+            # state's name; the stored rows are never rewritten (FR-370), so the filter
+            # finds both. A forward transition has `before.status` other than `review`.
+            conditions.append(
+                or_(
+                    AuditEventRow.action == action,
+                    and_(
+                        AuditEventRow.action == legacy,
+                        AuditEventRow.before["status"].astext == "review",
+                    ),
+                )
+            )
     if from_ is not None:
         conditions.append(AuditEventRow.at >= from_)
     if to is not None:
@@ -165,13 +206,14 @@ async def query_audit(
     q: str | None = None,
     cursor: str | None = None,
     limit: Annotated[int, Query(ge=1, le=MAX_LIMIT)] = DEFAULT_LIMIT,
-) -> Page[AuditEventView]:
+) -> Page[AuditEventListing]:
     """Filtered and cursor-paginated (FR-371, `00` §5.2).
 
     Ordered by `sequence`, the per-workspace monotonic counter, rather than by `at`: events
     written in one transaction share a timestamp, and a log whose order cannot be
     reconstructed cannot be verified.
     """
+    _require_aware(from_, to)
     conditions = _filtered(
         caller.workspace_id, actor=actor, entity=entity, action=action,
         from_=from_, to=to, q=q,
@@ -199,8 +241,8 @@ async def query_audit(
 
     has_more = len(rows) > limit
     page_rows = rows[:limit]
-    return Page[AuditEventView](
-        items=[_view(row) for row in page_rows],
+    return Page[AuditEventListing](
+        items=[_listing(row) for row in page_rows],
         next_cursor=encode_cursor(page_rows[-1].sequence) if has_more and page_rows else None,
         total_estimate=total,
     )
@@ -211,26 +253,54 @@ async def query_audit(
     summary="Recompute the hash chain (FR-372)",
     responses=problems(401, 403, 422),
 )
-async def verify_chain(caller: ReadAudit, database: DatabaseDep) -> ChainVerification:
-    """Recompute every hash for this workspace and report the first break.
+async def verify_chain(
+    caller: ReadAudit,
+    database: DatabaseDep,
+    from_: Annotated[datetime | None, Query(alias="from")] = None,
+    to: datetime | None = None,
+) -> ChainVerification:
+    """Recompute the hashes of this workspace's chain and report the first break.
+
+    With neither `from` nor `to` the whole chain is verified, and that is NFR-521's proof.
+    With either, the contiguous sequence span they select is verified (`first_sequence` and
+    `last_sequence` say which); the event just before the span is not itself verified.
 
     Returns `200` with `intact: false` rather than an error status. A broken chain is a
     *finding*, and an auditor asking the question needs the answer and the sequence number
     — not a 500 that looks like the endpoint is broken.
     """
+    _require_aware(from_, to)
+    if from_ is not None and to is not None and from_ > to:
+        raise PlatformError(
+            "VALIDATION_FAILED", "Invalid range", 422, "`from` is after `to`."
+        )
+    # The request, echoed: `from` is an alias, which the mypy plugin will not take as a keyword.
+    requested: dict[str, Any] = {"workspace_id": caller.workspace_id, "from": from_, "to": to}
     async with database.session() as session:
         try:
-            checked = await audit_service.verify_chain(session, caller.workspace_id)
+            span = await audit_service.verify_range(
+                session, caller.workspace_id, from_=from_, to=to
+            )
         except audit_service.ChainBrokenError as exc:
             return ChainVerification(
-                workspace_id=caller.workspace_id,
-                events_checked=exc.sequence - 1,
+                **requested,
+                whole_chain=from_ is None and to is None,
+                first_sequence=exc.first_sequence,
+                # The last sequence ACTUALLY verified, not the one before the break: on a gap the
+                # sequence before it names an event that is absent and was never checked.
+                last_sequence=exc.first_sequence + exc.checked - 1 if exc.checked else None,
+                events_checked=exc.checked,
                 intact=False,
                 broken_at_sequence=exc.sequence,
                 reason=exc.reason,
             )
     return ChainVerification(
-        workspace_id=caller.workspace_id, events_checked=checked, intact=True
+        **requested,
+        whole_chain=span.whole_chain,
+        first_sequence=span.first_sequence,
+        last_sequence=span.last_sequence,
+        events_checked=span.events_checked,
+        intact=True,
     )
 
 
@@ -253,20 +323,30 @@ async def export_audit(
     caller: ReadAudit,
     database: DatabaseDep,
     format: Annotated[str, Query(pattern="^(csv|json)$")] = "csv",
+    actor: UUID | None = None,
+    entity: str | None = None,
+    action: str | None = None,
     from_: Annotated[datetime | None, Query(alias="from")] = None,
     to: datetime | None = None,
+    q: str | None = None,
 ) -> StreamingResponse:
-    """Stream the log out, hashes included.
+    """Stream the events the query would show: the same filters, in `sequence` order.
 
-    The hashes are the point of the export: an auditor recomputes them with
-    `model_schema.compute_event_hash` and finds any break without the platform's help. An
-    export that omitted them would be a report about the log rather than the log.
+    **JSON Lines is the evidence form**: one `AuditEventRecord` per line, every hashed field
+    and both hashes, so an auditor recomputes each hash with `model_schema` and finds an
+    edited event without the platform's help. **The CSV is a report**: readable columns and
+    the two hashes, but not the whole event (no `workspace_id`, `before` or `after`, and
+    only the actor's display name), so it cannot be recomputed.
+
+    A filtered export is the matching events with gaps, so it cannot show the chain is
+    unbroken. Whether it is, is `/verify`'s to say (FR-372), not the file's.
     """
     if format not in {"csv", "json"}:  # pragma: no cover - Query pattern enforces it
         raise PlatformError("VALIDATION_FAILED", "Unsupported format", 422, format)
 
+    _require_aware(from_, to)
     conditions = _filtered(
-        caller.workspace_id, actor=None, entity=None, action=None, from_=from_, to=to, q=None
+        caller.workspace_id, actor=actor, entity=entity, action=action, from_=from_, to=to, q=q
     )
 
     async def rows() -> Any:
@@ -283,7 +363,7 @@ async def export_audit(
             # JSON Lines, not one array: an audit log is unbounded, and a consumer should
             # be able to start verifying the chain before the export finishes.
             async for row in rows():
-                yield _view(row).model_dump_json() + "\n"
+                yield _record(row).model_dump_json() + "\n"
 
         return StreamingResponse(
             json_lines(),

@@ -294,11 +294,19 @@ def _encode(
                 mapping = dict(maps[slug])
                 unknown = sorted(set(text.unique().to_list()) - set(mapping))
                 if unknown:
+                    # FD-1219 (#1657): the message states the count and the positions of the
+                    # unseen levels, never their values, which are dataset content and reach
+                    # the persisted Job error. `terms` keeps them for in-process callers.
+                    frame_levels = sorted(set(text.unique().to_list()))
+                    positions = [
+                        str(i) for i, level in enumerate(frame_levels) if level not in mapping
+                    ]
                     raise GbmFitError(
                         "UNSEEN_LEVEL_BEHAVIOUR_REQUIRED",
-                        f"factor {slug!r} carries level(s) {unknown} that the fitted model "
-                        "never saw, so they have no code in its persisted encoding map "
-                        "(FR-131).",
+                        f"factor {slug!r} carries {len(unknown)} level(s) that the fitted model "
+                        "never saw (at position(s) "
+                        f"{', '.join(positions)} of the factor's sorted levels in this frame), "
+                        "so they have no code in its persisted encoding map (FR-131).",
                         terms=unknown,
                     )
             else:

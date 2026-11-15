@@ -138,6 +138,7 @@ set -u
 L=$(mktemp -d)
 export POLARS_MAX_THREADS=4 RAYON_NUM_THREADS=4 TOKIO_WORKER_THREADS=4 OMP_NUM_THREADS=4 OPENBLAS_NUM_THREADS=4 MKL_NUM_THREADS=4
 export GIP_TEST_DATABASE_URL=postgresql+asyncpg://gipricing:gipricing@localhost:5432/gipricing_'"$WT"'
+case $GIP_GATE_SLOT in */gate-1) export GIP_REDIS_URL=redis://localhost:6379/1;; */gate-1b) export GIP_REDIS_URL=redis://localhost:6379/2;; *) echo "unknown GIP_GATE_SLOT $GIP_GATE_SLOT"; exit 3;; esac
 ( uv run ruff check .                                 >$L/ruff.log          2>&1; echo $? >$L/ruff.rc ) &
 ( uv run mypy                                         >$L/mypy.log          2>&1; echo $? >$L/mypy.rc ) &
 ( uv run lint-imports                                 >$L/import_linter.log 2>&1; echo $? >$L/import_linter.rc ) &

@@ -923,6 +923,10 @@ async def test_a_request_for_changes_ends_a_deployment_request_rejected(
         ).scalar_one_or_none()
     assert status == "rejected"
     assert event is not None
+    # The event keeps its own action (it has no pre-submission state to be a `<type>.returned`
+    # from, `06` §4.5's dated note) and records the move it made.
+    assert (event.before or {}).get("status") == "review"
+    assert (event.after or {}).get("status") == "rejected"
     refused = deploy(client, submitter, "prod", ref, deployment_request_ref=request["ref"])
     assert refused.status_code == 409
     assert refused.json()["code"] == "DEPLOY_REQUIRES_APPROVAL"

@@ -1,11 +1,11 @@
-<!-- One Work = one pull request = one commit per slice.
+<!-- One Work = one pull request = one commit per slice, plus any review-fix commits on top.
      Title: a Conventional Commit line, e.g. `feat(frontend): platform administration views`. -->
 
 Closes #<!-- Work issue number -->. Plan accepted in: <!-- link to the maintainer's "Plan accepted" comment -->
 
 ## Commits
 
-Review commit by commit. Each commit builds and passes the gate on its own.
+Review commit by commit. The squash commit (main plus this branch) must pass the gate; each commit is reviewed on its own.
 
 | # | Commit | Slice | Requirement ids | What it changes |
 |---|--------|-------|-----------------|-----------------|

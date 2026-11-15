@@ -953,7 +953,7 @@ def _kind_rows(kind: Kind) -> list[Row]:
         row(
             "review",
             "certified",
-            "certified",
+            "returned",
             "review",
             _kind_decides(DecisionKind.REQUEST_CHANGES),
         ),
@@ -1247,7 +1247,7 @@ MODEL_ROWS = [
     _model_row("draft", "fitted", "fitted", "draft", "fit"),
     _model_row("fitted", "review", "submitted", "fitted", "submit"),
     _model_row("review", "approved", "approved", "review", "approve"),
-    _model_row("review", "fitted", "fitted", "review", "changes"),
+    _model_row("review", "fitted", "returned", "review", "changes"),
     _model_row("approved", "superseded", "superseded", "superseding", "supersede"),
     _model_row("fitted", "archived", "archived", "fitted", "archive"),
     _model_row("draft", "archived", "archived", "draft", "archive"),
@@ -1399,7 +1399,7 @@ PERIL_ROWS = [
     _peril_row("draft", "reconciled", "reconciled", "draft", "reconcile"),
     _peril_row("reconciled", "review", "submitted", "reconciled", "submit"),
     _peril_row("review", "approved", "approved", "review", "approve"),
-    _peril_row("review", "reconciled", "reconciled", "review", "changes"),
+    _peril_row("review", "reconciled", "returned", "review", "changes"),
     _peril_row("approved", "superseded", "superseded", "superseding", "approve"),
 ]
 
