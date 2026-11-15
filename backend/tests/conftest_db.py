@@ -1150,6 +1150,85 @@ OWNER_FIXTURE_USERS: tuple[tuple[str, str, str], ...] = (
         "owner-subject",
         "plants a role state as the owner and applies the login-role SQL over it (rolled back)",
     ),
+    (
+        "backend/tests/test_provision_app_role.py::"
+        "test_the_login_role_sql_converges_a_planted_state[m5_extra_membership_of_login]",
+        "owner-subject",
+        "plants a role state as the owner and applies the login-role SQL over it (rolled back)",
+    ),
+    (
+        "backend/tests/test_provision_app_role.py::"
+        "test_the_login_role_sql_converges_a_planted_state[m5b_extra_membership_of_app]",
+        "owner-subject",
+        "plants a role state as the owner and applies the login-role SQL over it (rolled back)",
+    ),
+    (
+        "backend/tests/test_provision_app_role.py::"
+        "test_the_login_role_sql_converges_a_planted_state[m5c_other_grantor]",
+        "owner-subject",
+        "plants a role state as the owner and applies the login-role SQL over it (rolled back)",
+    ),
+    (
+        "backend/tests/test_provision_app_role.py::"
+        "test_the_login_role_sql_converges_a_planted_state[m5d_intended_membership_survives]",
+        "owner-subject",
+        "plants a role state as the owner and applies the login-role SQL over it (rolled back)",
+    ),
+    (
+        "backend/tests/test_provision_app_role.py::"
+        "test_the_login_role_sql_converges_a_planted_state[m5e_second_grantor_of_the_intended_pair]",
+        "owner-subject",
+        "plants a role state as the owner and applies the login-role SQL over it (rolled back)",
+    ),
+    (
+        "backend/tests/test_provision_app_role.py::"
+        "test_the_login_role_sql_converges_a_planted_state"
+        "[m5f_admin_option_on_the_provisioners_own_row]",
+        "owner-subject",
+        "plants a role state as the owner and applies the login-role SQL over it (rolled back)",
+    ),
+    (
+        "backend/tests/test_provision_app_role.py::"
+        "test_the_provisioner_names_the_role_pair_when_a_dependent_grant_blocks_the_revoke",
+        "owner-subject",
+        "plants a role state as the owner and applies the login-role SQL over it (rolled back)",
+    ),
+    (
+        "backend/tests/test_provision_app_role.py::"
+        "test_a_provisioner_that_is_not_a_superuser_is_refused_first",
+        "owner-subject",
+        "plants a role state as the owner and applies the login-role SQL over it (rolled back)",
+    ),
+    (
+        "backend/tests/test_provision_app_role.py::"
+        "test_the_final_assertion_judges_the_end_state[two_rows]",
+        "owner-subject",
+        "plants a role state as the owner and applies the login-role SQL over it (rolled back)",
+    ),
+    (
+        "backend/tests/test_provision_app_role.py::"
+        "test_the_final_assertion_judges_the_end_state[admin_option]",
+        "owner-subject",
+        "plants a role state as the owner and applies the login-role SQL over it (rolled back)",
+    ),
+    (
+        "backend/tests/test_provision_app_role.py::"
+        "test_the_final_assertion_judges_the_end_state[set_option]",
+        "owner-subject",
+        "plants a role state as the owner and applies the login-role SQL over it (rolled back)",
+    ),
+    (
+        "backend/tests/test_provision_app_role.py::"
+        "test_the_final_assertion_judges_the_end_state[no_row]",
+        "owner-subject",
+        "plants a role state as the owner and applies the login-role SQL over it (rolled back)",
+    ),
+    (
+        "backend/tests/test_provision_app_role.py::"
+        "test_the_final_assertion_judges_the_end_state[the_intended_row]",
+        "owner-subject",
+        "plants a role state as the owner and applies the login-role SQL over it (rolled back)",
+    ),
 )
 
 

@@ -39,7 +39,7 @@ from app.platform import rating_algorithms as algorithm_service
 from app.platform import rating_versions as rating_service
 from app.platform import regression_runs as run_service
 from app.platform import regression_suites as suite_service
-from app.platform.blobs import BlobStore
+from app.platform.blobs import BlobStore, retain
 from model_schema import (
     ActorKind,
     ArtifactRef,
@@ -822,10 +822,13 @@ class AccountingBlobStore(BlobStore):
         body = content if isinstance(content, bytes) else b"".join(content)
         digest = hashlib.sha256(body).hexdigest()
         if await session.get(BlobRow, digest) is None:
+            # `BlobStore.put` takes one reference for its caller (FR-420): so does this stand-in.
             session.add(
-                BlobRow(sha256=digest, bytes_=len(body), media_type=media_type, ref_count=0)
+                BlobRow(sha256=digest, bytes_=len(body), media_type=media_type, ref_count=1)
             )
             await session.flush()
+        else:
+            await retain(session, digest)
         self.objects[digest] = body
         return BlobRef(sha256=digest, bytes=len(body), media_type=media_type)
 

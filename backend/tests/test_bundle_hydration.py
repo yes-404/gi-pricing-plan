@@ -14,8 +14,9 @@ No database: the audit write is captured, so these run in the small lane. Pins, 
 from __future__ import annotations
 
 import ast
+import json
 import shutil
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Callable
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any
@@ -26,11 +27,12 @@ import pytest
 from app.api import score
 from app.errors import PlatformError
 from app.platform import bundle_hydration
-from app.platform.bundle_hydration import REFUSAL_ACTION, hydrate
+from app.platform.bundle_hydration import LOAD_GUARD_CODES, REFUSAL_ACTION, hydrate
 from app.platform.bundle_slot import BundleSlot
-from model_schema import ArtifactRef
+from model_schema import ArtifactRef, Grouping, GroupingMethod, UnseenLevelBehaviour
 from pricing_core.rating.compile import Bundle
 from pricing_core.rating.runtime import load_bundle
+from pricing_core.safe_error import CodedError
 
 FIXTURES = Path(__file__).parent / "fixtures" / "stored_bundles"
 SRC = Path(__file__).resolve().parents[1] / "src"
@@ -277,3 +279,78 @@ async def test_a_governance_refusal_is_never_deduplicated_and_names_the_acting_p
     scored = [e for e in events if e["actor"] is not actor]
     assert scored[0]["after"]["requested_by"] == str(requester.id)
     assert "requested_by" not in events[0]["after"]
+
+
+def _unproducible_bundle() -> Bundle:
+    """The clean bundle, its `region` Factor made a Grouping onto `A`/`B`, and its fit naming a
+    cell `region_x_yoa[C | 2011]` that Grouping cannot produce: a Bundle stored before FR-193's
+    load check, which priced that term at 0 on every quote."""
+    raw = json.loads((FIXTURES / "clean.bundle.json").read_text())
+    payloads = raw["resolved_payloads"]
+    region = payloads["factor:region@1"]
+    grouping = Grouping(
+        id=uuid4(), slug="region-ab", dataset_id=region["dataset_id"], version=1,
+        column="region", method=GroupingMethod.MANUAL, mapping={"A": "A", "B": "B"},
+        unseen_level_behaviour=UnseenLevelBehaviour.ERROR,
+    )
+    region.update(type="grouping", grouping_id=str(grouping.id))
+    payloads["grouping:region-ab@1"] = grouping.model_dump(mode="json")
+    coefficients = payloads["model:motor-freq-glm@1"]["fit_result"]["coefficients"]
+    stray = dict(coefficients[-1], term="region_x_yoa[C | 2011]")
+    coefficients.append(stray)
+    return Bundle.model_validate(raw)
+
+
+#: One row per load-guard code: a Bundle `load_bundle` refuses with it.
+GUARD_ROWS: dict[str, Callable[[], Bundle]] = {
+    "CONTROL_FACTOR_IN_RATEABLE_PATH": lambda: _bundle("offender.bundle.json"),
+    "MODEL_TERM_UNRESOLVED": _unproducible_bundle,
+}
+
+
+@pytest.mark.req("FR-243")
+def test_every_load_guard_code_has_a_row() -> None:
+    """Adding a code to `LOAD_GUARD_CODES` without a row here fails this test."""
+    assert set(GUARD_ROWS) == set(LOAD_GUARD_CODES)
+
+
+@pytest.mark.req("FR-193")
+@pytest.mark.req("FR-243")
+@pytest.mark.asyncio
+@pytest.mark.parametrize("code", sorted(GUARD_ROWS))
+async def test_every_load_guard_code_is_a_409_and_one_audit_event(
+    code: str, events: list[dict[str, Any]]
+) -> None:
+    bundle = GUARD_ROWS[code]()
+    with pytest.raises(PlatformError) as refused:
+        await hydrate(
+            bundle,
+            slot=BundleSlot(),
+            database=_FakeDatabase(),  # type: ignore[arg-type]
+            workspace_id=uuid4(),
+            ref=REF,
+        )
+    assert (refused.value.code, refused.value.status_code) == (code, 409)
+    assert [e["action"] for e in events] == [REFUSAL_ACTION]
+    assert events[0]["after"]["bundle_hash"] == bundle.content_hash
+    if code == "MODEL_TERM_UNRESOLVED":
+        assert "region_x_yoa[C | 2011]" in events[0]["after"]["refusal"]
+
+
+@pytest.mark.req("FR-243")
+@pytest.mark.asyncio
+async def test_a_coded_error_outside_the_load_guard_set_is_re_raised(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def other(_bundle: Bundle) -> None:
+        raise CodedError("RATING_VERSION_UNPINNED: not a load guard")
+
+    monkeypatch.setattr(bundle_hydration, "load_bundle", other)
+    with pytest.raises(CodedError):
+        await hydrate(
+            _bundle("clean.bundle.json"),
+            slot=BundleSlot(),
+            database=_FakeDatabase(),  # type: ignore[arg-type]
+            workspace_id=uuid4(),
+            ref=REF,
+        )

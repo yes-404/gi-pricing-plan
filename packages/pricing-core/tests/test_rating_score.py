@@ -584,6 +584,17 @@ async def test_the_billing_surface_guard_would_be_caught_if_removed(
     assert result.outcome == "quoted", "the patched guard should have priced this silently"
 
 
+@pytest.mark.req("FR-250")
+async def test_score_one_timing_ms_is_exactly_total_and_evaluate() -> None:
+    """`03` §4.4 (corrected 2026-08-31, F62; RL-931): `timing_ms` carries exactly the two keys
+    `score_one` emits, `total` and `evaluate`. The other tests blank `timing_ms` before comparing,
+    so nothing else pins the key set. The values are wall-clock: only keys and signs are asserted.
+    """
+    result = await score_one(await _compiled(), _ctx(), trace=False)
+    assert set(result.timing_ms) == {"total", "evaluate"}
+    assert all(value >= 0 for value in result.timing_ms.values())
+
+
 # ---------------------------------------------------------------------------
 # FR-258: the trace.
 # ---------------------------------------------------------------------------

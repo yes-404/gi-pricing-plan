@@ -120,11 +120,10 @@ async def write_trace(
     """
     payload = trace.model_dump_json().encode()
     ref = await blob_store.put(session, payload, "application/json")
-    # Keeps `ref_count > 0` so FR-420's GC (`ref_count == 0` is its selector) can never
-    # consider this blob a candidate for as long as this row exists — the claim RL-888
-    # rests the whole retention design on, verified rather than assumed
-    # (`backend/tests/test_traces.py`'s GC-survival test).
-    await blobs.retain(session, ref.sha256)
+    # `put` took the reference that keeps `ref_count > 0`, so FR-420's GC (`ref_count == 0`
+    # is its selector) can never consider this blob a candidate for as long as this row
+    # exists — the claim RL-888 rests the whole retention design on, verified rather than
+    # assumed (`backend/tests/test_traces.py`'s GC-survival test).
 
     row = ScoringTraceRow(
         workspace_id=workspace_id,
@@ -254,7 +253,6 @@ async def complete_pending_trace(
     else:
         payload = trace.model_dump_json().encode()
         ref = await blob_store.put(session, payload, "application/json")
-        await blobs.retain(session, ref.sha256)
         blob_sha256 = ref.sha256
         status = "complete" if reproduced_summary == row.served_summary else "mismatch"
 
@@ -329,6 +327,10 @@ async def delete_trace(
 
     # A pending row (Task 4B) has no blob yet — nothing to release. Every other status
     # does, and `write_trace`/`complete_pending_trace` both `retain` on the way in.
-    if row.blob_sha256 is not None:
-        await blobs.release(session, row.blob_sha256)
+    # The row is deleted and flushed first: `release` refuses to reach 0 while a row still
+    # names the digest (FR-420), and this row does until it is gone.
+    blob_sha256 = row.blob_sha256
     await session.delete(row)
+    if blob_sha256 is not None:
+        await session.flush()
+        await blobs.release(session, blob_sha256)

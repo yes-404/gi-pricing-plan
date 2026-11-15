@@ -30,7 +30,7 @@ from app.db.models import (
 )
 from app.db.session import Database
 from app.errors import PlatformError
-from app.platform import approvals, audit, blobs, rbac
+from app.platform import approvals, audit, rbac
 from app.platform import environments as environments_service
 from app.platform import objectives as objectives_service
 from app.platform import perils as perils_service
@@ -1263,9 +1263,7 @@ async def _structural_diff_gate(
         previous if previous is not None else _empty_algorithm(like=candidate), candidate
     )
     stored = await blob_store.put(session, diff.model_dump_json().encode(), "application/json")
-    # The row holds a reference to the blob for as long as the version exists, so FR-420's
-    # collector (`ref_count == 0`) can never take it (the pattern `traces.write_trace` uses).
-    await blobs.retain(session, stored.sha256)
+    # `put` took the reference the row holds for as long as the version exists (FR-420).
     return stored.sha256
 
 

@@ -1,8 +1,9 @@
 """The one place a stored Bundle is hydrated (FR-243, FR-240; WK-2113 S3).
 
 `hydrate` is the only caller of `load_bundle` in `backend/src`, so a Bundle compiled before the
-`control`-intent guard existed cannot price: `load_bundle` refuses it with
-`CONTROL_FACTOR_IN_RATEABLE_PATH`, and this wrapper turns that into a decided answer — a 409
+`control`-intent guard existed cannot price: `load_bundle` refuses it with a load-guard code
+(`LOAD_GUARD_CODES`: `CONTROL_FACTOR_IN_RATEABLE_PATH`, or `MODEL_TERM_UNRESOLVED` for a GLM level
+its Factor cannot produce), and this wrapper turns that into a decided answer — a 409
 problem (the request is valid; the stored artifact conflicts with the current rules), never a
 500 — and records the refusal as an Audit Event (NFR-498). `test_hydration_census` holds both
 "only caller" claims.
@@ -15,7 +16,7 @@ because the guard runs on every hydrate (a hash covers the pins, not the carried
 
 from __future__ import annotations
 
-from collections.abc import Awaitable
+from collections.abc import Awaitable, Mapping
 from typing import Protocol
 from uuid import UUID
 
@@ -33,9 +34,23 @@ from pricing_core.rating.compile import Bundle, check_rateable_intent
 from pricing_core.rating.runtime import CompiledBundle, load_bundle
 from pricing_core.safe_error import CodedError
 
-__all__ = ["REFUSAL_ACTION", "Revalidate", "hydrate", "revalidate", "revalidator"]
+__all__ = [
+    "LOAD_GUARD_CODES",
+    "REFUSAL_ACTION",
+    "Revalidate",
+    "hydrate",
+    "revalidate",
+    "revalidator",
+]
 
-_CODE = "CONTROL_FACTOR_IN_RATEABLE_PATH"
+#: The load-guard codes `load_bundle` refuses a stored Bundle with, each mapped to the 409's title.
+#: A `CodedError` carrying any other code is not a decided answer and is re-raised (FD-1495 for the
+#: first; FR-193 and FR-243 for the second). `test_bundle_hydration.py` fails when a code is added
+#: here without a row there.
+LOAD_GUARD_CODES: Mapping[str, str] = {
+    "CONTROL_FACTOR_IN_RATEABLE_PATH": "A stored bundle prices on a control-intent Factor",
+    "MODEL_TERM_UNRESOLVED": "A stored bundle prices a level its Factor cannot produce",
+}
 #: The Audit Event action for a refused load (`03` §4.3, NFR-498).
 REFUSAL_ACTION = "rating_version.load_refused"
 _ACTOR = Principal(kind=ActorKind.SYSTEM, display="bundle-guard")
@@ -58,6 +73,7 @@ async def _refuse(
     workspace_id: UUID,
     ref: ArtifactRef,
     content_hash: str,
+    code: str,
     refusal: str,
     acting: Principal | None,
     requester: Principal | None,
@@ -97,18 +113,18 @@ async def _refuse(
                 slot.unrecord_refusal(content_hash)
             raise
     return PlatformError(
-        _CODE,
-        "A stored bundle prices on a control-intent Factor",
+        code,
+        LOAD_GUARD_CODES[code],
         409,
         f"{ref} (bundle {content_hash}) is refused: {refusal}. Compile a new Rating Version; "
         "a compiled version is never mutated.",
     )
 
 
-def _control_refusal(exc: CodedError) -> str | None:
-    """The text after the code when `exc` is the `control`-intent refusal, else `None`."""
+def _load_guard_refusal(exc: CodedError) -> tuple[str, str] | None:
+    """`(code, text after the code)` when `exc` is a load-guard refusal, else `None`."""
     code, separator, refusal = str(exc).partition(": ")
-    return refusal if separator and code == _CODE else None
+    return (code, refusal) if separator and code in LOAD_GUARD_CODES else None
 
 
 async def hydrate(
@@ -128,8 +144,8 @@ async def hydrate(
     try:
         return load_bundle(bundle)
     except CodedError as exc:
-        refusal = _control_refusal(exc)
-        if refusal is None:
+        guard = _load_guard_refusal(exc)
+        if guard is None:
             raise
         raise await _refuse(
             slot,
@@ -137,7 +153,8 @@ async def hydrate(
             workspace_id=workspace_id,
             ref=ref,
             content_hash=bundle.content_hash,
-            refusal=refusal,
+            code=guard[0],
+            refusal=guard[1],
             acting=acting,
             requester=requester,
         ) from None
@@ -182,8 +199,8 @@ async def revalidate(
     try:
         await check_rateable_intent(version, resolver)
     except CodedError as exc:
-        refusal = _control_refusal(exc)
-        if refusal is None:
+        guard = _load_guard_refusal(exc)
+        if guard is None:
             raise
         raise await _refuse(
             slot,
@@ -191,7 +208,8 @@ async def revalidate(
             workspace_id=workspace_id,
             ref=ref,
             content_hash=bundle.content_hash,
-            refusal=refusal,
+            code=guard[0],
+            refusal=guard[1],
             acting=actor,
             requester=None,
         ) from None

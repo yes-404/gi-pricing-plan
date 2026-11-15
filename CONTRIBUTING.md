@@ -56,8 +56,10 @@ Use public or synthetic data only (freMTPL2). Never use real policy, claims or e
   the Work issue first.
 - If the Work needs a new dependency, open a decision-needed issue first. A migration is
   announced on the coordination issue.
-- New requirement ids and decision numbers are assigned by the core lead at the merge turn.
-  Write placeholders until then.
+- New requirement ids and decision numbers are reserved by the core lead when the plan is
+  accepted, from the reservations record kept on the milestone's Coordination issue. Use the
+  reserved ids in the branch from the first commit. A reserved id that is never used stays a
+  recorded gap and is never reused.
 
 ## The gate
 
