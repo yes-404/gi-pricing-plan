@@ -217,6 +217,22 @@ _SITES: dict[_Key, tuple[frozenset[str], str]] = {
         frozenset({"safe_error_detail(exc)", "spec.model_type", "str(exc)"}),
         "a named fit refusal on the model path (test_error_sinks.py `_SINKS`); no Quote Context",
     ),
+    ("backend/src/app/worker/model_handlers.py", "_offset_refusal", _DYNAMIC): (
+        frozenset({"_OFFSET_REFUSAL_DETAIL"}),
+        "a fixed module sentence; the code is exc.code; never the exception's text (stored on the"
+        " Job); FR-2143",
+    ),
+    ("backend/src/app/worker/model_handlers.py", "_all_rows_refusal", _DYNAMIC): (
+        frozenset({"detail"}),
+        "a fixed sentence formatted from the exception's `partition` and `count` attributes (a"
+        " name and a count, never a level or a value); never the exception's text (stored on"
+        " the Job); FR-2143",
+    ),
+    ("backend/src/app/worker/model_handlers.py", "_diagnostics_refusal", _DYNAMIC): (
+        frozenset({"_DIAGNOSTICS_REFUSAL_DETAIL"}),
+        "a fixed module sentence; the code is exc.code; never the exception's text (stored on the"
+        " Job); FR-2143",
+    ),
     ("backend/src/app/worker/model_handlers.py", "_reconcile", _DYNAMIC): (
         frozenset({"str(exc)"}),
         "`ModellingError` on the peril-reconciliation path (test_error_sinks.py `_SINKS`)",

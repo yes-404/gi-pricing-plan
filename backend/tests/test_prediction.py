@@ -210,9 +210,12 @@ class _ResidualPair(NamedTuple):
     resid_flag_id: UUID
     split2: SplitRef
     ref: str
+    residual_job_id: UUID | None = None
 
 
-async def _fitted_residual_pair(database, blob_store, workspace_id) -> _ResidualPair:
+async def _fitted_residual_pair(
+    database, blob_store, workspace_id, *, residual_status: JobStatus = JobStatus.SUCCEEDED
+) -> _ResidualPair:
     """The base GLM, then the residual GLM offset against it, through the real Jobs —
     the seeding `test_model_offset_jobs.py`'s happy path makes, with the ref read off
     the base row's own family and version."""
@@ -257,8 +260,8 @@ async def _fitted_residual_pair(database, blob_store, workspace_id) -> _Residual
         database, blob_store, workspace_id, actor,
         _residual_spec(v2_id, resid_flag, split2, ref=ref),
     )
-    assert await execute_job(database, job.id, blob_store) is JobStatus.SUCCEEDED
-    return _ResidualPair(actor, base_id, residual_id, v2_id, resid_flag, split2, ref)
+    assert await execute_job(database, job.id, blob_store) is residual_status
+    return _ResidualPair(actor, base_id, residual_id, v2_id, resid_flag, split2, ref, job.id)
 
 
 # -- The interval, end to end -------------------------------------------------------------
@@ -350,6 +353,60 @@ async def test_a_glm_fitted_before_the_covariance_blob_says_so_rather_than_going
     # The expectation is still served. FR-195 removes the interval, not the answer.
     assert all(row.lower is None and row.upper is None for row in prediction.rows)
     assert prediction.rows[0].expected > prediction.rows[1].expected
+
+
+@pytest.mark.req("FR-2143")
+async def test_a_refusal_from_the_offset_model_fails_the_fit_job_coded_and_says_what_next(
+    database, blob_store, workspace_id, monkeypatch
+) -> None:
+    """The offset model refuses a level it never saw while the residual model is fitted: its rows
+    cannot be dropped, so the Job fails with the refusal's code and a value-free next step."""
+    import pricing_core.modelling as modelling
+    from app.db.models import JobRow
+    from pricing_core.modelling.predict import PredictionError
+
+    def refuse(*args, **kwargs):
+        raise PredictionError(
+            "UNSEEN_LEVEL_BEHAVIOUR_REQUIRED",
+            "factor 'area' carries the level 'SENTINEL-4e8b' that the fitted model never saw",
+            terms=["area"],
+        )
+
+    monkeypatch.setattr(modelling, "linear_predictor", refuse)
+    pair = await _fitted_residual_pair(
+        database, blob_store, workspace_id, residual_status=JobStatus.FAILED
+    )
+
+    async with database.session() as session:
+        job_row = await session.get(JobRow, pair.residual_job_id)
+    assert job_row is not None
+    assert job_row.error is not None
+    assert job_row.error["code"] == "UNSEEN_LEVEL_BEHAVIOUR_REQUIRED"
+    assert "declare “map to base” on that factor, or re-split the data" in job_row.error["message"]
+    assert "SENTINEL-4e8b" not in str(job_row.error)  # the stored error never carries a level
+
+
+@pytest.mark.req("FR-2143")
+async def test_an_unseen_level_is_a_409_with_the_code_and_a_seen_one_scores(
+    database, blob_store, workspace_id
+) -> None:
+    """The GLM fitted through the real Job refuses a level its fit never saw, as the EBM does:
+    `PlatformError` 409 carrying `UNSEEN_LEVEL_BEHAVIOUR_REQUIRED`, the Factor undeclared."""
+    actor, model_id = await _fitted_glm(database, blob_store, workspace_id)
+
+    async with database.session() as session:
+        with pytest.raises(PlatformError) as refused:
+            await service.predict_rows(
+                session, workspace_id=workspace_id, actor=actor, model_id=model_id,
+                rows=[{"exposure_years": 1.0, "area": "suburban"}], blob_store=blob_store,
+            )
+        scored = await service.predict_rows(
+            session, workspace_id=workspace_id, actor=actor, model_id=model_id,
+            rows=ROWS, blob_store=blob_store,
+        )
+    assert refused.value.code == "UNSEEN_LEVEL_BEHAVIOUR_REQUIRED"
+    assert refused.value.status_code == 409
+    assert len(scored.rows) == 2
 
 
 @pytest.mark.req("FR-198")
