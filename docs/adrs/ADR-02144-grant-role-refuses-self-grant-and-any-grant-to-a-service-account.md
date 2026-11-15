@@ -33,6 +33,20 @@ say that no role is ever granted to one.
 
 ## Decision
 
+Decided by the maintainer on 2026-11-15 on issue #1843
+(https://github.com/yes-404/gi-pricing-plan/issues/1843#issuecomment-6886339566), in the
+comment's words: "**Decided by the maintainer, 2026-11-15: option (A).** The escalation guard
+refuses only when the grantee is the granter, as FR-348 is worded, with a hard refusal of a
+grant to oneself and to a Service Account one owns. An Admin may grant another principal a
+permission the Admin does not hold. Every grant stays an audit event, and the approval policy's
+submitter rule is unchanged. The accepted cost is as stated above: two colluding accounts can
+defeat separation of duties, and the audit event is the control."
+
+The maintainer amended the decision on 2026-11-15, under the user's authority: FR-347 and
+FR-389: a Service Account is never granted a role. The refusal of a grant to a Service Account
+the granter owns becomes a refusal of any grant to a Service Account, for any role, so the
+`created_by` column that recorded the owner is not needed.
+
 `grant_role` refuses two grants, whatever role is granted and whatever `principal_kind` is
 passed:
 
@@ -53,10 +67,15 @@ permissions of its own record only.
 
 This record changes the rule only. The route that calls `grant_role` belongs to #1494.
 
-Options not taken: keeping the permission-subset check; refusing only a grant to a Service
-Account the granter created (recorded in a `created_by` column, with a backfill and a
-migration), which this decision replaced and removed; a refusal keyed on `principal_kind`; an
-audit event for a refused grant.
+Options not taken, from the options and costs on #1843:
+
+- (B) "Keep the guard, and add a named first-grant route for an Admin, limited to built-in
+  roles, audited, and refusing a grant to the granter. Cost: a second route and its own
+  permission."
+- (C) "Give the built-in Admin every permission. Cost: the Admin can then approve and deploy,
+  which the role separation exists to prevent."
+
+Also not taken: a refusal keyed on `principal_kind`, and an audit event for a refused grant.
 
 ## Consequences
 
