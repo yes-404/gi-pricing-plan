@@ -252,11 +252,19 @@ _SINKS: dict[tuple[str, str, str], tuple[int, str]] = {
         "S3, B2): fixed texts naming a model ref, a feature, a Factor slug@version and an "
         "interaction, or a fit-result field; split at the code and returned in a 422 at save, "
         "where no quote exists (NFR-499)"),
-    ("backend/src/app/platform/bundle_hydration.py", "_control_refusal", "str(exc)"): (
-        1, "the `CodedError` of `load_bundle` / `check_rateable_intent`, split at its code: the "
-        "text names a model ref, a feature, a Factor slug@version and an interaction, all from "
-        "stored artifacts, never a quote input; it reaches the 409 detail and the audit `after` "
-        "(WK-2113 S3, NFR-499)"),
+    ("backend/src/app/platform/bundle_hydration.py", "_load_guard_refusal", "str(exc)"): (
+        1, "the `CodedError` of `load_bundle` / `check_rateable_intent`, split at its code and "
+        "kept only for a code in `LOAD_GUARD_CODES` (`CONTROL_FACTOR_IN_RATEABLE_PATH`, "
+        "`MODEL_TERM_UNRESOLVED`): the text names a model ref, a feature, a Factor slug@version, "
+        "an interaction and a term, all from stored artifacts, never a quote input; it reaches "
+        "the 409 detail and the audit `after` (WK-2113 S3, #1741, NFR-499); "
+        "test_bundle_hydration.py::test_every_load_guard_code_is_a_409_and_one_audit_event"),
+    ("packages/pricing-core/src/pricing_core/rating/runtime.py", "_glm_scorer", "{exc}"): (
+        1, "a `PredictionError` from `check_term_domains` at hydrate, re-raised as a `CodedError` "
+        "naming the code, the Bundle ref and the term and Factor slug: read at load from the "
+        "artifact, once per hydrate, no row exists (#1741, FR-193, FR-243); "
+        "test_rating_glm_model_call.py::"
+        "test_a_bundle_whose_glm_term_its_banding_cannot_produce_is_refused_at_load"),
     ("packages/pricing-core/src/pricing_core/modelling/gbm.py", "_compile_custom", "str(exc)"): (
         1, "an `ObjectiveError` from compiling a Custom Objective's declared source: the "
         "objective's own text, no quote exists at compile"),

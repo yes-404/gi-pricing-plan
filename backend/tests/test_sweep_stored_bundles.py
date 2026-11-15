@@ -129,3 +129,21 @@ def test_a_bundle_that_cannot_be_read_is_counted_and_fails_the_sweep() -> None:
     rc, lines = _run([broken])
     assert rc != 0
     assert any(line.startswith("UNREADABLE") and "motor-clean@1" in line for line in lines)
+
+
+@pytest.mark.req("FR-193")
+@pytest.mark.req("FR-243")
+def test_a_glm_level_its_factor_cannot_produce_is_an_offender_not_unreadable() -> None:
+    from backend.tests.test_bundle_hydration import _unproducible_bundle
+
+    bundle = _unproducible_bundle()
+    row = {
+        "slug": "motor-freq", "version": 4, "status": "approved",
+        "bundle_hash": bundle.content_hash, "bundle": json.loads(bundle.model_dump_json()),
+    }
+    rc, lines = _run([row])
+    assert rc == 1
+    offender = next(line for line in lines if line.startswith("OFFENDER"))
+    assert offender.count("region_x_yoa[C | 2011]") == 1
+    assert "unreadable: 0" in lines
+
