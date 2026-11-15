@@ -18,13 +18,15 @@ relates: [FR-372, FR-373, FR-424]   # ids only — the FR-/NFR-/ADR- this decisi
 - **Deciders:** the maintainer; the detail of the rule was decided on the maintainer's behalf by delegation, 15 Nov 2026.
 - **Decision issue:** [#1839](https://github.com/yes-404/gi-pricing-plan/issues/1839) (Work #1497, slice 10, `06` FR-373)
 - **Decision:** [comment of 2026-11-15](https://github.com/yes-404/gi-pricing-plan/issues/1839#issuecomment-6886339811), opening: "Decided by the maintainer, 2026-11-15: (i) option (a), and (ii) yes".
-- **Enacted by:** the pull request that adds this record (the audit anchor, #1497 slice 10).
+- **Enacted by:** the pull request that adds this record (the audit anchor, #1497 slice 10). Part of #1497 (slice 10). Enacts the decision on #1839.
 
 ## Context
 
 `06` FR-373 says the platform ships an explicit `POST /api/v1/audit/anchor` that exports a signed chain head for the customer to store somewhere the operator does not control. The hash chain (FR-372) detects an edit below the application, but not an operator who recomputes every later hash; a signed head that the customer holds outside the platform is what closes that gap, to the extent the customer automates it.
 
 Two things the specification left open had to be decided before code. Which signature scheme, through which library, with the key held where. And what the anchor does when the chain it is asked to sign does not verify: `GET /audit/verify` reports a break as a finding (200 with `intact: false`), but a signature over a head is a statement that the chain up to it is sound.
+
+[ADR-2149](ADR-02149-the-1497-plans-decided-items.md) recorded the decided items of the #1497 plan and left signing (that plan's Q8) open: it says Q8 is not decided by that record. This record decides it, on the decision issue named above.
 
 `cryptography` was already in `uv.lock`, through `pyjwt[crypto]`; no backend module named it.
 
