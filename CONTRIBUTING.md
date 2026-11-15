@@ -78,9 +78,14 @@ pnpm --dir frontend test && pnpm --dir frontend build
 
 ## Pull requests
 
-- **One Work is one pull request**, built as a series of commits, one per slice. Each
-  commit carries its spec change, code and tests, passes the gate on its own, and is
-  reviewed on its own. Fold a fix into the commit it belongs to.
+- **One Work is one pull request**, built as a series of commits: one commit per slice,
+  plus any review-fix commits on top. Each slice commit carries its spec change, code
+  and tests, and is reviewed on its own. The pull request squash-merges, and the squash
+  commit is what must pass the gate. Its tree is `main` plus the branch, which is the
+  tree CI's pull-request run checks. To gate that tree locally, merge `main` into the
+  branch and run the gate at the head. A fix made during review is a new
+  commit on top, never a rewrite of a pushed branch (no rebase, no force-push); the
+  commit table names which slice each fix belongs to.
 - The title is a Conventional Commit line. Add one type label. Fill in the template: the
   commit table, the gate evidence (range `origin/main...<branch>`), the changelog line,
   the decisions reached, and the AI disclosure.
@@ -105,7 +110,9 @@ Review is by risk, in four tiers:
 2. **Every contributor pull request:** the maintainer approves.
 3. **High-risk areas:** the other person cross-reviews. A reviewer is requested through
    `.github/CODEOWNERS`; the core lead applies the `high-risk` label. If the cross-review
-   does not happen within **three working days**, the maintainer may proceed.
+   does not happen within **three working days**, the maintainer may proceed. On a pull
+   request labelled high-risk by hand whose files request nobody, the author requests the
+   cross-review by hand, and the three working days run from that request.
 4. **The rest of the core team's work:** an independent audit.
 
 The six high-risk areas:
