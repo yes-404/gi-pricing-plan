@@ -1,7 +1,8 @@
 """A validation failure's text reaching a caller or a log carries no submitted value (NFR-499).
 
-FD-1589 / #1712 rows 2, 3, 7, 9 and 10 (rows 4, 5 and 6 are S7b's): each sink used to render `str(exc)` (or `f"{exc}"`) of a
-Pydantic `ValidationError` or a library error, and that text prints every failing `input_value`.
+FD-1589 / #1712 rows 2, 3, 7, 9 and 10 (rows 4, 5 and 6 are S7b's): each sink used to render
+`str(exc)` (or `f"{exc}"`) of a Pydantic `ValidationError` or a library error, and that text
+prints every failing `input_value`.
 Each now goes through `pricing_core.safe_error.safe_error_detail` (or fixed text, or `from None`).
 Every test plants a sentinel where the sink can see it and asserts the sentinel is absent, with a
 control that the text a caller needs is still there. Row 3's plain `ValueError` is a planted
