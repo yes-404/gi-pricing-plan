@@ -370,6 +370,7 @@ async def _seed(
     *,
     tampered: int | None = None,
     missing: int | None = None,
+    bad_link: int | None = None,
 ) -> None:
     """A chain whose events carry the given `at`s (`record()` stamps now()).
 
@@ -383,7 +384,9 @@ async def _seed(
     `tampered=N`: event N is stored with the action `job.failed` but the hash of the event it
     was before the edit (`job.submitted`), as a content edit leaves it; the next event's link
     names that stored hash. `missing=N`: event N is never stored, and the events after it keep
-    the links they would have had.
+    the links they would have had. `bad_link=N`: event N is hashed and stored with a
+    `prev_event_hash` that names no event (so its own content verifies, and only its link to
+    its predecessor is wrong); event N+1 links to N's stored hash as usual.
     """
     prev: str | None = None
     rows: list[AuditEventRow] = []
@@ -397,7 +400,8 @@ async def _seed(
             action="job.submitted",
             entity_ref=f"job:seed@{sequence}",
         )
-        event_hash = compute_event_hash(core, prev_event_hash=prev)
+        stored_prev = "sha256:" + "0" * 64 if sequence == bad_link else prev
+        event_hash = compute_event_hash(core, prev_event_hash=stored_prev)
         stored = core.model_dump(exclude={"actor"})
         if sequence == tampered:
             stored["action"] = "job.failed"
@@ -406,7 +410,7 @@ async def _seed(
                 AuditEventRow(
                     **stored,
                     actor=principal.model_dump(mode="json"),
-                    prev_event_hash=prev,
+                    prev_event_hash=stored_prev,
                     event_hash=event_hash,
                     sequence=sequence,
                 )
@@ -506,3 +510,33 @@ async def test_a_five_thousand_event_chain_verifies_whole_while_streaming(
     await _seed(database, workspace_id, principal, ats)
     async with database.session() as session:
         assert await audit.verify_chain(session, workspace_id) == 5000
+
+
+@pytest.mark.req("FR-372")
+async def test_a_range_starting_after_sequence_one_checks_the_link_to_its_predecessor(
+    database: Database, workspace_id, principal
+) -> None:
+    """The first event of a span links to its predecessor's STORED hash, which is checked
+    although the predecessor's content is not (#1858 M1). Event 2 is stored valid in itself
+    but linking to nothing; a span that starts at 2 must break at 2, and one that starts at 3
+    must not, because event 3 links to 2's stored hash."""
+    await _seed(database, workspace_id, principal, _days(5), bad_link=2)
+    async with database.session() as session:
+        with pytest.raises(ChainBrokenError) as exc:
+            await audit.verify_range(session, workspace_id, from_=_days(5)[1], to=_days(5)[3])
+        assert (exc.value.sequence, exc.value.first_sequence, exc.value.checked) == (2, 2, 0)
+        assert "does not match predecessor" in exc.value.reason
+        span = await audit.verify_range(session, workspace_id, from_=_days(5)[2])
+    assert (span.first_sequence, span.last_sequence, span.events_checked) == (3, 5, 3)
+
+
+@pytest.mark.req("FR-372")
+async def test_a_gap_inside_a_range_starting_after_sequence_one_is_caught(
+    database: Database, workspace_id, principal
+) -> None:
+    await _seed(database, workspace_id, principal, _days(6), missing=4)
+    async with database.session() as session:
+        with pytest.raises(ChainBrokenError) as exc:
+            await audit.verify_range(session, workspace_id, from_=_days(6)[1], to=_days(6)[5])
+    assert (exc.value.sequence, exc.value.first_sequence, exc.value.checked) == (5, 2, 2)
+    assert "expected sequence 4" in exc.value.reason
