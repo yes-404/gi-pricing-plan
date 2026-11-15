@@ -7,6 +7,21 @@ about. The format follows [Keep a Changelog 1.1.0](https://keepachangelog.com/en
 
 ### Changed
 
+- **A GLM refuses a level of a categorical Factor that its fit never saw, unless the Factor
+  declares `map_to_base`.** A Factor gains `unseen_level_behaviour` (`error` or `map_to_base`;
+  unset refuses), on `POST /api/v1/factors` and in the factor form. The refusal is
+  `UNSEEN_LEVEL_BEHAVIOUR_REQUIRED`: `409` on the prediction route, `MODEL_CALL_FAILED` carrying
+  that code on a quote. A Factor's declaration changes only by a new Factor version, which a
+  refit pins in a new model and a new Rating Version pins in a new bundle hash (FR-239,
+  FR-2143). Run `scripts/sweep-unseen-levels.py` before upgrading: a version it lists will
+  refuse the quotes it names until a new model is approved, and a batch carrying many such rows
+  can abort above `rating.batch_abort_failure_rate`. A version whose GLM has an indicator term for
+  a level its numeric input can never produce refuses every quote on that path, not only the
+  affected values; the sweep lists such versions as `NOTEXAMINED-NUMERIC-TERMS` until their models
+  are refitted. Diagnostics, comparisons and backtests leave
+  rows on such a level out of their figures and report the count and exposure; the model detail
+  view lists each banded null level, Grouping target and interaction cell the fit has no
+  relativity for.
 - **Scoring now refuses a numeric input the engine cannot hold exactly; it priced silently, or
   failed with a 500, before.** `POST /api/v1/score` and `POST /api/v1/score/compare` refuse a
   Rating Input, or any key in a quote's inputs written as a number with a fraction or an
