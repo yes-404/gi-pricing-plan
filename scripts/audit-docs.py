@@ -670,6 +670,19 @@ def _is_frozen_file(path: pathlib.Path) -> bool:
         return False
 _doc_index = _load_module("_doc_index_for_audit_docs", _DOC_INDEX_PATH)
 
+
+def _load_doc_id() -> types.ModuleType:
+    """`doc-id.py` by path, once — its `scan_spec_bold_ids` is the one reading of a spec's
+    bold requirement ids (check 32 resolves against it rather than re-typing the regex).
+    Loaded on first use: only check 32 needs it. Loaded from this script's own directory,
+    not `REPO / "scripts"`: `REPO` is the tree being audited (a test points it at a tmp
+    tree), and the reader of a tree is the tool beside this script, not one inside the
+    tree. The audited tree is what `scan_spec_bold_ids` is then called on."""
+    return sys.modules.get("_doc_id_for_audit_docs") or _load_module(
+        "_doc_id_for_audit_docs", pathlib.Path(__file__).resolve().parent / "doc-id.py"
+    )
+
+
 #: Roots checks 30-39 apply to. In W37-4 this is the set of paths that exist *after* the
 #: standard lands and *before* the migration; W37-6 replaces it with the whole corpus in the
 #: same commit that migrates, which is D14's "enforcement red from the migration PR".
@@ -1487,11 +1500,16 @@ def check_citations() -> None:
         )
         return
     # ADR-2136 (ND-4): a frozen-family id resolves against the frozen INDEX; an id minted
-    # after the freeze never enters INDEX, so it resolves against the governed headers.
+    # after the freeze never enters INDEX, so it resolves against the governed headers —
+    # and a requirement defined after it as a bold spec row (`**FR-2137**`) carries no
+    # header at all, so it resolves against the same bold-id scan `doc-id.py` reads.
     index_ids = {
         _docid.canonical(m.group(1), int(m.group(2)))
         for m in _docid.ID_RE.finditer(index_path.read_text(encoding="utf-8"))
-    } | _header_ids()
+    } | _header_ids() | {
+        _docid.canonical(prefix, number)
+        for prefix, number in _load_doc_id().scan_spec_bold_ids(REPO)
+    }
     checked = 0
     found: dict[str, list[tuple[str, str]]] = {}
     for path in _id_scope_documents():
@@ -2778,29 +2796,62 @@ def check_spec_examples(specs: list[pathlib.Path]) -> None:
     )
 
 
+_CHECK_1_LINK_RE: Final = re.compile(r"\[[^\]]*\]\(([^)#\s]+)(#[^)]*)?\)")
+_INLINE_CODE_RE: Final = re.compile(r"(?<!`)(`+)(?!`)(.+?)(?<!`)\1(?!`)")
+
+
+def _mask_code(text: str) -> str:
+    """`text` with every fenced block and inline code span blanked to spaces, length kept.
+
+    A link written inside code is a quotation of the syntax, not a link (F66): check 1 would
+    otherwise resolve `[x](y)` in back-ticks as a path. A fence is a line opening with three
+    back-ticks, closed by the next such line; an inline span is a run of back-ticks closed by
+    a run of the same length on the same line.
+    """
+    out: list[str] = []
+    in_fence = False
+    for line in text.splitlines(keepends=True):
+        if _FENCE_LINE_RE.match(line):
+            in_fence = not in_fence
+            out.append(re.sub(r"[^\n]", " ", line))
+        elif in_fence:
+            out.append(re.sub(r"[^\n]", " ", line))
+        else:
+            out.append(_INLINE_CODE_RE.sub(lambda m: re.sub(r"[^\n]", " ", m.group(0)), line))
+    return "".join(out)
+
+
+def broken_relative_links(path: pathlib.Path) -> list[str]:
+    """The relative link targets in `path`'s prose (not in code) that name no file."""
+    broken: list[str] = []
+    for m in _CHECK_1_LINK_RE.finditer(_mask_code(path.read_text(encoding="utf-8"))):
+        target = m.group(1)
+        if target.startswith(("http://", "https://", "mailto:")):
+            continue
+        if not (path.parent / target).resolve().exists():
+            broken.append(target)
+    return broken
+
+
 def main() -> int:
     md = sorted(f for f in ROOT.rglob("*.md") if not _is_frozen_file(f))
     specs = sorted(ROOT.glob("specs/*.md"))
 
     # 1. relative links
     for f in md:
-        for m in re.finditer(r"\[[^\]]*\]\(([^)#\s]+)(#[^)]*)?\)", f.read_text(encoding="utf-8")):
-            target = m.group(1)
-            if target.startswith(("http://", "https://", "mailto:")):
-                continue
-            if not (f.parent / target).resolve().exists():
-                # `check N: <path>: <prose>` — see check 36's identical fix above; PR
-                # #758's `_docverify._h1_residue_by_file` extraction needs the path
-                # immediately after the check number, not after descriptive prose.
-                # `REPO`, not `ROOT` (=`REPO / "docs"`): every other check names its
-                # file relative to the repo root, and a path relative to `docs/` instead
-                # (`rulings/RL-....md`, missing the `docs/` prefix) does not resolve from
-                # the repo root at all — a reader handed it cannot find the file. Found
-                # by `_docverify._h1_residue_by_file`'s resolution-against-the-corpus
-                # check (pin-3, PR #756/#758/#759's own follow-up): the old shape-only
-                # extractor accepted these 235 tokens because they looked path-shaped,
-                # never checking they named a real file.
-                fail(f"check 1: {f.relative_to(REPO)}: broken link to {target}")
+        for target in broken_relative_links(f):
+            # `check N: <path>: <prose>` — see check 36's identical fix above; PR
+            # #758's `_docverify._h1_residue_by_file` extraction needs the path
+            # immediately after the check number, not after descriptive prose.
+            # `REPO`, not `ROOT` (=`REPO / "docs"`): every other check names its
+            # file relative to the repo root, and a path relative to `docs/` instead
+            # (`rulings/RL-....md`, missing the `docs/` prefix) does not resolve from
+            # the repo root at all — a reader handed it cannot find the file. Found
+            # by `_docverify._h1_residue_by_file`'s resolution-against-the-corpus
+            # check (pin-3, PR #756/#758/#759's own follow-up): the old shape-only
+            # extractor accepted these 235 tokens because they looked path-shaped,
+            # never checking they named a real file.
+            fail(f"check 1: {f.relative_to(REPO)}: broken link to {target}")
 
     # 2/3. requirement ids
     defined: dict[str, list[str]] = collections.defaultdict(list)

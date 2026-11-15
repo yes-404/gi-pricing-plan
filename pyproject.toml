@@ -198,6 +198,9 @@ testpaths = [
 # requirement-traceability record (scripts/req-coverage.py).
 addopts = "--import-mode=importlib --strict-markers"
 asyncio_mode = "auto"
+# Stated explicitly: pytest 9.2.0 warns when it is unset. Unset means each async fixture's own
+# scope; every async fixture here is function-scoped, so "function" changes nothing today.
+asyncio_default_fixture_loop_scope = "function"
 markers = [
     # Requirement traceability: mark each test with the requirement it satisfies.
     # skills-map §9.1 "spec-to-implementation conformance".

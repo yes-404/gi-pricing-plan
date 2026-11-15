@@ -169,6 +169,10 @@ CASES: dict[str, tuple[int, Callable[[Path], None]]] = {
         31, _replace(ADR_OLD,
                      "id: ADR-703", "id: ADR-704")),
     "32 citation of an id that is not in INDEX": (32, _append(SPEC, "\nSee PL-7777777.\n")),
+    "32 citation of a requirement defined nowhere": (
+        32, _append(SPEC, "\nSee FR-9999999.\n")),
+    "2 requirement defined twice": (
+        2, _append(SPEC, "\n**FR-2999** one.\n\n**FR-2999** two.\n")),
     "33 status outside the vocabulary": (
         33, _replace(ADR_OLD,
                      "status: active", "status: bogus")),
@@ -192,6 +196,8 @@ GREEN: dict[str, Callable[[Path], None]] = {
         ".claude/skills/zz/SKILL.md", "---\nname: zz\nowner: nobody\n---\nbody\n"),
     "36 skill citing a legacy path": _write(".claude/skills/zz/SKILL.md", LEGACY),
     "36 frozen record citing a legacy path": _write("docs/plans/zz.md", LEGACY),
+    "32 citation of a requirement newly defined as a bold spec row": _append(
+        SPEC, "\n**FR-2999** a new requirement.\n\nSee FR-2999.\n"),
     "30 edit to a spec that already had no header": _append(
         "docs/specs/00-overview.md", "\nOne harmless sentence.\n"),
 }

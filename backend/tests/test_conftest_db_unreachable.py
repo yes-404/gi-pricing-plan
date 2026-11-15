@@ -95,6 +95,8 @@ def _run(tmp_path: Path, test: str, env_extra: dict[str, str], patch: str = "") 
             "no:cacheprovider",
             "-o",
             "asyncio_mode=auto",
+            "-o",
+            "asyncio_default_fixture_loop_scope=function",
             "--rootdir",
             str(tmp_path),
             "-rA",
