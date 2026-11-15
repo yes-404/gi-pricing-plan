@@ -108,7 +108,9 @@ Review is by risk, in four tiers:
 2. **Every contributor pull request:** the maintainer approves.
 3. **High-risk areas:** the other person cross-reviews. A reviewer is requested through
    `.github/CODEOWNERS`; the core lead applies the `high-risk` label. If the cross-review
-   does not happen within **three working days**, the maintainer may proceed.
+   does not happen within **three working days**, the maintainer may proceed. On a pull
+   request labelled high-risk by hand whose files request nobody, the author requests the
+   cross-review by hand, and the three working days run from that request.
 4. **The rest of the core team's work:** an independent audit.
 
 The six high-risk areas:
