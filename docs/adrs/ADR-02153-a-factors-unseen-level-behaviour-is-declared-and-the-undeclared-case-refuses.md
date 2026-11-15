@@ -17,6 +17,7 @@ relates: [FR-131, FR-239, FR-2143]   # ids only — the FR-/NFR-/ADR- this decis
 - **Status:** Accepted (front matter `active`). Supersedes nothing.
 - **Deciders:** the maintainer; the detail of the rule was decided on the maintainer's behalf by delegation, 15 Nov 2026.
 - **Decision issue:** [#1510](https://github.com/yes-404/gi-pricing-plan/issues/1510), where `02` FR-2143 is reserved for this Work.
+- **Decision:** [the maintainer's `Decided:` comment on #1510](https://github.com/yes-404/gi-pricing-plan/issues/1510#issuecomment-6900639016).
 - **Enacts:** `02` FR-2143, with FR-131 and `03` FR-222 stating the same rule.
 
 ## Context
@@ -25,9 +26,9 @@ A fitted model has relativities only for the levels its fit saw. A quote can car
 did not see: a new category, a missing value, an interaction cell that no fitted row held. What the
 platform scores for such a level is a pricing decision, and it is the Factor's to declare.
 
-- One rule applies across the three model families. An EBM and a GBM refuse a level they never saw
-  (FR-131). A GLM follows the same rule, so a Factor means the same thing whichever family a model
-  uses.
+- One rule applies across the three model families: a level the fit never saw is refused (FR-131).
+  A GLM may be declared otherwise, per Factor, with `map_to_base`; a GBM or an EBM refuses whatever
+  is declared, so a refusal means the same in every family.
 - A refusal is auditable: the Job or the quote carries a code, and a reader can see that the level
   was not priced. An undeclared score is not: the figure on the quote gives no sign that a level was
   assumed.
@@ -36,11 +37,12 @@ platform scores for such a level is a pricing decision, and it is the Factor's t
 
 ## Decision
 
-1. A Factor declares `unseen_level_behaviour`, `error` or `map_to_base`. A model scoring a level
-   its fit never saw refuses with `UNSEEN_LEVEL_BEHAVIOUR_REQUIRED` unless the Factor declares
-   `map_to_base`, which scores the level as the base. A Factor that declares nothing refuses.
-   This holds for a GLM as for an EBM and a GBM, for a Factor of any type, and for a null level and
-   an interaction cell. The refusal text names the Factor and never the value (NFR-499).
+1. A Factor declares `unseen_level_behaviour`, `error` or `map_to_base`. A GLM scoring a level its
+   fit never saw refuses with `UNSEEN_LEVEL_BEHAVIOUR_REQUIRED` unless the Factor declares
+   `map_to_base`, which scores the level as the base. A Factor that declares nothing refuses. This
+   holds for a Factor of any type, and for a null level and an interaction cell. A GBM or an EBM
+   refuses a level its fit never saw whatever the Factor declares (FR-131). The refusal text names
+   the Factor and never the value (NFR-499).
 2. `map_to_default` is refused.
 3. Evidence is not pricing. Rows on an unseen level, on a Factor that does not declare
    `map_to_base`, are excluded from a fit's diagnostics, a comparison and a backtest, and are
