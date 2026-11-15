@@ -1211,9 +1211,9 @@ async def test_a_decision_moves_the_version_as_fr_355_says_and_records_it_truly(
 
 @pytest.mark.req("FR-355")
 @pytest.mark.req("FR-368")
-@pytest.mark.parametrize("outcome", ("reject", "request_changes", "withdraw"))
+@pytest.mark.parametrize("outcome", ["reject", "request_changes", "withdraw"])
 @pytest.mark.parametrize(
-    "artifact_type", ("model", "custom_objective", "custom_metric", "peril_structure")
+    "artifact_type", ["model", "custom_objective", "custom_metric", "peril_structure"]
 )
 async def test_a_returned_event_names_the_approval_request_whose_decision_caused_it(
     client: TestClient, database: Database, workspace_id, grant, submitter_headers,
