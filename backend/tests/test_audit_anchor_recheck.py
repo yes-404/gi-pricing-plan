@@ -172,3 +172,15 @@ async def test_an_unchanged_head_is_signed_and_appended_once_under_the_workspace
     assert anchored.statement.head_event_hash == _VERIFIED
     assert appended == [f"workspace:{_SLUG}@1"]
 
+
+
+@pytest.mark.req("FR-373")
+async def test_the_anchor_verifies_then_locks_then_rereads_then_signs_then_appends(
+    appended: list[str], calls: list[str]
+) -> None:
+    """The lock is what makes the re-read mean something: taken after it, or not taken, the
+    same window is open. Plant (a): remove the `_lock_workspace` call, and `lock` is absent.
+    Plant (b): move it after the re-read, and `lock` follows `re-read`. Each reddens this."""
+    session = _Session((5, new_uuid7(), _VERIFIED), current_hash=_VERIFIED, calls=calls)
+    await _anchor(session, _RecordingKey(calls))
+    assert calls == _ORDER
