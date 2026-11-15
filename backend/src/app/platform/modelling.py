@@ -1519,7 +1519,10 @@ async def apply_approval_decision(
         workspace_id=workspace_id,
         actor=actor,
         source=JobSource.API,
-        action=f"model.{target.value}",
+        # A return from review is `model.returned`, not the forward state's name (C1).
+        action="model.returned"
+        if before is ModelStatus.REVIEW and target is ModelStatus.FITTED
+        else f"model.{target.value}",
         entity_ref=str(ref),
         before={"status": before.value},
         after={"status": target.value, "approval_request_id": str(request.id)},

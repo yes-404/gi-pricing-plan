@@ -71,6 +71,13 @@ import WorkspaceSelector from "./components/WorkspaceSelector.vue";
         >
           Reference
         </RouterLink>
+        <RouterLink
+          to="/audit"
+          class="text-sm text-slate-600 hover:text-slate-900"
+          active-class="text-slate-900 font-medium"
+        >
+          Audit
+        </RouterLink>
         <WorkspaceSelector />
         <AuthControl class="ml-auto" />
       </nav>

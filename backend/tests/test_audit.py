@@ -7,6 +7,7 @@ mock would test the wrong thing.
 from __future__ import annotations
 
 import json
+from datetime import UTC, datetime, timedelta
 
 import pytest
 from backend.tests.conftest_db import _EMPTY_THE_DATABASE
@@ -356,3 +357,186 @@ async def test_system_principal_needs_no_id_but_a_user_does() -> None:
     Principal(kind=ActorKind.SYSTEM)
     with pytest.raises(ValueError, match="must carry an id"):
         Principal(kind=ActorKind.USER)
+
+
+# -- verify_range: a span of the chain, streaming, and NFR-521's proof (#1497 slice 6) ----------
+
+
+async def _seed(
+    database: Database,
+    workspace_id,
+    principal,
+    ats: list[datetime],
+    *,
+    tampered: int | None = None,
+    missing: int | None = None,
+    bad_link: int | None = None,
+) -> None:
+    """A chain whose events carry the given `at`s (`record()` stamps now()).
+
+    Valid unless a defect is named. It is seeded at insert time, as the login role, which holds
+    INSERT only: no UPDATE, DELETE or `session_replication_role` (FR-370). So the defect is
+    *written*, not done to a stored row, and what these helpers exercise is the ranged
+    verifier's arithmetic on a defective chain. "Edited below the application" is
+    `test_tampering_below_the_application_is_detected`, which takes the registered owner
+    fixture.
+
+    `tampered=N`: event N is stored with the action `job.failed` but the hash of the event it
+    was before the edit (`job.submitted`), as a content edit leaves it; the next event's link
+    names that stored hash. `missing=N`: event N is never stored, and the events after it keep
+    the links they would have had. `bad_link=N`: event N is hashed and stored with a
+    `prev_event_hash` that names no event (so its own content verifies, and only its link to
+    its predecessor is wrong); event N+1 links to N's stored hash as usual.
+    """
+    prev: str | None = None
+    rows: list[AuditEventRow] = []
+    for sequence, at in enumerate(ats, start=1):
+        core = AuditEventCore(
+            id=new_uuid7(),
+            workspace_id=workspace_id,
+            at=at,
+            actor=principal,
+            source=JobSource.API,
+            action="job.submitted",
+            entity_ref=f"job:seed@{sequence}",
+        )
+        stored_prev = "sha256:" + "0" * 64 if sequence == bad_link else prev
+        event_hash = compute_event_hash(core, prev_event_hash=stored_prev)
+        stored = core.model_dump(exclude={"actor"})
+        if sequence == tampered:
+            stored["action"] = "job.failed"
+        if sequence != missing:
+            rows.append(
+                AuditEventRow(
+                    **stored,
+                    actor=principal.model_dump(mode="json"),
+                    prev_event_hash=stored_prev,
+                    event_hash=event_hash,
+                    sequence=sequence,
+                )
+            )
+        prev = event_hash
+    async with database.unit_of_work() as session:
+        session.add_all(rows)
+
+
+_DAY0 = datetime(2026, 1, 1, tzinfo=UTC)
+
+
+def _days(n: int) -> list[datetime]:
+    return [_DAY0 + timedelta(days=i) for i in range(n)]
+
+
+@pytest.mark.req("FR-372")
+async def test_a_tamper_outside_the_range_does_not_break_a_ranged_verify(
+    database: Database, workspace_id, principal
+) -> None:
+    await _seed(database, workspace_id, principal, _days(5), tampered=5)
+    async with database.session() as session:
+        span = await audit.verify_range(
+            session, workspace_id, from_=_days(5)[1], to=_days(5)[2]
+        )
+        assert (span.first_sequence, span.last_sequence, span.events_checked) == (2, 3, 2)
+        assert not span.whole_chain
+        with pytest.raises(ChainBrokenError) as exc:
+            await audit.verify_range(session, workspace_id)
+    assert exc.value.sequence == 5
+
+
+@pytest.mark.req("FR-372")
+async def test_a_tamper_inside_the_range_is_caught_at_its_sequence(
+    database: Database, workspace_id, principal
+) -> None:
+    await _seed(database, workspace_id, principal, _days(5), tampered=3)
+    async with database.session() as session:
+        with pytest.raises(ChainBrokenError) as exc:
+            await audit.verify_range(
+                session, workspace_id, from_=_days(5)[1], to=_days(5)[3]
+            )
+        assert (exc.value.sequence, exc.value.first_sequence, exc.value.checked) == (3, 2, 1)
+        # The event before a span is not itself verified: 3 is tampered, yet 4..5 is intact,
+        # because 4's link names 3's stored hash, which a content edit did not change.
+        span = await audit.verify_range(session, workspace_id, from_=_days(5)[3])
+    assert (span.first_sequence, span.last_sequence) == (4, 5)
+
+
+@pytest.mark.req("FR-372")
+async def test_a_row_deleted_inside_the_range_is_caught_as_a_gap(
+    database: Database, workspace_id, principal
+) -> None:
+    await _seed(database, workspace_id, principal, _days(5), missing=3)
+    async with database.session() as session:
+        with pytest.raises(ChainBrokenError) as exc:
+            await audit.verify_range(session, workspace_id, from_=_days(5)[0], to=_days(5)[4])
+    assert exc.value.sequence == 4
+    assert "expected sequence 3" in exc.value.reason
+
+
+@pytest.mark.req("FR-372")
+async def test_a_range_holding_no_event_verifies_nothing(
+    database: Database, workspace_id, principal
+) -> None:
+    await _seed(database, workspace_id, principal, _days(3))
+    async with database.session() as session:
+        span = await audit.verify_range(session, workspace_id, from_=_DAY0 + timedelta(days=99))
+    assert (span.first_sequence, span.last_sequence, span.events_checked) == (None, None, 0)
+
+
+@pytest.mark.req("NFR-521")
+async def test_a_chain_older_than_seven_years_verifies_whole(
+    database: Database, workspace_id, principal
+) -> None:
+    """NFR-521: retention is >= 7 years and the chain verifies over the whole retained range.
+
+    FR-370 leaves no delete path, so retention holds by construction; what needs proving is
+    that an old chain still verifies. The proof form is a verify with no range.
+    """
+    eight_years_ago = datetime.now(UTC) - timedelta(days=8 * 365)
+    await _seed(
+        database, workspace_id, principal, [eight_years_ago + timedelta(days=i) for i in range(3)]
+    )
+    async with database.session() as session:
+        span = await audit.verify_range(session, workspace_id)
+    assert span.whole_chain
+    assert (span.first_sequence, span.last_sequence, span.events_checked) == (1, 3, 3)
+
+
+@pytest.mark.req("NFR-521")
+async def test_a_five_thousand_event_chain_verifies_whole_while_streaming(
+    database: Database, workspace_id, principal
+) -> None:
+    """Rows are streamed in batches of 1,000; the chain is not held in memory. Not timed."""
+    ats = [_DAY0 + timedelta(minutes=i) for i in range(5000)]
+    await _seed(database, workspace_id, principal, ats)
+    async with database.session() as session:
+        assert await audit.verify_chain(session, workspace_id) == 5000
+
+
+@pytest.mark.req("FR-372")
+async def test_a_range_starting_after_sequence_one_checks_the_link_to_its_predecessor(
+    database: Database, workspace_id, principal
+) -> None:
+    """The first event of a span links to its predecessor's STORED hash, which is checked
+    although the predecessor's content is not (#1858 M1). Event 2 is stored valid in itself
+    but linking to nothing; a span that starts at 2 must break at 2, and one that starts at 3
+    must not, because event 3 links to 2's stored hash."""
+    await _seed(database, workspace_id, principal, _days(5), bad_link=2)
+    async with database.session() as session:
+        with pytest.raises(ChainBrokenError) as exc:
+            await audit.verify_range(session, workspace_id, from_=_days(5)[1], to=_days(5)[3])
+        assert (exc.value.sequence, exc.value.first_sequence, exc.value.checked) == (2, 2, 0)
+        assert "does not match predecessor" in exc.value.reason
+        span = await audit.verify_range(session, workspace_id, from_=_days(5)[2])
+    assert (span.first_sequence, span.last_sequence, span.events_checked) == (3, 5, 3)
+
+
+@pytest.mark.req("FR-372")
+async def test_a_gap_inside_a_range_starting_after_sequence_one_is_caught(
+    database: Database, workspace_id, principal
+) -> None:
+    await _seed(database, workspace_id, principal, _days(6), missing=4)
+    async with database.session() as session:
+        with pytest.raises(ChainBrokenError) as exc:
+            await audit.verify_range(session, workspace_id, from_=_days(6)[1], to=_days(6)[5])
+    assert (exc.value.sequence, exc.value.first_sequence, exc.value.checked) == (5, 2, 2)
+    assert "expected sequence 4" in exc.value.reason
