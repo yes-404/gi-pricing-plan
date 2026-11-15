@@ -649,8 +649,10 @@ async def test_a_tampered_chain_is_refused_and_nothing_is_appended(
     assert "sequence 2" in response.json()["detail"]
     assert listing["total_estimate"] == 3
     assert "audit.anchored" not in {i["action"] for i in listing["items"]}
-    # The refusal is logged at ERROR with the sequence (FR-373 (4)), and never carries the key. The
-    # app's JSON logger writes to stdout and does not propagate to `caplog`.
+    # The refusal is logged at ERROR with the sequence, and never carries the key (Q-E:
+    # https://github.com/yes-404/gi-pricing-plan/issues/1497#issuecomment-6900988245).
+    # The app is built inside this test, and `create_app()` removes the root handlers,
+    # `caplog`'s included, so the log is read from stdout.
     lines = [json.loads(ln) for ln in printed.out.splitlines() if ln.startswith("{")]
     refusals = [ln for ln in lines if ln.get("level") == "ERROR"]
     assert [ln.get("sequence") for ln in refusals] == [2]

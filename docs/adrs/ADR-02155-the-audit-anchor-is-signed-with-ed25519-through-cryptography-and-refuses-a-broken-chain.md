@@ -35,16 +35,16 @@ Two things the specification left open had to be decided before code. Which sign
 1. **Ed25519 (RFC 8032, pure, no pre-hash), through `cryptography`, a new direct dependency of `backend`.** `pricing-core` and `model-schema` do not import it. The signing key is the setting `GIP_AUDIT_ANCHOR_SIGNING_KEY`, a `SecretStr` holding an unencrypted PKCS#8 PEM key, until `07` FR-424's secret backend exists; it then resolves through it. A key that is set and does not load as Ed25519 refuses start-up. An unset key starts the platform, and the route refuses with 503.
 2. **The anchor refuses a chain that does not verify.** `POST /api/v1/audit/anchor` verifies the chain before it signs. A chain that does not verify is `409 AUDIT_CHAIN_BROKEN`: nothing is signed and no event is appended, because signing a tampered head would certify the tampering.
 
-The detail of the rule, decided on the maintainer's behalf by delegation, 15 Nov 2026, and written in `06` FR-373's dated clauses:
+The detail of the rule is the maintainer's answers to the plan's questions, posted on #1497 ([comment](https://github.com/yes-404/gi-pricing-plan/issues/1497#issuecomment-6900988245)): Q-B to Q-G answered on 2026-11-15, and Q-A (#1497's Q7 and Q9) on 2026-11-14. It is written in `06` FR-373's dated clauses:
 
 | Question | Decided |
 |---|---|
-| Status for an unset key | 503 `AUDIT_ANCHOR_KEY_UNCONFIGURED`, a new code: the deployment lacks a capability, not a client error |
-| Lock during the verify | Verify sequences `1..N` without the workspace lock; then under the lock re-read that row N's hash is the one verified, sign N and append. Never sign a later head than the one verified |
-| Empty chain | Sign sequence 0 with a null head hash |
-| A refused anchor | No event. An ERROR log with the sequence, and the 409 to the caller |
-| Key rotation | `previous_key_id` inside the signed statement; the platform keeps no retired key. Rotation does not revoke |
-| A public-key endpoint | None. The key arrives with each anchor and the customer pins it out of band |
+| Q-B, status for an unset key | 503 `AUDIT_ANCHOR_KEY_UNCONFIGURED`, a new code: the deployment lacks a capability, not a client error |
+| Q-C, lock during the verify | Verify sequences `1..N` without the workspace lock; then under the lock re-read that row N's hash is the one verified, sign N and append. Never sign a later head than the one verified |
+| Q-D, an empty chain | Sign sequence 0 with a null head hash |
+| Q-E, a refused anchor | No event. An ERROR log with the sequence, and the 409 to the caller |
+| Q-F, key rotation | `previous_key_id` inside the signed statement; the platform keeps no retired key. Rotation does not revoke |
+| Q-G, a public-key endpoint | None. The key arrives with each anchor and the customer pins it out of band |
 
 It rules out a second serialiser for the signed bytes (the anchor reuses the chain's canonical JSON rule), a key in PostgreSQL (FR-424), and an anchor that signs a chain it has not verified.
 
