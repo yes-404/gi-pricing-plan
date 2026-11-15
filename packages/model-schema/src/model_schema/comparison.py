@@ -191,6 +191,12 @@ class ComparisonSummary(BaseModel):
     #: The split every model was verified to share, stored so the claim is checkable.
     split_ref: SplitRef
     holdout_rows: int = Field(ge=1)
+    #: FR-2143. Holdout rows left out of EVERY candidate's metrics because a GLM candidate has no
+    #: relativity for a level or cell they carry on a Factor that does not declare `map_to_base`
+    #: (one shared row set, so the table stays comparable), and their exposure. `None` means "not
+    #: recorded" (a comparison stored before the rule), `0` means none were excluded.
+    rows_excluded_unseen_level: int | None = Field(default=None, ge=0)
+    exposure_excluded_unseen_level: DecimalStr | None = None
     metrics: tuple[ComparisonMetric, ...] = ()
     double_lift: tuple[DoubleLift, ...] = ()
     relativity_differences: tuple[RelativityDifference, ...] = ()

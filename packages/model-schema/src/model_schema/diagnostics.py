@@ -169,6 +169,14 @@ class PartitionDiagnostics(BaseModel):
     #: the artifact predates the rule or the fit is not a severity fit; `0` means the rule ran
     #: and removed nothing. A known amount that is not positive is refused, never counted here.
     rows_excluded_unknown_response: int | None = Field(default=None, ge=0)
+    #: FR-2143. How many rows were left out of this partition because a Factor that does not
+    #: declare `map_to_base` carries a level (or cell) the fit has no relativity for, and the
+    #: exposure of those rows (`exposure_excluded_unseen_level`). Such a row is refused at quote
+    #: time; here it is excluded from every metric and counted, never scored as another level.
+    #: `None` means the artifact predates the rule ("not recorded", never "none"); `0` means the
+    #: rule ran and excluded nothing. Optional so a stored `Diagnostics` still validates.
+    rows_excluded_unseen_level: int | None = Field(default=None, ge=0)
+    exposure_excluded_unseen_level: DecimalStr | None = None
     ae_overall: float = Field(ge=0.0)
     ae_by_factor: tuple[AeCell, ...] = ()
     lift: tuple[LiftBin, ...] = ()

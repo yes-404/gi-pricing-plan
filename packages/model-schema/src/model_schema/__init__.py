@@ -221,7 +221,11 @@ from model_schema.modelling import (
     TweediePowerFit,
     TweediePowerSpec,
     TweedieProfilePoint,
+    UnseenCellReport,
+    UnseenCellState,
     UnseenLevelBehaviour,
+    UnseenLevelGap,
+    UnseenLevelReach,
     WeightSpec,
 )
 from model_schema.money import Currency, DecimalStr, MoneyMinor, Relativity, apply_factor, to_minor
@@ -838,7 +842,11 @@ __all__ = [
     "UncertaintyBasis",
     "UncertaintyKind",
     "UniversalDiagnostics",
+    "UnseenCellReport",
+    "UnseenCellState",
     "UnseenLevelBehaviour",
+    "UnseenLevelGap",
+    "UnseenLevelReach",
     "UpliftByFilterRequest",
     "UpliftTableRequest",
     "UploadUrlRequest",
