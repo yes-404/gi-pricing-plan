@@ -26,7 +26,7 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.models import AuditEventRow
+from app.db.models import AuditEventRow, WorkspaceRow
 from app.observability.logging import get_logger
 from app.observability.trace import current_trace_id
 from model_schema import (
@@ -59,6 +59,7 @@ __all__ = [
     "record",
     "verify_chain",
     "verify_range",
+    "workspace_entity_ref",
 ]
 
 #: C1 (#1783): a return from review is `<type>.returned`. Before it, these four types wrote
@@ -417,6 +418,9 @@ async def anchor(
         )
         raise
 
+    slug = (
+        await session.execute(select(WorkspaceRow.slug).where(WorkspaceRow.id == workspace_id))
+    ).scalar_one()
     previous_key_id = (
         await session.execute(
             select(AuditEventRow.after["statement"]["key_id"].astext)
@@ -448,10 +452,22 @@ async def anchor(
         actor=actor,
         source=source,
         action=ANCHORED_ACTION,
-        entity_ref=f"workspace:{workspace_id}",
+        entity_ref=workspace_entity_ref(slug),
         after=anchored.model_dump(mode="json"),
     )
     return anchored
+
+
+def workspace_entity_ref(slug: str) -> str:
+    """The `entity_ref` of an event about a workspace: `workspace:<slug>@1` (FR-369).
+
+    FR-369 names `{type}:{slug}@{version}`, and #1497 decided `@1` for an artifact that has no
+    version. Every writer of a workspace event uses this, so an export that parses the column
+    meets one spelling of one workspace: the switch (`workspace_switch`) and the anchor.
+    `workspace` is not in `ARTIFACT_TYPES`, so the string does not parse as an `ArtifactRef`
+    (`OQ-653`); that is the column's normal condition, not a reason for a second form.
+    """
+    return f"workspace:{slug}@1"
 
 
 def _flatten(value: dict[str, Any] | None, prefix: str = "") -> dict[str, Any]:

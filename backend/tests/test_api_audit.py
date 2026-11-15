@@ -17,11 +17,11 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import (
 )
 from fastapi.testclient import TestClient
 from pydantic import SecretStr
-from sqlalchemy import text
+from sqlalchemy import select, text
 
 from app.api.deps import DEV_PRINCIPAL_HEADER
 from app.config import Environment, Settings
-from app.db.models import AuditEventRow
+from app.db.models import AuditEventRow, WorkspaceRow
 from app.db.session import Database
 from app.main import create_app
 from app.platform import audit
@@ -724,7 +724,12 @@ async def test_the_checkpoint_is_in_the_chain_and_the_chain_stays_intact(
     assert verify["intact"] is True
     assert verify["events_checked"] == 4
     assert newest["action"] == "audit.anchored"
-    assert newest["entity_ref"] == f"workspace:{workspace_id}"
+    async with database.session() as session:
+        slug = (
+            await session.execute(select(WorkspaceRow.slug).where(WorkspaceRow.id == workspace_id))
+        ).scalar_one()
+    # FR-369's `{type}:{slug}@{version}`, as the workspace switch writes it.
+    assert newest["entity_ref"] == f"workspace:{slug}@1"
     assert newest["after"] == anchor
 
 
