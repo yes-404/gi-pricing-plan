@@ -239,6 +239,15 @@ async def verify_chain(
     *finding*, and an auditor asking the question needs the answer and the sequence number
     — not a 500 that looks like the endpoint is broken.
     """
+    for name, bound in (("from", from_), ("to", to)):
+        if bound is not None and bound.tzinfo is None:
+            # A naive bound is ambiguous, and comparing it with an aware one raises: refuse it.
+            raise PlatformError(
+                "VALIDATION_FAILED",
+                "Invalid range",
+                422,
+                f"`{name}` must carry a timezone, for example a trailing Z.",
+            )
     if from_ is not None and to is not None and from_ > to:
         raise PlatformError(
             "VALIDATION_FAILED", "Invalid range", 422, "`from` is after `to`."
@@ -255,7 +264,9 @@ async def verify_chain(
                 **requested,
                 whole_chain=from_ is None and to is None,
                 first_sequence=exc.first_sequence,
-                last_sequence=exc.sequence - 1 if exc.checked else None,
+                # The last sequence ACTUALLY verified, not the one before the break: on a gap the
+                # sequence before it names an event that is absent and was never checked.
+                last_sequence=exc.first_sequence + exc.checked - 1 if exc.checked else None,
                 events_checked=exc.checked,
                 intact=False,
                 broken_at_sequence=exc.sequence,

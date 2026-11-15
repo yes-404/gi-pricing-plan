@@ -6,6 +6,7 @@ import json
 
 import pytest
 import pytest_asyncio
+from backend.tests.test_audit import _days, _seed
 from fastapi.testclient import TestClient
 from sqlalchemy import text
 
@@ -421,3 +422,45 @@ async def test_verify_refuses_a_range_that_ends_before_it_starts(
         headers=auditor_headers,
     )
     assert response.status_code == 422
+
+
+@pytest.mark.req("FR-372")
+async def test_a_gap_reports_the_last_sequence_actually_verified(
+    client: TestClient, database: Database, workspace_id, principal, auditor_headers
+) -> None:
+    """#1858 L2: with event 3 absent the check verified 1 and 2 and broke at 4. The response
+    must not name 3, a sequence that does not exist and was not verified, as the last one."""
+    await _seed(database, workspace_id, principal, _days(5), missing=3)
+    body = client.get("/api/v1/audit/verify", headers=auditor_headers).json()
+    assert body["intact"] is False
+    assert body["broken_at_sequence"] == 4
+    assert (body["first_sequence"], body["last_sequence"], body["events_checked"]) == (1, 2, 2)
+
+
+@pytest.mark.req("FR-372")
+async def test_a_break_at_the_first_event_verified_nothing(
+    client: TestClient, database: Database, workspace_id, principal, auditor_headers
+) -> None:
+    await _seed(database, workspace_id, principal, _days(3), tampered=1)
+    body = client.get("/api/v1/audit/verify", headers=auditor_headers).json()
+    broke = (body["broken_at_sequence"], body["events_checked"], body["last_sequence"])
+    assert broke == (1, 0, None)
+
+
+@pytest.mark.req("FR-372")
+@pytest.mark.parametrize(
+    "query",
+    [
+        "from=2026-01-01T00:00:00&to=2026-02-01T00:00:00Z",
+        "from=2026-01-01T00:00:00Z&to=2026-02-01T00:00:00",
+        "from=2026-01-01T00:00:00",
+        "to=2026-02-01T00:00:00",
+    ],
+)
+async def test_verify_refuses_a_bound_with_no_timezone(
+    client: TestClient, auditor_headers, query: str
+) -> None:
+    """#1858 L3: a naive bound is ambiguous. It is a 422, never a 500."""
+    response = client.get(f"/api/v1/audit/verify?{query}", headers=auditor_headers)
+    assert response.status_code == 422
+    assert response.json()["code"] == "VALIDATION_FAILED"
