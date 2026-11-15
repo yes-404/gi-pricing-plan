@@ -30,11 +30,21 @@
 /backend/src/app/worker/rating_handlers.py                 @yes-404 @freynia404
 # batch scoring (score_batch)
 /backend/src/app/worker/scoring_handlers.py                @yes-404 @freynia404
+# score traces, the score routes' rate limit, and the rating algorithms a bundle compiles from
+/backend/src/app/platform/traces.py                        @yes-404 @freynia404
+/backend/src/app/platform/rate_limit.py                    @yes-404 @freynia404
+/backend/src/app/api/rating_algorithms.py                  @yes-404 @freynia404
+/backend/src/app/platform/rating_algorithms.py             @yes-404 @freynia404
 
 # Money handling. Found by: grep -rlE '_minor\b|Decimal' --include=*.py packages/*/src backend/src
 # The Decimal and integer-minor-unit modules; model-schema money.py is covered by the contracts line below.
 /packages/pricing-core/src/pricing_core/money.py           @yes-404 @freynia404
 /packages/pricing-core/src/pricing_core/rate_tables/       @yes-404 @freynia404
+# integer minor units outside money.py: claim_amount_minor (ingestion), cap_minor (loss treatment),
+# change_minor and baseline_minor (dislocation), value_minor (traces, listed above)
+/backend/src/app/data/ingestion.py                         @yes-404 @freynia404
+/packages/pricing-core/src/pricing_core/modelling/loss_treatment.py @yes-404 @freynia404
+/backend/src/app/worker/dislocation_handlers.py            @yes-404 @freynia404
 
 # The shared data contracts, and the script that generates the committed contracts from them
 /packages/model-schema/                                    @yes-404 @freynia404
@@ -51,8 +61,16 @@
 /backend/src/app/platform/rbac.py                          @yes-404 @freynia404
 # returns the caller's identity and permissions
 /backend/src/app/api/me.py                                 @yes-404 @freynia404
-# the separation-of-duties checks: who may approve what
+# the separation-of-duties checks: who may approve what, and their routes
 /backend/src/app/platform/approvals.py                     @yes-404 @freynia404
+/backend/src/app/api/approvals.py                          @yes-404 @freynia404
+# workspace tenancy: whose data a caller may reach
+/backend/src/app/platform/tenancy.py                       @yes-404 @freynia404
+# a dataset-scoped grant on validation rules (#1837), and its two tests
+/backend/src/app/api/validation.py                         @yes-404 @freynia404
+/backend/src/app/platform/validation_rules.py              @yes-404 @freynia404
+/backend/tests/test_dataset_scoped_writes.py               @yes-404 @freynia404
+/backend/tests/test_route_scope_guard.py                   @yes-404 @freynia404
 # the database's least-privilege check on the connecting role
 /backend/src/app/db/immutability.py                        @yes-404 @freynia404
 # the application's login role, and the script that provisions it
@@ -70,3 +88,20 @@
 /CONTRIBUTING.md                                           @yes-404 @freynia404
 /SECURITY.md                                               @yes-404 @freynia404
 /.github/                                                  @yes-404 @freynia404
+# the agent settings and hooks, the scripts CI runs as checks, and the tests that hold CI's rules
+/.claude/settings.json                                     @yes-404 @freynia404
+/scripts/hooks/                                            @yes-404 @freynia404
+/scripts/freeze-check.py                                   @yes-404 @freynia404
+/scripts/_frozen.py                                        @yes-404 @freynia404
+/scripts/audit-docs.py                                     @yes-404 @freynia404
+/scripts/req-coverage.py                                   @yes-404 @freynia404
+/scripts/doc-id.py                                         @yes-404 @freynia404
+/scripts/_docid.py                                         @yes-404 @freynia404
+/tests/test_audit_docs_*.py                                @yes-404 @freynia404
+/tests/test_ci_paths_cover_mypy_files.py                   @yes-404 @freynia404
+/tests/test_freeze_check.py                                @yes-404 @freynia404
+/tests/test_doc_id.py                                      @yes-404 @freynia404
+/tests/test_hook_registration.py                           @yes-404 @freynia404
+/tests/test_retry_cap_hook.py                              @yes-404 @freynia404
+/tests/test_repository_invariants.py                       @yes-404 @freynia404
+/tests/test_req_coverage_markers.py                        @yes-404 @freynia404
