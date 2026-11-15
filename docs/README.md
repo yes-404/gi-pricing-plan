@@ -96,15 +96,10 @@ Validates every governed document's header against `document-ids.md` §1.5's fie
 the resolver's id rules — filename/id/directory agreement, no reused number, no bad
 transition in `status:`.
 
-```bash
-python3 scripts/doc-index.py --check
-```
+`docs/INDEX.md` is frozen by ADR-2136: it is neither regenerated nor checked, and it no longer
+lists new records. New decision records are listed in [`adrs/README.md`](adrs/README.md).
 
-Confirms `docs/INDEX.md`, the generated one-row-per-id index every citation resolves
-against, is current. Regenerate it with `python3 scripts/doc-index.py` whenever a document
-is added, renamed or its `status:` changes, and commit the result in the same change.
-
-Run all three before committing a docs change.
+Run both before committing a docs change.
 
 ## Conventions
 

@@ -84,7 +84,12 @@ from model_schema.approvals import (
     DEFAULT_DISLOCATION_BASELINE_ENVIRONMENT,
 )
 from model_schema.dislocation import DislocationRun
-from model_schema.rating import ApproximationCheck, ChangeSummaryDraft, RateTableChange
+from model_schema.rating import (
+    ApproximationCheck,
+    ChangeSummaryDraft,
+    ModelReferenceModeError,
+    RateTableChange,
+)
 from pricing_core.rating.compile import Bundle, ResolvedArtifact, compile_bundle
 from pricing_core.rating.runtime import CompiledBundle
 from pricing_core.rating.testing import evaluate_golden_quotes
@@ -321,12 +326,23 @@ async def create_rating_version(
             check_model_reference_mode(
                 to_schema(row), RatingAlgorithm.model_validate(algorithm_row.content)
             )
-        except ValueError as exc:
+        except ModelReferenceModeError as exc:
+            # Authored from the step id and the two declared modes, so input-free by class.
             raise PlatformError(
                 "MODEL_REFERENCE_MODE_INCONSISTENT",
                 "Model reference mode inconsistent",
                 422,
                 str(exc),
+            ) from exc
+        except ValueError as exc:
+            # FD-1589 row 7 (NFR-499): a stored algorithm that no longer validates. The code is
+            # kept (RL Q2 (a)); its `ValidationError` text prints the failing input, so the
+            # detail is the allow-listed text only.
+            raise PlatformError(
+                "MODEL_REFERENCE_MODE_INCONSISTENT",
+                "Model reference mode inconsistent",
+                422,
+                safe_error_detail(exc) or type(exc).__name__,
             ) from exc
     await audit.record(
         session,

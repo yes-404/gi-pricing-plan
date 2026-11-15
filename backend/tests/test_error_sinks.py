@@ -128,13 +128,11 @@ _SINKS: dict[tuple[str, str, str], tuple[int, str]] = {
         1, "`ModellingError`/`PredictionError`: named refusal of a model prediction; a "
         "Fitted Model scored on caller rows, synchronous, returned to the caller who sent"
         " them and not stored or logged"),
-    ("backend/src/app/platform/prediction.py", "predict_rows", "{exc}"): (
-        1, "polars' text for a ragged body, returned to the caller who sent it in a 422; "
-        "synchronous model-prediction path, not stored or logged, not a Quote Context"),
     ("backend/src/app/platform/rate_tables.py", "_map_operation_error", "str(exc)"): (
-        2, "a bulk operation's named refusal over a rate table; a rate table is not a quote input"),
-    ("backend/src/app/platform/rate_tables.py", "bulk_operation", "str(exc)"): (
-        1, "a rate-table bulk operation's parameter validation, echoed to the caller who sent it"),
+        1, "the coded branch only: splits `CODE: detail` off a pricing-core operation's refusal "
+        "(a residual for a library `FOO_BAR: value` is recorded on #1712, row 3 Q1 (a)); the "
+        "fallback goes through `safe_error_detail` "
+        "(test_validation_error_sinks.py, FD-1589 rows 2 and 3, NFR-499)"),
     ("backend/src/app/platform/rate_tables.py", "_portfolio_weights", "str(exc)"): (
         1, "FEEDS the text of a `PortfolioFrameError`, `WeightJoinError` or "
         "`FactorResolutionError` to the failure of the `rate_table.diff_cells` Job (stored as the "
@@ -167,8 +165,10 @@ _SINKS: dict[tuple[str, str, str], tuple[int, str]] = {
         "submitter in the 422 body; not stored, not logged; an artifact definition, not a Quote "
         "Context. The code is chosen by the typed error class, never by this text (FD-1326)"),
     ("backend/src/app/platform/rating_versions.py", "create_rating_version", "str(exc)"): (
-        1, "create time: an artifact-level refusal (FR-223 MODEL_REFERENCE_MODE_INCONSISTENT) "
-        "naming the step and the two declared modes; no quote is involved"),
+        1, "create time: caught BY CLASS (`ModelReferenceModeError`), an artifact-level refusal "
+        "(FR-223 MODEL_REFERENCE_MODE_INCONSISTENT) naming the step and the two declared modes; "
+        "no quote is involved; any other `ValueError` goes through `safe_error_detail` "
+        "(test_validation_error_sinks.py, FD-1589 row 7)"),
     ("backend/src/app/platform/regression_suites.py", "_validate_properties", "{exc}"): (
         1, "VERDICT (Q889-c): cannot carry a quote-input value. `UnsweepableProperty`'s text"
         " (`properties.py`, five raises) interpolates only `check.input`, "

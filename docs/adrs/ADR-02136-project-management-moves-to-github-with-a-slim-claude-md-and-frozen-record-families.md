@@ -2,7 +2,7 @@
 id: ADR-2136
 family: decision
 title: Project management moves to GitHub, with a slim CLAUDE.md and frozen record families
-status: draft                 # draft → active → superseded | retired (§1.2a)
+status: active                # draft → active → superseded | retired (§1.2a)
 created: 2026-11-13
 owner: decision-maker          # creates via adr-write; maintainer accepts draft → active
 tree: d01b188df8ec1fb72500b40c9b84623588208acb
@@ -14,7 +14,7 @@ relates: []                    # ids only — the FR-/NFR-/ADR- this decision to
 
 # ADR-2136 — Project management moves to GitHub, with a slim CLAUDE.md and frozen record families
 
-- **Status:** draft
+- **Status:** accepted (front matter `active`)
 - **Deciders:** the maintainer
 
 ## Context

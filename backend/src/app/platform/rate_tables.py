@@ -111,6 +111,7 @@ from pricing_core.rate_tables.weights import (
     exposure_weights,
 )
 from pricing_core.rating.analysis import PortfolioFrameError, read_portfolio
+from pricing_core.safe_error import safe_error_detail
 
 #: The plan's four named validation codes → 03 §5.2 module codes (RATE_TABLE_INCOMPLETE,
 #: RATE_TABLE_KEY_DUPLICATE). NULL_VALUE and OUT_OF_BOUNDS are completeness failures.
@@ -135,7 +136,14 @@ def _map_operation_error(exc: ValueError) -> PlatformError:
         )
     if code.isupper() and "_" in code and code != "VALIDATION_FAILED":
         return PlatformError(code, code.replace("_", " ").title(), 422, detail)
-    return PlatformError("VALIDATION_FAILED", "Validation Failed", 422, str(exc))
+    # FD-1589 row 3 (NFR-499): a library `ValueError` can repeat the value that caused it, so the
+    # fallback keeps only the allow-listed text, as `rating_versions.compile` does.
+    return PlatformError(
+        "VALIDATION_FAILED",
+        "Validation Failed",
+        422,
+        safe_error_detail(exc) or type(exc).__name__,
+    )
 
 
 async def seed_from_model(
@@ -1579,7 +1587,7 @@ async def bulk_operation(
                 "VALIDATION_FAILED",
                 "Invalid bulk operation parameters",
                 422,
-                str(exc),
+                safe_error_detail(exc),
             ) from exc
         except ValueError as exc:
             raise _map_operation_error(exc) from exc
