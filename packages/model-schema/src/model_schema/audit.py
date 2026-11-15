@@ -34,6 +34,7 @@ __all__ = [
     "ArtifactHistory",
     "ArtifactHistoryEntry",
     "AuditEvent",
+    "AuditEventListing",
     "AuditEventRecord",
     "FieldChange",
     "StatusTransition",
@@ -127,13 +128,22 @@ class AuditEventRecord(AuditEvent):
     """
 
     sequence: int = Field(ge=1, description="Position in the workspace's chain, from 1.")
+
+
+class AuditEventListing(AuditEventRecord):
+    """An event as the audit explorer's query returns it: the stored record, plus one derived
+    field for the views.
+
+    **The export is the record**, so an exported line is `AuditEventRecord` and carries nothing
+    derived; this class is the query response only (`06` §4.5's dated note on C1).
+    """
+
     current_action: str | None = Field(
         default=None,
         pattern=ACTION_PATTERN,
-        description="The name this event would be written under today, set only when it "
-        "differs from the stored `action` (a return from review written before the "
-        "`<type>.returned` rename). Derived, never stored and never hashed: `action` is "
-        "always the stored name.",
+        description="Derived, not stored, not exported. The name this event would be written "
+        "under today, set only when it differs from the stored `action` (a return from review "
+        "written before the `<type>.returned` rename). `action` is always the stored name.",
     )
 
 
@@ -172,8 +182,9 @@ class ArtifactHistoryEntry(BaseModel):
     current_action: str | None = Field(
         default=None,
         pattern=ACTION_PATTERN,
-        description="The name this event would be written under today, set only when it "
-        "differs from the stored `action` (a pre-rename return from review). Derived.",
+        description="Derived, not stored, not exported. The name this event would be written "
+        "under today, set only when it differs from the stored `action` (a pre-rename return "
+        "from review).",
     )
     transition: StatusTransition | None = None
     justification: str | None = None

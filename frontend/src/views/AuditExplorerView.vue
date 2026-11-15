@@ -5,7 +5,7 @@ import {
   exportAudit,
   listAudit,
   verifyChain,
-  type AuditEventRecord,
+  type AuditEventListing,
   type AuditFilters,
   type ChainVerification,
 } from "@/api/audit";
@@ -18,7 +18,7 @@ const form = reactive({ actor: "", entity: "", action: "", from: "", to: "", q: 
 /** The filters the list on screen was loaded with: export and verify use these, not the form. */
 const applied = ref<AuditFilters>({});
 
-const events = ref<AuditEventRecord[]>([]);
+const events = ref<AuditEventListing[]>([]);
 const totalEstimate = ref(0);
 const nextCursor = ref<string | null>(null);
 const loading = ref(true);

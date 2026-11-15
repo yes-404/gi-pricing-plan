@@ -1,8 +1,8 @@
 import { request } from "./client";
 import type { components } from "./generated/schema";
 
-export type AuditEventRecord = components["schemas"]["AuditEventRecord"];
-export type AuditPage = components["schemas"]["Page_AuditEventRecord_"];
+export type AuditEventListing = components["schemas"]["AuditEventListing"];
+export type AuditPage = components["schemas"]["Page_AuditEventListing_"];
 export type ChainVerification = components["schemas"]["ChainVerification"];
 
 /** The query's filters (FR-371). `from` and `to` bound `at`; `q` is free text over justifications. */

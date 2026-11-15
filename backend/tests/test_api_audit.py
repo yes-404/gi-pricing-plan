@@ -12,6 +12,7 @@ from sqlalchemy import text
 
 from app.api.deps import DEV_PRINCIPAL_HEADER
 from app.config import Environment, Settings
+from app.db.models import AuditEventRow
 from app.db.session import Database
 from app.main import create_app
 from app.platform import audit
@@ -169,9 +170,17 @@ async def test_the_explorer_and_the_export_show_the_stored_action_with_its_curre
     }
     page = client.get("/api/v1/audit", headers=auditor_headers).json()["items"]
     assert {i["entity_ref"]: (i["action"], i["current_action"]) for i in page} == expected
+    # The export is the record: a line is the stored event and nothing derived, so its keys
+    # are the stored event's keys, `current_action` among none of them.
     exported = client.get("/api/v1/audit/export?format=json", headers=auditor_headers)
     lines = [json.loads(line) for line in exported.text.splitlines() if line]
-    assert {i["entity_ref"]: (i["action"], i["current_action"]) for i in lines} == expected
+    stored_keys = set(AuditEventRow.__table__.columns.keys())
+    assert all(set(line) == stored_keys for line in lines)
+    assert {i["entity_ref"]: i["action"] for i in lines} == {
+        ref: stored for ref, (stored, _) in expected.items()
+    }
+    csv_export = client.get("/api/v1/audit/export?format=csv", headers=auditor_headers)
+    assert "current_action" not in csv_export.text.splitlines()[0]
     by_text = client.get("/api/v1/audit?q=returned", headers=auditor_headers).json()["items"]
     assert [i["entity_ref"] for i in by_text] == ["model:fam@3"]
 

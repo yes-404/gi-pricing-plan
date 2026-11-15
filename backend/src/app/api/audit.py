@@ -43,7 +43,7 @@ from app.db.models import AuditEventRow
 from app.db.session import Database
 from app.errors import PlatformError
 from app.platform import audit as audit_service
-from model_schema import AuditEventRecord, Permission, Principal
+from model_schema import AuditEventListing, AuditEventRecord, Permission, Principal
 
 __all__ = ["router"]
 
@@ -90,12 +90,12 @@ class ChainVerification(BaseModel):
     reason: str | None = None
 
 
-def _view(row: AuditEventRow) -> AuditEventRecord:
-    """The stored row as `model_schema.AuditEventRecord`, hashes included.
+def _record(row: AuditEventRow) -> AuditEventRecord:
+    """The stored row as `model_schema.AuditEventRecord`, hashes included, and nothing else.
 
-    The one shape the query and the JSON Lines export both return: an auditor exporting the
-    log recomputes the chain outside the platform from exactly these fields (FR-372), which
-    is what makes it evidence rather than a report. It is the contract's shape, not a copy.
+    The export's shape: an auditor exporting the log recomputes the chain outside the platform
+    from exactly these fields (FR-372), which is what makes it evidence rather than a report.
+    It is the stored event and nothing derived, and it is the contract's shape, not a copy.
     """
     return AuditEventRecord(
         id=row.id,
@@ -105,7 +105,6 @@ def _view(row: AuditEventRow) -> AuditEventRecord:
         actor=Principal.model_validate(row.actor),
         source=row.source,
         action=row.action,
-        current_action=audit_service.current_action_of(row.action, row.before),
         entity_ref=row.entity_ref,
         before=row.before,
         after=row.after,
@@ -114,6 +113,17 @@ def _view(row: AuditEventRow) -> AuditEventRecord:
         job_id=row.job_id,
         prev_event_hash=row.prev_event_hash,
         event_hash=row.event_hash,
+    )
+
+
+def _listing(row: AuditEventRow) -> AuditEventListing:
+    """What the explorer's query returns: the stored record plus the derived `current_action`.
+
+    The derived field is for the views only and is never exported (see `_record`).
+    """
+    return AuditEventListing(
+        **_record(row).model_dump(),
+        current_action=audit_service.current_action_of(row.action, row.before),
     )
 
 
@@ -178,7 +188,7 @@ async def query_audit(
     q: str | None = None,
     cursor: str | None = None,
     limit: Annotated[int, Query(ge=1, le=MAX_LIMIT)] = DEFAULT_LIMIT,
-) -> Page[AuditEventRecord]:
+) -> Page[AuditEventListing]:
     """Filtered and cursor-paginated (FR-371, `00` §5.2).
 
     Ordered by `sequence`, the per-workspace monotonic counter, rather than by `at`: events
@@ -212,8 +222,8 @@ async def query_audit(
 
     has_more = len(rows) > limit
     page_rows = rows[:limit]
-    return Page[AuditEventRecord](
-        items=[_view(row) for row in page_rows],
+    return Page[AuditEventListing](
+        items=[_listing(row) for row in page_rows],
         next_cursor=encode_cursor(page_rows[-1].sequence) if has_more and page_rows else None,
         total_estimate=total,
     )
@@ -341,7 +351,7 @@ async def export_audit(
             # JSON Lines, not one array: an audit log is unbounded, and a consumer should
             # be able to start verifying the chain before the export finishes.
             async for row in rows():
-                yield _view(row).model_dump_json() + "\n"
+                yield _record(row).model_dump_json() + "\n"
 
         return StreamingResponse(
             json_lines(),
