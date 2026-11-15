@@ -18,7 +18,7 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 from backend.tests.conftest_db import seed_as_owner
-from botocore.exceptions import ClientError
+from botocore.exceptions import ClientError, EndpointConnectionError
 from sqlalchemy import select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -54,6 +54,15 @@ async def _aged_unreferenced_blob(
         assert await blobs.release(session, ref.sha256) == 0
     await _backdate(ref.sha256)
     return ref.sha256
+
+
+async def _delete_row_as_owner(digest: str) -> None:
+    """The collector's row delete (step 1) as test setup: the login role has no DELETE on blobs."""
+
+    async def _delete(session: AsyncSession) -> None:
+        await session.execute(text("DELETE FROM blobs WHERE sha256 = :d"), {"d": digest})
+
+    await seed_as_owner(_delete)
 
 
 async def _object_exists(blob_store: BlobStore, digest: str) -> bool:
@@ -272,18 +281,19 @@ async def test_a_put_that_commits_between_the_row_commit_and_the_object_step_kee
 @pytest.mark.req("FR-420")
 async def test_a_put_that_starts_during_the_object_step_waits_then_writes_the_object(
     database: Database,
-    owner_database: Database,
     blob_store: BlobStore,
-    workspace_id,
-    principal: Principal,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Red-first 2. The object delete is held open inside the collector's unit of work (it holds
+    """Red-first 2. The object delete is held open inside the object step's unit of work (it holds
     the exclusive lock); a `put` of the same bytes starts, is seen waiting on a lock, and only
     after the delete finishes uploads the object and inserts the row. Without the lock the put's
-    upload lands first and the delete then removes it."""
+    upload lands first and the delete then removes it.
+
+    Runs as the login role throughout: the row DELETE (the collector's step 1, which needs the
+    owner) is set up by `seed_as_owner`, and the object step needs no DELETE privilege."""
     content = _unique(b"during")
     digest = await _aged_unreferenced_blob(database, blob_store, content)
+    await _delete_row_as_owner(digest)
     entered, release = threading.Event(), threading.Event()
     real_delete = blob_store._client.delete_object
 
@@ -293,11 +303,7 @@ async def test_a_put_that_starts_during_the_object_step_waits_then_writes_the_ob
         return real_delete(**kwargs)
 
     monkeypatch.setattr(blob_store._client, "delete_object", _held_delete)
-    collector = asyncio.create_task(
-        blob_store.collect_garbage(
-            owner_database, actor=principal, workspace_id=workspace_id, dry_run=False
-        )
-    )
+    collector = asyncio.create_task(blob_store._delete_object_if_unreferenced(database, digest))
     assert await asyncio.to_thread(entered.wait, 30)
 
     async def _put() -> None:
@@ -339,6 +345,82 @@ async def test_a_null_owner_digest_does_not_stop_the_collector_taking_an_unowned
     )
 
     assert digest in report.deleted
+
+
+@pytest.mark.req("FR-420")
+async def test_a_put_whose_retain_finds_the_row_deleted_falls_through_and_stores_the_blob(
+    database: Database,
+    blob_store: BlobStore,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Audit D1. A `put` reads an existing row at count 0; the row is then deleted and committed
+    (the collector's DELETE, which takes no digest lock); only then does the put's `retain` run,
+    and its UPDATE finds no row. The put must fall through to the new-object path under the lock
+    it holds, not fail with `BLOB_NOT_FOUND`: it stores the blob. The interleaving is forced by
+    holding the first `retain` call. The row delete is the collector's step 1 done by
+    `seed_as_owner` (it needs the owner), so the test itself runs as the login role; the
+    collector's own re-read of the row afterwards is the between-commit test's subject."""
+    content = _unique(b"retain-gone")
+    digest = await _aged_unreferenced_blob(database, blob_store, content)
+    read_done, release_put = asyncio.Event(), asyncio.Event()
+    original_retain = blobs.retain
+    calls = 0
+
+    async def _retain_after_the_delete(session: AsyncSession, sha256: str) -> int:
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            read_done.set()  # the put has read the row
+            await release_put.wait()  # ... and now waits until the row delete has committed
+        return await original_retain(session, sha256)
+
+    monkeypatch.setattr(blobs, "retain", _retain_after_the_delete)
+
+    async def _put() -> BlobRef:
+        async with database.unit_of_work() as session:
+            return await blob_store.put(session, content, "text/plain")
+
+    put_task = asyncio.create_task(_put())
+    await asyncio.wait_for(read_done.wait(), timeout=30)
+    await _delete_row_as_owner(digest)  # committed while the put holds its read
+    release_put.set()
+    ref = await put_task
+
+    assert ref.sha256 == digest
+    async with database.session() as session:
+        row = await session.get(BlobRow, digest)
+    assert row is not None
+    assert row.ref_count == 1
+    assert await _object_exists(blob_store, digest)
+
+
+@pytest.mark.req("FR-420")
+async def test_a_storage_error_that_is_not_a_client_error_leaves_an_orphan_and_keeps_the_report(
+    database: Database,
+    owner_database: Database,
+    blob_store: BlobStore,
+    workspace_id,
+    principal: Principal,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Audit D5. An unreachable storage endpoint raises a `BotoCoreError`, not a `ClientError`.
+    It must not abort the run after the rows were deleted and the audit event committed: the
+    object stays as an orphan (the sweep is slice 3b's), the report is returned, and no row
+    dangles."""
+    digest = await _aged_unreferenced_blob(database, blob_store)
+
+    def _unreachable(**_: object) -> None:
+        raise EndpointConnectionError(endpoint_url="http://127.0.0.1:1")
+
+    monkeypatch.setattr(blob_store._client, "delete_object", _unreachable)
+    report = await blob_store.collect_garbage(
+        owner_database, actor=principal, workspace_id=workspace_id, dry_run=False
+    )
+
+    assert digest in report.deleted
+    async with database.session() as session:
+        assert await session.get(BlobRow, digest) is None
+    assert await _object_exists(blob_store, digest)
 
 
 @pytest.mark.req("FR-420")

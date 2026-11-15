@@ -33,7 +33,7 @@ from uuid import UUID
 
 import boto3
 from botocore.client import Config as BotoConfig
-from botocore.exceptions import ClientError
+from botocore.exceptions import BotoCoreError, ClientError
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import CursorResult, delete, select, text, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
@@ -254,8 +254,19 @@ class BlobStore:
                         "requested_media_type": media_type,
                     },
                 )
-            await retain(session, digest)
-            return to_ref(existing)
+            try:
+                await retain(session, digest)
+            except PlatformError as exc:
+                if exc.code != "BLOB_NOT_FOUND":
+                    raise
+                # The collector's DELETE committed between our read and this retain (it takes no
+                # digest lock for the row delete, by design): the row is gone. The digest lock we
+                # still hold keeps its object step waiting, so fall through to the new-object path
+                # under it: upload, insert, and the collector then finds the row and keeps the
+                # object (`re_put`). Drop the stale instance so a later `get` sees the new row.
+                session.expunge(existing)
+            else:
+                return to_ref(existing)
 
         key = blob_key(digest)
         await asyncio.to_thread(
@@ -734,8 +745,11 @@ class BlobStore:
                 await asyncio.to_thread(
                     self._client.delete_object, Bucket=self._bucket, Key=blob_key(digest)
                 )
-        except ClientError:
-            # The row is gone and committed; the object is an orphan, not a dangling reference.
+        except (ClientError, BotoCoreError):
+            # The row is gone and committed; the object is an orphan, not a dangling reference. A
+            # storage failure that is not a `ClientError` (an unreachable endpoint, a timeout) is a
+            # `BotoCoreError`: it must not abort the loop and lose the report. The orphan sweep is
+            # slice 3b's (`reconcile_orphans`); a database deadlock mid-loop is #1888's subject.
             _log.warning("blob object delete failed; left as an orphan", extra={"sha256": digest})
         return True
 

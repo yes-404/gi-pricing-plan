@@ -245,7 +245,7 @@ OWNER_FIXTURE_USERS: tuple[tuple[str, str, str], ...] = (
     ),
     (
         "backend/tests/test_blob_collector.py::"
-        "test_a_put_that_starts_during_the_object_step_waits_then_writes_the_object",
+        "test_a_storage_error_that_is_not_a_client_error_leaves_an_orphan_and_keeps_the_report",
         "DP-22",
         "runs the collector's DELETE on blobs, which the application role cannot (OQ-1943)",
     ),
@@ -1494,7 +1494,10 @@ async def seed_as_owner[T](seed: Callable[[AsyncSession], Awaitable[T]]) -> T:
     **Commit semantics (S1a seam ruling, condition (ii)).** `unit_of_work` commits when `seed`
     returns, and the commit happens *before* this function does. The rows are therefore
     committed, and visible to the application connection (`database`, `api_client`) on its
-    next statement in the same test; there is no shared transaction to wait on.
+    next statement in the same test; there is no shared transaction to wait on. The same
+    semantics hold for a test-setup **delete** the login role cannot make (a row of `blobs`:
+    the collector's row delete done as setup, #1504 slice 3a): it is committed before this
+    function returns, so the next statement of the login-role connection no longer sees the row.
 
     **Teardown.** Nothing deletes these rows per test. Isolation is the test's own fresh
     `workspace_id` (the only isolation an append-only table permits), and the session-scoped
