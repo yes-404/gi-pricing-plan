@@ -127,6 +127,24 @@ def _listing(row: AuditEventRow) -> AuditEventListing:
     )
 
 
+def _require_aware(from_: datetime | None, to: datetime | None) -> None:
+    """Refuse a `from` or `to` that carries no UTC offset, on every route that takes them.
+
+    A bound without an offset is ambiguous: the driver reads it in the API process's local
+    timezone (asyncpg encodes a naive `datetime` through `astimezone`), so a query's range, or
+    an export's, could shift without notice, and comparing it with an aware bound raises.
+    The detail names the parameter and never echoes the value (NFR-499).
+    """
+    for name, bound in (("from", from_), ("to", to)):
+        if bound is not None and bound.tzinfo is None:
+            raise PlatformError(
+                "VALIDATION_FAILED",
+                "Invalid range",
+                422,
+                f"`{name}` must carry a UTC offset, for example a trailing Z.",
+            )
+
+
 def _filtered(
     workspace_id: UUID,
     *,
@@ -195,6 +213,7 @@ async def query_audit(
     written in one transaction share a timestamp, and a log whose order cannot be
     reconstructed cannot be verified.
     """
+    _require_aware(from_, to)
     conditions = _filtered(
         caller.workspace_id, actor=actor, entity=entity, action=action,
         from_=from_, to=to, q=q,
@@ -250,15 +269,7 @@ async def verify_chain(
     *finding*, and an auditor asking the question needs the answer and the sequence number
     — not a 500 that looks like the endpoint is broken.
     """
-    for name, bound in (("from", from_), ("to", to)):
-        if bound is not None and bound.tzinfo is None:
-            # A naive bound is ambiguous, and comparing it with an aware one raises: refuse it.
-            raise PlatformError(
-                "VALIDATION_FAILED",
-                "Invalid range",
-                422,
-                f"`{name}` must carry a timezone, for example a trailing Z.",
-            )
+    _require_aware(from_, to)
     if from_ is not None and to is not None and from_ > to:
         raise PlatformError(
             "VALIDATION_FAILED", "Invalid range", 422, "`from` is after `to`."
@@ -333,6 +344,7 @@ async def export_audit(
     if format not in {"csv", "json"}:  # pragma: no cover - Query pattern enforces it
         raise PlatformError("VALIDATION_FAILED", "Unsupported format", 422, format)
 
+    _require_aware(from_, to)
     conditions = _filtered(
         caller.workspace_id, actor=actor, entity=entity, action=action, from_=from_, to=to, q=q
     )

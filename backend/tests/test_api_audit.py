@@ -509,3 +509,30 @@ async def test_verify_refuses_a_bound_with_no_timezone(
     response = client.get(f"/api/v1/audit/verify?{query}", headers=auditor_headers)
     assert response.status_code == 422
     assert response.json()["code"] == "VALIDATION_FAILED"
+
+
+@pytest.mark.req("FR-371")
+@pytest.mark.parametrize(
+    "path", ["/api/v1/audit", "/api/v1/audit/export", "/api/v1/audit/verify"]
+)
+@pytest.mark.parametrize(
+    ("query", "named"),
+    [
+        ("from=2026-01-01T00:00:00", "from"),
+        ("to=2026-02-01T00:00:00", "to"),
+        ("from=2026-01-01T00:00:00&to=2026-02-01T00:00:00Z", "from"),
+        ("from=2026-01-01T00:00:00Z&to=2026-02-01T00:00:00", "to"),
+    ],
+)
+async def test_every_route_taking_a_range_refuses_a_bound_with_no_offset(
+    client: TestClient, auditor_headers, path: str, query: str, named: str
+) -> None:
+    """#1858 L3, the class: a naive bound, or a pair mixing naive and aware, is a 422 on the
+    query, the export and verify alike. The detail names the parameter and never echoes the
+    value. (A naive bound used to be read in the API process's local timezone.)"""
+    response = client.get(f"{path}?{query}", headers=auditor_headers)
+    assert response.status_code == 422
+    body = response.json()
+    assert body["code"] == "VALIDATION_FAILED"
+    assert f"`{named}` must carry a UTC offset" in body["detail"]
+    assert "2026-0" not in body["detail"]

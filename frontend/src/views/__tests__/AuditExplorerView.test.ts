@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/vue";
+import { fireEvent, render, screen, waitFor } from "@testing-library/vue";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -88,6 +88,22 @@ describe("the audit explorer (FR-371, FR-372, FR-373)", () => {
       action: "model.approved",
       q: "envelope",
     });
+  });
+
+  it("sends the time range as UTC instants, and says the inputs are the browser's local time", async () => {
+    await view();
+    expect(
+      screen.getByText("Times are your browser's local time; they are sent as UTC."),
+    ).toBeInTheDocument();
+    await fireEvent.update(screen.getByLabelText("From"), "2026-01-01T09:00");
+    await fireEvent.update(screen.getByLabelText("To"), "2026-02-01T17:30");
+    await userEvent.click(screen.getByRole("button", { name: "Apply filters" }));
+    await waitFor(() => expect(urls().length).toBe(2));
+    const sent = Object.fromEntries(urls()[1]!.searchParams);
+    expect(sent.from).toBe(new Date("2026-01-01T09:00").toISOString());
+    expect(sent.to).toBe(new Date("2026-02-01T17:30").toISOString());
+    expect(sent.from).toMatch(/Z$/);
+    expect(sent.to).toMatch(/Z$/);
   });
 
   it("passes the cursor back verbatim and shows a capped total as 1,000+", async () => {

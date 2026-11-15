@@ -171,6 +171,9 @@ onMounted(() => void load());
           class="mt-1 w-full rounded border border-slate-300 px-2 py-1"
         >
       </label>
+      <p class="self-end text-xs text-slate-500">
+        Times are your browser's local time; they are sent as UTC.
+      </p>
       <label class="text-sm">
         Justification text
         <input
