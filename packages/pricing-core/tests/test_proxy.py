@@ -193,8 +193,55 @@ def test_a_reference_table_that_fits_neither_granularity_is_refused(
 def test_negative_exposure_is_refused() -> None:
     frame = _frame(["k1", "k2"], ["A", "B"], [1.0, -1.0])
     ref = _subject_reference(["k1", "k2"], ["x", "y"], ["x", "y"])
-    with pytest.raises(ProxyAssessmentError, match="exposure"):
+    with pytest.raises(ProxyAssessmentError, match="exposure") as caught:
         _assess(frame, ref, ["x", "y"])
+    assert caught.value.code == "PROXY_INPUT_INVALID"
+
+
+@pytest.mark.req("FR-2138")
+@pytest.mark.parametrize(
+    "ref",
+    [
+        pl.DataFrame({"k": ["k1", "k1"], "x": [1.0, 0.0], "y": [0.0, 1.0]}),
+        pl.DataFrame({"k": ["k1", "k2"], "x": [0.5, 1.0], "y": [0.4, 0.0]}),
+        pl.DataFrame({"k": ["k1", "k2"], "x": [1.5, 1.0], "y": [-0.5, 0.0]}),
+        pl.DataFrame({"k": ["k1", "k2"], "x": [None, 1.0], "y": [0.0, 0.0]}),
+        pl.DataFrame({"k": ["k1", "k2"], "x": [1.0, 0.0]}),
+    ],
+)
+def test_a_refused_reference_carries_the_reference_code(ref: pl.DataFrame) -> None:
+    frame = _frame(["k1", "k2"], ["A", "B"], [1.0, 1.0])
+    with pytest.raises(ProxyAssessmentError) as caught:
+        _assess(frame, ref, ["x", "y"])
+    assert caught.value.code == "PROXY_REFERENCE_INVALID"
+
+
+@pytest.mark.req("FR-2138")
+def test_a_refusal_never_carries_a_share_or_a_value_from_the_frame() -> None:
+    """NFR-499: the message names columns and reference keys, never data (sentinel values)."""
+    share, level, exposure = 7.3141592, "SENTINEL_LEVEL_ZQX", -987654.321
+    cases = [
+        # shares out of range and not summing to 1 (the message may name keys, not shares)
+        (
+            _frame(["k1", "k2"], [level, level], [1.0, 1.0]),
+            pl.DataFrame({"k": ["k1", "k2"], "x": [share, 0.0], "y": [0.0, 1.0]}),
+        ),
+        (
+            _frame(["k1", "k2"], [level, level], [1.0, 1.0]),
+            pl.DataFrame({"k": ["k1", "k2"], "x": [0.3141592, 1.0], "y": [0.0, 0.0]}),
+        ),
+        # a negative exposure in the frame
+        (
+            _frame(["k1", "k2"], [level, level], [exposure, 1.0]),
+            _subject_reference(["k1", "k2"], ["x", "y"], ["x", "y"]),
+        ),
+    ]
+    for frame, ref in cases:
+        with pytest.raises(ProxyAssessmentError) as caught:
+            _assess(frame, ref, ["x", "y"])
+        text = str(caught.value)
+        for planted in ("7.3141592", "0.3141592", "SENTINEL_LEVEL_ZQX", "987654"):
+            assert planted not in text
 
 
 @pytest.mark.req("FR-2141")

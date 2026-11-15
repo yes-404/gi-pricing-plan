@@ -39,7 +39,18 @@ SHARE_TOLERANCE = 1e-6
 
 
 class ProxyAssessmentError(ValueError):
-    """The frame or the reference table cannot be assessed; the message names the cause."""
+    """The frame or the reference table cannot be assessed.
+
+    `code` is the platform error code, carried as data because `pricing-core` cannot import
+    the backend's registry (ADR-703): `PROXY_REFERENCE_INVALID` for the reference table,
+    `PROXY_INPUT_INVALID` for the call. The message names the column and, where it names rows,
+    their key in the reference table. It never carries a share or a value from the frame
+    (NFR-499): the reference is special-category data (FR-2142).
+    """
+
+    def __init__(self, code: str, message: str) -> None:
+        super().__init__(message)
+        self.code = code
 
 
 @dataclass(frozen=True)
@@ -87,7 +98,8 @@ def assess_proxies(
     kept = list(dict.fromkeys([*factors, key]))
     clash = [c for c in [*class_list, "_w"] if c in kept]
     if clash:
-        raise ProxyAssessmentError(f"class names clash with frame columns {clash}")
+        raise ProxyAssessmentError(
+            "PROXY_INPUT_INVALID", f"class names clash with frame columns {clash}")
     joined = frame.select([*kept, weight.alias("_w")]).join(
         reference.select([pl.col(reference_key).alias(key), *class_list]),
         on=key,
@@ -118,27 +130,35 @@ def _validate(
     exposure: str,
 ) -> None:
     if not classes or len(set(classes)) != len(classes):
-        raise ProxyAssessmentError("classes must be a non-empty list of distinct names")
+        raise ProxyAssessmentError(
+            "PROXY_INPUT_INVALID", "classes must be a non-empty list of distinct names")
     missing = [c for c in [*factors, key, exposure] if c not in frame.columns]
     if missing:
-        raise ProxyAssessmentError(f"frame has no column {missing}")
+        raise ProxyAssessmentError(
+            "PROXY_INPUT_INVALID", f"frame has no column {missing}")
     missing = [c for c in [reference_key, *classes] if c not in reference.columns]
     if missing:
-        raise ProxyAssessmentError(f"reference has no column {missing}")
+        raise ProxyAssessmentError(
+            "PROXY_REFERENCE_INVALID", f"reference has no column {missing}")
     if reference[reference_key].is_duplicated().any():
-        raise ProxyAssessmentError(f"reference key {reference_key!r} is repeated")
+        raise ProxyAssessmentError(
+            "PROXY_REFERENCE_INVALID", f"reference key {reference_key!r} is repeated")
     shares = reference.select(classes).to_numpy().astype(np.float64)
     if np.isnan(shares).any():
-        raise ProxyAssessmentError("reference shares must not be null")
+        raise ProxyAssessmentError(
+            "PROXY_REFERENCE_INVALID", "reference shares must not be null")
     if (shares < 0).any() or (shares > 1).any():
-        raise ProxyAssessmentError("reference shares must lie in [0, 1]")
+        raise ProxyAssessmentError(
+            "PROXY_REFERENCE_INVALID", "reference shares must lie in [0, 1]")
     off = np.abs(shares.sum(axis=1) - 1.0) > SHARE_TOLERANCE
     if off.any():
         bad = reference[reference_key].filter(pl.Series(off)).head(5).to_list()
-        raise ProxyAssessmentError(f"reference shares do not sum to 1 for keys {bad}")
+        raise ProxyAssessmentError(
+            "PROXY_REFERENCE_INVALID", f"reference shares do not sum to 1 for keys {bad}")
     exposures = frame[exposure].cast(pl.Float64)
     if exposures.null_count() or (exposures < 0).any():
-        raise ProxyAssessmentError("exposure must be non-null and non-negative")
+        raise ProxyAssessmentError(
+            "PROXY_INPUT_INVALID", "exposure must be non-null and non-negative")
 
 
 def _assess_factor(matched: pl.DataFrame, factor: str, classes: list[str]) -> FactorProxyResult:

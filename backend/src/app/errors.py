@@ -209,6 +209,10 @@ MODELLING_ERROR_CODES: Final[frozenset[str]] = frozenset(
         # FR-165, WK-690 S3 Task 6: the fit job surfaces Slice 2's two coded errors.
         "OBJECTIVE_NONFINITE_DERIVATIVE",
         "OBJECTIVE_ROUND_BUDGET_EXCEEDED",
+        # #1501 (WK-691), 2026-11-15, on the maintainer's ruling: the two codes of
+        # `pricing-core`'s `ProxyAssessmentError` (FR-2138). No route maps them yet.
+        "PROXY_REFERENCE_INVALID",
+        "PROXY_INPUT_INVALID",
         "MODEL_TERM_UNRESOLVED",
         "MODEL_LINK_UNSUPPORTED",
         "MODEL_OFFSET_MISSING",
