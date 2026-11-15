@@ -10,7 +10,9 @@ they are at the top of this file, separate from everything below that does.
 
 from __future__ import annotations
 
+import asyncio
 import random
+import warnings
 from datetime import UTC, datetime, timedelta
 
 import pytest
@@ -23,7 +25,7 @@ from app.db.models import BlobRow, ScoringTraceRow
 from app.db.session import Database
 from app.errors import PlatformError
 from app.platform import traces
-from app.platform.blobs import BlobStore
+from app.platform.blobs import BlobStore, owner_count
 from model_schema import LadderRung, ScoringResult, Trace, TraceStep, new_uuid7
 
 # ----------------------------------------------------------------------------------------
@@ -323,7 +325,7 @@ async def test_deleting_a_trace_outside_the_retention_floor_is_permitted(
 
 @pytest.mark.req("NFR-500")
 async def test_a_referenced_trace_blob_survives_garbage_collection(
-    database: Database, blob_store: BlobStore, workspace_id, principal
+    database: Database, owner_database: Database, blob_store: BlobStore, workspace_id, principal
 ) -> None:
     """RL-888's claim, verified rather than assumed: `write_trace`'s `retain` keeps a
     trace's blob invisible to GC's `ref_count == 0` selector even once it is old."""
@@ -339,10 +341,9 @@ async def test_a_referenced_trace_blob_survives_garbage_collection(
     )
     await _backdate(BlobRow, BlobRow.sha256 == row.blob_sha256, days=60)
 
-    async with database.unit_of_work() as session:
-        report = await blob_store.collect_garbage(
-            session, actor=principal, workspace_id=workspace_id, dry_run=False
-        )
+    report = await blob_store.collect_garbage(
+        owner_database, actor=principal, workspace_id=workspace_id, dry_run=False
+    )
 
     assert row.blob_sha256 not in report.deleted
     async with database.session() as session:
@@ -355,6 +356,62 @@ async def test_deleting_an_unknown_trace_is_a_typed_error(database: Database) ->
         with pytest.raises(PlatformError) as exc:
             await traces.delete_trace(session, new_uuid7())
     assert exc.value.code == "NOT_FOUND"
+
+
+@pytest.mark.req("FR-420")
+async def test_two_concurrent_deletes_release_once(
+    database: Database, blob_store: BlobStore, workspace_id
+) -> None:
+    """#1855 fix (ii). Three traces share one blob (`ref_count` 3). Two sessions delete the same
+    trace at once: A holds the row, B waits on it. B must then find no row and answer 404 —
+    not run its DELETE on 0 rows and still release, which leaves `ref_count` 1 with 2 owners."""
+    trace = _trace(
+        quote_id=f"quote-{new_uuid7()}",
+        rating_version="rating_version:motor-gb@11",
+        bundle_hash=_bundle_hash(),
+    )
+    rows = [await _write(database, blob_store, workspace_id, trace=trace) for _ in range(3)]
+    digest = rows[0].blob_sha256
+    assert digest is not None
+    target = rows[0].id
+
+    async def _b() -> PlatformError | None:
+        try:
+            async with database.unit_of_work() as session:
+                await traces.delete_trace(session, target, floor_days=0)
+        except PlatformError as exc:
+            return exc
+        return None
+
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        async with database.unit_of_work() as session_a:
+            await traces.delete_trace(session_a, target, floor_days=0)
+            b_task = asyncio.create_task(_b())
+            for _ in range(200):
+                async with database.session() as probe:
+                    blocked = (
+                        await probe.execute(
+                            text(
+                                "SELECT count(*) FROM pg_stat_activity WHERE "
+                                "datname = current_database() AND pid <> pg_backend_pid() "
+                                "AND wait_event_type = 'Lock'"
+                            )
+                        )
+                    ).scalar_one()
+                if blocked:
+                    break
+                await asyncio.sleep(0.05)
+            assert blocked, "B never waited on A's row lock"
+        b_error = await b_task
+
+    assert b_error is not None and b_error.code == "NOT_FOUND"
+    assert not [w for w in caught if "were matched" in str(w.message)]
+    async with database.session() as session:
+        blob_row = await session.get(BlobRow, digest)
+        assert blob_row is not None
+        assert blob_row.ref_count == 2
+        assert await owner_count(session, digest) == 2
 
 
 @pytest.mark.req("FR-259")

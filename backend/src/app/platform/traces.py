@@ -306,7 +306,13 @@ async def delete_trace(
     the blob reference on a permitted delete, mirroring `write_trace`'s `retain`: without
     it the blob would sit at `ref_count > 0` forever and never become GC-eligible.
     """
-    row = await session.get(ScoringTraceRow, trace_id)
+    # Locked, so two concurrent deletes of one trace cannot both release its blob reference: the
+    # second waits, reads no row and answers 404 like a sequential second delete (#1855).
+    # `populate_existing` because a row already in the session's identity map would be returned
+    # without a query, and so without the lock.
+    row = await session.get(
+        ScoringTraceRow, trace_id, with_for_update=True, populate_existing=True
+    )
     if row is None:
         raise PlatformError(
             "NOT_FOUND", "Trace not found", 404, f"No scoring trace with id {trace_id}."

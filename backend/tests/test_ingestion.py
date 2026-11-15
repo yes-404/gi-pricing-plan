@@ -667,10 +667,9 @@ async def test_correcting_a_derived_drafts_schema_keeps_the_parents_reference(
             table="policy_exposure", columns={"exposure_years": "float"},
         )
 
-    async with database.unit_of_work() as session:
-        report = await blob_store.collect_garbage(
-            session, actor=principal, workspace_id=workspace_id, dry_run=True, grace_days=0
-        )
+    report = await blob_store.collect_garbage(
+        database, actor=principal, workspace_id=workspace_id, dry_run=True, grace_days=0
+    )
     async with database.session() as session:
         assert (await session.get(BlobRow, shared)).ref_count >= 1
         parent = await session.get(DatasetVersionRow, parent_id)

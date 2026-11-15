@@ -201,10 +201,9 @@ async def test_gc_defaults_to_dry_run_and_deletes_nothing(
         await blobs.release(session, ref.sha256)
     await _age_blob(database, ref.sha256, days=60)
 
-    async with database.unit_of_work() as session:
-        report = await blob_store.collect_garbage(
-            session, actor=principal, workspace_id=workspace_id
-        )
+    report = await blob_store.collect_garbage(
+        database, actor=principal, workspace_id=workspace_id
+    )
 
     assert report.dry_run is True
     assert report.deleted == ()
@@ -223,10 +222,9 @@ async def test_gc_spares_a_referenced_blob(
         ref = await blob_store.put(session, unique(b"still referenced"), "text/plain")
     await _age_blob(database, ref.sha256, days=60)
 
-    async with owner_database.unit_of_work() as session:
-        report = await blob_store.collect_garbage(
-            session, actor=principal, workspace_id=workspace_id, dry_run=False
-        )
+    report = await blob_store.collect_garbage(
+        owner_database, actor=principal, workspace_id=workspace_id, dry_run=False
+    )
 
     assert ref.sha256 not in report.deleted
     async with database.session() as session:
@@ -242,10 +240,9 @@ async def test_gc_spares_a_young_unreferenced_blob(
         ref = await blob_store.put(session, unique(b"just uploaded"), "text/plain")
         await blobs.release(session, ref.sha256)
 
-    async with owner_database.unit_of_work() as session:
-        report = await blob_store.collect_garbage(
-            session, actor=principal, workspace_id=workspace_id, dry_run=False
-        )
+    report = await blob_store.collect_garbage(
+        owner_database, actor=principal, workspace_id=workspace_id, dry_run=False
+    )
 
     assert ref.sha256 not in report.deleted
     async with database.session() as session:
@@ -263,10 +260,9 @@ async def test_gc_deletes_an_old_unreferenced_blob_and_audits_it(
         await blobs.release(session, ref.sha256)
     await _age_blob(database, ref.sha256, days=60)
 
-    async with owner_database.unit_of_work() as session:
-        report = await blob_store.collect_garbage(
-            session, actor=principal, workspace_id=workspace_id, dry_run=False
-        )
+    report = await blob_store.collect_garbage(
+        owner_database, actor=principal, workspace_id=workspace_id, dry_run=False
+    )
 
     assert ref.sha256 in report.deleted
     assert report.bytes_reclaimed > 0

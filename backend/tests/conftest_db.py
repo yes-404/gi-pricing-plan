@@ -209,6 +209,35 @@ def owner_subject_settings(**overrides: Any) -> Settings:
 #: the owner is refused, or that tamper), `bootstrap` (the seed's `grant_demo_principals`).
 OWNER_FIXTURE_USERS: tuple[tuple[str, str, str], ...] = (
     (
+        "backend/tests/test_traces.py::test_a_referenced_trace_blob_survives_garbage_collection",
+        "DP-22",
+        "runs the collector's DELETE on blobs, which the application role cannot (OQ-1943)",
+    ),
+    (
+        "backend/tests/test_blob_collector.py::"
+        "test_a_failed_object_delete_after_the_commit_leaves_an_orphan_never_a_dangling_row",
+        "DP-22",
+        "runs the collector's DELETE on blobs, which the application role cannot (OQ-1943)",
+    ),
+    (
+        "backend/tests/test_blob_collector.py::"
+        "test_a_retain_that_commits_while_the_delete_waits_keeps_the_blob",
+        "DP-22",
+        "runs the collector's DELETE on blobs, which the application role cannot (OQ-1943)",
+    ),
+    (
+        "backend/tests/test_blob_collector.py::"
+        "test_a_blob_an_owner_row_names_is_not_collected_even_at_ref_count_zero",
+        "DP-22",
+        "runs the collector's DELETE on blobs, which the application role cannot (OQ-1943)",
+    ),
+    (
+        "backend/tests/test_blob_collector.py::"
+        "test_a_non_dry_run_deletes_row_and_object_and_audits_the_deleted_digests",
+        "DP-22",
+        "runs the collector's DELETE on blobs, which the application role cannot (OQ-1943)",
+    ),
+    (
         "backend/tests/test_migration_deployments.py::"
         "test_the_upgrade_seeds_the_three_environments_and_leaves_existing_traces_alone",
         "migration",

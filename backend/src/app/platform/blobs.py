@@ -35,7 +35,7 @@ import boto3
 from botocore.client import Config as BotoConfig
 from botocore.exceptions import ClientError
 from pydantic import BaseModel, ConfigDict, Field
-from sqlalchemy import CursorResult, select, text, update
+from sqlalchemy import CursorResult, delete, select, text, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -234,6 +234,9 @@ class BlobStore:
         body = content if isinstance(content, bytes) else b"".join(content)
         digest = hashlib.sha256(body).hexdigest()
 
+        # Held to the caller's commit: the collector's object delete takes the same lock, so it
+        # cannot delete the object between our read of the row and our insert of it.
+        await _lock_digest(session, digest)
         existing = await session.get(BlobRow, digest)
         if existing is not None:
             # FR-419 / ID-4: same content, same reference, no second object. Media type
@@ -409,6 +412,20 @@ class BlobStore:
             locked = await session.get(BlobUploadRow, upload_id, with_for_update=True)
             assert locked is not None
             if locked.sha256 is None:
+                # The collector may have deleted this digest's row and object since the check
+                # above. Under the digest lock nothing can change that until we commit: if no
+                # row exists, make sure the object does, then insert the row.
+                await _lock_digest(session, digest)
+                if await session.get(BlobRow, digest) is None and not await asyncio.to_thread(
+                    self._object_exists, content_key
+                ):
+                    await asyncio.to_thread(
+                        self._client.copy,
+                        {"Bucket": self._bucket, "Key": key},
+                        self._bucket,
+                        content_key,
+                        ExtraArgs={"ContentType": media_type, "MetadataDirective": "REPLACE"},
+                    )
                 await session.execute(
                     pg_insert(BlobRow)
                     .values(
@@ -428,6 +445,15 @@ class BlobStore:
 
         await asyncio.to_thread(self._client.delete_object, Bucket=self._bucket, Key=key)
         return ref
+
+    def _object_exists(self, key: str) -> bool:
+        try:
+            self._client.head_object(Bucket=self._bucket, Key=key)
+        except ClientError as exc:
+            if exc.response.get("Error", {}).get("Code") in {"404", "NoSuchKey", "NotFound"}:
+                return False
+            raise
+        return True
 
     def _complete_staged(self, key: str, s3_upload_id: str | None, part_count: int) -> None:
         """Finish the staged object, or fail with `VALIDATION_FAILED` naming what is wrong.
@@ -601,19 +627,32 @@ class BlobStore:
 
     async def collect_garbage(
         self,
-        session: AsyncSession,
+        database: Database,
         *,
         actor: Principal,
         workspace_id: Any,
         dry_run: bool = True,
         grace_days: int | None = None,
     ) -> GarbageCollectionReport:
-        """Reclaim unreferenced blobs, conservatively (FR-420).
+        """Reclaim unreferenced blobs, conservatively (FR-420, #1855).
 
-        A blob is deletable only when **both** hold: nothing references it, and it is older
-        than the grace period. The age check is what makes it conservative — a blob is
-        created before the artifact that references it, so a GC run in that window would
+        A blob is deletable only when **all** hold: its count is 0, no owner row names it, and
+        it is older than the grace period. The age check is what makes it conservative — a blob
+        is created before the artifact that references it, so a GC run in that window would
         delete content that is about to be claimed.
+
+        **The collector owns its transactions** (it takes the `Database`, not a session), because
+        the order is the safety property:
+
+        1. one unit of work deletes the rows with `_delete_unreferenced` — a single statement
+           that re-checks the count and the owners under the row lock — and writes the audit
+           event, then commits;
+        2. only after that commit are the objects deleted, each under the digest's advisory lock
+           and only if no row has appeared for it since (a concurrent `put` of the same bytes).
+
+        A failure in step 2 leaves an object with no row (an orphan, cheap); it can never leave a
+        row with no object, which is what a delete-then-rollback did. The audit event names the
+        rows the statement actually deleted, not the ones a prior read expected to.
 
         `dry_run` defaults to **True**. A destructive sweep whose default is to destroy is
         a sweep someone runs by accident.
@@ -621,42 +660,79 @@ class BlobStore:
         grace = grace_days if grace_days is not None else self._settings.blob_gc_grace_days
         cutoff = datetime.now(UTC) - timedelta(days=grace)
 
-        candidates = (
-            await session.execute(
-                select(BlobRow).where(BlobRow.ref_count == 0, BlobRow.created_at < cutoff)
-            )
-        ).scalars().all()
-
-        report = GarbageCollectionReport(
-            dry_run=dry_run,
-            grace_days=grace,
-            considered=len(candidates),
-            deleted=tuple(b.sha256 for b in candidates) if not dry_run else (),
-            bytes_reclaimed=sum(b.bytes_ for b in candidates) if not dry_run else 0,
-        )
-
-        if not dry_run:
-            for blob in candidates:
-                await asyncio.to_thread(
-                    self._client.delete_object,
-                    Bucket=self._bucket,
-                    Key=blob_key(blob.sha256),
+        found: list[tuple[str, int]]
+        async with database.unit_of_work() as session:
+            if dry_run:
+                # The count-and-age selector only, deliberately without the owner re-check: a
+                # dry run reports what the counts say, so a blob an owner names at count 0 (a
+                # leaked undercount) shows in `considered` instead of being hidden by the guard
+                # that would stop the real run from taking it.
+                counted = await session.execute(
+                    select(BlobRow.sha256, BlobRow.bytes_).where(
+                        BlobRow.ref_count == 0, BlobRow.created_at < cutoff
+                    )
                 )
-                await session.delete(blob)
-            await session.flush()
+                found = [(row[0], int(row[1])) for row in counted.all()]
+            else:
+                found = await _delete_unreferenced(session, cutoff)
+            report = GarbageCollectionReport(
+                dry_run=dry_run,
+                grace_days=grace,
+                considered=len(found),
+                deleted=() if dry_run else tuple(sha for sha, _ in found),
+                bytes_reclaimed=0 if dry_run else sum(size for _, size in found),
+            )
+            # Audited either way (FR-420): a dry run is evidence about what the platform
+            # believes is unreferenced, which is worth as much as the deletion itself.
+            await audit.record(
+                session,
+                workspace_id=workspace_id,
+                actor=actor,
+                source=JobSource.SYSTEM,
+                action="blob.garbage_collected",
+                entity_ref="blob:gc@1",
+                after=report.model_dump(mode="json"),
+            )
 
-        # Audited either way (FR-420): a dry run is evidence about what the platform
-        # believes is unreferenced, which is worth as much as the deletion itself.
-        await audit.record(
-            session,
-            workspace_id=workspace_id,
-            actor=actor,
-            source=JobSource.SYSTEM,
-            action="blob.garbage_collected",
-            entity_ref="blob:gc@1",
-            after=report.model_dump(mode="json"),
-        )
+        for digest in report.deleted:
+            await self._delete_object_if_unreferenced(database, digest)
         return report
+
+    async def _delete_object_if_unreferenced(self, database: Database, digest: str) -> None:
+        """Delete one object whose row was just deleted, unless the digest was re-stored.
+
+        Takes the digest lock a `put` of the same bytes holds from its read to its commit, then
+        re-reads the row: a `put` that committed meanwhile owns the object again.
+        """
+        try:
+            async with database.unit_of_work() as session:
+                await _lock_digest(session, digest)
+                if await session.get(BlobRow, digest) is None:
+                    await asyncio.to_thread(
+                        self._client.delete_object, Bucket=self._bucket, Key=blob_key(digest)
+                    )
+        except ClientError:
+            # The row is gone and committed; the object is an orphan, not a dangling reference.
+            _log.warning("blob object delete failed; left as an orphan", extra={"sha256": digest})
+
+
+#: Namespace of the per-digest advisory lock, distinct from the audit chain's (`0x47495041`).
+_DIGEST_LOCK_NAMESPACE: Final = 0x47495042
+
+
+async def _lock_digest(session: AsyncSession, sha256: str) -> None:
+    """Take the transaction-scoped advisory lock for one digest.
+
+    It serialises everything that decides whether an object exists for a digest: `put` and
+    `promote_upload` (write the object, then the row) against the collector's object delete.
+    Without it a `put` that missed the row just after the collector's commit uploads the object,
+    and the collector then deletes it, leaving a row with no bytes. Two digests that hash to one
+    key only wait for each other. Released at commit or rollback.
+    """
+    await session.execute(
+        text("SELECT pg_advisory_xact_lock(:ns, hashtext(:sha))"),
+        {"ns": _DIGEST_LOCK_NAMESPACE, "sha": sha256},
+    )
 
 
 async def retain(session: AsyncSession, sha256: str) -> int:
@@ -846,6 +922,35 @@ _OWNER_COUNTS_SQL = (
     f"SELECT sha256, count(*) AS n FROM ({_OWNER_ROWS_SQL}) AS owned "
     "WHERE sha256 IS NOT NULL GROUP BY sha256"
 )
+
+
+#: "No owner row names this blob", correlated to `blobs`. `NOT EXISTS`, not `NOT IN`: a NULL
+#: digest from an owner place (a model with no covariance blob) would make `NOT IN` match nothing.
+_NOT_OWNED = text(
+    f"NOT EXISTS (SELECT 1 FROM ({_OWNER_ROWS_SQL}) AS owned WHERE owned.sha256 = blobs.sha256)"
+)
+
+
+def _unreferenced(cutoff: datetime) -> tuple[Any, ...]:
+    """The collector's predicate, written once: count 0, no owner row, older than `cutoff`."""
+    return (BlobRow.ref_count == 0, BlobRow.created_at < cutoff, _NOT_OWNED)
+
+
+async def _delete_unreferenced(session: AsyncSession, cutoff: datetime) -> list[tuple[str, int]]:
+    """Delete every unreferenced blob row in **one statement**; return `(sha256, bytes)` deleted.
+
+    The count and owner re-check happen inside the DELETE, under the row lock it takes: a
+    concurrent `retain` blocks on that lock, and when it commits first the row no longer
+    matches and survives. This statement is the whole decision, so it can be called directly or
+    wrapped in a `SECURITY DEFINER` function without changing what it does (#1550).
+    """
+    result = await session.execute(
+        delete(BlobRow)
+        .where(*_unreferenced(cutoff))
+        .returning(BlobRow.sha256, BlobRow.bytes_)
+        .execution_options(synchronize_session=False)
+    )
+    return [(row[0], int(row[1])) for row in result.all()]
 
 
 async def backfill_ref_counts(session: AsyncSession) -> int:
