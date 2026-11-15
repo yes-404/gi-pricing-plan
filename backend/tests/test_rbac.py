@@ -8,7 +8,7 @@ from backend.tests.conftest_db import seed_as_owner
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.models import AuditEventRow, RoleAssignmentRow, RoleRow
+from app.db.models import AuditEventRow, RoleAssignmentRow, RoleRow, ServiceAccountRow
 from app.db.session import Database
 from app.errors import PlatformError
 from app.platform import rbac
@@ -274,26 +274,171 @@ async def test_granting_requires_the_manage_roles_permission(
             )
 
 
-@pytest.mark.req("FR-348")
-async def test_a_user_cannot_grant_a_permission_they_do_not_hold(
-    database: Database, workspace_id
-) -> None:
-    """The escalation FR-348 forbids: an admin minting an Approver and using it."""
-    admin, target = _user(), _user()
-    await _assign(database, workspace_id, admin, "admin")
+async def _seed_service_account(workspace_id) -> ServiceAccountRow:
+    account = ServiceAccountRow(
+        workspace_id=workspace_id,
+        slug=f"sa-{new_uuid7().hex[:12]}",
+        environments=["dev"],
+        permissions=[],
+    )
 
+    async def seed(session: AsyncSession) -> None:
+        session.add(account)
+
+    await seed_as_owner(seed)
+    return account
+
+
+async def _grant_refused(
+    database: Database,
+    workspace_id,
+    granter,
+    *,
+    kind: str,
+    principal_id,
+    role_slug: str = "analyst",
+) -> PlatformError:
+    """Attempt the grant as the application role, assert it was refused, and that nothing
+    was written or audited."""
     async with database.unit_of_work() as session:
         with pytest.raises(PlatformError) as exc:
             await rbac.grant_role(
                 session,
                 workspace_id=workspace_id,
-                granter=admin,
-                principal_kind="user",
-                principal_id=target.id,
-                role_slug="approver",
+                granter=granter,
+                principal_kind=kind,
+                principal_id=principal_id,
+                role_slug=role_slug,
             )
+    async with database.session() as session:
+        rows = (
+            await session.execute(
+                select(RoleAssignmentRow).where(
+                    RoleAssignmentRow.principal_id == principal_id,
+                    RoleAssignmentRow.granted_by.is_not(None),
+                )
+            )
+        ).scalars().all()
+        events = (
+            await session.execute(
+                select(AuditEventRow).where(
+                    AuditEventRow.workspace_id == workspace_id,
+                    AuditEventRow.action == "role_assignment.granted",
+                )
+            )
+        ).scalars().all()
+    assert rows == []
+    assert events == []
     assert exc.value.code == "PERMISSION_DENIED"
-    assert "approval:decide" in (exc.value.detail or "")
+    return exc.value
+
+
+@pytest.mark.req("FR-348")
+@pytest.mark.parametrize("kind", ["user", "service_account"])
+async def test_a_principal_cannot_grant_a_role_to_itself(
+    database: Database, workspace_id, kind: str
+) -> None:
+    """R1 / R1b: refused even when the granter already holds every permission the role
+    confers, and whatever `principal_kind` is passed (assignments resolve by id alone)."""
+    admin = _user()
+    await _assign(database, workspace_id, admin, "admin")
+    await _assign(database, workspace_id, admin, "analyst")
+    refusal = await _grant_refused(
+        database, workspace_id, admin, kind=kind, principal_id=admin.id
+    )
+    assert refusal.title == "Cannot grant a role to yourself"
+
+
+@pytest.mark.req("FR-348")
+async def test_a_self_grant_of_an_unknown_role_is_refused_not_missing(
+    database: Database, workspace_id
+) -> None:
+    """The self-grant check runs before the role lookup: 403, never 404."""
+    admin = _user()
+    await _assign(database, workspace_id, admin, "admin")
+    refusal = await _grant_refused(
+        database,
+        workspace_id,
+        admin,
+        kind="user",
+        principal_id=admin.id,
+        role_slug="no-such-role",
+    )
+    assert refusal.status_code == 403
+    assert refusal.title == "Cannot grant a role to yourself"
+
+
+@pytest.mark.req("FR-348")
+@pytest.mark.parametrize("kind", ["service_account", "user"])
+@pytest.mark.parametrize("role_slug", ["analyst", "approver", "deployer"])
+async def test_a_service_account_is_never_granted_a_role(
+    database: Database, workspace_id, kind: str, role_slug: str
+) -> None:
+    """FR-347 and FR-389: refused for any role, whatever `principal_kind` is passed (the
+    grantee is found by id), before any insert and before the audit record."""
+    admin = _user()
+    await _assign(database, workspace_id, admin, "admin")
+    account = await _seed_service_account(workspace_id)
+    refusal = await _grant_refused(
+        database,
+        workspace_id,
+        admin,
+        kind=kind,
+        principal_id=account.id,
+        role_slug=role_slug,
+    )
+    assert refusal.title == "Cannot grant a role to a service account"
+    assert "FR-347" in (refusal.detail or "")
+
+
+@pytest.mark.req("FR-347")
+async def test_a_service_account_of_another_workspace_is_refused_too(
+    database: Database, workspace_id
+) -> None:
+    """The grantee lookup is by id alone, not by the granter's workspace."""
+    admin = _user()
+    await _assign(database, workspace_id, admin, "admin")
+    foreign = await _seed_service_account(new_uuid7())
+    refusal = await _grant_refused(
+        database, workspace_id, admin, kind="service_account", principal_id=foreign.id
+    )
+    assert refusal.title == "Cannot grant a role to a service account"
+
+
+@pytest.mark.req("FR-348")
+async def test_a_grant_conferring_permissions_the_granter_lacks_succeeds(
+    database: Database, owner_database: Database, workspace_id
+) -> None:
+    """G1: the withdrawn "permission subset" rule (#1843, option (A))."""
+    admin, target = _user(), _user()
+    await _assign(database, workspace_id, admin, "admin")
+
+    async with owner_database.unit_of_work() as session:
+        await rbac.grant_role(
+            session,
+            workspace_id=workspace_id,
+            granter=admin,
+            principal_kind="user",
+            principal_id=target.id,
+            role_slug="approver",
+        )
+
+    async with database.session() as session:
+        held = await rbac.effective_permissions(
+            session,
+            workspace_id=workspace_id,
+            principal=Principal(kind=ActorKind.USER, id=target.id, display="t"),
+        )
+        events = (
+            await session.execute(
+                select(AuditEventRow).where(
+                    AuditEventRow.workspace_id == workspace_id,
+                    AuditEventRow.action == "role_assignment.granted",
+                )
+            )
+        ).scalars().all()
+    assert Permission.APPROVAL_DECIDE in held
+    assert len(events) == 1
 
 
 @pytest.mark.req("FR-348")
@@ -459,6 +604,60 @@ async def test_seeding_roles_is_idempotent(owner_database: Database, workspace_i
         second = await rbac.seed_builtin_roles(session, workspace_id)
     assert len(first) == len(BUILTIN_ROLES)
     assert second == []
+
+
+@pytest.mark.req("FR-347")
+async def test_a_role_assignment_on_a_service_account_confers_nothing(
+    database: Database, workspace_id
+) -> None:
+    """Defence in depth, role-isolated: the row is planted through the owner fixture (no
+    `grant_role`, which refuses), and the account's permissions are still its credential's
+    own. The control reads the same row as a USER principal, so the row is real and
+    resolvable by id."""
+    account = await _seed_service_account(workspace_id)
+
+    async def plant(session: AsyncSession) -> None:
+        await rbac.seed_builtin_roles(session, workspace_id)
+        role = (
+            await session.execute(
+                select(RoleRow).where(
+                    RoleRow.workspace_id == workspace_id, RoleRow.slug == "approver"
+                )
+            )
+        ).scalar_one()
+        session.add(
+            RoleAssignmentRow(
+                workspace_id=workspace_id,
+                principal_kind="service_account",
+                principal_id=account.id,
+                role_id=role.id,
+                scope_type=ScopeType.WORKSPACE.value,
+                scope_id=None,
+            )
+        )
+
+    await seed_as_owner(plant)
+    as_account = Principal(kind=ActorKind.SERVICE_ACCOUNT, id=account.id, display="sa")
+    as_user = Principal(kind=ActorKind.USER, id=account.id, display="same id, user kind")
+    async with database.session() as session:
+        held = await rbac.effective_permissions(
+            session,
+            workspace_id=workspace_id,
+            principal=as_account,
+            credential_permissions=frozenset({"score:execute"}),
+        )
+        control = await rbac.effective_permissions(
+            session, workspace_id=workspace_id, principal=as_user
+        )
+        anywhere = await rbac.holds_anywhere(
+            session,
+            workspace_id=workspace_id,
+            principal=as_account,
+            permission=Permission.APPROVAL_DECIDE,
+        )
+    assert held == frozenset({Permission.SCORE_EXECUTE})
+    assert Permission.APPROVAL_DECIDE in control
+    assert anywhere is False
 
 
 @pytest.mark.req("FR-347")
