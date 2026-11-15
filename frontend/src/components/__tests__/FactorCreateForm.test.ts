@@ -102,6 +102,34 @@ describe("creating a factor", () => {
     expect(createFactor.mock.calls[0]?.[0]).not.toHaveProperty("monotonic_rationale");
   });
 
+  it("refuses a level the fit never saw by default, sending no declaration", async () => {
+    const user = userEvent.setup();
+    createFactor.mockResolvedValue({ slug: "area-factor", version: 1 });
+    form();
+
+    expect(screen.getByLabelText(/A level the fit never saw/)).toHaveValue("");
+    await user.selectOptions(screen.getByLabelText("Column"), "area");
+    await user.type(screen.getByLabelText("Slug"), "area-factor");
+    await user.click(screen.getByRole("button", { name: /Create factor/ }));
+
+    await waitFor(() => expect(createFactor).toHaveBeenCalled());
+    expect(createFactor.mock.calls[0]?.[0]).not.toHaveProperty("unseen_level_behaviour");
+  });
+
+  it("sends map_to_base when the actuary declares it", async () => {
+    const user = userEvent.setup();
+    createFactor.mockResolvedValue({ slug: "area-factor", version: 1 });
+    form();
+
+    await user.selectOptions(screen.getByLabelText("Column"), "area");
+    await user.type(screen.getByLabelText("Slug"), "area-factor");
+    await user.selectOptions(screen.getByLabelText(/A level the fit never saw/), "map_to_base");
+    await user.click(screen.getByRole("button", { name: /Create factor/ }));
+
+    await waitFor(() => expect(createFactor).toHaveBeenCalled());
+    expect(createFactor.mock.calls[0]?.[0]).toMatchObject({ unseen_level_behaviour: "map_to_base" });
+  });
+
   it("renders a refusal's field errors rather than its generic title", async () => {
     // The W6b-4a lesson: a 422's actionable sentence lives only in `errors[]`, and the
     // house title/detail pair is boilerplate.

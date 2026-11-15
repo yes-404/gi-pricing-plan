@@ -116,6 +116,39 @@ describe("DiagnosticsView", () => {
     expect(cells[1]).toHaveTextContent("0.987");
   });
 
+  it("says rows on an unseen level were not recorded for a fit stored before the rule", async () => {
+    // FR-2143: absent is "not recorded", never "none left out".
+    stubBoth();
+    render(DiagnosticsView, { props: { slug: "motor-frequency" }, ...mounted });
+    const section = await screen.findByLabelText("Rows on a level this fit never saw");
+
+    expect(section).toHaveTextContent("Holdout: not recorded");
+    expect(section).not.toHaveTextContent("none left out");
+    expect(section).toHaveTextContent("is refused");
+  });
+
+  it("states the count and exposure left out, and that a quote is refused", async () => {
+    const withExcluded = {
+      ...DIAGNOSTICS,
+      universal: {
+        train: { ...DIAGNOSTICS.universal.train, rows_excluded_unseen_level: 0,
+                 exposure_excluded_unseen_level: "0" },
+        holdout: { ...DIAGNOSTICS.universal.holdout, rows_excluded_unseen_level: 50,
+                   exposure_excluded_unseen_level: "50.0" },
+      },
+    };
+    stubByUrl({
+      "/diagnostics": { body: withExcluded },
+      "/models/motor-frequency": { body: GBM_MODEL },
+    });
+    render(DiagnosticsView, { props: { slug: "motor-frequency" }, ...mounted });
+    const section = await screen.findByLabelText("Rows on a level this fit never saw");
+
+    expect(section).toHaveTextContent("Train: none left out");
+    expect(section).toHaveTextContent("Holdout: 50 rows (exposure 50.0) are left out of every figure");
+    expect(section).toHaveTextContent("A quote with such a level is refused");
+  });
+
   it("labels how the metrics were weighted, which the fit had to record", async () => {
     stubBoth();
     render(DiagnosticsView, { props: { slug: "motor-frequency" }, ...mounted });

@@ -129,6 +129,193 @@ describe("the model detail view", () => {
     expect(within(table).getAllByRole("row")).toHaveLength(3); // header + two levels
   });
 
+  it("says a model fitted before the report existed has not recorded its unseen levels", async () => {
+    // FR-2143: absent is "not recorded", never "none".
+    render(ModelDetailView, { props, ...mounted });
+    const section = await screen.findByLabelText("Levels this fit never saw");
+
+    expect(section).toHaveTextContent("Not recorded");
+    expect(section).not.toHaveTextContent("None:");
+  });
+
+  it("lists, in words, a level the fit has no relativity for and what a quote does", async () => {
+    stub({
+      ...MODEL,
+      fit_result: {
+        ...MODEL.fit_result,
+        unseen_level_gaps: [
+          { factor: "age_band", level: "unknown", reached_by: ["null_value", "below_range"] },
+        ],
+      },
+    });
+    render(ModelDetailView, { props, ...mounted });
+    const section = await screen.findByLabelText("Levels this fit never saw");
+
+    expect(section).toHaveTextContent("age_band");
+    expect(section).toHaveTextContent("unknown");
+    expect(section).toHaveTextContent("a missing value or a value below the first boundary");
+    expect(section).toHaveTextContent("is refused");
+  });
+
+  it("says what an empty list examined, and that a plain categorical level is not in it", async () => {
+    // FR-2143: the list holds banded null levels and Grouping targets only, so "none" is scoped.
+    stub({ ...MODEL, fit_result: { ...MODEL.fit_result, unseen_level_gaps: [] } });
+    render(ModelDetailView, { props, ...mounted });
+    const section = await screen.findByLabelText("Levels this fit never saw");
+
+    expect(section).toHaveTextContent(
+      "None among the missing-value levels of banded factors and the target levels of groupings",
+    );
+    expect(section).toHaveTextContent("A plain categorical level the fit never saw is not listed here");
+    expect(section).toHaveTextContent("is refused");
+    expect(section).not.toHaveTextContent("saw every level its factors can produce");
+  });
+
+  it("says an older model has not recorded its interaction cells, never that there are none", async () => {
+    render(ModelDetailView, { props, ...mounted });
+    const section = await screen.findByLabelText("Interaction cells this fit never saw");
+
+    expect(section).toHaveTextContent("Not recorded");
+    expect(section).not.toHaveTextContent("no interaction term");
+  });
+
+  it("says a fit with no interaction term has none", async () => {
+    stub({ ...MODEL, fit_result: { ...MODEL.fit_result, unseen_cell_reports: [] } });
+    render(ModelDetailView, { props, ...mounted });
+    const section = await screen.findByLabelText("Interaction cells this fit never saw");
+
+    expect(section).toHaveTextContent("This fit has no interaction term");
+  });
+
+  it("names the unfitted cells of a cross, the count and the cap, and what a quote does", async () => {
+    stub({
+      ...MODEL,
+      fit_result: {
+        ...MODEL.fit_result,
+        unseen_cell_reports: [
+          { factor: "age_x_fuel", state: "examined", producible: 6, unfitted: 3,
+            examples: ["mid | Y", "unknown | X", "unknown | Y"], example_cap: 5 },
+        ],
+      },
+    });
+    render(ModelDetailView, { props, ...mounted });
+    const section = await screen.findByLabelText("Interaction cells this fit never saw");
+
+    expect(section).toHaveTextContent("3 of 6 cells");
+    expect(section).toHaveTextContent("at most 5 are shown");
+    expect(section).toHaveTextContent("mid | Y; unknown | X; unknown | Y");
+    expect(section).toHaveTextContent("is refused");
+  });
+
+  it("says a cross with every cell fitted has none unfitted", async () => {
+    stub({
+      ...MODEL,
+      fit_result: {
+        ...MODEL.fit_result,
+        unseen_cell_reports: [
+          { factor: "age_x_fuel", state: "examined", producible: 6, unfitted: 0,
+            examples: [], example_cap: 5 },
+        ],
+      },
+    });
+    render(ModelDetailView, { props, ...mounted });
+    const section = await screen.findByLabelText("Interaction cells this fit never saw");
+
+    expect(section).toHaveTextContent("all 6 cells");
+  });
+
+  it("says too many cells to name are not enumerated, and keeps the count", async () => {
+    stub({
+      ...MODEL,
+      fit_result: {
+        ...MODEL.fit_result,
+        unseen_cell_reports: [
+          { factor: "one_x_two", state: "count_only", producible: 10201, unfitted: 10200,
+            examples: [], example_cap: 5 },
+        ],
+      },
+    });
+    render(ModelDetailView, { props, ...mounted });
+    const section = await screen.findByLabelText("Interaction cells this fit never saw");
+
+    expect(section).toHaveTextContent("10200 of 10201 cells");
+    expect(section).toHaveTextContent("not enumerated");
+  });
+
+  it("says a lower bound is a floor, names pairings, and says unseen levels are not counted", async () => {
+    stub({
+      ...MODEL,
+      fit_result: {
+        ...MODEL.fit_result,
+        unseen_cell_reports: [
+          { factor: "area_x_fuel", state: "lower_bound", producible: 4, unfitted: 1,
+            examples: ["A | y"], example_cap: 5 },
+        ],
+      },
+    });
+    render(ModelDetailView, { props, ...mounted });
+    const section = await screen.findByLabelText("Interaction cells this fit never saw");
+
+    expect(section).toHaveTextContent("at least 1 combinations of levels this fit saw");
+    expect(section).toHaveTextContent("A | y");
+    expect(section).toHaveTextContent("is refused");
+    expect(section).toHaveTextContent("never saw at all are not counted");
+  });
+
+  it("says a full grid of seen levels has every combination fitted", async () => {
+    stub({
+      ...MODEL,
+      fit_result: {
+        ...MODEL.fit_result,
+        unseen_cell_reports: [
+          { factor: "area_x_fuel", state: "lower_bound", producible: 4, unfitted: 0,
+            examples: [], example_cap: 5 },
+        ],
+      },
+    });
+    render(ModelDetailView, { props, ...mounted });
+    const section = await screen.findByLabelText("Interaction cells this fit never saw");
+
+    expect(section).toHaveTextContent("every combination of the levels this fit saw");
+    expect(section).toHaveTextContent("never saw at all are not counted");
+  });
+
+  it("says a lower bound with too many pairings to name keeps the count", async () => {
+    stub({
+      ...MODEL,
+      fit_result: {
+        ...MODEL.fit_result,
+        unseen_cell_reports: [
+          { factor: "big_x_big", state: "lower_bound", producible: 90000, unfitted: 80000,
+            examples: [], example_cap: 5 },
+        ],
+      },
+    });
+    render(ModelDetailView, { props, ...mounted });
+    const section = await screen.findByLabelText("Interaction cells this fit never saw");
+
+    expect(section).toHaveTextContent("at least 80000 combinations");
+    expect(section).toHaveTextContent("not enumerated");
+  });
+
+  it("says a cross whose operands cannot be listed is not examined, with no count", async () => {
+    stub({
+      ...MODEL,
+      fit_result: {
+        ...MODEL.fit_result,
+        unseen_cell_reports: [
+          { factor: "area_x_fuel", state: "not_examined", producible: null, unfitted: null,
+            examples: [], example_cap: 5 },
+        ],
+      },
+    });
+    render(ModelDetailView, { props, ...mounted });
+    const section = await screen.findByLabelText("Interaction cells this fit never saw");
+
+    expect(section).toHaveTextContent("not examined");
+    expect(section).not.toHaveTextContent("cells its operands can produce have");
+  });
+
   it("says a reserved model is not yet fitted rather than showing an empty table", async () => {
     stub({ ...MODEL, status: "draft", fit_result: null });
     render(ModelDetailView, { props, ...mounted });

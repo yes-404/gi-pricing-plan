@@ -43,6 +43,8 @@ const slug = ref("");
 const intent = ref<FactorIntent>("risk");
 const direction = ref<MonotonicDirection>("none");
 const rationale = ref("");
+/** "" is the default: a level the fit never saw is refused (FR-2143). */
+const unseen = ref<"" | "map_to_base">("");
 const busy = ref(false);
 const problem = ref<ProblemError | null>(null);
 const created = ref<Factor | null>(null);
@@ -71,6 +73,7 @@ async function submit(): Promise<void> {
       // Omitted rather than sent empty when there is no direction: the field is
       // `str | None`, and "" is a rationale that says nothing.
       ...(rationaleRequired.value ? { monotonic_rationale: rationale.value.trim() } : {}),
+      ...(unseen.value ? { unseen_level_behaviour: unseen.value } : {}),
     });
     created.value = factor;
     emit("created", factor);
@@ -182,6 +185,31 @@ async function submit(): Promise<void> {
         rows="2"
         class="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm"
       />
+    </FormField>
+
+    <FormField
+      v-slot="{ describedby }"
+      field-id="factor-unseen"
+      label="A level the fit never saw"
+      help="Refuse is the default: a quote carrying such a level is not scored. Map to base
+            scores it as the base level. This includes the missing-value level of a banded
+            factor, and the out-of-range level where a banding maps out-of-range values to
+            it: if the fit had no such rows, an undeclared quote with a missing or
+            out-of-range value is refused."
+    >
+      <select
+        id="factor-unseen"
+        v-model="unseen"
+        :aria-describedby="describedby"
+        class="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+      >
+        <option value="">
+          Refuse
+        </option>
+        <option value="map_to_base">
+          Map to base
+        </option>
+      </select>
     </FormField>
 
     <button

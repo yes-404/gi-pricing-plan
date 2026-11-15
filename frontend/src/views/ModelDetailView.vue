@@ -62,6 +62,23 @@ const fitted = computed(() => model.value?.fit_result != null);
 
 const coefficients = computed<Coefficient[]>(() => fit.value?.coefficients ?? []);
 const relativities = computed(() => Object.entries(fit.value?.relativities ?? {}));
+
+/**
+ * FR-2143: each level a Factor can produce that this fit has no relativity for. `null` is "not
+ * recorded" (a model fitted before the report existed) and `[]` is "none": never one for the other.
+ */
+const REACH_WORDS: Record<string, string> = {
+  null_value: "a missing value",
+  below_range: "a value below the first boundary",
+  above_range: "a value above the last boundary",
+  grouping_target: "a Grouping target level",
+};
+const unseenGaps = computed(() => fit.value?.unseen_level_gaps ?? null);
+/** The interaction terms: `null` is "not recorded", `[]` is "no interaction term" (FR-2143). */
+const cellReports = computed(() => fit.value?.unseen_cell_reports ?? null);
+function reachedBy(reasons: readonly string[]): string {
+  return reasons.map((reason) => REACH_WORDS[reason] ?? reason).join(" or ");
+}
 const libraries = computed(() =>
   Object.entries(fit.value?.library_versions ?? {})
     .map(([name, version]) => `${name} ${version}`)
@@ -344,6 +361,117 @@ onMounted(async () => {
               </tr>
             </tbody>
           </table>
+        </section>
+
+        <section
+          v-if="fit"
+          class="mt-8"
+          aria-label="Levels this fit never saw"
+        >
+          <h2 class="text-sm font-semibold uppercase tracking-wide text-slate-500">
+            Levels this fit never saw
+          </h2>
+          <p
+            v-if="unseenGaps === null"
+            class="mt-2 text-sm text-slate-600"
+          >
+            Not recorded: this model was fitted before the report existed.
+          </p>
+          <p
+            v-else-if="unseenGaps.length === 0"
+            class="mt-2 text-sm text-slate-600"
+          >
+            None among the missing-value levels of banded factors and the target levels of
+            groupings. A plain categorical level the fit never saw is not listed here: a quote
+            with one is refused, unless the factor declares “map to base”.
+          </p>
+          <ul
+            v-else
+            class="mt-2 space-y-1 text-sm text-slate-700"
+          >
+            <li
+              v-for="gap in unseenGaps"
+              :key="`${gap.factor}/${gap.level}`"
+            >
+              {{ gap.factor }}: the level “{{ gap.level }}” is produced by
+              {{ reachedBy(gap.reached_by) }}, and this fit has no relativity for it. A quote
+              that reaches it is refused, unless the factor declares “map to base”.
+            </li>
+          </ul>
+        </section>
+
+        <section
+          v-if="fit"
+          class="mt-8"
+          aria-label="Interaction cells this fit never saw"
+        >
+          <h2 class="text-sm font-semibold uppercase tracking-wide text-slate-500">
+            Interaction cells this fit never saw
+          </h2>
+          <p
+            v-if="cellReports === null"
+            class="mt-2 text-sm text-slate-600"
+          >
+            Not recorded: this model was fitted before the report existed.
+          </p>
+          <p
+            v-else-if="cellReports.length === 0"
+            class="mt-2 text-sm text-slate-600"
+          >
+            This fit has no interaction term.
+          </p>
+          <ul
+            v-else
+            class="mt-2 space-y-1 text-sm text-slate-700"
+          >
+            <li
+              v-for="report in cellReports"
+              :key="report.factor"
+            >
+              <template v-if="report.state === 'not_examined'">
+                {{ report.factor }}: not examined. The cells cannot be computed from what the fit
+                holds (a nested interaction, a missing artifact, or a level that contains the cell
+                separator), so no cell is counted. A quote in an unseen cell is refused, unless
+                the factor declares “map to base”.
+              </template>
+              <template v-else-if="report.state === 'lower_bound'">
+                <template v-if="report.unfitted === 0">
+                  {{ report.factor }}: every combination of the levels this fit saw has a
+                  relativity.
+                </template>
+                <template v-else>
+                  {{ report.factor }}: at least {{ report.unfitted }} combinations of levels this
+                  fit saw have no relativity.
+                  <template v-if="report.examples.length > 0">
+                    The first {{ report.examples.length }} (at most {{ report.example_cap }} are
+                    shown): {{ report.examples.join("; ") }}.
+                  </template>
+                  <template v-else>
+                    There are too many to name (not enumerated).
+                  </template>
+                  A quote in such a combination is refused, unless the factor declares “map to
+                  base”.
+                </template>
+                Levels this fit never saw at all are not counted.
+              </template>
+              <template v-else-if="report.unfitted === 0">
+                {{ report.factor }}: all {{ report.producible }} cells its operands can produce
+                have a relativity in this fit.
+              </template>
+              <template v-else>
+                {{ report.factor }}: {{ report.unfitted }} of {{ report.producible }} cells its
+                operands can produce have no relativity in this fit.
+                <template v-if="report.state === 'count_only'">
+                  There are too many to name (not enumerated).
+                </template>
+                <template v-else>
+                  The first {{ report.examples.length }} (at most {{ report.example_cap }} are
+                  shown): {{ report.examples.join("; ") }}.
+                </template>
+                A quote in such a cell is refused, unless the factor declares “map to base”.
+              </template>
+            </li>
+          </ul>
         </section>
 
         <section
