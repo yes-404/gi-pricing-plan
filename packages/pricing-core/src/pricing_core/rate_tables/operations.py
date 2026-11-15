@@ -323,13 +323,15 @@ def _row_key(row: CellRow, key_names: Sequence[str], index: int | None = None) -
     """A row's key tuple, or a named refusal when the row lacks a declared key.
 
     FD-1357's hardening (`PL-1376` DP-6 (a)): a row shape that does not carry every
-    declared key is a `ValueError` naming the key, never a `KeyError`. The message is
-    plain prose, because `_map_operation_error` reads an `UPPER_SNAKE: ` prefix as a code.
+    declared key is a `CodedError` naming the row index and the key (through `_named`), never a
+    `KeyError` and never a cell value. The message is plain prose, because
+    `_map_operation_error` reads an `UPPER_SNAKE: ` prefix as a code; its fallback keeps the
+    text as VALIDATION_FAILED (#1712 row 3).
     """
     for key in key_names:
         if key not in row:
             where = f"row {index}" if index is not None else "a row"
-            raise ValueError(f"{where} lacks declared key {key!r}")
+            raise CodedError(f"{where} lacks declared key {_named(key)}")
     return tuple(row[key] for key in key_names)
 
 

@@ -136,3 +136,21 @@ def test_the_seed_still_succeeds_for_a_well_formed_factor() -> None:
         seeded_at=datetime(2026, 10, 3, 10, 0, tzinfo=UTC),
     )
     assert result.cells
+
+
+@pytest.mark.req("NFR-499")
+def test_the_missing_key_refusal_is_coded_and_names_the_row_and_key() -> None:
+    """`_row_key` refuses a row lacking a declared key with a `CodedError` naming the row index
+    and the key, and carrying no cell value (#1712 row 3)."""
+    from pricing_core.rate_tables.operations import _row_key
+    from pricing_core.safe_error import safe_error_detail
+
+    with pytest.raises(ValueError, match="lacks declared key") as caught:
+        _row_key({"region": _SENTINEL}, ["region", "band"], 3)
+    assert isinstance(caught.value, CodedError), "the allow-list keeps a CodedError's text"
+    detail = safe_error_detail(caught.value)
+    assert "row 3" in detail
+    assert "'band'" in detail
+    assert _SENTINEL not in detail
+    with pytest.raises(CodedError, match="a row lacks declared key 'band'"):
+        _row_key({"region": "x"}, ["region", "band"])

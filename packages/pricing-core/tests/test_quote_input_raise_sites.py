@@ -102,6 +102,9 @@ _INPUT_FREE = {
     # test_rate_table_seed_refusals.py.
     ("rate_tables/operations.py", "seed_from_model"): 6,
     ("rate_tables/operations.py", "_glm_relativities"): 1,
+    # the missing-key refusal names the row index and the declared key only, never a cell value
+    # (`test_the_missing_key_refusal_is_coded_and_names_the_row_and_key` drives it)
+    ("rate_tables/operations.py", "_row_key"): 1,
     ("rating/runtime.py", "_check_graph_matches_inlined_algorithm"): 1,  # a node id
     # FR-193 / FR-243 (#1741): the load-time refusal of a GLM level indicator its Factor cannot
     # produce. It reads no row: the text is the code, the Bundle ref, the term and the Factor
