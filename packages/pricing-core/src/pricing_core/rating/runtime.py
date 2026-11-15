@@ -69,8 +69,10 @@ from pricing_core.modelling.errors import ModellingError
 from pricing_core.modelling.factors import consumed_features, required_model_inputs
 from pricing_core.modelling.gbm import GbmFitError, load_gbm_booster, predict_gbm
 from pricing_core.modelling.predict import (
+    GlmRowPlan,
     PredictionError,
     check_term_domains,
+    fitted_levels,
     linear_predictor_row,
     predict_glm_row,
 )
@@ -946,11 +948,16 @@ class _GlmScorer:
     groupings: Mapping[Any, Grouping]
     columns: Mapping[str, str]
     offset_source: _GlmScorer | None
+    #: `fitted_levels(fit)`, built once at hydrate, so a quote pays one set lookup per factor.
+    seen: Mapping[str, frozenset[str]] | None = None
+    #: The one-row path's per-scorer derivation (`GlmRowPlan`): the behaviours map, the parsed dummy
+    #: terms and the producible-level verdicts, built once at hydrate (FR-2143).
+    plan: GlmRowPlan | None = None
 
     def linear_predictor_row(self, row: Mapping[str, Any]) -> Any:
         return linear_predictor_row(
             self.fit, row, self.factors, self.spec, bandings=self.bandings,
-            groupings=self.groupings,
+            groupings=self.groupings, seen=self.seen, plan=self.plan,
         )
 
     def predict(self, feature_row: Mapping[str, Any]) -> float:
@@ -975,7 +982,7 @@ class _GlmScorer:
         )
         return predict_glm_row(
             self.fit, row, self.factors, self.spec, model_offset=model_offset,
-            bandings=self.bandings, groupings=self.groupings,
+            bandings=self.bandings, groupings=self.groupings, seen=self.seen, plan=self.plan,
         )
 
 
@@ -1034,7 +1041,10 @@ def _glm_scorer(ref: str, payloads: Mapping[str, Any]) -> _GlmScorer:
     columns = {f.slug: f.source_columns[0] for f in factors if len(f.source_columns) == 1}
     if source is not None:
         columns = {**source.columns, **columns}
-    return _GlmScorer(fit, spec, factors, bandings, groupings, columns, source)
+    return _GlmScorer(
+        fit, spec, factors, bandings, groupings, columns, source, fitted_levels(fit),
+        GlmRowPlan(fit, factors),
+    )
 
 
 def _load_glm_scorers(
