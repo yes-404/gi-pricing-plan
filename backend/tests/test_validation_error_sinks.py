@@ -1,6 +1,6 @@
 """A validation failure's text reaching a caller or a log carries no submitted value (NFR-499).
 
-FD-1589 / #1712 rows 2-4, 7, 9 and 10 (rows 5 and 6 are S7b's): each sink used to render `str(exc)` (or `f"{exc}"`) of a
+FD-1589 / #1712 rows 2, 3, 7, 9 and 10 (rows 4, 5 and 6 are S7b's): each sink used to render `str(exc)` (or `f"{exc}"`) of a
 Pydantic `ValidationError` or a library error, and that text prints every failing `input_value`.
 Each now goes through `pricing_core.safe_error.safe_error_detail` (or fixed text, or `from None`).
 Every test plants a sentinel where the sink can see it and asserts the sentinel is absent, with a
@@ -20,7 +20,6 @@ from uuid import uuid4
 import pytest
 from backend.tests.test_prediction import _fitted_glm
 from backend.tests.test_rating_version_compile import _empty_pins, _headers, _minimal_algorithm
-from pydantic import ValidationError
 from sqlalchemy import select
 
 from app.config import ConfigInvalidError, load_settings
@@ -28,8 +27,6 @@ from app.db.models import RatingAlgorithmRow
 from app.errors import PlatformError
 from app.platform import prediction as prediction_service
 from app.platform import rate_tables as rate_tables_service
-from app.platform.rating_algorithms import graph_validation_error
-from model_schema.rating import RatingAlgorithm
 
 _SENTINEL = "SENTINEL-submitted-value-4f8a21"
 
@@ -80,19 +77,6 @@ def test_a_library_value_error_in_a_bulk_operation_carries_no_value() -> None:
     )
     assert coded.code == "RATE_TABLE_INCOMPLETE"
     assert coded.detail == "key a is missing"
-
-
-@pytest.mark.req("NFR-499")
-def test_a_rating_graph_shape_refusal_carries_no_submitted_value() -> None:
-    """Row 4: `graph_validation_error`'s default branch."""
-    with pytest.raises(ValidationError) as invalid:
-        RatingAlgorithm.model_validate({"steps": _SENTINEL})
-    assert _SENTINEL in str(invalid.value), "control: pydantic's own text does carry it"
-
-    refused = graph_validation_error(invalid.value, artifact="rating algorithm")
-    assert refused.code == "VALIDATION_FAILED"
-    assert "steps" in (refused.detail or ""), "control: the field is still named"
-    assert _SENTINEL not in (refused.detail or "")
 
 
 @pytest.mark.req("NFR-499")

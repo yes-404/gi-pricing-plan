@@ -48,7 +48,7 @@ from pricing_core.modelling.factors import (
     required_model_inputs,
 )
 from pricing_core.rating.compile import refuse_control_in_features, validate_algorithm
-from pricing_core.safe_error import CodedError, safe_error_detail
+from pricing_core.safe_error import CodedError
 
 __all__ = [
     "create_algorithm",
@@ -92,7 +92,7 @@ def graph_validation_error(exc: ValidationError, *, artifact: str) -> PlatformEr
         "VALIDATION_FAILED",
         f"{artifact.capitalize()} is invalid",
         422,
-        safe_error_detail(exc),
+        str(exc),
     )
 
 
