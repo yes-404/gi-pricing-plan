@@ -122,7 +122,9 @@ def assert_identical(world: World, row: Mapping[str, Any], model_offset: Any = N
 # --- the synthetic world: every supported factor kind -----------------------------------------
 
 
-def _book(n: int = 3_000, seed: int = 20261017) -> pl.DataFrame:
+def _book(n: int = 3_000, seed: int = 20261017, *, nulls: bool = True) -> pl.DataFrame:
+    """`nulls` leaves one row in fifty with no `driver_age`, so the fit learns the age Banding's
+    `null_level`; without it the fit never reaches that level (FR-2143)."""
     rng = np.random.default_rng(seed)
     age = rng.integers(18, 78, n).astype(float)
     veh_age = rng.integers(0, 20, n).astype(float)
@@ -135,12 +137,20 @@ def _book(n: int = 3_000, seed: int = 20261017) -> pl.DataFrame:
         0.08 * np.where(age < 30, 1.5, 1.0) * np.where(np.isin(region, ["S1", "S2"]), 1.3, 1.0)
         * np.where(fuel == "diesel", 0.9, 1.0) * (1 + value / 200_000.0)
     )
-    return pl.DataFrame(
+    book = pl.DataFrame(
         {
             "driver_age": age, "veh_age": veh_age, "region": region, "brand": brand,
             "fuel": fuel, "vehicle_value": value, "exposure_years": exposure,
             "claim_count": rng.poisson(rate * exposure).astype(float),
         }
+    )
+    if not nulls:
+        return book
+    # Only SOUTH rows (S1, S2) lack an age: the learned null level is ONE cell of the cross.
+    return book.with_columns(
+        pl.when((pl.int_range(pl.len()) % 50 == 0) & pl.col("region").is_in(["S1", "S2"]))
+        .then(None)
+        .otherwise(pl.col("driver_age")).alias("driver_age")
     )
 
 
@@ -153,7 +163,7 @@ def _factor(slug: str, column: str | None, **over: Any) -> Factor:
     return Factor(**base)
 
 
-def _synthetic_world() -> World:
+def _synthetic_world(*, nulls: bool = True) -> World:
     age_banding = Banding(
         id=uuid4(), slug="age-steps", dataset_id=DATASET, version=1, column="driver_age",
         method=BandingMethod.MANUAL, boundaries=(18.0, 30.0, 45.0, 60.0, 78.0),
@@ -200,7 +210,9 @@ def _synthetic_world() -> World:
     )
     bandings = {age_banding.id: age_banding, veh_banding.id: veh_banding}
     groupings = {region_grouping.id: region_grouping, brand_grouping.id: brand_grouping}
-    fit = fit_glm(_book(), spec, list(factors), bandings=bandings, groupings=groupings)
+    fit = fit_glm(
+        _book(nulls=nulls), spec, list(factors), bandings=bandings, groupings=groupings
+    )
     return World(fit.result, spec, factors, bandings, groupings)
 
 
@@ -236,6 +248,57 @@ def test_every_factor_kind_scores_bit_identically(world: World, quote: dict[str,
         FactorType.IDENTITY, FactorType.BANDING, FactorType.GROUPING, FactorType.INTERACTION
     }
     assert_identical(world, quote)
+
+
+@pytest.mark.req("FR-2143")
+def test_a_fit_that_learned_the_null_level_scores_a_null_quote_at_its_relativity(
+    world: World,
+) -> None:
+    """The world's rows include nulls, so the fit learned the null level and a null quote scores
+    at that estimate, on both paths, bit-identical, with nothing declared. (The cross
+    `age_x_region` carries the age and region effects, so the learned level is ONE cell,
+    `age_x_region[unknown | SOUTH]`. This is not "nulls now price": a null quote in another
+    region still lands on an unseen cell and is refused unless declared, see
+    `test_a_null_quote_in_a_region_the_fit_saw_no_null_in_is_still_refused`.)"""
+    null_quote = QUOTES[5]  # region S1 is SOUTH
+    assert null_quote["driver_age"] is None
+    term = next(
+        (c for c in world.fit.coefficients if c.term == "age_x_region[unknown | SOUTH]"), None
+    )
+    assert term is not None
+    assert_identical(world, null_quote)
+    # at that relativity: the quote's linear predictor includes the learned estimate
+    eta = world.scalar_eta(null_quote)[0]
+    assert eta != eta - term.estimate
+
+
+def test_a_null_quote_in_a_region_the_fit_saw_no_null_in_is_still_refused(world: World) -> None:
+    """The nulls in the book are SOUTH only, so `unknown | NORTH` is a cell the fit never saw:
+    a null quote in region N1 is refused on both paths with the one code, undeclared."""
+    north_null = {**QUOTES[5], "region": "N1"}
+    assert north_null["driver_age"] is None
+    assert "age_x_region[unknown | NORTH]" not in {c.term for c in world.fit.coefficients}
+    assert _code(lambda: world.frame(north_null)) == "UNSEEN_LEVEL_BEHAVIOUR_REQUIRED"
+    assert _code(lambda: world.scalar(north_null)) == "UNSEEN_LEVEL_BEHAVIOUR_REQUIRED"
+
+
+def test_a_null_level_quote_is_refused_when_the_fit_never_saw_it() -> None:
+    """A fit on rows with no null never learned the level (FR-2143): both paths refuse a null
+    quote with the one code, and score it as the base once the Factors declare `map_to_base`."""
+    unlearned = _synthetic_world(nulls=False)
+    null_quote = QUOTES[5]
+    assert _code(lambda: unlearned.frame(null_quote)) == "UNSEEN_LEVEL_BEHAVIOUR_REQUIRED"
+    assert _code(lambda: unlearned.scalar(null_quote)) == "UNSEEN_LEVEL_BEHAVIOUR_REQUIRED"
+    declared = World(
+        unlearned.fit, unlearned.spec,
+        tuple(
+            f.model_copy(update={"unseen_level_behaviour": UnseenLevelBehaviour.MAP_TO_BASE})
+            if f.slug in {"age_band", "age_x_region"} else f
+            for f in unlearned.factors
+        ),
+        unlearned.bandings, unlearned.groupings,
+    )
+    assert_identical(declared, null_quote)
 
 
 @pytest.mark.req("FR-193")

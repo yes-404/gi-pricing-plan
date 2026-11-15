@@ -135,6 +135,29 @@ docker compose -f deploy/docker-compose.yml --profile app up -d --wait --scale a
   0.17.0 that `compose build` needs. A bare `--profile app up` starts `frontend`, so build its image
   first.
 
+- **Upgrading to the build that applies a Factor's `unseen_level_behaviour`** (`02` FR-2143): a
+  GLM `model_call` refuses a quote carrying a level of a categorical Factor that its fit never
+  saw, unless the Factor declares `map_to_base`. **Before upgrading, run the sweep**, a read-only
+  script that lists the stored versions that can refuse such quotes:
+  `uv run python scripts/sweep-unseen-levels.py [--dsn <read-only URL>] [--workspace <id>]`. It
+  prints its denominators first, then one line per version and class (reference only, never a
+  level or a hash), and exits 0 (none reachable), 1 (a version is reachable), 2 (a bundle could
+  not be read), 3 (no version with a bundle was found, so nothing was checked), 64 (an argument
+  error) or 70 (the sweep itself failed: it prints the exception's type only; never read 70 as
+  clean or as reachable). A version whose GLM has an indicator term for a level its numeric input
+  can never produce refuses EVERY quote on that path, not only the affected values; the sweep
+  lists such versions as `NOTEXAMINED-NUMERIC-TERMS` until their models are refitted (the line
+  lists every identity label that starts like a number, so it is a floor on what the tool
+  examined, not a count of faults). The NOTEXAMINED lines are information: they never change the
+  exit code. The sweep classifies each model in a bundle by its model type: a GLM is examined; a
+  model of another family (a GBM or an EBM) keeps the `02` FR-131 refusal whatever a Factor
+  declares, is not examined, and is counted on the `not-examined-other-family` line; a model with
+  no fit result, no model type or an unknown one makes its version unreadable (exit 2). Every
+  unreadable line names the version and either a fixed reason word or the exception's type, never
+  its text. A version it
+  lists will refuse the quotes it names until a new model is approved: a declaration changes only
+  by a new Factor version, a refit and a new Rating Version. A batch carrying many such rows can
+  abort above `rating.batch_abort_failure_rate`.
 - **Upgrading to the build that refuses a stored bundle on a `control` operand** (WK-2113 S3,
   FD-1495): a stored Rating Version compiled before the `control`-intent guards existed is now
   refused wherever it is hydrated, and a deploy, a rollback or a deployment request for it is

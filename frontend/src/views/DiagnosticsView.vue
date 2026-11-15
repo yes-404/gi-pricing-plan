@@ -36,6 +36,20 @@ const universal = computed(() =>
   diagnostics.value ? partitions(diagnostics.value.universal) : [],
 );
 
+/**
+ * FR-2143: rows left out of a partition because a factor that does not declare “map to base”
+ * carries a level the fit has no relativity for. `null` is "not recorded" (a fit stored ahead of
+ * the rule), `0` is "none": never one for the other. A GLM's fit only: a GBM or an EBM refuses
+ * such a level whatever is declared, and its diagnostics never record these counts.
+ */
+const unseenRows = computed(() =>
+  universal.value.map(([label, partition]) => {
+    const rows = partition.rows_excluded_unseen_level ?? null;
+    const exposure = partition.exposure_excluded_unseen_level ?? null;
+    return { label, rows, exposure };
+  }),
+);
+
 const headline = computed(() => {
   const pair = universal.value;
   if (pair.length === 0) return [];
@@ -202,6 +216,36 @@ onMounted(async () => {
             </tr>
           </tbody>
         </table>
+
+        <section
+          v-if="diagnostics.glm"
+          aria-label="Rows on a level this fit never saw"
+          class="mt-4 text-sm text-slate-700"
+        >
+          <h3 class="font-medium">
+            Rows on a level this fit never saw
+          </h3>
+          <ul class="mt-1 space-y-1">
+            <li
+              v-for="note in unseenRows"
+              :key="note.label"
+            >
+              <template v-if="note.rows === null">
+                {{ note.label }}: not recorded.
+              </template>
+              <template v-else-if="note.rows === 0">
+                {{ note.label }}: none left out.
+              </template>
+              <template v-else>
+                {{ note.label }}: {{ note.rows }} rows (exposure {{ note.exposure }}) are left out of
+                every figure on this page.
+              </template>
+            </li>
+          </ul>
+          <p class="mt-1">
+            A quote with such a level is refused, unless the factor declares “map to base”.
+          </p>
+        </section>
 
         <AeByFactorChart :partitions="universal" />
         <LiftChart :partitions="universal" />

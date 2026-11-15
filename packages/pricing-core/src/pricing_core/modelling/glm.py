@@ -22,13 +22,14 @@ What this module owes its caller, in the spec's own terms:
 from __future__ import annotations
 
 import hashlib
+import itertools
 import json
 import math
 import time
 import warnings
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Literal
 from uuid import UUID
 
 import numpy as np
@@ -37,24 +38,31 @@ import polars as pl
 from scipy import stats
 
 from model_schema import (
+    AboveRangePolicy,
     Banding,
+    BelowRangePolicy,
     BlobRef,
     Coefficient,
     CrossValidationDiagnostics,
     CvFoldMetric,
     CvPathPoint,
     Factor,
+    FactorType,
     GlmFitResult,
     GlmSpec,
     Grouping,
     RelativityLevel,
     TweediePowerFit,
     TweedieProfilePoint,
+    UnseenCellReport,
+    UnseenCellState,
+    UnseenLevelGap,
+    UnseenLevelReach,
 )
 from pricing_core.data.splits import assign_folds
 from pricing_core.modelling.bandings import check_fit_bandings
 from pricing_core.modelling.diagnostics import deviance
-from pricing_core.modelling.factors import FactorMatrix, resolve_factors
+from pricing_core.modelling.factors import CROSS_SEPARATOR, FactorMatrix, resolve_factors
 from pricing_core.modelling.loss_treatment import apply_loss_treatment
 from pricing_core.modelling.tweedie_density import tweedie_log_density
 from pricing_core.modelling.weights import require_usable_weights
@@ -770,6 +778,8 @@ def fit_glm(
     _refuse_separation(coefficients)
     report.update(0.95, "relativity tables")
     relativities = _relativities(matrix, levels, coefficients, spec, link=spec.link)
+    unseen_level_gaps = _unseen_level_gaps(relativities, factors, bandings, groupings)
+    unseen_cell_reports = _unseen_cell_reports(relativities, factors, bandings, groupings)
 
     covariance_bytes = encode_covariance(["intercept", *design.columns], covariance)
 
@@ -788,10 +798,156 @@ def fit_glm(
             library_versions=_versions(),
             covariance_blob=_covariance_ref(covariance_bytes),
             tweedie=tweedie_fit,
+            unseen_level_gaps=unseen_level_gaps,
+            unseen_cell_reports=unseen_cell_reports,
         ),
         covariance_bytes=covariance_bytes,
         cv=cv_diagnostics,
     )
+
+
+#: The most unfitted cells named per interaction term, and the most producible cells enumerated
+#: to name them (above it the report carries the count only). Both are stated in the view.
+_CELL_EXAMPLE_CAP = 5
+_CELL_ENUMERATION_LIMIT = 10_000
+
+
+def _operand_levels(
+    factor: Factor,
+    bandings: Mapping[UUID, Banding] | None,
+    groupings: Mapping[UUID, Grouping] | None,
+) -> list[str] | Literal["open"] | None:
+    """Every level an operand can produce; `"open"` when its levels are the data's (an IDENTITY
+    or unbanded operand: only the levels the cross's own cells show can be known); `None` when it
+    cannot be computed at all (a nested interaction, or an artifact the caller did not supply)."""
+    if factor.type is FactorType.INTERACTION:
+        return None
+    if factor.banding_id is not None and factor.type in (FactorType.BANDING, FactorType.EXPRESSION):
+        banding = (bandings or {}).get(factor.banding_id)
+        if banding is None:
+            return None
+        extra = [] if banding.null_level is None else [banding.null_level]
+        return sorted({*banding.labels, *extra})
+    if factor.type is FactorType.GROUPING and factor.grouping_id is not None:
+        grouping = (groupings or {}).get(factor.grouping_id)
+        return None if grouping is None else sorted(grouping.target_levels)
+    return "open"
+
+
+def _unseen_cell_reports(
+    relativities: Mapping[str, Sequence[RelativityLevel]],
+    factors: Sequence[Factor],
+    bandings: Mapping[UUID, Banding] | None,
+    groupings: Mapping[UUID, Grouping] | None,
+) -> tuple[UnseenCellReport, ...]:
+    """One report per `interaction` Factor: the cells its operands can produce that the fit has
+    no relativity for (FR-2143). Every term is reported. An operand whose levels are the data's
+    (IDENTITY) cannot be listed, so its levels are taken from the cross's own fitted cells and the
+    report is
+    a `lower_bound`: pairings of levels the fit saw separately and never together. Levels the fit
+    never saw at all are not counted. `not_examined` stays for what cannot be computed: a nested
+    interaction, an artifact not supplied, a level holding the separator."""
+    by_id = {f.id: f for f in factors}
+    reports: list[UnseenCellReport] = []
+    for factor in factors:
+        if factor.type is not FactorType.INTERACTION:
+            continue
+        operands = [by_id.get(i) for i in factor.operand_factor_ids]
+        raw = [
+            None if operand is None else _operand_levels(operand, bandings, groupings)
+            for operand in operands
+        ]
+        fitted = {entry.level for entry in relativities.get(factor.slug, ())}
+        split = [cell.split(CROSS_SEPARATOR) for cell in fitted]
+        if (
+            any(domain is None for domain in raw)
+            # a level that itself holds the separator makes a cell ambiguous to split
+            or any(len(parts) != len(raw) for parts in split)
+        ):
+            reports.append(
+                UnseenCellReport(
+                    factor=factor.slug, state=UnseenCellState.NOT_EXAMINED,
+                    example_cap=_CELL_EXAMPLE_CAP,
+                )
+            )
+            continue
+        lower_bound = any(domain == "open" for domain in raw)
+        domains = [
+            sorted({parts[i] for parts in split}) if domain == "open" else list(domain or ())
+            for i, domain in enumerate(raw)
+        ]
+        sets = [set(domain) for domain in domains]
+        producible = math.prod(len(s) for s in sets)
+        inside = sum(
+            all(part in s for part, s in zip(parts, sets, strict=True)) for parts in split
+        )
+        examples: tuple[str, ...] = ()
+        state = UnseenCellState.LOWER_BOUND if lower_bound else UnseenCellState.COUNT_ONLY
+        if producible <= _CELL_ENUMERATION_LIMIT:
+            state = UnseenCellState.LOWER_BOUND if lower_bound else UnseenCellState.EXAMINED
+            examples = tuple(
+                itertools.islice(
+                    (
+                        cell
+                        for parts in itertools.product(*domains)
+                        if (cell := CROSS_SEPARATOR.join(parts)) not in fitted
+                    ),
+                    _CELL_EXAMPLE_CAP,
+                )
+            )
+        reports.append(
+            UnseenCellReport(
+                factor=factor.slug, state=state, producible=producible,
+                unfitted=producible - inside, examples=examples, example_cap=_CELL_EXAMPLE_CAP,
+            )
+        )
+    return tuple(reports)
+
+
+def _unseen_level_gaps(
+    relativities: Mapping[str, Sequence[RelativityLevel]],
+    factors: Sequence[Factor],
+    bandings: Mapping[UUID, Banding] | None,
+    groupings: Mapping[UUID, Grouping] | None,
+) -> tuple[UnseenLevelGap, ...]:
+    """Each level a Factor can produce that the fit has no relativity for (FR-2143).
+
+    A Banding's labels are all fitted (FR-100 refuses an empty band), but its `null_level` is
+    not checked there: a fit on in-range, non-null rows has no relativity for it, and a null or
+    out-of-range quote lands on it. A Grouping's target levels are listed the same way. An
+    `interaction`'s cells are reported by `_unseen_cell_reports`."""
+    gaps: list[UnseenLevelGap] = []
+    for factor in factors:
+        fitted = {entry.level for entry in relativities.get(factor.slug, ())}
+        if factor.slug not in relativities:
+            continue
+        banding = (bandings or {}).get(factor.banding_id) if factor.banding_id else None
+        if (
+            banding is not None
+            and banding.null_level is not None
+            and banding.null_level not in fitted
+        ):
+            reached = [UnseenLevelReach.NULL_VALUE]
+            if banding.below_range is BelowRangePolicy.NULL_LEVEL:
+                reached.append(UnseenLevelReach.BELOW_RANGE)
+            if banding.above_range is AboveRangePolicy.NULL_LEVEL:
+                reached.append(UnseenLevelReach.ABOVE_RANGE)
+            gaps.append(
+                UnseenLevelGap(
+                    factor=factor.slug, level=banding.null_level, reached_by=tuple(reached)
+                )
+            )
+        grouping = (groupings or {}).get(factor.grouping_id) if factor.grouping_id else None
+        if grouping is not None:
+            gaps.extend(
+                UnseenLevelGap(
+                    factor=factor.slug, level=level,
+                    reached_by=(UnseenLevelReach.GROUPING_TARGET,),
+                )
+                for level in sorted(grouping.target_levels)
+                if level not in fitted
+            )
+    return tuple(gaps)
 
 
 def _covariance(
