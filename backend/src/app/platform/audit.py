@@ -15,40 +15,51 @@ workspaces have independent chains and must not queue behind each other.
 
 from __future__ import annotations
 
+import base64
+import hashlib
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any, Final
 from uuid import UUID
 
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.models import AuditEventRow
+from app.db.models import AuditEventRow, WorkspaceRow
+from app.observability.logging import get_logger
 from app.observability.trace import current_trace_id
 from model_schema import (
+    AnchorStatement,
     ArtifactHistory,
     ArtifactHistoryEntry,
     ArtifactRef,
+    AuditAnchor,
     AuditEvent,
     AuditEventCore,
     FieldChange,
     JobSource,
     Principal,
     StatusTransition,
+    anchor_statement_bytes,
     compute_event_hash,
     new_uuid7,
 )
+from model_schema.audit import HASH_PREFIX
 
 __all__ = [
+    "ANCHORED_ACTION",
     "RETURNED_LEGACY_ACTIONS",
     "ChainBrokenError",
     "VerifiedSpan",
+    "anchor",
     "artifact_history",
     "current_action_of",
     "field_diff",
     "record",
     "verify_chain",
     "verify_range",
+    "workspace_entity_ref",
 ]
 
 #: C1 (#1783): a return from review is `<type>.returned`. Before it, these four types wrote
@@ -61,6 +72,11 @@ RETURNED_LEGACY_ACTIONS: Final = {
     "custom_metric.returned": "custom_metric.certified",
     "peril_structure.returned": "peril_structure.reconciled",
 }
+
+_log = get_logger("app.platform.audit")
+
+#: The checkpoint event FR-373 (3) appends: the chain's own record of an anchor.
+ANCHORED_ACTION: Final = "audit.anchored"
 
 # Namespace for pg_advisory_xact_lock, so the audit chain lock cannot collide with any
 # other advisory lock the platform takes later.
@@ -114,14 +130,7 @@ async def record(
             "record and the change able to disagree. Use Database.unit_of_work()."
         )
 
-    # Serialise appends for this workspace only. Transaction-scoped, so it releases on
-    # commit or rollback without an explicit unlock — an unlock that a failure path could
-    # skip would deadlock every later write to the workspace.
-    await session.execute(
-        text("SELECT pg_advisory_xact_lock(:ns, :key)").bindparams(
-            ns=_LOCK_NAMESPACE, key=_workspace_lock_key(workspace_id)
-        )
-    )
+    await _lock_workspace(session, workspace_id)
 
     head = (
         await session.execute(
@@ -182,6 +191,20 @@ async def record(
 
     return AuditEvent(
         **core.model_dump(), prev_event_hash=prev_hash, event_hash=event_hash
+    )
+
+
+async def _lock_workspace(session: AsyncSession, workspace_id: UUID) -> None:
+    """Serialise appends for this workspace only.
+
+    Transaction-scoped, so it releases on commit or rollback without an explicit unlock — an
+    unlock that a failure path could skip would deadlock every later write to the workspace.
+    Re-entrant within one transaction, so `anchor()` takes it before `record()` does.
+    """
+    await session.execute(
+        text("SELECT pg_advisory_xact_lock(:ns, :key)").bindparams(
+            ns=_LOCK_NAMESPACE, key=_workspace_lock_key(workspace_id)
+        )
     )
 
 
@@ -343,6 +366,108 @@ async def verify_range(
         events_checked=checked,
         whole_chain=whole,
     )
+
+
+async def anchor(
+    session: AsyncSession,
+    *,
+    workspace_id: UUID,
+    key: Ed25519PrivateKey,
+    actor: Principal,
+    source: JobSource,
+) -> AuditAnchor:
+    """Sign the workspace's chain head and append the `audit.anchored` checkpoint (FR-373).
+
+    Verify `1..N` **without** the workspace lock (rows up to N cannot change through the
+    application, FR-370, and a whole-chain verify under the lock would block every write),
+    then take the lock, re-read that row N's hash is the one that was verified, and sign N
+    and append under it. It never signs a later head than the one it verified. A chain that
+    does not verify raises `ChainBrokenError`, signs nothing and appends nothing: appending to
+    a broken chain is not evidence of anything, so the refusal is logged (the sequence only,
+    never the key) and the caller gets the 409.
+    """
+    head = (
+        await session.execute(
+            select(AuditEventRow.sequence, AuditEventRow.id, AuditEventRow.event_hash)
+            .where(AuditEventRow.workspace_id == workspace_id)
+            .order_by(AuditEventRow.sequence.desc())
+            .limit(1)
+        )
+    ).first()
+    try:
+        await verify_range(session, workspace_id)
+        head_sequence, head_hash = (head[0], head[2]) if head else (0, None)
+        await _lock_workspace(session, workspace_id)
+        if head is not None:
+            current = (
+                await session.execute(
+                    select(AuditEventRow.event_hash).where(
+                        AuditEventRow.workspace_id == workspace_id,
+                        AuditEventRow.sequence == head_sequence,
+                    )
+                )
+            ).scalar()
+            if current != head_hash:
+                raise ChainBrokenError(
+                    head[1], head_sequence, "head event changed after it was verified"
+                )
+    except ChainBrokenError as exc:
+        _log.error(
+            "audit anchor refused: the chain does not verify",
+            extra={"workspace_id": str(workspace_id), "sequence": exc.sequence},
+        )
+        raise
+
+    slug = (
+        await session.execute(select(WorkspaceRow.slug).where(WorkspaceRow.id == workspace_id))
+    ).scalar_one()
+    previous_key_id = (
+        await session.execute(
+            select(AuditEventRow.after["statement"]["key_id"].astext)
+            .where(
+                AuditEventRow.workspace_id == workspace_id,
+                AuditEventRow.action == ANCHORED_ACTION,
+            )
+            .order_by(AuditEventRow.sequence.desc())
+            .limit(1)
+        )
+    ).scalar()
+    raw_public = key.public_key().public_bytes_raw()
+    statement = AnchorStatement(
+        workspace_id=workspace_id,
+        head_sequence=head_sequence,
+        head_event_hash=head_hash,
+        anchored_at=(await session.execute(select(func.now()))).scalar_one().astimezone(UTC),
+        key_id=f"{HASH_PREFIX}{hashlib.sha256(raw_public).hexdigest()}",
+        previous_key_id=previous_key_id,
+    )
+    anchored = AuditAnchor(
+        statement=statement,
+        public_key=base64.b64encode(raw_public).decode("ascii"),
+        signature=base64.b64encode(key.sign(anchor_statement_bytes(statement))).decode("ascii"),
+    )
+    await record(
+        session,
+        workspace_id=workspace_id,
+        actor=actor,
+        source=source,
+        action=ANCHORED_ACTION,
+        entity_ref=workspace_entity_ref(slug),
+        after=anchored.model_dump(mode="json"),
+    )
+    return anchored
+
+
+def workspace_entity_ref(slug: str) -> str:
+    """The `entity_ref` of an event about a workspace: `workspace:<slug>@1` (FR-369).
+
+    FR-369 names `{type}:{slug}@{version}`, and #1497 decided `@1` for an artifact that has no
+    version. Every writer of a workspace event uses this, so an export that parses the column
+    meets one spelling of one workspace: the switch (`workspace_switch`) and the anchor.
+    `workspace` is not in `ARTIFACT_TYPES`, so the string does not parse as an `ArtifactRef`
+    (`OQ-653`); that is the column's normal condition, not a reason for a second form.
+    """
+    return f"workspace:{slug}@1"
 
 
 def _flatten(value: dict[str, Any] | None, prefix: str = "") -> dict[str, Any]:

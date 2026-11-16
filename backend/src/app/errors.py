@@ -311,6 +311,9 @@ GOVERNANCE_ERROR_CODES: Final[frozenset[str]] = frozenset(
         "WITHDRAW_AFTER_DEPLOY_FORBIDDEN",
         "BREAK_GLASS_REASON_REQUIRED",
         "AUDIT_CHAIN_BROKEN",
+        # `06` FR-373, #1839: 503. The deployment has no anchor signing key configured: a
+        # capability that is absent, not a client error.
+        "AUDIT_ANCHOR_KEY_UNCONFIGURED",
         "ATTESTATION_OVERDUE",
         # FR-386. A well-formed reference to an artifact type no module in this
         # build can resolve — `rating_version` has a policy entry and no module

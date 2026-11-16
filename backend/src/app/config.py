@@ -16,6 +16,9 @@ import os
 import re
 from typing import Annotated, Any, Literal
 
+from cryptography.exceptions import UnsupportedAlgorithm
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from pydantic import Field, SecretStr, ValidationError, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -25,6 +28,7 @@ __all__ = [
     "SettingResolution",
     "SettingSource",
     "Settings",
+    "load_anchor_signing_key",
     "load_settings",
 ]
 
@@ -82,6 +86,25 @@ class ConfigInvalidError(RuntimeError):
     """
 
     code = "SETTING_INVALID"
+
+
+def load_anchor_signing_key(pem: SecretStr) -> Ed25519PrivateKey:
+    """The Ed25519 private key in `pem` (FR-373 (2)), or `ConfigInvalidError`.
+
+    The one loader: the setting's validator calls it at start-up, and the anchor route calls
+    it to sign, so the key that was checked is the key that is used.
+    """
+    refusal = ConfigInvalidError(
+        "GIP_AUDIT_ANCHOR_SIGNING_KEY is set but is not an unencrypted PKCS#8 PEM Ed25519 "
+        "private key (FR-373). Generate one with `openssl genpkey -algorithm ed25519`."
+    )
+    try:
+        key = serialization.load_pem_private_key(pem.get_secret_value().encode(), password=None)
+    except (ValueError, TypeError, UnsupportedAlgorithm):
+        raise refusal from None
+    if not isinstance(key, Ed25519PrivateKey):
+        raise refusal
+    return key
 
 
 class Settings(BaseSettings):
@@ -143,6 +166,13 @@ class Settings(BaseSettings):
     # them — the protection is in the type rather than in remembering.
     blob_access_key: SecretStr = SecretStr("gipricing")
     blob_secret_key: SecretStr = SecretStr("gipricing")
+
+    # FR-373: the Ed25519 key that signs the audit-chain anchor, as an unencrypted PKCS#8 PEM.
+    # SecretStr for the reason `blob_secret_key` is (R3): the type keeps the key out of every
+    # repr and dump. Unset by default and never required: the anchor is the customer's opt-in,
+    # so an unset key starts the platform and the route refuses (503). It moves to `07`
+    # FR-424's `secret:` resolution when that backend exists (#1504).
+    audit_anchor_signing_key: SecretStr | None = None
 
     # FR-420: a blob is deletable only when nothing references it *and* it is older
     # than this. Conservative by default — an over-eager GC deletes a dataset.
@@ -219,6 +249,18 @@ class Settings(BaseSettings):
                 "postgresql+asyncpg:// scheme; a sync driver blocks the event loop instead "
                 "of failing"
             )
+        return v
+
+    @field_validator("audit_anchor_signing_key")
+    @classmethod
+    def _anchor_key_must_load(cls, v: SecretStr | None) -> SecretStr | None:
+        """A key that is set must be an Ed25519 private key (FR-373 (2)), or start-up refuses.
+
+        The message names the setting and never the value, and the cause is not chained: the
+        loader's own message is not guaranteed to be free of the input.
+        """
+        if v is not None:
+            load_anchor_signing_key(v)
         return v
 
     def require_startable(self) -> None:
