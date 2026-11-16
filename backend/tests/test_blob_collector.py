@@ -529,6 +529,73 @@ async def test_promote_upload_falls_through_when_the_row_is_deleted_before_its_r
 
 
 @pytest.mark.req("FR-420")
+async def test_promote_upload_copies_again_when_the_collector_took_the_object_after_its_first_phase(
+    database: Database,
+    blob_store: BlobStore,
+    workspace_id,
+    principal: Principal,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Audit D4: the first phase of `promote_upload` saw a stored row and skipped its copy; then
+    a whole collector run (row delete and the real object step) completes before the final unit
+    of work takes its digest lock. The final unit finds no row and no object, and must copy the
+    object back, or the promoted blob names bytes that do not exist. The pause is placed on the
+    final unit's first `_lock_digest` call; the collector uses the exclusive form and is not held.
+    Red: remove the `_object_exists` recheck in the final unit and the object is missing."""
+    content = _unique(b"promote-collected")
+    digest = await _aged_unreferenced_blob(database, blob_store, content)
+    staging_key = f"staging/{new_uuid7()}"
+    await asyncio.to_thread(
+        blob_store._client.put_object, Bucket=blob_store._bucket, Key=staging_key, Body=content
+    )
+    upload_id = new_uuid7()
+    async with database.unit_of_work() as session:
+        session.add(
+            BlobUploadRow(
+                id=upload_id,
+                workspace_id=workspace_id,
+                principal_id=principal.id,
+                staging_key=staging_key,
+                s3_upload_id=None,
+                part_count=1,
+                media_type="text/plain",
+                complete_by=datetime.now(UTC) + timedelta(hours=1),
+            )
+        )
+    at_final_unit, release_promote = asyncio.Event(), asyncio.Event()
+    original_lock = blobs._lock_digest
+    paused = False
+
+    async def _lock_after_the_collector(session: AsyncSession, sha256: str, **kwargs) -> None:
+        nonlocal paused
+        if kwargs.get("shared") and not paused:
+            paused = True
+            at_final_unit.set()
+            await release_promote.wait()
+        await original_lock(session, sha256, **kwargs)
+
+    monkeypatch.setattr(blobs, "_lock_digest", _lock_after_the_collector)
+    promote = asyncio.create_task(blob_store.promote_upload(database, upload_id))
+    await asyncio.wait_for(at_final_unit.wait(), timeout=30)
+
+    report = await blob_store.collect_garbage(
+        database, actor=principal, workspace_id=workspace_id, dry_run=False
+    )
+    assert digest in report.deleted
+    assert not await _object_exists(blob_store, digest)
+
+    release_promote.set()
+    ref = await promote
+
+    assert ref.sha256 == digest
+    assert await _object_exists(blob_store, digest)
+    async with database.session() as session:
+        row = await session.get(BlobRow, digest)
+    assert row is not None
+    assert row.ref_count == 1
+
+
+@pytest.mark.req("FR-420")
 async def test_a_storage_error_that_is_not_a_client_error_leaves_an_orphan_and_keeps_the_report(
     database: Database,
     blob_store: BlobStore,
@@ -656,11 +723,21 @@ async def test_a_dry_run_deletes_nothing_and_is_audited(
             await session.execute(
                 select(AuditEventRow).where(
                     AuditEventRow.workspace_id == workspace_id,
+                    AuditEventRow.action == "blob.garbage_collection_previewed",
+                )
+            )
+        ).scalars().all()
+        deletions = (
+            await session.execute(
+                select(AuditEventRow).where(
+                    AuditEventRow.workspace_id == workspace_id,
                     AuditEventRow.action == "blob.garbage_collected",
                 )
             )
         ).scalars().all()
     assert events
+    # #1895: a preview is not counted as a deletion.
+    assert deletions == []
     assert await _object_exists(blob_store, digest)
 
 

@@ -774,13 +774,17 @@ class BlobStore:
                 bytes_reclaimed=0 if dry_run else sum(size for _, size in found),
             )
             # Audited either way (FR-420): a dry run is evidence about what the platform
-            # believes is unreferenced, which is worth as much as the deletion itself.
+            # believes is unreferenced, which is worth as much as the deletion itself. **Under
+            # its own action** (#1895): a reader counting `blob.garbage_collected` counts
+            # deletions, and a preview that deleted nothing must not be one of them.
             await audit.record(
                 session,
                 workspace_id=workspace_id,
                 actor=actor,
                 source=JobSource.SYSTEM,
-                action="blob.garbage_collected",
+                action=(
+                    "blob.garbage_collection_previewed" if dry_run else "blob.garbage_collected"
+                ),
                 entity_ref="blob:gc@1",
                 after=report.model_dump(mode="json"),
             )
