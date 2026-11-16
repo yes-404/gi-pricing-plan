@@ -796,10 +796,11 @@ class ApprovalRequestRow(Base):
         {
             "info": {
                 "immutability": "guarded",
-                "guards": ["approval_guard"],
+                "guards": ["approval_guard", "approval_requests_decision_guard"],
                 "reason": (
                     "the request's lifecycle moves under approval_guard's flag_only mode "
-                    "(a9f3c6d21b87:100)"
+                    "(a9f3c6d21b87:100); a decided request's decision is held by "
+                    "approval_requests_decision_guard (e5b2a7d94c13)"
                 ),
             }
         },
@@ -2332,13 +2333,18 @@ class RatingVersionRow(Base):
     __table_args__ = (
         UniqueConstraint("workspace_id", "slug", "version", name="uq_rating_versions_slug_version"),
         Index("ix_rating_versions_workspace", "workspace_id", "slug"),
+        CheckConstraint(
+            "status IN ('draft', 'review', 'approved', 'live', 'retired')",
+            name="rating_version_status_is_in_the_lifecycle",
+        ),
         {
             "info": {
                 "immutability": "guarded",
-                "guards": ["approval_guard"],
+                "guards": ["approval_guard", "rating_versions_content_guard"],
                 "reason": (
-                    "lifecycle and compiled bundle under approval_guard; the TRUNCATE gap "
-                    "(E1) closed"
+                    "lifecycle under approval_guard (live and retired held as approved is); "
+                    "content held once past draft by rating_versions_content_guard "
+                    "(e5b2a7d94c13); the TRUNCATE gap (E1) closed"
                 ),
             }
         },
