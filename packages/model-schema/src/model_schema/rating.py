@@ -609,10 +609,13 @@ class RatingAlgorithm(RatingAlgorithmDraft):
         if not tagged:
             return self
         rule, first = tagged[0]
-        # The two typed signals are mapped by class to fixed text downstream. Every other rule
-        # raises its own literal: the step id, value name or port the validate route reports
-        # (RL-1474) is not put in a message that also renders when a stored algorithm fails
-        # re-validation (NFR-499).
+        # Every rule but two raises its own literal: the step id, value name or port the validate
+        # route reports (RL-1474) is not put in a message that also renders when a stored
+        # algorithm fails re-validation (NFR-499). The two typed signals are NOT input-free:
+        # `GraphUnresolvedRefError` carries the step id and the value name in its own text. The
+        # request routes map them by class to fixed text, but `pricing_core/rating/inline.py`
+        # puts `str(cause)` into a `CodedError` on the compile path, where it can reach a stored
+        # Job error. That is not changed here (#1712 S7c); the cycle message is a literal.
         match rule:
             case _GraphRule.CYCLE:
                 raise GraphCycleError("the rating DAG contains a cycle (FR-212)")
