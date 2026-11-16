@@ -55,8 +55,10 @@ Classes (each counts versions; a version can carry several):
                             within THAT GLM's own fitted levels (checked per GLM, in every graph the
                             Bundle carries); `not-scored` = no model_call scores the GLM. Another
                             input type, a nullable input, an approximation call, a value from a step
-                            or a second input stays PLAIN. A Peril Structure's components count as
-                            scored by its call.
+                            or a second input stays PLAIN, as do an input-contract entry with no
+                            `nullable` key and a Factor that no model_call maps in its
+                            `feature_map`. A Peril Structure's components count as scored by its
+                            call.
     NULLLEVEL               a Banding Factor whose Banding names a `null_level` the fit has no
                             relativity for: a missing or out-of-range quote reaches it.
     GROUPING                a Grouping Factor with a target level the fit has no relativity for.

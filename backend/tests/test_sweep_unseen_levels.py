@@ -485,3 +485,18 @@ def test_a_glm_no_model_call_scores_is_not_reachable_whatever_the_input_admits()
 
     assert rc == 0
     assert "NOTREACHABLE unscored@1 status=approved (closed-input,not-scored)" in lines
+
+
+@pytest.mark.req("FR-2143")
+def test_an_input_read_with_a_default_or_a_second_producer_stays_plain() -> None:
+    with_a_default = _closed()
+    with_a_default["graph"]["nodes"]["s_region"]["on_missing"] = "default"
+
+    with_a_second_producer = _closed()
+    nodes = with_a_second_producer["graph"]["nodes"]
+    nodes["s_region_again"] = {**nodes["s_region"], "type": "expression", "produces": ["region"]}
+
+    for index, bundle in enumerate((with_a_default, with_a_second_producer)):
+        rc, lines = _run([_row(bundle, "case", index)])
+        assert rc == 1, index
+        assert f"PLAIN case@{index} status=approved" in lines
