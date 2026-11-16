@@ -418,6 +418,35 @@ database at all.
 So: **bring the stack up before the gate, and if the suite is red, check `docker ps` before
 diagnosing anything.**
 
+### Before pushing, scan every commit, not only the final diff
+
+A push publishes every commit in the range, not only the branch's final tree. A line added in one commit and removed in a later one is gone from the final diff, but it is still in the history the push makes public. Once pushed, it cannot be taken back. So the check before a push reads each commit on its own: its message, and the lines its own diff adds.
+
+The range is what the push publishes: `origin/<branch>..HEAD` for a branch that already has a pull request, and `origin/main..HEAD` for a new branch. A merge of `main` into the branch brings `main`'s own commits into that range. They are scanned too, and any hit in them is `main`'s own text, already public.
+
+CI's `history-policy` workflow checks commit messages for one pattern, a session link. It does not read diffs. Before every push, save this as a script file and run it with `bash`, not by pasting it into a login shell (its `exit 1` would close that shell):
+
+```bash
+range=origin/main..HEAD   # or origin/<branch>..HEAD for a branch with a pull request
+# Every pattern that must never be published. Add the project's other banned patterns here.
+# Each alternative is written with a bracket class, so this line does not match itself
+# when the commit that adds it is scanned.
+pattern='[c]laude[.]ai/code/session|[C]laude-Session:|/hom[e]/[a-z]|[.]local/share|scratc[h]/'
+# Positive control: a 0 below means something only if the pattern matches a known positive.
+# The positive is assembled from two pieces, so no line of this script holds a match.
+probe="see /ho""me/user/x"
+printf '%s\n' "$probe" | grep -qE "$pattern" || { echo "pattern matches nothing: fix it"; exit 1; }
+for c in $(git rev-list $range); do
+  msg=$(git show -s --format=%B "$c" | grep -cE "$pattern")
+  diff=$(git show --format= "$c" | grep '^+' | grep -v '^+++' | grep -cE "$pattern")
+  echo "${c:0:8} message=$msg added-lines=$diff"
+done
+```
+
+Every row reads `message=0 added-lines=0`, or each hit is read and listed in the pull request body with the reason it may stand. Some text may name a working directory on purpose, for example a skill that tells a reader where local logs live. An unread hit is a stop. Merge commits are included: their message counts, and `git show` of a merge prints only lines that differ from both parents.
+
+A non-zero row on a commit that is already pushed cannot be fixed by a new commit. Stop and ask the maintainer before anything else.
+
 ### Running a check beside a gate: a probe that gates, not one that prints
 
 The sweep-pause rule in every command-running role file (`.claude/roles/*.md`, the bullet
