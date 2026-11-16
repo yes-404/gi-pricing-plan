@@ -460,6 +460,16 @@ _GENERIC_ERROR_CODES: Final[frozenset[str]] = frozenset(
         # reference. Deliberately not in a spec's error block (the maintainer's ruling,
         # 2026-11-14): no client can act on it.
         "BLOB_REFERENCE_INVARIANT_BREACHED",
+        # The blob collector's refusals (#1504 slice 3b-1, #1855 (iv), (v); FR-420). Each is a
+        # rolled-back run in which nothing was deleted. `BLOB_GC_LOCK_TIMEOUT`: a lock was not
+        # available within `GC_LOCK_TIMEOUT_S`, which is how a caller that holds an open
+        # transaction shows itself. `BLOB_GC_OWNER_APPEARED`: an owner row naming a digest the run
+        # deleted committed during the run. `BLOB_GC_CUTOFF_TOO_RECENT`: the database refused a
+        # cutoff inside its one-day floor. Raised only by `BlobStore.collect_garbage`, which has
+        # no client: a Job that runs it reports the code in its result.
+        "BLOB_GC_LOCK_TIMEOUT",
+        "BLOB_GC_OWNER_APPEARED",
+        "BLOB_GC_CUTOFF_TOO_RECENT",
     }
 )
 

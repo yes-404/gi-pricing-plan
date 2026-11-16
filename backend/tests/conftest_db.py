@@ -228,6 +228,12 @@ OWNER_FIXTURE_USERS: tuple[tuple[str, str, str], ...] = (
         "plants an unpinned definer function (rolled back) and proves the startup check refuses it",
     ),
     (
+        "backend/tests/test_blob_gc_function.py::"
+        "test_an_owner_row_committed_while_the_delete_runs_rolls_the_run_back",
+        "owner-subject",
+        "creates a delay trigger on blobs (DDL, dropped in a finally); reads the owner's wait view",
+    ),
+    (
         "backend/tests/test_blob_gc_function.py::test_the_startup_check_passes_on_the_migrated_head",
         "owner-subject",
         "the positive control of the startup check, run on the owner connection (read only)",
@@ -249,59 +255,6 @@ OWNER_FIXTURE_USERS: tuple[tuple[str, str, str], ...] = (
         "test_a_security_definer_function_owned_by_the_table_owner_passes_provisioning",
         "owner-subject",
         "plants a definer function owned by the table owner (rolled back); proves it is accepted",
-    ),
-    (
-        "backend/tests/test_traces.py::test_a_referenced_trace_blob_survives_garbage_collection",
-        "DP-22",
-        "runs the collector's DELETE on blobs, which the application role cannot (OQ-1943)",
-    ),
-    (
-        "backend/tests/test_blob_collector.py::"
-        "test_a_failed_object_delete_after_the_commit_leaves_an_orphan_never_a_dangling_row",
-        "DP-22",
-        "runs the collector's DELETE on blobs, which the application role cannot (OQ-1943)",
-    ),
-    (
-        "backend/tests/test_blob_collector.py::"
-        "test_a_retain_that_commits_while_the_delete_waits_keeps_the_blob",
-        "DP-22",
-        "runs the collector's DELETE on blobs, which the application role cannot (OQ-1943)",
-    ),
-    (
-        "backend/tests/test_blob_collector.py::"
-        "test_a_blob_an_owner_row_names_is_not_collected_even_at_ref_count_zero",
-        "DP-22",
-        "runs the collector's DELETE on blobs, which the application role cannot (OQ-1943)",
-    ),
-    (
-        "backend/tests/test_blob_collector.py::"
-        "test_a_non_dry_run_deletes_row_and_object_and_audits_the_deleted_digests",
-        "DP-22",
-        "runs the collector's DELETE on blobs, which the application role cannot (OQ-1943)",
-    ),
-    (
-        "backend/tests/test_blob_collector.py::"
-        "test_a_put_that_commits_between_the_row_commit_and_the_object_step_keeps_the_object",
-        "DP-22",
-        "runs the collector's DELETE on blobs, which the application role cannot (OQ-1943)",
-    ),
-    (
-        "backend/tests/test_blob_collector.py::"
-        "test_a_storage_error_that_is_not_a_client_error_leaves_an_orphan_and_keeps_the_report",
-        "DP-22",
-        "runs the collector's DELETE on blobs, which the application role cannot (OQ-1943)",
-    ),
-    (
-        "backend/tests/test_blob_collector.py::"
-        "test_an_owner_row_that_commits_while_the_delete_waits_keeps_the_blob",
-        "DP-22",
-        "runs the collector's DELETE on blobs, which the application role cannot (OQ-1943)",
-    ),
-    (
-        "backend/tests/test_blob_collector.py::"
-        "test_a_null_owner_digest_does_not_stop_the_collector_taking_an_unowned_blob",
-        "DP-22",
-        "runs the collector's DELETE on blobs, which the application role cannot (OQ-1943)",
     ),
     (
         "backend/tests/test_migration_deployments.py::"
@@ -583,22 +536,6 @@ OWNER_FIXTURE_USERS: tuple[tuple[str, str, str], ...] = (
         "test_truncate_is_rejected",
         "owner-subject",
         "issues TRUNCATE on audit_events; asserts the append-only trigger refuses it",
-    ),
-    (
-        "backend/tests/test_blobs.py::"
-        "test_gc_deletes_an_old_unreferenced_blob_and_audits_it",
-        "DP-22",
-        "runs the FR-420 sweep, which DELETEs blobs; the app role has no DELETE (OQ-1943)",
-    ),
-    (
-        "backend/tests/test_blobs.py::test_gc_spares_a_referenced_blob",
-        "DP-22",
-        "runs the FR-420 sweep, which DELETEs blobs; the app role has no DELETE (OQ-1943)",
-    ),
-    (
-        "backend/tests/test_blobs.py::test_gc_spares_a_young_unreferenced_blob",
-        "DP-22",
-        "runs the FR-420 sweep, which DELETEs blobs; the app role has no DELETE (OQ-1943)",
     ),
     (
         "backend/tests/test_custom_metrics_table.py::test_a_metric_cannot_be_deleted_or_truncated",

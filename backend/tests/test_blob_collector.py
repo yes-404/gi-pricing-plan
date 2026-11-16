@@ -24,9 +24,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models import AuditEventRow, BlobRow, BlobUploadRow, ScoringTraceRow
 from app.db.session import Database
-from app.platform import blobs, traces
+from app.errors import PlatformError
+from app.platform import audit, blobs, traces
 from app.platform.blobs import BlobStore, blob_key
-from model_schema import BlobRef, Principal, Trace, TraceStep, new_uuid7
+from model_schema import BlobRef, JobSource, Principal, Trace, TraceStep, new_uuid7
 
 
 def _unique(label: bytes) -> bytes:
@@ -90,7 +91,6 @@ async def _wait_for_a_blocked_backend(database: Database) -> None:
 @pytest.mark.req("FR-420")
 async def test_a_failed_object_delete_after_the_commit_leaves_an_orphan_never_a_dangling_row(
     database: Database,
-    owner_database: Database,
     blob_store: BlobStore,
     workspace_id,
     principal: Principal,
@@ -106,7 +106,7 @@ async def test_a_failed_object_delete_after_the_commit_leaves_an_orphan_never_a_
 
     monkeypatch.setattr(blob_store._client, "delete_object", _boom)
     report = await blob_store.collect_garbage(
-        owner_database, actor=principal, workspace_id=workspace_id, dry_run=False
+        database, actor=principal, workspace_id=workspace_id, dry_run=False
     )
 
     assert digest in report.deleted
@@ -118,7 +118,6 @@ async def test_a_failed_object_delete_after_the_commit_leaves_an_orphan_never_a_
 @pytest.mark.req("FR-420")
 async def test_a_retain_that_commits_while_the_delete_waits_keeps_the_blob(
     database: Database,
-    owner_database: Database,
     blob_store: BlobStore,
     workspace_id,
     principal: Principal,
@@ -137,12 +136,11 @@ async def test_a_retain_that_commits_while_the_delete_waits_keeps_the_blob(
         await blob_store.put(session, content, row.media_type)  # ref_count 1, uncommitted
         collector = asyncio.create_task(
             blob_store.collect_garbage(
-                owner_database, actor=principal, workspace_id=workspace_id, dry_run=False
+                database, actor=principal, workspace_id=workspace_id, dry_run=False
             )
         )
-        # The collector runs as the owner, and a role sees another role's wait state only through
-        # `pg_read_all_stats`: the probe is the owner's connection, not the login role's.
-        await _wait_for_a_blocked_backend(owner_database)
+        # The collector and the probe are both the login role: it sees its own sessions' waits.
+        await _wait_for_a_blocked_backend(database)
         assert not collector.done()
     report = await collector
 
@@ -157,7 +155,6 @@ async def test_a_retain_that_commits_while_the_delete_waits_keeps_the_blob(
 @pytest.mark.req("FR-420")
 async def test_a_blob_an_owner_row_names_is_not_collected_even_at_ref_count_zero(
     database: Database,
-    owner_database: Database,
     blob_store: BlobStore,
     workspace_id,
     principal: Principal,
@@ -191,7 +188,7 @@ async def test_a_blob_an_owner_row_names_is_not_collected_even_at_ref_count_zero
     await _backdate(digest)
 
     report = await blob_store.collect_garbage(
-        owner_database, actor=principal, workspace_id=workspace_id, dry_run=False
+        database, actor=principal, workspace_id=workspace_id, dry_run=False
     )
 
     assert digest not in report.deleted
@@ -203,7 +200,6 @@ async def test_a_blob_an_owner_row_names_is_not_collected_even_at_ref_count_zero
 @pytest.mark.req("FR-420")
 async def test_an_owner_row_that_commits_while_the_delete_waits_keeps_the_blob(
     database: Database,
-    owner_database: Database,
     blob_store: BlobStore,
     workspace_id,
     principal: Principal,
@@ -251,10 +247,10 @@ async def test_an_owner_row_that_commits_while_the_delete_waits_keeps_the_blob(
     await asyncio.wait_for(holding.wait(), timeout=30)
     collector = asyncio.create_task(
         blob_store.collect_garbage(
-            owner_database, actor=principal, workspace_id=workspace_id, dry_run=False
+            database, actor=principal, workspace_id=workspace_id, dry_run=False
         )
     )
-    await _wait_for_a_blocked_backend(owner_database)  # the collector waits on the put's row lock
+    await _wait_for_a_blocked_backend(database)  # the collector waits on the put's row lock
     await _owner_row_without_a_reference()  # committed while it waits
     release.set()
     await put_task
@@ -302,7 +298,6 @@ async def test_the_object_step_skips_a_digest_a_concurrent_put_is_re_storing(
 @pytest.mark.req("FR-420")
 async def test_a_put_that_commits_between_the_row_commit_and_the_object_step_keeps_the_object(
     database: Database,
-    owner_database: Database,
     blob_store: BlobStore,
     workspace_id,
     principal: Principal,
@@ -326,7 +321,7 @@ async def test_a_put_that_commits_between_the_row_commit_and_the_object_step_kee
     monkeypatch.setattr(blob_store, "_delete_object_if_unreferenced", _after_a_put)
     collector = asyncio.create_task(
         blob_store.collect_garbage(
-            owner_database, actor=principal, workspace_id=workspace_id, dry_run=False
+            database, actor=principal, workspace_id=workspace_id, dry_run=False
         )
     )
     await asyncio.wait_for(row_committed.wait(), timeout=30)
@@ -390,24 +385,33 @@ async def test_a_put_that_starts_during_the_object_step_waits_then_writes_the_ob
 @pytest.mark.req("FR-420")
 async def test_a_null_owner_digest_does_not_stop_the_collector_taking_an_unowned_blob(
     database: Database,
-    owner_database: Database,
     blob_store: BlobStore,
     workspace_id,
     principal: Principal,
-    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Red-first for `NOT EXISTS`. An owner place that yields a NULL digest (a model with no
-    covariance blob, an unpromoted upload) is planted as one extra NULL row in the owner query.
-    The red (the base form, `NOT IN`): `x NOT IN (..., NULL)` is never true, so the DELETE
-    matches nothing and collection halts silently, with no error, for as long as any owner place
-    holds a NULL. With `NOT EXISTS` an unowned blob is still taken."""
+    """Red-first for `NOT EXISTS`, against the real function. An owner place that yields a NULL
+    digest is a real row: a Blob Upload not yet promoted has `sha256` NULL, and `blob_uploads` is
+    an owner place. The red (the function's `DELETE` written with `NOT IN`): `x NOT IN (..., NULL)`
+    is never true, so the `DELETE` matches nothing and collection halts silently, with no error,
+    for as long as any owner place holds a NULL. With `NOT EXISTS` an unowned blob is still
+    taken."""
     digest = await _aged_unreferenced_blob(database, blob_store)
-    monkeypatch.setattr(
-        blobs, "_OWNER_ROWS_SQL", f"{blobs._OWNER_ROWS_SQL} UNION ALL (SELECT NULL::text AS sha256)"
-    )
+    async with database.unit_of_work() as session:
+        session.add(
+            BlobUploadRow(
+                id=new_uuid7(),
+                workspace_id=workspace_id,
+                principal_id=principal.id,
+                staging_key=f"staging/{new_uuid7()}",
+                s3_upload_id=None,
+                part_count=1,
+                media_type="text/plain",
+                complete_by=datetime.now(UTC) + timedelta(hours=1),
+            )
+        )  # sha256 stays NULL: the NULL owner digest
 
     report = await blob_store.collect_garbage(
-        owner_database, actor=principal, workspace_id=workspace_id, dry_run=False
+        database, actor=principal, workspace_id=workspace_id, dry_run=False
     )
 
     assert digest in report.deleted
@@ -527,7 +531,6 @@ async def test_promote_upload_falls_through_when_the_row_is_deleted_before_its_r
 @pytest.mark.req("FR-420")
 async def test_a_storage_error_that_is_not_a_client_error_leaves_an_orphan_and_keeps_the_report(
     database: Database,
-    owner_database: Database,
     blob_store: BlobStore,
     workspace_id,
     principal: Principal,
@@ -544,13 +547,49 @@ async def test_a_storage_error_that_is_not_a_client_error_leaves_an_orphan_and_k
 
     monkeypatch.setattr(blob_store._client, "delete_object", _unreachable)
     report = await blob_store.collect_garbage(
-        owner_database, actor=principal, workspace_id=workspace_id, dry_run=False
+        database, actor=principal, workspace_id=workspace_id, dry_run=False
     )
 
     assert digest in report.deleted
     async with database.session() as session:
         assert await session.get(BlobRow, digest) is None
     assert await _object_exists(blob_store, digest)
+
+
+@pytest.mark.req("FR-420")
+async def test_a_caller_holding_the_audit_lock_gets_a_coded_error_not_a_hang(
+    database: Database,
+    blob_store: BlobStore,
+    workspace_id,
+    principal: Principal,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """#1855 (v): the caller breaks the contract. Its open transaction has recorded an audit event
+    for the workspace, so it holds the workspace's audit lock, idle on the client side; the
+    collector's own unit of work needs that lock for its audit event. PostgreSQL does not call
+    that a deadlock, so without a bound the call never returns: the test's `wait_for` ends it and
+    fails the test (the red against 3a). With the lock timeout the collector rolls back and raises
+    `BLOB_GC_LOCK_TIMEOUT`."""
+    monkeypatch.setattr(blobs, "_GC_LOCK_TIMEOUT_MS", 1000)
+    async with database.unit_of_work() as session:
+        await audit.record(
+            session,
+            workspace_id=workspace_id,
+            actor=principal,
+            source=JobSource.SYSTEM,
+            action="probe.audit_lock_held",
+            entity_ref="probe:audit-lock@1",
+            after={"probe": True},
+        )
+        with pytest.raises(PlatformError) as raised:
+            await asyncio.wait_for(
+                blob_store.collect_garbage(
+                    database, actor=principal, workspace_id=workspace_id, dry_run=True
+                ),
+                timeout=30,
+            )
+    assert raised.value.code == "BLOB_GC_LOCK_TIMEOUT"
+    assert raised.value.status_code == 503
 
 
 @pytest.mark.req("FR-420")
@@ -628,7 +667,6 @@ async def test_a_dry_run_deletes_nothing_and_is_audited(
 @pytest.mark.req("FR-420")
 async def test_a_non_dry_run_deletes_row_and_object_and_audits_the_deleted_digests(
     database: Database,
-    owner_database: Database,
     blob_store: BlobStore,
     workspace_id,
     principal: Principal,
@@ -636,7 +674,7 @@ async def test_a_non_dry_run_deletes_row_and_object_and_audits_the_deleted_diges
     digest = await _aged_unreferenced_blob(database, blob_store)
 
     report = await blob_store.collect_garbage(
-        owner_database, actor=principal, workspace_id=workspace_id, dry_run=False
+        database, actor=principal, workspace_id=workspace_id, dry_run=False
     )
 
     assert digest in report.deleted

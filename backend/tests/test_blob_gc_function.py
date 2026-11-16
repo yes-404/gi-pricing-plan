@@ -7,6 +7,7 @@ owner-owned `SECURITY DEFINER` function. Against real PostgreSQL, as the applica
 
 from __future__ import annotations
 
+import asyncio
 from datetime import UTC, datetime, timedelta
 
 import pytest
@@ -15,17 +16,20 @@ from sqlalchemy import text, update
 from sqlalchemy.exc import DBAPIError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.models import BlobRow
+from app.db.models import BlobRow, ScoringTraceRow
 from app.db.session import Database
+from app.errors import PlatformError
 from app.platform import blobs
-from app.platform.blobs import BlobStore
-from model_schema import new_uuid7
+from app.platform.blobs import BLOB_OWNERS, BlobOwner, BlobStore
+from model_schema import Principal, new_uuid7
 
 _SIGNATURE = "public.blob_gc_delete_unreferenced(timestamptz)"
 _CALL = text("SELECT deleted_sha256, deleted_bytes FROM blob_gc_delete_unreferenced(:cutoff)")
 
 
-async def _aged_unreferenced_blob(database: Database, blob_store: BlobStore) -> str:
+async def _aged_unreferenced_blob(
+    database: Database, blob_store: BlobStore, *, days: int = 60
+) -> str:
     async with database.unit_of_work() as session:
         ref = await blob_store.put(session, f"gc-function {new_uuid7()}".encode(), "text/plain")
     async with database.unit_of_work() as session:
@@ -35,7 +39,7 @@ async def _aged_unreferenced_blob(database: Database, blob_store: BlobStore) -> 
         await session.execute(
             update(BlobRow)
             .where(BlobRow.sha256 == ref.sha256)
-            .values(created_at=datetime.now(UTC) - timedelta(days=60))
+            .values(created_at=datetime.now(UTC) - timedelta(days=days))
         )
 
     await seed_as_owner(_backdate)
@@ -108,6 +112,119 @@ async def test_the_function_body_has_no_dynamic_sql_and_one_parameter(database: 
     assert "EXECUTE " not in body
     assert "FORMAT(" not in body
     assert "QUOTE_IDENT" not in body
+
+
+def _normalised(sql: str) -> str:
+    return " ".join(sql.split())
+
+
+async def _function_body(database: Database) -> str:
+    async with database.session() as session:
+        return str(
+            (
+                await session.execute(
+                    text("SELECT prosrc FROM pg_proc WHERE oid = to_regprocedure(:sig)"),
+                    {"sig": _SIGNATURE},
+                )
+            ).scalar_one()
+        )
+
+
+@pytest.mark.req("FR-420")
+async def test_the_function_body_is_the_collectors_specification(database: Database) -> None:
+    """The drift test. The function's `prosrc` contains each statement of
+    `render_gc_function_statements()` (whitespace-normalised), so the owner list in the code and
+    the one frozen in the migration cannot diverge: a `BlobOwner` added without a migration that
+    replaces the function makes this fail, and the function would otherwise go on deleting blobs the
+    new owner names."""
+    body = _normalised(await _function_body(database))
+    for statement in blobs.GC_FUNCTION_STATEMENTS:
+        assert _normalised(statement) in body
+
+
+@pytest.mark.req("FR-420")
+async def test_the_drift_test_sees_a_new_owner(database: Database) -> None:
+    """The negative control: a rendering over the owners plus one more is NOT in the body, so the
+    test above is red the day `BLOB_OWNERS` gains an entry the function does not have."""
+    extra = BlobOwner("zz.planted", "SELECT sha256 FROM zz_planted")
+    planted = blobs.render_gc_function_statements((*BLOB_OWNERS, extra))
+    body = _normalised(await _function_body(database))
+    assert any(_normalised(statement) not in body for statement in planted)
+
+
+_DELAY_FUNCTION = (
+    "CREATE FUNCTION public.zz_gc_delay() RETURNS trigger LANGUAGE plpgsql AS "
+    "$f$ BEGIN PERFORM pg_sleep(2); RETURN OLD; END $f$"
+)
+_DELAY_TRIGGER = (
+    "CREATE TRIGGER zz_gc_delay BEFORE DELETE ON blobs FOR EACH ROW "
+    "EXECUTE FUNCTION public.zz_gc_delay()"
+)
+
+
+@pytest.mark.req("FR-420")
+async def test_an_owner_row_committed_while_the_delete_runs_rolls_the_run_back(
+    database: Database,
+    owner_database: Database,
+    blob_store: BlobStore,
+    workspace_id,
+    principal: Principal,
+) -> None:
+    """#1855 (iv), the third statement. An owner row that took NO reference commits while the
+    function's `DELETE` is running: the `DELETE`'s snapshot was taken before it, so it is not seen
+    there (3a's collector then deleted the row and the object, probed). A `BEFORE DELETE` trigger
+    that sleeps 2 s per row, created here as the owner and dropped after, holds the `DELETE` open
+    so the interleaving is deterministic. The third statement looks again with a fresh snapshot,
+    sees the owner row, and the run rolls back: nothing is deleted, `BLOB_GC_OWNER_APPEARED`."""
+    digest = await _aged_unreferenced_blob(database, blob_store, days=400)
+    async with owner_database.engine.begin() as connection:
+        await connection.execute(text(_DELAY_FUNCTION))
+        await connection.execute(text(_DELAY_TRIGGER))
+    try:
+        collector = asyncio.create_task(
+            blob_store.collect_garbage(
+                database, actor=principal, workspace_id=workspace_id, dry_run=False, grace_days=300
+            )
+        )
+        asleep = False
+        for _ in range(300):
+            async with owner_database.session() as session:
+                asleep = bool(
+                    (
+                        await session.execute(
+                            text(
+                                "SELECT count(*) FROM pg_stat_activity WHERE "
+                                "datname = current_database() AND wait_event = 'PgSleep'"
+                            )
+                        )
+                    ).scalar_one()
+                )
+            if asleep:
+                break
+            await asyncio.sleep(0.02)
+        assert asleep, "the DELETE never reached the planted delay"
+        async with database.unit_of_work() as session:  # the login role may INSERT a trace row
+            session.add(
+                ScoringTraceRow(
+                    workspace_id=new_uuid7(),
+                    quote_id=f"quote-{new_uuid7()}",
+                    rating_version_ref="rating_version:motor-gb@3",
+                    bundle_hash="sha256:" + "0" * 64,
+                    sample_reason="rate",
+                    blob_sha256=digest,
+                    status="complete",
+                )
+            )  # committed while the DELETE is mid-statement, no reference taken
+        with pytest.raises(PlatformError) as raised:
+            await collector
+    finally:
+        async with owner_database.engine.begin() as connection:
+            await connection.execute(text("DROP TRIGGER IF EXISTS zz_gc_delay ON blobs"))
+            await connection.execute(text("DROP FUNCTION IF EXISTS public.zz_gc_delay()"))
+
+    assert raised.value.code == "BLOB_GC_OWNER_APPEARED"
+    async with database.session() as session:
+        assert await session.get(BlobRow, digest) is not None  # the delete was rolled back
 
 
 _PLANTED_BODY = "BEGIN RETURN QUERY SELECT 'x'::text, 1::bigint WHERE false; END"
