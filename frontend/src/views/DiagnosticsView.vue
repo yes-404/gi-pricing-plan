@@ -15,6 +15,7 @@ import LiftChart from "@/components/LiftChart.vue";
 import PartialDependencePanel from "@/components/PartialDependencePanel.vue";
 import PartitionTable from "@/components/PartitionTable.vue";
 import SurrogateNotice from "@/components/SurrogateNotice.vue";
+import UnseenLevelRows from "@/components/UnseenLevelRows.vue";
 
 const props = defineProps<{ slug: string; version?: string }>();
 
@@ -217,35 +218,11 @@ onMounted(async () => {
           </tbody>
         </table>
 
-        <section
+        <UnseenLevelRows
           v-if="diagnostics.glm"
-          aria-label="Rows on a level this fit never saw"
-          class="mt-4 text-sm text-slate-700"
-        >
-          <h3 class="font-medium">
-            Rows on a level this fit never saw
-          </h3>
-          <ul class="mt-1 space-y-1">
-            <li
-              v-for="note in unseenRows"
-              :key="note.label"
-            >
-              <template v-if="note.rows === null">
-                {{ note.label }}: not recorded.
-              </template>
-              <template v-else-if="note.rows === 0">
-                {{ note.label }}: none left out.
-              </template>
-              <template v-else>
-                {{ note.label }}: {{ note.rows }} rows (exposure {{ note.exposure }}) are left out of
-                every figure on this page.
-              </template>
-            </li>
-          </ul>
-          <p class="mt-1">
-            A quote with such a level is refused, unless the factor declares “map to base”.
-          </p>
-        </section>
+          :notes="unseenRows"
+          note="A quote with such a level is refused, unless the factor declares “map to base”."
+        />
 
         <AeByFactorChart :partitions="universal" />
         <LiftChart :partitions="universal" />

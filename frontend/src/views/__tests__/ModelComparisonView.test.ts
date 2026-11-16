@@ -186,3 +186,52 @@ describe("ModelComparisonView", () => {
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 });
+
+describe("ModelComparisonView, the rows left out on an unseen level (FR-2143)", () => {
+  const withExcluded = (rows: number | undefined, exposure: string | undefined): unknown => {
+    const summary = { ...COMPARISON.summary } as Record<string, unknown>;
+    delete summary.rows_excluded_unseen_level;
+    delete summary.exposure_excluded_unseen_level;
+    return {
+      ...COMPARISON,
+      summary: {
+        ...summary,
+        ...(rows === undefined ? {} : { rows_excluded_unseen_level: rows }),
+        ...(exposure === undefined ? {} : { exposure_excluded_unseen_level: exposure }),
+      },
+    };
+  };
+  const open = (artifact: unknown): void => {
+    routeQuery.ids = IDS;
+    stubByUrl({
+      "/models/compare": { status: 202, body: job("queued") },
+      "/jobs/": { status: 200, body: job("succeeded", COMPARISON_REF) },
+      [`/models/comparisons/${COMPARISON.id}`]: { status: 200, body: artifact },
+    });
+  };
+
+  it("states the count and exposure left out of the shared holdout", async () => {
+    open(withExcluded(50, "50.0"));
+    render(ModelComparisonView, { props: { pollIntervalMs: 0 }, global });
+    const section = await screen.findByLabelText("Rows on a level this fit never saw");
+
+    expect(section).toHaveTextContent("Shared holdout: 50 rows (exposure 50.0) are left out of every figure");
+  });
+
+  it("says none were left out when the count is 0", async () => {
+    open(withExcluded(0, "0"));
+    render(ModelComparisonView, { props: { pollIntervalMs: 0 }, global });
+    const section = await screen.findByLabelText("Rows on a level this fit never saw");
+
+    expect(section).toHaveTextContent("Shared holdout: none left out");
+  });
+
+  it("says not recorded for a comparison stored ahead of the rule, never none", async () => {
+    open(withExcluded(undefined, undefined));
+    render(ModelComparisonView, { props: { pollIntervalMs: 0 }, global });
+    const section = await screen.findByLabelText("Rows on a level this fit never saw");
+
+    expect(section).toHaveTextContent("Shared holdout: not recorded");
+    expect(section).not.toHaveTextContent("none left out");
+  });
+});

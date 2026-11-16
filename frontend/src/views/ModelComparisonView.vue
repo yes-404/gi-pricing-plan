@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref } from "vue";
+import { computed, onMounted, ref } from "vue";
 import { RouterLink, useRoute } from "vue-router";
 
 import type { ModelComparison } from "@/api/comparisons";
@@ -9,6 +9,7 @@ import { ProblemError } from "@/api/problem";
 import ComparisonMetricTable from "@/components/ComparisonMetricTable.vue";
 import DoubleLiftChart from "@/components/DoubleLiftChart.vue";
 import RelativityDiffTable from "@/components/RelativityDiffTable.vue";
+import UnseenLevelRows from "@/components/UnseenLevelRows.vue";
 
 /**
  * The poll budget, injectable so a test does not wait real seconds.
@@ -25,6 +26,22 @@ const props = withDefaults(defineProps<{ pollAttempts?: number; pollIntervalMs?:
 const route = useRoute();
 
 const comparison = ref<ModelComparison | null>(null);
+/**
+ * FR-2143: the rows of the shared holdout left out because a GLM candidate has no relativity for
+ * a level of a factor that does not declare “map to base”, with their exposure. `null` is "not
+ * recorded" (a comparison stored ahead of the rule), `0` is "none": never one for the other.
+ */
+const unseenNotes = computed(() => {
+  const summary = comparison.value?.summary;
+  if (!summary) return [];
+  return [
+    {
+      label: "Shared holdout",
+      rows: summary.rows_excluded_unseen_level ?? null,
+      exposure: summary.exposure_excluded_unseen_level ?? null,
+    },
+  ];
+});
 const problem = ref<ProblemError | null>(null);
 /**
  * A discriminated stage rather than a set of booleans (RuleBuilder.vue's precedent). `waiting`
@@ -155,6 +172,11 @@ onMounted(async () => {
       <ComparisonMetricTable
         :metrics="comparison.summary.metrics"
         :model-refs="comparison.summary.model_refs"
+      />
+
+      <UnseenLevelRows
+        :notes="unseenNotes"
+        note="A GLM candidate's quote with such a level is refused, unless the factor declares “map to base”; a GBM or an EBM refuses it whatever is declared."
       />
 
       <template v-if="comparison.summary.double_lift.length">

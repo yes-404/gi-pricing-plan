@@ -13,6 +13,7 @@ import AeByFactorChart from "@/components/AeByFactorChart.vue";
 import CalibrationChart from "@/components/CalibrationChart.vue";
 import LiftChart from "@/components/LiftChart.vue";
 import PartitionTable from "@/components/PartitionTable.vue";
+import UnseenLevelRows from "@/components/UnseenLevelRows.vue";
 
 const props = defineProps<{ slug: string; backtestId: string }>();
 
@@ -88,6 +89,24 @@ const residuals = computed(() => {
     name: RESIDUAL_LABELS[field],
     values: [summary[field]],
   }));
+});
+
+/**
+ * FR-2143: the rows the backtest leaves out because a factor that does not declare “map to base”
+ * carries a level the fit has no relativity for. A GLM's fit only: a GBM or an EBM refuses such a
+ * level whatever is declared and its backtest never records the counts, so "not recorded" would
+ * be false for it. `null` is "not recorded", `0` is "none".
+ */
+const unseenNotes = computed(() => {
+  const partitionOf = backtest.value?.summary.partition;
+  if (!partitionOf || model.value?.spec.model_type !== "glm") return [];
+  return [
+    {
+      label: "Backtest",
+      rows: partitionOf.rows_excluded_unseen_level ?? null,
+      exposure: partitionOf.exposure_excluded_unseen_level ?? null,
+    },
+  ];
 });
 
 onMounted(async () => {
@@ -207,6 +226,12 @@ onMounted(async () => {
           title="Headline metrics"
           :columns="['Backtest']"
           :rows="headline"
+        />
+
+        <UnseenLevelRows
+          v-if="unseenNotes.length"
+          :notes="unseenNotes"
+          note="A quote with such a level is refused, unless the factor declares “map to base”."
         />
 
         <AeByFactorChart :partitions="partition" />
