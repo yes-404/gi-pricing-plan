@@ -2,7 +2,7 @@
 id: ADR-2156
 family: decision
 title: Blob collection runs through a pinned definer function with a lock timeout, and its refusals and a deadlock are coded
-status: draft               # draft → active → superseded | retired (§1.2a)
+status: active              # draft → active → superseded | retired (§1.2a)
 created: 2026-11-16
 owner: executor
 tree: ad4fc5cab9a133e8504c35326ededac15364d1a7
@@ -14,7 +14,7 @@ relates: [FR-419, FR-420, ADR-2150]   # ids only — the FR-/NFR-/ADR- this deci
 
 # ADR-2156 — Blob collection runs through a pinned definer function with a lock timeout, and its refusals and a deadlock are coded
 
-- **Status:** Draft (front matter `draft`). Supersedes nothing. The maintainer accepts it.
+- **Status:** Accepted (front matter `active`), accepted by the maintainer as written on 2026-11-16 ([comment on #1504](https://github.com/yes-404/gi-pricing-plan/issues/1504#issuecomment-6909140793)). Supersedes nothing.
 - **Deciders:** the maintainer, on the decision issues named below.
 - **Decision issues:** #1550 (c) (the definer function), #1855 (v) (the collector's contract), #1888 option (d) (the deadlock), #1895 option (a) (the dry-run action).
 - **Enacted by:** the pull request that adds this record (#1504 slice 3b-1). Part of #1504.

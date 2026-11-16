@@ -48,4 +48,4 @@ has already been made and needs recording. Otherwise use
 | [ADR-2153](ADR-02153-a-factors-unseen-level-behaviour-is-declared-and-the-undeclared-case-refuses.md) | A Factor's unseen-level behaviour is declared, and the undeclared case refuses | active |
 | [ADR-2154](ADR-02154-the-audit-trail-is-the-seventh-high-risk-area.md) | The audit trail is the seventh high-risk area | active |
 | [ADR-2155](ADR-02155-the-audit-anchor-is-signed-with-ed25519-through-cryptography-and-refuses-a-broken-chain.md) | The audit anchor is signed with Ed25519 through cryptography, and refuses a chain that does not verify | active |
-| [ADR-2156](ADR-02156-blob-collection-runs-through-a-pinned-definer-function-with-a-lock-timeout-and-coded-refusals.md) | Blob collection runs through a pinned definer function with a lock timeout, and its refusals and a deadlock are coded | draft |
+| [ADR-2156](ADR-02156-blob-collection-runs-through-a-pinned-definer-function-with-a-lock-timeout-and-coded-refusals.md) | Blob collection runs through a pinned definer function with a lock timeout, and its refusals and a deadlock are coded | active |
