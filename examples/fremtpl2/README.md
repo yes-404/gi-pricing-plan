@@ -53,9 +53,11 @@ fitted coefficients and not from the scored bundle.
 The unseen-level sweep (`scripts/sweep-unseen-levels.py`) reports each version of this demo as
 `NOTREACHABLE`: its four categorical Factors (`veh_brand`, `veh_gas`, `area`, `region`) declare
 nothing, so a level their fit never saw would be refused, but in every version each is fed only by
-an input restricted to the fitted levels (`closed-input`): the base version is scored through the
-Peril Structure's `model_call`, and the input contract admits no other level. A version the sweep
-cannot classify is listed as `PLAIN`.
+an input restricted to the fitted levels (`closed-input`). Every version carries a `model_call`:
+the base version, `fremtpl2-demo@1`, is scored through the Peril Structure's, and so are the
+`fremtpl2-wf699` versions through theirs, and the check is made against each GLM's own fitted
+levels, so the severity fit is read as well as the frequency fit. A version the sweep cannot
+classify is listed as `PLAIN`.
 
 **The dislocation and attribution runs go over a 20,000-policy sample, never the full book.**
 The seed builds the sample with evenly spaced integer indices `i * N // n` over the
