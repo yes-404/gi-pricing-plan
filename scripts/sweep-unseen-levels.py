@@ -46,19 +46,27 @@ Classes (each counts versions; a version can carry several):
 
     PLAIN                   an IDENTITY categorical Factor with fitted relativities, declaring
                             nothing, that a quote can reach with a level the fit lacks, or that the
-                            sweep cannot show it cannot (NOTEXAMINED-CONTRACT counts these).
+                            sweep cannot show it cannot (NOTEXAMINED-CONTRACT counts these); also
+                            an `expression` Factor with no Banding and with relativities, whose
+                            domain is the data's.
     NOTREACHABLE            a version whose every such Factor is one no quote can bring an unseen
-                            level to, each listed with a reason word; not a finding, not reachable:
+                            level to, listed with reason words, and that carries NO other class
+                            and no NOTEXAMINED-* line (a version with one is listed under that
+                            class alone). Not a finding, not reachable:
                             `closed-input` = every model_call that scores the GLM is exact and
                             feeds the Factor only from a non-nullable enum input, read with
                             on_missing = error, produced by that one input node, whose domain lies
                             within THAT GLM's own fitted levels (checked per GLM, in every graph the
-                            Bundle carries); `not-scored` = no model_call scores the GLM. Another
-                            input type, a nullable input, an approximation call, a value from a step
-                            or a second input stays PLAIN, as do an input-contract entry with no
-                            `nullable` key and a Factor that no model_call maps in its
-                            `feature_map`. A Peril Structure's components count as scored by its
-                            call.
+                            Bundle carries); `not-scored` = nothing the runtime scores reads the
+                            GLM. A GLM is scored when a model_call names it, directly or as a Peril
+                            Structure's component, or when a scored GLM reads it as its offset
+                            model, however deep (`runtime.inlined_algorithms`, `_load_glm_scorers`
+                            and `scorer_chain` decide this: the sweep does not re-derive it).
+                            Another input type, a nullable input, an approximation call, a value
+                            from a step or a second input stays PLAIN, as do an input-contract
+                            entry with no `nullable` key, a Factor that no model_call maps in its
+                            `feature_map`, and a Factor that any interaction Factor of the same
+                            fit takes as an operand (a cell of the cross may be one the fit lacks).
     NULLLEVEL               a Banding Factor whose Banding names a `null_level` the fit has no
                             relativity for: a missing or out-of-range quote reaches it.
     GROUPING                a Grouping Factor with a target level the fit has no relativity for.
@@ -123,7 +131,12 @@ from model_schema import (
 )
 from pricing_core.modelling.glm import _unseen_cell_reports, _unseen_level_gaps
 from pricing_core.rating.compile import Bundle, JdmGraph
-from pricing_core.rating.runtime import _step_model_refs
+from pricing_core.rating.runtime import (
+    _load_glm_scorers,
+    _step_model_refs,
+    inlined_algorithms,
+    scorer_chain,
+)
 
 _DUMMY = re.compile(r"^(?P<slug>.+)\[(?P<level>.*)\]$")
 #: The classes that make a version reachable (exit code 1), in the order they are counted.
@@ -226,6 +239,23 @@ def _fed_by_a_closed_input(
     return True
 
 
+def _interaction_operand_ids(factors: list[Factor]) -> set[Any]:
+    """The ids of every Factor an interaction in `factors` takes as an operand, an operand that is
+    itself an interaction followed to its own operands."""
+    by_id = {f.id: f for f in factors}
+    seen: set[Any] = set()
+    pending = [f for f in factors if f.type is FactorType.INTERACTION]
+    while pending:
+        for operand_id in pending.pop().operand_factor_ids:
+            if operand_id in seen:
+                continue
+            seen.add(operand_id)
+            operand = by_id.get(operand_id)
+            if operand is not None and operand.type is FactorType.INTERACTION:
+                pending.append(operand)
+    return seen
+
+
 def _findings(bundle: Bundle) -> tuple[int, set[str], set[str], set[str]]:
     """The GLM models in `bundle`, the classes its fits and Factors fall into, the reason words of a
     NOTREACHABLE version, and the other model families it pins. Each `model:` payload is classified
@@ -253,6 +283,9 @@ def _findings(bundle: Bundle) -> tuple[int, set[str], set[str], set[str]]:
     reasons: set[str] = set()
     glm_refs = 0
     calls = _model_calls(bundle)
+    algorithm, purposes = inlined_algorithms(bundle)
+    scorers = _load_glm_scorers([algorithm, *purposes.values()], payloads)
+    chains = {ref: [r for r, _ in scorer_chain(ref, scorer)] for ref, scorer in scorers.items()}
     open_factor = False
     for key, payload in payloads.items():
         if not key.startswith("model:"):
@@ -278,16 +311,27 @@ def _findings(bundle: Bundle) -> tuple[int, set[str], set[str], set[str]]:
             f for f in factors if f.unseen_level_behaviour is not UnseenLevelBehaviour.MAP_TO_BASE
         ]
         fitted = {slug: {e.level for e in levels} for slug, levels in fit.relativities.items()}
+        # scored = a model_call names it, or a scorer the runtime builds reads it as its offset
         scoring = [
             (graph, call)
             for graph, call in calls
-            if key in _step_model_refs(call, payloads)
+            if any(
+                key in chains.get(ref, [ref]) for ref in _step_model_refs(call, payloads)
+            )
         ]
+        operands = _interaction_operand_ids(factors)
         for slug in fitted:
             factor = next((f for f in undeclared if f.slug == slug), None)
-            if factor is None or factor.type is not FactorType.IDENTITY:
+            if factor is None:
                 continue
-            if not scoring:
+            if factor.type is FactorType.EXPRESSION and factor.banding_id is None:
+                open_factor = True  # an open domain: any value is the data's
+                continue
+            if factor.type is not FactorType.IDENTITY:
+                continue
+            if factor.id in operands:
+                open_factor = True  # a cell of an interaction it feeds may be one the fit lacks
+            elif not scoring:
                 reasons.add("not-scored")
             elif all(
                 _fed_by_a_closed_input(graph, call, slug, fitted[slug]) for graph, call in scoring
@@ -326,8 +370,8 @@ def _findings(bundle: Bundle) -> tuple[int, set[str], set[str], set[str]]:
                 break
     if open_factor:
         kinds.add("PLAIN")
-    elif reasons:
-        kinds.add(NOTREACHABLE)
+    elif reasons and not kinds:
+        kinds.add(NOTREACHABLE)  # no reachable class, and nothing the sweep did not examine
     return glm_refs, kinds, reasons, other_families
 
 

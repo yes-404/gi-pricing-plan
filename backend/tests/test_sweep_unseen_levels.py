@@ -17,7 +17,7 @@ import importlib.util
 import io
 import json
 import pathlib
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from typing import Any
 from uuid import UUID
 
@@ -328,15 +328,41 @@ _SECOND = "model:motor-sev-glm@1"
 def _region_fitted(bundle: dict[str, Any], model: str, levels: list[str]) -> None:
     fit = bundle["resolved_payloads"][model]["fit_result"]
     fit["relativities"]["region"] = [
-        {"level": level, "is_base": i == 0} for i, level in enumerate(levels)
+        {"level": level, "is_base": i == 0, "relativity": 1.0, "estimate": 0.0, "exposure": 1.0}
+        for i, level in enumerate(levels)
     ]
 
 
-def _closed() -> dict[str, Any]:
-    """The clean bundle with region undeclared and fitted on A, B, the input's own domain."""
+def _algorithm(bundle: dict[str, Any]) -> dict[str, Any]:
+    stored: dict[str, Any] = bundle["resolved_payloads"][bundle["algorithm_ref"]]
+    return stored
+
+
+def _set_input(bundle: dict[str, Any], name: str, **changes: Any) -> None:
+    """Change one input-contract entry in the graph and in the stored algorithm, which the real
+    scorer reads: the two stay one statement."""
+    for contract in (bundle["graph"]["input_contract"], _algorithm(bundle)["input_contract"]):
+        next(entry for entry in contract if entry["name"] == name).update(changes)
+
+
+def _main_effects() -> dict[str, Any]:
+    """The clean bundle refitted as one main effect, region on A, B, with no cross and no yoa term:
+    a bundle the real scorer scores, and one whose region is closed-input."""
     bundle = copy.deepcopy(_clean())
+    fit = bundle["resolved_payloads"][_MODEL]["fit_result"]
+    template = fit["coefficients"][1]
+    fit["coefficients"] = [fit["coefficients"][0], {**template, "term": "region[B]"}]
+    del fit["relativities"]["region_x_yoa"]
     _region_fitted(bundle, _MODEL, ["A", "B"])
+    spec = bundle["resolved_payloads"][_MODEL]["spec"]
+    region = bundle["resolved_payloads"]["factor:region@1"]["id"]
+    spec["factors"] = [region]
     return bundle
+
+
+def _closed() -> dict[str, Any]:
+    """Region undeclared and fitted on A, B, the input's own domain, as a main effect."""
+    return _main_effects()
 
 
 def _with_second_model(bundle: dict[str, Any], levels: list[str]) -> None:
@@ -466,6 +492,8 @@ def test_a_version_with_one_closed_and_one_open_factor_stays_plain() -> None:
     bundle = _closed()
     fit = bundle["resolved_payloads"][_MODEL]["fit_result"]
     fit["relativities"]["yoa"] = [{"level": "2010", "is_base": True}]  # the input admits 2011 too
+    yoa = bundle["resolved_payloads"]["factor:yoa@1"]["id"]
+    bundle["resolved_payloads"][_MODEL]["spec"]["factors"].append(yoa)
     rc, lines = _run([_row(bundle, "mixed", 1)])
 
     assert rc == 1
@@ -500,3 +528,223 @@ def test_an_input_read_with_a_default_or_a_second_producer_stays_plain() -> None
         rc, lines = _run([_row(bundle, "case", index)])
         assert rc == 1, index
         assert f"PLAIN case@{index} status=approved" in lines
+
+
+# --- #1906: the two bundles a review found listed NOTREACHABLE while a quote was refused --------
+
+
+def _her_offset(offset_levels: list[str]) -> dict[str, Any]:
+    """Region fitted A, B, C with the input's domain A, B, C, as a main effect, and a second GLM
+    fitted on offset_levels as the first's offset model (spec.offset)."""
+    bundle = _main_effects()
+    _region_fitted(bundle, _MODEL, ["A", "B", "C"])
+    _set_input(bundle, "region", domain=["A", "B", "C"])
+    payloads = bundle["resolved_payloads"]
+    payloads[_SECOND] = copy.deepcopy(payloads[_MODEL])
+    _region_fitted(bundle, _SECOND, offset_levels)
+    payloads[_MODEL]["spec"]["offset"] = {
+        "kind": "model", "column": None, "offset_model_ref": _SECOND,
+    }
+    return bundle
+
+
+def _her_interaction() -> dict[str, Any]:
+    """The clean bundle, cross included: region fitted A, B, C with the input's domain A, B, C,
+    and the cross left with its four cells, none for C."""
+    bundle = copy.deepcopy(_clean())
+    _region_fitted(bundle, _MODEL, ["A", "B", "C"])
+    _set_input(bundle, "region", domain=["A", "B", "C"])
+    return bundle
+
+
+@pytest.mark.req("FR-2143")
+def test_an_offset_glm_fitted_on_fewer_levels_keeps_the_version_plain() -> None:
+    rc, lines = _run([_row(_her_offset(["A", "B"]), "offset", 1)])
+
+    assert "PLAIN offset@1 status=approved" in lines, lines
+    assert not any(line.startswith("NOTREACHABLE ") for line in lines)
+    assert rc == 1
+
+
+@pytest.mark.req("FR-2143")
+def test_an_offset_glm_over_the_whole_domain_is_scored_not_unscored() -> None:
+    rc, lines = _run([_row(_her_offset(["A", "B", "C"]), "offset", 1)])
+
+    assert "NOTREACHABLE offset@1 status=approved (closed-input)" in lines, lines
+    assert rc == 0
+
+
+@pytest.mark.req("FR-2143")
+def test_an_offset_of_an_offset_is_followed_to_its_end() -> None:
+    bundle = _her_offset(["A", "B", "C"])
+    payloads = bundle["resolved_payloads"]
+    third = "model:motor-third-glm@1"
+    payloads[third] = copy.deepcopy(payloads[_SECOND])
+    _region_fitted(bundle, third, ["A", "B"])
+    payloads[_SECOND]["spec"]["offset"] = {
+        "kind": "model", "column": None, "offset_model_ref": third,
+    }
+    rc, lines = _run([_row(bundle, "chain", 1)])
+
+    assert "PLAIN chain@1 status=approved" in lines, lines
+    assert rc == 1
+
+
+@pytest.mark.req("FR-2143")
+def test_a_factor_an_interaction_takes_as_an_operand_is_never_closed_input() -> None:
+    rc, lines = _run([_row(_her_interaction(), "ix", 1)])
+
+    assert "PLAIN ix@1 status=approved" in lines, lines
+    assert not any(line.startswith("NOTREACHABLE ") for line in lines)
+    assert rc == 1
+
+
+@pytest.mark.req("FR-2143")
+def test_an_interaction_outside_the_glms_factors_leaves_the_operand_closed() -> None:
+    bundle = _main_effects()  # the cross Factor is carried, and is not one of this GLM's factors
+    cross = bundle["resolved_payloads"]["factor:region_x_yoa@1"]["id"]
+    assert cross not in bundle["resolved_payloads"][_MODEL]["spec"]["factors"]
+    rc, lines = _run([_row(bundle, "ix", 2)])
+
+    assert "NOTREACHABLE ix@2 status=approved (closed-input)" in lines, lines
+    assert rc == 0
+
+
+@pytest.mark.req("FR-2143")
+def test_a_version_with_a_reachable_class_is_not_also_listed_notreachable() -> None:
+    bundle = _closed()  # region is closed; a ghost level indicator has no relativities entry
+    fit = bundle["resolved_payloads"][_MODEL]["fit_result"]
+    fit["coefficients"].append({**fit["coefficients"][1], "term": "ghost[x]"})
+    rc, lines = _run([_row(bundle, "both", 1)])
+
+    assert "NORELATIVITIES both@1 status=approved" in lines, lines
+    assert not any(line.startswith("NOTREACHABLE ") for line in lines)
+    assert "not-reachable: 0" in lines
+    assert rc == 1
+
+
+@pytest.mark.req("FR-2143")
+def test_a_version_carrying_a_not_examined_line_is_not_listed_notreachable() -> None:
+    bundle = _closed()
+    fit = bundle["resolved_payloads"][_MODEL]["fit_result"]
+    fit["coefficients"].append({**fit["coefficients"][1], "term": "region[3.0]"})
+    rc, lines = _run([_row(bundle, "numeric", 1)])
+
+    assert any(line.startswith("NOTEXAMINED-NUMERIC-TERMS numeric@1") for line in lines), lines
+    assert not any(line.startswith("NOTREACHABLE ") for line in lines)
+    assert rc == 0
+
+
+@pytest.mark.req("FR-2143")
+def test_an_unbanded_expression_factor_with_relativities_is_plain() -> None:
+    bundle = _closed()
+    factor = bundle["resolved_payloads"]["factor:region@1"]
+    factor["type"] = "expression"
+    factor["expression"] = "region"
+    rc, lines = _run([_row(bundle, "expr", 1)])
+
+    assert "PLAIN expr@1 status=approved" in lines, lines
+    assert rc == 1
+
+
+# --- the second, differently built check: the real scorer, never the classifier ---------------
+
+
+def _quote_combinations(bundle: dict[str, Any]) -> list[dict[str, object]]:
+    """Every combination of the declared domains of the bundle's enum inputs (the contract's own,
+    all of them, not only the ones the classifier called closed); another input is held at a
+    valid value. Never a sample."""
+    contract = bundle["graph"]["input_contract"]
+    fixed: dict[str, object] = {
+        entry["name"]: 1 for entry in contract if entry["type"] not in ("enum",)
+    }
+    enums = [(entry["name"], entry["domain"]) for entry in contract if entry["type"] == "enum"]
+    combos: list[dict[str, object]] = [dict(fixed)]
+    for name, domain in enums:
+        combos = [{**combo, name: level} for combo in combos for level in domain]
+    return combos
+
+
+def _refusals(bundle: dict[str, Any]) -> list[str]:
+    """Score every combination through the runtime's own loader and entry; the refusals' codes."""
+    import asyncio
+
+    from model_schema import ArtifactRef
+    from model_schema.scoring import QuoteContext, QuoteContextOptions
+    from pricing_core.rating.compile import Bundle
+    from pricing_core.rating.runtime import load_bundle
+    from pricing_core.rating.score import score_one
+
+    compiled = load_bundle(Bundle.model_validate(bundle))
+    reference = ArtifactRef(type="rating_version", slug="probe-rv", version=1)
+
+    async def score_all() -> list[str]:
+        refused: list[str] = []
+        for combo in _quote_combinations(bundle):
+            context = QuoteContext(
+                purpose="new_business",
+                quoted_at=datetime(2026, 11, 1, tzinfo=UTC),
+                effective_date=date(2026, 11, 1),
+                inputs=combo,
+                options=QuoteContextOptions(rating_version_ref=reference),
+            )
+            try:
+                await score_one(compiled, context)
+            except Exception as exc:
+                refused.append(f"{sorted(combo.items())}: {type(exc).__name__}: {str(exc)[:90]}")
+        return refused
+
+    return asyncio.run(score_all())
+
+
+def _closed_fixtures() -> dict[str, dict[str, Any]]:
+    return {
+        "main-effects": _main_effects(),
+        "offset-over-the-whole-domain": _her_offset(["A", "B", "C"]),
+    }
+
+
+@pytest.mark.req("FR-2143")
+@pytest.mark.parametrize("name", sorted(_closed_fixtures()))
+def test_every_version_listed_notreachable_scores_every_combination_of_its_inputs(
+    name: str,
+) -> None:
+    bundle = _closed_fixtures()[name]
+    _rc, lines = _run([_row(bundle, "fixture", 1)])
+
+    assert any(
+        line.startswith("NOTREACHABLE fixture@1 ") and "closed-input" in line for line in lines
+    ), lines
+    assert _refusals(bundle) == []
+
+
+@pytest.mark.req("FR-2143")
+@pytest.mark.parametrize(
+    "name", ["offset-fitted-on-fewer-levels", "interaction-cell-absent"]
+)
+def test_the_two_bundles_a_review_found_are_refused_by_the_real_scorer_and_read_plain(
+    name: str,
+) -> None:
+    bundle = (
+        _her_offset(["A", "B"]) if name == "offset-fitted-on-fewer-levels" else _her_interaction()
+    )
+    rc, lines = _run([_row(bundle, "refused", 1)])
+    refusals = _refusals(bundle)
+
+    assert refusals, "the real scorer scored every combination"
+    assert all("UNSEEN_LEVEL_BEHAVIOUR_REQUIRED" in line for line in refusals), refusals
+    assert "PLAIN refused@1 status=approved" in lines, lines
+    assert rc == 1
+
+
+@pytest.mark.req("FR-2143")
+def test_a_version_the_runtime_cannot_load_is_unreadable_by_the_exception_type() -> None:
+    """The sweep takes what is scored from the runtime's own loader, so a Bundle the runtime cannot
+    load (here a GLM whose Factor the Bundle does not carry) is UNREADABLE with the exception's
+    type, never a class: such a version cannot quote at all."""
+    bundle = _closed()
+    del bundle["resolved_payloads"]["factor:region@1"]
+    rc, lines = _run([_row(bundle, "unloadable", 1)])
+
+    assert "UNREADABLE unloadable@1 status=approved (ValueError)" in lines, lines
+    assert rc == 2

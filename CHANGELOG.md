@@ -24,8 +24,14 @@ about. The format follows [Keep a Changelog 1.1.0](https://keepachangelog.com/en
   GBM or an EBM, which keeps the FR-131 refusal) on `not-examined-other-family`; a model with no
   fit result, no model type or an unknown one makes its version unreadable, and each unreadable
   line names the version and a reason word or the exception's type only. A version whose every
-  undeclared identity Factor cannot be reached by a quote is listed as `NOTREACHABLE`, with the
-  reason word `closed-input` or `not-scored`, and `PLAIN` is what the sweep cannot classify. The
+  undeclared identity Factor cannot be reached by a quote, and that carries no other class, is
+  listed as `NOTREACHABLE`, with the reason word `closed-input` or `not-scored`, and `PLAIN` is
+  what the sweep cannot classify. The sweep also changes what it prints for a version with an
+  `expression` Factor that has no Banding and has relativities: it now lists it `PLAIN` (exit 1),
+  where it listed no class. A version the runtime cannot load (a GLM whose Factor the bundle does
+  not carry, or whose fit names a level its Factor cannot produce) now reads `UNREADABLE`, with the
+  exception's type (exit 2), where it was classified: the sweep takes what is scored from the
+  runtime's own loader. The
   backtest and model comparison views show the count of rows left out on an unseen level with its
   exposure, as the diagnostics view does. Diagnostics, comparisons
   and backtests leave

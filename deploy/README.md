@@ -149,10 +149,17 @@ docker compose -f deploy/docker-compose.yml --profile app up -d --wait --scale a
   lists such versions as `NOTEXAMINED-NUMERIC-TERMS` until their models are refitted (the line
   lists every identity label that starts like a number, so it is a floor on what the tool
   examined, not a count of faults). The NOTEXAMINED lines are information: they never change the
-  exit code. A version whose every undeclared identity Factor cannot be reached by a quote is
-  listed as `NOTREACHABLE`, never `PLAIN`, with a reason word on its line: `closed-input` (the
-  Factor is fed only by an input that is a closed enum over the fit's own levels, on every GLM
-  that input feeds) or `not-scored` (no `model_call` scores the GLM). `PLAIN` is what the sweep
+  exit code. A version whose every undeclared identity Factor cannot be reached by a quote, and that
+  carries no other class and no NOTEXAMINED line, is listed as `NOTREACHABLE`, never `PLAIN`,
+  with a reason word on its line: `closed-input` (the Factor is fed only by an input that is a
+  closed enum over the fit's own levels, on every GLM that input feeds, and no interaction Factor
+  of that fit takes it as an operand) or `not-scored` (nothing the runtime scores reads the GLM:
+  no `model_call` names it, directly or through a Peril Structure, and no scored GLM reads it as
+  its offset model). An `expression` Factor with no Banding and with relativities is `PLAIN`. A version the runtime
+  cannot load (a GLM whose Factor the bundle does not carry, or whose fit names a level its Factor
+  cannot produce) is `UNREADABLE` with the exception's type, and exit 2 now also means that the
+  runtime could not load a version's bundle: the sweep takes what is scored from the runtime's
+  own loader. `PLAIN` is what the sweep
   cannot classify, an upper bound. The sweep classifies each model in a bundle by its model type: a GLM is examined; a
   model of another family (a GBM or an EBM) keeps the `02` FR-131 refusal whatever a Factor
   declares, is not examined, and is counted on the `not-examined-other-family` line; a model with
