@@ -757,3 +757,65 @@ async def test_the_private_key_is_in_neither_the_response_nor_the_event_nor_the_
     for surface in (response.text, exported, printed.out, printed.err):
         assert marker not in surface
         assert raw_private not in surface
+
+
+# --- #1873: another workspace's events are outside this workspace's export and verify -------
+# A workspace's chain is its own (FR-372, FR-16): its export and its verify must not read,
+# count or verify another workspace's events. The event query has had this test since the
+# start (`test_another_workspaces_events_are_invisible`); these two routes had none, so
+# removing their workspace condition failed nothing.
+
+
+@pytest.mark.req("FR-16")
+async def test_another_workspaces_events_are_absent_from_the_export(
+    client: TestClient, database: Database, workspace_id, principal, auditor_headers
+) -> None:
+    other = new_uuid7()
+    await _events(database, workspace_id, principal, n=2)
+    await _events(database, other, principal, n=3)
+
+    exported = client.get("/api/v1/audit/export?format=json", headers=auditor_headers).text
+    lines = [json.loads(line) for line in exported.splitlines() if line]
+    assert [line["sequence"] for line in lines] == [1, 2]
+    assert {line["workspace_id"] for line in lines} == {str(workspace_id)}
+
+    csv_rows = client.get("/api/v1/audit/export?format=csv", headers=auditor_headers).text
+    assert len([row for row in csv_rows.splitlines() if row]) == 1 + 2  # the header and A's two
+
+    # Both workspaces hold one `model.submitted`: a filtered export must show only A's.
+    filtered = client.get(
+        "/api/v1/audit/export?format=json&action=model.submitted", headers=auditor_headers
+    ).text
+    narrowed = [json.loads(line) for line in filtered.splitlines() if line]
+    assert [line["workspace_id"] for line in narrowed] == [str(workspace_id)]
+
+
+@pytest.mark.req("FR-16")
+@pytest.mark.req("FR-372")
+async def test_another_workspaces_chain_is_outside_the_verified_count(
+    client: TestClient, database: Database, workspace_id, principal, auditor_headers
+) -> None:
+    await _events(database, workspace_id, principal, n=2)
+    await _events(database, new_uuid7(), principal, n=3)
+
+    body = client.get("/api/v1/audit/verify", headers=auditor_headers).json()
+    assert body["intact"] is True
+    assert body["events_checked"] == 2
+    assert body["last_sequence"] == 2
+    assert body["broken_at_sequence"] is None
+
+
+@pytest.mark.req("FR-16")
+@pytest.mark.req("FR-372")
+async def test_a_break_in_another_workspaces_chain_does_not_reach_this_ones_verify(
+    client: TestClient, database: Database, workspace_id, principal, auditor_headers
+) -> None:
+    """B's event 2 is stored with content its hash does not cover (`_seed`'s `tampered`), as an
+    edit below the application leaves it. A's verify neither walks into B nor reports it."""
+    await _events(database, workspace_id, principal, n=2)
+    await _seed(database, new_uuid7(), principal, _days(3), tampered=2)
+
+    body = client.get("/api/v1/audit/verify", headers=auditor_headers).json()
+    assert body["intact"] is True
+    assert body["events_checked"] == 2
+    assert body["broken_at_sequence"] is None
