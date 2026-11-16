@@ -115,12 +115,8 @@ _SINKS: dict[tuple[str, str, str], tuple[int, str]] = {
         1, "`ColumnNameCollisionError`: names two column headers; upload path, not a quote"),
     ("backend/src/app/data/ingestion.py", "ingest_upload", "{exc}"): (
         1, "`RecipeError`: names a column and a cast; upload path, not a quote"),
-    ("backend/src/app/platform/metrics.py", "_validated", "{exc}"): (
-        1, "a custom metric's own declaration error (RL-917's artifact path); no Quote Context"),
     ("backend/src/app/platform/modelling.py", "resolve_offset_model", "str(exc)"): (
         1, "`FactorResolutionError`: names a factor and a dataset version; model path"),
-    ("backend/src/app/platform/objectives.py", "_validated", "{exc}"): (
-        1, "a custom objective's own declaration error; no Quote Context"),
     ("backend/src/app/platform/objectives.py", "derive_objective", "str(exc)"): (
         2, "`ExpressionError` on an author's own loss text, as the problem detail and its "
         "`loss` field error; a custom objective's declaration error (FR-145), no Quote Context"),

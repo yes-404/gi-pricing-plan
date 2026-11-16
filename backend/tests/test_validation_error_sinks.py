@@ -157,3 +157,51 @@ async def test_a_body_that_is_not_a_table_carries_no_polars_text(
     assert refused.value.code == "VALIDATION_FAILED"
     assert "same columns" in (refused.value.detail or ""), "control: the guidance is kept"
     assert _SENTINEL not in (refused.value.detail or "")
+
+
+# -- #1712 rows 4, 5 and 6 (S7b) -------------------------------------------------------------
+
+
+def _custom_artifact_body(route: str, template: str, params: dict) -> dict:
+    body = {"slug": "sentinel-case", "template": template, "params": params}
+    if route.endswith("custom-metrics"):
+        body["direction"] = "lower_is_better"
+    return body
+
+
+@pytest.mark.req("NFR-499")
+@pytest.mark.parametrize("route", ["/api/v1/custom-metrics", "/api/v1/custom-objectives"])
+@pytest.mark.parametrize(
+    ("template", "params", "kept", "absent"),
+    [
+        # A malformed key is counted and not shown; the rule is still there.
+        (
+            "asymmetric_squared",
+            {"SENTINEL key<>": 1.0},
+            ["does not take a key", "not a parameter"],
+            ["SENTINEL"],
+        ),
+        # A value the caller sent is not echoed (a money parameter given as a float).
+        ("capped_gamma", {"cap": 987654321.5}, ["integer minor units"], ["987654321"]),
+        # A value distinct from the bound it broke is not echoed beyond the bound text.
+        ("tweedie", {"p": 0.987654}, ["greater than '1.0'"], ["0.987654"]),
+    ],
+    ids=["malformed-key", "money-value", "bound-value"],
+)
+def test_a_custom_artifact_refusal_carries_no_submitted_value(
+    api_client, workspace_id, principal, grant, route, template, params, kept, absent
+) -> None:
+    """Rows 5 and 6: `_validated` used to render the exception, and that text prints the
+    key and the value the caller sent. Kept: the rule. The `kept` text is any ONE of the
+    alternatives per route (the metric and the objective word the unknown-key rule alike)."""
+    asyncio.get_event_loop().run_until_complete(grant("pricing_actuary"))
+    refused = api_client.post(
+        route,
+        json=_custom_artifact_body(route, template, params),
+        headers=_headers(principal, workspace_id),
+    )
+    assert refused.status_code == 422, refused.text
+    detail = refused.json()["detail"]
+    assert any(text in detail for text in kept), (detail, kept)
+    for text in absent:
+        assert text not in refused.text

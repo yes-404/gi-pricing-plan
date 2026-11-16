@@ -73,6 +73,7 @@ from model_schema import (
     SamplingSpec,
     new_uuid7,
 )
+from model_schema.objectives import unknown_parameter_names
 from pricing_core.data.expressions import ExpressionError, GrammarProfile, parse_expression
 from pricing_core.modelling.expression_objective import derive
 from pricing_core.safe_error import safe_error_detail
@@ -1013,11 +1014,20 @@ def _validated(payload: dict[str, Any], *, template: ObjectiveTemplate | None) -
     try:
         return CustomObjective.model_validate(payload)
     except ValueError as exc:
+        # FD-1589 row 6: see `platform/metrics.py::_validated`.
+        detail = safe_error_detail(exc) or type(exc).__name__
+        params = payload.get("params")
+        if (
+            template is not None
+            and isinstance(params, dict)
+            and (names := unknown_parameter_names(template, params))
+        ):
+            detail += f" Parameters not accepted: {', '.join(repr(n) for n in names)}."
         raise PlatformError(
             "VALIDATION_FAILED",
             "This custom objective is not valid",
             422,
-            f"{exc}",
+            detail,
         ) from exc
 
 
