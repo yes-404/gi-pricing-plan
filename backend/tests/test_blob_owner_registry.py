@@ -127,10 +127,9 @@ async def test_after_the_backfill_the_collector_selects_nothing_any_row_mentions
     """
     async with database.unit_of_work() as session:
         await blobs.backfill_ref_counts(session)
-    async with database.unit_of_work() as session:
-        report = await blob_store.collect_garbage(
-            session, actor=principal, workspace_id=workspace_id, dry_run=True, grace_days=0
-        )
+    report = await blob_store.collect_garbage(
+        database, actor=principal, workspace_id=workspace_id, dry_run=True, grace_days=0
+    )
     assert report.dry_run is True
     assert report.deleted == ()  # a dry run deletes nothing
 

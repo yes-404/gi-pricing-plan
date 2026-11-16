@@ -33,9 +33,10 @@ from uuid import UUID
 
 import boto3
 from botocore.client import Config as BotoConfig
-from botocore.exceptions import ClientError
+from botocore.exceptions import BotoCoreError, ClientError
 from pydantic import BaseModel, ConfigDict, Field
-from sqlalchemy import CursorResult, select, text, update
+from sqlalchemy import CursorResult, String, any_, delete, literal, select, text, update
+from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -122,6 +123,9 @@ class GarbageCollectionReport(BaseModel):
     considered: int
     deleted: tuple[str, ...] = ()
     bytes_reclaimed: int = 0
+    #: Digests whose row was deleted but whose object was kept because a `put` re-created the
+    #: row before the object step. Set on the returned report only, after the audit event.
+    re_put: tuple[str, ...] = ()
 
 
 class BlobStore:
@@ -234,6 +238,9 @@ class BlobStore:
         body = content if isinstance(content, bytes) else b"".join(content)
         digest = hashlib.sha256(body).hexdigest()
 
+        # Shared, held to the caller's commit: the collector's object delete takes the same lock
+        # exclusively, so it cannot delete the object between our read of the row and our insert.
+        await _lock_digest(session, digest, shared=True)
         existing = await session.get(BlobRow, digest)
         if existing is not None:
             # FR-419 / ID-4: same content, same reference, no second object. Media type
@@ -248,8 +255,19 @@ class BlobStore:
                         "requested_media_type": media_type,
                     },
                 )
-            await retain(session, digest)
-            return to_ref(existing)
+            try:
+                await retain(session, digest)
+            except PlatformError as exc:
+                if exc.code != "BLOB_NOT_FOUND":
+                    raise
+                # The collector's DELETE committed between our read and this retain (it takes no
+                # digest lock for the row delete, by design): the row is gone. The digest lock we
+                # still hold keeps its object step waiting, so fall through to the new-object path
+                # under it: upload, insert, and the collector then finds the row and keeps the
+                # object (`re_put`). Drop the stale instance so a later `get` sees the new row.
+                session.expunge(existing)
+            else:
+                return to_ref(existing)
 
         key = blob_key(digest)
         await asyncio.to_thread(
@@ -260,10 +278,17 @@ class BlobStore:
             ContentType=media_type,
         )
 
-        session.add(
-            BlobRow(sha256=digest, bytes_=len(body), media_type=media_type, ref_count=1)
+        # Two first-time puts of the same bytes no longer exclude each other (the digest lock is
+        # shared), so the second finds the row the first inserted only at the unique index:
+        # on conflict it takes its reference with `retain` instead of failing.
+        inserted = await session.execute(
+            pg_insert(BlobRow)
+            .values(sha256=digest, bytes_=len(body), media_type=media_type, ref_count=1)
+            .on_conflict_do_nothing(index_elements=["sha256"])
+            .returning(BlobRow.sha256)
         )
-        await session.flush()
+        if inserted.first() is None:
+            await retain(session, digest)
         return BlobRef(sha256=digest, bytes=len(body), media_type=media_type)
 
     async def open(self, ref: BlobRef) -> AsyncIterator[bytes]:
@@ -409,7 +434,21 @@ class BlobStore:
             locked = await session.get(BlobUploadRow, upload_id, with_for_update=True)
             assert locked is not None
             if locked.sha256 is None:
-                await session.execute(
+                # The collector may have deleted this digest's row and object since the check
+                # above. Under the digest lock nothing can change that until we commit: if no
+                # row exists, make sure the object does, then insert the row.
+                await _lock_digest(session, digest, shared=True)
+                if await session.get(BlobRow, digest) is None and not await asyncio.to_thread(
+                    self._object_exists, content_key
+                ):
+                    await asyncio.to_thread(
+                        self._client.copy,
+                        {"Bucket": self._bucket, "Key": key},
+                        self._bucket,
+                        content_key,
+                        ExtraArgs={"ContentType": media_type, "MetadataDirective": "REPLACE"},
+                    )
+                insert = (
                     pg_insert(BlobRow)
                     .values(
                         sha256=digest,
@@ -420,14 +459,36 @@ class BlobStore:
                     )
                     .on_conflict_do_nothing(index_elements=["sha256"])
                 )
-                await retain(session, digest)
+                await session.execute(insert)
+                try:
+                    await retain(session, digest)
+                except PlatformError as exc:
+                    if exc.code != "BLOB_NOT_FOUND":
+                        raise
+                    # The row already existed (the insert did nothing) and the collector's DELETE,
+                    # which takes no digest lock for the row delete, committed between the insert
+                    # and this retain: the row is gone. Same as `put`: insert again (our own, new
+                    # row; the collector cannot see it before we commit) and retain. The object is
+                    # safe: the collector's object step waits on the shared lock we hold.
+                    await session.execute(insert)
+                    await retain(session, digest)
                 locked.sha256 = digest
-            row = await session.get(BlobRow, digest)
+            # `populate_existing`: the instance read above may be the row the collector deleted.
+            row = await session.get(BlobRow, digest, populate_existing=True)
             assert row is not None
             ref = to_ref(row)
 
         await asyncio.to_thread(self._client.delete_object, Bucket=self._bucket, Key=key)
         return ref
+
+    def _object_exists(self, key: str) -> bool:
+        try:
+            self._client.head_object(Bucket=self._bucket, Key=key)
+        except ClientError as exc:
+            if exc.response.get("Error", {}).get("Code") in {"404", "NoSuchKey", "NotFound"}:
+                return False
+            raise
+        return True
 
     def _complete_staged(self, key: str, s3_upload_id: str | None, part_count: int) -> None:
         """Finish the staged object, or fail with `VALIDATION_FAILED` naming what is wrong.
@@ -601,19 +662,34 @@ class BlobStore:
 
     async def collect_garbage(
         self,
-        session: AsyncSession,
+        database: Database,
         *,
         actor: Principal,
-        workspace_id: Any,
+        workspace_id: UUID,
         dry_run: bool = True,
         grace_days: int | None = None,
     ) -> GarbageCollectionReport:
-        """Reclaim unreferenced blobs, conservatively (FR-420).
+        """Reclaim unreferenced blobs, conservatively (FR-420, #1855).
 
-        A blob is deletable only when **both** hold: nothing references it, and it is older
-        than the grace period. The age check is what makes it conservative — a blob is
-        created before the artifact that references it, so a GC run in that window would
+        A blob is deletable only when **all** hold: its count is 0, no owner row names it, and
+        it is older than the grace period. The age check is what makes it conservative — a blob
+        is created before the artifact that references it, so a GC run in that window would
         delete content that is about to be claimed.
+
+        **The collector owns its transactions** (it takes the `Database`, not a session), because
+        the order is the safety property:
+
+        1. one unit of work deletes the rows with `_delete_unreferenced` — two statements: lock
+           the count-0 rows `FOR UPDATE`, then delete those no owner row names, with a snapshot
+           taken after the locks (its docstring says what that does and does not cover: the count
+           is re-checked under the row lock, the owners only as of the second statement's
+           snapshot) — and writes the audit event, then commits;
+        2. only after that commit are the objects deleted, each under the digest's advisory lock
+           and only if no row has appeared for it since (a concurrent `put` of the same bytes).
+
+        A failure in step 2 leaves an object with no row (an orphan, cheap); it can never leave a
+        row with no object, which is what a delete-then-rollback did. The audit event names the
+        rows the statement actually deleted, not the ones a prior read expected to.
 
         `dry_run` defaults to **True**. A destructive sweep whose default is to destroy is
         a sweep someone runs by accident.
@@ -621,42 +697,114 @@ class BlobStore:
         grace = grace_days if grace_days is not None else self._settings.blob_gc_grace_days
         cutoff = datetime.now(UTC) - timedelta(days=grace)
 
-        candidates = (
-            await session.execute(
-                select(BlobRow).where(BlobRow.ref_count == 0, BlobRow.created_at < cutoff)
-            )
-        ).scalars().all()
-
-        report = GarbageCollectionReport(
-            dry_run=dry_run,
-            grace_days=grace,
-            considered=len(candidates),
-            deleted=tuple(b.sha256 for b in candidates) if not dry_run else (),
-            bytes_reclaimed=sum(b.bytes_ for b in candidates) if not dry_run else 0,
-        )
-
-        if not dry_run:
-            for blob in candidates:
-                await asyncio.to_thread(
-                    self._client.delete_object,
-                    Bucket=self._bucket,
-                    Key=blob_key(blob.sha256),
+        found: list[tuple[str, int]]
+        async with database.unit_of_work() as session:
+            if dry_run:
+                # The count-and-age selector only, deliberately without the owner re-check: a
+                # dry run reports what the counts say, so a blob an owner names at count 0 (a
+                # leaked undercount) shows in `considered` instead of being hidden by the guard
+                # that would stop the real run from taking it.
+                counted = await session.execute(
+                    select(BlobRow.sha256, BlobRow.bytes_).where(
+                        BlobRow.ref_count == 0, BlobRow.created_at < cutoff
+                    )
                 )
-                await session.delete(blob)
-            await session.flush()
+                found = [(row[0], int(row[1])) for row in counted.all()]
+            else:
+                found = await _delete_unreferenced(session, cutoff)
+            report = GarbageCollectionReport(
+                dry_run=dry_run,
+                grace_days=grace,
+                considered=len(found),
+                deleted=() if dry_run else tuple(sha for sha, _ in found),
+                bytes_reclaimed=0 if dry_run else sum(size for _, size in found),
+            )
+            # Audited either way (FR-420): a dry run is evidence about what the platform
+            # believes is unreferenced, which is worth as much as the deletion itself.
+            await audit.record(
+                session,
+                workspace_id=workspace_id,
+                actor=actor,
+                source=JobSource.SYSTEM,
+                action="blob.garbage_collected",
+                entity_ref="blob:gc@1",
+                after=report.model_dump(mode="json"),
+            )
 
-        # Audited either way (FR-420): a dry run is evidence about what the platform
-        # believes is unreferenced, which is worth as much as the deletion itself.
-        await audit.record(
-            session,
-            workspace_id=workspace_id,
-            actor=actor,
-            source=JobSource.SYSTEM,
-            action="blob.garbage_collected",
-            entity_ref="blob:gc@1",
-            after=report.model_dump(mode="json"),
-        )
-        return report
+        re_put = [
+            digest
+            for digest in report.deleted
+            if not await self._delete_object_if_unreferenced(database, digest)
+        ]
+        # `re_put` is known only after the audit event committed, so it is on the returned report
+        # and in the log, not in the event: the event records the rows deleted.
+        return report.model_copy(update={"re_put": tuple(re_put)}) if re_put else report
+
+    async def _delete_object_if_unreferenced(self, database: Database, digest: str) -> bool:
+        """Delete one object whose row was just deleted; return False when the digest was re-put.
+
+        Takes the digest lock **exclusively** (a `put` of the same bytes holds it shared from
+        before its row read to its commit), then **re-reads that no `blobs` row exists** for the
+        digest. A row that is there was re-created by a `put` after the row delete committed: the
+        object is KEPT and the digest reported as re-put. The lock only orders the two sides; this
+        re-read is what closes the race. Lock sites: see `_lock_digest`.
+        """
+        try:
+            async with database.unit_of_work() as session:
+                await _lock_digest(session, digest, shared=False)
+                if await session.get(BlobRow, digest) is not None:
+                    _log.info(
+                        "blob re-put since its row was deleted; object kept",
+                        extra={"sha256": digest},
+                    )
+                    return False
+                await asyncio.to_thread(
+                    self._client.delete_object, Bucket=self._bucket, Key=blob_key(digest)
+                )
+        except (ClientError, BotoCoreError):
+            # The row is gone and committed; the object is an orphan, not a dangling reference. A
+            # storage failure that is not a `ClientError` (an unreachable endpoint, a timeout) is a
+            # `BotoCoreError`: it must not abort the loop and lose the report. The orphan sweep is
+            # slice 3b's (`reconcile_orphans`); a database deadlock mid-loop is #1888's subject.
+            _log.warning("blob object delete failed; left as an orphan", extra={"sha256": digest})
+        return True
+
+
+#: Namespace of the per-digest advisory lock, distinct from the audit chain's (`0x47495041`).
+_DIGEST_LOCK_NAMESPACE: Final = 0x47495042
+
+
+async def _lock_digest(session: AsyncSession, sha256: str, *, shared: bool) -> None:
+    """Take the transaction-scoped advisory lock for one digest.
+
+    It separates the writers of an object (`put`, `promote_upload`: write the object, then the
+    row) from the collector's object delete. Without it a `put` that missed the row just after
+    the collector's commit uploads the object, and the collector then deletes it, leaving a row
+    with no bytes.
+
+    **Writers take it SHARED, the collector EXCLUSIVE.** Writers need not exclude each other (the
+    row's primary key does that), so two transactions locking `{A, B}` and `{B, A}` never block
+    each other on this lock. (The `blobs` rows they then insert or update are locked until commit,
+    so two `put`s in opposite orders can still deadlock on those rows, as before.) The collector
+    waits for in-flight writers of that digest, and
+    a writer waits for the collector's object step. Two digests that hash to one key only share
+    or wait for each other. Released at commit or rollback.
+
+    **Protocol:**
+
+    - `BlobStore.put`: SHARED, taken **before** its row read, released at the caller's commit or
+      rollback (an advisory `xact` lock has no other release).
+    - `BlobStore.promote_upload`: SHARED, before its row read, released at the commit of its
+      final unit of work.
+    - `BlobStore._delete_object_if_unreferenced`: EXCLUSIVE, then the **re-read that no row
+      exists**, then the object delete; released at that unit of work's commit, after the
+      delete. A row found by the re-read keeps the object.
+    """
+    function = "pg_advisory_xact_lock_shared" if shared else "pg_advisory_xact_lock"
+    await session.execute(
+        text(f"SELECT {function}(:ns, hashtext(:sha))"),
+        {"ns": _DIGEST_LOCK_NAMESPACE, "sha": sha256},
+    )
 
 
 async def retain(session: AsyncSession, sha256: str) -> int:
@@ -846,6 +994,65 @@ _OWNER_COUNTS_SQL = (
     f"SELECT sha256, count(*) AS n FROM ({_OWNER_ROWS_SQL}) AS owned "
     "WHERE sha256 IS NOT NULL GROUP BY sha256"
 )
+
+
+#: "No owner row names this blob", correlated to `blobs`. `NOT EXISTS`, not `NOT IN`: a NULL
+#: digest from an owner place (a model with no covariance blob) would make `NOT IN` match nothing.
+def _not_owned() -> Any:
+    return text(
+        f"NOT EXISTS (SELECT 1 FROM ({_OWNER_ROWS_SQL}) AS owned WHERE owned.sha256 = blobs.sha256)"
+    )
+
+
+def _unreferenced(cutoff: datetime) -> tuple[Any, ...]:
+    """The collector's predicate, written once: count 0, no owner row, older than `cutoff`."""
+    return (BlobRow.ref_count == 0, BlobRow.created_at < cutoff, _not_owned())
+
+
+async def _delete_unreferenced(session: AsyncSession, cutoff: datetime) -> list[tuple[str, int]]:
+    """Delete every unreferenced blob row, in **two statements of one transaction**; return
+    `(sha256, bytes)` deleted.
+
+    1. `SELECT … FOR UPDATE` the rows with count 0 created before `cutoff`. It waits for any
+       transaction that holds one of those rows (a `retain` in flight) and, after the wait,
+       re-evaluates the row's own `ref_count`: a row that was retained is not returned.
+    2. A NEW `DELETE` of those rows that no owner row names. It is a new statement, so READ
+       COMMITTED gives it a fresh snapshot, taken **after** the row locks are held: an owner row
+       that committed while statement 1 waited is seen.
+
+    What this does and does not cover (#1893 review). Covered: a `ref_count` change, and an owner
+    row committed before statement 2 started. **Not covered:** an owner row that commits, without
+    taking a reference, after statement 2's snapshot and before its `DELETE` finishes; no row lock
+    on `blobs` stops that, because an owner writer touches the owner table, not `blobs`. Probed on
+    a copy database, with a 3 s delay planted inside the statement to widen the window (the real
+    window is narrow): the row and its object were deleted while an owner row named the digest.
+    That is the undercount case `BLOB_OWNERS` and the release guard exist for (FR-420); the
+    collector has no caller until slice 3b. A single statement did not close it either: its
+    `NOT EXISTS` used
+    the statement's starting snapshot, so it missed an owner row committed *during* the lock wait.
+
+    A statement-pair, not a lock the owner writers take, because the writers are many and
+    elsewhere. Both statements are plain SQL so a `SECURITY DEFINER` function can hold them in one
+    body (#1550): `FOR UPDATE` needs `UPDATE` on `blobs`, which the owner role has.
+    """
+    locked = list(
+        (
+            await session.execute(
+                select(BlobRow.sha256)
+                .where(BlobRow.ref_count == 0, BlobRow.created_at < cutoff)
+                .with_for_update()
+            )
+        ).scalars()
+    )
+    if not locked:
+        return []
+    result = await session.execute(
+        delete(BlobRow)
+        .where(BlobRow.sha256 == any_(literal(locked, ARRAY(String(64)))), *_unreferenced(cutoff))
+        .returning(BlobRow.sha256, BlobRow.bytes_)
+        .execution_options(synchronize_session=False)
+    )
+    return [(row[0], int(row[1])) for row in result.all()]
 
 
 async def backfill_ref_counts(session: AsyncSession) -> int:

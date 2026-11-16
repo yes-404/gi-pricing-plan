@@ -205,9 +205,64 @@ def owner_subject_settings(**overrides: Any) -> Settings:
 #: The `(node id, label, reason)` of every test that may use `owner_database` -- closed, and
 #: enforced by construction (`owner_database` fails a test not listed here). `api_settings` /
 #: `api_client` are never among them: they are the application. Labels: `migration`,
-#: `provisioning`, `DP-22` (the five caller-less paths), `owner-subject` (tests that PROVE
-#: the owner is refused, or that tamper), `bootstrap` (the seed's `grant_demo_principals`).
+#: `provisioning`, `DP-22` (the paths the application role has no grant for: the caller-less
+#: paths, and the FR-420 collector and its tests, one label for all of them), `owner-subject`
+#: (tests that PROVE the owner is refused, or that tamper), `bootstrap` (the seed's
+#: `grant_demo_principals`). The `DP-22` count is `grep -c '"DP-22"' backend/tests/conftest_db.py`.
 OWNER_FIXTURE_USERS: tuple[tuple[str, str, str], ...] = (
+    (
+        "backend/tests/test_traces.py::test_a_referenced_trace_blob_survives_garbage_collection",
+        "DP-22",
+        "runs the collector's DELETE on blobs, which the application role cannot (OQ-1943)",
+    ),
+    (
+        "backend/tests/test_blob_collector.py::"
+        "test_a_failed_object_delete_after_the_commit_leaves_an_orphan_never_a_dangling_row",
+        "DP-22",
+        "runs the collector's DELETE on blobs, which the application role cannot (OQ-1943)",
+    ),
+    (
+        "backend/tests/test_blob_collector.py::"
+        "test_a_retain_that_commits_while_the_delete_waits_keeps_the_blob",
+        "DP-22",
+        "runs the collector's DELETE on blobs, which the application role cannot (OQ-1943)",
+    ),
+    (
+        "backend/tests/test_blob_collector.py::"
+        "test_a_blob_an_owner_row_names_is_not_collected_even_at_ref_count_zero",
+        "DP-22",
+        "runs the collector's DELETE on blobs, which the application role cannot (OQ-1943)",
+    ),
+    (
+        "backend/tests/test_blob_collector.py::"
+        "test_a_non_dry_run_deletes_row_and_object_and_audits_the_deleted_digests",
+        "DP-22",
+        "runs the collector's DELETE on blobs, which the application role cannot (OQ-1943)",
+    ),
+    (
+        "backend/tests/test_blob_collector.py::"
+        "test_a_put_that_commits_between_the_row_commit_and_the_object_step_keeps_the_object",
+        "DP-22",
+        "runs the collector's DELETE on blobs, which the application role cannot (OQ-1943)",
+    ),
+    (
+        "backend/tests/test_blob_collector.py::"
+        "test_a_storage_error_that_is_not_a_client_error_leaves_an_orphan_and_keeps_the_report",
+        "DP-22",
+        "runs the collector's DELETE on blobs, which the application role cannot (OQ-1943)",
+    ),
+    (
+        "backend/tests/test_blob_collector.py::"
+        "test_an_owner_row_that_commits_while_the_delete_waits_keeps_the_blob",
+        "DP-22",
+        "runs the collector's DELETE on blobs, which the application role cannot (OQ-1943)",
+    ),
+    (
+        "backend/tests/test_blob_collector.py::"
+        "test_a_null_owner_digest_does_not_stop_the_collector_taking_an_unowned_blob",
+        "DP-22",
+        "runs the collector's DELETE on blobs, which the application role cannot (OQ-1943)",
+    ),
     (
         "backend/tests/test_migration_deployments.py::"
         "test_the_upgrade_seeds_the_three_environments_and_leaves_existing_traces_alone",
@@ -492,17 +547,17 @@ OWNER_FIXTURE_USERS: tuple[tuple[str, str, str], ...] = (
     (
         "backend/tests/test_blobs.py::"
         "test_gc_deletes_an_old_unreferenced_blob_and_audits_it",
-        "owner-subject",
+        "DP-22",
         "runs the FR-420 sweep, which DELETEs blobs; the app role has no DELETE (OQ-1943)",
     ),
     (
         "backend/tests/test_blobs.py::test_gc_spares_a_referenced_blob",
-        "owner-subject",
+        "DP-22",
         "runs the FR-420 sweep, which DELETEs blobs; the app role has no DELETE (OQ-1943)",
     ),
     (
         "backend/tests/test_blobs.py::test_gc_spares_a_young_unreferenced_blob",
-        "owner-subject",
+        "DP-22",
         "runs the FR-420 sweep, which DELETEs blobs; the app role has no DELETE (OQ-1943)",
     ),
     (
@@ -1447,7 +1502,13 @@ async def seed_as_owner[T](seed: Callable[[AsyncSession], Awaitable[T]]) -> T:
     **Commit semantics (S1a seam ruling, condition (ii)).** `unit_of_work` commits when `seed`
     returns, and the commit happens *before* this function does. The rows are therefore
     committed, and visible to the application connection (`database`, `api_client`) on its
-    next statement in the same test; there is no shared transaction to wait on.
+    next statement in the same test; there is no shared transaction to wait on. The same
+    semantics hold for the test-setup writes to `blobs` that the login role has no grant for
+    (#1504 slice 3a, three sites in `backend/tests/test_blob_collector.py`): `_backdate` (an
+    `UPDATE` of `blobs.created_at`, to age a blob past the grace period), `_delete_row_as_owner`
+    (the collector's row `DELETE` done as setup) and the inline `_drop_row` in
+    `test_the_object_step_skips_a_digest_a_concurrent_put_is_re_storing`. Each is committed
+    before this function returns, so the next statement of the login-role connection sees it.
 
     **Teardown.** Nothing deletes these rows per test. Isolation is the test's own fresh
     `workspace_id` (the only isolation an append-only table permits), and the session-scoped
