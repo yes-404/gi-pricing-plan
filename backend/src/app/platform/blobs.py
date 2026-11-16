@@ -448,7 +448,7 @@ class BlobStore:
                         content_key,
                         ExtraArgs={"ContentType": media_type, "MetadataDirective": "REPLACE"},
                     )
-                await session.execute(
+                insert = (
                     pg_insert(BlobRow)
                     .values(
                         sha256=digest,
@@ -459,9 +459,22 @@ class BlobStore:
                     )
                     .on_conflict_do_nothing(index_elements=["sha256"])
                 )
-                await retain(session, digest)
+                await session.execute(insert)
+                try:
+                    await retain(session, digest)
+                except PlatformError as exc:
+                    if exc.code != "BLOB_NOT_FOUND":
+                        raise
+                    # The row already existed (the insert did nothing) and the collector's DELETE,
+                    # which takes no digest lock for the row delete, committed between the insert
+                    # and this retain: the row is gone. Same as `put`: insert again (our own, new
+                    # row; the collector cannot see it before we commit) and retain. The object is
+                    # safe: the collector's object step waits on the shared lock we hold.
+                    await session.execute(insert)
+                    await retain(session, digest)
                 locked.sha256 = digest
-            row = await session.get(BlobRow, digest)
+            # `populate_existing`: the instance read above may be the row the collector deleted.
+            row = await session.get(BlobRow, digest, populate_existing=True)
             assert row is not None
             ref = to_ref(row)
 

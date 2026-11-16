@@ -22,7 +22,7 @@ from botocore.exceptions import ClientError, EndpointConnectionError
 from sqlalchemy import select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.models import AuditEventRow, BlobRow, ScoringTraceRow
+from app.db.models import AuditEventRow, BlobRow, BlobUploadRow, ScoringTraceRow
 from app.db.session import Database
 from app.platform import blobs, traces
 from app.platform.blobs import BlobStore, blob_key
@@ -457,6 +457,70 @@ async def test_a_put_whose_retain_finds_the_row_deleted_falls_through_and_stores
         row = await session.get(BlobRow, digest)
     assert row is not None
     assert row.ref_count == 1
+    assert await _object_exists(blob_store, digest)
+
+
+@pytest.mark.req("FR-420")
+async def test_promote_upload_falls_through_when_the_row_is_deleted_before_its_retain(
+    database: Database,
+    blob_store: BlobStore,
+    workspace_id,
+    principal: Principal,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """#1893 review, point 3 (and audit D4): the review's own interleaving. A blob row already
+    exists at count 0, so `promote_upload`'s insert does nothing; the collector's DELETE commits
+    (done here by `seed_as_owner`); only then does `promote_upload`'s `retain` run and find no
+    row. It must insert again and retain, as `put` does, not fail with `BLOB_NOT_FOUND`. The
+    interleaving is forced by holding the first `retain`. Runs as the login role."""
+    content = _unique(b"promote-gone")
+    digest = await _aged_unreferenced_blob(database, blob_store, content)
+    staging_key = f"staging/{new_uuid7()}"
+    await asyncio.to_thread(
+        blob_store._client.put_object, Bucket=blob_store._bucket, Key=staging_key, Body=content
+    )
+    upload_id = new_uuid7()
+    async with database.unit_of_work() as session:
+        session.add(
+            BlobUploadRow(
+                id=upload_id,
+                workspace_id=workspace_id,
+                principal_id=principal.id,
+                staging_key=staging_key,
+                s3_upload_id=None,
+                part_count=1,
+                media_type="text/plain",
+                complete_by=datetime.now(UTC) + timedelta(hours=1),
+            )
+        )
+    read_done, release_promote = asyncio.Event(), asyncio.Event()
+    original_retain = blobs.retain
+    calls = 0
+
+    async def _retain_after_the_delete(session: AsyncSession, sha256: str) -> int:
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            read_done.set()
+            await release_promote.wait()
+        return await original_retain(session, sha256)
+
+    monkeypatch.setattr(blobs, "retain", _retain_after_the_delete)
+    promote = asyncio.create_task(blob_store.promote_upload(database, upload_id))
+    await asyncio.wait_for(read_done.wait(), timeout=30)
+    # The collector's DELETE, committed between promote_upload's insert and its retain.
+    await _delete_row_as_owner(digest)
+    release_promote.set()
+    ref = await promote
+
+    assert ref.sha256 == digest
+    async with database.session() as session:
+        row = await session.get(BlobRow, digest)
+        upload = await session.get(BlobUploadRow, upload_id)
+    assert row is not None
+    assert row.ref_count == 1
+    assert upload is not None
+    assert upload.sha256 == digest
     assert await _object_exists(blob_store, digest)
 
 
