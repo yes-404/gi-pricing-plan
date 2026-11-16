@@ -13,10 +13,6 @@ from model_schema.graph_errors import GraphCycleError, GraphUnresolvedRefError
 from model_schema.input_free import InputFreeError
 from model_schema.rating import RatingAlgorithm
 
-# Pydantic wraps a `ValueError` in a validator, and callers catching `ValueError` still catch an
-# `InputFreeError`: the tests below rely on it.
-assert issubclass(InputFreeError, ValueError)
-
 pytestmark = pytest.mark.req("FR-212")
 
 
@@ -62,7 +58,13 @@ def test_a_cycle_raises_the_cycle_class() -> None:
     assert isinstance(raised(data), GraphCycleError)
 
 
-def test_a_declared_output_without_an_output_step_is_a_plain_value_error() -> None:
+def test_an_input_free_error_is_a_value_error() -> None:
+    """Pydantic wraps a `ValueError` in a validator, and callers catching `ValueError` still
+    catch an `InputFreeError`: the tests below rely on it."""
+    assert issubclass(InputFreeError, ValueError)
+
+
+def test_a_declared_output_without_an_output_step_is_an_input_free_error() -> None:
     data = algorithm()
     data["outputs"].append({"name": "extra", "type": "int", "required": False})
     error = raised(data)
