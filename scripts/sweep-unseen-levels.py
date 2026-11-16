@@ -22,7 +22,8 @@ Output, in this order (a zero over an empty corpus is vacuous, so the denominato
     glm refs read: G       GLM models read across the checked bundles
     <CLASS> <ref>          one line per version and class (below)
     UNREADABLE <ref> (<reason>)   one line per unreadable version (below)
-    plain: .. null-level-unfitted: .. grouping-unfitted: .. interaction-unfitted: ..
+    plain: .. not-reachable: .. null-level-unfitted: .. grouping-unfitted: ..
+    interaction-unfitted: ..
     interaction-unfitted-lower-bound: .. no-relativities: .. not-examined-interaction: ..
     not-examined-other-family: n (families: ..)   versions pinning a model of another family
     NOTEXAMINED-CONTRACT n / NOTEXAMINED-GROUPING-SOURCE n   (what the sweep did not classify)
@@ -44,8 +45,18 @@ Every UNREADABLE line carries the version reference and either the exception TYP
 Classes (each counts versions; a version can carry several):
 
     PLAIN                   an IDENTITY categorical Factor with fitted relativities, declaring
-                            nothing. An UPPER BOUND: whether the quote's input contract is a closed
-                            enum over the fitted levels is not classified (NOTEXAMINED-CONTRACT).
+                            nothing, that a quote can reach with a level the fit lacks, or that the
+                            sweep cannot show it cannot (NOTEXAMINED-CONTRACT counts these).
+    NOTREACHABLE            a version whose every such Factor is one no quote can bring an unseen
+                            level to, each listed with a reason word; not a finding, not reachable:
+                            `closed-input` = every model_call that scores the GLM is exact and
+                            feeds the Factor only from a non-nullable enum input, read with
+                            on_missing = error, produced by that one input node, whose domain lies
+                            within THAT GLM's own fitted levels (checked per GLM, in every graph the
+                            Bundle carries); `not-scored` = no model_call scores the GLM. Another
+                            input type, a nullable input, an approximation call, a value from a step
+                            or a second input stays PLAIN. A Peril Structure's components count as
+                            scored by its call.
     NULLLEVEL               a Banding Factor whose Banding names a `null_level` the fit has no
                             relativity for: a missing or out-of-range quote reaches it.
     GROUPING                a Grouping Factor with a target level the fit has no relativity for.
@@ -74,7 +85,7 @@ a Grouping Factor: how an unseen SOURCE level maps is the Grouping's own declare
 Exit code (a distinct non-zero for each condition; the first that applies wins):
 
     0   every version with a bundle was read, there is at least one, and none is reachable
-    1   at least one version is reachable (any class above except NOTEXAMINED-*)
+    1   at least one version is reachable (any class above except NOTREACHABLE and NOTEXAMINED-*)
     2   a version's bundle could not be read: an unchecked version is not a clean one
     3   the corpus is empty (no version with a bundle): a zero over nothing is not a clean result
     64  usage (an argument error; argparse's own code 2 is mapped to this one)
@@ -83,7 +94,7 @@ Exit code (a distinct non-zero for each condition; the first that applies wins):
 
 `2` wins over `3` and `1`; `3` wins over `1` only when there is nothing to be reachable.
 
-The NOTEXAMINED lines are information: they never change the exit code.
+The NOTREACHABLE and NOTEXAMINED lines are information: they never change the exit code.
 """
 
 from __future__ import annotations
@@ -104,17 +115,24 @@ from model_schema import (
     FitResult,
     GlmFitResult,
     Grouping,
+    RatingModelCallStep,
     UnseenCellState,
     UnseenLevelBehaviour,
 )
 from pricing_core.modelling.glm import _unseen_cell_reports, _unseen_level_gaps
-from pricing_core.rating.compile import Bundle
+from pricing_core.rating.compile import Bundle, JdmGraph
+from pricing_core.rating.runtime import _step_model_refs
 
 _DUMMY = re.compile(r"^(?P<slug>.+)\[(?P<level>.*)\]$")
 #: The classes that make a version reachable (exit code 1), in the order they are counted.
 _REACHABLE = (
     "PLAIN", "NULLLEVEL", "GROUPING", "INTERACTION", "INTERACTION-LOWERBOUND", "NORELATIVITIES"
 )
+#: The class of a version whose every undeclared IDENTITY Factor with relativities is one no quote
+#: can bring an unseen level to, each with a reason word (`NOTREACHABLE_REASONS`). Not reachable: it
+#: does not change the exit code.
+NOTREACHABLE = "NOTREACHABLE"
+NOTREACHABLE_REASONS = ("closed-input", "not-scored")
 _NOT_EXAMINED = (
     "NOTEXAMINED-INTERACTION", "NOTEXAMINED-GROUPING-SOURCE", "NOTEXAMINED-NUMERIC-TERMS"
 )
@@ -161,11 +179,57 @@ class _UnreadableError(Exception):
         self.reason = reason
 
 
-def _findings(bundle: Bundle) -> tuple[int, set[str], set[str]]:
-    """The GLM models in `bundle`, the classes its fits and Factors fall into, and the other model
-    families it pins. Each `model:` payload is classified by its `fit_result.model_type`: `glm` is
-    validated and examined; another family the fit-result union names is not examined (FR-131's
-    refusal applies to it whatever a Factor declares); anything else raises `_UnreadableError`."""
+def _model_calls(bundle: Bundle) -> list[tuple[JdmGraph, RatingModelCallStep]]:
+    """Every `model_call` node of the Bundle's graphs (the base graph and each purpose graph), with
+    the graph it sits in, as the step the runtime reads (`_step_model_refs` takes that type)."""
+    calls: list[tuple[JdmGraph, RatingModelCallStep]] = []
+    for graph in (bundle.graph, *bundle.purpose_graphs.values()):
+        for step_id, node in graph.nodes.items():
+            if node.get("type") == "model_call":
+                step = RatingModelCallStep.model_validate({**node, "step_id": step_id})
+                calls.append((graph, step))
+    return calls
+
+
+def _fed_by_a_closed_input(
+    graph: JdmGraph, call: RatingModelCallStep, slug: str, fitted_levels: set[str]
+) -> bool:
+    """True when `call` is an exact `model_call` and every name it maps to Factor `slug` is an
+    input read with `on_missing` = error, produced by that one input node and by no other step,
+    declared in the input contract as a non-nullable enum whose domain lies within
+    `fitted_levels`. Anything else is not classified here (it stays PLAIN)."""
+    if call.mode != "exact":
+        return False
+    names = [name for name, factor in call.feature_map.items() if factor == slug]
+    if not names:
+        return False
+    contract = {c.get("name"): c for c in graph.input_contract}
+    for name in names:
+        producers = [n for n in graph.nodes.values() if name in n.get("produces", ())]
+        if len(producers) != 1:
+            return False
+        node = producers[0]
+        if node.get("type") != "input" or node.get("on_missing") != "error":
+            return False
+        entry = contract.get(node.get("input_name"))
+        domain = None if entry is None else entry.get("domain")
+        if (
+            entry is None
+            or entry.get("type") != "enum"
+            or entry.get("nullable") is not False
+            or not isinstance(domain, list)
+            or not set(domain) <= fitted_levels
+        ):
+            return False
+    return True
+
+
+def _findings(bundle: Bundle) -> tuple[int, set[str], set[str], set[str]]:
+    """The GLM models in `bundle`, the classes its fits and Factors fall into, the reason words of a
+    NOTREACHABLE version, and the other model families it pins. Each `model:` payload is classified
+    by its `fit_result.model_type`: `glm` is validated and examined; another family the fit-result
+    union names is not examined (FR-131's refusal applies to it whatever a Factor declares);
+    anything else raises `_UnreadableError`."""
     payloads = bundle.resolved_payloads
     all_factors = [
         Factor.model_validate(v) for k, v in payloads.items() if k.startswith("factor:")
@@ -184,7 +248,10 @@ def _findings(bundle: Bundle) -> tuple[int, set[str], set[str]]:
     }
     kinds: set[str] = set()
     other_families: set[str] = set()
+    reasons: set[str] = set()
     glm_refs = 0
+    calls = _model_calls(bundle)
+    open_factor = False
     for key, payload in payloads.items():
         if not key.startswith("model:"):
             continue
@@ -209,10 +276,23 @@ def _findings(bundle: Bundle) -> tuple[int, set[str], set[str]]:
             f for f in factors if f.unseen_level_behaviour is not UnseenLevelBehaviour.MAP_TO_BASE
         ]
         fitted = {slug: {e.level for e in levels} for slug, levels in fit.relativities.items()}
+        scoring = [
+            (graph, call)
+            for graph, call in calls
+            if key in _step_model_refs(call, payloads)
+        ]
         for slug in fitted:
             factor = next((f for f in undeclared if f.slug == slug), None)
-            if factor is not None and factor.type is FactorType.IDENTITY:
-                kinds.add("PLAIN")
+            if factor is None or factor.type is not FactorType.IDENTITY:
+                continue
+            if not scoring:
+                reasons.add("not-scored")
+            elif all(
+                _fed_by_a_closed_input(graph, call, slug, fitted[slug]) for graph, call in scoring
+            ):
+                reasons.add("closed-input")
+            else:
+                open_factor = True
         for gap in _unseen_level_gaps(fit.relativities, undeclared, bandings, groupings):
             reached = {r.value for r in gap.reached_by}
             kinds.add("GROUPING" if reached == {"grouping_target"} else "NULLLEVEL")
@@ -242,7 +322,11 @@ def _findings(bundle: Bundle) -> tuple[int, set[str], set[str]]:
             ):
                 kinds.add("NOTEXAMINED-NUMERIC-TERMS")
                 break
-    return glm_refs, kinds, other_families
+    if open_factor:
+        kinds.add("PLAIN")
+    elif reasons:
+        kinds.add(NOTREACHABLE)
+    return glm_refs, kinds, reasons, other_families
 
 
 def sweep(versions: list[dict[str, Any]], out: TextIO) -> int:
@@ -256,7 +340,7 @@ def sweep(versions: list[dict[str, Any]], out: TextIO) -> int:
     unreadable = glm_refs = other_versions = 0
     lines: list[str] = []
     other_families: set[str] = set()
-    counts = {name: 0 for name in (*_REACHABLE, *_NOT_EXAMINED)}
+    counts = {name: 0 for name in (*_REACHABLE, NOTREACHABLE, *_NOT_EXAMINED)}
     for each in with_bundle:
         ref = f"{each['slug']}@{each['version']} status={each['status']}"
         try:
@@ -266,7 +350,7 @@ def sweep(versions: list[dict[str, Any]], out: TextIO) -> int:
             lines.append(f"UNREADABLE {ref} (bundle-unparseable)")
             continue
         try:
-            refs, kinds, others = _findings(bundle)
+            refs, kinds, reasons, others = _findings(bundle)
         except _UnreadableError as exc:
             unreadable += 1
             lines.append(f"UNREADABLE {ref} ({exc.reason})")
@@ -282,7 +366,9 @@ def sweep(versions: list[dict[str, Any]], out: TextIO) -> int:
             other_families |= others
         for kind in sorted(kinds):
             counts[kind] += 1
-            if kind != "NOTEXAMINED-GROUPING-SOURCE":  # counted, not listed: it is a reason
+            if kind == NOTREACHABLE:
+                lines.append(f"{kind} {ref} ({','.join(sorted(reasons))})")
+            elif kind != "NOTEXAMINED-GROUPING-SOURCE":  # counted, not listed: it is a reason
                 lines.append(f"{kind} {ref}")
     print(f"versions: {len(versions)}", file=out)
     print(f"with a bundle: {len(with_bundle)}", file=out)
@@ -292,6 +378,7 @@ def sweep(versions: list[dict[str, Any]], out: TextIO) -> int:
     for line in lines:
         print(line, file=out)
     print(f"plain: {counts['PLAIN']}", file=out)
+    print(f"not-reachable: {counts[NOTREACHABLE]}", file=out)
     print(f"null-level-unfitted: {counts['NULLLEVEL']}", file=out)
     print(f"grouping-unfitted: {counts['GROUPING']}", file=out)
     print(f"interaction-unfitted: {counts['INTERACTION']}", file=out)
@@ -310,7 +397,7 @@ def sweep(versions: list[dict[str, Any]], out: TextIO) -> int:
     )
     print(
         f"NOTEXAMINED-CONTRACT {counts['PLAIN']} "
-        "(PLAIN is an upper bound: closed-enum input contracts are not classified here)",
+        "(PLAIN versions: an input that is open or not classified here feeds the Factor)",
         file=out,
     )
     print(

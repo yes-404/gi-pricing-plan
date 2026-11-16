@@ -17,7 +17,9 @@ import importlib.util
 import io
 import json
 import pathlib
+from datetime import UTC, datetime
 from typing import Any
+from uuid import UUID
 
 import pytest
 
@@ -66,6 +68,13 @@ def _without_a_cell() -> dict[str, Any]:
     return bundle
 
 
+def _input(bundle: dict[str, Any], name: str) -> dict[str, Any]:
+    contract: dict[str, Any] = next(
+        c for c in bundle["graph"]["input_contract"] if c["name"] == name
+    )
+    return contract
+
+
 @pytest.mark.req("FR-2143")
 def test_a_clean_version_exits_zero_and_the_denominators_print_first() -> None:
     rc, lines = _run([_row(_clean())])
@@ -100,11 +109,13 @@ def test_an_undeclared_identity_factor_with_relativities_is_listed_as_plain() ->
     fit["relativities"]["region"] = [
         {"level": "A", "is_base": True}, {"level": "B", "is_base": False},
     ]
+    # the input is open: it admits a level the fit has no relativity for
+    _input(bundle, "region")["domain"] = ["A", "B", "C"]
     rc, lines = _run([_row(bundle, "plain", 1)])
 
     assert rc == 1
     assert "PLAIN plain@1 status=approved" in lines
-    assert any(line.startswith("NOTEXAMINED-CONTRACT 1 (PLAIN is an upper bound") for line in lines)
+    assert any(line.startswith("NOTEXAMINED-CONTRACT 1 (") for line in lines)
 
 
 @pytest.mark.req("FR-2143")
@@ -307,3 +318,170 @@ def test_an_empty_corpus_exits_three_never_zero() -> None:
 
     assert rc_none == rc_uncompiled == 3
     assert lines_none[:3] == ["versions: 0", "with a bundle: 0", "checked: 0"]
+
+
+# --- FR-2143: an undeclared identity Factor no quote can bring an unseen level to -------------
+
+_SECOND = "model:motor-sev-glm@1"
+
+
+def _region_fitted(bundle: dict[str, Any], model: str, levels: list[str]) -> None:
+    fit = bundle["resolved_payloads"][model]["fit_result"]
+    fit["relativities"]["region"] = [
+        {"level": level, "is_base": i == 0} for i, level in enumerate(levels)
+    ]
+
+
+def _closed() -> dict[str, Any]:
+    """The clean bundle with region undeclared and fitted on A, B, the input's own domain."""
+    bundle = copy.deepcopy(_clean())
+    _region_fitted(bundle, _MODEL, ["A", "B"])
+    return bundle
+
+
+def _with_second_model(bundle: dict[str, Any], levels: list[str]) -> None:
+    """A second GLM payload, a copy of the first fitted on levels, and a second model_call."""
+    payloads = bundle["resolved_payloads"]
+    payloads[_SECOND] = copy.deepcopy(payloads[_MODEL])
+    _region_fitted(bundle, _SECOND, levels)
+    nodes = bundle["graph"]["nodes"]
+    nodes["s_risk2"] = {**nodes["s_risk"], "model_ref": _SECOND, "produces": ["risk2"]}
+
+
+@pytest.mark.req("FR-2143")
+def test_a_factor_fed_only_by_a_closed_enum_over_its_levels_is_not_reachable() -> None:
+    rc, lines = _run([_row(_closed(), "closed", 1)])
+
+    assert rc == 0
+    assert "NOTREACHABLE closed@1 status=approved (closed-input)" in lines
+    assert "not-reachable: 1" in lines
+    assert "plain: 0" in lines
+    assert any(line.startswith("NOTEXAMINED-CONTRACT 0 (") for line in lines)
+    assert not any(line.startswith("PLAIN ") for line in lines)
+
+
+@pytest.mark.req("FR-2143")
+def test_an_open_input_keeps_the_factor_plain() -> None:
+    bundle = _closed()
+    _input(bundle, "region")["domain"] = ["A", "B", "C"]
+    rc, lines = _run([_row(bundle, "open", 1)])
+
+    assert rc == 1
+    assert "PLAIN open@1 status=approved" in lines
+    assert "not-reachable: 0" in lines
+
+
+@pytest.mark.req("FR-2143")
+def test_the_closed_check_is_made_per_glm_a_second_fit_lacking_a_level_stays_plain() -> None:
+    bundle = _closed()
+    _with_second_model(bundle, ["A"])  # the second fit never saw B, which the input admits
+    rc, lines = _run([_row(bundle, "severity", 1)])
+
+    assert rc == 1
+    assert "PLAIN severity@1 status=approved" in lines
+    assert "not-reachable: 0" in lines
+
+
+@pytest.mark.req("FR-2143")
+def test_two_fits_each_over_the_whole_domain_are_not_reachable() -> None:
+    bundle = _closed()
+    _with_second_model(bundle, ["A", "B"])
+    rc, lines = _run([_row(bundle, "both", 1)])
+
+    assert rc == 0
+    assert "NOTREACHABLE both@1 status=approved (closed-input)" in lines
+
+
+def _structured(second_levels: list[str]) -> dict[str, Any]:
+    """The closed bundle whose one model_call scores through a Peril Structure of two GLMs."""
+    from model_schema import (
+        ArtifactRef,
+        LargeLossKind,
+        LargeLossTreatment,
+        PerilComponent,
+        PerilMethod,
+        PerilStructure,
+    )
+
+    bundle = _closed()
+    _with_second_model(bundle, second_levels)
+    nodes = bundle["graph"]["nodes"]
+    del nodes["s_risk2"]
+    structure = PerilStructure(
+        id=UUID("11111111-1111-4111-8111-111111111111"),
+        slug="motor-perils",
+        version=1,
+        perils=(
+            PerilComponent(
+                peril="AD",
+                method=PerilMethod.FREQUENCY_SEVERITY,
+                frequency_model=ArtifactRef.model_validate(_MODEL),
+                severity_model=ArtifactRef.model_validate(_SECOND),
+                large_loss=LargeLossTreatment(kind=LargeLossKind.NONE),
+            ),
+        ),
+        created_at=datetime(2026, 10, 1, tzinfo=UTC),
+    )
+    bundle["resolved_payloads"]["peril_structure:motor-perils@1"] = structure.model_dump(
+        mode="json"
+    )
+    nodes["s_risk"]["model_ref"] = None
+    nodes["s_risk"]["peril_structure_ref"] = "peril_structure:motor-perils@1"
+    return bundle
+
+
+@pytest.mark.req("FR-2143")
+def test_a_factor_scored_through_a_peril_structure_is_judged_on_every_component() -> None:
+    rc, lines = _run([_row(_structured(["A", "B"]), "perils", 1)])
+    assert rc == 0
+    assert "NOTREACHABLE perils@1 status=approved (closed-input)" in lines
+
+    rc, lines = _run([_row(_structured(["A"]), "perils", 2)])
+    assert rc == 1
+    assert "PLAIN perils@2 status=approved" in lines
+
+
+@pytest.mark.req("FR-2143")
+def test_a_value_from_a_step_a_nullable_input_or_an_approximation_stays_plain() -> None:
+    from_a_step = _closed()
+    nodes = from_a_step["graph"]["nodes"]
+    nodes["s_derived"] = {**nodes["s_region"], "type": "expression", "produces": ["derived"]}
+    nodes["s_risk"]["feature_map"]["derived"] = "region"
+    del nodes["s_risk"]["feature_map"]["region"]
+
+    nullable = _closed()
+    _input(nullable, "region")["nullable"] = True
+
+    approximate = _closed()
+    approximate["graph"]["nodes"]["s_risk"]["mode"] = "approximation"
+
+    for index, bundle in enumerate((from_a_step, nullable, approximate)):
+        rc, lines = _run([_row(bundle, "case", index)])
+        assert rc == 1, index
+        assert f"PLAIN case@{index} status=approved" in lines
+
+
+@pytest.mark.req("FR-2143")
+def test_a_version_with_one_closed_and_one_open_factor_stays_plain() -> None:
+    bundle = _closed()
+    fit = bundle["resolved_payloads"][_MODEL]["fit_result"]
+    fit["relativities"]["yoa"] = [{"level": "2010", "is_base": True}]  # the input admits 2011 too
+    rc, lines = _run([_row(bundle, "mixed", 1)])
+
+    assert rc == 1
+    assert "PLAIN mixed@1 status=approved" in lines
+    assert "not-reachable: 0" in lines
+
+
+@pytest.mark.req("FR-2143")
+def test_a_glm_no_model_call_scores_is_not_reachable_whatever_the_input_admits() -> None:
+    bundle = _closed()
+    _input(bundle, "region")["domain"] = ["A", "B", "C"]  # open, yet nothing scores the first fit
+    _with_second_model(bundle, ["A", "B", "C"])
+    nodes = bundle["graph"]["nodes"]
+    nodes["s_risk"]["model_ref"] = _SECOND  # the only model_call now scores the second GLM
+    del nodes["s_risk2"]
+    rc, lines = _run([_row(bundle, "unscored", 1)])
+
+    assert rc == 0
+    assert "NOTREACHABLE unscored@1 status=approved (closed-input,not-scored)" in lines
