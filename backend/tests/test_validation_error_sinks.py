@@ -16,12 +16,14 @@ import logging
 import traceback
 from contextlib import asynccontextmanager
 from types import SimpleNamespace
+from typing import Any
 from uuid import uuid4
 
 import pytest
 from backend.tests.conftest_db import seed_as_owner
 from backend.tests.test_prediction import _fitted_glm
 from backend.tests.test_rating_version_compile import _empty_pins, _headers, _minimal_algorithm
+from pydantic import ValidationError
 from sqlalchemy import func, select
 
 from app.config import ConfigInvalidError, load_settings
@@ -32,8 +34,13 @@ from app.db.models import (
     SubGraphVersionRow,
 )
 from app.errors import PlatformError
+from app.platform import metrics as metrics_service
+from app.platform import objectives as objectives_service
 from app.platform import prediction as prediction_service
 from app.platform import rate_tables as rate_tables_service
+from app.platform.rating_algorithms import graph_validation_error
+from model_schema import RatingAlgorithm
+from model_schema.sub_graphs import SubGraphCreate
 
 _SENTINEL = "SENTINEL-submitted-value-4f8a21"
 
@@ -168,24 +175,22 @@ async def test_a_body_that_is_not_a_table_carries_no_polars_text(
 
 
 # -- #1712 rows 4, 5 and 6 (S7b) -------------------------------------------------------------
+#
+# Pydantic's `input_value` shows only the start and the end of a payload, so a sentinel in one
+# place never proves another (the first version of these cases put one sentinel in the middle,
+# then in the slug, and passed with each route fix reverted). Every caller-controlled string of a
+# request body therefore gets its OWN sentinel, and a failure names the field that leaked and
+# where. Each route also has a case whose payload is short enough that nothing is shortened.
+
+_SLUG = "zqs-4f8a21"
 
 
-#: Where a reverted route fix leaks. Pydantic's `input_value` shows only the start and the end of
-#: the payload, so a sentinel in the middle never reaches a reverted route's text (the first
-#: version of these cases passed with each route fix reverted). The slug is the first key and
-#: short enough to sit whole inside the start; the last value of the last key sits inside the end.
-_SLUG_SENTINEL = "zq4f8a21"
-_END_SENTINEL = "zq-end-4f8a21"
+def _name(field: str) -> str:
+    """One distinct sentinel per field, valid as an identifier and as free text."""
+    return f"zq_{field}_4f8a21"
 
 
-def _custom_artifact_body(route: str, template: str, params: dict) -> dict:
-    body = {"slug": _SLUG_SENTINEL, "template": template, "params": params}
-    if route.endswith("custom-metrics"):
-        body["direction"] = "lower_is_better"
-    return body
-
-
-def _stored(row, slug: str) -> int:
+def _stored(row: Any, slug: str) -> int:
     """Rows of `row` whose slug is `slug`, read as the owner: a refusal stores nothing."""
 
     async def count(session) -> int:
@@ -196,122 +201,235 @@ def _stored(row, slug: str) -> int:
     return asyncio.get_event_loop().run_until_complete(seed_as_owner(count))
 
 
-def _assert_no_trace(response, caplog, row, slug: str, *sentinels: str) -> None:
-    """No sentinel in the response body, in any captured log record, or in a stored row."""
-    for sentinel in sentinels:
-        assert sentinel not in response.text, sentinel
-        assert sentinel not in caplog.text, sentinel
-    assert _stored(row, slug) == 0
+def _leaks(text: str, log: str, sentinels: dict[str, str]) -> list[str]:
+    found = []
+    for field, value in sentinels.items():
+        if value in text:
+            found.append(f"{field} ({value!r}) is in the response body")
+        if value in log:
+            found.append(f"{field} ({value!r}) is in a log record")
+    return found
+
+
+def _assert_no_trace(response, caplog, row: Any, sentinels: dict[str, str]) -> None:
+    """No sentinel in the response body, in any captured log record, or in a stored row. A
+    failure prints which field leaked and where."""
+    found = _leaks(response.text, caplog.text, sentinels)
+    if row is not None and _stored(row, sentinels["slug"]):
+        found.append("a row with the submitted slug is stored")
+    assert not found, "leaked: " + "; ".join(found)
+
+
+def _custom_artifact_body(route: str, template: str, params: dict) -> dict:
+    body = {
+        "slug": _SLUG,
+        "template": template,
+        "params": params,
+        "description": _name("description"),
+    }
+    if route.endswith("custom-metrics"):
+        body["direction"] = "lower_is_better"
+    return body
 
 
 @pytest.mark.req("NFR-499")
 @pytest.mark.parametrize("route", ["/api/v1/custom-metrics", "/api/v1/custom-objectives"])
 @pytest.mark.parametrize(
-    ("template", "params", "kept", "absent"),
+    ("template", "params", "kept", "extra"),
     [
         # A malformed key is counted and not shown; the rule is still there.
         (
             "asymmetric_squared",
-            {"SENTINEL key<>": 1.0},
+            {"ZQKEY<>4f8a21": 1.0},
             ["does not take a key", "not a parameter"],
-            ["SENTINEL"],
+            {"parameter key": "ZQKEY<>4f8a21"},
         ),
         # A value the caller sent is not echoed (a money parameter given as a float).
-        ("capped_gamma", {"cap": 987654321.5}, ["integer minor units"], ["987654321"]),
+        (
+            "capped_gamma",
+            {"cap": 987654321.5},
+            ["integer minor units"],
+            {"parameter value": "987654321"},
+        ),
         # A value distinct from the bound it broke is not echoed beyond the bound text.
-        ("tweedie", {"p": 0.987654}, ["greater than '1.0'"], ["0.987654"]),
+        ("tweedie", {"p": 0.987654}, ["greater than '1.0'"], {"parameter value": "0.987654"}),
     ],
     ids=["malformed-key", "money-value", "bound-value"],
 )
 def test_a_custom_artifact_refusal_carries_no_submitted_value(
-    api_client, workspace_id, principal, grant, caplog, route, template, params, kept, absent
+    api_client, workspace_id, principal, grant, caplog, route, template, params, kept, extra
 ) -> None:
-    """Rows 5 and 6: `_validated` used to render the exception, and that text prints the
-    key and the value the caller sent, and the start of the payload (its slug). Kept: the rule.
-    The `kept` text is any ONE of the alternatives per route (the metric and the objective word
-    the unknown-key rule alike). The slug sentinel is where a reverted route leaks."""
+    """Rows 5 and 6: `_validated` used to render the exception, and that text prints the key and
+    the value the caller sent and the start and end of the payload it built (an id, the slug, ...,
+    the description). Kept: the rule. The `kept` text is any ONE of the alternatives per route
+    (the metric and the objective word the unknown-key rule alike)."""
     caplog.set_level(logging.DEBUG)
     asyncio.get_event_loop().run_until_complete(grant("pricing_actuary"))
-    refused = api_client.post(
-        route,
-        json=_custom_artifact_body(route, template, params),
-        headers=_headers(principal, workspace_id),
-    )
+    body = _custom_artifact_body(route, template, params)
+    sentinels = {"slug": body["slug"], "description": body["description"], **extra}
+    refused = api_client.post(route, json=body, headers=_headers(principal, workspace_id))
     assert refused.status_code == 422, refused.text
-    detail = refused.json()["detail"]
     row = CustomMetricRow if route.endswith("custom-metrics") else CustomObjectiveRow
-    _assert_no_trace(refused, caplog, row, _SLUG_SENTINEL, _SLUG_SENTINEL, *absent)
+    _assert_no_trace(refused, caplog, row, sentinels)
+    detail = refused.json()["detail"]
     assert any(text in detail for text in kept), (detail, kept)
 
 
+def _sentinel_algorithm(case: str) -> tuple[dict, dict[str, str]]:
+    """A rating algorithm whose every caller-controlled string carries its own sentinel, with
+    the one shape fault `case` names, and the sentinels by field."""
+    n = {
+        key: _name(key)
+        for key in (
+            "input", "produced", "output", "s_in", "s_expr", "s_out",
+            "label_in", "label_expr", "label_out", "orphan_id", "orphan_label", "orphan_out",
+            "unproduced_output",
+        )
+    }
+    algorithm = {
+        "slug": _SLUG,
+        "version": 1,
+        "input_contract": [{"name": n["input"], "type": "int", "nullable": False}],
+        "outputs": [{"name": n["output"], "type": "money_minor", "required": True}],
+        "steps": [
+            {"step_id": n["s_in"], "type": "input", "label": n["label_in"],
+             "input_name": n["input"], "on_missing": "error", "produces": n["input"]},
+            {"step_id": n["s_expr"], "type": "expression", "label": n["label_expr"],
+             "expr": f"{n['input']} * 2", "result_type": "money_minor",
+             "consumes": [n["input"]], "produces": n["produced"]},
+            {"step_id": n["s_out"], "type": "output", "label": n["label_out"],
+             "output_name": n["output"], "rounding": {"mode": "half_even", "dp": 0},
+             "consumes": [n["produced"]]},
+        ],
+        "sub_graphs": [],
+    }
+    used = {"slug": _SLUG}
+    if case == "orphan":
+        algorithm["steps"].append(
+            {"step_id": n["orphan_id"], "type": "expression", "label": n["orphan_label"],
+             "expr": "1", "result_type": "int", "produces": n["orphan_out"]}
+        )
+    else:
+        algorithm["outputs"].append(
+            {"name": n["unproduced_output"], "type": "int", "required": False}
+        )
+    used |= {
+        key: value
+        for key, value in n.items()
+        if value in str(algorithm) and (case == "orphan" or key != "orphan_id")
+    }
+    return algorithm, used
+
+
 @pytest.mark.req("NFR-499")
+@pytest.mark.parametrize(
+    ("case", "kept"),
+    [("orphan", "unreachable from any input"), ("unproduced", "has no output step (FR-214)")],
+)
 def test_a_rating_graph_shape_refusal_carries_no_submitted_value(
-    api_client, workspace_id, principal, grant, caplog
+    api_client, workspace_id, principal, grant, caplog, case, kept
 ) -> None:
-    """Row 4: the slug, an orphan step's id and what it produces, and a declared output's name
-    are the caller's own text. The 422 states the rule; where it is, is the validate route's
-    report (RL-1474). Where a reverted route leaks: the slug (the start of the payload) and the
-    value the last step produces (its end). The step id and the output name sit in the middle,
-    so they hold the validators, not the route."""
+    """Row 4: every caller-controlled string of the algorithm (slug, input and output names, step
+    ids, labels, expressions' names, what a step produces) is the caller's own text. The 422
+    states the rule; where it is, is the validate route's report (RL-1474)."""
     caplog.set_level(logging.DEBUG)
     asyncio.get_event_loop().run_until_complete(grant("analyst"))
-    headers = _headers(principal, workspace_id)
-
-    orphan = _minimal_algorithm()
-    orphan["slug"] = _SLUG_SENTINEL
-    orphan["steps"].append(
-        {"step_id": "SENTINEL_step_77", "type": "expression", "label": "orphan",
-         "expr": "1", "result_type": "int", "produces": _END_SENTINEL}
+    algorithm, sentinels = _sentinel_algorithm(case)
+    refused = api_client.post(
+        "/api/v1/rating-algorithms", json=algorithm, headers=_headers(principal, workspace_id)
     )
-    refused = api_client.post("/api/v1/rating-algorithms", json=orphan, headers=headers)
     assert refused.status_code == 422, refused.text
     assert refused.json()["code"] == "VALIDATION_FAILED"
-    _assert_no_trace(
-        refused, caplog, RatingAlgorithmRow, _SLUG_SENTINEL,
-        _SLUG_SENTINEL, _END_SENTINEL, "SENTINEL_step_77",
-    )
-    assert "unreachable from any input" in refused.json()["detail"], "control: the rule is kept"
+    _assert_no_trace(refused, caplog, RatingAlgorithmRow, sentinels)
+    assert kept in refused.json()["detail"], "control: the rule is kept"
 
-    unproduced = _minimal_algorithm()
-    unproduced["slug"] = _SLUG_SENTINEL
-    unproduced["outputs"].append({"name": "SENTINEL_out_77", "type": "int", "required": False})
-    refused = api_client.post("/api/v1/rating-algorithms", json=unproduced, headers=headers)
-    assert refused.status_code == 422, refused.text
-    assert refused.json()["code"] == "VALIDATION_FAILED"
-    _assert_no_trace(
-        refused, caplog, RatingAlgorithmRow, _SLUG_SENTINEL, _SLUG_SENTINEL, "SENTINEL_out_77"
-    )
-    assert "has no output step (FR-214)" in refused.json()["detail"], "control: the rule is kept"
+
+def _sentinel_sub_graph() -> tuple[dict, dict[str, str]]:
+    n = {
+        key: _name(key)
+        for key in (
+            "input", "output", "s_ncd", "label_ncd", "orphan_id", "orphan_label", "orphan_out",
+            "change_note",
+        )
+    }
+    payload = {
+        "slug": _SLUG,
+        "inputs": [{"name": n["input"], "type": "int"}],
+        "outputs": [{"name": n["output"], "type": "relativity", "required": True}],
+        "steps": [
+            {"step_id": n["s_ncd"], "type": "table", "label": n["label_ncd"],
+             "rate_table_ref": "rate_table:ncd@2", "key_expr": [n["input"]],
+             "consumes": n["input"], "produces": n["output"]},
+            {"step_id": n["orphan_id"], "type": "expression", "label": n["orphan_label"],
+             "expr": "1", "result_type": "int", "produces": n["orphan_out"]},
+        ],
+        "change_note": n["change_note"],
+    }
+    return payload, {"slug": _SLUG, **n}
 
 
 @pytest.mark.req("NFR-499")
 def test_a_sub_graph_shape_refusal_carries_no_submitted_value(
     api_client, workspace_id, principal, grant, caplog
 ) -> None:
-    """Row 4 through the sub-graph route: the slug (the start of the payload), the change note
-    (its last key, the end) and an orphan step's id are not in the 422, the log or a stored row.
-    A reverted route leaks the slug and the change note; the step id holds the validators."""
+    """Row 4 through the sub-graph route: every caller-controlled string (slug, port names, step
+    ids, labels, what a step produces, the change note) is absent from the 422, the log and the
+    stored rows."""
     caplog.set_level(logging.DEBUG)
     asyncio.get_event_loop().run_until_complete(grant("analyst"))
-    payload = {
-        "slug": _SLUG_SENTINEL,
-        "inputs": [{"name": "ncd_years", "type": "int"}],
-        "outputs": [{"name": "ncd_factor", "type": "relativity", "required": True}],
-        "steps": [
-            {"step_id": "s_ncd", "type": "table", "label": "NCD ladder",
-             "rate_table_ref": "rate_table:ncd@2", "key_expr": ["ncd_years"],
-             "consumes": "ncd_years", "produces": "ncd_factor"},
-            {"step_id": "SENTINEL_step_77", "type": "expression", "label": "orphan",
-             "expr": "1", "result_type": "int", "produces": "unused_value"},
-        ],
-        "change_note": _END_SENTINEL,
-    }
+    payload, sentinels = _sentinel_sub_graph()
     refused = api_client.post(
         "/api/v1/sub-graphs", json=payload, headers=_headers(principal, workspace_id)
     )
     assert refused.status_code == 422, refused.text
-    _assert_no_trace(
-        refused, caplog, SubGraphVersionRow, _SLUG_SENTINEL,
-        _SLUG_SENTINEL, _END_SENTINEL, "SENTINEL_step_77",
-    )
+    _assert_no_trace(refused, caplog, SubGraphVersionRow, sentinels)
     assert "unreachable from any input port" in refused.json()["detail"], "control: rule kept"
+
+
+# The short-payload cases: a payload so short that pydantic shortens nothing, so a reverted sink
+# would print every submitted string. A request body cannot be that short (the request models
+# need fields of their own), so these call the sinks the routes call, with the same kind of
+# invalid payload; none needs a database.
+
+
+@pytest.mark.req("NFR-499")
+def test_a_short_custom_metric_payload_leaks_nothing_through_validated() -> None:
+    payload = {"slug": _name("slug"), "applicability": {"responses": [_name("response")]}}
+    with pytest.raises(PlatformError) as refused:
+        metrics_service._validated(payload, template=metrics_service.ObjectiveTemplate.TWEEDIE)
+    assert refused.value.status_code == 422
+    for field, value in {"slug": _name("slug"), "response": _name("response")}.items():
+        assert value not in (refused.value.detail or ""), f"{field} leaked in the 422 detail"
+    assert (refused.value.detail or "").startswith("1 validation error") or "validation error" in (
+        refused.value.detail or ""
+    ), "control: the failure is still described"
+
+
+@pytest.mark.req("NFR-499")
+def test_a_short_custom_objective_payload_leaks_nothing_through_validated() -> None:
+    payload = {"slug": _name("slug"), "applicability": {"responses": [_name("response")]}}
+    with pytest.raises(PlatformError) as refused:
+        objectives_service._validated(payload, template=None)
+    assert refused.value.status_code == 422
+    for field, value in {"slug": _name("slug"), "response": _name("response")}.items():
+        assert value not in (refused.value.detail or ""), f"{field} leaked in the 422 detail"
+    assert "validation error" in (refused.value.detail or ""), "control: still described"
+
+
+@pytest.mark.req("NFR-499")
+@pytest.mark.parametrize(
+    ("schema", "artifact"),
+    [(RatingAlgorithm, "rating algorithm"), (SubGraphCreate, "sub-graph")],
+    ids=["rating-algorithm", "sub-graph"],
+)
+def test_a_short_graph_payload_leaks_nothing_through_graph_validation_error(
+    schema, artifact
+) -> None:
+    payload = {"slug": _name("slug"), "inputs": [_name("input")], "steps": _name("steps")}
+    with pytest.raises(ValidationError) as caught:
+        schema.model_validate(payload)
+    refusal = graph_validation_error(caught.value, artifact=artifact)
+    assert refusal.status_code == 422
+    for field in ("slug", "input", "steps"):
+        assert _name(field) not in (refusal.detail or ""), f"{field} leaked in the 422 detail"
+    assert "validation error" in (refusal.detail or ""), "control: still described"
