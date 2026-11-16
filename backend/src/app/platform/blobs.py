@@ -65,12 +65,14 @@ __all__ = [
     "GC_FUNCTION_STATEMENTS",
     "GC_LOCK_TIMEOUT_S",
     "INSIDE_BLOB_OWNERS",
+    "OWNER_WRITERS",
     "QUOTE_INPUT_BLOB_COLUMNS",
     "STAGING_EXPIRY_DAYS",
     "UPLOAD_COMPLETE_WITHIN",
     "BlobOwner",
     "BlobStore",
     "GarbageCollectionReport",
+    "OwnerWriter",
     "PresignedUpload",
     "blob_key",
     "blob_not_found",
@@ -1028,6 +1030,128 @@ INSIDE_BLOB_OWNERS: dict[str, str] = {
     ),
     "score batch output parquet (summary blob 'output_blob_sha256')": (
         "named by the summary blob that the Job's `result.ref` points at"
+    ),
+}
+
+@dataclass(frozen=True)
+class OwnerWriter:
+    """One function that writes an owner place, and how it takes its reference (#1855 (iv)).
+
+    `file::function` names it; `takes` is `put`, `retain` or `promote_upload` (its own body calls
+    it, in the same transaction as the write), or another stated way: `via` names a helper in the
+    same file whose body calls one, or `reason` says why no reference is taken here. The census
+    test `test_blob_owner_writers.py` holds every entry against the code.
+    """
+
+    file: str
+    function: str
+    takes: str
+    via: str = ""
+    reason: str = ""
+
+
+#: For each place in `BLOB_OWNERS`, the functions that write it. The rule the collector's safety
+#: rests on: every writer takes a reference to the digest it names, in the same transaction as the
+#: owner row, so the reference count protects the blob and a writer that follows the rule waits on
+#: the row lock the collector holds (#1855 (iv)). Keyed by `BlobOwner.name`.
+OWNER_WRITERS: dict[str, tuple[OwnerWriter, ...]] = {
+    "dataset_versions.tables[*].blob": (
+        OwnerWriter(
+            "backend/src/app/data/ingestion.py", "ingest_upload", "via", via="_store_table"
+        ),
+        OwnerWriter("backend/src/app/data/ingestion.py", "correct_schema", "put"),
+        OwnerWriter("backend/src/app/platform/datasets.py", "derive_version", "retain"),
+        OwnerWriter(
+            "backend/src/app/worker/data_handlers.py",
+            "_derive.work",
+            "via",
+            via="_materialise_split",
+        ),
+        OwnerWriter("scripts/bench-score-batch.py", "_dataset_version", "put"),
+    ),
+    "jobs.result (kind = blob)": (
+        OwnerWriter(
+            "backend/src/app/platform/jobs.py",
+            "transition",
+            "earlier unit of work",
+            reason=(
+                "the result's digest was put, or promoted, with its reference in an earlier "
+                "committed unit of work of the handler; this write names it and takes none of its "
+                "own, and relies on that reference (the condition slice 3c carries forward: a Job "
+                "result's blob keeps a reference while the Job row names it)"
+            ),
+        ),
+    ),
+    "blob_uploads.sha256": (
+        OwnerWriter("backend/src/app/platform/blobs.py", "BlobStore.promote_upload", "retain"),
+    ),
+    "models.fit_result.booster_blob": (
+        OwnerWriter(
+            "backend/src/app/platform/modelling.py",
+            "record_fit",
+            "via",
+            via="backend/src/app/worker/model_handlers.py::_fit.store",
+        ),
+    ),
+    "models.fit_result.covariance_blob": (
+        OwnerWriter(
+            "backend/src/app/platform/modelling.py",
+            "record_fit",
+            "via",
+            via="backend/src/app/worker/model_handlers.py::_fit.store",
+        ),
+    ),
+    "rate_table_versions.cells": (
+        OwnerWriter("backend/src/app/platform/rate_tables.py", "_persist_new_version", "put"),
+    ),
+    "rating_versions.bundle.blob_sha256": (
+        OwnerWriter(
+            "backend/src/app/platform/rating_versions.py",
+            "record_bundle_blob",
+            "via",
+            via="backend/src/app/worker/rating_handlers.py::_rating_compile.work",
+        ),
+        OwnerWriter(
+            "backend/src/app/platform/rating_versions.py",
+            "compile_rating_version",
+            "names nothing",
+            reason="rewrites `bundle` without a `blob_sha256` key: it names no digest",
+        ),
+        OwnerWriter("scripts/bench-rating.py", "_seed", "put"),
+    ),
+    "rating_versions.evidence.structural_diff_blob": (
+        OwnerWriter(
+            "backend/src/app/platform/rating_versions.py",
+            "submit_for_review",
+            "via",
+            via="_structural_diff_gate",
+        ),
+    ),
+    "regression_runs.cases_blob_sha256": (
+        OwnerWriter(
+            "backend/src/app/platform/regression_runs.py",
+            "persist_run",
+            "via",
+            via="backend/src/app/worker/rating_handlers.py::_rating_regression.persist",
+        ),
+    ),
+    "dislocation_runs.movers_blob_sha256": (
+        OwnerWriter(
+            "backend/src/app/platform/dislocation_runs.py",
+            "persist_run",
+            "via",
+            via="backend/src/app/worker/dislocation_handlers.py::_dislocation_run.persist",
+        ),
+    ),
+    "scoring_traces.blob_sha256": (
+        OwnerWriter("backend/src/app/platform/traces.py", "write_trace", "put"),
+        OwnerWriter(
+            "backend/src/app/platform/traces.py",
+            "write_pending_trace",
+            "names nothing",
+            reason="writes `blob_sha256=None`: a pending row has no body yet",
+        ),
+        OwnerWriter("backend/src/app/platform/traces.py", "complete_pending_trace", "put"),
     ),
 }
 

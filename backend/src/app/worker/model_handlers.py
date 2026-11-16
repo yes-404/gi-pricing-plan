@@ -97,6 +97,23 @@ _NEXT_STEP_BY_CODE = {
 _GENERIC_NEXT_STEP = "The error code names the refusal."
 
 
+def _assert_stored_the_named_digest(stored_sha256: str, named_sha256: str) -> None:
+    """The blob `put` stored is the one the fit result names (#1855 (iv)).
+
+    `put` takes the reference for the digest of the bytes it was given; the model row names the
+    digest `pricing-core` computed. A difference would leave a model naming a digest no reference
+    protects, which the collector could take: an internal invariant breach, never a caller's
+    mistake, so the transaction is stopped before the model row is written.
+    """
+    if stored_sha256 != named_sha256:
+        raise PlatformError(
+            "BLOB_REFERENCE_INVARIANT_BREACHED",
+            "Internal error",
+            500,
+            "A fit result names a blob digest other than the one stored for it.",
+        )
+
+
 def _next_step(code: str, unseen_level_step: str) -> str:
     """The fixed next step for a refusal `code`; `unseen_level_step` is the advice for an unseen
     level, which differs by what was being scored."""
@@ -648,17 +665,24 @@ def _fit(parameters: dict[str, Any], callback: ProgressCallback) -> JobResult:
             # so it is already correct — what this guarantees is that a committed model
             # never references an object that was never written. `put` is idempotent on the
             # digest (FR-419), so a retried job stores nothing twice.
+            #
+            # **The reference `put` takes is for the digest of the bytes it stored, and the model
+            # names the digest `pricing-core` computed** (#1855 (iv)): they must be equal, or the
+            # model would name a digest nothing holds a reference to. The two `BlobRef`s are
+            # compared and a difference stops the Job before the model row is written.
             if booster is not None:
                 assert isinstance(result, GbmFitResult)
-                await progress.blob_store.put(
+                stored = await progress.blob_store.put(
                     session, booster, result.booster_blob.media_type
                 )
+                _assert_stored_the_named_digest(stored.sha256, result.booster_blob.sha256)
             if covariance is not None:
                 assert isinstance(result, GlmFitResult)
                 assert result.covariance_blob is not None
-                await progress.blob_store.put(
+                stored = await progress.blob_store.put(
                     session, covariance, result.covariance_blob.media_type
                 )
+                _assert_stored_the_named_digest(stored.sha256, result.covariance_blob.sha256)
             await model_service.record_fit(
                 session,
                 workspace_id=workspace_id,
