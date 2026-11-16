@@ -22,15 +22,19 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from model_schema.comparison import MetricDirection
-from model_schema.input_free import InputFreeError
+from model_schema.input_free import InputFreeError, identifier
 from model_schema.objectives import (
+    NAME_LIST_PATTERN,
+    PARAMETER_NAME_PATTERN,
     TEMPLATE_APPLICABILITY,
+    TEMPLATE_NAME_PATTERN,
     TEMPLATE_PARAMETERS,
     Applicability,
     CertificateResult,
     ObjectiveKind,
     ObjectiveTemplate,
     battery_is_exactly,
+    unknown_parameter_keys,
 )
 from model_schema.refs import Slug
 
@@ -135,18 +139,29 @@ class CustomMetric(BaseModel):
         if self.template is None:  # pragma: no cover — the validator above ran first
             return self
         declared = {p.name: p for p in TEMPLATE_PARAMETERS[self.template]}
-        unknown = sorted(set(self.params) - set(declared))
-        if unknown:
-            raise ValueError(
-                f"metric params {unknown} are not parameters of template "
-                f"{self.template.value!r}; it declares {sorted(declared)} (FR-155)."
+        if unknown_parameter_keys(self.template, self.params):
+            # The caller's own keys are not named here (see `CustomObjective`'s sibling): this
+            # text is also rendered when a stored metric fails re-validation.
+            if not declared:
+                raise InputFreeError(
+                    "metric params carry a key that is not a parameter of template "
+                    "{template}; it takes no parameters (FR-155).",
+                    template=identifier(self.template.value, TEMPLATE_NAME_PATTERN),
+                )
+            raise InputFreeError(
+                "metric params carry a key that is not a parameter of template {template}; "
+                "it takes {declared} (FR-155).",
+                template=identifier(self.template.value, TEMPLATE_NAME_PATTERN),
+                declared=identifier(", ".join(sorted(declared)), NAME_LIST_PATTERN),
             )
         for name, parameter in declared.items():
             if name not in self.params:
                 if parameter.default is None:
-                    raise ValueError(
-                        f"template {self.template.value!r} requires {name!r} and it is "
-                        "missing; §4.5 gives it no default (FR-155)."
+                    raise InputFreeError(
+                        "template {template} requires {name} and it is missing; "
+                        "§4.5 gives it no default (FR-155).",
+                        template=identifier(self.template.value, TEMPLATE_NAME_PATTERN),
+                        name=identifier(name, PARAMETER_NAME_PATTERN),
                     )
                 continue
             parameter.check(self.params[name])
@@ -167,10 +182,11 @@ class CustomMetric(BaseModel):
         if self.template is None:  # pragma: no cover — refused above
             return self
         if not self.applicability.is_within(TEMPLATE_APPLICABILITY[self.template]):
-            raise ValueError(
-                f"metric {self.slug}@{self.version} declares an applicability wider than "
-                f"template {self.template.value!r}'s (§4.5, FR-155). A metric may be "
-                "restricted further than its template and never extended beyond it."
+            raise InputFreeError(
+                "this metric declares an applicability wider than template {template}'s "
+                "(§4.5, FR-155). A metric may be restricted further than its template and "
+                "never extended beyond it.",
+                template=identifier(self.template.value, TEMPLATE_NAME_PATTERN),
             )
         return self
 
