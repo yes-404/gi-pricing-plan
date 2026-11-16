@@ -441,3 +441,39 @@ def test_a_role_mutating_case_skips_only_for_the_isolation_reason() -> None:
     assert any(
         m.name == "skipif" and m.kwargs["reason"] == ROLE_CLUSTER_SKIP_REASON for m in guarded
     )
+
+
+_DEFINER_PLANT = (
+    "CREATE FUNCTION public.gip_scratch_definer() RETURNS integer LANGUAGE sql "
+    "SECURITY DEFINER AS $f$ SELECT 1 $f$; "
+)
+
+
+@requires_isolated_role_cluster
+@pytest.mark.req("FR-44")
+async def test_a_security_definer_function_owned_by_another_role_fails_provisioning(
+    owner_database: Database,
+) -> None:
+    """#1550 (c), slice 3b, condition (iv): a definer function runs with its owner's rights, so one
+    owned by a role other than the owner of `blobs` is refused by the provisioner, naming the
+    function and its owner. Red before the file's check exists: the run completes."""
+    plant = (
+        "CREATE ROLE gip_scratch_3b NOLOGIN; "
+        + _DEFINER_PLANT
+        + "ALTER FUNCTION public.gip_scratch_definer() OWNER TO gip_scratch_3b"
+    )
+    with pytest.raises(asyncpg.PostgresError) as raised:
+        await _apply_over(owner_database, plant)
+    assert raised.value.sqlstate == "P0001"
+    assert "gip_scratch_definer" in str(raised.value)
+    assert "gip_scratch_3b" in str(raised.value)
+
+
+@requires_isolated_role_cluster
+@pytest.mark.req("FR-44")
+async def test_a_security_definer_function_owned_by_the_table_owner_passes_provisioning(
+    owner_database: Database,
+) -> None:
+    """The check's other side: the same function, owned by the owner of `blobs` as the migrations
+    make it, does not stop provisioning."""
+    await _apply_over(owner_database, _DEFINER_PLANT)

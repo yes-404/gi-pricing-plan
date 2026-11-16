@@ -28,10 +28,12 @@ from app.db.base import Base
 
 __all__ = [
     "CAN_SET_REPLICATION_ROLE",
+    "PINNED_DEFINER_FUNCTION_MD5",
     "PINNED_GUARD_FUNCTION_MD5",
     "PREDEFINED_ROLES",
     "P_OWN",
     "LeastPrivilegeError",
+    "assert_definer_functions_pinned",
     "assert_least_privilege",
 ]
 
@@ -61,6 +63,27 @@ PINNED_GUARD_FUNCTION_MD5: dict[str, str] = {
     "rate_tables_pointer_only": "cd911971d3cf0d2e98a5e26397cb7843",
     "reference_table_versions_publish_only": "be3b2a9ff80fcc600e098725b7ff23c9",
 }
+
+#: `md5(prosrc)` of every `SECURITY DEFINER` function the migrations create (#1550 (c), slice 3b):
+#: the only code that deletes from a table the application role cannot delete from. Measured, never
+#: typed by hand: it is `md5` of the migration's `_BODY` (PostgreSQL stores a function body as
+#: written), and `test_the_pinned_definer_function_hashes_match_the_head` holds it equal to the
+#: migrated head's `md5(prosrc)`. A definer function present in the database but absent here is
+#: refused.
+PINNED_DEFINER_FUNCTION_MD5: dict[str, str] = {
+    "blob_gc_delete_unreferenced": "eea250ea8c650abc80155e6880d569f3",
+}
+
+#: The migration that creates each pinned definer function, named in the refusal. Keys equal
+#: `PINNED_DEFINER_FUNCTION_MD5`'s.
+_DEFINER_MIGRATION: dict[str, str] = {
+    "blob_gc_delete_unreferenced": "d5b9f20c8a14_blob_gc_definer_function",
+}
+
+#: What a definer function's `proconfig` must hold: the pinned `search_path`, `pg_temp` last, so a
+#: caller cannot shadow a table or operator with a temporary object. The body is pinned by its hash;
+#: this and `prosecdef` are the parts of the definition the hash does not cover.
+_DEFINER_SEARCH_PATH = "search_path=pg_catalog, public, pg_temp"
 
 #: The predefined roles that hand out what the grant map withholds: write or read every table,
 #: run a program or write a file as the server's operating-system user (FD-1951).
@@ -133,6 +156,14 @@ _TRIGGERS = text("""
 """)
 
 
+_DEFINER_FUNCTIONS = text("""
+    SELECT p.proname AS function, p.prosecdef AS secdef, p.proconfig::text[] AS config,
+           md5(p.prosrc) AS body_md5
+    FROM pg_proc p
+    WHERE p.pronamespace = 'public'::regnamespace AND p.prosecdef
+""")
+
+
 def _declared(kind: str) -> tuple[str, ...]:
     """The tables whose ORM declaration says `kind` (DP-8): derived, never restated.
 
@@ -199,4 +230,36 @@ async def assert_least_privilege(connection: AsyncConnection) -> None:
             raise LeastPrivilegeError(
                 f"trigger {name} on {table} runs {row.function}() whose body is not the pinned "
                 "one (replaced, or not pinned)"
+            )
+    await assert_definer_functions_pinned(connection)
+
+
+async def assert_definer_functions_pinned(connection: AsyncConnection) -> None:
+    """Raise `LeastPrivilegeError` unless every `SECURITY DEFINER` function in `public` is pinned.
+
+    An unpinned one is a new elevation path, and a pinned one whose body or `search_path` changed
+    is a tampered one. A pinned function that is absent is not refused here (a database before its
+    migration, or after a downgrade): the collector refuses to run non-dry without it. A failure is
+    a refusal to start (never a warning), and names the migration that owns the function, so the
+    operator knows what to re-run or restore. Split out so a test can run it on a connection that
+    holds a planted replacement, which `assert_least_privilege` would refuse earlier as an owner.
+    """
+    for row in (await connection.execute(_DEFINER_FUNCTIONS)).all():
+        pinned = PINNED_DEFINER_FUNCTION_MD5.get(row.function)
+        if pinned is None:
+            raise LeastPrivilegeError(
+                f"{row.function}() is a SECURITY DEFINER function no migration pinned: a new "
+                "elevation path"
+            )
+        migration = _DEFINER_MIGRATION[row.function]
+        if pinned != row.body_md5:
+            raise LeastPrivilegeError(
+                f"definer function {row.function}() has a body that is not the pinned one "
+                f"(replaced, or not pinned); restore it by re-running migration {migration}"
+            )
+        if list(row.config or []) != [_DEFINER_SEARCH_PATH]:
+            raise LeastPrivilegeError(
+                f"definer function {row.function}() does not run with the pinned search_path "
+                f"({_DEFINER_SEARCH_PATH!r}); it holds {list(row.config or [])!r}; restore it "
+                f"by re-running migration {migration}"
             )

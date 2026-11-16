@@ -211,6 +211,46 @@ def owner_subject_settings(**overrides: Any) -> Settings:
 #: `grant_demo_principals`). The `DP-22` count is `grep -c '"DP-22"' backend/tests/conftest_db.py`.
 OWNER_FIXTURE_USERS: tuple[tuple[str, str, str], ...] = (
     (
+        "backend/tests/test_blob_gc_function.py::"
+        "test_the_startup_check_refuses_a_replaced_definer_body_naming_the_migration",
+        "owner-subject",
+        "plants a replacement definer body (rolled back); proves the startup check refuses it",
+    ),
+    (
+        "backend/tests/test_blob_gc_function.py::test_the_startup_check_refuses_a_changed_search_path",
+        "owner-subject",
+        "changes the definer search_path (rolled back); proves the startup check refuses it",
+    ),
+    (
+        "backend/tests/test_blob_gc_function.py::"
+        "test_the_startup_check_refuses_an_unpinned_definer_function",
+        "owner-subject",
+        "plants an unpinned definer function (rolled back) and proves the startup check refuses it",
+    ),
+    (
+        "backend/tests/test_blob_gc_function.py::test_the_startup_check_passes_on_the_migrated_head",
+        "owner-subject",
+        "the positive control of the startup check, run on the owner connection (read only)",
+    ),
+    (
+        "backend/tests/test_application_role.py::"
+        "test_a_role_without_execute_cannot_call_the_gc_function",
+        "owner-subject",
+        "creates a scratch role in a rolled-back transaction and proves it is refused EXECUTE",
+    ),
+    (
+        "backend/tests/test_provision_app_role.py::"
+        "test_a_security_definer_function_owned_by_another_role_fails_provisioning",
+        "owner-subject",
+        "plants a definer function owned by a scratch role (rolled back) and proves it is refused",
+    ),
+    (
+        "backend/tests/test_provision_app_role.py::"
+        "test_a_security_definer_function_owned_by_the_table_owner_passes_provisioning",
+        "owner-subject",
+        "plants a definer function owned by the table owner (rolled back); proves it is accepted",
+    ),
+    (
         "backend/tests/test_traces.py::test_a_referenced_trace_blob_survives_garbage_collection",
         "DP-22",
         "runs the collector's DELETE on blobs, which the application role cannot (OQ-1943)",

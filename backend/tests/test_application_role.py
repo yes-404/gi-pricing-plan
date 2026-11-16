@@ -34,28 +34,33 @@ from __future__ import annotations
 import os
 import subprocess
 import sys
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import pytest
-from backend.tests.conftest_db import owner_subject_settings
+from backend.tests.conftest_db import owner_subject_settings, seed_as_owner
 from backend.tests.test_provision_app_role import requires_isolated_role_cluster
 from fastapi.testclient import TestClient
 from pydantic import SecretStr
-from sqlalchemy import text
+from sqlalchemy import text, update
 from sqlalchemy.exc import DBAPIError
-from sqlalchemy.ext.asyncio import AsyncConnection
+from sqlalchemy.ext.asyncio import AsyncConnection, AsyncSession
 
 from app.config import Settings
 from app.db.immutability import (
     P_OWN,
+    PINNED_DEFINER_FUNCTION_MD5,
     PINNED_GUARD_FUNCTION_MD5,
     PREDEFINED_ROLES,
     LeastPrivilegeError,
     _declared,
     assert_least_privilege,
 )
+from app.db.models import BlobRow
 from app.db.session import Database
 from app.main import create_app
+from app.platform.blobs import BlobStore, release
+from model_schema import new_uuid7
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 _APP_ROLE = "gip_app"
@@ -549,6 +554,85 @@ async def test_the_pinned_guard_function_hashes_match_the_head(database: Databas
     assert rows
     mismatched = [name for name, digest in rows if PINNED_GUARD_FUNCTION_MD5.get(name) != digest]
     assert mismatched == []
+
+
+# ----------------------------------------------- #1550 (c), slice 3b: the blob GC definer function
+
+_GC_FUNCTION = "blob_gc_delete_unreferenced"
+_GC_CALL = text(f"SELECT deleted_sha256 FROM {_GC_FUNCTION}(:cutoff)")
+
+
+@pytest.mark.req("FR-420")
+async def test_the_login_role_deletes_through_the_gc_function_and_never_directly(
+    database: Database, blob_store: BlobStore
+) -> None:
+    """The login role (the `database` fixture) CAN call the function and delete an aged
+    unreferenced blob with it, and CANNOT `DELETE FROM blobs` itself: the function is the one
+    path. Before the migration exists the call fails with 'function does not exist'."""
+    async with database.unit_of_work() as session:
+        ref = await blob_store.put(session, f"gc-role {new_uuid7()}".encode(), "text/plain")
+    async with database.unit_of_work() as session:
+        await release(session, ref.sha256)
+
+    async def _backdate(session: AsyncSession) -> None:
+        await session.execute(
+            update(BlobRow)
+            .where(BlobRow.sha256 == ref.sha256)
+            .values(created_at=datetime.now(UTC) - timedelta(days=60))
+        )
+
+    await seed_as_owner(_backdate)
+
+    with pytest.raises(DBAPIError, match="permission denied"):
+        async with database.unit_of_work() as session:
+            await session.execute(text("DELETE FROM blobs WHERE sha256 = :d"), {"d": ref.sha256})
+
+    async with database.unit_of_work() as session:
+        deleted = (
+            await session.execute(_GC_CALL, {"cutoff": datetime.now(UTC) - timedelta(days=2)})
+        ).scalars().all()
+    assert ref.sha256 in deleted
+    async with database.session() as session:
+        assert await session.get(BlobRow, ref.sha256) is None
+
+
+@requires_isolated_role_cluster
+@pytest.mark.req("FR-420")
+async def test_a_role_without_execute_cannot_call_the_gc_function(
+    owner_database: Database,
+) -> None:
+    """`REVOKE ... FROM PUBLIC` holds: a scratch role that was granted nothing is refused. The role
+    is created inside a transaction that is always rolled back, so nothing is left to drop. Roles
+    are cluster-wide, hence the isolated-cluster guard."""
+    async with owner_database.engine.connect() as connection:
+        transaction = await connection.begin()
+        try:
+            await connection.execute(text("CREATE ROLE gip_scratch_noexec NOLOGIN"))
+            await connection.execute(text("SET LOCAL ROLE gip_scratch_noexec"))
+            with pytest.raises(DBAPIError, match="permission denied for function"):
+                await connection.execute(
+                    text(f"SELECT * FROM {_GC_FUNCTION}(now() - interval '2 days')")
+                )
+        finally:
+            await transaction.rollback()
+
+
+@pytest.mark.req("FR-420")
+async def test_the_pinned_definer_function_hashes_match_the_head(database: Database) -> None:
+    """Like T8 for triggers: `md5(prosrc)` of every pinned definer function equals its pin, which
+    is measured from the migrated head and never typed. An empty pin never matches, so this is red
+    until the value is filled in. Every SECURITY DEFINER function in `public` is pinned."""
+    async with database.session() as session:
+        rows = (
+            await session.execute(
+                text(
+                    "SELECT p.proname, md5(p.prosrc) FROM pg_proc p "
+                    "WHERE p.pronamespace = 'public'::regnamespace AND p.prosecdef"
+                )
+            )
+        ).all()
+    assert {name for name, _ in rows} == set(PINNED_DEFINER_FUNCTION_MD5), rows
+    assert [n for n, digest in rows if PINNED_DEFINER_FUNCTION_MD5[n] != digest] == []
 
 
 # --------------------------------------------------------------------------- S1, S2 (DB-free)
