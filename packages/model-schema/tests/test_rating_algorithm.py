@@ -640,7 +640,9 @@ def test_a_purpose_mount_may_not_reach_the_risk_premium_output() -> None:
         RatingAlgorithm.model_validate(data)
     types = {e["type"] for e in raised.value.errors()}
     assert "extra_forbidden" not in types, f"the field does not exist yet: {types}"
-    message = str(raised.value)
+    # The validator's own message, not `str(ValidationError)`, which also prints the (shortened)
+    # input and so depends on the payload's layout.
+    message = " ".join(str(e) for e in _graph_errors(raised))
     assert "s_cancel" not in message
     assert "risk_premium_minor" in message
     assert not any(
