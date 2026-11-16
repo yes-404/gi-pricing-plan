@@ -251,6 +251,12 @@ OWNER_FIXTURE_USERS: tuple[tuple[str, str, str], ...] = (
     ),
     (
         "backend/tests/test_blob_collector.py::"
+        "test_an_owner_row_that_commits_while_the_delete_waits_keeps_the_blob",
+        "DP-22",
+        "runs the collector's DELETE on blobs, which the application role cannot (OQ-1943)",
+    ),
+    (
+        "backend/tests/test_blob_collector.py::"
         "test_a_null_owner_digest_does_not_stop_the_collector_taking_an_unowned_blob",
         "DP-22",
         "runs the collector's DELETE on blobs, which the application role cannot (OQ-1943)",

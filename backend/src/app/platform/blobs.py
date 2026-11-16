@@ -35,7 +35,8 @@ import boto3
 from botocore.client import Config as BotoConfig
 from botocore.exceptions import BotoCoreError, ClientError
 from pydantic import BaseModel, ConfigDict, Field
-from sqlalchemy import CursorResult, delete, select, text, update
+from sqlalchemy import CursorResult, String, any_, delete, literal, select, text, update
+from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -651,7 +652,7 @@ class BlobStore:
         database: Database,
         *,
         actor: Principal,
-        workspace_id: Any,
+        workspace_id: UUID,
         dry_run: bool = True,
         grace_days: int | None = None,
     ) -> GarbageCollectionReport:
@@ -665,9 +666,11 @@ class BlobStore:
         **The collector owns its transactions** (it takes the `Database`, not a session), because
         the order is the safety property:
 
-        1. one unit of work deletes the rows with `_delete_unreferenced` — a single statement
-           that re-checks the count and the owners under the row lock — and writes the audit
-           event, then commits;
+        1. one unit of work deletes the rows with `_delete_unreferenced` — two statements: lock
+           the count-0 rows `FOR UPDATE`, then delete those no owner row names, with a snapshot
+           taken after the locks (its docstring says what that does and does not cover: the count
+           is re-checked under the row lock, the owners only as of the second statement's
+           snapshot) — and writes the audit event, then commits;
         2. only after that commit are the objects deleted, each under the digest's advisory lock
            and only if no row has appeared for it since (a concurrent `put` of the same bytes).
 
@@ -994,16 +997,42 @@ def _unreferenced(cutoff: datetime) -> tuple[Any, ...]:
 
 
 async def _delete_unreferenced(session: AsyncSession, cutoff: datetime) -> list[tuple[str, int]]:
-    """Delete every unreferenced blob row in **one statement**; return `(sha256, bytes)` deleted.
+    """Delete every unreferenced blob row, in **two statements of one transaction**; return
+    `(sha256, bytes)` deleted.
 
-    The count and owner re-check happen inside the DELETE, under the row lock it takes: a
-    concurrent `retain` blocks on that lock, and when it commits first the row no longer
-    matches and survives. This statement is the whole decision, so it can be called directly or
-    wrapped in a `SECURITY DEFINER` function without changing what it does (#1550).
+    1. `SELECT … FOR UPDATE` the rows with count 0 created before `cutoff`. It waits for any
+       transaction that holds one of those rows (a `retain` in flight) and, after the wait,
+       re-evaluates the row's own `ref_count`: a row that was retained is not returned.
+    2. A NEW `DELETE` of those rows that no owner row names. It is a new statement, so READ
+       COMMITTED gives it a fresh snapshot, taken **after** the row locks are held: an owner row
+       that committed while statement 1 waited is seen.
+
+    What this does and does not cover (#1893 review). Covered: a `ref_count` change, and an owner
+    row committed before statement 2 started. **Not covered:** an owner row that commits, without
+    taking a reference, after statement 2's snapshot and before its `DELETE` finishes; no row lock
+    on `blobs` stops that, because an owner writer touches the owner table, not `blobs`. That is
+    the undercount case `BLOB_OWNERS` and the release guard exist for (FR-420); the collector has
+    no caller until slice 3b. A single statement did not close it either: its `NOT EXISTS` used
+    the statement's starting snapshot, so it missed an owner row committed *during* the lock wait.
+
+    A statement-pair, not a lock the owner writers take, because the writers are many and
+    elsewhere. Both statements are plain SQL so a `SECURITY DEFINER` function can hold them in one
+    body (#1550): `FOR UPDATE` needs `UPDATE` on `blobs`, which the owner role has.
     """
+    locked = list(
+        (
+            await session.execute(
+                select(BlobRow.sha256)
+                .where(BlobRow.ref_count == 0, BlobRow.created_at < cutoff)
+                .with_for_update()
+            )
+        ).scalars()
+    )
+    if not locked:
+        return []
     result = await session.execute(
         delete(BlobRow)
-        .where(*_unreferenced(cutoff))
+        .where(BlobRow.sha256 == any_(literal(locked, ARRAY(String(64)))), *_unreferenced(cutoff))
         .returning(BlobRow.sha256, BlobRow.bytes_)
         .execution_options(synchronize_session=False)
     )

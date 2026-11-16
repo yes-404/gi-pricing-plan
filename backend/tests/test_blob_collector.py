@@ -22,7 +22,7 @@ from botocore.exceptions import ClientError, EndpointConnectionError
 from sqlalchemy import select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.models import AuditEventRow, BlobRow
+from app.db.models import AuditEventRow, BlobRow, ScoringTraceRow
 from app.db.session import Database
 from app.platform import blobs, traces
 from app.platform.blobs import BlobStore, blob_key
@@ -193,6 +193,72 @@ async def test_a_blob_an_owner_row_names_is_not_collected_even_at_ref_count_zero
     report = await blob_store.collect_garbage(
         owner_database, actor=principal, workspace_id=workspace_id, dry_run=False
     )
+
+    assert digest not in report.deleted
+    async with database.session() as session:
+        assert await session.get(BlobRow, digest) is not None
+    assert await _object_exists(blob_store, digest)
+
+
+@pytest.mark.req("FR-420")
+async def test_an_owner_row_that_commits_while_the_delete_waits_keeps_the_blob(
+    database: Database,
+    owner_database: Database,
+    blob_store: BlobStore,
+    workspace_id,
+    principal: Principal,
+) -> None:
+    """#1893 review, point 1: the review's own reproduction. A blob sits at count 0. A `put` of the
+    same bytes holds the row lock (its `retain` has run, uncommitted). The collector waits behind
+    it. An owner row naming the digest then commits, WITHOUT taking a reference (the undercount
+    case the owner check exists for). The `put` rolls back. The one-statement form removed the row
+    and the object, because its `NOT EXISTS` used the statement's starting snapshot and so missed
+    the owner row; the two-statement form takes a fresh snapshot after the lock wait and keeps
+    it."""
+    content = _unique(b"owner-during-wait")
+    digest = await _aged_unreferenced_blob(database, blob_store, content)
+    holding, release = asyncio.Event(), asyncio.Event()
+
+    class _RollBackError(Exception):
+        pass
+
+    async def _put_then_roll_back() -> None:
+        try:
+            async with database.unit_of_work() as session:
+                await blob_store.put(session, content, "text/plain")  # retain: the row lock
+                holding.set()
+                await release.wait()
+                raise _RollBackError
+        except _RollBackError:
+            pass
+
+    async def _owner_row_without_a_reference() -> None:
+        # The login role may INSERT a trace row (it is what `write_trace` does): no owner needed.
+        async with database.unit_of_work() as session:
+            session.add(
+                ScoringTraceRow(
+                    workspace_id=new_uuid7(),
+                    quote_id=f"quote-{new_uuid7()}",
+                    rating_version_ref="rating_version:motor-gb@3",
+                    bundle_hash="sha256:" + "0" * 64,
+                    sample_reason="rate",
+                    blob_sha256=digest,
+                    status="complete",
+                )
+            )
+
+    put_task = asyncio.create_task(_put_then_roll_back())
+    await asyncio.wait_for(holding.wait(), timeout=30)
+    collector = asyncio.create_task(
+        blob_store.collect_garbage(
+            owner_database, actor=principal, workspace_id=workspace_id, dry_run=False
+        )
+    )
+    await _wait_for_a_blocked_backend(owner_database)  # the collector waits on the put's row lock
+    await _owner_row_without_a_reference()  # committed while it waits
+    release.set()
+    await put_task
+    report = await collector
 
     assert digest not in report.deleted
     async with database.session() as session:
