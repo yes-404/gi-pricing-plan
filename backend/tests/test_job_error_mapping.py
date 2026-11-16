@@ -124,3 +124,54 @@ async def test_a_handler_bug_is_still_not_retryable(
     assert row.error is not None
     assert row.error["code"] == "JOB_HANDLER_FAILED"
     assert row.error["retryable"] is False
+
+
+@pytest.mark.req("FR-420")
+async def test_a_handler_that_breaks_the_collector_contract_fails_the_job_with_a_code_not_a_hang(
+    database: Database, blob_store, workspace_id, principal, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """#1855 (v), the Job-runner shape: a handler runs the collector while its own open
+    transaction holds the workspace's audit lock. The collector's lock timeout ends the call with
+    `BLOB_GC_LOCK_TIMEOUT`, the Job fails with that code (503 is a route's, a Job stores the
+    code), and the runner does not hang. Without the timeout the test's `wait_for` ends it."""
+    import asyncio
+
+    from app.platform import audit, blobs
+    from model_schema import JobSource
+
+    monkeypatch.setattr(blobs, "_GC_LOCK_TIMEOUT_MS", 1000)
+
+    def handler(params: dict[str, Any], progress: ProgressCallback) -> JobResult:
+        async def broken() -> None:
+            async with progress.database.unit_of_work() as session:  # type: ignore[attr-defined]
+                await audit.record(
+                    session,
+                    workspace_id=workspace_id,
+                    actor=principal,
+                    source=JobSource.SYSTEM,
+                    action="probe.audit_lock_held",
+                    entity_ref="probe:audit-lock@1",
+                    after={"probe": True},
+                )
+                await progress.blob_store.collect_garbage(  # type: ignore[attr-defined]
+                    progress.database,  # type: ignore[attr-defined]
+                    actor=principal,
+                    workspace_id=workspace_id,
+                    dry_run=True,
+                )
+
+        progress.run_on_loop(broken())  # type: ignore[attr-defined]
+        raise AssertionError("unreachable")
+
+    handlers.register_handler(JobKind.MODEL_FIT, handler)
+    async with database.unit_of_work() as session:
+        job = await jobs.submit(
+            session, JobKind.MODEL_FIT, {}, principal, workspace_id=workspace_id
+        )
+    status = await asyncio.wait_for(execute_job(database, job.id, blob_store), timeout=60)
+    assert status is JobStatus.FAILED
+    async with database.session() as session:
+        row = await session.get(JobRow, job.id)
+    assert row is not None
+    assert row.error is not None
+    assert row.error["code"] == "BLOB_GC_LOCK_TIMEOUT"
