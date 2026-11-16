@@ -180,7 +180,10 @@ async def test_a_body_that_is_not_a_table_carries_no_polars_text(
 # place never proves another (the first version of these cases put one sentinel in the middle,
 # then in the slug, and passed with each route fix reverted). Every caller-controlled string of a
 # request body therefore gets its OWN sentinel, and a failure names the field that leaked and
-# where. Each route also has a case whose payload is short enough that nothing is shortened.
+# where. The route cases depend on the KEY ORDER of the body they post (pydantic prints its
+# start and its end), so a body builder below must keep its keys in order. A request body cannot be
+# short enough that nothing is shortened, so the short-payload cases at the end call the sinks
+# (`_validated`, `graph_validation_error`) directly instead of going through a route.
 
 _SLUG = "zqs-4f8a21"
 
