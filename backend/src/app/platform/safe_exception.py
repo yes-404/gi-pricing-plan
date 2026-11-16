@@ -23,7 +23,7 @@ from typing import Any
 
 from sqlalchemy.exc import DBAPIError
 
-from app.errors import PlatformError, is_registered_code
+from app.errors import DEADLOCK_SQLSTATE, PlatformError, is_registered_code
 from pricing_core.safe_error import (
     CodedError,
     safe_error_detail,
@@ -31,9 +31,23 @@ from pricing_core.safe_error import (
     safe_exc_info,
 )
 
-__all__ = ["coded_job_error", "safe_job_error_text", "safe_job_exc_info"]
+__all__ = [
+    "coded_job_error",
+    "is_retryable_job_code",
+    "safe_job_error_text",
+    "safe_job_exc_info",
+]
 
 _CODE_RE = re.compile(r"[A-Z][A-Z0-9_]*")
+
+#: The Job error codes that tell the caller to submit the Job again (#1888 option (d)). Nothing
+#: re-submits automatically: the flag is information on `JobError`, not a retry.
+_RETRYABLE_JOB_CODES = frozenset({"CONCURRENT_WRITE_RETRY"})
+
+
+def is_retryable_job_code(code: str) -> bool:
+    """Whether a failed Job's `code` is one the caller may answer by submitting the Job again."""
+    return code in _RETRYABLE_JOB_CODES
 
 
 def safe_job_error_text(exc: BaseException) -> str:
@@ -64,6 +78,17 @@ def coded_job_error(exc: BaseException) -> tuple[str, str] | None:
     unregistered code returns `None`, as does anything that is not a `CodedError`; the caller
     then stores `JOB_HANDLER_FAILED` as before.
     """
+    if isinstance(exc, DBAPIError):
+        # A deadlock victim (SQLSTATE 40P01, #1888 option (d)): a named, retryable refusal. The
+        # text is ours and carries no driver text.
+        orig: Any = exc.orig
+        holders = (orig, getattr(orig, "__cause__", None))
+        if any(getattr(h, "sqlstate", None) == DEADLOCK_SQLSTATE for h in holders):
+            return (
+                "CONCURRENT_WRITE_RETRY",
+                "Another write to the same data won; nothing was written. Submit the Job again.",
+            )
+        return None
     if not isinstance(exc, CodedError):
         return None
     code, sep, message = safe_error_detail(exc).partition(": ")

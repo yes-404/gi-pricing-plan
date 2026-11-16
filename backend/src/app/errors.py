@@ -44,6 +44,10 @@ __all__ = [
 #: holds the same literal, and a test pins the two.
 APPROVAL_GUARD_SQLSTATE: Final = "GP001"
 
+#: PostgreSQL's `deadlock_detected`. It aborts exactly one of the transactions that wait on each
+#: other, and the abort is nothing the client did: it is told to try again (#1888 option (d)).
+DEADLOCK_SQLSTATE: Final = "40P01"
+
 _log = get_logger("app.errors")
 
 PROBLEM_MEDIA_TYPE: Final = "application/problem+json"
@@ -470,6 +474,10 @@ _GENERIC_ERROR_CODES: Final[frozenset[str]] = frozenset(
         "BLOB_GC_LOCK_TIMEOUT",
         "BLOB_GC_OWNER_APPEARED",
         "BLOB_GC_CUTOFF_TOO_RECENT",
+        # #1888 option (d): PostgreSQL aborted this request's transaction as a deadlock victim.
+        # A route answers 409 with it and a Job fails with it marked retryable; nothing is
+        # retried automatically. The caller is told to send the request again.
+        "CONCURRENT_WRITE_RETRY",
     }
 )
 
@@ -634,8 +642,23 @@ async def _handle_database_error(request: Request, exc: DBAPIError) -> JSONRespo
     permission problem. The code is kept so the defect is named, and it is logged at ERROR
     with the table and ref from the trigger's DETAIL. The response text is fixed: the
     driver's message can carry bound values.
+
+    **A deadlock is a retryable conflict, not a defect** (#1888 option (d)): SQLSTATE `40P01`
+    answers 409 `CONCURRENT_WRITE_RETRY`, and nothing is retried by the platform, so no handler
+    re-runs and no side effect repeats. It is logged at WARNING so the refusals can be counted.
     """
-    if getattr(exc.orig, "sqlstate", None) != APPROVAL_GUARD_SQLSTATE:
+    sqlstate = getattr(exc.orig, "sqlstate", None)
+    if sqlstate == DEADLOCK_SQLSTATE:
+        _log.warning("a write was refused as a deadlock", extra={"path": request.url.path})
+        conflict = PlatformError(
+            "CONCURRENT_WRITE_RETRY",
+            "The write conflicted with another one",
+            status.HTTP_409_CONFLICT,
+            "Another request was writing the same data at the same time and this one lost. "
+            "Nothing was written. Send the request again.",
+        ).to_problem(instance=request.url.path)
+        return problem_response(conflict)
+    if sqlstate != APPROVAL_GUARD_SQLSTATE:
         raise exc
     detail = getattr(exc.orig, "detail", None) or getattr(
         getattr(exc.orig, "__cause__", None), "detail", None
