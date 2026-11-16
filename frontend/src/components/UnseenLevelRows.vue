@@ -40,8 +40,8 @@ defineProps<{
           {{ entry.label }}: none left out.
         </template>
         <template v-else>
-          {{ entry.label }}: {{ entry.rows }} rows (exposure {{ entry.exposure }}) are left out of
-          every figure on this page.
+          {{ entry.label }}: {{ entry.rows }} rows (exposure
+          {{ entry.exposure ?? "not recorded" }}) are left out of every figure on this page.
         </template>
       </li>
     </ul>

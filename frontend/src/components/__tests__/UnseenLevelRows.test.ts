@@ -30,6 +30,16 @@ describe("UnseenLevelRows", () => {
     expect(section).not.toHaveTextContent("Holdout: none left out");
   });
 
+  it("says the exposure is not recorded when rows are left out and the exposure is null", () => {
+    show([{ label: "Holdout", rows: 5, exposure: null }]);
+    const section = screen.getByLabelText("Rows on a level this fit never saw");
+
+    expect(section).toHaveTextContent(
+      "Holdout: 5 rows (exposure not recorded) are left out of every figure on this page.",
+    );
+    expect(section).not.toHaveTextContent("exposure null");
+  });
+
   it("carries the caller's sentence about a quote", () => {
     show([{ label: "Holdout", rows: 0, exposure: "0" }]);
 
