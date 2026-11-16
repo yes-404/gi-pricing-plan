@@ -52,9 +52,10 @@ fitted coefficients and not from the scored bundle.
 
 The unseen-level sweep (`scripts/sweep-unseen-levels.py`) reports each version of this demo as
 `NOTREACHABLE`: its four categorical Factors (`veh_brand`, `veh_gas`, `area`, `region`) declare
-nothing, so a level their fit never saw would be refused, but each is fed only by an input
-restricted to the fitted levels (`closed-input`) or by no `model_call` at all (`not-scored`), and a
-version the sweep cannot classify is listed as `PLAIN`, an upper bound.
+nothing, so a level their fit never saw would be refused, but in every version each is fed only by
+an input restricted to the fitted levels (`closed-input`): the base version is scored through the
+Peril Structure's `model_call`, and the input contract admits no other level. A version the sweep
+cannot classify is listed as `PLAIN`.
 
 **The dislocation and attribution runs go over a 20,000-policy sample, never the full book.**
 The seed builds the sample with evenly spaced integer indices `i * N // n` over the
