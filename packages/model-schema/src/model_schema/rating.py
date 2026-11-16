@@ -605,15 +605,47 @@ class RatingAlgorithm(RatingAlgorithmDraft):
 
     @model_validator(mode="after")
     def _graph_invariants(self) -> RatingAlgorithm:
-        issues = graph_invariant_issues(self)
-        if not issues:
+        tagged = _graph_issues(self)
+        if not tagged:
             return self
-        first = issues[0]
-        if first.code == "RATING_GRAPH_CYCLIC":
-            raise GraphCycleError("the rating DAG contains a cycle (FR-212)")
-        if first.code == "RATING_GRAPH_UNRESOLVED_REF":
-            raise GraphUnresolvedRefError(first.message)
-        raise ValueError(first.message)
+        rule, first = tagged[0]
+        # The two typed signals are mapped by class to fixed text downstream. Every other rule
+        # raises its own literal: the step id, value name or port the validate route reports
+        # (RL-1474) is not put in a message that also renders when a stored algorithm fails
+        # re-validation (NFR-499).
+        match rule:
+            case _GraphRule.CYCLE:
+                raise GraphCycleError("the rating DAG contains a cycle (FR-212)")
+            case _GraphRule.MOUNT_INPUT_BLANK | _GraphRule.VALUE_UNDEFINED:
+                raise GraphUnresolvedRefError(first.message)
+            case _GraphRule.STEP_ID_UNIQUE:
+                raise InputFreeError("every step_id is unique (FR-215)")
+            case _GraphRule.MOUNT_POINT_UNIQUE:
+                raise InputFreeError(
+                    "every mount_point is unique among the step_ids and the other mounts "
+                    "(FR-215, RL-1309 DP-3)"
+                )
+            case _GraphRule.MOUNT_OUTPUT_BLANK:
+                raise InputFreeError(
+                    "a mount maps an output port to a blank name; omit the port to leave it "
+                    "unmapped (FR-217)"
+                )
+            case _GraphRule.OUTPUT_HAS_NO_STEP:
+                raise InputFreeError("a declared output has no output step (FR-214)")
+            case _GraphRule.PRODUCERS_NOT_A_CHAIN:
+                raise InputFreeError(
+                    "a value is produced by steps that do not form a single re-production "
+                    "chain (FR-212)"
+                )
+            case _GraphRule.STEP_UNREACHABLE:
+                raise InputFreeError(
+                    "a step is unreachable from any input and referenced by no output (FR-212)"
+                )
+            case _GraphRule.PURPOSE_MOUNT_REACHES_RISK_PRICE:
+                raise InputFreeError(
+                    "a purpose mount reaches the risk_premium_minor output: one risk price "
+                    "(FR-218)"
+                )
 
     @staticmethod
     def _reachable(
@@ -660,6 +692,25 @@ _RISK_PREMIUM_OUTPUT: Final = "risk_premium_minor"
 """The declared output that carries the one risk price (FR-218, `RL-1628` R1)."""
 
 
+class _GraphRule(StrEnum):
+    """Which graph rule an issue breaks. Private: `RatingAlgorithm` raises one literal,
+    input-free message per rule, and the validate route reports the issues themselves."""
+
+    STEP_ID_UNIQUE = "step_id_unique"
+    MOUNT_POINT_UNIQUE = "mount_point_unique"
+    MOUNT_INPUT_BLANK = "mount_input_blank"
+    MOUNT_OUTPUT_BLANK = "mount_output_blank"
+    OUTPUT_HAS_NO_STEP = "output_has_no_step"
+    VALUE_UNDEFINED = "value_undefined"
+    CYCLE = "cycle"
+    PRODUCERS_NOT_A_CHAIN = "producers_not_a_chain"
+    STEP_UNREACHABLE = "step_unreachable"
+    PURPOSE_MOUNT_REACHES_RISK_PRICE = "purpose_mount_reaches_risk_price"
+
+
+_TaggedIssue = tuple[_GraphRule, ValidationIssue]
+
+
 def graph_invariant_issues(draft: RatingAlgorithmDraft) -> list[ValidationIssue]:
     """Every graph-invariant breach of `draft`, located, in the order saving checks them.
 
@@ -675,17 +726,25 @@ def graph_invariant_issues(draft: RatingAlgorithmDraft) -> list[ValidationIssue]
     unconditional mounts alone, which is what every other purpose is priced by. An algorithm
     with no purpose mount has the one graph, and is checked exactly as before.
     """
+    return [issue for _, issue in _graph_issues(draft)]
+
+
+def _graph_issues(draft: RatingAlgorithmDraft) -> list[_TaggedIssue]:
+    """`graph_invariant_issues`, each issue tagged with the rule it breaks."""
     steps = draft.steps
-    issues: list[ValidationIssue] = []
+    issues: list[_TaggedIssue] = []
 
     seen: set[str] = set()
     for step in steps:
         if step.step_id in seen:
             issues.append(
-                ValidationIssue(
-                    code="VALIDATION_FAILED",
-                    message="every step_id is unique (FR-215)",
-                    step_id=step.step_id,
+                (
+                    _GraphRule.STEP_ID_UNIQUE,
+                    ValidationIssue(
+                        code="VALIDATION_FAILED",
+                        message="every step_id is unique (FR-215)",
+                        step_id=step.step_id,
+                    ),
                 )
             )
         seen.add(step.step_id)
@@ -696,11 +755,14 @@ def graph_invariant_issues(draft: RatingAlgorithmDraft) -> list[ValidationIssue]
     mount_points = [m.mount_point for m in draft.sub_graphs]
     if len(mount_points) != len(set(mount_points)) or set(mount_points) & seen:
         issues.append(
-            ValidationIssue(
-                code="VALIDATION_FAILED",
-                message=(
-                    "every mount_point is unique among the step_ids and the other mounts "
-                    "(FR-215, RL-1309 DP-3)"
+            (
+                _GraphRule.MOUNT_POINT_UNIQUE,
+                ValidationIssue(
+                    code="VALIDATION_FAILED",
+                    message=(
+                        "every mount_point is unique among the step_ids and the other mounts "
+                        "(FR-215, RL-1309 DP-3)"
+                    ),
                 ),
             )
         )
@@ -713,25 +775,31 @@ def graph_invariant_issues(draft: RatingAlgorithmDraft) -> list[ValidationIssue]
         for port, name in m.inputs.items():
             if not name.strip():
                 issues.append(
-                    ValidationIssue(
-                        code="RATING_GRAPH_UNRESOLVED_REF",
-                        message=(
-                            f"mount '{m.mount_point}' leaves input port '{port}' unmapped: "
-                            "its parent name is blank (FR-217)"
+                    (
+                        _GraphRule.MOUNT_INPUT_BLANK,
+                        ValidationIssue(
+                            code="RATING_GRAPH_UNRESOLVED_REF",
+                            message=(
+                                f"mount '{m.mount_point}' leaves input port '{port}' unmapped: "
+                                "its parent name is blank (FR-217)"
+                            ),
+                            step_id=m.mount_point,
                         ),
-                        step_id=m.mount_point,
                     )
                 )
         for port, name in m.outputs.items():
             if not name.strip():
                 issues.append(
-                    ValidationIssue(
-                        code="VALIDATION_FAILED",
-                        message=(
-                            f"mount '{m.mount_point}' maps output port '{port}' to a blank "
-                            "name; omit the port to leave it unmapped (FR-217)"
+                    (
+                        _GraphRule.MOUNT_OUTPUT_BLANK,
+                        ValidationIssue(
+                            code="VALIDATION_FAILED",
+                            message=(
+                                f"mount '{m.mount_point}' maps output port '{port}' to a blank "
+                                "name; omit the port to leave it unmapped (FR-217)"
+                            ),
+                            step_id=m.mount_point,
                         ),
-                        step_id=m.mount_point,
                     )
                 )
 
@@ -744,7 +812,7 @@ def graph_invariant_issues(draft: RatingAlgorithmDraft) -> list[ValidationIssue]
         for name in _named(m.outputs.values()):
             purpose_only.setdefault(name, []).extend(m.purposes or [])
 
-    found: dict[tuple[str, str, str | None], ValidationIssue] = {}
+    found: dict[tuple[str, str, str | None], _TaggedIssue] = {}
     for purpose in [*selected, None]:
         mounts = [
             _MountNode(m.mount_point, _named(m.inputs.values()), _named(m.outputs.values()))
@@ -754,8 +822,9 @@ def graph_invariant_issues(draft: RatingAlgorithmDraft) -> list[ValidationIssue]
         purpose_mounts = {
             m.mount_point for m in draft.sub_graphs if m.purposes is not None
         }
-        for issue in _graph_pass_issues(draft, mounts, purpose_mounts, purpose_only):
-            found.setdefault((issue.code, issue.message, issue.step_id), issue)
+        for tagged in _graph_pass_issues(draft, mounts, purpose_mounts, purpose_only):
+            issue = tagged[1]
+            found.setdefault((issue.code, issue.message, issue.step_id), tagged)
     return [*issues, *found.values()]
 
 
@@ -764,7 +833,7 @@ def _graph_pass_issues(
     mounts: list[_MountNode],
     purpose_mounts: set[str],
     purpose_only: Mapping[str, list[str]],
-) -> list[ValidationIssue]:
+) -> list[_TaggedIssue]:
     """FR-212/214/215 over `draft.steps` and the given `mounts`: one purpose's graph.
 
     `purpose_mounts` are the mount points that carry a `purposes` selector; none of their steps
@@ -773,7 +842,7 @@ def _graph_pass_issues(
     produces it.
     """
     steps = draft.steps
-    issues: list[ValidationIssue] = []
+    issues: list[_TaggedIssue] = []
     nodes: list[_Node] = [*steps, *mounts]
 
     produced = _produced_by(nodes)
@@ -784,9 +853,12 @@ def _graph_pass_issues(
     for out in draft.outputs:
         if out.name not in output_steps:
             issues.append(
-                ValidationIssue(
-                    code="VALIDATION_FAILED",
-                    message=f"declared output {out.name!r} has no output step (FR-214)",
+                (
+                    _GraphRule.OUTPUT_HAS_NO_STEP,
+                    ValidationIssue(
+                        code="VALIDATION_FAILED",
+                        message=f"declared output {out.name!r} has no output step (FR-214)",
+                    ),
                 )
             )
 
@@ -799,13 +871,16 @@ def _graph_pass_issues(
             producers = produced.get(name)
             if not producers:
                 issues.append(
-                    ValidationIssue(
-                        code="RATING_GRAPH_UNRESOLVED_REF",
-                        message=(
-                            f"step {node.step_id!r} consumes undefined value {name!r} "
-                            "(FR-212)" + _only_in(purpose_only.get(name))
+                    (
+                        _GraphRule.VALUE_UNDEFINED,
+                        ValidationIssue(
+                            code="RATING_GRAPH_UNRESOLVED_REF",
+                            message=(
+                                f"step {node.step_id!r} consumes undefined value {name!r} "
+                                "(FR-212)" + _only_in(purpose_only.get(name))
+                            ),
+                            step_id=node.step_id,
                         ),
-                        step_id=node.step_id,
                     )
                 )
                 continue
@@ -839,10 +914,13 @@ def _graph_pass_issues(
                     queue.extend(dependencies[sid])
             if node.step_id in reach:
                 issues.append(
-                    ValidationIssue(
-                        code="RATING_GRAPH_CYCLIC",
-                        message=f"step {node.step_id!r} lies on a cycle (FR-212)",
-                        step_id=node.step_id,
+                    (
+                        _GraphRule.CYCLE,
+                        ValidationIssue(
+                            code="RATING_GRAPH_CYCLIC",
+                            message=f"step {node.step_id!r} lies on a cycle (FR-212)",
+                            step_id=node.step_id,
+                        ),
                     )
                 )
 
@@ -862,13 +940,16 @@ def _graph_pass_issues(
             for _prev, nxt in pairwise(by_position):
                 if name not in _as_list(step_by_id[nxt].consumes):
                     issues.append(
-                        ValidationIssue(
-                            code="VALIDATION_FAILED",
-                            message=(
-                                f"value {name!r} is produced by {len(producers)} steps "
-                                "that do not form a single re-production chain (FR-212)"
+                        (
+                            _GraphRule.PRODUCERS_NOT_A_CHAIN,
+                            ValidationIssue(
+                                code="VALIDATION_FAILED",
+                                message=(
+                                    f"value {name!r} is produced by {len(producers)} steps "
+                                    "that do not form a single re-production chain (FR-212)"
+                                ),
+                                step_id=nxt,
                             ),
-                            step_id=nxt,
                         )
                     )
 
@@ -884,13 +965,16 @@ def _graph_pass_issues(
     for step in steps:
         if step.step_id not in reachable_from_input and step.step_id not in feeds_output:
             issues.append(
-                ValidationIssue(
-                    code="VALIDATION_FAILED",
-                    message=(
-                        f"step {step.step_id!r} is unreachable from any input and "
-                        "referenced by no output (FR-212)"
+                (
+                    _GraphRule.STEP_UNREACHABLE,
+                    ValidationIssue(
+                        code="VALIDATION_FAILED",
+                        message=(
+                            f"step {step.step_id!r} is unreachable from any input and "
+                            "referenced by no output (FR-212)"
+                        ),
+                        step_id=step.step_id,
                     ),
-                    step_id=step.step_id,
                 )
             )
 
@@ -906,13 +990,16 @@ def _graph_pass_issues(
             {node.step_id}, step_by_id, produced, consumed
         ):
             issues.append(
-                ValidationIssue(
-                    code="VALIDATION_FAILED",
-                    message=(
-                        f"purpose mount {node.step_id!r} reaches the {_RISK_PREMIUM_OUTPUT!r} "
-                        "output: one risk price (FR-218)"
+                (
+                    _GraphRule.PURPOSE_MOUNT_REACHES_RISK_PRICE,
+                    ValidationIssue(
+                        code="VALIDATION_FAILED",
+                        message=(
+                            f"purpose mount {node.step_id!r} reaches the "
+                            f"{_RISK_PREMIUM_OUTPUT!r} output: one risk price (FR-218)"
+                        ),
+                        step_id=node.step_id,
                     ),
-                    step_id=node.step_id,
                 )
             )
     return issues

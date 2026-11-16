@@ -28,7 +28,8 @@ _Site = tuple[str, str, int]
 #: rewrites one decrements it; a new plain raise fails. Holds only sites no request body
 #: reaches (PL-1599 Appendix A: B1 and B2, carried to P3). Emptied and deleted by the last slice.
 # `RatingAlgorithm._graph_invariants`: WK-675 S3 moved the checks to `graph_invariant_issues`; the
-# cycle, unresolved-ref and `raise ValueError(first.message)` raises remain (B1, P3, owner SL-1601).
+# cycle and unresolved-ref typed signals remain (B1, P3, owner SL-1601), mapped by class to fixed
+# text. The `raise ValueError(first.message)` became one literal raise per rule (#1712 S7b).
 # Every entry's owner is SL-1601, the P3 carry for B1/B2 (roadmap.md, minted from working id 9958).
 _RESIDUAL: dict[tuple[str, str], int] = {
     ("approvals.py", "ApprovalRequest._recorded_matches_decisions"): 1,  # owner: SL-1601
@@ -65,9 +66,9 @@ _RESIDUAL: dict[tuple[str, str], int] = {
     ("prediction.py", "PredictedRow._the_bounds_are_a_pair_and_ordered"): 2,  # owner: SL-1601
     ("prediction.py", "Prediction._every_row_matches_the_declared_uncertainty"): 1,  # owner: SL-1601  # noqa: E501
     ("prediction.py", "Uncertainty._the_kind_and_its_evidence_agree"): 8,  # owner: SL-1601
-    ("rating.py", "RatingAlgorithm._graph_invariants"): 3,  # owner: SL-1601
+    ("rating.py", "RatingAlgorithm._graph_invariants"): 2,  # owner: SL-1601
     ("regression.py", "RegressionSuiteContent._unique_names"): 1,  # owner: SL-1601
-    ("sub_graphs.py", "SubGraphBody._graph_invariants"): 5,  # owner: SL-1601
+    ("sub_graphs.py", "SubGraphBody._graph_invariants"): 2,  # owner: SL-1601
     ("sub_graphs.py", "_topological_order"): 1,  # owner: SL-1601
     ("validation.py", "RuleSetEntry._an_override_may_only_raise"): 1,  # owner: SL-1601
     ("validation.py", "ValidationRule._catalogue_id_names_a_catalogue_entry"): 1,  # owner: SL-1601

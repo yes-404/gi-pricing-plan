@@ -641,7 +641,7 @@ def test_a_purpose_mount_may_not_reach_the_risk_premium_output() -> None:
     types = {e["type"] for e in raised.value.errors()}
     assert "extra_forbidden" not in types, f"the field does not exist yet: {types}"
     message = str(raised.value)
-    assert "s_cancel" in message
+    assert "s_cancel" not in message
     assert "risk_premium_minor" in message
     assert not any(
         isinstance(e, (GraphCycleError, GraphUnresolvedRefError)) for e in _graph_errors(raised)

@@ -10,7 +10,12 @@ import pytest
 from pydantic import ValidationError
 
 from model_schema.graph_errors import GraphCycleError, GraphUnresolvedRefError
+from model_schema.input_free import InputFreeError
 from model_schema.rating import RatingAlgorithm
+
+# Pydantic wraps a `ValueError` in a validator, and callers catching `ValueError` still catch an
+# `InputFreeError`: the tests below rely on it.
+assert issubclass(InputFreeError, ValueError)
 
 pytestmark = pytest.mark.req("FR-212")
 
@@ -61,5 +66,5 @@ def test_a_declared_output_without_an_output_step_is_a_plain_value_error() -> No
     data = algorithm()
     data["outputs"].append({"name": "extra", "type": "int", "required": False})
     error = raised(data)
-    assert type(error) is ValueError
+    assert type(error) is InputFreeError
     assert "FR-214" in str(error)
