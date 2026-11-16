@@ -50,6 +50,12 @@ rateable; the bands are printed as the seed runs. **The base premium is a simpli
 cost, not a modelled pure premium. Its golden quotes are the GLM's own premiums, computed from the
 fitted coefficients and not from the scored bundle.
 
+The unseen-level sweep (`scripts/sweep-unseen-levels.py`) reports each version of this demo as
+`NOTREACHABLE`: its four categorical Factors (`veh_brand`, `veh_gas`, `area`, `region`) declare
+nothing, so a level their fit never saw would be refused, but each is fed only by an input
+restricted to the fitted levels (`closed-input`) or by no `model_call` at all (`not-scored`), and a
+version the sweep cannot classify is listed as `PLAIN`, an upper bound.
+
 **The dislocation and attribution runs go over a 20,000-policy sample, never the full book.**
 The seed builds the sample with evenly spaced integer indices `i * N // n` over the
 checksum-pinned file (a fixed size, a fixed rule, no random seed: the same 20,000 policies every

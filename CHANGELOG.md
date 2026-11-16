@@ -23,7 +23,11 @@ about. The format follows [Keep a Changelog 1.1.0](https://keepachangelog.com/en
   are refitted. The sweep examines each GLM in a bundle and counts a model of another family (a
   GBM or an EBM, which keeps the FR-131 refusal) on `not-examined-other-family`; a model with no
   fit result, no model type or an unknown one makes its version unreadable, and each unreadable
-  line names the version and a reason word or the exception's type only. Diagnostics, comparisons
+  line names the version and a reason word or the exception's type only. A version whose every
+  undeclared identity Factor cannot be reached by a quote is listed as `NOTREACHABLE`, with the
+  reason word `closed-input` or `not-scored`, and `PLAIN` is what the sweep cannot classify. The
+  backtest and model comparison views show the count of rows left out on an unseen level with its
+  exposure, as the diagnostics view does. Diagnostics, comparisons
   and backtests leave
   rows on such a level out of their figures and report the count and exposure; the model detail
   view lists each banded null level, Grouping target and interaction cell the fit has no

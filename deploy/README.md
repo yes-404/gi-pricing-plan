@@ -149,7 +149,11 @@ docker compose -f deploy/docker-compose.yml --profile app up -d --wait --scale a
   lists such versions as `NOTEXAMINED-NUMERIC-TERMS` until their models are refitted (the line
   lists every identity label that starts like a number, so it is a floor on what the tool
   examined, not a count of faults). The NOTEXAMINED lines are information: they never change the
-  exit code. The sweep classifies each model in a bundle by its model type: a GLM is examined; a
+  exit code. A version whose every undeclared identity Factor cannot be reached by a quote is
+  listed as `NOTREACHABLE`, never `PLAIN`, with a reason word on its line: `closed-input` (the
+  Factor is fed only by an input that is a closed enum over the fit's own levels, on every GLM
+  that input feeds) or `not-scored` (no `model_call` scores the GLM). `PLAIN` is what the sweep
+  cannot classify, an upper bound. The sweep classifies each model in a bundle by its model type: a GLM is examined; a
   model of another family (a GBM or an EBM) keeps the `02` FR-131 refusal whatever a Factor
   declares, is not examined, and is counted on the `not-examined-other-family` line; a model with
   no fit result, no model type or an unknown one makes its version unreadable (exit 2). Every
