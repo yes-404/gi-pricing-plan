@@ -156,10 +156,6 @@ _SINKS: dict[tuple[str, str, str], tuple[int, str]] = {
         "portfolio Dataset Version, not a Quote Context; the message reaches the Job's failure "
         "(test_rate_table_diff_portfolio.py::"
         "test_a_resolution_error_reaches_the_failed_job_with_its_count_and_example)"),
-    ("backend/src/app/platform/rating_algorithms.py", "graph_validation_error", "str(exc)"): (
-        1, "RETURNS Pydantic's text of the submitter's own algorithm or sub-graph JSON to the "
-        "submitter in the 422 body; not stored, not logged; an artifact definition, not a Quote "
-        "Context. The code is chosen by the typed error class, never by this text (FD-1326)"),
     ("backend/src/app/platform/rating_versions.py", "create_rating_version", "str(exc)"): (
         1, "create time: caught BY CLASS (`ModelReferenceModeError`), an artifact-level refusal "
         "(FR-223 MODEL_REFERENCE_MODE_INCONSISTENT) naming the step and the two declared modes; "

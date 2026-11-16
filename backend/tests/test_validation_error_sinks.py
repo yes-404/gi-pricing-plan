@@ -205,3 +205,59 @@ def test_a_custom_artifact_refusal_carries_no_submitted_value(
     assert any(text in detail for text in kept), (detail, kept)
     for text in absent:
         assert text not in refused.text
+
+
+@pytest.mark.req("NFR-499")
+def test_a_rating_graph_shape_refusal_carries_no_submitted_value(
+    api_client, workspace_id, principal, grant
+) -> None:
+    """Row 4: an orphan step's id, and a declared output's name, are the caller's own text.
+    The 422 states the rule; where it is, is the validate route's report (RL-1474)."""
+    asyncio.get_event_loop().run_until_complete(grant("analyst"))
+    headers = _headers(principal, workspace_id)
+
+    orphan = _minimal_algorithm()
+    orphan["steps"].append(
+        {"step_id": "SENTINEL_step_77", "type": "expression", "label": "orphan",
+         "expr": "1", "result_type": "int", "produces": "unused_value"}
+    )
+    refused = api_client.post("/api/v1/rating-algorithms", json=orphan, headers=headers)
+    assert refused.status_code == 422, refused.text
+    assert refused.json()["code"] == "VALIDATION_FAILED"
+    assert "unreachable from any input" in refused.json()["detail"], "control: the rule is kept"
+    assert "SENTINEL_step_77" not in refused.text
+
+    unproduced = _minimal_algorithm()
+    unproduced["outputs"].append({"name": "SENTINEL_out_77", "type": "int", "required": False})
+    refused = api_client.post("/api/v1/rating-algorithms", json=unproduced, headers=headers)
+    assert refused.status_code == 422, refused.text
+    assert refused.json()["code"] == "VALIDATION_FAILED"
+    assert "has no output step (FR-214)" in refused.json()["detail"], "control: the rule is kept"
+    assert "SENTINEL_out_77" not in refused.text
+
+
+@pytest.mark.req("NFR-499")
+def test_a_sub_graph_shape_refusal_carries_no_submitted_value(
+    api_client, workspace_id, principal, grant
+) -> None:
+    """Row 4 through the sub-graph route: an orphan step's id is not in the 422."""
+    asyncio.get_event_loop().run_until_complete(grant("analyst"))
+    payload = {
+        "slug": "sentinel-sub-graph",
+        "inputs": [{"name": "ncd_years", "type": "int"}],
+        "outputs": [{"name": "ncd_factor", "type": "relativity", "required": True}],
+        "steps": [
+            {"step_id": "s_ncd", "type": "table", "label": "NCD ladder",
+             "rate_table_ref": "rate_table:ncd@2", "key_expr": ["ncd_years"],
+             "consumes": "ncd_years", "produces": "ncd_factor"},
+            {"step_id": "SENTINEL_step_77", "type": "expression", "label": "orphan",
+             "expr": "1", "result_type": "int", "produces": "unused_value"},
+        ],
+        "change_note": "first",
+    }
+    refused = api_client.post(
+        "/api/v1/sub-graphs", json=payload, headers=_headers(principal, workspace_id)
+    )
+    assert refused.status_code == 422, refused.text
+    assert "unreachable from any input port" in refused.json()["detail"], "control: rule kept"
+    assert "SENTINEL_step_77" not in refused.text
