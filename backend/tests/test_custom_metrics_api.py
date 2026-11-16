@@ -563,7 +563,8 @@ def test_every_custom_metric_route_is_in_the_published_contract() -> None:
 #: (template, params, substrings the detail keeps, substrings it must not carry)
 _PARAMETER_REFUSALS = [
     ("capped_gamma", {}, ["'cap'", "requires"], []),
-    ("asymmetric_squared", {"w_overs": 2.0}, ["'w_overs'", "w_under, w_over"], []),
+    # A metric lists the declared names sorted (an objective, in §4.5's order).
+    ("asymmetric_squared", {"w_overs": 2.0}, ["'w_overs'", "it takes 'w_over, w_under'"], []),
     ("tweedie", {"p": 2.0}, ["less than '2.0'"], []),
     ("tweedie", {"p": 2.987654}, ["less than '2.0'"], ["2.987654"]),
     ("capped_gamma", {"cap": 987654321.5}, ["integer minor units"], ["987654321"]),
