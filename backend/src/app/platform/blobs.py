@@ -1023,9 +1023,12 @@ async def _delete_unreferenced(session: AsyncSession, cutoff: datetime) -> list[
     What this does and does not cover (#1893 review). Covered: a `ref_count` change, and an owner
     row committed before statement 2 started. **Not covered:** an owner row that commits, without
     taking a reference, after statement 2's snapshot and before its `DELETE` finishes; no row lock
-    on `blobs` stops that, because an owner writer touches the owner table, not `blobs`. That is
-    the undercount case `BLOB_OWNERS` and the release guard exist for (FR-420); the collector has
-    no caller until slice 3b. A single statement did not close it either: its `NOT EXISTS` used
+    on `blobs` stops that, because an owner writer touches the owner table, not `blobs`. Probed on
+    a copy database, with a 3 s delay planted inside the statement to widen the window (the real
+    window is narrow): the row and its object were deleted while an owner row named the digest.
+    That is the undercount case `BLOB_OWNERS` and the release guard exist for (FR-420); the
+    collector has no caller until slice 3b. A single statement did not close it either: its
+    `NOT EXISTS` used
     the statement's starting snapshot, so it missed an owner row committed *during* the lock wait.
 
     A statement-pair, not a lock the owner writers take, because the writers are many and
