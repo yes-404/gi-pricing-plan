@@ -35,7 +35,7 @@ from app.db.models import RatingVersionRow
 from app.errors import PlatformError
 from app.platform import datasets as dataset_service
 from app.platform import rating_versions as rating_versions_service
-from app.platform.bundle_hydration import hydrate
+from app.platform.bundle_hydration import hydrate, load_stored_bundle
 from app.platform.bundle_slot import BundleSlot
 from app.platform.dislocation_runs import (
     DISLOCATION_RATINGS_PER_WORKER_HOUR,
@@ -67,7 +67,6 @@ from pricing_core.rating.analysis import (
 )
 from pricing_core.rating.compile import (
     ArtifactResolver,
-    Bundle,
     ResolvedArtifact,
     compile_bundle,
 )
@@ -246,9 +245,17 @@ async def _compiled(
     payload = await read_stored_blob(
         session, progress.blob_store, sha256, f"{ref}'s compiled bundle"
     )
-    bundle = Bundle.model_validate_json(payload)
+    slot = BundleSlot()
+    bundle = await load_stored_bundle(
+        payload,
+        recorded=(row.bundle or {}).get("content_hash"),
+        slot=slot,
+        database=progress.database,
+        workspace_id=workspace_id,
+        ref=ref,
+    )
     compiled = await hydrate(
-        bundle, slot=BundleSlot(), database=progress.database, workspace_id=workspace_id, ref=ref
+        bundle, slot=slot, database=progress.database, workspace_id=workspace_id, ref=ref
     )
     return compiled, bundle.content_hash
 
