@@ -79,6 +79,19 @@
 # the test fixtures that build the login role and the owner connection (decision on #1854)
 /backend/tests/conftest_db.py                              @yes-404 @freynia404
 
+# The audit trail: how an audit event is recorded and chained, and its routes (ADR-02154).
+# record() is the only writer of an audit event; the hash function, the append-only triggers
+# and their grant are covered by the contracts and migrations lines.
+/backend/src/app/platform/audit.py                         @yes-404 @freynia404
+/backend/src/app/api/audit.py                              @yes-404 @freynia404
+/backend/src/app/api/artifacts.py                          @yes-404 @freynia404
+/scripts/reset-unbacked-rule-approvals.py                  @yes-404 @freynia404
+/backend/tests/test_audit*.py                              @yes-404 @freynia404
+/backend/tests/test_api_audit.py                           @yes-404 @freynia404
+/backend/tests/test_nfr498_audit_events.py                 @yes-404 @freynia404
+/backend/tests/test_auth_failure_audit.py                  @yes-404 @freynia404
+/backend/tests/test_artifact_immutability.py               @yes-404 @freynia404
+
 # Database migrations
 /backend/migrations/                                       @yes-404 @freynia404
 /alembic.ini                                               @yes-404 @freynia404

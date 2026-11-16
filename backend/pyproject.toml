@@ -15,6 +15,8 @@ dependencies = [
     "boto3>=1.35",
     "celery[redis]>=5.4",
     "pyjwt[crypto]>=2.9",
+    # FR-373: Ed25519 anchor signing (#1839). Already locked through `pyjwt[crypto]`.
+    "cryptography>=50.0",
     "httpx>=0.27",
     "polars>=1.9",
     # FR-28 requires Excel; polars reads it through this engine.

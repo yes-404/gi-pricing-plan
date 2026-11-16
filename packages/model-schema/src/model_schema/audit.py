@@ -21,23 +21,26 @@ from __future__ import annotations
 import hashlib
 import json
 from datetime import datetime
-from typing import Any
+from typing import Any, Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from model_schema.input_free import InputFreeError
 from model_schema.jobs import JobSource, Principal
 from model_schema.refs import ArtifactRef
 
 __all__ = [
+    "AnchorStatement",
     "ArtifactHistory",
     "ArtifactHistoryEntry",
+    "AuditAnchor",
     "AuditEvent",
     "AuditEventListing",
     "AuditEventRecord",
     "FieldChange",
     "StatusTransition",
+    "anchor_statement_bytes",
     "canonical_payload",
     "compute_event_hash",
 ]
@@ -221,9 +224,71 @@ def canonical_payload(core: AuditEventCore, prev_event_hash: str | None) -> byte
     """
     data: dict[str, Any] = core.model_dump(mode="json")
     data["prev_event_hash"] = prev_event_hash
-    return json.dumps(
-        data, sort_keys=True, separators=(",", ":"), ensure_ascii=False
-    ).encode("utf-8")
+    return _canonical_json(data)
+
+
+def _canonical_json(data: dict[str, Any]) -> bytes:
+    """The one canonical serialisation: the chain's hashed bytes and the anchor's signed bytes.
+
+    Two serialisers drifted once (see `AuditEventCore`); the anchor's customer rebuilds these
+    bytes with `json.dumps` and the arguments below (`06` FR-373 (6)), so they never change.
+    """
+    return json.dumps(data, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode(
+        "utf-8"
+    )
+
+
+class AnchorStatement(BaseModel):
+    """What the audit anchor signs (`06` FR-373 (1)): a chain head, the key and the time.
+
+    `head_sequence` 0 with a null `head_event_hash` is an empty chain, and nothing else is.
+    `key_id` and `previous_key_id` sit inside the signed bytes, so a signature cannot be
+    shown under another key's name and a rotation is visible in the customer's store.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    anchor_version: Literal[1] = 1
+    workspace_id: UUID
+    head_sequence: int = Field(ge=0)
+    head_event_hash: str | None = Field(pattern=_HASH_PATTERN)
+    anchored_at: datetime
+    key_id: str = Field(pattern=_HASH_PATTERN)
+    previous_key_id: str | None = Field(default=None, pattern=_HASH_PATTERN)
+
+    @field_validator("anchored_at")
+    @classmethod
+    def _anchored_at_is_aware(cls, v: datetime) -> datetime:
+        if v.tzinfo is None:
+            raise InputFreeError("anchor timestamps must be timezone-aware")
+        return v
+
+    @model_validator(mode="after")
+    def _empty_chain_has_no_head_hash(self) -> AnchorStatement:
+        if (self.head_sequence == 0) != (self.head_event_hash is None):
+            raise InputFreeError("head_sequence is 0 exactly when head_event_hash is null")
+        return self
+
+
+class AuditAnchor(BaseModel):
+    """A signed chain head: what `POST /audit/anchor` returns and `audit.anchored` records.
+
+    `public_key` is the base64 of the 32 raw bytes and `signature` the base64 of the 64-byte
+    Ed25519 signature over `anchor_statement_bytes(statement)`. Verifying it, and why the key
+    must be pinned out of band, is `06` FR-373 (6).
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    statement: AnchorStatement
+    algorithm: Literal["Ed25519"] = "Ed25519"
+    public_key: str = Field(min_length=1)
+    signature: str = Field(min_length=1)
+
+
+def anchor_statement_bytes(statement: AnchorStatement) -> bytes:
+    """The bytes the anchor signs: the statement under the chain's canonical rule (FR-373 (1))."""
+    return _canonical_json(statement.model_dump(mode="json"))
 
 
 def compute_event_hash(core: AuditEventCore, *, prev_event_hash: str | None) -> str:

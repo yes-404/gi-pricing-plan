@@ -49,5 +49,5 @@ async def record_switch(
             actor=principal,
             source=JobSource.API,
             action=action,
-            entity_ref=f"workspace:{row.slug}@1",
+            entity_ref=audit.workspace_entity_ref(row.slug),
         )

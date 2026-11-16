@@ -2,27 +2,38 @@
 
 from __future__ import annotations
 
+import base64
+import hashlib
 import json
 
 import pytest
 import pytest_asyncio
 from backend.tests.test_audit import _days, _seed
+from cryptography.exceptions import InvalidSignature
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric.ed25519 import (
+    Ed25519PrivateKey,
+    Ed25519PublicKey,
+)
 from fastapi.testclient import TestClient
-from sqlalchemy import text
+from pydantic import SecretStr
+from sqlalchemy import select, text
 
 from app.api.deps import DEV_PRINCIPAL_HEADER
 from app.config import Environment, Settings
-from app.db.models import AuditEventRow
+from app.db.models import AuditEventRow, WorkspaceRow
 from app.db.session import Database
 from app.main import create_app
 from app.platform import audit
 from model_schema import (
     BUILTIN_ROLES,
     ActorKind,
+    AuditAnchor,
     AuditEventRecord,
     JobSource,
     Permission,
     Principal,
+    anchor_statement_bytes,
     new_uuid7,
 )
 
@@ -536,3 +547,213 @@ async def test_every_route_taking_a_range_refuses_a_bound_with_no_offset(
     assert body["code"] == "VALIDATION_FAILED"
     assert f"`{named}` must carry a UTC offset" in body["detail"]
     assert "2026-0" not in body["detail"]
+
+
+# --- FR-373: the signed anchor (#1839) ---------------------------------------------------
+# Keys are generated at test time; no key literal is committed.
+
+
+def _pem(key: Ed25519PrivateKey) -> SecretStr:
+    return SecretStr(
+        key.private_bytes(
+            serialization.Encoding.PEM,
+            serialization.PrivateFormat.PKCS8,
+            serialization.NoEncryption(),
+        ).decode()
+    )
+
+
+def _client_with(api_settings: Settings, key: Ed25519PrivateKey | None) -> TestClient:
+    settings = api_settings.model_copy(
+        update={"audit_anchor_signing_key": None if key is None else _pem(key)}
+    )
+    return TestClient(create_app(settings), raise_server_exceptions=False)
+
+
+def _verifies(anchor: dict, public_key: Ed25519PublicKey) -> bool:
+    """The customer's steps (iii) and (iv) of FR-373 (6), from the stored response alone."""
+    statement = json.dumps(
+        anchor["statement"], sort_keys=True, separators=(",", ":"), ensure_ascii=False
+    ).encode()
+    try:
+        public_key.verify(base64.b64decode(anchor["signature"]), statement)
+    except InvalidSignature:
+        return False
+    return True
+
+
+def _public(key: Ed25519PrivateKey) -> Ed25519PublicKey:
+    return key.public_key()
+
+
+def _key_id(key: Ed25519PrivateKey) -> str:
+    raw = key.public_key().public_bytes_raw()
+    return "sha256:" + hashlib.sha256(raw).hexdigest()
+
+
+@pytest.mark.req("FR-373")
+async def test_the_anchor_signature_verifies_with_the_returned_key(
+    api_settings: Settings, database: Database, workspace_id, principal, auditor_headers
+) -> None:
+    await _events(database, workspace_id, principal)
+    key = Ed25519PrivateKey.generate()
+    with _client_with(api_settings, key) as client:
+        response = client.post("/api/v1/audit/anchor", headers=auditor_headers)
+    assert response.status_code == 200, response.text
+    anchor = AuditAnchor.model_validate(response.json())
+    statement = anchor.statement
+    assert (statement.head_sequence, statement.workspace_id) == (3, workspace_id)
+    assert statement.key_id == _key_id(key)
+    assert statement.previous_key_id is None
+    returned = Ed25519PublicKey.from_public_bytes(base64.b64decode(anchor.public_key))
+    assert _verifies(response.json(), returned)
+    # The bytes the platform signed are the bytes the customer's rule rebuilds.
+    returned.verify(base64.b64decode(anchor.signature), anchor_statement_bytes(statement))
+
+
+@pytest.mark.req("FR-373")
+async def test_a_signature_does_not_verify_under_another_key_or_after_a_change(
+    api_settings: Settings, database: Database, workspace_id, principal, auditor_headers
+) -> None:
+    await _events(database, workspace_id, principal)
+    key = Ed25519PrivateKey.generate()
+    with _client_with(api_settings, key) as client:
+        body = client.post("/api/v1/audit/anchor", headers=auditor_headers).json()
+    other = Ed25519PrivateKey.generate()
+    assert not _verifies(body, _public(other))
+    assert body["statement"]["key_id"] != _key_id(other)
+    body["statement"]["head_sequence"] += 1
+    assert not _verifies(body, _public(key))
+
+
+@pytest.mark.req("FR-373")
+async def test_a_tampered_chain_is_refused_and_nothing_is_appended(
+    api_settings: Settings,
+    database: Database,
+    workspace_id,
+    principal,
+    auditor_headers,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    # Event 2 is stored with content its hash does not cover, as an edit below the
+    # application leaves it (`_seed`'s `tampered`). The owner fixture is registered per test
+    # in `OWNER_FIXTURE_USERS`; the stored chain is what the anchor reads either way.
+    await _seed(database, workspace_id, principal, _days(3), tampered=2)
+    key = Ed25519PrivateKey.generate()
+    with _client_with(api_settings, key) as client:
+        response = client.post("/api/v1/audit/anchor", headers=auditor_headers)
+        listing = client.get("/api/v1/audit", headers=auditor_headers).json()
+    printed = capsys.readouterr()
+    assert response.status_code == 409
+    assert response.json()["code"] == "AUDIT_CHAIN_BROKEN"
+    assert "sequence 2" in response.json()["detail"]
+    assert listing["total_estimate"] == 3
+    assert "audit.anchored" not in {i["action"] for i in listing["items"]}
+    # The refusal is logged at ERROR with the sequence, and never carries the key (Q-E:
+    # https://github.com/yes-404/gi-pricing-plan/issues/1497#issuecomment-6900988245).
+    # The app is built inside this test, and `create_app()` removes the root handlers,
+    # `caplog`'s included, so the log is read from stdout.
+    lines = [json.loads(ln) for ln in printed.out.splitlines() if ln.startswith("{")]
+    refusals = [ln for ln in lines if ln.get("level") == "ERROR"]
+    assert [ln.get("sequence") for ln in refusals] == [2]
+    assert _pem(key).get_secret_value().splitlines()[1] not in printed.out + printed.err
+
+
+@pytest.mark.req("FR-373")
+async def test_rotation_keeps_old_anchors_verifiable(
+    api_settings: Settings, database: Database, workspace_id, principal, auditor_headers
+) -> None:
+    await _events(database, workspace_id, principal)
+    key_a, key_b = Ed25519PrivateKey.generate(), Ed25519PrivateKey.generate()
+    with _client_with(api_settings, key_a) as client:
+        first = client.post("/api/v1/audit/anchor", headers=auditor_headers).json()
+    with _client_with(api_settings, key_b) as client:
+        second = client.post("/api/v1/audit/anchor", headers=auditor_headers).json()
+    assert _verifies(first, _public(key_a))
+    assert not _verifies(first, _public(key_b))
+    assert _verifies(second, _public(key_b))
+    assert second["statement"]["previous_key_id"] == _key_id(key_a)
+    assert second["statement"]["head_sequence"] == 4  # the first anchor's own event
+    assert first["statement"]["previous_key_id"] is None
+
+
+@pytest.mark.req("FR-373")
+async def test_an_empty_chain_is_anchored_at_sequence_zero(
+    api_settings: Settings, auditor_headers
+) -> None:
+    with _client_with(api_settings, Ed25519PrivateKey.generate()) as client:
+        response = client.post("/api/v1/audit/anchor", headers=auditor_headers)
+    assert response.status_code == 200, response.text
+    statement = response.json()["statement"]
+    assert (statement["head_sequence"], statement["head_event_hash"]) == (0, None)
+
+
+@pytest.mark.req("FR-373")
+async def test_no_key_is_a_503_and_appends_nothing(
+    api_settings: Settings, database: Database, workspace_id, principal, auditor_headers
+) -> None:
+    await _events(database, workspace_id, principal)
+    with _client_with(api_settings, None) as client:
+        response = client.post("/api/v1/audit/anchor", headers=auditor_headers)
+        listing = client.get("/api/v1/audit", headers=auditor_headers).json()
+    assert response.status_code == 503
+    assert response.json()["code"] == "AUDIT_ANCHOR_KEY_UNCONFIGURED"
+    assert listing["total_estimate"] == 3
+
+
+@pytest.mark.req("FR-373")
+async def test_an_analyst_cannot_anchor(api_settings: Settings, workspace_id, grant) -> None:
+    analyst = new_uuid7()
+    await grant("analyst", principal_id=analyst)
+    with _client_with(api_settings, Ed25519PrivateKey.generate()) as client:
+        response = client.post(
+            "/api/v1/audit/anchor",
+            headers={DEV_PRINCIPAL_HEADER: str(analyst), "Workspace-Id": str(workspace_id)},
+        )
+    assert response.status_code == 403
+
+
+@pytest.mark.req("FR-372")
+@pytest.mark.req("FR-373")
+async def test_the_checkpoint_is_in_the_chain_and_the_chain_stays_intact(
+    api_settings: Settings, database: Database, workspace_id, principal, auditor_headers
+) -> None:
+    await _events(database, workspace_id, principal)
+    with _client_with(api_settings, Ed25519PrivateKey.generate()) as client:
+        anchor = client.post("/api/v1/audit/anchor", headers=auditor_headers).json()
+        verify = client.get("/api/v1/audit/verify", headers=auditor_headers).json()
+        newest = client.get("/api/v1/audit", headers=auditor_headers).json()["items"][0]
+    assert verify["intact"] is True
+    assert verify["events_checked"] == 4
+    assert newest["action"] == "audit.anchored"
+    async with database.session() as session:
+        slug = (
+            await session.execute(select(WorkspaceRow.slug).where(WorkspaceRow.id == workspace_id))
+        ).scalar_one()
+    # FR-369's `{type}:{slug}@{version}`, as the workspace switch writes it.
+    assert newest["entity_ref"] == f"workspace:{slug}@1"
+    assert newest["after"] == anchor
+
+
+@pytest.mark.req("FR-373")
+async def test_the_private_key_is_in_neither_the_response_nor_the_event_nor_the_log(
+    api_settings: Settings,
+    database: Database,
+    workspace_id,
+    principal,
+    auditor_headers,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    await _events(database, workspace_id, principal)
+    key = Ed25519PrivateKey.generate()
+    marker = _pem(key).get_secret_value().splitlines()[1]
+    raw_private = base64.b64encode(key.private_bytes_raw()).decode()
+    with _client_with(api_settings, key) as client:
+        response = client.post("/api/v1/audit/anchor", headers=auditor_headers)
+        exported = client.get("/api/v1/audit/export?format=json", headers=auditor_headers).text
+    printed = capsys.readouterr()
+    # The app's JSON logger writes to stdout, so what it logged is in `printed`.
+    assert printed.out, "the request logged nothing, so the log check below would be vacuous"
+    for surface in (response.text, exported, printed.out, printed.err):
+        assert marker not in surface
+        assert raw_private not in surface
