@@ -202,9 +202,9 @@ def test_a_custom_artifact_refusal_carries_no_submitted_value(
     )
     assert refused.status_code == 422, refused.text
     detail = refused.json()["detail"]
-    assert any(text in detail for text in kept), (detail, kept)
     for text in absent:
         assert text not in refused.text
+    assert any(text in detail for text in kept), (detail, kept)
 
 
 @pytest.mark.req("NFR-499")

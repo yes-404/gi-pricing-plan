@@ -594,7 +594,7 @@ def test_a_refused_metric_parameter_keeps_the_rule_and_drops_the_value(
     assert response.status_code == 422, response.text
     problem = response.json()
     assert problem["code"] == "VALIDATION_FAILED"
-    for text in kept:
-        assert text in problem["detail"], problem["detail"]
     for text in absent:
         assert text not in problem["detail"], problem["detail"]
+    for text in kept:
+        assert text in problem["detail"], problem["detail"]
