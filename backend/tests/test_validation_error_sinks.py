@@ -180,10 +180,23 @@ async def test_a_body_that_is_not_a_table_carries_no_polars_text(
 # place never proves another (the first version of these cases put one sentinel in the middle,
 # then in the slug, and passed with each route fix reverted). Every caller-controlled string of a
 # request body therefore gets its OWN sentinel, and a failure names the field that leaked and
-# where. The route cases depend on the KEY ORDER of the body they post (pydantic prints its
-# start and its end), so a body builder below must keep its keys in order. A request body cannot be
-# short enough that nothing is shortened, so the short-payload cases at the end call the sinks
-# (`_validated`, `graph_validation_error`) directly instead of going through a route.
+# where.
+#
+# THE GUARDS. Each route's guard is its SHORT-PAYLOAD case at the end of this section: it calls
+# the sink the route calls (`_validated` of metrics, `_validated` of objectives,
+# `graph_validation_error` for a rating algorithm and for a sub-graph) with a payload so short
+# that pydantic shortens nothing. It is independent of key order and of where the library cuts
+# the text, and it went red under that route's own revert. A request body cannot be that short,
+# so the guards do not go through a route.
+#
+# THE LONG CASES go through the routes, post a payload with a sentinel in every caller-controlled
+# string, and read the response, the log and the stored rows. They are ADDITIONAL, not guards: they
+# depend on where the library cuts the text (its first and last ~25 characters) and so on the KEY
+# ORDER of the payload that reaches it. For the rating algorithm and sub-graph routes that payload
+# is the body the case posts, and three calibration tests fail loudly if its order moves. For the
+# six custom metric and objective cases it is the dict the route itself builds
+# (`platform/metrics.py` and `platform/objectives.py`, `description` last), which a case cannot read
+# without the route: each marks itself "supplementary".
 
 _SLUG = "zqs-4f8a21"
 
@@ -265,7 +278,11 @@ def test_a_custom_artifact_refusal_carries_no_submitted_value(
     """Rows 5 and 6: `_validated` used to render the exception, and that text prints the key and
     the value the caller sent and the start and end of the payload it built (an id, the slug, ...,
     the description). Kept: the rule. The `kept` text is any ONE of the alternatives per route
-    (the metric and the objective word the unknown-key rule alike)."""
+    (the metric and the objective word the unknown-key rule alike).
+
+    SUPPLEMENTARY, NOT A GUARD: that a reverted route leaks `description` here relies on the
+    route's own dict ending with it (`platform/metrics.py:210`, `objectives.py:217`) and on the
+    library's cut; the guards are the short-payload cases below."""
     caplog.set_level(logging.DEBUG)
     asyncio.get_event_loop().run_until_complete(grant("pricing_actuary"))
     body = _custom_artifact_body(route, template, params)
@@ -436,3 +453,36 @@ def test_a_short_graph_payload_leaks_nothing_through_graph_validation_error(
     for field in ("slug", "input", "steps"):
         assert _name(field) not in (refusal.detail or ""), f"{field} leaked in the 422 detail"
     assert "validation error" in (refusal.detail or ""), "control: still described"
+
+
+# The calibration of the long rating-algorithm and sub-graph route cases. A reverted route prints
+# `str(ValidationError)`, which shows only the start and the end of the payload the case posts;
+# these assert exactly which sentinels that text shows, so a change in the payload's key order, or
+# in where the library cuts, fails HERE, loudly, and not as a long case that keeps passing while it
+# can no longer see a leak. No database.
+
+
+def _visible(schema, payload: dict, sentinels: dict[str, str]) -> set[str]:
+    with pytest.raises(ValidationError) as caught:
+        schema.model_validate(payload)
+    shown = str(caught.value)
+    return {field for field, value in sentinels.items() if value in shown}
+
+
+@pytest.mark.req("NFR-499")
+@pytest.mark.parametrize("case", ["orphan", "unproduced"])
+def test_a_reverted_route_would_print_the_slug_of_the_long_rating_algorithm_case(case) -> None:
+    algorithm, sentinels = _sentinel_algorithm(case)
+    assert _visible(RatingAlgorithm, algorithm, sentinels) == {"slug"}, (
+        "the posted rating algorithm no longer exposes exactly its slug to a reverted route: "
+        "the long rating-algorithm case no longer detects a regression"
+    )
+
+
+@pytest.mark.req("NFR-499")
+def test_a_reverted_route_would_print_the_slug_and_note_of_the_long_sub_graph_case() -> None:
+    payload, sentinels = _sentinel_sub_graph()
+    assert _visible(SubGraphCreate, payload, sentinels) == {"slug", "change_note"}, (
+        "the posted sub-graph no longer exposes exactly its slug and change note to a reverted "
+        "route: the long sub-graph case no longer detects a regression"
+    )
