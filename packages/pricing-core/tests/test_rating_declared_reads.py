@@ -120,6 +120,39 @@ def test_the_location_is_the_position_of_the_read_and_the_order_is_fixed() -> No
 
 
 @pytest.mark.req("FR-246")
+def test_a_keyed_maps_entries_are_visited_in_sorted_key_order() -> None:
+    """#1712 S7c second audit (S2): stored JSONB does not keep key order, so a save (request
+    order) and a compile (stored order) must list a keyed map's entries the same way. The same
+    algorithm with `feature_map` and `clamp_bounds` keys inserted in two orders gives the same
+    issue list, in sorted key order."""
+
+    def fields(reverse: bool) -> list[tuple[str, str, str]]:
+        payload = copy.deepcopy(_algorithm_payload())
+        for step in payload["steps"]:
+            if step["step_id"] == "s_risk":
+                items = [("driver_age", "age_years"), ("stray_a", "x"), ("stray_b", "y")]
+                step["feature_map"] = dict(reversed(items) if reverse else items)
+            elif step["step_id"] == "s_clamp":
+                step["consumes"] = ["office_premium_minor"]
+                items = [("max", "stray_c"), ("min", "stray_d")]
+                step["clamp_bounds"] = dict(reversed(items) if reverse else items)
+        issues = _fr246(validate_algorithm(RatingAlgorithm.model_validate(payload)))
+        return [(i.step_id, i.code, i.field) for i in issues]
+
+    forward, backward = fields(False), fields(True)
+    assert forward == backward, (forward, backward)
+    assert [f for s, _, f in forward if s == "s_risk"] == [
+        "feature_map.stray_a",
+        "feature_map.stray_b",
+    ]
+    assert [f for s, _, f in forward if s == "s_clamp"] == [
+        "condition",
+        "clamp_bounds.max",
+        "clamp_bounds.min",
+    ]
+
+
+@pytest.mark.req("FR-246")
 async def test_the_compile_refusal_for_an_undeclared_feature_map_key_carries_no_key() -> None:
     """#1712 S7c: what a Job stores is the `CodedError` text. It is the code and the literal
     message, no field and no key. (DB-free: the text is raised here, before any Job row.)"""
