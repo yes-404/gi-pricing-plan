@@ -182,7 +182,7 @@ amendments name). Verified against origin/main `cf074d20` plus this slice's tree
 `python3 scripts/audit-docs.py` red (check 30 and 35 on both new files) and green after the
 register edit.
 
-2026-11-17 — #1920 (WK-1920 working id): the "a new generated schema is a new file the audit
+2026-11-17 — #1920: the "a new generated schema is a new file the audit
 must be told about" paragraph was rewritten. The 2026-10-03 text above named two edits that no
 longer exist (see the paragraph). Verified on a scratch copy of tree `3aed71d9` (`git archive`,
 fresh `git init`, `origin/main` set to its base commit): baseline green; one generated schema
