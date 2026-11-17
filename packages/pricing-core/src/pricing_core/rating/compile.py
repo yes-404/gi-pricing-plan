@@ -172,7 +172,7 @@ def output_type_issues(
     `at_output_step` is True for an algorithm's `output` step and False for a Sub-graph port.
     """
     issues: list[ValidationIssue] = []
-    for step_id, output_name, declared_type, fed_by in outputs:
+    for step_id, _output_name, declared_type, fed_by in outputs:
         producer_type = types.get(fed_by)
         if producer_type is not None and not _compatible(
             producer_type, declared_type, at_output_step=at_output_step
@@ -181,8 +181,8 @@ def output_type_issues(
                 ValidationIssue(
                     code="RATING_TYPE_MISMATCH",
                     message=(
-                        f"output {output_name!r} is declared {declared_type!r} but "
-                        f"its producing step yields {producer_type!r} (FR-227)"
+                        f"an output is declared {declared_type!r} but its producing step "
+                        f"yields {producer_type!r} (FR-227)"
                     ),
                     step_id=step_id,
                     field="outputs",
@@ -272,19 +272,17 @@ def _check_clamp_placement(algo: RatingAlgorithm) -> list[ValidationIssue]:
             if source != produced[0]:
                 continue
             if rung_name != placeable:
-                reason = (
-                    f"rung {rung_name!r} is not the last rung before constraints ({placeable!r})"
-                )
+                reason = "its rung is not the last rung before constraints"
             elif not consumed_names or consumed_names[0] != produced[0]:
-                reason = f"it produces {produced[0]!r} but consumes {consumed_names[:1]!r}"
+                reason = "it does not consume the value it produces"
             else:
                 continue
             issues.append(
                 ValidationIssue(
                     code="LADDER_CLAMP_UNPLACEABLE",
                     message=(
-                        f"clamp step {step.step_id!r} cannot be placed on the premium "
-                        f"ladder: {reason} (FR-240, FR-247)"
+                        f"a clamp step cannot be placed on the premium ladder: {reason} "
+                        "(FR-240, FR-247)"
                     ),
                     step_id=step.step_id,
                     field="produces",
@@ -331,8 +329,8 @@ def _check_scale_cap(text: str) -> tuple[str, str] | None:
         if len(fraction) > _SCALE_CAP:
             return (
                 "EXPRESSION_SCALE_OVERFLOW",
-                f"literal {match.group(0)!r} needs {len(fraction)} decimal "
-                f"places, beyond rust_decimal's cap of {_SCALE_CAP} (FR-275)",
+                f"a literal needs more decimal places than rust_decimal's cap of {_SCALE_CAP} "
+                "(FR-275)",
             )
     return None
 
@@ -342,7 +340,10 @@ def _check_allow_list(text: str) -> tuple[str, str] | None:
     refused = check_allow_list(text)
     if refused is None:
         return None
-    return "EXPRESSION_INVALID_VOCABULARY", f"{refused} (FR-244)"
+    return (
+        "EXPRESSION_INVALID_VOCABULARY",
+        "expression uses a construct FR-244 does not name (the allow-list)",
+    )
 
 
 def _check_vocabulary(text: str) -> tuple[str, str] | None:
@@ -354,10 +355,10 @@ def _check_vocabulary(text: str) -> tuple[str, str] | None:
     """
     try:
         zen.compile_expression(text)
-    except Exception as exc:
+    except Exception:
         return (
             "EXPRESSION_INVALID_VOCABULARY",
-            f"expression does not compile against the engine: {exc} (FR-276)",
+            "expression does not compile against the engine (FR-276)",
         )
     return None
 
@@ -373,8 +374,8 @@ def _check_input_bound_scale(algo: RatingAlgorithm) -> list[ValidationIssue]:
                     ValidationIssue(
                         code="EXPRESSION_SCALE_OVERFLOW",
                         message=(
-                            f"input {field.name!r} {bound_name} needs more than "
-                            f"{_SCALE_CAP} decimal places (FR-275)"
+                            f"an input {bound_name} needs more than {_SCALE_CAP} decimal places "
+                            "(FR-275)"
                         ),
                         field=f"input_contract.{bound_name}",
                     )
@@ -403,14 +404,11 @@ def _check_lookup_as_at(algo: RatingAlgorithm) -> list[ValidationIssue]:
             continue
         else:
             code = "RATING_TYPE_MISMATCH"
-            why = f"is a declared {declared[name].value!s} input, not a date"
+            why = "is a declared input of a type other than date"
         issues.append(
             ValidationIssue(
                 code=code,
-                message=(
-                    f"as_at of lookup step {authored.step_id!r} names {name!r}, "
-                    f"which {why} (FR-221)"
-                ),
+                message=f"as_at of a lookup step names a value that {why} (FR-221)",
                 step_id=authored.step_id,
                 field="as_at",
             )
@@ -437,10 +435,7 @@ def _check_declared_reads(algo: RatingAlgorithm) -> list[ValidationIssue]:
             issues.append(
                 ValidationIssue(
                     code="RATING_STEP_UNDECLARED_READ",
-                    message=(
-                        f"step {step.step_id!r} reads {undeclared} without declaring them in "
-                        "consumes (FR-246)"
-                    ),
+                    message="a step reads names it does not declare in consumes (FR-246)",
                     step_id=step.step_id,
                     field="consumes",
                 )
@@ -486,7 +481,7 @@ def validate_algorithm(algo: RatingAlgorithm) -> list[ValidationIssue]:
                 issues.append(
                     ValidationIssue(
                         code=code,
-                        message=f"{authored.field} of step {authored.step_id!r}: {message}",
+                        message=message,
                         step_id=authored.step_id,
                         field=authored.field,
                     )

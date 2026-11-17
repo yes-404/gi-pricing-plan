@@ -390,7 +390,8 @@ def test_a_fragment_output_port_type_mismatch_names_the_producing_step() -> None
     assert [(i.code, i.step_id, i.field) for i in issues] == [
         ("RATING_TYPE_MISMATCH", "s_last", "outputs")
     ]
-    assert "'ncd_factor'" in issues[0].message
+    # #1712 S7c: the port is named by the issue's structured fields, not by the text.
+    assert "ncd_factor" not in issues[0].message
 
 
 @pytest.mark.req("FR-217")
@@ -698,3 +699,75 @@ def test_a_mount_port_admits_the_allowed_set(producer: str, declared: str) -> No
 
     algorithm, fragments = _mount_case(producer, declared)
     _refuse_mount_port_type_mismatch(algorithm, fragments)
+
+
+# --- #1712 S7c: no issue text carries a caller-controlled string -------------------------------
+# NFR-499: `compile_bundle` raises `issues[0].message` into a CodedError that a Job stores, so the
+# text of EVERY issue is checked, not the first: the guard is order-independent. The sentinel is
+# in every caller-controlled string the checks read (step ids, value names, input names, the
+# expression text, the function the expression calls).
+
+SENT = "sentinels7c91"
+
+
+def _sentinel_everywhere(data: dict, names: list[str]) -> dict:
+    import json
+    import re
+
+    text = json.dumps(data)
+    for name in names:
+        text = re.sub(rf"\b{name}\b", f"{name}_{SENT}", text)
+    planted: dict = json.loads(text)
+    return planted
+
+
+def _planted_clamp() -> RatingAlgorithm:
+    data = _sentinel_everywhere(
+        PRE_EDIT_VALID_ALGORITHM,
+        ["s_minprem", "s_office", "s_expense", "s_area", "office_premium_minor",
+         "expense_factor", "rating_area"],
+    )
+    return RatingAlgorithm.model_validate(data)
+
+
+def _planted_text() -> RatingAlgorithm:
+    data = _sentinel_everywhere(
+        valid_algorithm(), ["s_office", "s_area", "office_premium_minor", "expense_factor"]
+    )
+    for step in data["steps"]:
+        if step["step_id"].startswith("s_office"):
+            step["expr"] = (
+                f"now() + risk_premium_minor / expense_factor_{SENT} + "
+                f"0.12345678901234567890123456789012 + fn_{SENT}(1) % 2 + undeclared_{SENT}"
+            )
+        if step["step_id"].startswith("s_area"):
+            step["as_at"] = f"asat_{SENT}"
+    data["input_contract"].append(
+        {"name": f"rate_{SENT}", "type": "decimal", "nullable": False,
+         "min": "0.12345678901234567890123456789012"}
+    )
+    return RatingAlgorithm.model_validate(data)
+
+
+def test_no_issue_text_carries_a_step_id_a_value_name_or_authored_text() -> None:
+    clamp, text = validate_algorithm(_planted_clamp()), validate_algorithm(_planted_text())
+    issues = [*clamp, *text]
+    # The guard: each check the plants are for fired, so a clean text is not a check that
+    # never ran (the order of the issues does not matter).
+    assert {i.code for i in issues} >= {
+        "LADDER_CLAMP_UNPLACEABLE", "EXPRESSION_NON_DETERMINISTIC", "EXPRESSION_UNGUARDED_DIVISION",
+        "EXPRESSION_SCALE_OVERFLOW", "EXPRESSION_INVALID_VOCABULARY",
+        "RATING_GRAPH_UNRESOLVED_REF", "RATING_STEP_UNDECLARED_READ",
+    }
+    leaking = [(i.code, i.message) for i in issues if SENT in i.message]
+    assert leaking == []
+    # The location is still reported, in the structured fields (FR-1607).
+    assert any(i.step_id is not None and SENT in i.step_id for i in issues)
+
+
+def test_the_type_mismatch_text_names_no_output() -> None:
+    outputs = [(f"s_out_{SENT}", f"out_{SENT}", "decimal", f"src_{SENT}")]
+    issues = output_type_issues({f"src_{SENT}": "money_minor"}, outputs, at_output_step=True)
+    assert [i.code for i in issues] == ["RATING_TYPE_MISMATCH"]
+    assert SENT not in issues[0].message
+    assert issues[0].step_id == f"s_out_{SENT}"
