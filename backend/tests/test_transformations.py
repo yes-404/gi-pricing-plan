@@ -856,3 +856,27 @@ async def test_a_fit_whose_grouping_factor_maps_none_of_the_column_fails_the_job
     assert job_row.error["code"] == "GROUPING_MAPS_NO_VALUE"
     assert "urban" not in job_row.error["message"]
     assert "rural" not in job_row.error["message"]
+
+
+@pytest.mark.req("FR-109")
+async def test_a_grouping_cannot_name_its_own_request_id_as_its_parent(
+    database: Database, blob_store: BlobStore, workspace_id
+) -> None:
+    """The row's id is the application's `new_uuid7` default, never the request's, so a body id
+    that equals its own `parent_grouping_id` names no stored row and reads as not found.
+
+    A later change that took the id from the request would let a Grouping be its own parent;
+    this test turns red then.
+    """
+    actor = await _actuary(database, workspace_id)
+    dataset_id = await _dataset(database, blob_store, workspace_id, actor)
+    own = uuid4()
+    child = _chain_link(dataset_id, "area", {"a": "A"}, parent_id=own).model_copy(
+        update={"id": own}
+    )
+    with pytest.raises(PlatformError) as refused:
+        async with database.unit_of_work() as session:
+            await transform_service.create_grouping(
+                session, workspace_id=workspace_id, actor=actor, grouping=child
+            )
+    assert refused.value.code == "GROUPING_PARENT_NOT_FOUND"
