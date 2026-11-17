@@ -16,7 +16,10 @@
   upgrade counts the rows outside them first, raises and rewrites nothing.
 * `approval_requests_decision_guard()`: `status`, `decided_at` and `withdrawn_reason` of a
   request change only along the state machine's edges (`VALID_APPROVAL_TRANSITIONS`): from
-  `review` to a decided status, and from `approved` to `withdrawn`; every other status is held.
+  `review` to `approved`, `rejected` or `changes_requested` with `decided_at` set and no
+  `withdrawn_reason`; from `review` to `withdrawn` with `decided_at` set and a non-empty
+  `withdrawn_reason`; and from `approved` to `withdrawn` with `decided_at` unchanged and a
+  non-empty `withdrawn_reason`. Every other change, in every status, is held.
 
 Existing rows are not touched (the triggers fire on UPDATE). Reversible: the downgrade drops
 the three additions and restores the earlier `approval_guard()` body and trigger.
@@ -68,16 +71,21 @@ DECISION_GUARD_FUNCTION = """
 CREATE OR REPLACE FUNCTION approval_requests_decision_guard() RETURNS trigger AS $fn$
 BEGIN
   IF OLD.status = 'review'
-     AND NEW.status IN ('review', 'approved', 'rejected', 'changes_requested', 'withdrawn')
-     AND (NEW.status <> 'review'
-          OR (NEW.decided_at IS NOT DISTINCT FROM OLD.decided_at
-              AND NEW.withdrawn_reason IS NOT DISTINCT FROM OLD.withdrawn_reason)) THEN
+     AND NEW.status IN ('approved', 'rejected', 'changes_requested')
+     AND NEW.decided_at IS NOT NULL
+     AND NEW.withdrawn_reason IS NULL THEN
     RETURN NEW;
   END IF;
-  IF OLD.status = 'approved' AND NEW.status IN ('approved', 'withdrawn')
-     AND (NEW.status <> 'approved'
-          OR (NEW.decided_at IS NOT DISTINCT FROM OLD.decided_at
-              AND NEW.withdrawn_reason IS NOT DISTINCT FROM OLD.withdrawn_reason)) THEN
+  IF OLD.status = 'review'
+     AND NEW.status = 'withdrawn'
+     AND NEW.decided_at IS NOT NULL
+     AND btrim(coalesce(NEW.withdrawn_reason, '')) <> '' THEN
+    RETURN NEW;
+  END IF;
+  IF OLD.status = 'approved'
+     AND NEW.status = 'withdrawn'
+     AND NEW.decided_at IS NOT DISTINCT FROM OLD.decided_at
+     AND btrim(coalesce(NEW.withdrawn_reason, '')) <> '' THEN
     RETURN NEW;
   END IF;
   IF NEW.status IS NOT DISTINCT FROM OLD.status

@@ -46,7 +46,7 @@ class LeastPrivilegeError(RuntimeError):
 #: throwaway migrated to head in S1b's DB window (LG-1947): an empty value never matches.
 PINNED_GUARD_FUNCTION_MD5: dict[str, str] = {
     "approval_guard": "b0ca8a31d23d186b24749286f4053110",
-    "approval_requests_decision_guard": "d6da5322e1c55d9c0e807459ff74d72e",
+    "approval_requests_decision_guard": "e6112fb9936222e182a253bf8b1c8442",
     "artifact_append_only": "c37e697febc245839b2672b90cf0b0ac",
     "audit_events_append_only": "1db7015bf61710795ac45ff15476fa06",
     "blobs_content_immutable": "73dbe02fec4b21b62649add0bea1e3d2",
