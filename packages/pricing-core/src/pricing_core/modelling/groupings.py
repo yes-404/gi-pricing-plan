@@ -553,7 +553,10 @@ def apply_grouping(series: pl.Series, grouping: Grouping) -> pl.Series:
 def check_grouping_chain(child: Grouping, ancestors: Sequence[Grouping]) -> None:
     """Refuse a chain whose levels do not chain (FR-109).
 
-    `ancestors` runs parent first. Two rules, each stated once for every caller:
+    `ancestors` runs parent first, and is empty when the parent could not be found. Three
+    rules, each stated once for every caller:
+
+    * a Grouping that names a parent has one;
 
     * the child's source levels must be target levels of its parent, or the chain names a
       step nothing produces;
@@ -563,8 +566,14 @@ def check_grouping_chain(child: Grouping, ancestors: Sequence[Grouping]) -> None
     The text names the Groupings and a count, never a level: a level is a value from the
     caller's data (NFR-499).
     """
-    if child.parent_grouping_id is None or not ancestors:
+    if child.parent_grouping_id is None:
         return
+    if not ancestors:
+        raise GroupingError(
+            "GROUPING_PARENT_NOT_FOUND",
+            f"grouping {child.slug!r} names a parent grouping that is not in this "
+            "workspace (FR-109).",
+        )
     parent = ancestors[0]
     own = set(child.mapping)
     unproduced = own - set(parent.mapping.values())

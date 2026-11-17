@@ -686,3 +686,16 @@ def test_the_overlap_is_checked_against_every_ancestor_not_only_the_parent() -> 
     with pytest.raises(GroupingError) as refused:
         check_grouping_chain(zone, [area, fine])
     assert refused.value.code == "GROUPING_CHAIN_LEVELS_MISMATCH"
+
+
+@pytest.mark.req("FR-109")
+def test_a_grouping_that_names_a_parent_nobody_supplied_is_refused() -> None:
+    _, region = _area_and_region()
+    with pytest.raises(GroupingError) as refused:
+        check_grouping_chain(region, [])
+    assert refused.value.code == "GROUPING_PARENT_NOT_FOUND"
+
+
+@pytest.mark.req("FR-109")
+def test_a_grouping_without_a_parent_needs_no_chain() -> None:
+    check_grouping_chain(_manual(), [])

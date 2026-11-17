@@ -400,22 +400,14 @@ async def _require_chain(
             )
         )
         if parent is None:
-            if not ancestors:
-                raise PlatformError(
-                    "GROUPING_PARENT_NOT_FOUND",
-                    "The grouping's parent does not exist",
-                    422,
-                    f"Grouping {grouping.slug!r} names a parent grouping that is not in "
-                    "this workspace (FR-109).",
-                )
-            break  # a stored ancestor whose own parent is gone is legacy data, not this request
+            break  # absent: the pure check refuses it for a first parent; deeper is legacy data
         ancestors.append(to_grouping(parent))
         parent_id = parent.parent_grouping_id
     try:
         check_grouping_chain(grouping, ancestors)
     except GroupingError as refused:
         raise PlatformError(
-            refused.code, "The grouping's levels do not chain", 422, str(refused)
+            refused.code, "The grouping's chain is invalid", 422, str(refused)
         ) from refused
     return f"grouping:{ancestors[0].slug}@{ancestors[0].version}"
 
