@@ -249,31 +249,36 @@ def test_r5_a_deployment_request_must_be_executed() -> None:
 # -- legacy marking (D2) ----------------------------------------------------------------------
 
 
-def test_a_mismatch_older_than_the_first_id_event_is_marked_legacy_but_reported() -> None:
-    old = ArtifactState("rating_versions", "rating_version:old@1", "rating_version", "approved")
-    old_request = RequestState(
-        uuid4(), "rating_version:old@1", "rating_version", "review", SUBMITTER, 1, _t(-100)
-    )
-    data = replace(
-        _reconciled(),
-        artifacts=(*_reconciled().artifacts, old),
-        requests=(*_reconciled().requests, old_request),
-    )
-    found = reconcile_data(data)
+def _legacy_pair(ref: str, event_sequence: int, event_at: datetime) -> WorkspaceData:
+    """The reconciled workspace plus one approved artifact with no approved request, and the
+    one chain event that names it, at the given sequence and claimed time."""
+    base = _reconciled()
+    artifact = ArtifactState("rating_versions", ref, "rating_version", "approved")
+    event = EventState(event_sequence, event_at, "rating_version.created", ref, SUBMITTER)
+    return replace(base, artifacts=(*base.artifacts, artifact), events=(*base.events, event))
+
+
+def test_a_mismatch_before_the_first_id_event_in_the_chain_is_marked_legacy_but_reported() -> None:
+    found = reconcile_data(_legacy_pair("rating_version:old@1", 0, _t(-100)))
     assert [(m.rule, m.ref, m.legacy) for m in found] == [("R1", "rating_version:old@1", True)]
 
 
-def test_a_mismatch_after_the_first_id_carrying_event_is_not_legacy() -> None:
-    new = ArtifactState("rating_versions", "rating_version:new@1", "rating_version", "approved")
-    late = RequestState(
-        uuid4(), "rating_version:new@1", "rating_version", "review", SUBMITTER, 1, _t(50)
-    )
-    data = replace(
-        _reconciled(),
-        artifacts=(*_reconciled().artifacts, new),
-        requests=(*_reconciled().requests, late),
-    )
-    found = reconcile_data(data)
+def test_a_mismatch_after_the_first_id_event_in_the_chain_is_not_legacy() -> None:
+    found = reconcile_data(_legacy_pair("rating_version:new@1", 10, _t(50)))
+    assert [(m.rule, m.legacy) for m in found] == [("R1", False)]
+
+
+def test_a_back_dated_event_placed_after_the_first_id_event_is_not_legacy() -> None:
+    """The time is the writer's choice: an event claiming a time long before the first id event,
+    but sitting after it in the chain, must not make its mismatch legacy."""
+    found = reconcile_data(_legacy_pair("rating_version:late@1", 10, _t(-1000)))
+    assert [(m.rule, m.legacy) for m in found] == [("R1", False)]
+
+
+def test_a_mismatch_with_no_chain_evidence_is_not_legacy() -> None:
+    base = _reconciled()
+    bare = ArtifactState("rating_versions", "rating_version:bare@1", "rating_version", "approved")
+    found = reconcile_data(replace(base, artifacts=(*base.artifacts, bare)))
     assert [(m.rule, m.legacy) for m in found] == [("R1", False)]
 
 

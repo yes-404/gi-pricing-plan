@@ -52,8 +52,10 @@ Options considered:
    written. Exit `0` clean, `1` any mismatch, `2` a broken chain or a run that could not
    complete. It should run with a read-only login where one exists; the application login is
    acceptable because the run only reads. `deploy/README.md` says so.
-3. Rows older than the workspace's first decision event that carries its ids are reported like any
-   other mismatch, each marked `legacy`; the exit code stays `1`. Nothing is silenced by default.
+3. A mismatch whose chain evidence lies wholly before the workspace's first decision event that
+   carries its ids is reported like any other mismatch, marked `legacy`; the exit code stays `1`.
+   The mark is by chain sequence, never by timestamp, because an event's time is its writer's
+   choice. Nothing is silenced by default.
 4. The decision event's `after` gains `approval_request_id` and `decision_id`, for new events only,
    so rule 3 matches exactly; earlier events are matched by `(entity_ref, actor, decision)`.
 5. The set of governed tables and "approved or later" states the run covers is derived from the

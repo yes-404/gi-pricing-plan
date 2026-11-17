@@ -13,8 +13,9 @@ reads.
 Output: one JSON line per workspace, then one summary line.
 `{"workspace_id", "chain": "intact"|"broken", "events_verified", "artifacts_checked",
 "requests_checked", "mismatches": [{"rule", "ref", "detail", "legacy"}]}`.
-A mismatch with `"legacy": true` is older than the workspace's first decision event that
-carries its ids; it is reported and counted like any other.
+A mismatch with `"legacy": true` has chain evidence only before the workspace's first
+decision event that carries its ids (by sequence, never by timestamp); it is reported and
+counted like any other.
 
 Exit codes: **0** every chain verifies and nothing mismatches; **1** at least one mismatch
 (legacy ones included); **2** a chain is broken, or the run could not complete. A broken

@@ -29,8 +29,9 @@ Rules (rule ids are this module's vocabulary, not requirement ids):
 * **R5** — every deployment rests on a version that passes R1 to R4 and has its creation
   event; where it names a deployment request, that request is `executed` and passes R1 to R4.
 
-A mismatch older than the workspace's first id-carrying decision event is marked `legacy`;
-it is reported and counted like any other (nothing is silenced).
+A mismatch whose chain evidence all lies before the workspace's first id-carrying decision
+event (by sequence, never by timestamp) is marked `legacy`; it is reported and counted like any
+other (nothing is silenced).
 """
 
 from __future__ import annotations
@@ -494,30 +495,28 @@ def _r5(data: WorkspaceData, upstream: Collection[Mismatch]) -> list[Mismatch]:
 
 
 def _mark_legacy(data: WorkspaceData, mismatches: list[Mismatch]) -> list[Mismatch]:
+    """Mark a mismatch `legacy` by chain sequence, never by a timestamp.
+
+    `at` is chosen by whoever writes the event, so it cannot say what is old. A mismatch is
+    legacy only when it has chain evidence and all of it, every event naming its reference, lies
+    at a sequence before the workspace's first decision event that carries its ids. A mismatch
+    with no event naming its reference has nothing to place and is not legacy.
+    """
     first_new = min(
         (
-            e.at
+            e.sequence
             for e in data.events
             if e.action in DECISION_ACTIONS.values() and (e.after or {}).get("decision_id")
         ),
         default=None,
     )
-    submitted: dict[str, datetime] = {}
-    for request in data.requests:
-        submitted[request.ref] = min(
-            request.submitted_at, submitted.get(request.ref, request.submitted_at)
-        )
-    seen: dict[str, datetime] = {}
-    for event in sorted(data.events, key=lambda e: e.sequence):
-        seen.setdefault(event.entity_ref, event.at)
-
-    def when(ref: str) -> datetime | None:
-        return submitted.get(ref) or seen.get(ref)
-
+    latest: dict[str, int] = {}
+    for event in data.events:
+        latest[event.entity_ref] = max(event.sequence, latest.get(event.entity_ref, event.sequence))
     out: list[Mismatch] = []
     for m in mismatches:
-        moment = when(m.ref)
-        legacy = moment is not None and (first_new is None or moment < first_new)
+        last = latest.get(m.ref)
+        legacy = last is not None and (first_new is None or last < first_new)
         out.append(Mismatch(m.rule, m.ref, m.detail, legacy))
     return out
 

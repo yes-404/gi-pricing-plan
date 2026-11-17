@@ -257,8 +257,8 @@ fact, writes nothing (not even an Audit Event) and prevents no write.
 - **Exit code:** `0` every chain verifies and nothing mismatches; `1` at least one mismatch;
   `2` a chain is broken or the run could not complete. A workspace whose chain is broken prints no
   rule output.
-- **`legacy`:** a mismatch older than the workspace's first decision event that carries the request
-  and decision ids. It is reported and counted like any other; the exit code stays `1`.
+- **`legacy`:** a mismatch whose chain evidence lies wholly before the workspace's first decision event that
+  carries the request and decision ids, by chain sequence and never by timestamp. It is reported and counted like any other; the exit code stays `1`.
 - **What the run cannot show:** a chain rewritten consistently (FR-373: the chain is tamper-evident,
   not tamper-proof). The anchors of FR-373, kept in a store the operator does not control, are the
   record outside the platform. This check does not widen FR-372 or FR-373.
