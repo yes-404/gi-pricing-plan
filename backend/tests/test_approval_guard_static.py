@@ -23,6 +23,17 @@ _SCANNED = ("backend/src", "backend/migrations", "examples")
 DECISION_MODULE = "backend/src/app/platform/approvals.py"
 GUARD_MIGRATION = "backend/migrations/versions/a9f3c6d21b87_approval_guard.py"
 
+#: **Reader migrations, pinned as a literal.** A file named here may carry the flag literal
+#: only inside a `current_setting('<flag>', …)` read; any form that sets it is refused, as
+#: it is for every other file. A read in a file not named here is refused like any other
+#: mention of the flag. Adding a reader is a change to this list, by file name.
+READER_MIGRATIONS = frozenset(
+    {
+        GUARD_MIGRATION,
+        "backend/migrations/versions/e5b2a7d94c13_rating_version_content_guard.py",
+    }
+)
+
 #: The two sanctioned sites of the decision path.
 SANCTIONED_SITES = frozenset(
     {
@@ -98,12 +109,45 @@ def _unsanctioned_entries(sources: dict[str, str]) -> list[str]:
     return stray + [f"{p}::{fn}" for p, fn in sorted(entered - allowed)]
 
 
+def _docstring_ids(tree: ast.AST) -> set[int]:
+    return {
+        id(node.body[0].value)
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Module | ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef)
+        and node.body
+        and isinstance(node.body[0], ast.Expr)
+        and isinstance(node.body[0].value, ast.Constant)
+    }
+
+
+_FLAG_READ = re.compile(r"current_setting\(\s*'" + re.escape(FLAG) + r"'", re.IGNORECASE)
+
+
+def _flag_beyond_a_read(source: str) -> bool:
+    """True when a string that is not a docstring names the flag anywhere but inside a
+    `current_setting('<flag>', …)` read: so `SET`, `SET LOCAL` and `set_config` all fail."""
+    tree = ast.parse(source)
+    docstrings = _docstring_ids(tree)
+    return any(
+        isinstance(node, ast.Constant)
+        and isinstance(node.value, str)
+        and id(node) not in docstrings
+        and FLAG in _FLAG_READ.sub("", node.value)
+        for node in ast.walk(tree)
+    )
+
+
 def _flag_literal_outside_its_owners(sources: dict[str, str]) -> list[str]:
-    return [
-        path
-        for path, source in sources.items()
-        if FLAG in source and path not in (DECISION_MODULE, GUARD_MIGRATION)
-    ]
+    bad = []
+    for path, source in sources.items():
+        if FLAG not in source or path == DECISION_MODULE:
+            continue
+        if path in READER_MIGRATIONS:
+            if _flag_beyond_a_read(source):
+                bad.append(path)
+        else:
+            bad.append(path)
+    return bad
 
 
 def _session_level_flag_sets(sources: dict[str, str]) -> list[str]:
@@ -142,14 +186,7 @@ def _replication_role_sql(sources: dict[str, str]) -> list[str]:
     bad = []
     for path, source in sources.items():
         tree = ast.parse(source)
-        docstrings = {
-            id(node.body[0].value)
-            for node in ast.walk(tree)
-            if isinstance(node, ast.Module | ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef)
-            and node.body
-            and isinstance(node.body[0], ast.Expr)
-            and isinstance(node.body[0].value, ast.Constant)
-        }
+        docstrings = _docstring_ids(tree)
         for node in ast.walk(tree):
             if (
                 isinstance(node, ast.Constant)
@@ -203,7 +240,7 @@ def test_every_pinned_site_really_enters_the_context() -> None:
 
 
 @pytest.mark.req("FR-351")
-def test_the_flag_literal_lives_only_in_the_decision_module_and_the_guard_migration() -> None:
+def test_the_flag_literal_lives_only_in_the_decision_module_and_the_reader_migrations() -> None:
     assert _flag_literal_outside_its_owners(_sources()) == []
 
 
@@ -261,6 +298,45 @@ def test_a_planted_second_function_in_an_allowed_file_is_refused() -> None:
 def test_a_planted_flag_literal_is_refused() -> None:
     planted = _plant("backend/src/app/x.py", f"SQL = \"SELECT set_config('{FLAG}', 'on', true)\"\n")
     assert _flag_literal_outside_its_owners(planted) == ["backend/src/app/x.py"]
+
+
+_READER = "backend/migrations/versions/e5b2a7d94c13_rating_version_content_guard.py"
+
+
+@pytest.mark.req("FR-351")
+def test_the_reader_migrations_are_pinned_by_file_name() -> None:
+    assert GUARD_MIGRATION in READER_MIGRATIONS
+    assert _READER in READER_MIGRATIONS
+    assert len(READER_MIGRATIONS) == 2
+    assert _sources().keys() >= READER_MIGRATIONS
+
+
+@pytest.mark.req("FR-351")
+@pytest.mark.parametrize(
+    "sql",
+    [
+        f"SELECT set_config('{FLAG}', 'on', true)",
+        f"SET LOCAL {FLAG} = 'on'",
+        f"SET {FLAG} = 'on'",
+    ],
+    ids=["set_config_local", "set_local", "set"],
+)
+def test_a_planted_set_of_the_flag_in_a_reader_migration_is_refused(sql: str) -> None:
+    planted = _plant(_READER, _sources()[_READER] + f'\nBAD = "{sql}"\n')
+    assert _flag_literal_outside_its_owners(planted) == [_READER]
+
+
+@pytest.mark.req("FR-351")
+def test_a_planted_read_in_a_migration_not_on_the_list_is_refused() -> None:
+    other = "backend/migrations/versions/zzzzzzzzzzzz_other.py"
+    source = f"Q = \"SELECT current_setting('{FLAG}', true)\"\n"
+    assert _flag_literal_outside_its_owners(_plant(other, source)) == [other]
+
+
+@pytest.mark.req("FR-351")
+def test_a_read_in_a_listed_reader_migration_is_not_refused() -> None:
+    source = f"Q = \"SELECT current_setting('{FLAG}', true) IS DISTINCT FROM 'on'\"\n"
+    assert _flag_literal_outside_its_owners({_READER: source}) == []
 
 
 @pytest.mark.req("FR-351")
