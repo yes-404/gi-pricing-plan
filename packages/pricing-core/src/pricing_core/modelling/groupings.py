@@ -590,6 +590,8 @@ def check_fit_groupings(
     The holdout is counted with the flag off (it is
     evidence, not a fit input). A Grouping the mapping lacks, or whose column the frame lacks
     or differs from the Factor's, is left to `resolve_factors`, which refuses each by name.
+    A Grouping declaring `error` is left to it too: it refuses an unseen value already, under
+    its existing code.
 
     Membership is `_targets`'s: a value is mapped iff it is a key of `grouping.mapping`. A null
     is not a level and is `apply_grouping`'s refusal, so it is in neither count. The text names
@@ -604,6 +606,10 @@ def check_fit_groupings(
         grouping = mapping.get(factor.grouping_id) if factor.grouping_id else None
         source = factor.source_columns[0] if factor.source_columns else ""
         if grouping is None or grouping.column != source or source not in data.columns:
+            continue
+        if grouping.unseen_level_behaviour is UnseenLevelBehaviour.ERROR:
+            # `error` already refuses every unseen value, with the published
+            # `FACTOR_RESOLUTION_FAILED`: this check covers the two lenient behaviours only.
             continue
         seen.add(factor.slug)
         values = data[source].cast(pl.String)

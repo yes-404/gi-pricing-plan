@@ -29,7 +29,7 @@ from model_schema import (
     SplitRef,
     UnseenLevelBehaviour,
 )
-from pricing_core.modelling import GroupingError, fit_ebm, fit_gbm, fit_glm
+from pricing_core.modelling import FactorResolutionError, GroupingError, fit_ebm, fit_gbm, fit_glm
 
 pytestmark = pytest.mark.req("FR-109")
 
@@ -176,3 +176,13 @@ def test_a_holdout_that_maps_none_is_counted_and_not_refused() -> None:
     assert fit.result.grouping_unmapped == ()
     (entry,) = fit.result.holdout_grouping_unmapped
     assert (entry.factor, entry.rows) == ("region", 20)
+
+
+def test_an_error_grouping_that_maps_none_keeps_its_existing_refusal() -> None:
+    """`error` refuses an unseen value already, as `FACTOR_RESOLUTION_FAILED`: published, so the
+    new check covers the two lenient behaviours and leaves this code as it was."""
+    book = _book(["AB1", "AB2", "CD1", "CD2"] * 50)
+    with pytest.raises(FactorResolutionError) as refused:
+        _fit_glm(book, _grouping(UnseenLevelBehaviour.ERROR))
+    assert refused.value.code == "FACTOR_RESOLUTION_FAILED"
+    assert not isinstance(refused.value, GroupingError)
