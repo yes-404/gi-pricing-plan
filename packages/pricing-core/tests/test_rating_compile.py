@@ -803,3 +803,32 @@ def test_the_type_mismatch_text_names_no_output() -> None:
     assert [i.code for i in issues] == ["RATING_TYPE_MISMATCH"]
     assert SENT not in issues[0].message
     assert issues[0].step_id == f"s_out_{SENT}"
+
+
+@pytest.mark.req("FR-240")
+def test_a_clamp_on_the_placeable_rung_that_consumes_another_name_is_located_at_consumes_0() -> None:
+    """#1914 review (freynia404, at 267e8507), blocking 1: the `consumes[0]` limb of the clamp
+    location is reachable. A clamp whose produced name is the source of the last rung before
+    `constraints` (`clamped_value`, read by the `optimisation_adjustment` output step) but which
+    consumes another name (`optimisation_adjustment_minor`) validates, and the issue names the
+    consumed entry by position."""
+    payload = valid_algorithm()
+    steps = [s for s in payload["steps"] if s["step_id"] not in {"s_minprem", "s_out_office"}]
+    index = next(i for i, s in enumerate(steps) if s["step_id"] == "s_office")
+    steps[index + 1 : index + 1] = [
+        {"step_id": "s_opt", "type": "expression", "label": "Optimisation adjustment",
+         "expr": "office_premium_minor * 1", "result_type": "money_minor",
+         "consumes": ["office_premium_minor"], "produces": "optimisation_adjustment_minor"},
+        {"step_id": "s_clamp", "type": "constraint", "label": "Min premium",
+         "condition": "optimisation_adjustment_minor >= 100", "on_violation": "clamp",
+         "clamp_bounds": {"min": "100"}, "reason_code": "MIN_PREMIUM_APPLIED",
+         "consumes": ["optimisation_adjustment_minor"], "produces": "clamped_value"},
+        {"step_id": "s_out_opt", "type": "output", "label": "Optimisation adjustment",
+         "output_name": "optimisation_adjustment_minor",
+         "rounding": {"mode": "half_even", "dp": 0}, "consumes": ["clamped_value"]},
+    ]
+    payload["steps"] = steps
+    issues = validate_algorithm(RatingAlgorithm.model_validate(payload))
+    assert [(i.code, i.step_id, i.field) for i in issues] == [
+        ("LADDER_CLAMP_UNPLACEABLE", "s_clamp", "consumes[0]")
+    ], issues
