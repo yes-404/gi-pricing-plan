@@ -64,6 +64,7 @@ from app.db.models import (
     ValidationRuleSetRow,
 )
 from app.platform import audit
+from app.platform.safe_exception import safe_job_error_text
 from model_schema import (
     VALID_METRIC_TRANSITIONS,
     VALID_MODEL_TRANSITIONS,
@@ -654,13 +655,18 @@ async def reconcile(session: AsyncSession, workspace_id: UUID) -> WorkspaceRepor
         data = await load_workspace_data(session, workspace_id)
         mismatches = tuple(reconcile_data(data))
     except audit.ChainBrokenError as exc:
-        return WorkspaceReport(workspace_id, "broken", chain_detail=str(exc))
+        # The verifier's own authored reason and the sequence number, never `str(exc)`.
+        return WorkspaceReport(
+            workspace_id,
+            "broken",
+            chain_detail=f"audit chain broken at sequence {int(exc.sequence)}: {exc.reason}",
+        )
     except _UNREADABLE as exc:
         # A row whose stored shape the models refuse: this workspace cannot be read, the run
         # carries on with the others (a pydantic `ValidationError` is a `ValueError`).
-        return WorkspaceReport(
-            workspace_id, "unreadable", chain_detail=f"{type(exc).__name__}: {exc}"
-        )
+        # The allow-list's text, which for these types is the class name only: what the models
+        # raise can carry the stored row (NFR-499).
+        return WorkspaceReport(workspace_id, "unreadable", chain_detail=safe_job_error_text(exc))
     return WorkspaceReport(
         workspace_id,
         "intact",

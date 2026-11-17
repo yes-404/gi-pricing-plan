@@ -256,7 +256,9 @@ fact, writes nothing (not even an Audit Event) and prevents no write.
   `ref`, `detail` and `legacy` mark), then a summary line.
 - **Exit code:** `0` every chain verifies and nothing mismatches; `1` at least one mismatch;
   `2` a chain is broken or unreadable (a stored row the models refuse) or the run could not
-  complete. Such a workspace prints no rule output; every other workspace still prints.
+  complete. Such a workspace prints no rule output; every other workspace still prints. Its `chain_detail` is
+  the verifier's reason and the sequence it broke at, or the exception's type name, never an
+  exception's text: a stored row can carry input.
 - **`legacy`:** a mismatch whose chain evidence lies wholly before the workspace's first decision event that
   carries the request and decision ids, by chain sequence and never by timestamp. It is reported and counted like any other; the exit code stays `1`. `legacy` means "no later than the cut-over as far as the chain shows", never "benign": a workspace with no decision event carrying the ids has no cut-over, and nothing in it is marked legacy. A deployment's mismatch is never marked legacy.
 - **What the run cannot show:** a chain rewritten consistently (FR-373: the chain is tamper-evident,
