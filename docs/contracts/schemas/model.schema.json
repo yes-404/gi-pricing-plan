@@ -55,6 +55,10 @@
                 "type": ["string", "null"],
                 "pattern": "^model:[a-z0-9][a-z0-9-]{1,62}@[1-9][0-9]*$",
                 "description": "FR-116: the resolved, pinned ref an offset-from-another-model fit was constructed against. Null for every other offset kind."
+              },
+              "grouping_unmapped": {
+                "type": ["array", "null"], "items": {"$ref": "#/$defs/GroupingUnmapped"},
+                "description": "FR-109. Each Grouping Factor whose column held values its Grouping does not map, with the rows and exposure. Null means not recorded (a Model fitted before the field existed); an empty array means every row mapped."
               }
             }
           }
@@ -109,6 +113,14 @@
                   }
                 },
                 "description": "FR-161. Empty on every fit that evaluated everything it was asked for; populated only where LightGBM early-stops on a Custom Metric and its declared builtins are suppressed so they cannot take position 0 and drive the stop."
+              },
+              "grouping_unmapped": {
+                "type": ["array", "null"], "items": {"$ref": "#/$defs/GroupingUnmapped"},
+                "description": "FR-109. Each Grouping Factor whose column held values its Grouping does not map, with the rows and exposure. Null means not recorded (a Model fitted before the field existed); an empty array means every row mapped."
+              },
+              "holdout_grouping_unmapped": {
+                "type": ["array", "null"], "items": {"$ref": "#/$defs/GroupingUnmapped"},
+                "description": "FR-109: the same count over the holdout frame, which is counted and never refused. Null means not recorded; an empty array means every holdout row mapped."
               }
             }
           }
@@ -152,7 +164,11 @@
                   }
                 }
               },
-              "best_iteration": {"type": "integer", "minimum": 0}
+              "best_iteration": {"type": "integer", "minimum": 0},
+              "grouping_unmapped": {
+                "type": ["array", "null"], "items": {"$ref": "#/$defs/GroupingUnmapped"},
+                "description": "FR-109. Each Grouping Factor whose column held values its Grouping does not map, with the rows and exposure. Null means not recorded (a Model fitted before the field existed); an empty array means every row mapped."
+              }
             }
           }
         }
@@ -234,6 +250,21 @@
               "log_likelihood": {"type": "number"}
             }
           }
+        }
+      }
+    },
+    "GroupingUnmapped": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "The rows a fit's Grouping Factor did not map, and their exposure (FR-109). A row whose column value is not a source level of the Factor's Grouping is unmapped; a fit with every row unmapped is refused and one with some records them here.",
+      "required": ["factor", "grouping", "rows"],
+      "properties": {
+        "factor": {"type": "string"},
+        "grouping": {"type": "string"},
+        "rows": {"type": "integer", "minimum": 1},
+        "exposure": {
+          "type": ["string", "null"], "pattern": "^-?[0-9]+(\\.[0-9]+)?$",
+          "description": "Exact decimal as a string, never a binary float (FR-10). Null when the fit has no exposure column to sum."
         }
       }
     },
