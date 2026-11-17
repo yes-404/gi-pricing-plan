@@ -110,7 +110,7 @@ def test_an_undeclared_identity_factor_with_relativities_is_listed_as_plain() ->
         {"level": "A", "is_base": True}, {"level": "B", "is_base": False},
     ]
     # the input is open: it admits a level the fit has no relativity for
-    _input(bundle, "region")["domain"] = ["A", "B", "C"]
+    _set_input(bundle, "region", domain=["A", "B", "C"])
     rc, lines = _run([_row(bundle, "plain", 1)])
 
     assert rc == 1
@@ -389,7 +389,7 @@ def test_a_factor_fed_only_by_a_closed_enum_over_its_levels_is_not_reachable() -
 @pytest.mark.req("FR-2143")
 def test_an_open_input_keeps_the_factor_plain() -> None:
     bundle = _closed()
-    _input(bundle, "region")["domain"] = ["A", "B", "C"]
+    _set_input(bundle, "region", domain=["A", "B", "C"])
     rc, lines = _run([_row(bundle, "open", 1)])
 
     assert rc == 1
@@ -476,7 +476,7 @@ def test_a_value_from_a_step_a_nullable_input_or_an_approximation_stays_plain() 
     del nodes["s_risk"]["feature_map"]["region"]
 
     nullable = _closed()
-    _input(nullable, "region")["nullable"] = True
+    _set_input(nullable, "region", nullable=True)
 
     approximate = _closed()
     approximate["graph"]["nodes"]["s_risk"]["mode"] = "approximation"
@@ -536,9 +536,8 @@ def test_a_second_model_call_scoring_the_glm_from_an_open_input_keeps_it_plain()
     second call to the same GLM, fed from an open input, makes the Factor reachable."""
     bundle = _closed()
     graph = bundle["graph"]
-    graph["input_contract"].append(
-        {**_input(bundle, "region"), "name": "region2", "domain": ["A", "B", "C"]}
-    )
+    for contract in (graph["input_contract"], _algorithm(bundle)["input_contract"]):
+        contract.append({**_input(bundle, "region"), "name": "region2", "domain": ["A", "B", "C"]})
     nodes = graph["nodes"]
     nodes["s_region2"] = {
         **nodes["s_region"], "input_name": "region2", "label": "region2", "produces": ["region2"],
@@ -559,10 +558,10 @@ def test_a_second_model_call_scoring_the_glm_from_an_open_input_keeps_it_plain()
 @pytest.mark.req("FR-2143")
 def test_a_model_call_in_a_purpose_graph_is_judged_with_the_base_graphs() -> None:
     """The base graph's call reads a closed input; a purpose graph's call to the same GLM reads an
-    open one (its input contract admits C, which the fit never saw): the version stays PLAIN."""
+    open one (it reads the input with a default): the version stays PLAIN."""
     bundle = _closed()
     purpose = copy.deepcopy(bundle["graph"])
-    next(c for c in purpose["input_contract"] if c["name"] == "region")["domain"] = ["A", "B", "C"]
+    purpose["nodes"]["s_region"]["on_missing"] = "default"  # the purpose graph reads it openly
     bundle["purpose_graphs"] = {"cancellation": purpose}
     rc, lines = _run([_row(bundle, "purposed", 1)])
 
@@ -650,9 +649,7 @@ def test_a_factor_an_interaction_takes_as_an_operand_is_never_closed_input() -> 
 
 @pytest.mark.req("FR-2143")
 def test_an_interaction_outside_the_glms_factors_leaves_the_operand_closed() -> None:
-    bundle = _main_effects()  # the cross Factor is carried, and is not one of this GLM's factors
-    cross = bundle["resolved_payloads"]["factor:region_x_yoa@1"]["id"]
-    assert cross not in bundle["resolved_payloads"][_MODEL]["spec"]["factors"]
+    bundle = _an_interaction_outside_the_factors()
     rc, lines = _run([_row(bundle, "ix", 2)])
 
     assert "NOTREACHABLE ix@2 status=approved (closed-input)" in lines, lines
@@ -682,6 +679,46 @@ def test_a_version_carrying_a_not_examined_line_is_not_listed_notreachable() -> 
     assert any(line.startswith("NOTEXAMINED-NUMERIC-TERMS numeric@1") for line in lines), lines
     assert not any(line.startswith("NOTREACHABLE ") for line in lines)
     assert rc == 0
+
+
+@pytest.mark.req("FR-2143")
+def test_a_closed_version_pinning_a_model_of_another_family_is_not_listed_notreachable() -> None:
+    """FR-2143: NOTREACHABLE needs no line the sweep did not examine; the other-family line is
+    one (it keeps FR-131's refusal), so the version is counted there and not listed."""
+    rc, lines = _run([_row(_with_a_gbm(_closed()), "gbm_plus_closed", 1)])
+
+    assert not any(line.startswith("NOTREACHABLE ") for line in lines), lines
+    assert "not-reachable: 0" in lines
+    other = "not-examined-other-family: 1 (families: xgboost;"
+    assert any(line.startswith(other) for line in lines)
+    assert rc == 0
+
+
+@pytest.mark.req("FR-2143")
+def test_the_sweep_reads_the_input_contract_the_runtime_validates_not_the_graphs_copy() -> None:
+    """The runtime validates inputs against the inlined algorithm's contract. A graph whose copy
+    says [A, B] while the algorithm admits C is refused at C by the scorer: it stays PLAIN."""
+    bundle = _closed()
+    _algorithm(bundle)["input_contract"][0]["domain"] = ["A", "B", "C"]
+    assert _input(bundle, "region")["domain"] == ["A", "B"]
+    rc, lines = _run([_row(bundle, "split", 1)])
+
+    assert "PLAIN split@1 status=approved" in lines, lines
+    assert not any(line.startswith("NOTREACHABLE ") for line in lines)
+    assert rc == 1
+
+
+@pytest.mark.req("FR-2143")
+def test_a_string_input_carrying_a_domain_is_not_closed() -> None:
+    """Only an enum input has its domain enforced; a string with a domain list accepts any
+    string, so it can bring a level the fit lacks."""
+    bundle = _closed()
+    _set_input(bundle, "region", type="string")
+    rc, lines = _run([_row(bundle, "stringy", 1)])
+
+    assert "PLAIN stringy@1 status=approved" in lines, lines
+    assert not any(line.startswith("NOTREACHABLE ") for line in lines)
+    assert rc == 1
 
 
 @pytest.mark.req("FR-2143")
@@ -781,6 +818,14 @@ def _unscored_glm() -> dict[str, Any]:
     return bundle
 
 
+def _an_interaction_outside_the_factors() -> dict[str, Any]:
+    """The ix@2 bundle: a cross Factor carried, and not one of this GLM's factors."""
+    bundle = _main_effects()
+    cross = bundle["resolved_payloads"]["factor:region_x_yoa@1"]["id"]
+    assert cross not in bundle["resolved_payloads"][_MODEL]["spec"]["factors"]
+    return bundle
+
+
 def _closed_fixtures() -> dict[str, dict[str, Any]]:
     """Every fixture above the sweep lists NOTREACHABLE (closed-input), each scored for real."""
     return {
@@ -790,6 +835,7 @@ def _closed_fixtures() -> dict[str, dict[str, Any]]:
         "peril-structure-over-the-whole-domain": _structured(["A", "B"]),
         "a-glm-no-model-call-scores": _unscored_glm(),
         "a-closed-version-with-a-purpose-graph": _closed_with_a_purpose_graph(),
+        "an-interaction-outside-the-glms-factors": _an_interaction_outside_the_factors(),
     }
 
 

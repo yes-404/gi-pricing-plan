@@ -58,15 +58,18 @@ const unseenNotes = computed(() => {
 });
 const problem = ref<ProblemError | null>(null);
 
-/** One candidate's `model_type`; `null` for a ref that is not versioned or a model that is gone. */
+/**
+ * One candidate's `model_type`; `null` for a ref that is not versioned or a model that could not
+ * be read, whatever the failure: the comparison itself loaded, so a candidate's read failing (a
+ * network error as much as a problem document) must not fail the page.
+ */
 async function candidateType(ref: string): Promise<string | null> {
   const parsed = parseModelRef(ref);
   if (parsed === null) return null;
   try {
     return (await getModel(parsed.slug, parsed.version)).spec.model_type;
-  } catch (error) {
-    if (error instanceof ProblemError) return null;
-    throw error;
+  } catch {
+    return null;
   }
 }
 /**

@@ -51,7 +51,8 @@ Classes (each counts versions; a version can carry several):
                             domain is the data's.
     NOTREACHABLE            a version whose every such Factor is one no quote can bring an unseen
                             level to, listed with reason words, and that carries NO other class
-                            and no NOTEXAMINED-* line (a version with one is listed under that
+                            and no line the sweep did not examine (a NOTEXAMINED-* line, or a
+                            model of another family; a version with one is listed under that
                             class alone). Not a finding, not reachable:
                             `closed-input` = every model_call that scores the GLM is exact and
                             feeds the Factor only from a non-nullable enum input, read with
@@ -125,6 +126,7 @@ from model_schema import (
     FitResult,
     GlmFitResult,
     Grouping,
+    RatingAlgorithm,
     RatingModelCallStep,
     UnseenCellState,
     UnseenLevelBehaviour,
@@ -194,31 +196,42 @@ class _UnreadableError(Exception):
         self.reason = reason
 
 
-def _model_calls(bundle: Bundle) -> list[tuple[JdmGraph, RatingModelCallStep]]:
+def _model_calls(
+    bundle: Bundle, algorithm: RatingAlgorithm, purposes: dict[str, RatingAlgorithm]
+) -> list[tuple[JdmGraph, RatingAlgorithm, RatingModelCallStep]]:
     """Every `model_call` node of the Bundle's graphs (the base graph and each purpose graph), with
-    the graph it sits in, as the step the runtime reads (`step_model_refs` takes that type)."""
-    calls: list[tuple[JdmGraph, RatingModelCallStep]] = []
-    for graph in (bundle.graph, *bundle.purpose_graphs.values()):
+    the graph it sits in and the inlined algorithm the runtime validates that graph's inputs
+    against, as the step the runtime reads (`step_model_refs` takes that type)."""
+    calls: list[tuple[JdmGraph, RatingAlgorithm, RatingModelCallStep]] = []
+    graphs = [(bundle.graph, algorithm)] + [
+        (graph, purposes[purpose]) for purpose, graph in bundle.purpose_graphs.items()
+    ]
+    for graph, scored_by in graphs:
         for step_id, node in graph.nodes.items():
             if node.get("type") == "model_call":
                 step = RatingModelCallStep.model_validate({**node, "step_id": step_id})
-                calls.append((graph, step))
+                calls.append((graph, scored_by, step))
     return calls
 
 
 def _fed_by_a_closed_input(
-    graph: JdmGraph, call: RatingModelCallStep, slug: str, fitted_levels: set[str]
+    graph: JdmGraph,
+    algorithm: RatingAlgorithm,
+    call: RatingModelCallStep,
+    slug: str,
+    fitted_levels: set[str],
 ) -> bool:
     """True when `call` is an exact `model_call` and every name it maps to Factor `slug` is an
     input read with `on_missing` = error, produced by that one input node and by no other step,
-    declared in the input contract as a non-nullable enum whose domain lies within
+    declared in the input contract of `algorithm` (the one the runtime validates the inputs
+    against, not the graph's copy) as a non-nullable enum whose domain lies within
     `fitted_levels`. Anything else is not classified here (it stays PLAIN)."""
     if call.mode != "exact":
         return False
     names = [name for name, factor in call.feature_map.items() if factor == slug]
     if not names:
         return False
-    contract = {c.get("name"): c for c in graph.input_contract}
+    contract = {c.name: c for c in algorithm.input_contract}
     for name in names:
         producers = [n for n in graph.nodes.values() if name in n.get("produces", ())]
         if len(producers) != 1:
@@ -227,13 +240,12 @@ def _fed_by_a_closed_input(
         if node.get("type") != "input" or node.get("on_missing") != "error":
             return False
         entry = contract.get(node.get("input_name"))
-        domain = None if entry is None else entry.get("domain")
         if (
             entry is None
-            or entry.get("type") != "enum"
-            or entry.get("nullable") is not False
-            or not isinstance(domain, list)
-            or not set(domain) <= fitted_levels
+            or entry.type != "enum"
+            or entry.nullable is not False
+            or entry.domain is None
+            or not set(entry.domain) <= fitted_levels
         ):
             return False
     return True
@@ -282,8 +294,8 @@ def _findings(bundle: Bundle) -> tuple[int, set[str], set[str], set[str]]:
     other_families: set[str] = set()
     reasons: set[str] = set()
     glm_refs = 0
-    calls = _model_calls(bundle)
     algorithm, purposes = inlined_algorithms(bundle)
+    calls = _model_calls(bundle, algorithm, purposes)
     scorers = load_glm_scorers([algorithm, *purposes.values()], payloads)
     chains = {ref: [r for r, _ in scorer_chain(ref, scorer)] for ref, scorer in scorers.items()}
     open_factor = False
@@ -316,8 +328,8 @@ def _findings(bundle: Bundle) -> tuple[int, set[str], set[str], set[str]]:
         # refuses it (LOSS_TREATMENT_UNIMPLEMENTED), so no stored bundle holds one. When #1507
         # implements it, the sweep must count it as a scored model.
         scoring = [
-            (graph, call)
-            for graph, call in calls
+            (graph, scored_by, call)
+            for graph, scored_by, call in calls
             if any(
                 key in chains.get(ref, [ref]) for ref in step_model_refs(call, payloads)
             )
@@ -337,7 +349,8 @@ def _findings(bundle: Bundle) -> tuple[int, set[str], set[str], set[str]]:
             elif not scoring:
                 reasons.add("not-scored")
             elif all(
-                _fed_by_a_closed_input(graph, call, slug, fitted[slug]) for graph, call in scoring
+                _fed_by_a_closed_input(graph, scored_by, call, slug, fitted[slug])
+                for graph, scored_by, call in scoring
             ):
                 reasons.add("closed-input")
             else:
@@ -373,8 +386,10 @@ def _findings(bundle: Bundle) -> tuple[int, set[str], set[str], set[str]]:
                 break
     if open_factor:
         kinds.add("PLAIN")
-    elif reasons and not kinds:
-        kinds.add(NOTREACHABLE)  # no reachable class, and nothing the sweep did not examine
+    elif reasons and not kinds and not other_families:
+        # no reachable class and no line the sweep did not examine: a model of another family
+        # is one (FR-131's refusal is not read here)
+        kinds.add(NOTREACHABLE)
     return glm_refs, kinds, reasons, other_families
 
 

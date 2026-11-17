@@ -257,6 +257,34 @@ describe("ModelComparisonView, the rows left out on an unseen level (FR-2143)", 
     expect(screen.queryByText(/none left out/)).toBeNull();
   });
 
+  it("reads a candidate whose fetch fails outright as not recorded and still shows the comparison", async () => {
+    routeQuery.ids = IDS;
+    stubByUrl({
+      "/models/compare": { status: 202, body: job("queued") },
+      "/jobs/": { status: 200, body: job("succeeded", COMPARISON_REF) },
+      [`/models/comparisons/${COMPARISON.id}`]: { status: 200, body: withExcluded(undefined, undefined) },
+      "/models/motor-ad-frequency-gbm": { status: 200, body: GBM_MODEL },
+    });
+    const answer = globalThis.fetch;
+    // A network failure (not a problem document) on the non-GBM candidate's model read.
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = String(input);
+        if (url.includes("motor-ad-frequency") && !/-gbm|compar/.test(url)) {
+          throw new TypeError("Failed to fetch");
+        }
+        return answer(input, init);
+      }),
+    );
+    render(ModelComparisonView, { props: { pollIntervalMs: 0 }, global });
+    const section = await screen.findByLabelText("Rows on a level this fit never saw");
+
+    expect(section).toHaveTextContent("Shared holdout: not recorded");
+    expect(screen.getByTestId("metrics")).toBeInTheDocument();
+    expect(screen.queryByText(/Failed to fetch/)).toBeNull();
+  });
+
   it("keeps the count when one candidate is a GLM", async () => {
     openWith(GLM_MODEL);
     render(ModelComparisonView, { props: { pollIntervalMs: 0 }, global });

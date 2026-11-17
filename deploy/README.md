@@ -150,7 +150,7 @@ docker compose -f deploy/docker-compose.yml --profile app up -d --wait --scale a
   lists every identity label that starts like a number, so it is a floor on what the tool
   examined, not a count of faults). The NOTEXAMINED lines are information: they never change the
   exit code. A version whose every undeclared identity Factor cannot be reached by a quote, and that
-  carries no other class and no NOTEXAMINED line, is listed as `NOTREACHABLE`, never `PLAIN`,
+  carries no other class and no line the sweep did not examine (a NOTEXAMINED line, or a model of another family), is listed as `NOTREACHABLE`, never `PLAIN`,
   with a reason word on its line: `closed-input` (the Factor is fed only by an input that is a
   closed enum over the fit's own levels, on every GLM that input feeds, and no interaction Factor
   of that fit takes it as an operand) or `not-scored` (nothing the runtime scores reads the GLM:
