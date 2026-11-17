@@ -59,7 +59,11 @@ Options considered:
 5. The set of governed tables and "approved or later" states the run covers is derived from the
    installed approval guards and the status lifecycles, never listed by hand; a census test
    fails when a guarded table has no coverage.
-6. Dataset Versions are outside this Work (their `validated` state is set by a job, not an
+6. A row in a status no lifecycle edge leads to (today a rating version that is `live` or
+   `retired`) is reported by rule 1 as a status the product does not write, whatever requests
+   exist. A model archived after it was superseded is not claimed by rule 1, because
+   `archived` is reachable from `draft`; rules 2 to 4 cover its approval through the chain.
+7. Dataset Versions are outside this Work (their `validated` state is set by a job, not an
    approval) and a scheduled run is a later Work.
 
 ## Consequences

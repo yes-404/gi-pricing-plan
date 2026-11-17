@@ -107,6 +107,20 @@ def test_r1_covers_a_state_reachable_only_through_approval() -> None:
     assert reconcile_data(archived) == [], "archived is reachable from draft: not an approved state"
 
 
+def test_r1_a_status_the_product_does_not_write_is_reported_whatever_requests_exist() -> None:
+    data = _reconciled()
+    live = ArtifactState("rating_versions", REF, "rating_version", "live")
+    found = reconcile_data(replace(data, artifacts=(live,)))
+    assert _rules(found) == ["R1"], found
+    assert "does not write" in found[0].detail
+
+
+def test_unwritten_states_are_derived_by_reachability() -> None:
+    assert rc.unwritten_states("rating_version") == {"live", "retired"}
+    assert rc.unwritten_states("model") == set()
+    assert rc.unwritten_states("deployment") == set()
+
+
 def test_approved_or_later_is_derived_from_the_lifecycle_graph() -> None:
     graph = {"a": {"b"}, "b": {"approved", "x"}, "approved": {"z"}, "z": set(), "x": set()}
     assert approved_or_later("a", graph) == {"approved", "z"}

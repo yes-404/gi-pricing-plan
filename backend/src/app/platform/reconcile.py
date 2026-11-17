@@ -15,7 +15,10 @@ anchor refuses one (FR-373 (4)).
 Rules (rule ids are this module's vocabulary, not requirement ids):
 
 * **R1** — every artifact in an approved state, or in a state reachable only through
-  `approved`, has an approved approval request.
+  `approved`, has an approved approval request; a row in a status no lifecycle edge leads to
+  (today a rating version that is `live` or `retired`) is reported whatever requests exist.
+  A model archived after it was superseded is not claimed by R1: `archived` is reachable from
+  `draft`, so R2 to R4 cover its approval through the chain.
 * **R2** — every approved request has enough approving decisions, from distinct approvers,
   none of them its submitter (FR-353).
 * **R3** — every decision row has exactly one matching chain event, and every such event has
@@ -81,6 +84,7 @@ __all__ = [
     "load_workspace_data",
     "reconcile",
     "reconcile_data",
+    "unwritten_states",
 ]
 
 APPROVED: Final = "approved"
@@ -182,6 +186,23 @@ def approved_states(artifact_type: str) -> frozenset[str]:
     return approved_or_later(initial, graph)
 
 
+def unwritten_states(artifact_type: str) -> frozenset[str]:
+    """The statuses no lifecycle edge leads to: the product never writes a row in one.
+
+    Every status unreachable from the initial status, `approved` included as a way through.
+    A rating version's `live` and `retired` are such statuses today.
+    """
+    initial, graph = STATE_GRAPHS[artifact_type]
+    reached = {initial}
+    stack = [initial]
+    while stack:
+        for target in graph.get(stack.pop(), ()):
+            if target not in reached:
+                reached.add(target)
+                stack.append(target)
+    return frozenset(set(graph) - reached)
+
+
 @dataclass(frozen=True)
 class ArtifactState:
     table: str
@@ -265,15 +286,26 @@ class WorkspaceReport:
 
 def _r1(data: WorkspaceData) -> list[Mismatch]:
     approved_refs = {r.ref for r in data.requests if r.status == APPROVED}
-    return [
-        Mismatch(
-            "R1",
-            a.ref,
-            f"{a.table} row is {a.status!r} and no approved approval request names {a.ref}",
-        )
-        for a in data.artifacts
-        if a.status in approved_states(a.type) and a.ref not in approved_refs
-    ]
+    found: list[Mismatch] = []
+    for a in data.artifacts:
+        if a.status in unwritten_states(a.type):
+            # Whatever requests exist: no writer of this product produces a row in this status.
+            found.append(
+                Mismatch(
+                    "R1",
+                    a.ref,
+                    f"{a.table} row is {a.status!r}, a status the product does not write",
+                )
+            )
+        elif a.status in approved_states(a.type) and a.ref not in approved_refs:
+            found.append(
+                Mismatch(
+                    "R1",
+                    a.ref,
+                    f"{a.table} row is {a.status!r} and no approved approval request names {a.ref}",
+                )
+            )
+    return found
 
 
 def _r2(data: WorkspaceData) -> list[Mismatch]:
