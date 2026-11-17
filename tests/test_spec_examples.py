@@ -9,6 +9,7 @@ import types
 from typing import Any
 
 import pytest
+from pydantic import ValidationError
 
 import model_schema
 
@@ -74,8 +75,13 @@ def test_an_unknown_class_is_refused() -> None:
 
 def test_the_example_the_finding_named_fails() -> None:
     body = (ROOT / "tests/fixtures/spec-examples/ra-c535b19d.json").read_text("utf-8")
-    with pytest.raises(ValueError, match=r"a declared output has no output step \(FR-214\)"):
+    refusal = r"a declared output has no output step \(FR-214\)"
+    with pytest.raises(ValidationError, match=refusal) as caught:
         _validate("RatingAlgorithm", body)
+    # The refusal's text names no output (NFR-499); the output it is about is the structured
+    # `located` of its `InputFreeError` (#1712 S7c), so the proof is for THAT output again.
+    (error,) = caught.value.errors()
+    assert error["ctx"]["error"].located == {"output": "premium_ladder"}
 
 
 def test_the_census_is_a_second_reading_of_the_same_lines() -> None:
