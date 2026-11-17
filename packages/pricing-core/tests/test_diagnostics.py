@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import dataclasses
 import math
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import numpy as np
 import polars as pl
@@ -27,8 +27,11 @@ from model_schema import (
     GbmFunctionRef,
     GbmSpec,
     GlmSpec,
+    Grouping,
+    GroupingMethod,
     MonotonicDirection,
     OffsetSpec,
+    UnseenLevelBehaviour,
     Weighting,
     WeightSpec,
 )
@@ -1050,3 +1053,169 @@ def test_a_weighted_cells_interval_is_ratio_z_over_root_sum_of_weights() -> None
         ratio = by[level].ae
         half = ratio * _NORMAL_975 / math.sqrt(sum_w)
         assert by[level].ci_95 == pytest.approx((ratio - half, ratio + half), rel=1e-12)
+
+
+# --- the finer-level actual-versus-expected (FR-109, decision #1908) --------------------
+
+
+def _postcode_chain_groupings() -> tuple[Grouping, dict[UUID, Grouping]]:
+    """`area` (postcode to area) is `region`'s parent; `region` reads its own `area` column, so
+    the chain holds under the rules a chain must satisfy (PR #1947)."""
+    common: dict[str, object] = {
+        "dataset_id": uuid4(),
+        "version": 1,
+        "column": "postcode",
+        "method": GroupingMethod.MANUAL,
+        "unseen_level_behaviour": UnseenLevelBehaviour.ERROR,
+    }
+    area = Grouping(
+        id=uuid4(), slug="area", mapping={"AB1": "AB", "AB2": "AB", "CD1": "CD"}, **common  # type: ignore[arg-type]
+    )
+    region = Grouping(
+        id=uuid4(),
+        slug="region",
+        mapping={"AB": "NORTH", "CD": "SOUTH"},
+        parent_grouping_id=area.id,
+        **{**common, "column": "area"},  # type: ignore[arg-type]
+    )
+    return region, {area.id: area, region.id: region}
+
+
+@pytest.mark.req("FR-109")
+def test_the_finer_level_ae_equals_the_hand_computed_table() -> None:
+    """Six rows on a two-level chain, A/E as FR-171 defines it, against the table worked by
+    hand for #1506 (no weight column, so the A/E weight is 1; exposure 1 a row)."""
+    from pricing_core.modelling.diagnostics import finer_level_ae
+
+    region, groupings = _postcode_chain_groupings()
+    frame = pl.DataFrame({"postcode": ["AB1", "AB1", "AB2", "AB2", "CD1", "CD1"]})
+    result = finer_level_ae(
+        "region",
+        region,
+        groupings,
+        frame,
+        y=np.array([1.0, 0.0, 2.0, 1.0, 0.0, 1.0]),
+        mu=np.array([0.5, 0.5, 1.0, 1.0, 0.8, 0.4]),
+        ae_weights=np.ones(6),
+        exposure=np.ones(6),
+        weighted=False,
+    )
+    assert [level.name for level in result] == ["postcode", "area"]
+    z = 1.959963984540054
+    # (actual, expected, exposure, half-width of the interval on the ratio)
+    hand = {
+        ("postcode", "AB1"): (1.0, 1.0, 2.0, z * 1.0 / 1.0),
+        ("postcode", "AB2"): (3.0, 2.0, 2.0, z * math.sqrt(3.0) / 2.0),
+        ("postcode", "CD1"): (1.0, 1.2, 2.0, z * 1.0 / 1.2),
+        ("area", "AB"): (4.0, 3.0, 4.0, z * 2.0 / 3.0),
+        ("area", "CD"): (1.0, 1.2, 2.0, z * 1.0 / 1.2),
+    }
+    got = {}
+    for level in result:
+        assert level.unavailable_rows == 0
+        for cell in level.cells:
+            assert cell.factor == "region"
+            got[(level.name, cell.level)] = cell
+    assert set(got) == set(hand)
+    for key, (actual, expected, exposure, half) in hand.items():
+        cell = got[key]
+        ratio = actual / expected
+        assert cell.actual == pytest.approx(actual)
+        assert cell.expected == pytest.approx(expected)
+        assert cell.ae == pytest.approx(ratio)
+        assert cell.ci_95 == pytest.approx((ratio - half, ratio + half))
+        assert cell.exposure_years is not None
+        assert float(cell.exposure_years) == pytest.approx(exposure)
+
+
+@pytest.mark.req("FR-109")
+def test_a_finer_level_with_its_column_absent_is_not_available_never_empty() -> None:
+    from pricing_core.modelling.diagnostics import finer_level_ae
+
+    region, groupings = _postcode_chain_groupings()
+    result = finer_level_ae(
+        "region",
+        region,
+        groupings,
+        pl.DataFrame({"outcode": ["AB1"]}),
+        y=np.array([1.0]),
+        mu=np.array([0.5]),
+        ae_weights=np.ones(1),
+        exposure=np.ones(1),
+        weighted=False,
+    )
+    assert [level.name for level in result] == ["postcode", "area"]
+    for level in result:
+        assert level.cells == ()
+        assert level.unavailable_rows == 1
+        assert float(level.unavailable_exposure) == pytest.approx(1.0)
+        assert level.unavailable_actual == pytest.approx(1.0)
+        assert level.unavailable_expected == pytest.approx(0.5)
+
+
+@pytest.mark.req("FR-109")
+def test_a_chain_whose_parent_is_gone_is_not_available_and_never_fails_the_fit() -> None:
+    """A stored Grouping can name a parent that is gone. The finer-level diagnostics then show
+    that level as not available, with the fit's totals, and raise nothing: a diagnostic never
+    fails a fit that scoring completes (the ruling of 2026-11-17 on #1506)."""
+    from pricing_core.modelling.diagnostics import finer_level_ae
+
+    region, _ = _postcode_chain_groupings()
+    result = finer_level_ae(
+        "region",
+        region,
+        {region.id: region},
+        pl.DataFrame({"postcode": ["AB1", "CD1"]}),
+        y=np.array([1.0, 0.0]),
+        mu=np.array([0.5, 0.25]),
+        ae_weights=np.ones(2),
+        exposure=np.ones(2),
+        weighted=False,
+    )
+    assert [level.name for level in result] == ["area"]
+    (level,) = result
+    assert level.cells == ()
+    assert level.unavailable_rows == 2
+    assert float(level.unavailable_exposure) == pytest.approx(2.0)
+    assert level.unavailable_actual == pytest.approx(1.0)
+    assert level.unavailable_expected == pytest.approx(0.75)
+
+
+@pytest.mark.req("FR-109")
+def test_rows_the_chain_refuses_are_one_not_available_row_and_the_totals_still_add_up() -> None:
+    """An unseen postcode under `error`: its row is not available at the area level, with its
+    count, exposure, actual and expected, so each level's totals equal the partition's."""
+    from pricing_core.modelling.diagnostics import finer_level_ae
+
+    region, groupings = _postcode_chain_groupings()
+    y = np.array([1.0, 0.0, 2.0])
+    mu = np.array([0.5, 0.5, 1.5])
+    exposure = np.array([1.0, 2.0, 0.5])
+    result = finer_level_ae(
+        "region",
+        region,
+        groupings,
+        pl.DataFrame({"postcode": ["AB1", "AB2", "ZZ9"]}),
+        y=y,
+        mu=mu,
+        ae_weights=np.ones(3),
+        exposure=exposure,
+        weighted=False,
+    )
+    by_name = {level.name: level for level in result}
+    assert by_name["postcode"].unavailable_rows == 0
+    area = by_name["area"]
+    assert [cell.level for cell in area.cells] == ["AB"]
+    assert area.unavailable_rows == 1
+    assert float(area.unavailable_exposure) == pytest.approx(0.5)
+    assert area.unavailable_actual == pytest.approx(2.0)
+    assert area.unavailable_expected == pytest.approx(1.5)
+    for level in result:
+        actual = sum(cell.actual for cell in level.cells) + level.unavailable_actual
+        expected = sum(cell.expected for cell in level.cells) + level.unavailable_expected
+        exposure_total = sum(float(cell.exposure_years or 0) for cell in level.cells) + float(
+            level.unavailable_exposure
+        )
+        assert actual == pytest.approx(float(y.sum()))
+        assert expected == pytest.approx(float(mu.sum()))
+        assert exposure_total == pytest.approx(float(exposure.sum()))

@@ -30,7 +30,7 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from datetime import date
 from decimal import Decimal
-from typing import Any
+from typing import Any, NamedTuple
 from uuid import UUID
 
 import numpy as np
@@ -81,6 +81,7 @@ from model_schema import (
     Weighting,
 )
 from pricing_core.modelling.factors import resolve_factors
+from pricing_core.modelling.groupings import finer_levels
 from pricing_core.modelling.predict import (
     AllRowsUnseenError,
     UnseenLevelExclusion,
@@ -94,11 +95,13 @@ from pricing_core.progress import NullProgress, ProgressCallback
 
 __all__ = [
     "DiagnosticsResult",
+    "FinerLevelAe",
     "backtest_model",
     "compute_diagnostics",
     "compute_ebm_diagnostics",
     "compute_gbm_diagnostics",
     "deviance",
+    "finer_level_ae",
     "unit_deviance",
 ]
 
@@ -377,6 +380,122 @@ def _bin_index(values: npt.NDArray[np.float64], bins: int) -> npt.NDArray[np.int
     return np.minimum(ranks * bins // n, bins - 1) + 1
 
 
+def _ae_cells(
+    factor: str,
+    values: pl.Series,
+    *,
+    y: npt.NDArray[np.float64],
+    mu: npt.NDArray[np.float64],
+    ae_w: npt.NDArray[np.float64],
+    exposure: npt.NDArray[np.float64],
+    weighted: bool,
+) -> list[AeCell]:
+    """FR-171's actual versus expected for every level of `values`, one `AeCell` each.
+
+    The one statement of the A/E arithmetic: a factor's own levels and the finer levels of a
+    grouping chain (FR-109) are read through it, so the two can never be computed apart.
+    """
+    levels = values.cast(pl.String)
+    cells: list[AeCell] = []
+    for level in sorted({v for v in levels.unique().to_list() if v is not None}):
+        # A null row (a finer level that could not be rebuilt) is in no level's mask.
+        mask = (levels == level).fill_null(False).to_numpy()
+        actual = float(np.sum(ae_w[mask] * y[mask]))
+        expected = float(np.sum(ae_w[mask] * mu[mask]))
+        if expected <= 0:
+            continue
+        ratio = actual / expected
+        # Without a weight column the interval is on the ratio, treating the claim count
+        # as the only random quantity — the standard actuarial A/E interval — and
+        # `actual` is that count. Under a declared weight column `actual` is a weighted
+        # total, so its root is no standard error (DP-M1): the half-width is
+        # `ratio·z/√Σw`, Σw being the claim count for severity. Where the weight is
+        # exposure that is an approximation. With no claims (or no weight) in the cell
+        # there is nothing to build one from, and a zero-width interval would read as
+        # certainty rather than absence.
+        sum_w = float(np.sum(ae_w[mask]))
+        half: float | None
+        if weighted:
+            half = ratio * _NORMAL_975 / math.sqrt(sum_w) if actual > 0 and sum_w > 0 else None
+        else:
+            half = _NORMAL_975 * math.sqrt(actual) / expected if actual > 0 else None
+        cells.append(
+            AeCell(
+                factor=factor,
+                level=level,
+                actual=actual,
+                expected=expected,
+                ae=ratio,
+                ci_95=(ratio - half, ratio + half) if half is not None else None,
+                exposure_years=Decimal(str(round(float(np.sum(exposure[mask])), 6))),
+            )
+        )
+    return cells
+
+
+class FinerLevelAe(NamedTuple):
+    """The A/E at one finer level of a grouping chain (FR-109).
+
+    `cells` are the levels the chain rebuilt. The rows it could not rebuild are one named row
+    of their own, "not available", with their count, exposure, actual and expected, so the
+    level's totals equal the partition's (decision #1908 and the maintainer's ruling of
+    2026-11-17 on #1506). A level whose column is absent is that one row and no cells.
+    """
+
+    name: str
+    cells: tuple[AeCell, ...]
+    unavailable_rows: int
+    unavailable_exposure: Decimal
+    unavailable_actual: float
+    unavailable_expected: float
+
+
+def finer_level_ae(
+    factor: str,
+    grouping: Grouping,
+    groupings: Mapping[UUID, Grouping],
+    data: pl.DataFrame,
+    *,
+    y: npt.NDArray[np.float64],
+    mu: npt.NDArray[np.float64],
+    ae_weights: npt.NDArray[np.float64],
+    exposure: npt.NDArray[np.float64],
+    weighted: bool,
+) -> tuple[FinerLevelAe, ...]:
+    """Actual versus expected at each level finer than `factor`'s grouping (FR-109).
+
+    The rows are the ones the partition's A/E reads, and `mu` is the model's own fitted mean
+    for each: only the grouping of the rows changes, never what they are compared against, so
+    no figure here moves a price. The finer levels come from `finer_levels` (decision #1908,
+    option (B)); an unchained grouping gives `()`. The rows a level could not rebuild are
+    reported as its "not available" row, never dropped and never an empty table.
+    """
+    result: list[FinerLevelAe] = []
+    for name, values in finer_levels(data, grouping, groupings):
+        missing = values.is_null().to_numpy()
+        result.append(
+            FinerLevelAe(
+                name=name,
+                cells=tuple(
+                    _ae_cells(
+                        factor,
+                        values,
+                        y=y,
+                        mu=mu,
+                        ae_w=ae_weights,
+                        exposure=exposure,
+                        weighted=weighted,
+                    )
+                ),
+                unavailable_rows=int(np.count_nonzero(missing)),
+                unavailable_exposure=Decimal(str(round(float(np.sum(exposure[missing])), 6))),
+                unavailable_actual=float(np.sum(ae_weights[missing] * y[missing])),
+                unavailable_expected=float(np.sum(ae_weights[missing] * mu[missing])),
+            )
+        )
+    return tuple(result)
+
+
 def _partition(
     data: pl.DataFrame,
     spec: ModelSpecCommon,
@@ -420,39 +539,17 @@ def _partition(
     for slug, column in matrix.terms.items():
         if column not in matrix.categorical:
             continue
-        levels = matrix.frame[column].cast(pl.String)
-        for level in sorted({v for v in levels.unique().to_list() if v is not None}):
-            mask = (levels == level).to_numpy()
-            actual = float(np.sum(ae_w[mask] * y[mask]))
-            expected = float(np.sum(ae_w[mask] * mu[mask]))
-            if expected <= 0:
-                continue
-            ratio = actual / expected
-            # Without a weight column the interval is on the ratio, treating the claim count
-            # as the only random quantity — the standard actuarial A/E interval — and
-            # `actual` is that count. Under a declared weight column `actual` is a weighted
-            # total, so its root is no standard error (DP-M1): the half-width is
-            # `ratio·z/√Σw`, Σw being the claim count for severity. Where the weight is
-            # exposure that is an approximation. With no claims (or no weight) in the cell
-            # there is nothing to build one from, and a zero-width interval would read as
-            # certainty rather than absence.
-            sum_w = float(np.sum(ae_w[mask]))
-            half: float | None
-            if weighted:
-                half = ratio * _NORMAL_975 / math.sqrt(sum_w) if actual > 0 and sum_w > 0 else None
-            else:
-                half = _NORMAL_975 * math.sqrt(actual) / expected if actual > 0 else None
-            cells.append(
-                AeCell(
-                    factor=slug,
-                    level=level,
-                    actual=actual,
-                    expected=expected,
-                    ae=ratio,
-                    ci_95=(ratio - half, ratio + half) if half is not None else None,
-                    exposure_years=Decimal(str(round(float(np.sum(exposure[mask])), 6))),
-                )
+        cells.extend(
+            _ae_cells(
+                slug,
+                matrix.frame[column],
+                y=y,
+                mu=mu,
+                ae_w=ae_w,
+                exposure=exposure,
+                weighted=weighted,
             )
+        )
 
     with np.errstate(divide="ignore", invalid="ignore"):
         rate = np.where(exposure > 0, mu / exposure, 0.0)

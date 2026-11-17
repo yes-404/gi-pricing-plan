@@ -137,6 +137,20 @@ Terms from `00-overview.md` §2.2 are used unchanged. Additional terms owned her
 > review** for an owner (the maintainer's entry "2026-10-14 11:28:56 BST": "Owners at §14: …
 > FR-109"). Until it is owned, no behaviour may be built on the stored chain.
 
+> **FR-109, dated amendment 2026-11-17 (#1506 slice 4, decision #1908 option (B) and the
+> maintainer's ruling of 2026-11-17 on #1506).** #1506 owns the finer-level diagnostics, and
+> its finer levels are rebuilt from the deepest grouping's `column` by applying the chain in
+> order up to each level; a row the chain cannot rebuild (its column not in the frame, a
+> null, or a value a grouping refuses under `error`, FR-104) is counted in that level's named
+> row "not available", with its own row count and exposure, at that level and every coarser
+> one, so each level's totals equal the fit's and the table is never empty; a parent Grouping
+> that is not supplied or no longer exists breaks the chain the same way, so every row is "not
+> available" at the level that parent produces (named by the `column` of the Grouping that
+> reads it) and at every coarser one, and the fit never fails for it, only a chain that comes
+> back on itself being a caller's error; only this
+> diagnostic chain is lenient, since how a Factor resolves is unchanged and a value the rating
+> Factor's own grouping refuses still refuses the fit.
+
 ### 3.4 GLM fitting
 
 | ID | Requirement |
