@@ -312,6 +312,9 @@ def _findings(bundle: Bundle) -> tuple[int, set[str], set[str], set[str]]:
         ]
         fitted = {slug: {e.level for e in levels} for slug, levels in fit.relativities.items()}
         # scored = a model_call names it, or a scorer the runtime builds reads it as its offset
+        # The excess model (large_loss.excess_model, separate_model) is not examined here: compile
+        # refuses it (LOSS_TREATMENT_UNIMPLEMENTED), so no stored bundle holds one. When #1507
+        # implements it, the sweep must count it as a scored model.
         scoring = [
             (graph, call)
             for graph, call in calls
