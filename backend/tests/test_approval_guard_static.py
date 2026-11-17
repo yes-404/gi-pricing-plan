@@ -5,8 +5,11 @@ planted violation, plus the allowance pinned as a literal. `backend/tests/` is e
 nothing else. The scans take `{path: source}` so a test can plant a violation in a copy
 without touching the tree.
 
-A literal assembled at run time (concatenated, or in an f-string) evades the literal scan;
-that residual is named in RL-1301 A.4.4 and PL-1303 Acceptance 11, not hidden.
+A reader migration may only read the flag: its strings are joined and matched
+case-insensitively, so a name assembled from literal pieces, an f-string's pieces or a
+`%`-format's template are read too. What the scan still cannot see (a name that is not in any
+literal) is listed in `_flag_beyond_a_read`'s docstring, and for the other files the literal
+scan's residual is named in RL-1301 A.4.4 and PL-1303 Acceptance 11, not hidden.
 """
 
 from __future__ import annotations
@@ -121,31 +124,53 @@ def _docstring_ids(tree: ast.AST) -> set[int]:
 
 
 _FLAG_READ = re.compile(r"current_setting\(\s*'" + re.escape(FLAG) + r"'", re.IGNORECASE)
+_FLAG_NAME = FLAG.partition(".")[2]
+#: A message that names the Python context manager, `approval_decision()`, is not the setting.
+_CONTEXT_MANAGER_NAME = re.compile(r"(?<!app\.)(?<!app\.\n)" + _FLAG_NAME + r"\(\)", re.IGNORECASE)
+_SETS_AN_APP_SETTING = re.compile(
+    r"\bSET\s+(?:LOCAL\s+|SESSION\s+)?app\.|set_config\(\s*['\"]\s*app\.", re.IGNORECASE
+)
 
 
 def _flag_beyond_a_read(source: str) -> bool:
-    """True when a string that is not a docstring names the flag anywhere but inside a
-    `current_setting('<flag>', …)` read: so `SET`, `SET LOCAL` and `set_config` all fail."""
+    """True when a reader migration does anything with the flag but read it.
+
+    The strings that are not docstrings (every `Constant`, so the pieces of an f-string and of
+    a concatenation too) are joined and read case-insensitively, as Postgres reads a setting
+    name. Two refusals: **any** occurrence of the flag's name once the plain
+    `current_setting('<flag>', …)` reads and a message's `approval_decision()` (the context
+    manager, never preceded by `app.`) are removed; and **any** `SET`, `SET LOCAL`,
+    `SESSION` or `set_config` that names an `app.` setting, whatever follows it.
+
+    **What this still cannot see** (it reads literals, not values): a setting name built from
+    pieces that never appear in one string next to `app.` (a `chr()` or `bytes` assembly, a
+    name read from a column, an environment variable or a function argument); a `set_config`
+    whose first argument is a parameter of the statement; a statement composed by a helper in
+    another file; and a comment (a comment is not executed). Each is what review of the reader
+    list, which is pinned by file name, exists for.
+    """
     tree = ast.parse(source)
     docstrings = _docstring_ids(tree)
-    return any(
-        isinstance(node, ast.Constant)
+    text = "\n".join(
+        node.value
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Constant)
         and isinstance(node.value, str)
         and id(node) not in docstrings
-        and FLAG in _FLAG_READ.sub("", node.value)
-        for node in ast.walk(tree)
+    )
+    return (
+        _FLAG_NAME in _CONTEXT_MANAGER_NAME.sub("", _FLAG_READ.sub("", text)).lower()
+        or _SETS_AN_APP_SETTING.search(text) is not None
     )
 
 
 def _flag_literal_outside_its_owners(sources: dict[str, str]) -> list[str]:
     bad = []
     for path, source in sources.items():
-        if FLAG not in source or path == DECISION_MODULE:
-            continue
         if path in READER_MIGRATIONS:
             if _flag_beyond_a_read(source):
                 bad.append(path)
-        else:
+        elif FLAG in source.lower() and path != DECISION_MODULE:
             bad.append(path)
     return bad
 
@@ -155,7 +180,7 @@ def _session_level_flag_sets(sources: dict[str, str]) -> list[str]:
     leak across the pool. Checked in the two files that may name the flag at all."""
     bad = []
     for path, source in sources.items():
-        if FLAG not in source:
+        if FLAG not in source.lower():
             continue
         for match in re.finditer(r"\bSET\s+(?!LOCAL\b)" + re.escape(FLAG), source, re.IGNORECASE):
             bad.append(f"{path}: session-level SET at offset {match.start()}")
@@ -324,6 +349,37 @@ def test_the_reader_migrations_are_pinned_by_file_name() -> None:
 def test_a_planted_set_of_the_flag_in_a_reader_migration_is_refused(sql: str) -> None:
     planted = _plant(_READER, _sources()[_READER] + f'\nBAD = "{sql}"\n')
     assert _flag_literal_outside_its_owners(planted) == [_READER]
+
+
+@pytest.mark.req("FR-351")
+@pytest.mark.parametrize(
+    "statement",
+    [
+        "BAD = \"SET LOCAL APP.APPROVAL_DECISION = 'on'\"",
+        "BAD = \"SELECT set_config('App.Approval_Decision', 'on', true)\"",
+        'BAD = "SET LOCAL app." + "approval_decision" + " = \'on\'"',
+        'BAD = "SET LOCAL app.approval_%s = \'on\'" % "decision"',
+        'N = "approval_decision"\nBAD = f"SET LOCAL app.{N} = \'on\'"',
+    ],
+    ids=[
+        "upper_case_set_local",
+        "mixed_case_set_config",
+        "split_literal",
+        "percent_format",
+        "fstring",
+    ],
+)
+def test_a_reader_migration_that_sets_the_flag_by_any_spelling_is_refused(statement: str) -> None:
+    planted = _plant(_READER, _sources()[_READER] + f"\n{statement}\n")
+    assert _flag_literal_outside_its_owners(planted) == [_READER]
+
+
+@pytest.mark.req("FR-351")
+def test_an_upper_case_flag_in_a_file_that_is_not_a_reader_is_refused() -> None:
+    other = "backend/src/app/x.py"
+    sql = f"Q = \"SET LOCAL {FLAG.upper()} = 'on'\"\n"
+    assert _flag_literal_outside_its_owners(_plant(other, sql)) == [other]
+    assert _session_level_flag_sets({other: f"Q = \"SET {FLAG.upper()} = 'on'\"\n"}) != []
 
 
 @pytest.mark.req("FR-351")
