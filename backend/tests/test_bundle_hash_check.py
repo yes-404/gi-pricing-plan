@@ -11,11 +11,13 @@ the replacement, and with that hold removed the loader refuses the bundle.
 
 from __future__ import annotations
 
+import ast
 import asyncio
 import hashlib
 import json
 import logging
 import pathlib
+import re
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from types import SimpleNamespace
@@ -495,6 +497,123 @@ def test_each_load_site_calls_the_one_function(site: str) -> None:
     `bundle_hydration.revalidate`)."""
     source = (_SRC / site).read_text()
     assert _LOADER in source.replace("async def " + _LOADER, ""), site
+
+
+_NAME = "load_stored_" + "bundle"
+_LOAD_SITES = (
+    "app/api/score.py",
+    "app/platform/bundle_hydration.py",
+    "app/worker/rating_handlers.py",
+    "app/worker/dislocation_handlers.py",
+)
+
+
+_DIGEST_CALLS = frozenset({"sha256", "sha512", "md5", "hexdigest", "digest", "new"})
+
+
+def _row_derived(expr: ast.expr) -> bool:
+    """`expr` reads the row's `blob_sha256` and computes no digest itself."""
+    reads_the_row = any(
+        isinstance(n, ast.Constant) and n.value == "blob_sha256" for n in ast.walk(expr)
+    )
+    computes = any(
+        isinstance(n, ast.Call)
+        and (
+            (isinstance(n.func, ast.Name) and n.func.id in {"sha256", "sha512", "md5"})
+            or (isinstance(n.func, ast.Attribute) and n.func.attr in _DIGEST_CALLS)
+        )
+        for n in ast.walk(expr)
+    )
+    return reads_the_row and not computes
+
+
+def _digests_not_from_the_row(source: str) -> list[str]:
+    """One entry per `load_stored_bundle(...)` call in `source` whose `payload_sha256` is not the
+    row's `bundle -> blob_sha256`: absent, a name with no assignment in the module or with ANY
+    assignment that is not row-derived (`_row_derived`), or an expression that is not. A digest
+    computed from the payload just read would pass the loader's compare and hold it to nothing.
+    """
+    tree = ast.parse(source)
+    parents = {id(c): n for n in ast.walk(tree) for c in ast.iter_child_nodes(n)}
+
+    def assignments(call: ast.AST, name: str) -> list[ast.expr]:
+        """The values `name` is assigned in the innermost enclosing function that assigns it
+        (a nested function reads its outer function's variable)."""
+        scope: ast.AST | None = parents.get(id(call))
+        while scope is not None:
+            if isinstance(scope, ast.FunctionDef | ast.AsyncFunctionDef):
+                values = [
+                    n.value
+                    for n in ast.walk(scope)
+                    if isinstance(n, ast.Assign)
+                    and any(isinstance(t, ast.Name) and t.id == name for t in n.targets)
+                ]
+                if values:
+                    return values
+            scope = parents.get(id(scope))
+        return []
+
+    problems = []
+    for node in ast.walk(tree):
+        callee = (
+            getattr(node.func, "id", getattr(node.func, "attr", None))
+            if isinstance(node, ast.Call)
+            else None
+        )
+        if callee != "load_stored_bundle":
+            continue
+        assert isinstance(node, ast.Call)
+        digest = next((k.value for k in node.keywords if k.arg == "payload_sha256"), None)
+        if digest is None:
+            problems.append(f"line {node.lineno}: no payload_sha256")
+        elif isinstance(digest, ast.Name):
+            values = assignments(node, digest.id)
+            if not values or not all(_row_derived(v) for v in values):
+                problems.append(f"line {node.lineno}: {digest.id} is not the row's digest")
+        elif not _row_derived(digest):
+            problems.append(f"line {node.lineno}: payload_sha256 is not the row's digest")
+    return problems
+
+
+@pytest.mark.req("FR-240")
+@pytest.mark.parametrize("site", _LOAD_SITES)
+def test_census_each_load_site_passes_the_rows_digest_and_never_one_it_computed(
+    site: str,
+) -> None:
+    """Every `load_stored_bundle` call's `payload_sha256` is the row's `bundle -> blob_sha256`
+    (a self-computed digest would always equal the bytes' and hold them to nothing). Each site
+    is shown red when its own argument is replaced with `sha256(payload)`; the census counts the
+    calls, so a site that stopped calling the loader does not read as clean here."""
+    source = (_SRC / site).read_text()
+    calls = [
+        n
+        for n in ast.walk(ast.parse(source))
+        if isinstance(n, ast.Call) and getattr(n.func, "id", getattr(n.func, "attr", "")) == _NAME
+    ]
+    assert len(calls) == 1, (site, len(calls))
+    assert _digests_not_from_the_row(source) == [], site
+    planted = re.sub(
+        r"payload_sha256=\w+,", "payload_sha256=hashlib.sha256(payload).hexdigest(),", source
+    )
+    assert planted != source, site
+    assert _digests_not_from_the_row(planted) != [], site
+
+
+@pytest.mark.req("FR-240")
+def test_census_a_rebound_digest_name_is_refused() -> None:
+    """The name passed is held to EVERY assignment of it in its function: one row-derived
+    assignment does not excuse a second that hashes the payload."""
+    source = (
+        "async def f(row, payload):\n"
+        "    blob_sha256 = row.bundle.get('blob_sha256')\n"
+        "    blob_sha256 = hashlib.sha256(payload).hexdigest()\n"
+        "    return await load_stored_bundle(payload, payload_sha256=blob_sha256)\n"
+    )
+    assert _digests_not_from_the_row(source) != []
+    assert (
+        _digests_not_from_the_row(source.replace("    blob_sha256 = hashlib", "    zz = hashlib"))
+        == []
+    )
 
 
 @pytest.mark.req("FR-240")
