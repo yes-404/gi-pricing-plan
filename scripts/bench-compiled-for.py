@@ -46,10 +46,13 @@ import argparse
 import asyncio
 import os
 import statistics
+import sys
 import time
 from pathlib import Path
 from uuid import UUID
 
+if str(Path(__file__).resolve().parent) not in sys.path:  # _gitenv: any loader (#1913)
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
 from _gitenv import clean_env
 
 from app.api.score import _compiled_for

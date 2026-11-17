@@ -189,13 +189,29 @@ def _is_git_argv(node: ast.expr | None) -> bool:
     )
 
 
-def _is_subprocess_call(node: ast.AST) -> bool:
+def _subprocess_names(nodes: list[ast.AST]) -> tuple[set[str], set[str]]:
+    """The names a file binds to the `subprocess` module and to one of its run functions
+    (`import subprocess as sp`, `from subprocess import run as r`)."""
+    modules, funcs = {"subprocess"}, set()
+    for n in nodes:
+        if isinstance(n, ast.Import):
+            modules |= {a.asname or a.name for a in n.names if a.name == "subprocess"}
+        elif isinstance(n, ast.ImportFrom) and n.module == "subprocess":
+            funcs |= {a.asname or a.name for a in n.names if a.name in _SUBPROCESS_FUNCS}
+    return modules, funcs
+
+
+def _is_subprocess_call(node: ast.AST, modules: set[str], funcs: set[str]) -> bool:
+    if not isinstance(node, ast.Call):
+        return False
+    f = node.func
+    if isinstance(f, ast.Name):
+        return f.id in funcs
     return (
-        isinstance(node, ast.Call)
-        and isinstance(node.func, ast.Attribute)
-        and isinstance(node.func.value, ast.Name)
-        and node.func.value.id == "subprocess"
-        and node.func.attr in _SUBPROCESS_FUNCS
+        isinstance(f, ast.Attribute)
+        and isinstance(f.value, ast.Name)
+        and f.value.id in modules
+        and f.attr in _SUBPROCESS_FUNCS
     )
 
 
@@ -210,7 +226,15 @@ def _has_clean_env(call: ast.Call) -> bool:
 
 
 def census(scripts: pathlib.Path) -> tuple[list[str], int]:
-    """(offenders, count of covered subprocess calls) over `scripts/**/*.py` but `_gitenv.py`."""
+    """(offenders, count of covered subprocess calls) over `scripts/**/*.py` but `_gitenv.py`.
+
+    Each call to `subprocess` (through `import subprocess as sp` or `from subprocess import run`
+    too) whose argv is a literal git list, or is not a literal, must carry `env=clean_env()`:
+    per call, so a `clean_env()` elsewhere in the file hides nothing. Its limits, silent by
+    design: a git name held in a variable (`CMD = "git"`); a helper in another module that runs
+    git; `os.system`; `shell=True` or `shlex.split` command strings; a `.sh` file; `gh`, which
+    runs git itself.
+    """
     offenders: list[str] = []
     covered = 0
     for path in sorted(scripts.rglob("*.py")):
@@ -229,8 +253,9 @@ def census(scripts: pathlib.Path) -> tuple[list[str], int]:
             for n in nodes
         ):
             offenders.append(f"{rel}: git argv and no clean_env call")
+        modules, funcs = _subprocess_names(nodes)
         for n in nodes:
-            if not _is_subprocess_call(n):
+            if not _is_subprocess_call(n, modules, funcs):
                 continue
             assert isinstance(n, ast.Call)
             first = n.args[0] if n.args else None
@@ -278,6 +303,21 @@ def test_the_census_sees_a_planted_uncovered_git_call(tmp_path: pathlib.Path) ->
     assert redirect_holders(tmp_path) == ["d.py"]
     for name in ("a.py", "b.py", "c.py", "d.py"):
         assert any(o.startswith(name) for o in offenders), (name, offenders)
+
+
+def test_the_census_sees_an_aliased_git_call_beside_a_covered_one(tmp_path: pathlib.Path) -> None:
+    """A `clean_env()` call elsewhere in the file must not hide an aliased call (#1913)."""
+    (tmp_path / "e.py").write_text(
+        "import subprocess as sp\nfrom _gitenv import clean_env\n"
+        "sp.run(['git', 'status'], env=clean_env())\nsp.run(['git', 'log'])\n"
+    )
+    (tmp_path / "f.py").write_text(
+        "from subprocess import run as r\nfrom _gitenv import clean_env\n"
+        "r(['git', 'status'], env=clean_env())\nr(['git', 'log'])\n"
+    )
+    offenders, covered = census(tmp_path)
+    assert covered == 2
+    assert offenders == ["e.py:4", "f.py:4"], offenders
 
 
 def test_redirect_name_census_finds_one_definition() -> None:

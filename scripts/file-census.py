@@ -66,6 +66,8 @@ from collections import Counter
 from collections.abc import Sequence
 from typing import TextIO
 
+if str(pathlib.Path(__file__).resolve().parent) not in sys.path:  # _gitenv: any loader (#1913)
+    sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 from _gitenv import clean_env
 
 REPO = pathlib.Path(__file__).resolve().parent.parent

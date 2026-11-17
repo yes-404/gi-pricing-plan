@@ -40,12 +40,16 @@ import argparse
 import asyncio
 import io
 import os
+import sys
 import time
 from datetime import date
 from pathlib import Path
 from uuid import UUID
 
 import polars as pl
+
+if str(Path(__file__).resolve().parent) not in sys.path:  # _gitenv: any loader (#1913)
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
 from _gitenv import clean_env
 
 from app.config import Settings

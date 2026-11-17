@@ -85,6 +85,8 @@ import sys
 import types
 from pathlib import Path
 
+if str(Path(__file__).resolve().parent) not in sys.path:  # _gitenv: any loader (#1913)
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
 from _gitenv import clean_env
 
 REPO = Path(__file__).resolve().parent.parent
