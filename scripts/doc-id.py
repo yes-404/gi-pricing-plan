@@ -29,10 +29,9 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Final
 
-import _docid
-
 if str(Path(__file__).resolve().parent) not in sys.path:  # _gitenv: any loader (#1913)
     sys.path.insert(0, str(Path(__file__).resolve().parent))
+import _docid
 from _gitenv import clean_env
 
 REPO_ROOT: Final = Path(__file__).resolve().parent.parent

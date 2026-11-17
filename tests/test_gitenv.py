@@ -193,6 +193,37 @@ def test_bench_and_measure_scripts_head_is_their_own(
         assert module._env()["tree"] == own_head
 
 
+# --- every importer of _gitenv loads by path from anywhere (#1913) ---------------------------
+
+_IMPORTERS = sorted(
+    p.name
+    for p in SCRIPTS.glob("*.py")
+    if any(line.startswith("from _gitenv import") for line in p.read_text().splitlines())
+)
+
+_LOADER = (
+    "import importlib.util, sys\n"
+    "spec = importlib.util.spec_from_file_location('_t1913_loaded', sys.argv[1])\n"
+    "module = importlib.util.module_from_spec(spec)\n"
+    "sys.modules[spec.name] = module\n"
+    "spec.loader.exec_module(module)\n"
+)
+
+
+@pytest.mark.parametrize("script", _IMPORTERS)
+def test_every_gitenv_importer_loads_by_path_from_outside_the_repo(
+    script: str, tmp_path: pathlib.Path
+) -> None:
+    """`python -I` drops the script directory from `sys.path`; the cwd is outside the repo."""
+    result = subprocess.run(
+        [sys.executable, "-I", "-c", _LOADER, str(SCRIPTS / script)],
+        cwd=tmp_path,
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 0, result.stderr
+
+
 # --- the census (T9-T11) ---------------------------------------------------------------------
 
 _SUBPROCESS_FUNCS = {"run", "Popen", "check_output", "check_call", "call"}
@@ -253,7 +284,10 @@ def census(scripts: pathlib.Path) -> tuple[list[str], int]:
     per call, so a `clean_env()` elsewhere in the file hides nothing. Its limits, silent by
     design: a git name held in a variable (`CMD = "git"`); a helper in another module that runs
     git; `os.system`; `shell=True` or `shlex.split` command strings; a `.sh` file; `gh`, which
-    runs git itself.
+    runs git itself; and, found by the #1913 audit, `from subprocess import *`; a subprocess
+    function bound to a name and called later (`r = subprocess.run`, then `r([...])`);
+    `importlib.import_module("subprocess")`; `subprocess.getoutput` and `getstatusoutput`; the
+    `os.spawn*`, `os.exec*` and `os.popen` families.
     """
     offenders: list[str] = []
     covered = 0
