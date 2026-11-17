@@ -97,7 +97,9 @@ class CreateCustomMetric(BaseModel):
     #: `TemplateParameter.check` ever saw it, turning a valid request into a 422 the caller
     #: cannot fix by re-reading §4.5. Strict, so a
     #: JSON `true` (a `bool` is an `int`) or a numeric string is a 422 here and never a coerced
-    #: `1` or `5` (#1904); `TemplateParameter.check` stays the second hold.
+    #: `1` or `5` (#1904). This request model is the hold for a boolean and a numeric
+    #: string; `TemplateParameter.check` runs after it on a number, and does not by itself
+    #: refuse a boolean until #1916.
     params: dict[str, StrictInt | StrictFloat] = Field(default_factory=dict)
     #: Omitted means the template's own (§4.5). An author may narrow it and never widen it.
     applicability: Applicability | None = None
