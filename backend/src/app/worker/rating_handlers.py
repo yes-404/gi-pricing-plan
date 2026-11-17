@@ -179,6 +179,7 @@ def _rating_regression(parameters: dict[str, Any], callback: ProgressCallback) -
         slot = BundleSlot()
         bundle = await load_stored_bundle(
             payload,
+            payload_sha256=blob_sha256,
             recorded=recorded,
             slot=slot,
             database=progress.database,

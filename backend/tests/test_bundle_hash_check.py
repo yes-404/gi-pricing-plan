@@ -12,8 +12,11 @@ the replacement, and with that hold removed the loader refuses the bundle.
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import json
 import pathlib
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from typing import Any
 from uuid import UUID, uuid4
 
@@ -44,7 +47,8 @@ from app.db.models import RatingVersionRow
 from app.db.session import Database
 from app.errors import PlatformError
 from app.main import create_app
-from app.platform.bundle_hydration import revalidate, verify_bundle
+from app.platform import bundle_hydration
+from app.platform.bundle_hydration import load_stored_bundle, revalidate, verify_bundle
 from app.platform.bundle_slot import BundleSlot
 from app.platform.deployment_switch import SwitchMessage
 from app.worker.rating_handlers import register_rating_handlers
@@ -486,3 +490,62 @@ def test_the_regression_run_refuses_a_bundle_its_row_does_not_record(run_world: 
     job = w.run()
     assert getattr(job.status, "value", job.status) == "failed", job.status
     assert CODE in str(job.error), job.error
+
+
+class _NoDatabase:
+    """A store with no database behind it: the refusal's audit write is replaced below."""
+
+    @asynccontextmanager
+    async def unit_of_work(self) -> AsyncIterator[None]:
+        yield None
+
+
+@pytest.mark.req("FR-240")
+async def test_a_stored_payload_is_held_to_the_digest_its_row_records(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The payload bytes read are held to the sha256 the row records, before they are used.
+
+    The content hash covers the graph and pins only; here the graph, the pins and the recorded
+    content hash are all unchanged and one resolved payload differs, so the digest alone refuses.
+    Database-free: the refusal's audit write is replaced.
+    """
+    audited: list[str] = []
+
+    async def record(session: object, **kwargs: Any) -> None:
+        audited.append(kwargs["action"])
+
+    monkeypatch.setattr(bundle_hydration.audit, "record", record)
+    original = (FIXTURES / "clean.bundle.json").read_bytes()
+    stored = json.loads(original)
+    first = next(iter(stored["resolved_payloads"]))
+    stored["resolved_payloads"][first]["base_level_method"] = "a_different_method"
+    swapped = json.dumps(stored).encode()
+    assert swapped != original
+    bundle = Bundle.model_validate_json(swapped)
+    clean = _clean()
+    assert (bundle.graph, bundle.pins, bundle.content_hash) == (
+        clean.graph,
+        clean.pins,
+        clean.content_hash,
+    )
+    digest = hashlib.sha256(original).hexdigest()
+    ref = ArtifactRef(type="rating_version", slug="payload-digest", version=1)
+
+    async def load(payload: bytes, recorded_digest: str | None) -> Bundle:
+        return await load_stored_bundle(
+            payload,
+            payload_sha256=recorded_digest,
+            recorded=clean.content_hash,
+            slot=BundleSlot(),
+            database=_NoDatabase(),  # type: ignore[arg-type]
+            workspace_id=uuid4(),
+            ref=ref,
+        )
+
+    assert (await load(original, digest)).content_hash == clean.content_hash
+    for refused in (swapped, original):
+        with pytest.raises(PlatformError) as raised:
+            await load(refused, digest if refused is swapped else None)
+        assert raised.value.code == CODE
+    assert audited == [REFUSAL_ACTION, REFUSAL_ACTION]

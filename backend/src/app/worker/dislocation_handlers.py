@@ -248,6 +248,7 @@ async def _compiled(
     slot = BundleSlot()
     bundle = await load_stored_bundle(
         payload,
+        payload_sha256=sha256,
         recorded=(row.bundle or {}).get("content_hash"),
         slot=slot,
         database=progress.database,

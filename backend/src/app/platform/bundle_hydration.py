@@ -16,6 +16,7 @@ because the guard runs on every hydrate (a hash covers the pins, not the carried
 
 from __future__ import annotations
 
+import hashlib
 import logging
 from collections.abc import Awaitable, Mapping
 from typing import Protocol
@@ -187,6 +188,7 @@ async def verify_bundle(
 async def load_stored_bundle(
     payload: bytes,
     *,
+    payload_sha256: str | None,
     recorded: str | None,
     deployment: str | None = None,
     slot: BundleSlot,
@@ -196,11 +198,35 @@ async def load_stored_bundle(
     requester: Principal | None = None,
     acting: Principal | None = None,
 ) -> Bundle:
-    """The one place a stored bundle's bytes are parsed (`03` FR-240): parse, then compare.
+    """The one place a stored bundle's bytes are parsed (`03` FR-240): verify the bytes, parse,
+    then compare.
+
+    The sha256 of the payload bytes read must equal the digest the version's row records
+    (`payload_sha256`) before the bytes are used: the content hash covers the graph and pins
+    only, and the payloads (rate table cells, coefficients, boosters) are covered by this digest.
+    A digest of `None` is a mismatch, as `recorded` of `None` is.
 
     Every load site goes through here, so no site can parse a stored bundle and skip the
     comparison; `test_a_stored_bundle_is_parsed_in_one_place_only` fails on any other parse in
     `backend/src`."""
+    if payload_sha256 is None or hashlib.sha256(payload).hexdigest() != payload_sha256.removeprefix(
+        "sha256:"
+    ):
+        _log.error(
+            "a stored bundle's payload does not match its recorded digest",
+            extra={"rating_version_ref": str(ref)},
+        )
+        raise await _refuse(
+            slot,
+            database,
+            workspace_id=workspace_id,
+            ref=ref,
+            content_hash=recorded or "",
+            code=MISMATCH_CODE,
+            refusal="hash mismatch (payload digest)",
+            acting=acting,
+            requester=requester,
+        )
     bundle = Bundle.model_validate_json(payload)
     await verify_bundle(
         bundle,
@@ -282,6 +308,7 @@ async def revalidate(
         raise unreadable_bundle(ref, "it has no readable stored bundle")
     bundle = await load_stored_bundle(
         await blob_store.read(to_ref(blob_row)),
+        payload_sha256=blob_sha256,
         recorded=(row.bundle or {}).get("content_hash"),
         slot=slot,
         database=database,

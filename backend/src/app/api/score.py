@@ -503,6 +503,7 @@ async def _fetch_bundle(
 
     bundle = await load_stored_bundle(
         payload,
+        payload_sha256=blob_sha256,
         recorded=content_hash,
         deployment=deployment_hash,
         slot=slot,
