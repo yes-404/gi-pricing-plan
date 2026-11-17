@@ -30,7 +30,7 @@ from app.platform import jobs
 from app.platform.safe_exception import safe_job_error_text, safe_job_exc_info
 from app.worker import handlers
 from app.worker.tasks import execute_job
-from model_schema import JobKind, JobResult, JobStatus
+from model_schema import JobError, JobErrorLocation, JobKind, JobResult, JobStatus
 from pricing_core.progress import ProgressCallback
 
 _SENTINEL = "SENTINEL-quote-input-7f3a91c2"
@@ -363,3 +363,43 @@ async def test_a_plain_value_error_in_the_shape_of_a_coded_one_stays_job_handler
     assert row.error["code"] == "JOB_HANDLER_FAILED"
     assert row.error["message"] == "ValueError"
 
+
+
+@pytest.mark.req("FR-403")
+async def test_a_refusal_carrying_a_location_stores_it_and_never_a_submitted_value(
+    database: Database, workspace_id, principal
+) -> None:
+    """#1917: `PlatformError.location` reaches `JobError.location`, by equality, and a
+    submitted value in the message does not become part of it."""
+
+    def handler(params: dict[str, Any], progress: ProgressCallback) -> JobResult:
+        raise PlatformError(
+            "VALIDATION_FAILED",
+            "The step is invalid",
+            422,
+            "The step is invalid.",
+            location=JobErrorLocation(step_id="s_rp", field="inputs.age"),
+        )
+
+    row = await _run(database, workspace_id, principal, handler)
+
+    assert row.error is not None
+    located = JobError.model_validate(row.error).location
+    assert located == JobErrorLocation(step_id="s_rp", field="inputs.age")
+    assert _SENTINEL not in str(row.error)
+
+
+@pytest.mark.req("FR-403")
+async def test_a_refusal_without_a_location_stores_none_and_an_old_row_still_validates(
+    database: Database, workspace_id, principal
+) -> None:
+    def handler(params: dict[str, Any], progress: ProgressCallback) -> JobResult:
+        raise PlatformError("VALIDATION_FAILED", "The quote is invalid", 422)
+
+    row = await _run(database, workspace_id, principal, handler)
+
+    assert row.error is not None
+    assert row.error["location"] is None
+    # A row stored before `location` existed has no such key at all.
+    old = {k: v for k, v in row.error.items() if k != "location"}
+    assert JobError.model_validate(old).location is None

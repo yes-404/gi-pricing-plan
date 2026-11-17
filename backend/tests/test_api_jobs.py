@@ -16,7 +16,15 @@ from app.config import ConfigInvalidError, Environment, Settings, load_settings
 from app.db.session import Database
 from app.main import create_app
 from app.platform import jobs as job_service
-from model_schema import ActorKind, JobKind, JobStatus, Principal, new_uuid7
+from model_schema import (
+    ActorKind,
+    JobError,
+    JobErrorLocation,
+    JobKind,
+    JobStatus,
+    Principal,
+    new_uuid7,
+)
 
 pytestmark = pytest.mark.usefixtures("database")
 
@@ -396,3 +404,23 @@ async def test_read_permission_does_not_confer_cancel(
     denied = client.post(f"/api/v1/jobs/{job.id}/cancel", headers=auditor_headers)
     assert denied.status_code == 403
     assert denied.json()["code"] == "PERMISSION_DENIED"
+
+
+@pytest.mark.req("FR-403")
+async def test_detail_returns_a_failed_jobs_error_location(
+    client: TestClient, database: Database, workspace_id, principal, caller_headers
+) -> None:
+    job = await _submit(database, workspace_id, principal)
+    error = JobError(
+        code="VALIDATION_FAILED",
+        message="The step is invalid.",
+        retryable=False,
+        location=JobErrorLocation(step_id="s_rp", field="inputs.age", ref="model:freq@2"),
+    )
+    async with database.unit_of_work() as session:
+        await job_service.transition(
+            session, job.id, JobStatus.FAILED, actor=Principal(kind=ActorKind.SYSTEM), error=error
+        )
+    body = client.get(f"/api/v1/jobs/{job.id}", headers=caller_headers).json()
+    assert body["error"]["location"] == error.model_dump(mode="json")["location"]
+    assert body["error"]["location"]["step_id"] == "s_rp"

@@ -23,7 +23,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.observability.logging import get_logger
 from app.observability.trace import current_trace_id
-from model_schema import FieldError, ProblemDetail
+from model_schema import FieldError, JobErrorLocation, ProblemDetail
 from model_schema.money import DecimalMagnitudeError
 from pricing_core.safe_error import safe_validation_message
 
@@ -498,6 +498,7 @@ class PlatformError(Exception):
         *,
         errors: tuple[FieldError, ...] = (),
         headers: Mapping[str, str] | None = None,
+        location: JobErrorLocation | None = None,
     ) -> None:
         if code not in _KNOWN_CODES:
             raise ValueError(
@@ -512,6 +513,10 @@ class PlatformError(Exception):
         self.errors = errors
         #: Response headers the handler writes with the problem (FR-452's `Retry-After`).
         self.headers = dict(headers) if headers else {}
+        #: Where in the caller's own artifact the refusal points (#1917). Read only by the Job
+        #: worker, which stores it in `JobError.location`; `to_problem` does not render it, so a
+        #: request's problem response is unchanged.
+        self.location = location
 
     def to_problem(self, instance: str | None = None) -> ProblemDetail:
         return ProblemDetail(
