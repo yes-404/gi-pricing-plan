@@ -143,6 +143,26 @@ def test_doc_id_clone_does_not_move_another_repository(
     assert (other / "f.txt").read_text() == "other 2\n"
 
 
+def test_doc_id_clone_does_not_write_into_a_sibling_clone(
+    tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The one redirect that WRITES (#1913): `other` is a clone of `own` (same history, an
+    `origin`, a branch) and `GIT_DIR` names it. Unfixed, `remote remove origin` and
+    `checkout --detach` run against `other`: its `origin` is gone and its HEAD detached."""
+    for k in [k for k in os.environ if k.startswith("GIT_")]:
+        monkeypatch.delenv(k)
+    own = _make_repo(tmp_path / "own", "own", 2)
+    other = tmp_path / "other"
+    _git(tmp_path, "clone", "-q", str(own), str(other))
+    monkeypatch.setenv("GIT_DIR", str(other / ".git"))
+    module = _load("doc-id")
+    module.materialize_ref_with_history("HEAD", tmp_path / "cloned", repo_root=own)
+    assert _git(other, "remote") == "origin"
+    assert _git(other, "symbolic-ref", "HEAD") == "refs/heads/main"
+    assert _git(other, "status", "--porcelain") == ""
+    assert (tmp_path / "cloned" / "f.txt").read_text() == "own 1\n"
+
+
 def test_double_stamp_scan_sees_its_own_changes(
     two_repos: tuple[pathlib.Path, pathlib.Path],
 ) -> None:
