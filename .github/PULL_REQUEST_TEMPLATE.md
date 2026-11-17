@@ -14,11 +14,11 @@ Review commit by commit. The squash commit (main plus this branch) must pass the
 
 Changes since the last review round: <!-- per commit, or "first round" -->
 
-Single-slice reason: <!-- core only: one of the four in CONTRIBUTING, "Pull requests", or "Series" -->
+Single-slice reason: <!-- core only: one of the four in CONTRIBUTING, "Pull requests", or "Series" when the pull request is not a single slice -->
 
 ## Independent audit
 
-<!-- Every finding of the independent audit, and what was done about each. See CONTRIBUTING, "Review". -->
+<!-- Every finding of the independent audit, and what was done about each. Write "None found" when the audit raised nothing. See CONTRIBUTING, "Review". -->
 
 ## Paths
 
@@ -50,7 +50,7 @@ Not run, and why: <!-- or "None" -->
 - AI use: <!-- NO, or YES with the tool, the model version and what it did (code, tests, docs) -->
 - [ ] A person has read and understood every change in this pull request.
   <!-- Ticked only by that person. No agent ticks it, and it is never ticked to get a pull request through. -->
-- Review the change had instead, if the box is unticked: <!-- e.g. the independent audit, the cross-review, the gate; or "Not applicable" -->
+- Review the change had instead, if the box is unticked: <!-- e.g. the independent audit, the cross-review, the gate; or "Not applicable" when the box is ticked -->
 - Accountable person: @<!-- the person who answers review questions and owns defects -->
 
 ## Notes for the reviewer

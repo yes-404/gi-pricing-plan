@@ -118,9 +118,9 @@ Review is by risk, in four tiers:
 **The independent audit is for every pull request, whatever its tier.** The audit and the
 cross-review are different checks, and neither replaces the other. The auditor did not
 write the change, and is given the code and the specification, not the author's
-conclusions. A core pull request is audited before it is pushed. A contributor Work is
+conclusions. A core pull request is audited before it is first pushed; commits pushed after the audit are listed in the description with the review each had. A contributor Work is
 audited against the specification before merge, with failing-first evidence per commit.
-The description lists the audit's findings and what was done about each.
+The description lists the audit's findings and what was done about each. A dependency update opened by the repository's dependency bot has no independent audit; it merges on its CI and the maintainer's acknowledgement naming its head.
 
 The seven high-risk areas:
 
