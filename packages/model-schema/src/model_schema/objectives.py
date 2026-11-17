@@ -38,12 +38,14 @@ from __future__ import annotations
 
 import datetime as _datetime
 import enum
+import re
+from collections.abc import Mapping
 from typing import Final, Literal, Self
 from uuid import UUID
 
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, model_validator
 
-from model_schema.input_free import InputFreeError
+from model_schema.input_free import InputFreeError, identifier
 from model_schema.modelling import ResponseKind
 from model_schema.refs import Slug
 
@@ -188,6 +190,16 @@ FITTABLE_OBJECTIVE_STATUSES: Final[frozenset[ObjectiveStatus]] = frozenset(
 )
 
 
+#: Patterns for the module data a validator message may name through `identifier` (DP-8 (b)):
+#: a template's value, a §4.5 parameter name, a list of those names and a §4.5 bound. None of
+#: them is a submitted value; `tests/test_objectives.py` holds that every one of the module's own
+#: values matches, so a parameter added later cannot quietly make its refusal generic.
+TEMPLATE_NAME_PATTERN: Final = r"^[a-z][a-z_]{0,63}$"
+PARAMETER_NAME_PATTERN: Final = r"^[a-z][a-z0-9_]{0,63}$"
+NAME_LIST_PATTERN: Final = r"^[a-z][a-z0-9_]{0,63}(, [a-z][a-z0-9_]{0,63})*$"
+BOUND_PATTERN: Final = r"^-?[0-9]+\.[0-9]+$"
+
+
 class TemplateParameter(BaseModel):
     """One template parameter and the range §4.5 gives it.
 
@@ -211,26 +223,50 @@ class TemplateParameter(BaseModel):
     default: float | int | None = None
 
     def check(self, value: float | int) -> None:
-        """Raise `ValueError` unless `value` is a valid setting of this parameter.
+        """Raise `InputFreeError` unless `value` is a valid setting of this parameter.
 
         One implementation, read by the contract that persists an objective and by the
         `pricing-core` code that compiles one, so a parameter cannot be valid on one side of
-        the boundary and invalid on the other.
+        the boundary and invalid on the other. The message names the parameter and the rule,
+        never the value it was given.
         """
+        # Each raise builds its identifiers inline: the census (`test_input_free_raises.py`)
+        # accepts a keyword only as `identifier(<expr>, PATTERN)`.
         if isinstance(value, bool):
-            raise ValueError(f"parameter {self.name!r} is {value!r}; a boolean is not a number")
+            raise InputFreeError(
+                "parameter {name} is a boolean; a boolean is not a number.",
+                name=identifier(self.name, PARAMETER_NAME_PATTERN),
+            )
         if self.kind == "money_minor" and not isinstance(value, int):
-            raise ValueError(
-                f"parameter {self.name!r} is money and must be integer minor units, not "
-                f"{value!r} (`CLAUDE.md` §7)."
+            raise InputFreeError(
+                "parameter {name} is money and must be integer minor units (`CLAUDE.md` §7).",
+                name=identifier(self.name, PARAMETER_NAME_PATTERN),
             )
         low, high = self.minimum, self.maximum
         if low is not None and (value <= low if self.minimum_exclusive else value < low):
-            edge = "greater than" if self.minimum_exclusive else "at least"
-            raise ValueError(f"parameter {self.name!r} is {value!r}; it must be {edge} {low}")
+            if self.minimum_exclusive:
+                raise InputFreeError(
+                    "parameter {name} must be greater than {bound}.",
+                    name=identifier(self.name, PARAMETER_NAME_PATTERN),
+                    bound=identifier(repr(float(low)), BOUND_PATTERN),
+                )
+            raise InputFreeError(
+                "parameter {name} must be at least {bound}.",
+                name=identifier(self.name, PARAMETER_NAME_PATTERN),
+                bound=identifier(repr(float(low)), BOUND_PATTERN),
+            )
         if high is not None and (value >= high if self.maximum_exclusive else value > high):
-            edge = "less than" if self.maximum_exclusive else "at most"
-            raise ValueError(f"parameter {self.name!r} is {value!r}; it must be {edge} {high}")
+            if self.maximum_exclusive:
+                raise InputFreeError(
+                    "parameter {name} must be less than {bound}.",
+                    name=identifier(self.name, PARAMETER_NAME_PATTERN),
+                    bound=identifier(repr(float(high)), BOUND_PATTERN),
+                )
+            raise InputFreeError(
+                "parameter {name} must be at most {bound}.",
+                name=identifier(self.name, PARAMETER_NAME_PATTERN),
+                bound=identifier(repr(float(high)), BOUND_PATTERN),
+            )
 
 
 class YDomain(BaseModel):
@@ -470,6 +506,30 @@ TEMPLATE_APPLICABILITY: Final[dict[ObjectiveTemplate, Applicability]] = {
 }
 
 
+def unknown_parameter_keys(template: ObjectiveTemplate, params: Mapping[str, object]) -> list[str]:
+    """Every key of `params` that is not one of the template's §4.5 parameters, sorted.
+
+    The one definition of "unknown", read by both validators (a malformed key is unknown too).
+    The result is submitted data: it is never put in a validator message.
+    """
+    declared = {parameter.name for parameter in TEMPLATE_PARAMETERS[template]}
+    return sorted(set(params) - declared)
+
+
+def unknown_parameter_names(template: ObjectiveTemplate, params: Mapping[str, object]) -> list[str]:
+    """The unknown keys that are well-formed parameter names: the ones a 422 may show its caller.
+
+    The caller's own key goes back to that caller only when it matches
+    `PARAMETER_NAME_PATTERN`; a malformed key is counted, never shown. The request path that
+    builds a 422 neither stores nor logs it (#1712 Q1 (B)).
+    """
+    return [
+        key
+        for key in unknown_parameter_keys(template, params)
+        if re.fullmatch(PARAMETER_NAME_PATTERN, key)
+    ]
+
+
 class ObjectiveParameter(BaseModel):
     """One declared parameter of an `expression` objective (`02` §4.6)."""
 
@@ -652,37 +712,40 @@ class CustomObjective(BaseModel):
         shape. An `expression` objective's `derived` is `None` until the platform derives it
         and may not exist without the `loss` it came from.
         """
-        who = f"custom objective {self.slug}@{self.version}"
         if self.kind is ObjectiveKind.TEMPLATE:
             if self.template is None:
-                raise ValueError(f"{who} is a template objective and names no template.")
+                raise InputFreeError(
+                    "this custom objective is a template objective and names no template."
+                )
             carried = [
                 name
                 for name in ("bound_symbols", "parameters", "loss", "derived")
                 if getattr(self, name) is not None
             ]
             if carried:
-                raise ValueError(
-                    f"{who} is a template objective and carries expression fields "
-                    f"({', '.join(carried)}): a template objective carries no loss."
+                raise InputFreeError(
+                    "this custom objective is a template objective and carries expression "
+                    "fields ({fields}): a template objective carries no loss.",
+                    fields=identifier(", ".join(carried), NAME_LIST_PATTERN),
                 )
             return self
         if self.template is not None:
-            raise ValueError(
-                f"{who} is an expression objective and names template "
-                f"{self.template.value!r}: an expression objective names no template."
+            raise InputFreeError(
+                "this custom objective is an expression objective and names template "
+                "{template}: an expression objective names no template.",
+                template=identifier(self.template.value, TEMPLATE_NAME_PATTERN),
             )
         if self.params:
-            raise ValueError(
-                f"{who} is an expression objective and carries template params; its "
-                "parameters are the `parameters` block."
+            raise InputFreeError(
+                "this custom objective is an expression objective and carries template "
+                "params; its parameters are the `parameters` block."
             )
         if self.loss is None and self.derived is not None:
-            raise ValueError(f"{who}: an expression objective has no loss to derive from.")
+            raise InputFreeError("an expression objective has no loss to derive from.")
         if self.loss is None or self.bound_symbols is None or self.parameters is None:
-            raise ValueError(
-                f"{who} is an expression objective and must carry bound_symbols, "
-                "parameters and loss."
+            raise InputFreeError(
+                "this custom objective is an expression objective and must carry "
+                "bound_symbols, parameters and loss."
             )
         return self
 
@@ -698,18 +761,29 @@ class CustomObjective(BaseModel):
         if self.template is None:  # pragma: no cover — the validator above has refused it
             return self
         declared = {parameter.name: parameter for parameter in TEMPLATE_PARAMETERS[self.template]}
-        unknown = sorted(set(self.params) - set(declared))
-        if unknown:
-            raise ValueError(
-                f"template {self.template.value!r} does not take {', '.join(unknown)} "
-                f"(§4.5 gives it {', '.join(declared) or 'no parameters'})."
+        if unknown_parameter_keys(self.template, self.params):
+            # The caller's own keys are not named here: this text is also rendered when a
+            # stored objective fails re-validation, where it is stored or logged. The 422
+            # builder adds the well-formed ones (`unknown_parameter_names`).
+            if not declared:
+                raise InputFreeError(
+                    "template {template} does not take a key in params "
+                    "(§4.5 gives it no parameters).",
+                    template=identifier(self.template.value, TEMPLATE_NAME_PATTERN),
+                )
+            raise InputFreeError(
+                "template {template} does not take a key in params (§4.5 gives it {declared}).",
+                template=identifier(self.template.value, TEMPLATE_NAME_PATTERN),
+                declared=identifier(", ".join(declared), NAME_LIST_PATTERN),
             )
         for name, parameter in declared.items():
             if name not in self.params:
                 if parameter.default is None:
-                    raise ValueError(
-                        f"template {self.template.value!r} requires {name!r} and it is "
-                        "missing; §4.5 gives it no default."
+                    raise InputFreeError(
+                        "template {template} requires {name} and it is missing; "
+                        "§4.5 gives it no default.",
+                        template=identifier(self.template.value, TEMPLATE_NAME_PATTERN),
+                        name=identifier(name, PARAMETER_NAME_PATTERN),
                     )
                 continue
             parameter.check(self.params[name])
@@ -726,11 +800,11 @@ class CustomObjective(BaseModel):
         if self.template is None:  # pragma: no cover — refused above
             return self
         if not self.applicability.is_within(TEMPLATE_APPLICABILITY[self.template]):
-            raise ValueError(
-                f"custom objective {self.slug}@{self.version} declares an applicability "
-                f"wider than template {self.template.value!r}'s (§4.5, FR-153). An "
-                "objective may be restricted further than its template and never extended "
-                "beyond it."
+            raise InputFreeError(
+                "this custom objective declares an applicability wider than template "
+                "{template}'s (§4.5, FR-153). An objective may be restricted further than "
+                "its template and never extended beyond it.",
+                template=identifier(self.template.value, TEMPLATE_NAME_PATTERN),
             )
         return self
 
@@ -743,10 +817,10 @@ class CustomObjective(BaseModel):
         """
         past_draft = self.status not in {ObjectiveStatus.DRAFT, ObjectiveStatus.DEPRECATED}
         if past_draft and self.certificate_id is None:
-            raise ValueError(
-                f"custom objective {self.slug}@{self.version} is {self.status.value} with no "
-                "certificate (FR-146). Certification is what `certified` means, and "
-                "submission requires it."
+            raise InputFreeError(
+                "this custom objective has a status past `draft` with no certificate "
+                "(FR-146). Certification is what `certified` means, and submission "
+                "requires it."
             )
         return self
 

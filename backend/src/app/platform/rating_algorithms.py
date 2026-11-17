@@ -48,7 +48,7 @@ from pricing_core.modelling.factors import (
     required_model_inputs,
 )
 from pricing_core.rating.compile import refuse_control_in_features, validate_algorithm
-from pricing_core.safe_error import CodedError
+from pricing_core.safe_error import CodedError, safe_error_detail
 
 __all__ = [
     "create_algorithm",
@@ -88,11 +88,14 @@ def graph_validation_error(exc: ValidationError, *, artifact: str) -> PlatformEr
             422,
             "Every consumed value is produced by a step (FR-212).",
         )
+    # FD-1589 row 4: an `InputFreeError` is kept and any other value error is dropped, so the
+    # 422 states the rule, never the step id, value name or port the caller submitted. Where it
+    # is, is the validate route's report (RL-1474).
     return PlatformError(
         "VALIDATION_FAILED",
         f"{artifact.capitalize()} is invalid",
         422,
-        str(exc),
+        safe_error_detail(exc) or type(exc).__name__,
     )
 
 

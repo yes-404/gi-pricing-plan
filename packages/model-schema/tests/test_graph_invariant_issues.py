@@ -195,3 +195,56 @@ def test_an_output_port_mapped_to_a_blank_name_is_refused_naming_the_port() -> N
     assert "'factor'" in blank[0].message
     with pytest.raises(ValidationError):
         RatingAlgorithm.model_validate(draft.model_dump(mode="json"))
+
+
+def _mount_of(purposes: list[str] | None = None, **ports: dict[str, str]) -> dict[str, Any]:
+    mount = _mount("s_ncd", ports.get("inputs", {"claims": "x"}), ports.get("outputs", {"f": "n"}))
+    if purposes is not None:
+        mount["purposes"] = purposes
+    return mount
+
+
+def _rule_drafts() -> dict[str, RatingAlgorithmDraft]:
+    """One draft per `_GraphRule`: the first issue of each breaks exactly that rule."""
+    steps = [_input("s_in", "x"), _output("s_out", "out", "n")]
+    return {
+        "step_id_unique": _draft([*_valid_steps(), _input("s_in", "y")]),
+        "mount_point_unique": _mount_draft(steps, [_mount("s_in", {"claims": "x"}, {"f": "n"})]),
+        "mount_input_blank": _mount_draft(steps, [_mount_of(inputs={"claims": ""})]),
+        "mount_output_blank": _mount_draft(steps, [_mount_of(outputs={"f": ""})]),
+        "output_has_no_step": _draft(_valid_steps(), outputs=["out", "missing"]),
+        "value_undefined": _draft([*_valid_steps(), _expr("s_c", ["ghost"], "g")]),
+        "cycle": _draft([*_valid_steps(), *_cycle()]),
+        "producers_not_a_chain": _draft([*_valid_steps(), _input("s_in2", "x")]),
+        "step_unreachable": _draft([*_valid_steps(), _expr("s_orphan", [], "z")]),
+        "purpose_mount_reaches_risk_price": _mount_draft(
+            [_input("s_in", "x"), _output("s_out", "risk_premium_minor", "n")],
+            [_mount_of(purposes=["cancellation"])],
+            outputs=["risk_premium_minor"],
+        ),
+    }
+
+
+@pytest.mark.req("FR-212")
+def test_every_graph_rule_has_a_draft_and_an_input_free_or_typed_refusal() -> None:
+    """The `match` in `RatingAlgorithm._graph_invariants` covers every rule: a refusal is a typed
+    signal (cycle, unresolved reference) or an `InputFreeError`, never a plain `ValueError`
+    whose text carries a step id, a value name or a port."""
+    from model_schema.graph_errors import GraphCycleError, GraphUnresolvedRefError
+    from model_schema.input_free import InputFreeError
+    from model_schema.rating import _graph_issues, _GraphRule
+
+    drafts = _rule_drafts()
+    assert set(drafts) == {rule.value for rule in _GraphRule}, "a rule has no draft here"
+    typed = {
+        "cycle": GraphCycleError,
+        "mount_input_blank": GraphUnresolvedRefError,
+        "value_undefined": GraphUnresolvedRefError,
+    }
+    for name, draft in drafts.items():
+        rule, _issue = _graph_issues(draft)[0]
+        assert rule.value == name, (name, rule)
+        with pytest.raises(ValidationError) as refused:
+            RatingAlgorithm.model_validate(draft.model_dump(mode="json"))
+        raised = refused.value.errors()[0]["ctx"]["error"]
+        assert type(raised) is typed.get(name, InputFreeError), (name, type(raised))

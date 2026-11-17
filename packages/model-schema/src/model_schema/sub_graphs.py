@@ -105,15 +105,15 @@ class SubGraphBody(BaseModel):
         for name, producers in produced.items():
             ordered = sorted(producers, key=lambda pid: position[pid])
             if name in port_names and name not in _as_list(step_by_id[ordered[0]].consumes):
-                raise ValueError(
-                    f"value {name!r} is an input port and step {ordered[0]!r} produces it "
-                    "without consuming it: they do not form a single re-production chain (FR-212)"
+                raise InputFreeError(
+                    "a value is an input port and a step produces it without consuming it: "
+                    "they do not form a single re-production chain (FR-212)"
                 )
             for _prev, nxt in pairwise(ordered):
                 if name not in _as_list(step_by_id[nxt].consumes):
-                    raise ValueError(
-                        f"value {name!r} is produced by {len(producers)} steps that do "
-                        "not form a single re-production chain (FR-212)"
+                    raise InputFreeError(
+                        "a value is produced by steps that do not form a single "
+                        "re-production chain (FR-212)"
                     )
 
         from_inputs = RatingAlgorithm._reachable(
@@ -126,9 +126,9 @@ class SubGraphBody(BaseModel):
         )
         for step in steps:
             if step.step_id not in from_inputs and step.step_id not in feeds_output:
-                raise ValueError(
-                    f"step {step.step_id!r} is unreachable from any input port and "
-                    "contributes to no output port (FR-212)"
+                raise InputFreeError(
+                    "a step is unreachable from any input port and contributes to no output "
+                    "port (FR-212)"
                 )
         return self
 
