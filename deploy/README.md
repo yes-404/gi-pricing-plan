@@ -155,7 +155,7 @@ docker compose -f deploy/docker-compose.yml --profile app up -d --wait --scale a
   closed enum over the fit's own levels, on every GLM that input feeds, and no interaction Factor
   of that fit takes it as an operand) or `not-scored` (nothing the runtime scores reads the GLM:
   no `model_call` names it, directly or through a Peril Structure, and no scored GLM reads it as
-  its offset model). An `expression` Factor with no Banding and with relativities is `PLAIN`. A version the runtime
+  its offset model). An `expression` Factor with no Banding and with relativities is `PLAIN`. A version with no reachable class and a model of another family is `not-examined-other-family`, never `NOTREACHABLE`: its GLMs were examined and its other models were not. A version the runtime
   cannot load (a GLM whose Factor the bundle does not carry, or whose fit names a level its Factor
   cannot produce) is `UNREADABLE` with the exception's type, and exit 2 now also means that the
   runtime could not load a version's bundle: the sweep takes what is scored from the runtime's
@@ -163,7 +163,7 @@ docker compose -f deploy/docker-compose.yml --profile app up -d --wait --scale a
   cannot classify, an upper bound. The sweep classifies each model in a bundle by its model type: a GLM is examined; a
   model of another family (a GBM or an EBM) keeps the `02` FR-131 refusal whatever a Factor
   declares, is not examined, and is counted on the `not-examined-other-family` line; a model with
-  no fit result, no model type or an unknown one makes its version unreadable (exit 2). Every
+  no fit result, no model type or an unknown one makes its version unreadable (exit 2). The GLMs of every version are examined, whatever else the version pins: a reachable class in a GLM is listed and counts in the exit code even when the version also pins a model of another family. A version with no reachable class and a model of another family is listed as `not-examined-other-family`, never as `NOTREACHABLE`, and its line says that its GLMs were examined and its other models were not. Every
   unreadable line names the version and either a fixed reason word or the exception's type, never
   its text. A version it
   lists will refuse the quotes it names until a new model is approved: a declaration changes only

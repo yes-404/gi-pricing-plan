@@ -963,10 +963,76 @@ def _ghost_term() -> dict[str, Any]:
     return bundle
 
 
+_DATASET = "7292d8d6-7909-4a61-9999-5d663388a0f5"
+_BANDING_REGION = "11111111-1111-4111-8111-111111111111"
+_BANDING_YOA = "33333333-3333-4333-8333-333333333333"
+_GROUPING_REGION = "22222222-2222-4222-8222-222222222222"
+
+
+def _level_rows(levels: list[str]) -> list[dict[str, Any]]:
+    return [
+        {"estimate": 0.0, "exposure": 100.0, "is_base": i == 0, "level": level, "relativity": 1.0}
+        for i, level in enumerate(levels)
+    ]
+
+
+def _banding(
+    slug: str, banding_id: str, labels: list[str], null_level: str | None
+) -> dict[str, Any]:
+    return {
+        "id": banding_id, "slug": slug, "dataset_id": _DATASET, "version": 1, "column": slug,
+        "method": "manual", "boundaries": [float(i) for i in range(len(labels) + 1)],
+        "labels": labels, "null_level": null_level,
+    }
+
+
+def _null_level() -> dict[str, Any]:
+    """A Banding whose null level the fit never saw: NULLLEVEL."""
+    bundle = copy.deepcopy(_clean())
+    payloads = bundle["resolved_payloads"]
+    payloads["banding:rb@1"] = _banding("rb", _BANDING_REGION, ["A", "B"], "__null__")
+    payloads["factor:region@1"].update(type="banding", banding_id=_BANDING_REGION)
+    payloads[_MODEL]["fit_result"]["relativities"]["region"] = _level_rows(["A", "B"])
+    return bundle
+
+
+def _grouping_target() -> dict[str, Any]:
+    """A Grouping whose target level B the fit never saw: GROUPING."""
+    bundle = copy.deepcopy(_clean())
+    payloads = bundle["resolved_payloads"]
+    payloads["grouping:rg@1"] = {
+        "id": _GROUPING_REGION, "slug": "rg", "dataset_id": _DATASET, "version": 1,
+        "column": "region", "method": "manual", "mapping": {"x": "A", "y": "B"},
+        "unseen_level_behaviour": "error",
+    }
+    payloads["factor:region@1"].update(type="grouping", grouping_id=_GROUPING_REGION)
+    payloads[_MODEL]["fit_result"]["relativities"]["region"] = _level_rows(["A"])
+    return bundle
+
+
+def _interaction_cell() -> dict[str, Any]:
+    """Both operands banded and one cell of the cross missing: INTERACTION (not the lower bound)."""
+    bundle = copy.deepcopy(_clean())
+    payloads = bundle["resolved_payloads"]
+    payloads["banding:rb@1"] = _banding("rb", _BANDING_REGION, ["A", "B"], None)
+    payloads["banding:yb@1"] = _banding("yb", _BANDING_YOA, ["2010", "2011"], None)
+    payloads["factor:region@1"].update(type="banding", banding_id=_BANDING_REGION)
+    payloads["factor:yoa@1"].update(type="banding", banding_id=_BANDING_YOA)
+    relativities = payloads[_MODEL]["fit_result"]["relativities"]
+    relativities["region_x_yoa"] = [
+        cell for cell in relativities["region_x_yoa"] if cell["level"] != "A | 2011"
+    ]
+    return bundle
+
+
+# Each class the sweep reaches, by the line that names it.
 _REACHABLE_FIXTURES = {
-    "a-cell-the-fit-lacks": _without_a_cell,
-    "an-open-input": _open_input,
-    "a-level-indicator-with-no-relativities": _ghost_term,
+    "a-cell-the-fit-lacks": (_without_a_cell, "INTERACTION-LOWERBOUND "),
+    "an-open-input": (_open_input, "PLAIN "),
+    "a-level-indicator-with-no-relativities": (_ghost_term, "NORELATIVITIES "),
+    "a-null-level-the-fit-lacks": (_null_level, "NULLLEVEL "),
+    "a-grouping-target-the-fit-lacks": (_grouping_target, "GROUPING "),
+    "a-cell-of-two-banded-operands": (_interaction_cell, "INTERACTION "),
 }
 
 
@@ -977,7 +1043,11 @@ def test_a_versions_glm_classes_are_the_same_with_or_without_another_family_besi
 ) -> None:
     """The rule (the maintainer, #1510): a reachable class in a GLM is listed and counts in the
     exit code whatever else the version pins. It describes behaviour the sweep already had."""
-    make = {**_REACHABLE_FIXTURES, "clean": _clean, **_closed_fixtures_by_name()}[name]
+    make = {
+        **{key: fixture for key, (fixture, _line) in _REACHABLE_FIXTURES.items()},
+        "clean": _clean,
+        **_closed_fixtures_by_name(),
+    }[name]
     alone_rc, alone = _run([_row(make(), "v", 1)])
     mixed_rc, mixed = _run([_row(_with_a_gbm(make()), "v", 1)])
 
@@ -986,6 +1056,17 @@ def test_a_versions_glm_classes_are_the_same_with_or_without_another_family_besi
 
     assert classes(mixed) == classes(alone), (alone, mixed)
     assert (mixed_rc == 1) == (alone_rc == 1) == bool(classes(alone)), (alone_rc, mixed_rc)
+
+
+@pytest.mark.req("FR-2143")
+@pytest.mark.parametrize("name", sorted(_REACHABLE_FIXTURES))
+def test_each_reachable_class_prints_and_exits_1_beside_the_other_family_line(name: str) -> None:
+    make, line_start = _REACHABLE_FIXTURES[name]
+    for bundle in (make(), _with_a_gbm(make())):
+        rc, lines = _run([_row(bundle, "v", 1)])
+        assert any(ln.startswith(line_start) and "v@1" in ln for ln in lines), lines
+        assert rc == 1, (rc, lines)
+    assert any(ln.startswith("not-examined-other-family v@1") for ln in lines), lines
 
 
 def _closed_fixtures_by_name() -> dict[str, Any]:

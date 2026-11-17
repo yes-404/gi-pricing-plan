@@ -23,7 +23,7 @@ about. The format follows [Keep a Changelog 1.1.0](https://keepachangelog.com/en
   are refitted. The sweep examines each GLM in a bundle and counts a model of another family (a
   GBM or an EBM, which keeps the FR-131 refusal) on `not-examined-other-family`; a model with no
   fit result, no model type or an unknown one makes its version unreadable, and each unreadable
-  line names the version and a reason word or the exception's type only. A version whose every
+  line names the version and a reason word or the exception's type only. The GLMs of every version are examined, whatever else the version pins: a reachable class in a GLM is listed and counts in the exit code even when the version also pins a model of another family. A version with no reachable class and a model of another family is listed as `not-examined-other-family`, never as `NOTREACHABLE`, and its line says that its GLMs were examined and its other models were not. A version whose every
   undeclared identity Factor cannot be reached by a quote, and that carries no other class and no line the sweep did not examine, is
   listed as `NOTREACHABLE`, with the reason word `closed-input` or `not-scored`, and `PLAIN` is
   what the sweep cannot classify. The sweep also changes what it prints for a version with an
