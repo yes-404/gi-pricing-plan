@@ -143,3 +143,37 @@ def test_every_entry_of_the_one_frozen_list_reds_on_a_delete(repo: Path, entry: 
     (repo / rel).unlink()
     commit(repo)
     assert run(repo) == 1
+
+
+def test_default_repo_is_the_checkout_the_script_lives_in(
+    repo: Path, tmp_path_factory: pytest.TempPathFactory
+) -> None:
+    """Run from a second, valid repository, the script reads its own checkout (#1900).
+
+    `repo` is the script's own checkout and carries an edit to a frozen plan. The other
+    repository is clean, so a script that read the current directory would pass.
+    """
+    scripts = repo / "scripts"
+    scripts.mkdir()
+    for name in ("freeze-check.py", "_frozen.py"):
+        (scripts / name).write_text((SCRIPT.parent / name).read_text())
+    write(repo, "docs/plans/PL-1.md", "edited\n")
+    commit(repo)
+    own_head = subprocess.run(
+        ["git", "-C", str(repo), "rev-parse", "--short=12", "HEAD"],
+        check=True, capture_output=True, text=True,
+    ).stdout.strip()
+
+    other = tmp_path_factory.mktemp("other")
+    git(other, "init", "-q", "-b", "main")
+    write(other, "README.md", "x\n")
+    git(other, "add", "-A")
+    git(other, "commit", "-q", "-m", "base")
+    git(other, "checkout", "-q", "-b", "work")
+
+    done = subprocess.run(
+        [sys.executable, str(scripts / "freeze-check.py"), "--base", "main"],
+        cwd=other, capture_output=True, text=True,
+    )
+    assert done.returncode == 1, done.stdout + done.stderr
+    assert done.stderr.splitlines()[0] == f"freeze-check: repo={repo.resolve()} head={own_head}"

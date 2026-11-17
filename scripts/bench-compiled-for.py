@@ -47,6 +47,7 @@ import asyncio
 import os
 import statistics
 import time
+from pathlib import Path
 from uuid import UUID
 
 from app.api.score import _compiled_for
@@ -141,12 +142,18 @@ async def _time_calls(
     return samples
 
 
+REPO = Path(__file__).resolve().parent.parent
+
+
 def _git_head() -> str:
     import subprocess
 
     try:
         return subprocess.run(
-            ["git", "rev-parse", "HEAD"], capture_output=True, text=True, check=True
+            ["git", "-C", str(REPO), "rev-parse", "HEAD"],
+            capture_output=True,
+            text=True,
+            check=True,
         ).stdout.strip()
     except Exception as exc:  # pragma: no cover - diagnostic path only
         return f"(unavailable: {exc})"
@@ -175,6 +182,8 @@ def _report(label: str, samples: list[float]) -> None:
 
 
 async def main(n: int) -> None:
+    print(f"repo: {REPO}")
+    print(f"tree: {_git_head()}")
     database = Database(Settings(database_url=DEFAULT_DSN))
     blob_store = BlobStore(Settings(database_url=DEFAULT_DSN, blob_bucket=BUCKET))
     await blob_store.ensure_bucket()
@@ -197,7 +206,6 @@ async def main(n: int) -> None:
         n=n, fresh_slot_per_call=True,
     )
 
-    print(f"tree: {_git_head()}")
     print(f"host: {_host_summary()}")
     print(f"pass count: 1 (one run of this script; each condition below is {n} calls in it)")
     print("ref cardinality: 1 (one compiled Rating Version, bundle_slot_capacity=1, unraised)")
