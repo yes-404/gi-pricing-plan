@@ -16,6 +16,7 @@ import os
 import pathlib
 import re
 import subprocess
+import sys
 from collections.abc import Iterator
 from contextlib import contextmanager
 
@@ -27,6 +28,30 @@ SCRIPT = ROOT / "scripts" / "run-small.sh"
 # Exit codes the script documents (flock's own -E code is 75, kept clear of pytest's 0-5).
 USAGE, SLOT_SET, LOAD, ALEMBIC, TOO_MANY, NOT_A_TEST_FILE, BUSY = 64, 65, 66, 67, 68, 71, 75
 OUTSIDE_WORKTREE, NOT_TEST_NAMED = 72, 73
+PYTEST_NOT_FOUND, PYTEST_NOTHING_COLLECTED = 4, 5
+
+# A tiny test file for the node-id cases, run by the REAL pytest (see `Env.use_real_pytest`).
+SAMPLE_SOURCE = """\
+import pytest
+
+
+def test_one():
+    pass
+
+
+def test_two():
+    pass
+
+
+@pytest.mark.parametrize("v", ["a", "b"])
+def test_param(v):
+    pass
+
+
+class TestBox:
+    def test_inside(self):
+        pass
+"""
 
 
 class Env:
@@ -59,6 +84,17 @@ class Env:
         )
         uv.chmod(0o755)
 
+    def use_real_pytest(self) -> None:
+        """Swap the recording stub for one that runs the real pytest inside the worktree, so a
+        node id, its brackets and pytest's own exit codes are exercised and not assumed (#1924)."""
+        (self.wt / "test_sample.py").write_text(SAMPLE_SOURCE)
+        uv = self.bin / "uv"
+        uv.write_text(
+            "#!/bin/bash\n"
+            'wt=$3; shift 4; cd "$wt" || exit 99\n'
+            f'exec {sys.executable} -m pytest -p no:cacheprovider --rootdir "$wt" "$@"\n'
+        )
+
     def run(self, *args: str, **extra: str) -> subprocess.CompletedProcess[str]:
         env = {k: v for k, v in os.environ.items() if k != "GIP_GATE_SLOT"}
         env.update(
@@ -74,6 +110,12 @@ class Env:
 @pytest.fixture
 def env(tmp_path: pathlib.Path) -> Env:
     return Env(tmp_path)
+
+
+@pytest.fixture
+def real_env(env: Env) -> Env:
+    env.use_real_pytest()
+    return env
 
 
 def _refused(env: Env, result: subprocess.CompletedProcess[str], rc: int, message: str) -> None:
@@ -214,3 +256,78 @@ def test_a_symlink_resolving_outside_the_worktree_is_refused(env: Env) -> None:
     outside.write_text("")
     (env.wt / "test_link.py").symlink_to(outside)
     _refused(env, env.run(str(env.wt), "test_link.py"), OUTSIDE_WORKTREE, "outside the worktree")
+
+
+# --- a pytest node id is a target; a run that ran no test is an error (#1924) -----------------
+# The refusals of a whole file, a directory, an option and a fourth target are pinned above, once.
+
+
+@pytest.mark.parametrize(
+    "node_id",
+    [
+        "test_sample.py::test_one",
+        "test_sample.py::test_param[a]",
+        "test_sample.py::TestBox::test_inside",
+    ],
+)
+def test_a_node_id_runs_that_test_only(real_env: Env, node_id: str) -> None:
+    result = real_env.run(str(real_env.wt), node_id)
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "1 passed" in result.stdout
+
+
+@pytest.mark.parametrize(
+    "node_id", ["test_sample.py::test_not_there", "test_sample.py::test_param[zzz]"]
+)
+def test_a_node_id_that_selects_nothing_is_an_error(real_env: Env, node_id: str) -> None:
+    result = real_env.run(str(real_env.wt), node_id)
+    assert result.returncode == PYTEST_NOT_FOUND, "a run of nothing must not be a green"
+    assert "NO TEST RAN" in result.stderr
+    assert "passed" not in result.stdout
+
+
+def test_a_file_that_collects_no_test_is_an_error(real_env: Env) -> None:
+    (real_env.wt / "test_empty.py").write_text("x = 1\n")
+    result = real_env.run(str(real_env.wt), "test_empty.py")
+    assert result.returncode == PYTEST_NOTHING_COLLECTED
+    assert "NO TEST RAN" in result.stderr
+
+
+def test_a_failing_test_keeps_its_own_exit_code_and_no_no_test_line(real_env: Env) -> None:
+    (real_env.wt / "test_bad.py").write_text("def test_bad():\n    assert 1 == 2\n")
+    result = real_env.run(str(real_env.wt), "test_bad.py::test_bad")
+    assert result.returncode == 1
+    assert "NO TEST RAN" not in result.stderr
+
+
+def test_up_to_three_node_ids_run_together(real_env: Env) -> None:
+    ids = ("test_sample.py::test_one", "test_sample.py::test_two", "test_a.py")
+    result = real_env.run(str(real_env.wt), *ids)
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "3 passed" in result.stdout
+
+
+def test_a_node_id_whose_file_is_missing_is_refused(env: Env) -> None:
+    _refused(
+        env, env.run(str(env.wt), "test_nope.py::test_one"), NOT_A_TEST_FILE, "not a test file"
+    )
+
+
+@pytest.mark.parametrize("arg", ["tests::test_one", "test_a.py::", "::test_one"])
+def test_a_directory_or_an_empty_part_of_a_node_id_is_refused(env: Env, arg: str) -> None:
+    _refused(env, env.run(str(env.wt), arg), NOT_A_TEST_FILE, "not a test file")
+
+
+def test_a_node_id_of_a_non_test_file_is_refused(env: Env) -> None:
+    (env.wt / "helper.py").write_text("")
+    _refused(
+        env, env.run(str(env.wt), "helper.py::test_one"), NOT_TEST_NAMED, "not named as a test file"
+    )
+
+
+def test_a_node_id_outside_the_worktree_is_refused(env: Env) -> None:
+    outside = env.tmp / "test_outside.py"
+    outside.write_text("def test_o():\n    pass\n")
+    _refused(
+        env, env.run(str(env.wt), f"{outside}::test_o"), OUTSIDE_WORKTREE, "outside the worktree"
+    )
