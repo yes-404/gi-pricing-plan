@@ -131,18 +131,34 @@ _CONTEXT_MANAGER_NAME = re.compile(r"(?<!app\.)(?<!app\.\n)" + _FLAG_NAME + r"\(
 #: only reads.** Refused, whatever the name or the spelling: `set_config`; a `SET` statement (the
 #: word followed by `LOCAL`/`SESSION`, a parenthesis, a `ROLE`/`SCHEMA`/`TIME ZONE`-style keyword,
 #: or a name and `=`/`TO`; so `UPDATE ... SET column = ...` is one, and prose such as "set by" is
-#: not); `INSERT INTO`, `DELETE FROM`, `TRUNCATE`, `MERGE INTO`, `COPY ... FROM/TO`; and a
-#: plpgsql or SQL `EXECUTE` of anything but `FUNCTION`/`PROCEDURE` (the trigger DDL's own).
+#: not); `ALTER ROLE`/`USER`/`DATABASE ... SET`; `INSERT INTO`, `DELETE FROM`, `TRUNCATE`,
+#: `MERGE INTO`, `COPY ... FROM/TO`, `SELECT ... INTO`, `CREATE TABLE ... AS`, `CALL name(`; and
+#: a plpgsql or SQL `EXECUTE` of anything but `FUNCTION`/`PROCEDURE` (the trigger DDL's own).
 _NO_WRITE_NO_SETTING = re.compile(
     r"\bset_config\b"
     r"|\bSET\s*\("
     r"|\bSET\s+(?:LOCAL|SESSION|ROLE|SCHEMA|TIME\s+ZONE|CONSTRAINTS|TRANSACTION|NAMES)\b"
-    r"|\bSET\s+[^\s=;]+\s*(?:=|\bTO\b)"
+    r"|\bSET\b\s*[^\s=;]+\s*(?:=|\bTO\b)"
+    r"|\bALTER\s+(?:ROLE|USER|DATABASE)\b[^;]*?\bSET\b"
     r"|\bINSERT\s+INTO\b|\bDELETE\s+FROM\b|\bTRUNCATE\b|\bMERGE\s+INTO\b"
-    r"|\bCOPY\s+\S+\s+(?:FROM|TO)\b"
+    r"|\bCOPY\b[^;]*?\b(?:FROM|TO)\b"
+    r"|\bSELECT\b[^;]*?\bINTO\b"
+    r"|\bCREATE\s+(?:(?:GLOBAL|LOCAL|TEMP|TEMPORARY|UNLOGGED)\s+)*TABLE\b[^;]*?\bAS\b"
+    r"|\bCALL\s+[\w.\"]+\s*\("
     r"|\bEXECUTE\b(?!\s+(?:FUNCTION|PROCEDURE)\b)",
     re.IGNORECASE,
 )
+_SQL_BLOCK_COMMENT = re.compile(r"/\*.*?\*/", re.DOTALL)
+_SQL_LINE_COMMENT = re.compile(r"--[^\n]*")
+
+
+def _sql_views(text: str) -> tuple[str, str]:
+    """The text twice, whitespace collapsed: as it stands, and with its SQL comments replaced by
+    a space (Postgres reads a comment as whitespace, so `SET/**/LOCAL` is `SET LOCAL`). Both are
+    read and a hit in either refuses: stripping alone would let `'--'; DELETE FROM t` hide the
+    `DELETE` in a "comment" that is really inside a quoted literal."""
+    stripped = _SQL_LINE_COMMENT.sub(" ", _SQL_BLOCK_COMMENT.sub(" ", text))
+    return re.sub(r"\s+", " ", text), re.sub(r"\s+", " ", stripped)
 
 
 def _flag_beyond_a_read(source: str) -> bool:
@@ -150,10 +166,15 @@ def _flag_beyond_a_read(source: str) -> bool:
     statement and no session setting at all: it only reads (`_NO_WRITE_NO_SETTING`), and it names
     the flag only in a `current_setting` read.
 
+    **This is a tripwire behind the database guards, not the control**: the guards refuse a write
+    at run time; this rule makes a reader that writes fail in review's sight first.
+
     The strings that are not docstrings (every `Constant`, so the pieces of an f-string and of a
     concatenation too, in source order) are joined, once with a newline between them and once with
-    nothing, and read case-insensitively, as Postgres reads a setting name. Three refusals: a
-    statement `_NO_WRITE_NO_SETTING` names; **any** occurrence of the flag's name once the plain
+    nothing, and each is read case-insensitively, as Postgres reads a setting name, twice (see
+    `_sql_views`): whitespace collapsed, and with SQL comments (`/* ... */`, `-- ...`) stripped,
+    so a comment or a missing space cannot split a keyword pair. Three refusals: a statement
+    `_NO_WRITE_NO_SETTING` names; **any** occurrence of the flag's name once the plain
     `current_setting('<flag>', …)` reads and a message's `approval_decision()` (the context
     manager, never preceded by `app.`) are removed; and, together, that makes a split or escaped
     spelling of the name refused by the statement around it, whatever the name.
@@ -165,7 +186,8 @@ def _flag_beyond_a_read(source: str) -> bool:
        `chr()` or `bytes` assembly, or pieces separated by another literal);
     2. a name or a statement read from a column, an environment variable or a function argument;
     3. a statement composed by a helper in another file;
-    4. a comment (a comment is not executed);
+    4. a **Python** comment (it is not a literal, so it is not read; a SQL comment inside a
+       literal is, and is stripped);
     5. the flag name built at run time from a variable defined in another module (an imported
        constant or a value computed there), which no literal of the reader file contains;
     6. **`op.execute(...)` of a string built from parts in Python** (an f-string, `.format`, a
@@ -173,7 +195,10 @@ def _flag_beyond_a_read(source: str) -> bool:
        readers do this today, for DDL only: `a9f3c6d21b87_approval_guard.py`
        (`op.execute(create_trigger_sql(table))`, ``op.execute(f"DROP TRIGGER ... {table}")``) and
        `e5b2a7d94c13_rating_version_content_guard.py` (`_RV_TRIGGER.format(...)`, f-strings over
-       `CHECK_NAME` and `known`), so the rule cannot refuse it. A plpgsql `EXECUTE` is refused.
+       `CHECK_NAME` and `known`), so the rule cannot refuse it. A plpgsql `EXECUTE` is refused;
+    7. **`PERFORM some_function()` or `SELECT some_function()` where the function writes**: a
+       volatile function is unseeable by any pattern over the text of the call;
+    8. a nested block comment (Postgres nests `/* /* */ */`; the strip ends at the first `*/`).
     """
     tree = ast.parse(source)
     docstrings = _docstring_ids(tree)
@@ -188,12 +213,13 @@ def _flag_beyond_a_read(source: str) -> bool:
         key=lambda node: (node.lineno, node.col_offset),
     )
     return any(
-        _NO_WRITE_NO_SETTING.search(text) is not None
-        or _FLAG_NAME in _CONTEXT_MANAGER_NAME.sub("", _FLAG_READ.sub("", text)).lower()
+        _NO_WRITE_NO_SETTING.search(view) is not None
+        or _FLAG_NAME in _CONTEXT_MANAGER_NAME.sub("", _FLAG_READ.sub("", view)).lower()
         for text in (
             "\n".join(str(node.value) for node in pieces),
             "".join(str(node.value) for node in pieces),
         )
+        for view in _sql_views(text)
     )
 
 
@@ -439,6 +465,22 @@ _NOT_A_READER = {
     "set_role": "SET LOCAL ROLE gip_owner",
     "plpgsql_execute": "DO $$ BEGIN EXECUTE format('SELECT %s', 1); END $$",
     "plpgsql_execute_literal": "DO $$ BEGIN EXECUTE 'SELECT 1'; END $$",
+    # The fresh-reader addendum's forms (S-1): a SQL comment or a missing space split a keyword
+    # pair, and statement forms the first rule did not name.
+    "set_local_comment": "SET/**/LOCAL app.x = 'on'",
+    "insert_comment_into": "INSERT /**/ INTO rating_versions VALUES (1)",
+    "delete_comment_from": "DELETE/**/FROM rating_versions",
+    "update_set_quoted_column_no_space": 'UPDATE rating_versions SET"change_summary"=1',
+    "update_set_comment_column": "UPDATE rating_versions SET/**/change_summary=1",
+    "alter_role_set": "ALTER ROLE r SET app.x FROM CURRENT",
+    "alter_database_set": "ALTER DATABASE d SET app.x FROM CURRENT",
+    "copy_subquery_to": "COPY (SELECT 1) TO '/tmp/x'",
+    "select_into_table": "SELECT 1 INTO newtab",
+    "create_table_as": "CREATE TABLE z AS SELECT 1",
+    "call_procedure": "CALL some_writer()",
+    "line_comment_then_newline_split": "DELETE -- a comment\nFROM rating_versions",
+    # A "comment" that is really inside a quoted literal hides nothing: the unstripped view sees it.
+    "write_after_dashes_inside_a_literal": "SELECT '--'; DELETE FROM rating_versions",
 }
 
 
@@ -462,8 +504,9 @@ def test_a_reader_migration_contains_no_data_changing_statement_and_no_session_s
         "EXECUTE FUNCTION f('a')",
         "RAISE EXCEPTION 'the decision flag set by approval_decision()'",
         "SELECT current_setting('app.approval_decision', true)",
+        "SELECT 1 /* a block comment */ -- and a line comment\nFROM rating_versions",
     ],
-    ids=["trigger_ddl", "prose_set_by", "plain_read"],
+    ids=["trigger_ddl", "prose_set_by", "plain_read", "sql_comments_alone"],
 )
 def test_what_a_reader_may_contain_is_not_refused(sql: str) -> None:
     assert _flag_literal_outside_its_owners({_READER: f"BAD = {sql!r}\n"}) == []
