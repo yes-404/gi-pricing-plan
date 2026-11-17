@@ -120,6 +120,18 @@ def _offset_refusal(exc: Any, *, where: str = "the holdout") -> PlatformError:
     return PlatformError(exc.code, "The offset model could not be scored", 409, detail)
 
 
+def _grouping_refusal(exc: Any, model_type: str) -> PlatformError:
+    """The coded failure for a fit whose grouping Factor maps none of its column (FR-109).
+
+    409, like every refusal of a job against the data in this module (422 is the request's own
+    shape). The text goes through the allow-list: it names the Factor and Grouping and a row
+    count, never a value (NFR-499).
+    """
+    return PlatformError(
+        exc.code, f"The {model_type} model could not be fitted", 409, safe_error_detail(exc)
+    )
+
+
 def _all_rows_refusal(exc: Any) -> PlatformError:
     """The coded failure when every row of a partition is excluded (`AllRowsUnseenError`): its code
     and a detail BUILT from its `partition` and `count` attributes (never `str(exc)`: no exception
@@ -509,13 +521,8 @@ def _fit(parameters: dict[str, Any], callback: ProgressCallback) -> JobResult:
         ) from exc
     except GroupingCoverageError as exc:
         # FR-109: a grouping Factor that maps none of its column. Named before the
-        # `FactorResolutionError` arm, and its text goes through the allow-list (NFR-499).
-        raise PlatformError(
-            exc.code,
-            f"The {spec.model_type} model could not be fitted",
-            422,
-            safe_error_detail(exc),
-        ) from exc
+        # `FactorResolutionError` arm.
+        raise _grouping_refusal(exc, spec.model_type) from exc
     except FactorResolutionError as exc:
         raise PlatformError(
             "FACTOR_RESOLUTION_FAILED",

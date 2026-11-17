@@ -856,6 +856,7 @@ async def test_a_fit_whose_grouping_factor_maps_none_of_the_column_fails_the_job
     assert job_row.error["code"] == "GROUPING_MAPS_NO_VALUE"
     assert "urban" not in job_row.error["message"]
     assert "rural" not in job_row.error["message"]
+    assert "region-f-" in job_row.error["message"]  # the Factor is named; the 409 is the handler's
 
 
 @pytest.mark.req("FR-109")

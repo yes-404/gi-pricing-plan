@@ -148,7 +148,7 @@ Terms from `00-overview.md` §2.2 are used unchanged. Additional terms owned her
 > level (NFR-499). A Grouping stored before this clause is not re-checked.
 >
 > **(2) At fit**, a grouping Factor whose Grouping declares `map_to_default` or `map_to_base` and maps **none** of its column's rows is refused
-> (`GROUPING_MAPS_NO_VALUE`, 422 on a fit job): a Factor none of whose rows is a level the Grouping maps carries no information about its column. The
+> (`GROUPING_MAPS_NO_VALUE`, 409 on a fit job, like every refusal of a job against the data; the creation-time refusals above are 422, the request's own shape): a Factor none of whose rows is a level the Grouping maps carries no information about its column. The
 > text names the Factor, the Grouping and a row count, never a value (NFR-499). A Grouping declaring `error` keeps the refusal it has (`FACTOR_RESOLUTION_FAILED`): the code is published, and `error` already refuses every unseen value. Where **some**
 > rows are unmapped the fit is not refused: each of a GLM, a GBM and an EBM fit result records
 > `grouping_unmapped`, one entry per such Factor with its `rows` and `exposure` (`None` for a fit with no exposure column), and a GBM
