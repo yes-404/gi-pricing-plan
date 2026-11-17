@@ -25,8 +25,6 @@ SCRIPTS = ROOT / "scripts"
 if str(SCRIPTS) not in sys.path:
     sys.path.insert(0, str(SCRIPTS))
 
-import _gitenv  # noqa: E402  (after the sys.path insert)
-
 
 def _load(name: str, path: pathlib.Path | None = None) -> types.ModuleType:
     path = path or SCRIPTS / f"{name}.py"
@@ -37,6 +35,9 @@ def _load(name: str, path: pathlib.Path | None = None) -> types.ModuleType:
     sys.modules[spec.name] = module
     spec.loader.exec_module(module)
     return module
+
+
+_gitenv = _load("_gitenv")  # by path, so mypy needs no `scripts/` on its own path
 
 
 def _git(repo: pathlib.Path, *args: str) -> str:
