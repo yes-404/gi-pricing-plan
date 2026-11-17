@@ -144,6 +144,23 @@ async def _time_calls(
 
 REPO = Path(__file__).resolve().parent.parent
 
+# The GIT_* variables that point git at another repository, as a git hook exports them. `git -C`
+# does not override them, so each git call below runs without them (#1900): the script reads the
+# checkout it names, never one the caller's environment names. Named, not a GIT_ prefix match.
+_GIT_REDIRECTS = (
+    "GIT_DIR",
+    "GIT_WORK_TREE",
+    "GIT_INDEX_FILE",
+    "GIT_COMMON_DIR",
+    "GIT_OBJECT_DIRECTORY",
+    "GIT_ALTERNATE_OBJECT_DIRECTORIES",
+    "GIT_NAMESPACE",
+)
+
+
+def _git_env() -> dict[str, str]:
+    return {k: v for k, v in os.environ.items() if k not in _GIT_REDIRECTS}
+
 
 def _git_head() -> str:
     import subprocess
@@ -154,6 +171,7 @@ def _git_head() -> str:
             capture_output=True,
             text=True,
             check=True,
+            env=_git_env(),
         ).stdout.strip()
     except Exception as exc:  # pragma: no cover - diagnostic path only
         return f"(unavailable: {exc})"
@@ -181,9 +199,13 @@ def _report(label: str, samples: list[float]) -> None:
     )
 
 
+def _provenance_lines() -> list[str]:
+    return [f"repo: {REPO}", f"tree: {_git_head()}"]
+
+
 async def main(n: int) -> None:
-    print(f"repo: {REPO}")
-    print(f"tree: {_git_head()}")
+    for line in _provenance_lines():
+        print(line)
     database = Database(Settings(database_url=DEFAULT_DSN))
     blob_store = BlobStore(Settings(database_url=DEFAULT_DSN, blob_bucket=BUCKET))
     await blob_store.ensure_bucket()

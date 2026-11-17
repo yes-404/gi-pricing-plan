@@ -177,3 +177,51 @@ def test_default_repo_is_the_checkout_the_script_lives_in(
     )
     assert done.returncode == 1, done.stdout + done.stderr
     assert done.stderr.splitlines()[0] == f"freeze-check: repo={repo.resolve()} head={own_head}"
+
+
+# Each redirects git to the other repository when exported; value is relative to `<other>/.git`.
+GIT_REDIRECTS = {
+    "GIT_DIR": "",
+    "GIT_COMMON_DIR": "",
+    "GIT_INDEX_FILE": "/index",
+    "GIT_OBJECT_DIRECTORY": "/objects",
+}
+
+
+@pytest.mark.parametrize("var", sorted(GIT_REDIRECTS))
+def test_an_exported_git_variable_does_not_redirect_the_read(
+    var: str, repo: Path, tmp_path_factory: pytest.TempPathFactory
+) -> None:
+    """`git -C <own>` obeys an exported GIT_DIR and its kin (as inside a git hook); the script
+    strips them, so it still reads its own checkout and does not false-pass (#1900 audit Q6-A)."""
+    scripts = repo / "scripts"
+    scripts.mkdir()
+    for name in ("freeze-check.py", "_frozen.py"):
+        (scripts / name).write_text((SCRIPT.parent / name).read_text())
+    write(repo, "docs/plans/PL-1.md", "edited\n")
+    commit(repo)
+    own_head = subprocess.run(
+        ["git", "-C", str(repo), "rev-parse", "--short=12", "HEAD"],
+        check=True, capture_output=True, text=True, env=_clean_env(),
+    ).stdout.strip()
+
+    other = tmp_path_factory.mktemp("other")
+    git(other, "init", "-q", "-b", "main")
+    write(other, "README.md", "x\n")
+    git(other, "add", "-A")
+    git(other, "commit", "-q", "-m", "base")
+    git(other, "checkout", "-q", "-b", "work")
+
+    env = {**_clean_env(), var: f"{other / '.git'}{GIT_REDIRECTS[var]}"}
+    done = subprocess.run(
+        [sys.executable, str(scripts / "freeze-check.py"), "--base", "main"],
+        cwd=other, capture_output=True, text=True, env=env,
+    )
+    assert done.returncode == 1, done.stdout + done.stderr
+    assert done.stderr.splitlines()[0] == f"freeze-check: repo={repo.resolve()} head={own_head}"
+
+
+def _clean_env() -> dict[str, str]:
+    import os
+
+    return {k: v for k, v in os.environ.items() if not k.startswith("GIT_")}

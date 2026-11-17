@@ -58,6 +58,7 @@ from __future__ import annotations
 import argparse
 import csv
 import dataclasses
+import os
 import pathlib
 import re
 import subprocess
@@ -67,6 +68,24 @@ from collections.abc import Sequence
 from typing import TextIO
 
 REPO = pathlib.Path(__file__).resolve().parent.parent
+
+# The GIT_* variables that point git at another repository, as a git hook exports them. `git -C`
+# does not override them, so each git call below runs without them (#1900): the script reads the
+# checkout it names, never one the caller's environment names. Named, not a GIT_ prefix match.
+_GIT_REDIRECTS = (
+    "GIT_DIR",
+    "GIT_WORK_TREE",
+    "GIT_INDEX_FILE",
+    "GIT_COMMON_DIR",
+    "GIT_OBJECT_DIRECTORY",
+    "GIT_ALTERNATE_OBJECT_DIRECTORIES",
+    "GIT_NAMESPACE",
+)
+
+
+def _git_env() -> dict[str, str]:
+    return {k: v for k, v in os.environ.items() if k not in _GIT_REDIRECTS}
+
 CSV_HEADER = ["path", "area", "name_pattern", "size_bytes", "mutability", "referenced_by"]
 
 _DATE = re.compile(r"\d{4}-\d{2}-\d{2}")
@@ -156,6 +175,7 @@ def git_ls_files(root: pathlib.Path) -> list[str]:
             ["git", "-C", str(root), "ls-files", "-z"],
             capture_output=True,
             check=False,
+            env=_git_env(),
         )
     except OSError as exc:
         raise GitLsFilesError(f"could not invoke git: {exc}") from exc
@@ -247,7 +267,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     root = args.root.resolve()
     head = subprocess.run(
         ["git", "-C", str(root), "rev-parse", "--short=12", "HEAD"],
-        capture_output=True, text=True, check=False,
+        capture_output=True, text=True, check=False, env=_git_env(),
     ).stdout.strip()
     print(f"file-census: root={root} head={head}", file=sys.stderr)
     try:
