@@ -67,8 +67,12 @@ def _fr246(issues: list[Any]) -> list[Any]:
 @pytest.mark.req("FR-246")
 def test_a_constraint_reading_an_undeclared_name_is_refused() -> None:
     issues = _fr246(validate_algorithm(RatingAlgorithm.model_validate(_undeclared_clamp_payload())))
-    assert [(i.step_id, i.code) for i in issues] == [("s_clamp", UNDECLARED_READ_CODE)], issues
-    assert "min_premium_minor" in issues[0].message
+    assert [(i.step_id, i.code, i.field) for i in issues] == [
+        ("s_clamp", UNDECLARED_READ_CODE, "consumes")
+    ], issues
+    # #1712 S7c: the text names no step and no name; the step is located by `step_id`/`field`.
+    assert "min_premium_minor" not in issues[0].message
+    assert "s_clamp" not in issues[0].message
 
 
 @pytest.mark.req("FR-246")

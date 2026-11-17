@@ -15,9 +15,9 @@ import pytest
 from test_rating_score import _ctx, _FakeResolver, _version
 from test_rating_score_batch import _ctx_to_row
 
-from model_schema.rating import Pins
+from model_schema.rating import Pins, RatingAlgorithm
 from model_schema.scoring import QuoteContext, QuoteContextOptions
-from pricing_core.rating.compile import compile_bundle
+from pricing_core.rating.compile import compile_bundle, validate_algorithm
 from pricing_core.rating.runtime import CompiledBundle, load_bundle
 from pricing_core.rating.score import score_batch, score_one
 from pricing_core.safe_error import CodedError
@@ -169,28 +169,51 @@ async def test_score_batch_prices_on_the_row_in_force() -> None:
     assert prices == [130_000, 180_000], SUPERSEDED
 
 
+def _located(algo: dict[str, Any]) -> list[tuple[str, str | None, str | None]]:
+    """(code, step_id, field) of each issue `validate_algorithm` reports: the location a compile
+    refusal's text no longer carries (#1712 S7c, NFR-499)."""
+    issues = validate_algorithm(RatingAlgorithm.model_validate(algo))
+    return [(i.code, i.step_id, i.field) for i in issues if "FR-221" in i.message]
+
+
+def _assert_coded_no_identifier(error: CodedError, code: str, value: str) -> None:
+    text = str(error)
+    assert text.startswith(f"{code}: "), text
+    assert "s_area" not in text
+    assert f"'{value}'" not in text
+
+
 _DATE_INPUT = {"name": "inception", "type": "date", "nullable": False}
 
 
 @pytest.mark.req("FR-221")
 @pytest.mark.req("FR-227")
 async def test_as_at_naming_a_non_date_input_is_refused_at_compile() -> None:
-    with pytest.raises(CodedError, match=r"^RATING_TYPE_MISMATCH:.*s_area.*postcode"):
-        await _compiled(_algo(as_at="postcode"))
+    algo = _algo(as_at="postcode")
+    with pytest.raises(CodedError) as caught:
+        await _compiled(algo)
+    _assert_coded_no_identifier(caught.value, "RATING_TYPE_MISMATCH", "postcode")
+    assert _located(algo) == [("RATING_TYPE_MISMATCH", "s_area", "as_at")]
 
 
 @pytest.mark.req("FR-221")
 async def test_as_at_naming_an_undeclared_value_is_refused_at_compile() -> None:
-    with pytest.raises(CodedError, match=r"^RATING_GRAPH_UNRESOLVED_REF:.*s_area.*inception"):
-        await _compiled(_algo(as_at="inception"))
+    algo = _algo(as_at="inception")
+    with pytest.raises(CodedError) as caught:
+        await _compiled(algo)
+    _assert_coded_no_identifier(caught.value, "RATING_GRAPH_UNRESOLVED_REF", "inception")
+    assert _located(algo) == [("RATING_GRAPH_UNRESOLVED_REF", "s_area", "as_at")]
 
 
 @pytest.mark.req("FR-221")
 @pytest.mark.req("FR-227")
 async def test_a_declared_effective_date_must_be_date_typed() -> None:
     contract = [*_CONTRACT, {"name": "effective_date", "type": "string", "nullable": False}]
-    with pytest.raises(CodedError, match=r"^RATING_TYPE_MISMATCH:.*s_area.*effective_date"):
-        await _compiled(_algo(contract=contract))
+    algo = _algo(contract=contract)
+    with pytest.raises(CodedError) as caught:
+        await _compiled(algo)
+    _assert_coded_no_identifier(caught.value, "RATING_TYPE_MISMATCH", "string")
+    assert _located(algo) == [("RATING_TYPE_MISMATCH", "s_area", "as_at")]
 
 
 @pytest.mark.req("FR-221")
