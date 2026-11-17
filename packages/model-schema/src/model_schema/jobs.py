@@ -210,7 +210,7 @@ class JobErrorLocation(BaseModel):
     @model_validator(mode="after")
     def _points_somewhere(self) -> JobErrorLocation:
         if all(value is None for value in self.model_dump().values()):
-            raise ValueError("a location must name at least one identifier")
+            raise InputFreeError("a location must name at least one identifier")
         return self
 
 
