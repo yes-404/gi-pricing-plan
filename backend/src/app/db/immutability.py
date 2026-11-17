@@ -45,7 +45,8 @@ class LeastPrivilegeError(RuntimeError):
 #: declaration reaches that is absent here is refused as unpinned. The values are filled from a
 #: throwaway migrated to head in S1b's DB window (LG-1947): an empty value never matches.
 PINNED_GUARD_FUNCTION_MD5: dict[str, str] = {
-    "approval_guard": "c4d56bfa76f12bfecba41b61975f1b65",
+    "approval_guard": "b0ca8a31d23d186b24749286f4053110",
+    "approval_requests_decision_guard": "d6da5322e1c55d9c0e807459ff74d72e",
     "artifact_append_only": "c37e697febc245839b2672b90cf0b0ac",
     "audit_events_append_only": "1db7015bf61710795ac45ff15476fa06",
     "blobs_content_immutable": "73dbe02fec4b21b62649add0bea1e3d2",
@@ -59,6 +60,7 @@ PINNED_GUARD_FUNCTION_MD5: dict[str, str] = {
     "peril_structures_composition_immutable": "53d6958a1db9583f458168c72da2e8f8",
     "peril_structures_reconciled_undeletable": "1e1dfaf61c4cb9240da81c7015b2c842",
     "rate_tables_pointer_only": "cd911971d3cf0d2e98a5e26397cb7843",
+    "rating_versions_content_guard": "07c7682b0da0fc628e080b05d782123d",
     "reference_table_versions_publish_only": "be3b2a9ff80fcc600e098725b7ff23c9",
 }
 
