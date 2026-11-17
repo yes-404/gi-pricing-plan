@@ -93,11 +93,11 @@ pnpm --dir frontend test && pnpm --dir frontend build
   series stays in the pull request. This is revisited after the first two contributor Works.
 - The squash commit keeps the contributor as author and the changelog names them.
 - The one-pull-request rule binds contributors only. The core team follows the series form
-  by default and may merge a single slice for an urgent correctness fix, shared files that
-  several Works wait on, or external timing. Every core merge still passes the required
-  checks, the independent audit and its review tier.
-- Every contributor Work gets an independent audit against the specification before merge,
-  with failing-first evidence per commit.
+  by default and may merge a single slice for one of four reasons: an urgent correctness
+  fix, shared files that several Works wait on, external timing, or a slice of a Work whose
+  plan was accepted as separate pull requests. The description names which reason applies.
+  Every core merge still passes the required checks, the independent audit and its review
+  tier (see "Review").
 - **Nobody merges their own pull request.** The collaborator may merge after approving. The core
   lead merges one pull request at a time.
 - The first Work of a new contributor is a trial, reviewed afterwards.
@@ -113,7 +113,14 @@ Review is by risk, in four tiers:
    does not happen within **three working days**, the maintainer may proceed. On a pull
    request labelled high-risk by hand whose files request nobody, the author requests the
    cross-review by hand, and the three working days run from that request.
-4. **The rest of the core team's work:** an independent audit.
+4. **The rest of the core team's work:** no review beyond the independent audit below.
+
+**The independent audit is for every pull request, whatever its tier.** The audit and the
+cross-review are different checks, and neither replaces the other. The auditor did not
+write the change, and is given the code and the specification, not the author's
+conclusions. A core pull request is audited before it is pushed. A contributor Work is
+audited against the specification before merge, with failing-first evidence per commit.
+The description lists the audit's findings and what was done about each.
 
 The seven high-risk areas:
 
@@ -151,8 +158,13 @@ AI tools and agent teams are welcome on four conditions.
 
 1. **Disclose it.** Every pull request names the tools and model versions, and what they
    did. AI-written commits carry a `Co-Authored-By:` trailer.
-2. **A named person is accountable.** That person has read every line, can explain it
-   without the tool, and answers review.
+2. **A named person is accountable.** That person answers review and owns defects. Ticking
+   the box "A person has read and understood every change" means that person has read every
+   line and can explain it without the tool; no agent ticks it, and it is never ticked to
+   get a pull request through. When no person has read every change, it stays unticked and
+   the description says what review the change had instead. Before a milestone is closed,
+   the accountable person reads the changes merged into high-risk areas in that milestone,
+   or the release notes say which of them no person has read.
 3. **Agents act under a named person.** An agent opens pull requests and comments only
    under a named person's account.
 4. **Same bar.** AI-assisted work meets the same tests, review and cross-review.

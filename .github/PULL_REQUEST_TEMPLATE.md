@@ -1,5 +1,6 @@
 <!-- One Work = one pull request = one commit per slice, plus any review-fix commits on top.
-     Title: a Conventional Commit line, e.g. `feat(frontend): platform administration views`. -->
+     Title: a Conventional Commit line, e.g. `feat(frontend): platform administration views`.
+     A core pull request of a single slice names its reason under "Commits". -->
 
 Closes #<!-- Work issue number -->. Plan accepted in: <!-- link to the maintainer's "Plan accepted" comment -->
 
@@ -12,6 +13,12 @@ Review commit by commit. The squash commit (main plus this branch) must pass the
 | 1 | `abc1234` | | | |
 
 Changes since the last review round: <!-- per commit, or "first round" -->
+
+Single-slice reason: <!-- core only: one of the four in CONTRIBUTING, "Pull requests", or "Series" -->
+
+## Independent audit
+
+<!-- Every finding of the independent audit, and what was done about each. See CONTRIBUTING, "Review". -->
 
 ## Paths
 
@@ -42,6 +49,8 @@ Not run, and why: <!-- or "None" -->
 
 - AI use: <!-- NO, or YES with the tool, the model version and what it did (code, tests, docs) -->
 - [ ] A person has read and understood every change in this pull request.
+  <!-- Ticked only by that person. No agent ticks it, and it is never ticked to get a pull request through. -->
+- Review the change had instead, if the box is unticked: <!-- e.g. the independent audit, the cross-review, the gate; or "Not applicable" -->
 - Accountable person: @<!-- the person who answers review questions and owns defects -->
 
 ## Notes for the reviewer
