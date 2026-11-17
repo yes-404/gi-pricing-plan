@@ -2889,291 +2889,295 @@ def test_every_one_sided_slug_is_declared() -> None:
 # Every path is listed exactly: a wildcard over a one-sided object would let a new field under
 # it pass silently, which is the defect in a smaller form. Each reason carries its class
 # (O open map keyed on one side only / S item shape differs / D field on one side only /
-# U declared and unbuilt) and the issue that owns the decision. The list only shrinks: the
-# fix for an entry removes it and lowers `ONE_SIDED_PATHS_CEILING` in the same change.
+# U declared and unbuilt), the side it is on (`gen:` the model's generated schema, `auth:` the
+# hand-authored contract; a test recomputes it) and the issue that owns the decision. The
+# list only shrinks: the fix for an entry removes it and lowers `ONE_SIDED_PATHS_CEILING` in
+# the same change.
 #
-# NOT seen here: arm-level existence (a field moved between conditional arms, OQ-649's
-# remaining boundary, D2 of #1918), and type or bound disagreement on a path both sides carry
+# NOT seen here: a path below an object-valued `additionalProperties` or `patternProperties`
+# (a map's value shape, e.g. `fit_result.relativities`; a later slice of #1918), arm-level
+# existence (a field moved between conditional arms, OQ-649's remaining boundary, D2 of
+# #1918), and type or bound disagreement on a path both sides carry
 # (the comparisons above own that).
 
 ONE_SIDED_PATHS: Final[dict[str, dict[str, str]]] = {
     "custom-objective": {
         "applicability.y_domain.max_exclusive": (
-            "D: field on the model only, never published in the contract; owner #1918"
+            "gen: D: field on the model only, never published in the contract; owner #1918"
         ),
         "applicability.y_domain.min_exclusive": (
-            "D: field on the model only, never published in the contract; owner #1918"
+            "gen: D: field on the model only, never published in the contract; owner #1918"
         ),
     },
     "dataset-version": {
         "tables.[].source_names": (
-            "D: field on the model only, never published in the contract; owner #1918"
+            "gen: D: field on the model only, never published in the contract; owner #1918"
         ),
     },
     "diagnostics": {
         "gbm.partial_dependence.[].omitted": (
-            "D: field on the model only, never published in the contract; owner #1918"
+            "gen: D: field on the model only, never published in the contract; owner #1918"
         ),
         "gbm.partial_dependence.[].omitted.exposure_share": (
-            "D: field on the model only, never published in the contract; owner #1918"
+            "gen: D: field on the model only, never published in the contract; owner #1918"
         ),
         "gbm.partial_dependence.[].omitted.levels": (
-            "D: field on the model only, never published in the contract; owner #1918"
+            "gen: D: field on the model only, never published in the contract; owner #1918"
         ),
         "gbm.partial_dependence.[].omitted.reason": (
-            "D: field on the model only, never published in the contract; owner #1918"
+            "gen: D: field on the model only, never published in the contract; owner #1918"
         ),
         "glm.monotonicity": (
-            "D: field on the model only, never published in the contract; owner #1918"
+            "gen: D: field on the model only, never published in the contract; owner #1918"
         ),
         "glm.monotonicity.[]": (
-            "D: field on the model only, never published in the contract; owner #1918"
+            "gen: D: field on the model only, never published in the contract; owner #1918"
         ),
         "glm.monotonicity.[].declared": (
-            "D: field on the model only, never published in the contract; owner #1918"
+            "gen: D: field on the model only, never published in the contract; owner #1918"
         ),
         "glm.monotonicity.[].factor": (
-            "D: field on the model only, never published in the contract; owner #1918"
+            "gen: D: field on the model only, never published in the contract; owner #1918"
         ),
         "glm.monotonicity.[].holds": (
-            "D: field on the model only, never published in the contract; owner #1918"
+            "gen: D: field on the model only, never published in the contract; owner #1918"
         ),
         "glm.monotonicity.[].worst_violation": (
-            "D: field on the model only, never published in the contract; owner #1918"
+            "gen: D: field on the model only, never published in the contract; owner #1918"
         ),
         "glm.monotonicity_omitted": (
-            "D: field on the model only, never published in the contract; owner #1918"
+            "gen: D: field on the model only, never published in the contract; owner #1918"
         ),
         "glm.monotonicity_omitted.[]": (
-            "D: field on the model only, never published in the contract; owner #1918"
+            "gen: D: field on the model only, never published in the contract; owner #1918"
         ),
         "glm.monotonicity_omitted.[].factor": (
-            "D: field on the model only, never published in the contract; owner #1918"
+            "gen: D: field on the model only, never published in the contract; owner #1918"
         ),
         "glm.monotonicity_omitted.[].reason": (
-            "D: field on the model only, never published in the contract; owner #1918"
+            "gen: D: field on the model only, never published in the contract; owner #1918"
         ),
         "universal.holdout.exposure_excluded_unseen_level": (
-            "D: field on the model only, never published in the contract; owner #1918"
+            "gen: D: field on the model only, never published in the contract; owner #1918"
         ),
         "universal.holdout.rows_excluded_unknown_response": (
-            "D: field on the model only, never published in the contract; owner #1918"
+            "gen: D: field on the model only, never published in the contract; owner #1918"
         ),
         "universal.holdout.rows_excluded_unseen_level": (
-            "D: field on the model only, never published in the contract; owner #1918"
+            "gen: D: field on the model only, never published in the contract; owner #1918"
         ),
         "universal.train.exposure_excluded_unseen_level": (
-            "D: field on the model only, never published in the contract; owner #1918"
+            "gen: D: field on the model only, never published in the contract; owner #1918"
         ),
         "universal.train.rows_excluded_unknown_response": (
-            "D: field on the model only, never published in the contract; owner #1918"
+            "gen: D: field on the model only, never published in the contract; owner #1918"
         ),
         "universal.train.rows_excluded_unseen_level": (
-            "D: field on the model only, never published in the contract; owner #1918"
+            "gen: D: field on the model only, never published in the contract; owner #1918"
         ),
     },
     "grouping": {
         "evidence.credibility_components.evpv": (
-            "O: open map on one side, keyed properties on the other; owner #1918"
+            "auth: O: open map on one side, keyed properties on the other; owner #1918"
         ),
         "evidence.credibility_components.k": (
-            "O: open map on one side, keyed properties on the other; owner #1918"
+            "auth: O: open map on one side, keyed properties on the other; owner #1918"
         ),
         "evidence.credibility_components.vhm": (
-            "O: open map on one side, keyed properties on the other; owner #1918"
+            "auth: O: open map on one side, keyed properties on the other; owner #1918"
         ),
         "method_params.credibility_model": (
-            "O: open map on one side, keyed properties on the other; owner #1918"
+            "auth: O: open map on one side, keyed properties on the other; owner #1918"
         ),
         "method_params.credibility_pk": (
-            "O: open map on one side, keyed properties on the other; owner #1918"
+            "auth: O: open map on one side, keyed properties on the other; owner #1918"
         ),
         "method_params.credibility_pk.k": (
-            "O: open map on one side, keyed properties on the other; owner #1918"
+            "auth: O: open map on one side, keyed properties on the other; owner #1918"
         ),
         "method_params.credibility_pk.p": (
-            "O: open map on one side, keyed properties on the other; owner #1918"
+            "auth: O: open map on one side, keyed properties on the other; owner #1918"
         ),
         "method_params.credibility_standard_claims": (
-            "O: open map on one side, keyed properties on the other; owner #1918"
+            "auth: O: open map on one side, keyed properties on the other; owner #1918"
         ),
         "method_params.merge_tolerance_relativity": (
-            "O: open map on one side, keyed properties on the other; owner #1918"
+            "auth: O: open map on one side, keyed properties on the other; owner #1918"
         ),
         "method_params.reference_table_ref": (
-            "O: open map on one side, keyed properties on the other; owner #1918"
+            "auth: O: open map on one side, keyed properties on the other; owner #1918"
         ),
     },
     "job": {
         "submitted_by.display": (
-            "O: open map on one side, keyed properties on the other; owner #1918"
+            "gen: O: open map on one side, keyed properties on the other; owner #1918"
         ),
         "submitted_by.id": (
-            "O: open map on one side, keyed properties on the other; owner #1918"
+            "gen: O: open map on one side, keyed properties on the other; owner #1918"
         ),
         "submitted_by.kind": (
-            "O: open map on one side, keyed properties on the other; owner #1918"
+            "gen: O: open map on one side, keyed properties on the other; owner #1918"
         ),
     },
     "model": {
         "fit_result.banding_warnings": (
-            "D: field on the model only, never published in the contract; owner #1918"
+            "gen: D: field on the model only, never published in the contract; owner #1918"
         ),
         "fit_result.banding_warnings.[]": (
-            "D: field on the model only, never published in the contract; owner #1918"
+            "gen: D: field on the model only, never published in the contract; owner #1918"
         ),
         "fit_result.banding_warnings.[].band_index": (
-            "D: field on the model only, never published in the contract; owner #1918"
+            "gen: D: field on the model only, never published in the contract; owner #1918"
         ),
         "fit_result.banding_warnings.[].band_label": (
-            "D: field on the model only, never published in the contract; owner #1918"
+            "gen: D: field on the model only, never published in the contract; owner #1918"
         ),
         "fit_result.banding_warnings.[].banding": (
-            "D: field on the model only, never published in the contract; owner #1918"
+            "gen: D: field on the model only, never published in the contract; owner #1918"
         ),
         "fit_result.banding_warnings.[].measure": (
-            "D: field on the model only, never published in the contract; owner #1918"
+            "gen: D: field on the model only, never published in the contract; owner #1918"
         ),
         "fit_result.banding_warnings.[].minimum": (
-            "D: field on the model only, never published in the contract; owner #1918"
+            "gen: D: field on the model only, never published in the contract; owner #1918"
         ),
         "fit_result.banding_warnings.[].observed": (
-            "D: field on the model only, never published in the contract; owner #1918"
+            "gen: D: field on the model only, never published in the contract; owner #1918"
         ),
         "fit_result.unseen_cell_reports": (
-            "D: field on the model only, never published in the contract; owner #1918"
+            "gen: D: field on the model only, never published in the contract; owner #1918"
         ),
         "fit_result.unseen_cell_reports.[]": (
-            "D: field on the model only, never published in the contract; owner #1918"
+            "gen: D: field on the model only, never published in the contract; owner #1918"
         ),
         "fit_result.unseen_cell_reports.[].example_cap": (
-            "D: field on the model only, never published in the contract; owner #1918"
+            "gen: D: field on the model only, never published in the contract; owner #1918"
         ),
         "fit_result.unseen_cell_reports.[].examples": (
-            "D: field on the model only, never published in the contract; owner #1918"
+            "gen: D: field on the model only, never published in the contract; owner #1918"
         ),
         "fit_result.unseen_cell_reports.[].examples.[]": (
-            "D: field on the model only, never published in the contract; owner #1918"
+            "gen: D: field on the model only, never published in the contract; owner #1918"
         ),
         "fit_result.unseen_cell_reports.[].factor": (
-            "D: field on the model only, never published in the contract; owner #1918"
+            "gen: D: field on the model only, never published in the contract; owner #1918"
         ),
         "fit_result.unseen_cell_reports.[].producible": (
-            "D: field on the model only, never published in the contract; owner #1918"
+            "gen: D: field on the model only, never published in the contract; owner #1918"
         ),
         "fit_result.unseen_cell_reports.[].state": (
-            "D: field on the model only, never published in the contract; owner #1918"
+            "gen: D: field on the model only, never published in the contract; owner #1918"
         ),
         "fit_result.unseen_cell_reports.[].unfitted": (
-            "D: field on the model only, never published in the contract; owner #1918"
+            "gen: D: field on the model only, never published in the contract; owner #1918"
         ),
         "fit_result.unseen_level_gaps": (
-            "D: field on the model only, never published in the contract; owner #1918"
+            "gen: D: field on the model only, never published in the contract; owner #1918"
         ),
         "fit_result.unseen_level_gaps.[]": (
-            "D: field on the model only, never published in the contract; owner #1918"
+            "gen: D: field on the model only, never published in the contract; owner #1918"
         ),
         "fit_result.unseen_level_gaps.[].factor": (
-            "D: field on the model only, never published in the contract; owner #1918"
+            "gen: D: field on the model only, never published in the contract; owner #1918"
         ),
         "fit_result.unseen_level_gaps.[].level": (
-            "D: field on the model only, never published in the contract; owner #1918"
+            "gen: D: field on the model only, never published in the contract; owner #1918"
         ),
         "fit_result.unseen_level_gaps.[].reached_by": (
-            "D: field on the model only, never published in the contract; owner #1918"
+            "gen: D: field on the model only, never published in the contract; owner #1918"
         ),
         "fit_result.unseen_level_gaps.[].reached_by.[]": (
-            "D: field on the model only, never published in the contract; owner #1918"
+            "gen: D: field on the model only, never published in the contract; owner #1918"
         ),
         "spec.custom_objective_ref": (
-            "U: declared and unbuilt (FR-207); owner #1918"
+            "auth: U: declared and unbuilt (FR-207); owner #1918"
         ),
         "spec.factors.[].factor_id": (
-            "S: items are a string ref on the model, an object on the contract; owner #1918"
+            "auth: S: items are a string ref on the model, an object on the contract; owner #1918"
         ),
         "spec.factors.[].factor_version": (
-            "S: items are a string ref on the model, an object on the contract; owner #1918"
+            "auth: S: items are a string ref on the model, an object on the contract; owner #1918"
         ),
         "spec.filter": (
-            "U: declared and unbuilt (FR-207); owner #1918"
+            "auth: U: declared and unbuilt (FR-207); owner #1918"
         ),
     },
     "model-spec": {
         "factors.[].factor_id": (
-            "S: items are a string ref on the model, an object on the contract; owner #1918"
+            "auth: S: items are a string ref on the model, an object on the contract; owner #1918"
         ),
         "factors.[].factor_version": (
-            "S: items are a string ref on the model, an object on the contract; owner #1918"
+            "auth: S: items are a string ref on the model, an object on the contract; owner #1918"
         ),
     },
     "peril-structure": {
         "reconciliation.ratio": (
-            "D: field on the contract only, absent from the model; owner #1918"
+            "auth: D: field on the contract only, absent from the model; owner #1918"
         ),
         "reconciliation.status": (
-            "D: field on the contract only, absent from the model; owner #1918"
+            "auth: D: field on the contract only, absent from the model; owner #1918"
         ),
     },
     "profile": {
         "columns.[].quantiles.p1": (
-            "O: open map on one side, keyed properties on the other; owner #1918"
+            "auth: O: open map on one side, keyed properties on the other; owner #1918"
         ),
         "columns.[].quantiles.p25": (
-            "O: open map on one side, keyed properties on the other; owner #1918"
+            "auth: O: open map on one side, keyed properties on the other; owner #1918"
         ),
         "columns.[].quantiles.p5": (
-            "O: open map on one side, keyed properties on the other; owner #1918"
+            "auth: O: open map on one side, keyed properties on the other; owner #1918"
         ),
         "columns.[].quantiles.p50": (
-            "O: open map on one side, keyed properties on the other; owner #1918"
+            "auth: O: open map on one side, keyed properties on the other; owner #1918"
         ),
         "columns.[].quantiles.p75": (
-            "O: open map on one side, keyed properties on the other; owner #1918"
+            "auth: O: open map on one side, keyed properties on the other; owner #1918"
         ),
         "columns.[].quantiles.p95": (
-            "O: open map on one side, keyed properties on the other; owner #1918"
+            "auth: O: open map on one side, keyed properties on the other; owner #1918"
         ),
         "columns.[].quantiles.p99": (
-            "O: open map on one side, keyed properties on the other; owner #1918"
+            "auth: O: open map on one side, keyed properties on the other; owner #1918"
         ),
     },
     "transparency-artifact": {
         "shap_summary.top_interactions.[].holdout_strength_ratio": (
-            "D: field on the model only, never published in the contract; owner #1918"
+            "gen: D: field on the model only, never published in the contract; owner #1918"
         ),
     },
     "validation-report": {
         "results.[].evidence_blob": (
-            "D: field on the contract only, absent from the model; owner #1918"
+            "auth: D: field on the contract only, absent from the model; owner #1918"
         ),
     },
     "validation-rule": {
         "params.query": (
-            "O: open map on one side, keyed properties on the other; owner #1918"
+            "auth: O: open map on one side, keyed properties on the other; owner #1918"
         ),
         "scope.filter": (
-            "O: open map on one side, keyed properties on the other; owner #1918"
+            "auth: O: open map on one side, keyed properties on the other; owner #1918"
         ),
         "scope.skip_on_derived": (
-            "O: open map on one side, keyed properties on the other; owner #1918"
+            "auth: O: open map on one side, keyed properties on the other; owner #1918"
         ),
         "target.column": (
-            "O: open map on one side, keyed properties on the other; owner #1918"
+            "auth: O: open map on one side, keyed properties on the other; owner #1918"
         ),
         "target.columns": (
-            "O: open map on one side, keyed properties on the other; owner #1918"
+            "auth: O: open map on one side, keyed properties on the other; owner #1918"
         ),
         "target.columns.[]": (
-            "O: open map on one side, keyed properties on the other; owner #1918"
+            "auth: O: open map on one side, keyed properties on the other; owner #1918"
         ),
         "target.table": (
-            "O: open map on one side, keyed properties on the other; owner #1918"
+            "auth: O: open map on one side, keyed properties on the other; owner #1918"
         ),
         "tolerance.max_violating_exposure_fraction": (
-            "O: open map on one side, keyed properties on the other; owner #1918"
+            "auth: O: open map on one side, keyed properties on the other; owner #1918"
         ),
         "tolerance.max_violating_rows": (
-            "O: open map on one side, keyed properties on the other; owner #1918"
+            "auth: O: open map on one side, keyed properties on the other; owner #1918"
         ),
     },
 }
@@ -3253,9 +3257,25 @@ def test_one_sided_path_census_reasons_name_class_and_owner() -> None:
         (slug, path): reason
         for slug, paths in ONE_SIDED_PATHS.items()
         for path, reason in paths.items()
-        if not re.fullmatch(r"[OSDU]: .+; owner #\d+", reason)
+        if not re.fullmatch(r"(gen|auth): [OSDU]: .+; owner #\d+", reason)
     }
-    assert not bad, f"a reason must read '<O|S|D|U>: <why>; owner #<issue>': {bad}"
+    assert not bad, (
+        f"a reason must read '<gen|auth>: <O|S|D|U>: <why>; owner #<issue>': {bad}"
+    )
+
+
+@pytest.mark.req("FR-451")
+def test_one_sided_path_census_declared_side_is_the_side_found() -> None:
+    """Each entry's `gen:`/`auth:` prefix equals the side the walker finds the path on today."""
+    wrong = {
+        (slug, path): (reason.split(":", 1)[0], found[path])
+        for slug, paths in ONE_SIDED_PATHS.items()
+        for found in [_slug_one_sided_paths(slug)]
+        for path, reason in paths.items()
+        if path in found and {"gen": "generated", "auth": "authored"}[reason.split(":", 1)[0]]
+        != found[path]
+    }
+    assert not wrong, f"a declared side no longer matches the side found (declared, found): {wrong}"
 
 
 @pytest.mark.req("FR-451")

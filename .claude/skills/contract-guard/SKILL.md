@@ -77,7 +77,7 @@ the reverse of what it was asked.
    **Since #1918 a path on one side only below the top level is not silent:**
    `test_one_sided_path_census_has_no_undeclared_path` fails on any nested path in
    `_field_paths`' symmetric difference that is not in `ONE_SIDED_PATHS` (exact path, with a
-   `<O|S|D|U>: why; owner #n` reason), the stale and ceiling tests keep the list honest, and the
+   `<gen|auth>: <O|S|D|U>: why; owner #n` reason, the side tested against the walker), the stale and ceiling tests keep the list honest, and the
    list only shrinks. A new comparison still intersects; the census is what says what it dropped.
 4. **Resolve every disagreement it finds** before the slice ends. A red guard at the end of a
    slice is the same artifact as no guard.
@@ -282,7 +282,7 @@ hold the cases.
 every nested path that is on one side only (85 at main `3aed71d9`, over 12 of the 21 compared
 slugs), each exact, each with its class and owner, under `ONE_SIDED_PATHS_CEILING`. The census
 tests are named `test_one_sided_path_census_*` so the census selection (`-k census`) runs them.
-It does **not** see: a top-level name (`ONE_SIDED_SLUGS` and the two name tests own that, and
+It does **not** see: a path below an object-valued `additionalProperties` or `patternProperties` (a map's value shape, e.g. `fit_result.relativities`; a later slice of #1918), a top-level name (`ONE_SIDED_SLUGS` and the two name tests own that, and
 `validation-rule` is outside the second), arm-level existence below, or type and bound
 disagreement on a shared path (the comparisons above own that). Fixing an entry removes it and
 lowers the ceiling in the same commit.
@@ -377,7 +377,6 @@ before this one started, and it was the stale check, not a reading, that said wh
 2026-11-17 — #1918 slice 1, on the tree `origin/main` `3aed71d9` plus that slice. Step 3 and "What the guard
 does not reach" gained the path-level census. Built red first: with `ONE_SIDED_PATHS` empty, the
 parametrized test failed on exactly 12 slugs naming 85 paths; the #1917 shape planted on a scratch copy
-of `generated/job.schema.json` failed naming `error.location`; a stale entry and an extra entry failed the
-stale and ceiling tests; a walker that stopped at `items` failed the reach control naming
+of `generated/job.schema.json` failed naming `error.location`; a stale entry (a contract edit making a listed path two-sided, the entry left) failed the stale test alone, and an entry whose side was flipped failed the side test alone; a walker that stopped at `items` failed the reach control naming
 `columns.[].top_levels.[].level`. The lesson to carry: a scoped guard's silence is found by asking what
 its intersection drops, and then counting that with the guard's own walker.
