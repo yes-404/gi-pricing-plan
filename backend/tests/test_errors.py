@@ -105,6 +105,24 @@ def test_unexpected_error_does_not_leak_the_exception_message(
     assert body["trace_id"]
 
 
+@pytest.mark.req("FR-403")
+def test_to_problem_leaves_a_refusals_location_out_of_the_problem_body() -> None:
+    """#1917: `location` is for the Job worker only; a request's problem response is unchanged."""
+    from model_schema.jobs import JobErrorLocation
+
+    located = PlatformError(
+        "VALIDATION_FAILED",
+        "Nope",
+        422,
+        location=JobErrorLocation(step_id="s_rp", field="inputs.age"),
+    )
+    plain = PlatformError("VALIDATION_FAILED", "Nope", 422)
+    body = located.to_problem().model_dump(mode="json")
+    assert "location" not in body
+    assert "s_rp" not in str(body)
+    assert body == plain.to_problem().model_dump(mode="json")
+
+
 @pytest.mark.req("FR-450")
 def test_unknown_error_code_is_refused_at_construction() -> None:
     """Negative: an unenumerated code reaches a client as something it cannot branch on."""

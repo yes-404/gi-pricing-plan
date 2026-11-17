@@ -66,7 +66,7 @@
     },
     "JobErrorLocation": {
       "additionalProperties": false,
-      "description": "Where in the caller's own artifact a deterministic refusal points (#1917, `07` §4.1).\n\nIdentifiers only: a step id, a path inside that step, a reference, a name the artifact\nitself declares. **Never a submitted value**: no quote input, no rate-table cell, no factor\nlevel, no bound, no number, no type, no free text. That is enforced by `extra=\"forbid\"`\n(no other key), `str` only, and the grammar of each key; a name that looks like an\nidentifier is kept out of the value space by construction alone (only raise sites that\nread the caller's artifact fill it), which no pattern can prove. The key set is the one\n`InputFreeError.located` uses, so a `located` mapping builds this one to one.",
+      "description": "Where in the caller's own artifact a deterministic refusal points (#1917, `07` §4.1).\n\nIdentifiers only: a step id, a path inside that step, a reference, a name the artifact\nitself declares. **Never a submitted value** is what the raise sites guarantee, by filling\nthis only from the caller's own artifact; no pattern can prove it. What the model itself\nenforces is the source field's grammar (DP-2): `extra=\"forbid\"` (no other key), `str` only\n(a JSON number is refused), and one pattern per key (no whitespace or free text in a step\nid, a reference, a dotted path of identifiers). A digit string such as `\"42\"` or `\"0.05\"`\nsatisfies the `step_id` and name patterns and is NOT refused. The key set is the one\n`InputFreeError.located` uses, so a `located` mapping builds this one to one.",
       "properties": {
         "factor": {
           "anyOf": [

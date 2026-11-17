@@ -74,6 +74,26 @@ def test_job_error_location_round_trips_by_equality() -> None:
 
 @pytest.mark.req("FR-403")
 @pytest.mark.parametrize(
+    ("key", "value"),
+    [
+        ("step_id", "42"),
+        ("step_id", "0.05"),
+        ("key", "42"),
+        ("peril", "0.05"),
+    ],
+)
+def test_job_error_location_admits_a_digit_string_the_grammar_cannot_tell_from_an_id(
+    key: str, value: str
+) -> None:
+    """The grammar is the source field's (DP-2), not a "no number" rule: a digit string passes
+    (kept out by the raise sites alone), while the same value as a JSON number is refused."""
+    assert _failed_error(location={key: value}).location is not None
+    with pytest.raises(ValidationError):
+        _failed_error(location={key: int(float(value))})
+
+
+@pytest.mark.req("FR-403")
+@pytest.mark.parametrize(
     "location",
     [
         {},  # empty: points nowhere

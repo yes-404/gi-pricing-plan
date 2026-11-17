@@ -50,11 +50,13 @@ def _isolate_handlers():
     handlers.HANDLERS.update(original)
 
 
-async def _run(database: Database, workspace_id, principal, handler) -> JobRow:
+async def _run(
+    database: Database, workspace_id, principal, handler, params: dict[str, Any] | None = None
+) -> JobRow:
     handlers.register_handler(JobKind.MODEL_FIT, handler)
     async with database.unit_of_work() as session:
         job = await jobs.submit(
-            session, JobKind.MODEL_FIT, {}, principal, workspace_id=workspace_id
+            session, JobKind.MODEL_FIT, params or {}, principal, workspace_id=workspace_id
         )
     assert await execute_job(database, job.id) is JobStatus.FAILED
     async with database.session() as session:
@@ -364,7 +366,6 @@ async def test_a_plain_value_error_in_the_shape_of_a_coded_one_stays_job_handler
     assert row.error["message"] == "ValueError"
 
 
-
 @pytest.mark.req("FR-403")
 async def test_a_refusal_carrying_a_location_stores_it_and_never_a_submitted_value(
     database: Database, workspace_id, principal
@@ -381,12 +382,15 @@ async def test_a_refusal_carrying_a_location_stores_it_and_never_a_submitted_val
             location=JobErrorLocation(step_id="s_rp", field="inputs.age"),
         )
 
-    row = await _run(database, workspace_id, principal, handler)
+    # The sentinel is a submitted value (it passes the `step_id` grammar, so a location built
+    # from it would validate): it must be absent from the stored row.
+    row = await _run(database, workspace_id, principal, handler, params={"step_id": _SENTINEL})
 
     assert row.error is not None
     located = JobError.model_validate(row.error).location
     assert located == JobErrorLocation(step_id="s_rp", field="inputs.age")
     assert _SENTINEL not in str(row.error)
+    assert row.parameters == {"step_id": _SENTINEL}  # the one place the request's value lives
 
 
 @pytest.mark.req("FR-403")

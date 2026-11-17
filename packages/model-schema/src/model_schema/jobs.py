@@ -119,9 +119,7 @@ TERMINAL_STATUSES: frozenset[JobStatus] = frozenset(
 #: common case, and it needs no cooperation from `pricing-core`.
 VALID_TRANSITIONS: dict[JobStatus, frozenset[JobStatus]] = {
     JobStatus.QUEUED: frozenset({JobStatus.RUNNING, JobStatus.CANCELLED, JobStatus.FAILED}),
-    JobStatus.RUNNING: frozenset(
-        {JobStatus.SUCCEEDED, JobStatus.FAILED, JobStatus.CANCELLED}
-    ),
+    JobStatus.RUNNING: frozenset({JobStatus.SUCCEEDED, JobStatus.FAILED, JobStatus.CANCELLED}),
     JobStatus.SUCCEEDED: frozenset(),
     JobStatus.FAILED: frozenset(),
     JobStatus.CANCELLED: frozenset(),
@@ -186,11 +184,12 @@ class JobErrorLocation(BaseModel):
     """Where in the caller's own artifact a deterministic refusal points (#1917, `07` §4.1).
 
     Identifiers only: a step id, a path inside that step, a reference, a name the artifact
-    itself declares. **Never a submitted value**: no quote input, no rate-table cell, no factor
-    level, no bound, no number, no type, no free text. That is enforced by `extra="forbid"`
-    (no other key), `str` only, and the grammar of each key; a name that looks like an
-    identifier is kept out of the value space by construction alone (only raise sites that
-    read the caller's artifact fill it), which no pattern can prove. The key set is the one
+    itself declares. **Never a submitted value** is what the raise sites guarantee, by filling
+    this only from the caller's own artifact; no pattern can prove it. What the model itself
+    enforces is the source field's grammar (DP-2): `extra="forbid"` (no other key), `str` only
+    (a JSON number is refused), and one pattern per key (no whitespace or free text in a step
+    id, a reference, a dotted path of identifiers). A digit string such as `"42"` or `"0.05"`
+    satisfies the `step_id` and name patterns and is NOT refused. The key set is the one
     `InputFreeError.located` uses, so a `located` mapping builds this one to one.
     """
 
