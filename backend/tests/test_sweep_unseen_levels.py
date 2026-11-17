@@ -883,3 +883,65 @@ def test_a_version_the_runtime_cannot_load_is_unreadable_by_the_exception_type()
 
     assert "UNREADABLE unloadable@1 status=approved (ValueError)" in lines, lines
     assert rc == 2
+
+
+# --- the property: a version with a not-examined line is never NOTREACHABLE ---------------------
+
+
+def _plant_a_gbm(bundle: dict[str, Any]) -> dict[str, Any]:
+    return _with_a_gbm(bundle)
+
+
+def _plant_a_numeric_term(bundle: dict[str, Any]) -> dict[str, Any]:
+    fit = bundle["resolved_payloads"][_MODEL]["fit_result"]
+    fit["coefficients"].append({**fit["coefficients"][1], "term": "region[3.0]"})
+    return bundle
+
+
+_NOT_EXAMINED_PLANTS = {"another-family": _plant_a_gbm, "numeric-terms": _plant_a_numeric_term}
+_REACHABLE_LINES = (
+    "PLAIN ",
+    "NULLLEVEL ",
+    "GROUPING ",
+    "INTERACTION ",
+    "INTERACTION-LOWERBOUND ",
+    "NORELATIVITIES ",
+)
+_COUNT_LINES = (
+    "not-examined-other-family: ",
+    "not-examined-interaction: ",
+    "NOTEXAMINED-NUMERIC-TERMS ",
+    "NOTEXAMINED-GROUPING-SOURCE ",
+)
+
+
+def _carries_a_not_examined_line(lines: list[str]) -> bool:
+    """Read from the printed report alone: a non-zero not-examined count line (the count is the
+    first number after the label), or a listed NOTEXAMINED-* line naming the version."""
+    for line in lines:
+        for label in _COUNT_LINES:
+            if line.startswith(label) and line[len(label) :].split()[0] != "0":
+                return True
+        if line.startswith("NOTEXAMINED-") and "@" in line:
+            return True
+    return False
+
+
+@pytest.mark.req("FR-2143")
+@pytest.mark.parametrize("plant", sorted(_NOT_EXAMINED_PLANTS))
+@pytest.mark.parametrize("name", sorted(_closed_fixtures()))
+def test_a_version_carrying_a_not_examined_line_is_never_listed_notreachable(
+    name: str, plant: str
+) -> None:
+    _clean_rc, clean_lines = _run([_row(_closed_fixtures()[name], "v", 1)])
+    assert any(line.startswith("NOTREACHABLE v@1 ") for line in clean_lines), clean_lines
+
+    bundle = _NOT_EXAMINED_PLANTS[plant](_closed_fixtures()[name])
+    rc, lines = _run([_row(bundle, "v", 1)])
+
+    assert not _carries_a_not_examined_line(clean_lines), clean_lines
+    assert _carries_a_not_examined_line(lines), lines  # the plant is not vacuous
+    assert not any(line.startswith("NOTREACHABLE ") for line in lines), lines
+    assert "not-reachable: 0" in lines
+    reachable = any(line.startswith(_REACHABLE_LINES) for line in lines)
+    assert rc == (1 if reachable else 0), (rc, lines)

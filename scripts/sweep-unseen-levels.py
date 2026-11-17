@@ -386,11 +386,15 @@ def _findings(bundle: Bundle) -> tuple[int, set[str], set[str], set[str]]:
                 break
     if open_factor:
         kinds.add("PLAIN")
-    elif reasons and not kinds and not other_families:
-        # no reachable class and no line the sweep did not examine: a model of another family
-        # is one (FR-131's refusal is not read here)
-        kinds.add(NOTREACHABLE)
     return glm_refs, kinds, reasons, other_families
+
+
+def _is_not_reachable(kinds: set[str], reasons: set[str], other_families: set[str]) -> bool:
+    """THE verdict (FR-2143): a version is NOTREACHABLE when it has a reason word and carries
+    nothing else the sweep recorded about it: no class (PLAIN and every reachable class are in
+    `kinds`), no NOTEXAMINED-* line (also in `kinds`) and no model of another family (FR-131's
+    refusal is not read here). The one place the rule lives; `sweep` is its only caller."""
+    return bool(reasons) and not kinds and not other_families
 
 
 def sweep(versions: list[dict[str, Any]], out: TextIO) -> int:
@@ -425,6 +429,8 @@ def sweep(versions: list[dict[str, Any]], out: TextIO) -> int:
             lines.append(f"UNREADABLE {ref} ({type(exc).__name__})")
             continue
         glm_refs += refs
+        if _is_not_reachable(kinds, reasons, others):
+            kinds = {NOTREACHABLE}
         if others:
             other_versions += 1
             other_families |= others
