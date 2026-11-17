@@ -106,6 +106,7 @@
 /scripts/hooks/                                            @yes-404 @freynia404
 /scripts/freeze-check.py                                   @yes-404 @freynia404
 /scripts/_frozen.py                                        @yes-404 @freynia404
+/scripts/_gitenv.py                                        @yes-404 @freynia404
 /scripts/audit-docs.py                                     @yes-404 @freynia404
 /scripts/req-coverage.py                                   @yes-404 @freynia404
 /scripts/doc-id.py                                         @yes-404 @freynia404
