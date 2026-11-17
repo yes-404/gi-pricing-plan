@@ -17,7 +17,9 @@ import json
 import pathlib
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from types import SimpleNamespace
 from typing import Any
+from unittest.mock import create_autospec
 from uuid import UUID, uuid4
 
 import pytest
@@ -40,7 +42,9 @@ from backend.tests.test_stored_bundle_revalidation import (
 from fastapi.testclient import TestClient
 from sqlalchemy import select, text
 from sqlalchemy.exc import DBAPIError
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api import score as score_api
 from app.api.deps import DEV_PRINCIPAL_HEADER
 from app.api.score import _fetch_bundle, hydrate_for_switch
 from app.db.models import RatingVersionRow
@@ -501,13 +505,18 @@ class _NoDatabase:
 
 
 @pytest.mark.req("FR-240")
+@pytest.mark.parametrize("swapped_part", ["resolved_payloads", "algorithm_ref"])
 async def test_a_stored_payload_is_held_to_the_digest_its_row_records(
-    monkeypatch: pytest.MonkeyPatch,
+    monkeypatch: pytest.MonkeyPatch, swapped_part: str
 ) -> None:
     """The payload bytes read are held to the sha256 the row records, before they are used.
 
-    The content hash covers the graph and pins only; here the graph, the pins and the recorded
-    content hash are all unchanged and one resolved payload differs, so the digest alone refuses.
+    The digest is `bundle -> blob_sha256` on the version's row, which the content guard holds
+    once the version is past draft (`test_rating_version_content_guard.py`). The content hash
+    covers the graph and pins only; here the graph, the pins and the recorded content hash are
+    all unchanged and one other part of the payload differs, so the digest alone refuses: the
+    resolved payloads (rate table cells, coefficients, boosters), and the `algorithm_ref` the
+    bundle carries, which travels in the payload bytes and by no other path.
     Database-free: the refusal's audit write is replaced.
     """
     audited: list[str] = []
@@ -518,8 +527,11 @@ async def test_a_stored_payload_is_held_to_the_digest_its_row_records(
     monkeypatch.setattr(bundle_hydration.audit, "record", record)
     original = (FIXTURES / "clean.bundle.json").read_bytes()
     stored = json.loads(original)
-    first = next(iter(stored["resolved_payloads"]))
-    stored["resolved_payloads"][first]["base_level_method"] = "a_different_method"
+    if swapped_part == "resolved_payloads":
+        first = next(iter(stored["resolved_payloads"]))
+        stored["resolved_payloads"][first]["base_level_method"] = "a_different_method"
+    else:
+        stored["algorithm_ref"] = "rating_algorithm:another@1"
     swapped = json.dumps(stored).encode()
     assert swapped != original
     bundle = Bundle.model_validate_json(swapped)
@@ -544,8 +556,60 @@ async def test_a_stored_payload_is_held_to_the_digest_its_row_records(
         )
 
     assert (await load(original, digest)).content_hash == clean.content_hash
-    for refused in (swapped, original):
+    for refused, recorded_digest in ((swapped, digest), (original, None)):
         with pytest.raises(PlatformError) as raised:
-            await load(refused, digest if refused is swapped else None)
+            await load(refused, recorded_digest)
         assert raised.value.code == CODE
     assert audited == [REFUSAL_ACTION, REFUSAL_ACTION]
+
+
+class _BlobReadReachedError(Exception):
+    """The fetch went on to read the blob."""
+
+
+@pytest.mark.req("FR-240")
+async def test_a_slot_hit_is_compared_with_the_row_and_not_with_the_deployment(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Characterisation of the scoring fetch's slot-hit path (ADR-2157 decision 6: the hold is
+    made at load; a process that holds a bundle keeps it until it loads again).
+
+    What it compares: the content hash recorded on the version's row (read on this call) with the
+    hash the slot holds the bundle under. What it does not compare: the Deployment's hash
+    (`deployment_hash`), nor the stored bytes, which it does not read. A hit is served as held;
+    a row whose recorded hash the slot does not hold goes on to read the blob, where
+    `load_stored_bundle` compares every hash. The switch's PREPARE has its own explicit check
+    (`hydrate_for_switch`). Database-free: the session and the row are stand-ins.
+    """
+    held = "sha256:" + "a" * 64
+    row = SimpleNamespace(bundle={"content_hash": held, "blob_sha256": "b" * 64})
+
+    async def resolve(session: object, **kwargs: Any) -> SimpleNamespace:
+        return row
+
+    monkeypatch.setattr(score_api.rating_versions_service, "resolve_rating_version_ref", resolve)
+    session = create_autospec(AsyncSession, instance=True)
+    session.get.side_effect = _BlobReadReachedError
+    compiled = SimpleNamespace(content_hash=held)
+    slot = BundleSlot()
+    ref = ArtifactRef(type="rating_version", slug="slot-hit", version=1)
+    slot.put(ref, compiled)  # type: ignore[arg-type]
+
+    async def fetch(deployment_hash: str | None) -> Any:
+        return await _fetch_bundle(
+            session,
+            None,  # type: ignore[arg-type]
+            slot,
+            database=None,  # type: ignore[arg-type]
+            workspace_id=uuid4(),
+            ref=ref,
+            deployment_hash=deployment_hash,
+        )
+
+    assert await fetch(None) is compiled
+    assert await fetch("sha256:" + "9" * 64) is compiled  # a Deployment hash it does not hold
+    session.get.assert_not_called()  # no blob read on a hit
+
+    row.bundle["content_hash"] = "sha256:" + "c" * 64  # the row now records a hash it does not hold
+    with pytest.raises(_BlobReadReachedError):
+        await fetch(None)

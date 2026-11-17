@@ -9,6 +9,7 @@ sweep does not know fails the test, asking for a hold decision.
 
 from __future__ import annotations
 
+import hashlib
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from uuid import UUID
@@ -48,6 +49,7 @@ NEW_VALUE: dict[str, str] = {
 #: A backwards status for a row that is past `review`; `retired` above is forward for `review`.
 HELD_STATUSES = ("review", "approved", "live", "retired")
 GUARD = "rating_versions_content_guard"
+CHECK_NAME = "rating_version_status_is_in_the_lifecycle"
 #: The two SQLSTATEs a refusal may carry: this guard's, and the approval guard's, which fires
 #: first (by name) on the identity columns of an approved or later row.
 REFUSED = {"42501", "GP001"}
@@ -149,14 +151,76 @@ async def test_a_version_past_draft_refuses_every_content_column(database: Datab
     assert allowed == {}
 
 
+async def _refusal(conn: AsyncConnection, sql: str) -> tuple[str | None, str]:
+    """`(SQLSTATE, message)` of the refusal `sql` raises, or `(None, "")` when it runs; inside a
+    savepoint, like `_sqlstate`. The message names the rule that refused."""
+    nested = await conn.begin_nested()
+    try:
+        await conn.execute(text(sql))
+    except DBAPIError as exc:
+        await nested.rollback()
+        state = getattr(exc.orig, "sqlstate", None) or getattr(exc.orig, "pgcode", None)
+        return state, str(exc.orig)
+    await nested.rollback()
+    return None, ""
+
+
 @pytest.mark.req("FR-44")
-async def test_a_status_the_platform_does_not_define_is_not_accepted(database: Database) -> None:
+async def test_a_status_outside_the_lifecycle_is_refused_by_the_check(database: Database) -> None:
+    """On a `draft` row (free for the content guard, and a status the approval guard does not
+    hold) only the CHECK can refuse: 23514, naming `rating_version_status_is_in_the_lifecycle`."""
     async with rolled_back(database) as conn:
-        row_id = await plant(conn, "approved")
-        state = await _sqlstate(
+        row_id = await plant(conn, "draft")
+        state, message = await _refusal(
             conn, f"UPDATE rating_versions SET status = 'approvedx' WHERE id = '{row_id}'"
         )
-    assert state in {"23514", "42501"}
+    assert state == "23514", (state, message)
+    assert CHECK_NAME in message, message
+
+
+@pytest.mark.req("FR-44")
+async def test_a_status_outside_the_lifecycle_on_a_held_row_is_refused_by_the_content_guard(
+    database: Database,
+) -> None:
+    """On an `approved` row the BEFORE trigger refuses before the CHECK is evaluated: 42501,
+    with the content guard's own message (the approval guard lets a status it does not hold
+    through, so it is not the refuser)."""
+    async with rolled_back(database) as conn:
+        row_id = await plant(conn, "approved")
+        state, message = await _refusal(
+            conn, f"UPDATE rating_versions SET status = 'approvedx' WHERE id = '{row_id}'"
+        )
+    assert state == "42501", (state, message)
+    assert "a rating version past draft is held" in message, message
+
+
+@pytest.mark.req("FR-44")
+async def test_the_stored_bundle_digest_is_held_with_the_bytes_it_describes(
+    database: Database,
+) -> None:
+    """The digest the loader holds a stored payload to is `bundle -> blob_sha256` on the version's
+    row (written by the compile job while the version is a draft), and the content guard refuses
+    to change it once the version is past draft: a payload put in the blob store under a new
+    digest, and that digest written to the row, is refused (42501, the content guard's message)
+    at every held status."""
+    async with rolled_back(database) as conn:
+        for status in HELD_STATUSES:
+            row_id = await plant(conn, status, slug=f"digest-{status}")
+            new_digest = hashlib.sha256(status.encode()).hexdigest()
+            await conn.execute(
+                text(
+                    "INSERT INTO blobs (sha256, bytes, media_type, ref_count) "
+                    "VALUES (:d, 1, 'application/json', 1)"
+                ),
+                {"d": new_digest},
+            )
+            state, message = await _refusal(
+                conn,
+                "UPDATE rating_versions SET bundle = jsonb_set(bundle, '{blob_sha256}', "
+                f"'\"{new_digest}\"') WHERE id = '{row_id}'",
+            )
+            assert state == "42501", (status, state, message)
+            assert "a rating version past draft is held" in message, (status, message)
 
 
 @pytest.mark.req("FR-44")
