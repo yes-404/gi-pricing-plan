@@ -340,3 +340,65 @@ def test_git_ls_files_type_is_list_of_str(synthetic_repo: pathlib.Path) -> None:
     tracked = file_census.git_ls_files(synthetic_repo)
     assert isinstance(tracked, list)
     assert all(isinstance(p, str) for p in cast("list[object]", tracked))
+
+
+def test_default_root_is_the_checkout_the_script_lives_in(
+    tmp_path: pathlib.Path,
+) -> None:
+    """Run from a second, valid repository, the census reads its own checkout (#1900)."""
+    own = tmp_path / "own"
+    other = tmp_path / "other"
+    own.mkdir()
+    other.mkdir()
+    _init_repo(own, {"own-only.md": "own"})
+    _init_repo(other, {"other-only.md": "other"})
+    (own / "scripts").mkdir()
+    copy = own / "scripts" / "file-census.py"
+    copy.write_text(SCRIPT.read_text(encoding="utf-8"), encoding="utf-8")
+
+    done = subprocess.run(
+        [sys.executable, str(copy)], cwd=other, capture_output=True, text=True, check=True
+    )
+    paths = [row[0] for row in list(csv.reader(io.StringIO(done.stdout)))[1:]]
+    assert paths == ["own-only.md"]
+    own_head = subprocess.run(
+        ["git", "-C", str(own), "rev-parse", "--short=12", "HEAD"],
+        check=True, capture_output=True, text=True,
+    ).stdout.strip()
+    assert done.stderr.splitlines()[0] == f"file-census: root={own.resolve()} head={own_head}"
+
+
+@pytest.mark.parametrize(
+    ("var", "suffix"),
+    [("GIT_DIR", ""), ("GIT_COMMON_DIR", ""), ("GIT_INDEX_FILE", "/index"),
+     ("GIT_OBJECT_DIRECTORY", "/objects")],
+)
+def test_an_exported_git_variable_does_not_redirect_the_read(
+    var: str, suffix: str, tmp_path: pathlib.Path
+) -> None:
+    """An exported GIT_DIR and its kin (as inside a git hook) override `git -C`; the census
+    strips them and still reads its own checkout (#1900 audit Q6-A)."""
+    import os
+
+    own = tmp_path / "own"
+    other = tmp_path / "other"
+    own.mkdir()
+    other.mkdir()
+    clean = {k: v for k, v in os.environ.items() if not k.startswith("GIT_")}
+    _init_repo(own, {"own-only.md": "own"})
+    _init_repo(other, {"other-only.md": "other"})
+    (own / "scripts").mkdir()
+    copy = own / "scripts" / "file-census.py"
+    copy.write_text(SCRIPT.read_text(encoding="utf-8"), encoding="utf-8")
+
+    done = subprocess.run(
+        [sys.executable, str(copy)], cwd=other, capture_output=True, text=True, check=True,
+        env={**clean, var: f"{other / '.git'}{suffix}"},
+    )
+    paths = [row[0] for row in list(csv.reader(io.StringIO(done.stdout)))[1:]]
+    assert paths == ["own-only.md"]
+    own_head = subprocess.run(
+        ["git", "-C", str(own), "rev-parse", "--short=12", "HEAD"],
+        check=True, capture_output=True, text=True, env=clean,
+    ).stdout.strip()
+    assert done.stderr.splitlines()[0] == f"file-census: root={own.resolve()} head={own_head}"
