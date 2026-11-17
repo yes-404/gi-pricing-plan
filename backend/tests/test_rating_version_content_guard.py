@@ -54,7 +54,11 @@ CHECK_NAME = "rating_version_status_is_in_the_lifecycle"
 #: The content guard refuses every change to a row past `draft`; the approval guard
 #: (`approval_guard`, `BEFORE INSERT OR UPDATE OF status, workspace_id, slug, version`, which sorts
 #: first by name) is the refuser of a changed identity on an approved, live or retired row,
-#: because the row's ref no longer names the decided request.
+#: because the row's ref no longer names the decided request. The trigger's column list is
+#: line 190 of `backend/migrations/versions/e5b2a7d94c13_rating_version_content_guard.py`
+#: (`_RV_TRIGGER`): of the 19 columns only `workspace_id`, `slug` and `version` change the ref it
+#: checks, so no CONTENT column is refused first by the approval guard and none needs that guard
+#: switched off to show the content guard alone.
 CONTENT_GUARD = ("42501", "a rating version past draft is held")
 APPROVAL_GUARD = ("GP001", "only the approval decision path may write approved")
 IDENTITY = ("workspace_id", "slug", "version")
