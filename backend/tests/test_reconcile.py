@@ -13,6 +13,7 @@ from datetime import UTC, datetime, timedelta
 from uuid import UUID, uuid4
 
 import pytest
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import Database
@@ -258,6 +259,31 @@ async def test_a_workspace_with_a_malformed_event_body_is_reported_unreadable(
     report = await rc.reconcile(None, uuid4())  # type: ignore[arg-type]
     assert report.chain == "unreadable"
     assert report.mismatches == ()
+
+
+@pytest.mark.parametrize("stage", ["verify_chain", "load_workspace_data"])
+@pytest.mark.parametrize(
+    "error",
+    [ConnectionError("connection lost"), SQLAlchemyError("statement failed")],
+    ids=["os-error", "sqlalchemy-error"],
+)
+async def test_a_database_error_aborts_the_run_and_is_not_read_as_an_unreadable_workspace(
+    monkeypatch: pytest.MonkeyPatch, stage: str, error: Exception
+) -> None:
+    async def _raises(*_a: object, **_k: object) -> int:
+        raise error
+
+    async def _verified(*_a: object, **_k: object) -> int:
+        return 3
+
+    if stage == "verify_chain":
+        monkeypatch.setattr(rc.audit, "verify_chain", _raises)
+    else:
+        monkeypatch.setattr(rc.audit, "verify_chain", _verified)
+        monkeypatch.setattr(rc, "load_workspace_data", _raises)
+    with pytest.raises(type(error)) as caught:
+        await rc.reconcile(None, uuid4())  # type: ignore[arg-type]
+    assert caught.value is error
 
 
 # -- R4 ---------------------------------------------------------------------------------------
