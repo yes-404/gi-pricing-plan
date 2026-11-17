@@ -392,6 +392,7 @@ def _fit(parameters: dict[str, Any], callback: ProgressCallback) -> JobResult:
     )
     from pricing_core.modelling.errors import (
         BandingError,
+        GroupingCoverageError,
         NonFiniteDerivativeError,
         RoundBudgetExceededError,
     )
@@ -504,6 +505,15 @@ def _fit(parameters: dict[str, Any], callback: ProgressCallback) -> JobResult:
             exc.code,
             f"The {spec.model_type} model could not be fitted",
             409,
+            safe_error_detail(exc),
+        ) from exc
+    except GroupingCoverageError as exc:
+        # FR-109: a grouping Factor that maps none of its column. Named before the
+        # `FactorResolutionError` arm, and its text goes through the allow-list (NFR-499).
+        raise PlatformError(
+            exc.code,
+            f"The {spec.model_type} model could not be fitted",
+            422,
             safe_error_detail(exc),
         ) from exc
     except FactorResolutionError as exc:

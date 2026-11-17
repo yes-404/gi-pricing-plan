@@ -24,6 +24,7 @@ from pricing_core.modelling.ebm import EbmFitError, fit_ebm
 from pricing_core.modelling.errors import (
     BandingError,
     FactorResolutionError,
+    GroupingCoverageError,
     GroupingError,
     ModellingError,
     NonFiniteDerivativeError,
@@ -56,7 +57,9 @@ from pricing_core.modelling.glm import (
 )
 from pricing_core.modelling.groupings import (
     apply_grouping,
+    check_fit_groupings,
     check_grouping_chain,
+    fit_exposure,
     grouping_evidence,
     propose_grouping,
 )
@@ -102,6 +105,7 @@ __all__ = [
     "GlmApproximationFit",
     "GlmFit",
     "GlmFitError",
+    "GroupingCoverageError",
     "GroupingError",
     "ModellingError",
     "NonFiniteDerivativeError",
@@ -122,6 +126,7 @@ __all__ = [
     "build_shap_summary",
     "certify_objective",
     "check_banding",
+    "check_fit_groupings",
     "check_grouping_chain",
     "compare_models",
     "compile_objective",
@@ -132,6 +137,7 @@ __all__ = [
     "encode_covariance",
     "fidelity_statement",
     "fit_ebm",
+    "fit_exposure",
     "fit_gbm",
     "fit_glm",
     "grouping_evidence",

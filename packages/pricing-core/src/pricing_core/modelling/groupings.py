@@ -30,7 +30,8 @@ this factor alone, not the deviance the eventual multi-factor model will report.
 from __future__ import annotations
 
 import math
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
+from decimal import Decimal
 from uuid import UUID
 
 import numpy as np
@@ -39,19 +40,34 @@ from scipy import stats
 
 from model_schema import (
     CredibilityModel,
+    Factor,
+    FactorType,
     Grouping,
     GroupingEvidence,
     GroupingMethod,
     GroupingProposal,
+    GroupingUnmapped,
+    OffsetSpec,
     OneWayRow,
     OneWaySummary,
     UnseenLevelBehaviour,
     new_uuid7,
 )
 from pricing_core.data.profile import one_way
-from pricing_core.modelling.errors import FactorResolutionError, GroupingError
+from pricing_core.modelling.errors import (
+    FactorResolutionError,
+    GroupingCoverageError,
+    GroupingError,
+)
 
-__all__ = ["apply_grouping", "check_grouping_chain", "grouping_evidence", "propose_grouping"]
+__all__ = [
+    "apply_grouping",
+    "check_fit_groupings",
+    "check_grouping_chain",
+    "fit_exposure",
+    "grouping_evidence",
+    "propose_grouping",
+]
 
 def _full_credibility_claims(p: float, k: float) -> float:
     """The claim count at which a Poisson estimate is within ±`k` with probability `p`.
@@ -548,6 +564,75 @@ def apply_grouping(series: pl.Series, grouping: Grouping) -> pl.Series:
     if text.len() == 1:
         return pl.Series(series.name, [targets[levels[0]]], dtype=pl.String)
     return text.replace_strict(targets, return_dtype=pl.String).rename(series.name)
+
+
+def fit_exposure(data: pl.DataFrame, offset: OffsetSpec) -> pl.Series | None:
+    """The exposure column a fit's offset names, or `None` when it names none the frame has."""
+    if offset.kind == "log_column" and offset.column in data.columns:
+        return data[str(offset.column)]
+    return None
+
+
+def check_fit_groupings(
+    data: pl.DataFrame,
+    factors: Sequence[Factor],
+    groupings: Mapping[UUID, Grouping] | None,
+    exposure: pl.Series | None = None,
+    *,
+    refuse_when_none_mapped: bool = True,
+) -> tuple[GroupingUnmapped, ...]:
+    """FR-109 at fit time: what each Grouping Factor does not map of `data`'s column.
+
+    A Factor none of whose rows is a source level of its Grouping is refused when
+    `refuse_when_none_mapped` (the fit's own rows): none of the column's rows is a level the
+    Grouping maps, so the Factor carries nothing of its column. Some rows unmapped is never a
+    refusal; it is returned, with the exposure of those rows, for the fit result to carry.
+    The holdout is counted with the flag off (it is
+    evidence, not a fit input). A Grouping the mapping lacks, or whose column the frame lacks
+    or differs from the Factor's, is left to `resolve_factors`, which refuses each by name.
+
+    Membership is `_targets`'s: a value is mapped iff it is a key of `grouping.mapping`. A null
+    is not a level and is `apply_grouping`'s refusal, so it is in neither count. The text names
+    the Factor, the Grouping and a count, never a value (NFR-499).
+    """
+    mapping = groupings or {}
+    report: list[GroupingUnmapped] = []
+    seen: set[str] = set()
+    for factor in factors:
+        if factor.type is not FactorType.GROUPING or factor.slug in seen:
+            continue
+        grouping = mapping.get(factor.grouping_id) if factor.grouping_id else None
+        source = factor.source_columns[0] if factor.source_columns else ""
+        if grouping is None or grouping.column != source or source not in data.columns:
+            continue
+        seen.add(factor.slug)
+        values = data[source].cast(pl.String)
+        present = values.is_not_null()
+        unmapped = present & ~values.is_in(list(grouping.mapping))
+        rows_present, rows_unmapped = int(present.sum()), int(unmapped.sum())
+        if refuse_when_none_mapped and rows_present and rows_unmapped == rows_present:
+            raise GroupingCoverageError(
+                "GROUPING_MAPS_NO_VALUE",
+                f"factor {factor.slug!r} pins grouping {grouping.slug!r}@{grouping.version} "
+                f"over column {source!r}, and none of the column's {rows_present} row(s) is a "
+                "source level that grouping maps: the column holds values at a different level "
+                "from the grouping's source levels (FR-109).",
+            )
+        if rows_unmapped:
+            total = (
+                None
+                if exposure is None
+                else Decimal(repr(float(exposure.filter(unmapped).sum())))
+            )
+            report.append(
+                GroupingUnmapped(
+                    factor=factor.slug,
+                    grouping=f"{grouping.slug}@{grouping.version}",
+                    rows=rows_unmapped,
+                    exposure=total,
+                )
+            )
+    return tuple(report)
 
 
 def check_grouping_chain(child: Grouping, ancestors: Sequence[Grouping]) -> None:

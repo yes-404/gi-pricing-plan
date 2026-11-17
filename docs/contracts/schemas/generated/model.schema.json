@@ -340,6 +340,21 @@
           "title": "Fit Seconds",
           "type": "number"
         },
+        "grouping_unmapped": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/GroupingUnmapped"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Grouping Unmapped"
+        },
         "intercept": {
           "title": "Intercept",
           "type": "number"
@@ -791,6 +806,36 @@
           "title": "Fit Seconds",
           "type": "number"
         },
+        "grouping_unmapped": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/GroupingUnmapped"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Grouping Unmapped"
+        },
+        "holdout_grouping_unmapped": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/GroupingUnmapped"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Holdout Grouping Unmapped"
+        },
         "inverse_link": {
           "anyOf": [
             {
@@ -1233,6 +1278,21 @@
           "title": "Fit Seconds",
           "type": "number"
         },
+        "grouping_unmapped": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/GroupingUnmapped"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Grouping Unmapped"
+        },
         "iterations": {
           "minimum": 0,
           "title": "Iterations",
@@ -1544,6 +1604,46 @@
         "response_column"
       ],
       "title": "GlmSpec",
+      "type": "object"
+    },
+    "GroupingUnmapped": {
+      "additionalProperties": false,
+      "description": "The rows a fit's Grouping Factor did not map, and their exposure (FR-109).\n\nA row whose column value is not a source level of the Factor's Grouping is unmapped; a fit\nwith every row unmapped is refused and one with some records them here. `exposure` is `None`\nwhen the fit has no exposure column to sum.",
+      "properties": {
+        "exposure": {
+          "anyOf": [
+            {
+              "description": "Exact decimal as a string; never a binary float (FR-10).",
+              "pattern": "^-?[0-9]+(\\.[0-9]+)?$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Exposure"
+        },
+        "factor": {
+          "title": "Factor",
+          "type": "string"
+        },
+        "grouping": {
+          "title": "Grouping",
+          "type": "string"
+        },
+        "rows": {
+          "minimum": 1,
+          "title": "Rows",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "factor",
+        "grouping",
+        "rows"
+      ],
+      "title": "GroupingUnmapped",
       "type": "object"
     },
     "IntervalFor": {

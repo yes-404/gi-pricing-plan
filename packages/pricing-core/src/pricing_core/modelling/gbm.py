@@ -63,6 +63,7 @@ from model_schema import (
 from pricing_core.modelling.bandings import check_fit_bandings
 from pricing_core.modelling.errors import ObjectiveError
 from pricing_core.modelling.factors import FactorMatrix, resolve_factors
+from pricing_core.modelling.groupings import check_fit_groupings, fit_exposure
 from pricing_core.modelling.loss_treatment import apply_loss_treatment
 from pricing_core.modelling.metrics import evaluate_metric
 from pricing_core.modelling.objectives import (
@@ -616,6 +617,9 @@ def fit_gbm(
         ).data
     # FR-100 over the rows fitted (after the weight-0 exclusion): empty refused, thin recorded.
     banding_warnings = check_fit_bandings(data, factors, bandings)
+    grouping_unmapped = check_fit_groupings(
+        data, factors, groupings, fit_exposure(data, spec.offset)
+    )
     report.update(0.05, "resolving factors")
     matrix = resolve_factors(data, factors, bandings=bandings, groupings=groupings)
 
@@ -662,6 +666,17 @@ def fit_gbm(
         )
 
     valid: tuple[np.ndarray, np.ndarray, np.ndarray | None, np.ndarray | None] | None = None
+    holdout_grouping_unmapped = (
+        None
+        if holdout is None
+        else check_fit_groupings(
+            holdout,
+            factors,
+            groupings,
+            fit_exposure(holdout, spec.offset),
+            refuse_when_none_mapped=False,
+        )
+    )
     if holdout is not None:
         holdout_matrix = resolve_factors(holdout, factors, bandings=bandings, groupings=groupings)
         vx = _encode(holdout_matrix, factors, maps=encodings, bandings=bandings).x
@@ -715,6 +730,8 @@ def fit_gbm(
             library_versions=versions,
             dropped_eval_metrics=dropped,
             banding_warnings=banding_warnings,
+            grouping_unmapped=grouping_unmapped,
+            holdout_grouping_unmapped=holdout_grouping_unmapped,
         ),
         booster_bytes=payload,
         eval_curve=curve,

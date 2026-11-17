@@ -26,7 +26,7 @@ from backend.tests.test_model_jobs import (
 )
 from sqlalchemy import select
 
-from app.db.models import AuditEventRow, BandingRow, GroupingRow, ModelRow
+from app.db.models import AuditEventRow, BandingRow, GroupingRow, JobRow, ModelRow
 from app.db.session import Database
 from app.errors import PlatformError
 from app.platform import jobs as job_service
@@ -787,3 +787,72 @@ async def test_a_three_link_chain_whose_levels_chain_is_created_and_audited(
         )
         assert event is not None
         assert event.after["parent_grouping_ref"].startswith("grouping:area-")
+
+
+@pytest.mark.req("FR-109")
+async def test_a_fit_whose_grouping_factor_maps_none_of_the_column_fails_the_job_with_its_code(
+    database: Database, blob_store: BlobStore, workspace_id
+) -> None:
+    """The book's `area` holds `urban` and `rural`; the grouping maps neither."""
+    actor = await _actuary(database, workspace_id)
+    dataset_id = await _dataset(database, blob_store, workspace_id, actor)
+    version_id = await _validated_version(database, blob_store, workspace_id, actor, dataset_id)
+    async with database.unit_of_work() as session:
+        grouping_row = await transform_service.create_grouping(
+            session,
+            workspace_id=workspace_id,
+            actor=actor,
+            grouping=Grouping(
+                id=uuid4(),
+                slug=f"region-{uuid4().hex[-6:]}",
+                dataset_id=dataset_id,
+                version=1,
+                column="area",
+                method=GroupingMethod.MANUAL,
+                mapping={"AB": "R1", "CD": "R2"},
+                unseen_level_behaviour=UnseenLevelBehaviour.MAP_TO_DEFAULT,
+                default_target_level="R1",
+            ),
+        )
+        factor_row = await model_service.create_factor(
+            session,
+            workspace_id=workspace_id,
+            actor=actor,
+            factor=Factor(
+                id=uuid4(),
+                slug=f"region-f-{uuid4().hex[-6:]}",
+                dataset_id=dataset_id,
+                version=1,
+                type=FactorType.GROUPING,
+                source_columns=("area",),
+                grouping_id=grouping_row.id,
+            ),
+        )
+        factor_id = factor_row.id
+
+    async with database.unit_of_work() as session:
+        row, _ = await model_service.reserve_model(
+            session,
+            workspace_id=workspace_id,
+            actor=actor,
+            spec=_spec(version_id, (factor_id,)),
+        )
+        job = await job_service.submit(
+            session,
+            JobKind.MODEL_FIT,
+            {
+                "workspace_id": str(workspace_id),
+                "actor": actor.model_dump(mode="json"),
+                "model_id": str(row.id),
+            },
+            actor,
+            workspace_id=workspace_id,
+        )
+    assert await execute_job(database, job.id, blob_store) is JobStatus.FAILED
+    async with database.session() as session:
+        job_row = await session.get(JobRow, job.id)
+    assert job_row is not None
+    assert job_row.error is not None
+    assert job_row.error["code"] == "GROUPING_MAPS_NO_VALUE"
+    assert "urban" not in job_row.error["message"]
+    assert "rural" not in job_row.error["message"]

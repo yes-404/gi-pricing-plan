@@ -472,3 +472,24 @@ def test_the_cells_agree_with_the_summary(with_weights: bool) -> None:
     else:
         assert pairs == []
         assert summary.exposure_weighted_mean_change_pct is None
+
+
+@pytest.mark.req("FR-109")
+def test_a_grouping_factor_key_whose_column_maps_none_of_the_portfolio_is_refused() -> None:
+    """The weights join must not price a book's every row by the Grouping's default level."""
+    head, factors, _, groupings, _, cells, _ = _grouping_case()
+    (grouping,) = groupings.values()
+    declared = grouping.model_copy(
+        update={
+            "unseen_level_behaviour": UnseenLevelBehaviour.MAP_TO_DEFAULT,
+            "default_target_level": grouping.target_levels[0],
+        }
+    )
+    frame = _portfolio(region=["ZZ-SENTINEL-9"] * 3, exposure_years=[D("1"), D("2"), D("4")])
+    pattern = r"region_f.*region-ns'@1.*none of the column"
+    with pytest.raises(WeightJoinError, match=pattern) as refused:
+        exposure_weights(
+            frame, [_key("region_k", factor_ref=_ref(head.slug))], cells,
+            factors={_ref(head.slug): factors}, bandings={}, groupings={declared.id: declared},
+        )
+    assert "ZZ-SENTINEL-9" not in str(refused.value)

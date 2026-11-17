@@ -146,6 +146,18 @@ Terms from `00-overview.md` §2.2 are used unchanged. Additional terms owned her
 > target level of its parent, and none is also a source level of an ancestor
 > (`GROUPING_CHAIN_LEVELS_MISMATCH`). The refusal names the Grouping and a count, never a
 > level (NFR-499). A Grouping stored before this clause is not re-checked.
+>
+> **(2) At fit**, a grouping Factor whose Grouping maps **none** of its column's rows is refused
+> (`GROUPING_MAPS_NO_VALUE`, 422 on a fit job): a Factor none of whose rows is a level the Grouping maps carries no information about its column. The
+> text names the Factor, the Grouping and a row count, never a value (NFR-499). Where **some**
+> rows are unmapped the fit is not refused: each of a GLM, a GBM and an EBM fit result records
+> `grouping_unmapped`, one entry per such Factor with its `rows` and `exposure` (`None` for a fit with no exposure column), and a GBM
+> fit records the same count over its holdout as `holdout_grouping_unmapped`, which is counted
+> and never refused. Both fields are optional: `None` is *not recorded* (a Model fitted before
+> this clause), `()` is *every row mapped*, never one for the other. The model detail view
+> states the rows and exposure in words. A rate-table weights join (`03` FR-231) refuses a
+> Grouping Factor key whose portfolio column maps none of its rows by the same rule, as a
+> `WeightJoinError`.
 
 ### 3.4 GLM fitting
 
@@ -2281,7 +2293,7 @@ Dataset.
 **Error codes owned by this module:** `DATASET_NOT_VALIDATED` (re-raised from `01`),
 `PROXY_REFERENCE_INVALID` (a Reference Population that FR-2138 refuses: a missing column, a repeated key, a null or out-of-range share, or shares that do not sum to 1; *added 2026-11-15 for #1501 (WK-691), on the maintainer's ruling*), `PROXY_INPUT_INVALID` (a Proxy Assessment call that cannot be assessed: the classes, the frame's columns or the exposure; same date). Both messages name the column and, for rows, their key in the reference — never a share or a value from the caller's frame (NFR-499),
 `FACTOR_PROHIBITED`, `FACTOR_RESOLUTION_FAILED`, `BAND_EMPTY`, `BAND_BELOW_MIN_EXPOSURE`,
-`GROUPING_NOT_EXHAUSTIVE`, `GROUPING_PARENT_NOT_FOUND` and `GROUPING_CHAIN_LEVELS_MISMATCH` (FR-109's creation check; names a Grouping and a count, never a level; *added 2026-11-17*), `CREDIBILITY_VARIANCE_NOT_ESTIMABLE`,
+`GROUPING_NOT_EXHAUSTIVE`, `GROUPING_PARENT_NOT_FOUND` and `GROUPING_CHAIN_LEVELS_MISMATCH` (FR-109's creation check; names a Grouping and a count, never a level; *added 2026-11-17*), `GROUPING_MAPS_NO_VALUE` (a fit whose grouping Factor maps none of its column's rows; names a Factor, a Grouping and a row count, never a value; same date), `CREDIBILITY_VARIANCE_NOT_ESTIMABLE`,
 `UNSEEN_LEVEL_BEHAVIOUR_REQUIRED`, `GLM_CV_FOLD_EMPTY`,
 `GLM_TWEEDIE_POWER_GRID_EDGE`, `GLM_DID_NOT_CONVERGE`, `GLM_RANK_DEFICIENT`,
 `GLM_SEPARATION_DETECTED`, `GLM_FIT_FAILED`, `DECLARED_WEIGHT_INVALID`,

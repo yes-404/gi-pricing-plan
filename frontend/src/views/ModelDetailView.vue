@@ -77,6 +77,8 @@ const REACH_WORDS: Record<UnseenLevelReach, string> = {
 const unseenGaps = computed(() => fit.value?.unseen_level_gaps ?? null);
 /** The interaction terms: `null` is "not recorded", `[]` is "no interaction term" (FR-2143). */
 const cellReports = computed(() => fit.value?.unseen_cell_reports ?? null);
+/** Rows a Grouping Factor did not map: `null` is "not recorded", `[]` is "every row mapped" (FR-109). */
+const groupingUnmapped = computed(() => fit.value?.grouping_unmapped ?? null);
 function reachedBy(reasons: readonly UnseenLevelReach[]): string {
   return reasons.map((reason) => REACH_WORDS[reason]).join(" or ");
 }
@@ -397,6 +399,42 @@ onMounted(async () => {
               {{ gap.factor }}: the level “{{ gap.level }}” is produced by
               {{ reachedBy(gap.reached_by) }}, and this fit has no relativity for it. A quote
               that reaches it is refused, unless the factor declares “map to base”.
+            </li>
+          </ul>
+        </section>
+
+        <section
+          v-if="fit"
+          class="mt-8"
+          aria-label="Rows a grouping did not map"
+        >
+          <h2 class="text-sm font-semibold uppercase tracking-wide text-slate-500">
+            Rows a grouping did not map
+          </h2>
+          <p
+            v-if="groupingUnmapped === null"
+            class="mt-2 text-sm text-slate-600"
+          >
+            Not recorded: this model was fitted before the report existed.
+          </p>
+          <p
+            v-else-if="groupingUnmapped.length === 0"
+            class="mt-2 text-sm text-slate-600"
+          >
+            Every row of every grouping factor was a level its grouping maps.
+          </p>
+          <ul
+            v-else
+            class="mt-2 space-y-1 text-sm text-slate-700"
+          >
+            <li
+              v-for="entry in groupingUnmapped"
+              :key="entry.factor"
+            >
+              {{ entry.factor }} ({{ entry.grouping }}): {{ entry.rows }} rows{{
+                entry.exposure ? `, exposure ${entry.exposure}` : ""
+              }}
+              held a value the grouping does not map.
             </li>
           </ul>
         </section>

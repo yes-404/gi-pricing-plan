@@ -67,6 +67,7 @@ __all__ = [
     "GroupingEvidence",
     "GroupingMethod",
     "GroupingProposal",
+    "GroupingUnmapped",
     "IntervalFor",
     "LossTreatment",
     "Model",
@@ -1725,6 +1726,22 @@ class UnseenLevelGap(BaseModel):
     reached_by: tuple[UnseenLevelReach, ...] = Field(min_length=1)
 
 
+class GroupingUnmapped(BaseModel):
+    """The rows a fit's Grouping Factor did not map, and their exposure (FR-109).
+
+    A row whose column value is not a source level of the Factor's Grouping is unmapped; a fit
+    with every row unmapped is refused and one with some records them here. `exposure` is `None`
+    when the fit has no exposure column to sum.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    factor: str
+    grouping: str
+    rows: int = Field(ge=1)
+    exposure: DecimalStr | None = None
+
+
 class UnseenCellState(enum.StrEnum):
     """What the fit-time report could say about one interaction term (FR-2143).
 
@@ -1810,6 +1827,10 @@ class GlmFitResult(BaseModel):
     #: FR-2143, the interaction terms: one report per `interaction` Factor. `None` is "not
     #: recorded", `()` is "this fit has no interaction term"; the same rule as above.
     unseen_cell_reports: tuple[UnseenCellReport, ...] | None = None
+    #: FR-109. Each Grouping Factor whose column held values the Grouping does not map, with the
+    #: rows and exposure. **Optional, and the absence is meaningful:** `None` is "not recorded" (a
+    #: Model fitted before the field existed), `()` is "every row mapped".
+    grouping_unmapped: tuple[GroupingUnmapped, ...] | None = None
 
     @property
     def intercept(self) -> Coefficient | None:
@@ -1908,6 +1929,12 @@ class GbmFitResult(BaseModel):
     #: FR-100. One record per breached floor per band under `warn`; empty on every fit with
     #: no violation and on every artifact written before 2026-10-17.
     banding_warnings: tuple[BandingWarning, ...] = ()
+    #: FR-109. Each Grouping Factor whose column held values the Grouping does not map, with the
+    #: rows and exposure. **Optional, and the absence is meaningful:** `None` is "not recorded" (a
+    #: Model fitted before the field existed), `()` is "every row mapped".
+    grouping_unmapped: tuple[GroupingUnmapped, ...] | None = None
+    #: FR-109, OQ-P4: the same count over the holdout frame, which is counted and never refused.
+    holdout_grouping_unmapped: tuple[GroupingUnmapped, ...] | None = None
 
     @model_validator(mode="after")
     def _the_constraint_vector_is_aligned_with_the_feature_order(self) -> GbmFitResult:
@@ -2033,6 +2060,10 @@ class EbmFitResult(BaseModel):
     library_versions: dict[str, str] = Field(default_factory=dict)
     #: FR-100; see `GbmFitResult.banding_warnings`.
     banding_warnings: tuple[BandingWarning, ...] = ()
+    #: FR-109. Each Grouping Factor whose column held values the Grouping does not map, with the
+    #: rows and exposure. **Optional, and the absence is meaningful:** `None` is "not recorded" (a
+    #: Model fitted before the field existed), `()` is "every row mapped".
+    grouping_unmapped: tuple[GroupingUnmapped, ...] | None = None
 
     @model_validator(mode="after")
     def _bins_align_with_the_feature_order(self) -> EbmFitResult:

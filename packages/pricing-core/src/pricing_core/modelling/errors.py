@@ -19,6 +19,7 @@ from pricing_core.safe_error import CodedError
 __all__ = [
     "BandingError",
     "FactorResolutionError",
+    "GroupingCoverageError",
     "GroupingError",
     "ModellingError",
     "NonFiniteDerivativeError",
@@ -60,6 +61,14 @@ class BandingError(ModellingError, CodedError):
 
 class GroupingError(ModellingError):
     """A Grouping that is not exhaustive, or cannot be proposed (`GROUPING_*`)."""
+
+
+class GroupingCoverageError(GroupingError, CodedError):
+    """A fit's Grouping Factor that maps none of its column's values (`GROUPING_MAPS_NO_VALUE`).
+
+    Also a `CodedError`, so the backend keeps its text through `safe_error_detail` (NFR-499):
+    the text names a Factor, a Grouping and a row count, never a value from the data.
+    """
 
 
 class ObjectiveError(ModellingError):
