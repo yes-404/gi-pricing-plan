@@ -370,7 +370,10 @@ that docstring:
   is unstampable, and check 35 does not red on it. Measured on a scratch copy of tree
   `3aed71d9`: a new `docs/scratchprobe/x.json` left every audit line unchanged except check
   32's file count. The per-file register `UNSTAMPABLE_EXEMPTIONS` that earlier text of this
-  bullet described is not defined in `scripts/` at that tree, and only comments cite it.
+  bullet described is not defined in `scripts/` at that tree, and `scripts/` cites it only in comments.
+  `tests/test_audit_docs_ids.py` still names it as code, but only inside three helpers
+  (`_run_all_ten`, `_register_without`, `_post_migration_roots`) that nothing in `tests/`
+  calls; that file ran 73 passed, 0 skipped at `3aed71d9`.
   A new **generated** contract schema is covered the same way, plus checks 7 and 8's parse
   and `$ref` pass; it needs no edit to the audit or to `tests/test_audit_docs_ids.py` — see
   `contract-schema`'s "A new generated schema needs no registration with the audit".

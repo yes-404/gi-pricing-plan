@@ -120,7 +120,13 @@ the edit in reflow and destroying the layout a reader relies on. Patch the text,
 
 **A new generated schema needs no registration with the audit.** Add its slug to
 `GENERATED_SHAPES` in `scripts/generate-contracts.py`, run that script, and commit the file it
-writes under `docs/contracts/schemas/generated/`. Measured on a scratch copy of the tree at
+writes under `docs/contracts/schemas/generated/`. That is all the audit needs; the schema-drift
+guard needs one more edit. A slug with no authored twin still fails
+`backend/tests/test_contracts.py::test_every_one_sided_slug_is_declared` until it is added,
+with its reason, to `ONE_SIDED_SLUGS` (`backend/tests/test_contracts.py`). After #1918's
+slice 1 merges, a one-sided slug whose nested path the authored contract does not agree with
+also fails that slice's new census, so the generated and authored shapes must agree there
+before the commit. Measured on a scratch copy of the tree at
 `3aed71d9` (a second `Job` entry, slug `scratch-job-copy`, generated, then
 `python3 scripts/audit-docs.py` run untracked and again after `git add`): the audit stayed
 green both times and its output differed from the baseline in one line only, check 7's
@@ -139,8 +145,9 @@ Earlier text of this skill told you to add the path to a literal tuple in the au
 bump a count in a named test. Neither exists on `3aed71d9`: that tuple and that test are gone
 from `scripts/` and `tests/`, and nothing in the audit's output asks for either edit. Drift
 between the models and the committed file is a different gate:
-`uv run python scripts/generate-contracts.py --check` (FR-451). `git add` is still needed
-before running the audit only because the audit reads the tracked tree.
+`uv run python scripts/generate-contracts.py --check` (FR-451). In the measurement above the
+audit counted the file in check 7 both untracked and after `git add`; nothing was measured about
+other checks and the tracked tree.
 
 ## Verified
 
