@@ -45,6 +45,7 @@ from model_schema import (
     Principal,
 )
 from pricing_core.modelling import (
+    MAX_CHAIN_DEPTH,
     GroupingError,
     ModellingError,
     band_statistics,
@@ -375,10 +376,6 @@ async def create_grouping(
     return row
 
 
-#: A chain deeper than this is not a chain anyone drew (FR-109); the walk stops there.
-_MAX_CHAIN_DEPTH = 16
-
-
 async def _require_chain(
     session: AsyncSession, *, workspace_id: UUID, grouping: Grouping
 ) -> str | None:
@@ -392,7 +389,7 @@ async def _require_chain(
         return None
     ancestors: list[Grouping] = []
     seen: set[UUID] = set()
-    while parent_id is not None and parent_id not in seen and len(ancestors) < _MAX_CHAIN_DEPTH:
+    while parent_id is not None and parent_id not in seen and len(ancestors) < MAX_CHAIN_DEPTH:
         seen.add(parent_id)
         parent = await session.scalar(
             select(GroupingRow).where(
@@ -477,19 +474,44 @@ async def load_banding_by_ref(
 async def load_groupings(
     session: AsyncSession, *, workspace_id: UUID, ids: list[UUID]
 ) -> dict[UUID, Grouping]:
+    """The Groupings `ids` name **and their ancestors**, keyed by id (FR-109).
+
+    The ancestors ride in the same map so every caller that resolves a Factor, and the compile
+    that writes a Bundle, holds the chain without a second lookup; callers index by
+    `factor.grouping_id`, so the extra entries change nothing for them. The walk stops at a
+    parent the workspace does not hold (no foreign key guarantees one) and at
+    `MAX_CHAIN_DEPTH`: a chain that cannot be followed further is resolved as far as it goes.
+    """
     if not ids:
         return {}
-    rows = list(
-        (
+    rows = await _grouping_rows(session, workspace_id, ids)
+    _refuse_missing({row.id for row in rows.values()}, ids, kind="grouping")
+    for _ in range(MAX_CHAIN_DEPTH):
+        parents = {
+            row.parent_grouping_id
+            for row in rows.values()
+            if row.parent_grouping_id is not None and row.parent_grouping_id not in rows
+        }
+        found = await _grouping_rows(session, workspace_id, list(parents)) if parents else {}
+        if not found:
+            break
+        rows.update(found)
+    return {row.id: to_grouping(row) for row in rows.values()}
+
+
+async def _grouping_rows(
+    session: AsyncSession, workspace_id: UUID, ids: list[UUID]
+) -> dict[UUID, GroupingRow]:
+    return {
+        row.id: row
+        for row in (
             await session.execute(
                 select(GroupingRow).where(
                     GroupingRow.workspace_id == workspace_id, GroupingRow.id.in_(ids)
                 )
             )
         ).scalars()
-    )
-    _refuse_missing({row.id for row in rows}, ids, kind="grouping")
-    return {row.id: to_grouping(row) for row in rows}
+    }
 
 
 def _refuse_missing(found: set[UUID], wanted: list[UUID], *, kind: str) -> None:

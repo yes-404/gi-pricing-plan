@@ -121,7 +121,8 @@ def _offset_refusal(exc: Any, *, where: str = "the holdout") -> PlatformError:
 
 
 def _grouping_refusal(exc: Any, model_type: str) -> PlatformError:
-    """The coded failure for a fit whose grouping Factor maps none of its column (FR-109).
+    """The coded failure for a fit whose grouping Factor maps none of its column, or meets a value
+    at an ancestor's level of its Grouping's chain (FR-109).
 
     409, like every refusal of a job against the data in this module (422 is the request's own
     shape). The text goes through the allow-list: it names the Factor and Grouping and a row
@@ -404,6 +405,7 @@ def _fit(parameters: dict[str, Any], callback: ProgressCallback) -> JobResult:
     )
     from pricing_core.modelling.errors import (
         BandingError,
+        GroupingAncestorLevelError,
         GroupingCoverageError,
         NonFiniteDerivativeError,
         RoundBudgetExceededError,
@@ -519,9 +521,9 @@ def _fit(parameters: dict[str, Any], callback: ProgressCallback) -> JobResult:
             409,
             safe_error_detail(exc),
         ) from exc
-    except GroupingCoverageError as exc:
-        # FR-109: a grouping Factor that maps none of its column. Named before the
-        # `FactorResolutionError` arm.
+    except (GroupingAncestorLevelError, GroupingCoverageError) as exc:
+        # FR-109: a grouping Factor that maps none of its column, or a value at an ancestor's
+        # level. Named before the `FactorResolutionError` arm.
         raise _grouping_refusal(exc, spec.model_type) from exc
     except FactorResolutionError as exc:
         raise PlatformError(

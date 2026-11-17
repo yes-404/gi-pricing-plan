@@ -19,6 +19,7 @@ from pricing_core.safe_error import CodedError
 __all__ = [
     "BandingError",
     "FactorResolutionError",
+    "GroupingAncestorLevelError",
     "GroupingCoverageError",
     "GroupingError",
     "ModellingError",
@@ -61,6 +62,13 @@ class BandingError(ModellingError, CodedError):
 
 class GroupingError(ModellingError):
     """A Grouping that is not exhaustive, or cannot be proposed (`GROUPING_*`)."""
+
+
+class GroupingAncestorLevelError(GroupingError, CodedError):
+    """A value at an ancestor's level of a Grouping's chain (`GROUPING_VALUE_AT_ANCESTOR_LEVEL`).
+
+    Also a `CodedError`: the text names a Factor and Grouping refs, never the value (NFR-499).
+    """
 
 
 class GroupingCoverageError(GroupingError, CodedError):

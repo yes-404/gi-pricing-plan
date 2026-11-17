@@ -24,6 +24,7 @@ from pricing_core.modelling.ebm import EbmFitError, fit_ebm
 from pricing_core.modelling.errors import (
     BandingError,
     FactorResolutionError,
+    GroupingAncestorLevelError,
     GroupingCoverageError,
     GroupingError,
     ModellingError,
@@ -56,10 +57,12 @@ from pricing_core.modelling.glm import (
     fit_glm,
 )
 from pricing_core.modelling.groupings import (
+    MAX_CHAIN_DEPTH,
     apply_grouping,
     check_fit_groupings,
     check_grouping_chain,
     fit_exposure,
+    grouping_ancestors,
     grouping_evidence,
     propose_grouping,
 )
@@ -92,6 +95,7 @@ from pricing_core.modelling.transparency import (
 
 __all__ = [
     "COVARIANCE_MEDIA_TYPE",
+    "MAX_CHAIN_DEPTH",
     "SUPPORTED_GBM_OBJECTIVES",
     "BandingError",
     "ComparisonCandidate",
@@ -105,6 +109,7 @@ __all__ = [
     "GlmApproximationFit",
     "GlmFit",
     "GlmFitError",
+    "GroupingAncestorLevelError",
     "GroupingCoverageError",
     "GroupingError",
     "ModellingError",
@@ -140,6 +145,7 @@ __all__ = [
     "fit_exposure",
     "fit_gbm",
     "fit_glm",
+    "grouping_ancestors",
     "grouping_evidence",
     "is_certainly_numeric",
     "linear_predictor",

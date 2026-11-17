@@ -881,3 +881,36 @@ async def test_a_grouping_cannot_name_its_own_request_id_as_its_parent(
                 session, workspace_id=workspace_id, actor=actor, grouping=child
             )
     assert refused.value.code == "GROUPING_PARENT_NOT_FOUND"
+
+
+@pytest.mark.req("FR-109")
+async def test_loading_a_grouping_brings_its_whole_chain(
+    database: Database, blob_store: BlobStore, workspace_id
+) -> None:
+    actor = await _actuary(database, workspace_id)
+    dataset_id = await _dataset(database, blob_store, workspace_id, actor)
+    async with database.unit_of_work() as session:
+        fine = await transform_service.create_grouping(
+            session,
+            workspace_id=workspace_id,
+            actor=actor,
+            grouping=_chain_link(dataset_id, "fine", {"ab1": "AB", "cd1": "CD"}),
+        )
+        area = await transform_service.create_grouping(
+            session,
+            workspace_id=workspace_id,
+            actor=actor,
+            grouping=_chain_link(dataset_id, "area", {"AB": "N", "CD": "S"}, parent_id=fine.id),
+        )
+        region = await transform_service.create_grouping(
+            session,
+            workspace_id=workspace_id,
+            actor=actor,
+            grouping=_chain_link(dataset_id, "region", {"N": "ALL", "S": "ALL"}, parent_id=area.id),
+        )
+        ids = (fine.id, area.id, region.id)
+    async with database.session() as session:
+        loaded = await transform_service.load_groupings(
+            session, workspace_id=workspace_id, ids=[ids[2]]
+        )
+    assert set(loaded) == set(ids)

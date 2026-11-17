@@ -586,9 +586,12 @@ def test_a_proposal_defaults_unseen_levels_to_the_largest_group() -> None:
 
 
 @pytest.mark.req("FR-104")
-def test_an_unseen_level_is_named_when_the_behaviour_is_error() -> None:
-    with pytest.raises(FactorResolutionError, match="L99"):
-        apply_grouping(pl.Series("vehicle_group", ["L00", "L99"]), _manual())
+def test_an_unseen_level_is_counted_not_named_when_the_behaviour_is_error() -> None:
+    """The refusal says how many levels, never which: a level is a value from the caller's data
+    (NFR-499). It was listed (up to ten) until the 2026-11-17 ruling."""
+    with pytest.raises(FactorResolutionError, match=r"met 1 level\(s\) in 'vehicle_group'") as r:
+        apply_grouping(pl.Series("vehicle_group", ["L00", "ZZ-SENTINEL-9"]), _manual())
+    assert "ZZ-SENTINEL-9" not in str(r.value)
 
 
 @pytest.mark.req("FR-104")

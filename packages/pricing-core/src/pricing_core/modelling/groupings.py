@@ -56,15 +56,18 @@ from model_schema import (
 from pricing_core.data.profile import one_way
 from pricing_core.modelling.errors import (
     FactorResolutionError,
+    GroupingAncestorLevelError,
     GroupingCoverageError,
     GroupingError,
 )
 
 __all__ = [
+    "MAX_CHAIN_DEPTH",
     "apply_grouping",
     "check_fit_groupings",
     "check_grouping_chain",
     "fit_exposure",
+    "grouping_ancestors",
     "grouping_evidence",
     "propose_grouping",
 ]
@@ -539,11 +542,43 @@ def _tree(
     return clusters
 
 
-def apply_grouping(series: pl.Series, grouping: Grouping) -> pl.Series:
+#: A chain deeper than this is not a chain anyone drew (FR-109); the walk stops there.
+MAX_CHAIN_DEPTH = 16
+
+
+def grouping_ancestors(
+    grouping: Grouping, groupings: Mapping[UUID, Grouping]
+) -> tuple[Grouping, ...]:
+    """`grouping`'s ancestors that `groupings` holds, parent first (FR-109).
+
+    The walk follows `parent_grouping_id` through the map and stops at a link the map lacks, at
+    one it has already met, and at `MAX_CHAIN_DEPTH`: a caller that supplies no ancestors (a
+    stored Bundle carries none) gets `()`, and so today's behaviour. It collects Groupings to
+    read their source levels; it never maps a value through one (FR-109, 2026-11-17).
+    """
+    found: list[Grouping] = []
+    seen = {grouping.id}
+    link = grouping
+    while link.parent_grouping_id is not None and len(found) < MAX_CHAIN_DEPTH:
+        parent = groupings.get(link.parent_grouping_id)
+        if parent is None or parent.id in seen:
+            break
+        found.append(parent)
+        seen.add(parent.id)
+        link = parent
+    return tuple(found)
+
+
+def apply_grouping(
+    series: pl.Series, grouping: Grouping, ancestors: Sequence[Grouping] = ()
+) -> pl.Series:
     """Map a column's Levels onto their target Levels (FR-104).
 
     Unseen levels follow the declared behaviour, and `error` names them — the behaviour is
-    mandatory precisely so that the silent case does not exist.
+    mandatory precisely so that the silent case does not exist. `ancestors` are the Groupings
+    above this one in its chain, when the caller holds them: a value that is a source level of
+    one of them is at the wrong level for this Grouping and is refused (FR-109). A caller
+    that holds none keeps the declared behaviour.
     """
     text = series.cast(pl.String)
     if text.null_count():
@@ -558,7 +593,7 @@ def apply_grouping(series: pl.Series, grouping: Grouping) -> pl.Series:
     # measured.
     # The rule below is the same for one value or a million.
     levels = text.to_list() if text.len() == 1 else text.unique().to_list()
-    targets = _targets(levels, grouping)
+    targets = _targets(levels, grouping, ancestors)
     if not targets:
         return text.rename(series.name)
     if text.len() == 1:
@@ -685,7 +720,9 @@ def check_grouping_chain(child: Grouping, ancestors: Sequence[Grouping]) -> None
         )
 
 
-def _targets(levels: Sequence[str], grouping: Grouping) -> dict[str, str | None]:
+def _targets(
+    levels: Sequence[str], grouping: Grouping, ancestors: Sequence[Grouping] = ()
+) -> dict[str, str | None]:
     """The target Level of every distinct source Level, or the refusal for an unseen one.
 
     The one statement of the unseen-level behaviour (FR-104): `apply_grouping` reads it for a
@@ -698,10 +735,20 @@ def _targets(levels: Sequence[str], grouping: Grouping) -> dict[str, str | None]
     if unseen:
         if grouping.unseen_level_behaviour is UnseenLevelBehaviour.ERROR:
             raise FactorResolutionError(
-                f"grouping {grouping.slug!r} met level(s) {unseen[:10]} in "
+                f"grouping {grouping.slug!r} met {len(unseen)} level(s) in "
                 f"{grouping.column!r} that it does not map, and its unseen-level behaviour "
                 "is `error` (FR-104). Re-derive the grouping on this version, or "
                 "declare where an unknown level should go."
+            )
+        above = {level for ancestor in ancestors for level in ancestor.mapping}
+        if above.intersection(unseen):
+            chain = [f"{ancestor.slug!r}@{ancestor.version}" for ancestor in ancestors]
+            raise GroupingAncestorLevelError(
+                "GROUPING_VALUE_AT_ANCESTOR_LEVEL",
+                f"grouping {grouping.slug!r}@{grouping.version} has the parent chain "
+                f"{', '.join(chain)}, and a value in {grouping.column!r} is a source level of "
+                "an ancestor grouping, not of this one: it is at the wrong level for this grouping "
+                "and is refused (FR-109).",
             )
         fallback = (
             grouping.default_target_level
