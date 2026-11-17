@@ -67,7 +67,7 @@ from pricing_core.modelling.factors import (
 from pricing_core.rating.authored import authored_expression_fields
 from pricing_core.rating.inline import inline_mounts, mounted_fragments, selected_purposes
 from pricing_core.rating.ladder import RUNG_ORDER, output_steps_by_name, rung_output_name
-from pricing_core.rating.references import STAMPED_DATE, referenced_names
+from pricing_core.rating.references import STAMPED_DATE, string_reads
 from pricing_core.rating.vocabulary import check_allow_list
 from pricing_core.safe_error import CodedError, safe_error_detail
 
@@ -273,8 +273,11 @@ def _check_clamp_placement(algo: RatingAlgorithm) -> list[ValidationIssue]:
                 continue
             if rung_name != placeable:
                 reason = "its rung is not the last rung before constraints"
+                located = "produces[0]"
             elif not consumed_names or consumed_names[0] != produced[0]:
                 reason = "it does not consume the value it produces"
+                # the entry compared with `produces[0]`; an empty `consumes` has no entry to name
+                located = "consumes[0]" if consumed_names else "consumes"
             else:
                 continue
             issues.append(
@@ -285,7 +288,7 @@ def _check_clamp_placement(algo: RatingAlgorithm) -> list[ValidationIssue]:
                         "(FR-240, FR-247)"
                     ),
                     step_id=step.step_id,
-                    field="produces",
+                    field=located,
                 )
             )
     return issues
@@ -366,7 +369,7 @@ def _check_vocabulary(text: str) -> tuple[str, str] | None:
 def _check_input_bound_scale(algo: RatingAlgorithm) -> list[ValidationIssue]:
     """FR-275: no input bound needs a decimal scale beyond 28."""
     issues: list[ValidationIssue] = []
-    for field in algo.input_contract:
+    for index, field in enumerate(algo.input_contract):
         for bound_name, bound in (("min", field.min), ("max", field.max)):
             exponent = bound.as_tuple().exponent if isinstance(bound, Decimal) else None
             if isinstance(exponent, int) and -exponent > _SCALE_CAP:
@@ -377,7 +380,7 @@ def _check_input_bound_scale(algo: RatingAlgorithm) -> list[ValidationIssue]:
                             f"an input {bound_name} needs more than {_SCALE_CAP} decimal places "
                             "(FR-275)"
                         ),
-                        field=f"input_contract.{bound_name}",
+                        field=f"input_contract[{index}].{bound_name}",
                     )
                 )
     return issues
@@ -427,19 +430,36 @@ def _check_declared_reads(algo: RatingAlgorithm) -> list[ValidationIssue]:
     this check is not re-checked at load (`load_bundle` runs no validation), only at its next
     compile (RL-1519 (iii-b))."""
     issues: list[ValidationIssue] = []
+    authored_by_step: dict[str, list[Any]] = {}
+    for authored in authored_expression_fields(algo):
+        authored_by_step.setdefault(authored.step_id, []).append(authored)
     for step in algo.steps:
         if step.type not in _DECLARED_READ_STEP_TYPES:
             continue
-        undeclared = sorted(referenced_names(step.model_dump()) - set(_as_list(step.consumes)))
-        if undeclared:
-            issues.append(
-                ValidationIssue(
-                    code="RATING_STEP_UNDECLARED_READ",
-                    message="a step reads names it does not declare in consumes (FR-246)",
-                    step_id=step.step_id,
-                    field="consumes",
-                )
+        declared = set(_as_list(step.consumes))
+        # One issue per READING LOCATION (#1712 S7c; the maintainer's ruling, 2026-11-17): the
+        # field is where the step reads, never a name the author submitted. Fixed order: step
+        # order, then `authored_expression_fields`' field order, then a model_call's
+        # `feature_map` by position in the map's stored order (insertion order, which
+        # `RatingModelCallStep` keeps from the authored JSON).
+        locations = [
+            authored.field
+            for authored in authored_by_step.get(step.step_id, [])
+            if string_reads(authored.field.split("[")[0].split(".")[0], authored.text) - declared
+        ]
+        if isinstance(step, RatingModelCallStep):
+            locations.extend(
+                f"feature_map[{i}]" for i, key in enumerate(step.feature_map) if key not in declared
             )
+        issues.extend(
+            ValidationIssue(
+                code="RATING_STEP_UNDECLARED_READ",
+                message="a step reads names it does not declare in consumes (FR-246)",
+                step_id=step.step_id,
+                field=location,
+            )
+            for location in locations
+        )
     return issues
 
 

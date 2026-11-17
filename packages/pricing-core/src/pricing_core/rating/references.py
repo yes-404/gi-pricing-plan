@@ -29,6 +29,15 @@ def _names_in(text: str) -> set[str]:
     return {m for m in _NAME.findall(_STRING.sub(" ", text)) if m not in _KEYWORDS}
 
 
+def string_reads(field: str, text: str) -> set[str]:
+    """The names one authored string reads. `field` is the evaluated field's name or its
+    authored location (`clamp_bounds.min`, `key_expr[0]`); a lookup's `as_at` naming the
+    stamped date reads no one (FR-221; FR-246's clarification, 2026-10-10)."""
+    if field == "as_at" and text == STAMPED_DATE:
+        return set()
+    return _names_in(text)
+
+
 def _as_list(value: Any) -> list[str]:
     if value is None:
         return []
@@ -45,8 +54,6 @@ def referenced_names(node: Mapping[str, Any]) -> frozenset[str]:
         for text in [value] if isinstance(value, str) else value or []:
             if not isinstance(text, str):  # an absent clamp bound is None
                 continue
-            if field == "as_at" and text == STAMPED_DATE:
-                continue  # the quote's stamped date: FR-221 declares no one (FR-246 clarified)
-            names |= _names_in(text)
+            names |= string_reads(field, text)
     names |= set((node.get("feature_map") or {}).keys())
     return frozenset(names)

@@ -67,12 +67,16 @@ def _fr246(issues: list[Any]) -> list[Any]:
 @pytest.mark.req("FR-246")
 def test_a_constraint_reading_an_undeclared_name_is_refused() -> None:
     issues = _fr246(validate_algorithm(RatingAlgorithm.model_validate(_undeclared_clamp_payload())))
+    # #1712 S7c: one issue per READING LOCATION, in step order then field order, each field the
+    # authored location (`authored_expression_fields`), never a name the author submitted.
     assert [(i.step_id, i.code, i.field) for i in issues] == [
-        ("s_clamp", UNDECLARED_READ_CODE, "consumes")
+        ("s_clamp", UNDECLARED_READ_CODE, "condition"),
+        ("s_clamp", UNDECLARED_READ_CODE, "clamp_bounds.min"),
     ], issues
     # #1712 S7c: the text names no step and no name; the step is located by `step_id`/`field`.
-    assert "min_premium_minor" not in issues[0].message
-    assert "s_clamp" not in issues[0].message
+    assert all("min_premium_minor" not in i.message for i in issues)
+    assert all("s_clamp" not in i.message for i in issues)
+    assert all("min_premium_minor" not in i.field for i in issues)
 
 
 @pytest.mark.req("FR-246")
@@ -82,7 +86,34 @@ def test_an_expression_reading_an_undeclared_name_is_refused() -> None:
         if step["step_id"] == "s_office":
             step["expr"] = "risk_premium_minor * expense_factor * sanity_cap_minor"
     issues = _fr246(validate_algorithm(RatingAlgorithm.model_validate(payload)))
-    assert [(i.step_id, i.code) for i in issues] == [("s_office", UNDECLARED_READ_CODE)], issues
+    assert [(i.step_id, i.code, i.field) for i in issues] == [
+        ("s_office", UNDECLARED_READ_CODE, "expr")
+    ], issues
+
+
+@pytest.mark.req("FR-246")
+def test_the_location_is_the_position_of_the_read_and_the_order_is_fixed() -> None:
+    """#1712 S7c: three steps each read a stray name at a NON-first location (a list position,
+    a model_call feature_map position, an expression). Equality on (step_id, code, field), in
+    step order; the submitted name is in no field."""
+    payload = copy.deepcopy(_algorithm_payload())
+    for step in payload["steps"]:
+        if step["step_id"] == "s_expense":
+            step["key_expr"] = ["channel", "stray_key"]
+        elif step["step_id"] == "s_risk":
+            step["feature_map"] = {"driver_age": "age_years", "stray_feature": "x"}
+        elif step["step_id"] == "s_office":
+            step["expr"] = "risk_premium_minor * expense_factor * stray_expr"
+    expected = [
+        ("s_expense", UNDECLARED_READ_CODE, "key_expr[1]"),
+        ("s_risk", UNDECLARED_READ_CODE, "feature_map[1]"),
+        ("s_office", UNDECLARED_READ_CODE, "expr"),
+    ]
+    for _ in range(2):  # the same order on a second call
+        issues = _fr246(validate_algorithm(RatingAlgorithm.model_validate(payload)))
+        assert [(i.step_id, i.code, i.field) for i in issues] == expected, issues
+    assert not any(n in i.field or n in i.message
+                   for i in issues for n in ("stray_key", "stray_feature", "stray_expr"))
 
 
 @pytest.mark.req("FR-246")

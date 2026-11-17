@@ -209,6 +209,16 @@ def test_a_scale_cap_overflow_is_refused() -> None:
     assert "EXPRESSION_SCALE_OVERFLOW" in codes(algorithm)
 
 
+@pytest.mark.req("FR-275")
+def test_a_scale_overflow_locates_the_input_and_the_bound_by_position() -> None:
+    """#1712 S7c: the field is the real entry's position, the second input's `max` here."""
+    data = valid_algorithm()
+    data["input_contract"][1]["max"] = "0.12345678901234567890123456789"  # 29 places
+    issues = [i for i in validate_algorithm(RatingAlgorithm.model_validate(data))
+              if i.code == "EXPRESSION_SCALE_OVERFLOW"]
+    assert [(i.step_id, i.field) for i in issues] == [(None, "input_contract[1].max")], issues
+
+
 @pytest.mark.req("FR-276")
 def test_a_foreign_function_is_refused() -> None:
     """FR-276: an expression using a function the engine lacks fails to compile."""
