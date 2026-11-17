@@ -79,74 +79,6 @@ def audit() -> types.ModuleType:
     return _load_by_path("_audit_docs_under_test", SCRIPT)
 
 
-def _run_all_ten(
-    audit: types.ModuleType,
-    roots: tuple[pathlib.Path, ...],
-    monkeypatch: pytest.MonkeyPatch,
-    tmp_path: pathlib.Path,
-) -> list[str]:
-    """Run every one of checks 30-39 with `_ID_SCOPE_ROOTS` pointed at `roots`, and
-    return the resulting `failures` list. `notes`/`failures` are reset first so a
-    fixture's own prior use (there is none in practice, since `audit` is function-scoped)
-    can never leak between calls.
-
-    **D2 (deputy, 2026-09-17 03:18:29 BST): pins pre-migration state hermetically.**
-    Production `audit-docs.py` always runs *inside* the tree it audits, so `check_
-    citations` (32) and `check_redirects` (36) correctly gate on the real `ROOT` there —
-    the tool is not wrong. But every fixture `roots` argument here was built to prove
-    ONE check in isolation, on the assumption that `docs/INDEX.md`/`docs/REDIRECTS.csv`
-    do not exist yet — an assumption that silently depended on running this suite before
-    the migration landed. `check_citations`/`check_redirects` read `ROOT / "INDEX.md"`/
-    `ROOT / "REDIRECTS.csv"` directly (not `migrated_tree()`, and not `_ID_SCOPE_ROOTS`,
-    which `roots` overrides below regardless) to decide whether to run their corpus-wide
-    sub-clauses at all, so pointing `ROOT` at an empty `tmp_path` — guaranteed to carry
-    neither file — makes that gate read pre-migration on ANY tree this suite runs
-    against, migrated or not. `migrated_tree` is pinned to the same state explicitly,
-    even though none of checks 30-39's own gates read it directly, so a reader (or a
-    future check) cannot observe one pinned signal disagreeing with the other.
-
-    A second, independent mechanism needs its own pin: `_check_unstampable_register`
-    (check 35's F83 condition 2 clause) calls `nt0019_stamp_set()` with no argument,
-    which then asks `git ls-files` for the WHOLE real repository — never gated by
-    `ROOT`, `_ID_SCOPE_ROOTS` or `migrated_tree()` at all, so patching those three does
-    not touch it. `nt0019_stamp_set`'s own docstring says its `tracked` parameter "is
-    injectable so a test can put a corpus in front of this without a filesystem" —
-    exactly the seam a hermetic test needs; only `_check_unstampable_register` never
-    exercises it. Pinned here to an empty stamp set: none of `_run_all_ten`'s own
-    callers test F83 condition 2 (the six `test_f83_register_*` tests and
-    `test_scope_clause_reds_from_inside_the_migration_commit` call `_check_unstampable_
-    register`/`_check_scope_unstamped_are_registered` directly, never through this
-    helper), so an empty set costs those tests nothing and the real, unpinned
-    `nt0019_stamp_set()` still catches whatever a real corpus gap is register-worthy
-    the moment any of those six run — proof, not just assertion, in `docs/audit/
-    register.md`'s D2 finding.
-
-    An empty stamp set alone is not enough: `_check_unstampable_register` also compares
-    the REAL `UNSTAMPABLE_EXEMPTIONS` register against whatever `nt0019_stamp_set()`
-    returns, so an empty stamp set against a non-empty real register reports every real
-    entry "stale" — a pollution this pin introduces rather than removes. Pinning both to
-    empty together keeps the comparison vacuously true (nothing on either side), which
-    is what "this test's fixture carries no F83-registered file" actually means.
-
-    `monkeypatch.setattr` restores all four automatically; no `importlib.reload`
-    anywhere.
-    """
-    monkeypatch.setattr(audit, "ROOT", tmp_path)
-    monkeypatch.setattr(audit, "nt0019_stamp_set", lambda tracked=None: [])
-    monkeypatch.setattr(audit, "UNSTAMPABLE_EXEMPTIONS", ())
-    monkeypatch.setattr(audit, "migrated_tree", lambda: False)
-    audit.failures.clear()
-    audit.notes.clear()
-    # `setattr`, not `audit._ID_SCOPE_ROOTS = roots`: `types.ModuleType`'s stub declares
-    # `__getattr__` (so any *read* on a dynamically-loaded module type-checks as `Any`),
-    # but no `__setattr__` — mypy has no fallback for an *assignment* to a name it cannot
-    # statically find, and flags it `[attr-defined]` everywhere that name is then used in
-    # the file, reads included. `setattr` sidesteps this the same way a plain read does.
-    setattr(audit, "_ID_SCOPE_ROOTS", roots)  # noqa: B010 -- mypy needs setattr here; see _run_all_ten's comment
-    audit.check_ids_30_39()
-    return list(audit.failures)
-
-
 def _only_check(failures: list[str], n: int) -> bool:
     """True when `failures` is non-empty and every entry names check `n` — the "exactly
     one check reds" proof the plan's own broken-input standard asks for.
@@ -1177,15 +1109,6 @@ def test_doc_id_check_exits_0_on_the_real_tree() -> None:
 # =========================================================================================
 
 
-def _register_without(audit: types.ModuleType, path: str) -> tuple[object, ...]:
-    """The real register minus the entry for `path`, asserting it was actually there —
-    a "remove X" helper that silently removes nothing turns every test using it green.
-    """
-    kept = tuple(e for e in audit.UNSTAMPABLE_EXEMPTIONS if e.path != path)
-    assert len(kept) == len(audit.UNSTAMPABLE_EXEMPTIONS) - 1, path
-    return kept
-
-
 def _run_check_35(audit: types.ModuleType) -> list[str]:
     """`check_owner()`'s failures on the real tree, **minus** what `_partition_by_w37_11_
     record` discloses — never the raw list. W37-6 (2026-09-17, class A loop 1, deputy
@@ -1377,27 +1300,6 @@ def _widened_roots(audit: types.ModuleType) -> tuple[pathlib.Path, ...]:
         audit.REPO / ".claude" / "skills",
         audit.REPO / ".claude" / "agents",
     )
-
-
-def _post_migration_roots(audit: types.ModuleType) -> tuple[pathlib.Path, ...]:
-    """The widened scope as it stands *after* the migration: everything stampable
-    stamped, leaving only the files that cannot be.
-
-    `_id_scope_documents` yields a *file* root verbatim — only *directory* roots go
-    through its markdown glob — so a tuple of file paths models an arbitrary scope
-    exactly. That is the whole reason this simulation is possible without a fixture tree.
-    """
-    registered = {e.path for e in audit.UNSTAMPABLE_EXEMPTIONS}
-    roots: list[pathlib.Path] = []
-    for rel in audit.nt0019_stamp_set():
-        path = audit.REPO / rel
-        try:
-            header = audit._docid.parse_header(path)
-        except audit._docid.HeaderError:
-            header = None
-        if header is not None or (rel in registered and rel.endswith(".md")):
-            roots.append(path)
-    return tuple(roots)
 
 
 # =========================================================================================
