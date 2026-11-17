@@ -241,3 +241,24 @@ default. It signs the chain head with an Ed25519 key you hold.
   5. Later, to detect a rewrite of history, export the log (`GET /api/v1/audit/export?format=json`)
      and check that the event at `head_sequence` has an `event_hash` equal to `head_event_hash`, and
      that `GET /api/v1/audit/verify` is intact over the range.
+
+## Reconciling approvals against the audit chain (FR-2163)
+
+`scripts/reconcile-approvals.py` checks, per workspace, that every artifact in an approved state and
+every deployment has the approval request, the decisions and the Audit Events the decision path
+writes, in order, in a chain that verifies. It is **detective and read-only**: it reports after the
+fact, writes nothing (not even an Audit Event) and prevents no write.
+
+- **Run:** `uv run python scripts/reconcile-approvals.py`; `GIP_DATABASE_URL` overrides the DSN.
+  Use a read-only login where one exists. The application login is acceptable, because the run only
+  reads.
+- **Output:** one JSON line per workspace (`chain`, counts, and each mismatch with its `rule`,
+  `ref`, `detail` and `legacy` mark), then a summary line.
+- **Exit code:** `0` every chain verifies and nothing mismatches; `1` at least one mismatch;
+  `2` a chain is broken or the run could not complete. A workspace whose chain is broken prints no
+  rule output.
+- **`legacy`:** a mismatch older than the workspace's first decision event that carries the request
+  and decision ids. It is reported and counted like any other; the exit code stays `1`.
+- **What the run cannot show:** a chain rewritten consistently (FR-373: the chain is tamper-evident,
+  not tamper-proof). The anchors of FR-373, kept in a store the operator does not control, are the
+  record outside the platform. This check does not widen FR-372 or FR-373.
