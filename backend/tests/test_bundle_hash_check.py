@@ -508,46 +508,77 @@ _LOAD_SITES = (
 )
 
 
-_DIGEST_CALLS = frozenset({"sha256", "sha512", "md5", "hexdigest", "digest", "new"})
-
-
 def _row_derived(expr: ast.expr) -> bool:
-    """`expr` reads the row's `blob_sha256` and computes no digest itself."""
-    reads_the_row = any(
-        isinstance(n, ast.Constant) and n.value == "blob_sha256" for n in ast.walk(expr)
-    )
-    computes = any(
-        isinstance(n, ast.Call)
-        and (
-            (isinstance(n.func, ast.Name) and n.func.id in {"sha256", "sha512", "md5"})
-            or (isinstance(n.func, ast.Attribute) and n.func.attr in _DIGEST_CALLS)
+    """`expr` is the row's digest read and nothing more: `<receiver>.get("blob_sha256")` or
+    `<receiver>["blob_sha256"]`, the receiver holding no call. A helper, an `or`/`if` fallback, a
+    hash function or any other expression is refused, whatever it also names."""
+    if isinstance(expr, ast.Call):
+        reads = (
+            isinstance(expr.func, ast.Attribute)
+            and expr.func.attr == "get"
+            and len(expr.args) == 1
+            and not expr.keywords
+            and isinstance(expr.args[0], ast.Constant)
+            and expr.args[0].value == "blob_sha256"
         )
-        for n in ast.walk(expr)
-    )
-    return reads_the_row and not computes
+        receiver = expr.func.value if isinstance(expr.func, ast.Attribute) else expr
+    elif isinstance(expr, ast.Subscript):
+        reads = isinstance(expr.slice, ast.Constant) and expr.slice.value == "blob_sha256"
+        receiver = expr.value
+    else:
+        return False
+    return reads and not any(isinstance(n, ast.Call) for n in ast.walk(receiver))
 
 
 def _digests_not_from_the_row(source: str) -> list[str]:
     """One entry per `load_stored_bundle(...)` call in `source` whose `payload_sha256` is not the
     row's `bundle -> blob_sha256`: absent, a name with no assignment in the module or with ANY
-    assignment that is not row-derived (`_row_derived`), or an expression that is not. A digest
-    computed from the payload just read would pass the loader's compare and hold it to nothing.
+    binding that is not row-derived (`_row_derived`: a plain or annotated assignment is read; a
+    tuple unpack, an augmented assignment, a walrus, a loop or `with` target, an `except ... as`
+    or a parameter is refused unread), or an expression that is not. A digest computed from the
+    payload just read would pass the loader's compare and hold it to nothing. It sees calls by
+    the name `load_stored_bundle`; a call through another name is `_name_misuse`'s to refuse.
     """
     tree = ast.parse(source)
     parents = {id(c): n for n in ast.walk(tree) for c in ast.iter_child_nodes(n)}
 
+    def bindings(scope: ast.AST, name: str) -> list[ast.expr]:
+        """Every binding of `name` in `scope`, as the value it is given. A plain or annotated
+        assignment gives its value, which is then read; any other binding (a tuple or list
+        unpack, an augmented assignment, a walrus, a `for`/`with`/comprehension target, an
+        `except ... as`, a parameter) gives a placeholder that is not row-derived, so it is
+        refused: the census does not try to follow what such a binding holds."""
+        opaque = ast.Constant(value=None)
+
+        def names(target: ast.AST) -> bool:
+            return any(isinstance(n, ast.Name) and n.id == name for n in ast.walk(target))
+
+        def plain(target: ast.AST) -> bool:
+            return isinstance(target, ast.Name) and target.id == name
+
+        found: list[ast.expr] = []
+        for n in ast.walk(scope):
+            if isinstance(n, ast.Assign):
+                found += [n.value if plain(t) else opaque for t in n.targets if names(t)]
+            elif isinstance(n, ast.AnnAssign) and names(n.target):
+                found.append(n.value if n.value is not None and plain(n.target) else opaque)
+            elif (
+                (isinstance(n, ast.AugAssign | ast.NamedExpr) and names(n.target))
+                or (isinstance(n, ast.For | ast.AsyncFor | ast.comprehension) and names(n.target))
+                or (isinstance(n, ast.withitem) and n.optional_vars and names(n.optional_vars))
+                or (isinstance(n, ast.ExceptHandler) and n.name == name)
+                or (isinstance(n, ast.arg) and n.arg == name)
+            ):
+                found.append(opaque)
+        return found
+
     def assignments(call: ast.AST, name: str) -> list[ast.expr]:
-        """The values `name` is assigned in the innermost enclosing function that assigns it
-        (a nested function reads its outer function's variable)."""
+        """The bindings of `name` in the innermost enclosing function that binds it (a nested
+        function reads its outer function's variable)."""
         scope: ast.AST | None = parents.get(id(call))
         while scope is not None:
             if isinstance(scope, ast.FunctionDef | ast.AsyncFunctionDef):
-                values = [
-                    n.value
-                    for n in ast.walk(scope)
-                    if isinstance(n, ast.Assign)
-                    and any(isinstance(t, ast.Name) and t.id == name for t in n.targets)
-                ]
+                values = bindings(scope, name)
                 if values:
                     return values
             scope = parents.get(id(scope))
@@ -573,6 +604,50 @@ def _digests_not_from_the_row(source: str) -> list[str]:
         elif not _row_derived(digest):
             problems.append(f"line {node.lineno}: payload_sha256 is not the row's digest")
     return problems
+
+
+def _name_misuse(source: str) -> list[str]:
+    """Every use of the name `load_stored_bundle` in `source` that is not a plain call of it, a
+    plain `import` of it or its definition: an `import ... as` alias, a reference that is not the
+    callee (`functools.partial(load_stored_bundle, ...)`, an assignment, an argument), and the
+    name as a string (`getattr(module, "load_stored_bundle")`), `__all__` excepted. Each would
+    let a call escape `_digests_not_from_the_row`, which finds calls by the name."""
+    tree = ast.parse(source)
+    parents = {id(c): n for n in ast.walk(tree) for c in ast.iter_child_nodes(n)}
+    problems = []
+    for node in ast.walk(tree):
+        line = getattr(node, "lineno", 0)
+        if isinstance(node, ast.alias) and node.name.rpartition(".")[2] == _NAME and node.asname:
+            problems.append(f"line {line}: imported as {node.asname}")
+        elif isinstance(node, ast.Name | ast.Attribute) and (
+            getattr(node, "id", getattr(node, "attr", None)) == _NAME
+        ):
+            parent = parents.get(id(node))
+            if not (isinstance(parent, ast.Call) and parent.func is node):
+                problems.append(f"line {line}: {_NAME} used as a value, not called")
+        elif isinstance(node, ast.Constant) and node.value == _NAME:
+            parent = parents.get(id(node))
+            while parent is not None and not isinstance(parent, ast.Assign):
+                parent = parents.get(id(parent))
+            in_all = isinstance(parent, ast.Assign) and any(
+                isinstance(t, ast.Name) and t.id == "__all__" for t in parent.targets
+            )
+            if not in_all:
+                problems.append(f"line {line}: {_NAME} as a string")
+    return problems
+
+
+def _files_calling_the_loader(sources: dict[str, str]) -> list[str]:
+    """The paths in `sources` whose source calls `load_stored_bundle` (by name or attribute)."""
+    return [
+        path
+        for path, source in sorted(sources.items())
+        if _NAME in source
+        and any(
+            isinstance(n, ast.Call) and getattr(n.func, "id", getattr(n.func, "attr", "")) == _NAME
+            for n in ast.walk(ast.parse(source))
+        )
+    ]
 
 
 @pytest.mark.req("FR-240")
@@ -613,6 +688,89 @@ def test_census_a_rebound_digest_name_is_refused() -> None:
     assert (
         _digests_not_from_the_row(source.replace("    blob_sha256 = hashlib", "    zz = hashlib"))
         == []
+    )
+
+
+_HASH = "hashlib.sha256(payload).hexdigest()"
+_ROW = "row.bundle.get('blob_sha256')"
+_LOAD_CALL = "    return await load_stored_bundle(payload, payload_sha256=d)\n"
+_FN = "async def f(row, payload):\n"
+
+#: Each form the fresh-reader addendum found to slip past a callee-name, `Assign`-only census.
+_UNDETECTED = {
+    "annassign_second_binding": f"{_FN}    d = {_ROW}\n    d: str = {_HASH}\n{_LOAD_CALL}",
+    "tuple_unpack_second_binding": f"{_FN}    d = {_ROW}\n    d, _ = {_HASH}, 1\n{_LOAD_CALL}",
+    "augmented_second_binding": f"{_FN}    d = {_ROW}\n    d += 'x'\n{_LOAD_CALL}",
+    "walrus_second_binding": f"{_FN}    d = {_ROW}\n    (d := {_HASH})\n{_LOAD_CALL}",
+    "for_target_second_binding": (
+        f"{_FN}    d = {_ROW}\n    for d in [{_HASH}]:\n        pass\n{_LOAD_CALL}"
+    ),
+    "helper_with_the_constant": f"{_FN}    d = _sha(payload, 'blob_sha256')\n{_LOAD_CALL}",
+    "helper_after_or": f"{_FN}    d = {_ROW} or _sha(payload)\n{_LOAD_CALL}",
+}
+
+
+@pytest.mark.req("FR-240")
+@pytest.mark.parametrize("source", list(_UNDETECTED.values()), ids=list(_UNDETECTED))
+def test_census_a_second_binding_or_a_helper_that_hashes_is_refused(source: str) -> None:
+    """A binding of the digest name that is not a plain, row-derived assignment is refused
+    unread; and a helper handed the constant `blob_sha256`, or a fallback after the read, is not
+    the row's read (`_row_derived`: the row's `.get("blob_sha256")` and nothing more)."""
+    assert _digests_not_from_the_row(source) != []
+
+
+_ALIASES = {
+    "import_as": f"from x import load_stored_bundle as lsb\n{_FN}    return await lsb(payload)\n",
+    "partial": f"{_FN}    g = partial(load_stored_bundle, payload_sha256={_ROW})\n    return g()\n",
+    "functools_partial": f"{_FN}    return functools.partial(mod.load_stored_bundle)\n",
+    "getattr_by_name": f"{_FN}    return await getattr(mod, 'load_stored_bundle')(payload)\n",
+    "assigned_to_a_name": f"{_FN}    g = load_stored_bundle\n    return await g(payload)\n",
+    "passed_as_an_argument": f"{_FN}    return await run(load_stored_bundle, payload)\n",
+}
+
+
+@pytest.mark.req("FR-240")
+@pytest.mark.parametrize("source", list(_ALIASES.values()), ids=list(_ALIASES))
+def test_census_an_alias_or_an_indirect_use_of_the_loader_is_refused(source: str) -> None:
+    assert _name_misuse(source) != []
+
+
+@pytest.mark.req("FR-240")
+def test_census_a_plain_import_call_and_all_entry_are_not_misuse() -> None:
+    source = (
+        "from app.platform.bundle_hydration import load_stored_bundle\n"
+        "__all__ = ['load_stored_bundle']\n"
+        "async def f(row, payload):\n"
+        "    return await load_stored_bundle(payload)\n"
+        "async def g(row, payload):\n"
+        "    return await mod.load_stored_bundle(payload)\n"
+    )
+    assert _name_misuse(source) == []
+
+
+def _every_src_file() -> dict[str, str]:
+    return {str(p.relative_to(_SRC)): p.read_text() for p in sorted(_SRC.rglob("*.py"))}
+
+
+@pytest.mark.req("FR-240")
+def test_census_every_file_under_src_that_calls_the_loader_is_a_listed_site_and_clean() -> None:
+    """The census reads every `.py` file under `backend/src`, not four named ones: a fifth file
+    that calls `load_stored_bundle` is found here and must be listed in `_LOAD_SITES` (where the
+    per-site test also plants its red); every file is held to `_name_misuse`, and every calling
+    file to `_digests_not_from_the_row`."""
+    sources = _every_src_file()
+    found = _files_calling_the_loader(sources)
+    assert found == sorted(_LOAD_SITES), found
+    assert {p: _name_misuse(s) for p, s in sources.items() if _name_misuse(s)} == {}
+    assert {p: _digests_not_from_the_row(sources[p]) for p in found} == {key: [] for key in found}
+
+
+@pytest.mark.req("FR-240")
+def test_census_a_fifth_file_that_calls_the_loader_is_found() -> None:
+    fifth = {"app/x.py": f"{_FN}{_LOAD_CALL}", "app/y.py": "def f(): pass\n"}
+    assert _files_calling_the_loader(fifth) == ["app/x.py"]
+    assert _files_calling_the_loader({**_every_src_file(), **fifth}) == sorted(
+        [*_LOAD_SITES, "app/x.py"]
     )
 
 

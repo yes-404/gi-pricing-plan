@@ -69,6 +69,9 @@ APPROVAL_HELD = ("approved", "live", "retired")
 #: columns the approval guard, every other column the content guard. Each cell of the sweep is
 #: asserted against this, never against "either of the two": a column the content guard stopped
 #: holding would still be refused by nothing, or by the wrong rule, and fail its own cell.
+#: The `status` column's cell is the content guard's at every status: `plant()` inserts an
+#: approved request for `slug@1` in the same workspace, so the approval guard passes whichever
+#: held status the sweep writes (`retired`, `live`), and the content guard is what refuses.
 REFUSER: dict[str, tuple[str, str]] = {
     column: APPROVAL_GUARD if column in IDENTITY else CONTENT_GUARD for column in NEW_VALUE
 }
