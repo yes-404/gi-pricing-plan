@@ -84,8 +84,11 @@ _FIXTURES: list[tuple[str, str, dict[str, Any]]] = [
     ("test_rating_score", "_table_and_lookup_payload", {}),
     ("test_rating_score_batch", "_decimal_output_algorithm_payload", {}),
     ("test_rating_compile", "_probe_algorithm", {"producer": "expression", "declared": "decimal"}),
-    ("test_rating_glm_model_call", "_typed_outputs_algorithm",
-     {"call_type": "glm", "output_type": "decimal"}),
+    (
+        "test_rating_glm_model_call",
+        "_typed_outputs_algorithm",
+        {"call_type": "glm", "output_type": "decimal"},
+    ),
     ("test_rating_column_collision", "algorithm", {"feature_map": {"a": "b"}}),
     ("test_rating_compile_completeness", "_algorithm", {"feature_map": {"a": "b"}}),
     ("test_rating_pin_membership", "_veh_algo", {"kind": "table", "ref": "rate_table:v@1"}),
@@ -125,4 +128,5 @@ def test_referenced_names_returns_the_same_set_as_before_for_every_fixture_algor
             steps += 1
             assert referenced_names(node) == _old_referenced_names(node), (label, node["step_id"])
     print(f"compared {len(corpus)} algorithms, {steps} steps")
-    assert len(corpus) >= len(_FIXTURES) + 1 and steps > 100, "the corpus read empty"
+    assert len(corpus) > len(_FIXTURES), "the 03 examples read empty"
+    assert steps > 100, "the corpus read empty"
