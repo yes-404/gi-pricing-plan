@@ -94,7 +94,7 @@ async def _verify(database: Database, workspace_id: UUID, bundle: Bundle, **hash
         slot=BundleSlot(),
         database=database,
         workspace_id=workspace_id,
-        ref=ArtifactRef.parse("rating_version:v@1"),
+        ref=ArtifactRef.parse("rating_version:hash-check@1"),
         **hashes,
     )
 
@@ -149,7 +149,7 @@ async def test_a_bundle_that_disagrees_with_any_hash_is_refused_as_an_integrity_
         kwargs["deployment"] = other
     with pytest.raises(PlatformError) as refused:
         await _verify(database, workspace_id, bundle, **kwargs)
-    assert (refused.value.code, refused.value.status) == (CODE, 500)
+    assert (refused.value.code, refused.value.status_code) == (CODE, 500)
     events = await refusal_events(database, workspace_id)
     assert len(events) == 1
     after = events[0].after or {}
@@ -229,7 +229,7 @@ async def test_switch_prepare_refuses_a_bundle_the_deployment_does_not_record(
     )
     with pytest.raises(PlatformError) as refused:
         await hydrate_for_switch(database, blob_store, BundleSlot(), message)
-    assert (refused.value.code, refused.value.status) == (CODE, 500)
+    assert (refused.value.code, refused.value.status_code) == (CODE, 500)
     assert [e.action for e in await refusal_events(database, workspace_id)] == [REFUSAL_ACTION]
 
 

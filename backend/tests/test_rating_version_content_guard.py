@@ -124,7 +124,10 @@ async def _sweep(
     for status in statuses:
         row_id = await plant(conn, status, slug=f"held-{status}")
         for column in await _columns(conn):
-            sql = f"UPDATE rating_versions SET {column} = {NEW_VALUE[column]} WHERE id = '{row_id}'"
+            new = NEW_VALUE[column]
+            if column == "status" and status == "retired":
+                new = "'live'"  # retired -> retired changes nothing, and a no-op is allowed
+            sql = f"UPDATE rating_versions SET {column} = {new} WHERE id = '{row_id}'"
             out[(status, column)] = await _sqlstate(conn, sql)
     return out
 

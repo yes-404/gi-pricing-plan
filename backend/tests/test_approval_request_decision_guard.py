@@ -41,8 +41,9 @@ async def _plant(conn: AsyncConnection, status: str, *, slug: str) -> str:
             "INSERT INTO approval_requests (id, workspace_id, artifact_ref, artifact_type, "
             "submitted_by, change_summary, status, approvers_required, decided_at, "
             "withdrawn_reason) VALUES (:id, gen_random_uuid(), :ref, 'model', gen_random_uuid(), "
-            "'c', :status, 1, CASE WHEN :status IN ('draft', 'review') THEN NULL ELSE now() END, "
-            "CASE WHEN :status = 'withdrawn' THEN 'why' END)"
+            "'c', CAST(:status AS varchar), 1, "
+            "CASE WHEN CAST(:status AS varchar) IN ('draft', 'review') THEN NULL ELSE now() END, "
+            "CASE WHEN CAST(:status AS varchar) = 'withdrawn' THEN 'why' END)"
         ),
         {"id": request_id, "ref": f"model:{slug}@1", "status": status},
     )
