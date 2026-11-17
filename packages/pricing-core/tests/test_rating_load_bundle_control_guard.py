@@ -245,3 +245,52 @@ def test_scorer_chain_is_exactly_the_walk_refuse_control_in_bundle_makes(
         ("model:third@1", {"for": "model:third@1"}, ("t",)),
         ("model:lone@1", {"for": "model:lone@1"}, ("l",)),
     ]
+
+
+def test_inlined_algorithms_is_the_base_algorithm_and_one_per_purpose_the_bundle_selects(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """`inlined_algorithms` is `load_bundle`'s first step: the stored algorithm re-inlined from the
+    mounted fragments with no purpose (the base), then once per purpose in `purpose_graphs`.
+
+    The collaborators are recorded, not run: what is pinned is which purposes reach `inline_mounts`
+    and what the function returns, so dropping the purpose algorithms fails here alone."""
+    from types import SimpleNamespace
+
+    from pricing_core.rating import runtime
+
+    stored = object()
+    fragments = object()
+    calls: list[tuple[object, object, str | None]] = []
+
+    def inline(algorithm: object, mounted: object, purpose: str | None = None) -> str:
+        calls.append((algorithm, mounted, purpose))
+        return f"inlined:{purpose}"
+
+    bundle = SimpleNamespace(
+        algorithm_ref="algorithm:a@1",
+        pins="pins",
+        resolved_payloads={"algorithm:a@1": {"payload": 1}},
+        purpose_graphs={"cancellation": None, "mid_term_adjustment": None},
+    )
+    monkeypatch.setattr(
+        runtime, "RatingAlgorithm", SimpleNamespace(model_validate=lambda payload: stored)
+    )
+    monkeypatch.setattr(runtime, "mounted_fragments", lambda *args: fragments)
+    monkeypatch.setattr(runtime, "inline_mounts", inline)
+
+    base, per_purpose = runtime.inlined_algorithms(bundle)  # type: ignore[arg-type]
+
+    assert base == "inlined:None"
+    assert per_purpose == {
+        "cancellation": "inlined:cancellation",
+        "mid_term_adjustment": "inlined:mid_term_adjustment",
+    }
+    assert calls == [
+        (stored, fragments, None),
+        (stored, fragments, "cancellation"),
+        (stored, fragments, "mid_term_adjustment"),
+    ]
+
+    none = SimpleNamespace(**{**vars(bundle), "purpose_graphs": {}})
+    assert runtime.inlined_algorithms(none) == ("inlined:None", {})  # type: ignore[arg-type]

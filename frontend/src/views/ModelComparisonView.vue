@@ -3,8 +3,14 @@ import { computed, onMounted, ref } from "vue";
 import { RouterLink, useRoute } from "vue-router";
 
 import type { ModelComparison } from "@/api/comparisons";
-import { comparisonIdFromJob, getComparison, startComparison } from "@/api/comparisons";
+import {
+  comparisonIdFromJob,
+  getComparison,
+  parseModelRef,
+  startComparison,
+} from "@/api/comparisons";
 import { TERMINAL, waitForJob } from "@/api/jobs";
+import { getModel } from "@/api/models";
 import { ProblemError } from "@/api/problem";
 import ComparisonMetricTable from "@/components/ComparisonMetricTable.vue";
 import DoubleLiftChart from "@/components/DoubleLiftChart.vue";
@@ -26,14 +32,22 @@ const props = withDefaults(defineProps<{ pollAttempts?: number; pollIntervalMs?:
 const route = useRoute();
 
 const comparison = ref<ModelComparison | null>(null);
+/** The `model_type` of each candidate, in `model_refs` order; `null` when it could not be read. */
+const candidateTypes = ref<(string | null)[]>([]);
 /**
  * FR-2143: the rows of the shared holdout left out because a GLM candidate has no relativity for
  * a level of a factor that does not declare “map to base”, with their exposure. `null` is "not
  * recorded" (a comparison stored ahead of the rule), `0` is "none": never one for the other.
+ * Nothing is shown when every candidate is known not to be a GLM: a GBM or an EBM refuses such a
+ * level whatever is declared and records no count, so "none left out" would be false of it, as
+ * "not recorded" would be (the backtest view guards the same way). A candidate that could not be
+ * read is not known to be anything else, so the note stays.
  */
 const unseenNotes = computed(() => {
   const summary = comparison.value?.summary;
   if (!summary) return [];
+  if (candidateTypes.value.length > 0 && candidateTypes.value.every((t) => t !== null && t !== "glm"))
+    return [];
   return [
     {
       label: "Shared holdout",
@@ -43,6 +57,18 @@ const unseenNotes = computed(() => {
   ];
 });
 const problem = ref<ProblemError | null>(null);
+
+/** One candidate's `model_type`; `null` for a ref that is not versioned or a model that is gone. */
+async function candidateType(ref: string): Promise<string | null> {
+  const parsed = parseModelRef(ref);
+  if (parsed === null) return null;
+  try {
+    return (await getModel(parsed.slug, parsed.version)).spec.model_type;
+  } catch (error) {
+    if (error instanceof ProblemError) return null;
+    throw error;
+  }
+}
 /**
  * A discriminated stage rather than a set of booleans (RuleBuilder.vue's precedent). `waiting`
  * and `stalled` are different things to tell a user, which is why `waitForJob` returns a
@@ -100,7 +126,9 @@ onMounted(async () => {
       failure.value = "The comparison finished but did not name an artifact to read.";
       return;
     }
-    comparison.value = await getComparison(comparisonId);
+    const read = await getComparison(comparisonId);
+    candidateTypes.value = await Promise.all(read.summary.model_refs.map(candidateType));
+    comparison.value = read;
     stage.value = "ready";
   } catch (error) {
     // A ProblemError from the POST is a complete answer — every comparability rule is
@@ -175,6 +203,7 @@ onMounted(async () => {
       />
 
       <UnseenLevelRows
+        v-if="unseenNotes.length"
         :notes="unseenNotes"
         note="A GLM candidate's quote with such a level is refused, unless the factor declares “map to base”; a GBM or an EBM refuses it whatever is declared."
       />

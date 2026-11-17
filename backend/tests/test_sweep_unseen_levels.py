@@ -530,6 +530,55 @@ def test_an_input_read_with_a_default_or_a_second_producer_stays_plain() -> None
         assert f"PLAIN case@{index} status=approved" in lines
 
 
+@pytest.mark.req("FR-2143")
+def test_a_second_model_call_scoring_the_glm_from_an_open_input_keeps_it_plain() -> None:
+    """Every model_call that scores the GLM must feed the Factor from a closed input (FR-2143): a
+    second call to the same GLM, fed from an open input, makes the Factor reachable."""
+    bundle = _closed()
+    graph = bundle["graph"]
+    graph["input_contract"].append(
+        {**_input(bundle, "region"), "name": "region2", "domain": ["A", "B", "C"]}
+    )
+    nodes = graph["nodes"]
+    nodes["s_region2"] = {
+        **nodes["s_region"], "input_name": "region2", "label": "region2", "produces": ["region2"],
+    }
+    nodes["s_risk_again"] = {
+        **nodes["s_risk"],
+        "consumes": ["region2"],
+        "feature_map": {**nodes["s_risk"]["feature_map"], "region": "region2"},
+        "produces": ["risk_again"],
+    }
+    rc, lines = _run([_row(bundle, "two-calls", 1)])
+
+    assert rc == 1
+    assert "PLAIN two-calls@1 status=approved" in lines, lines
+    assert "not-reachable: 0" in lines
+
+
+@pytest.mark.req("FR-2143")
+def test_a_model_call_in_a_purpose_graph_is_judged_with_the_base_graphs() -> None:
+    """The base graph's call reads a closed input; a purpose graph's call to the same GLM reads an
+    open one (its input contract admits C, which the fit never saw): the version stays PLAIN."""
+    bundle = _closed()
+    purpose = copy.deepcopy(bundle["graph"])
+    next(c for c in purpose["input_contract"] if c["name"] == "region")["domain"] = ["A", "B", "C"]
+    bundle["purpose_graphs"] = {"cancellation": purpose}
+    rc, lines = _run([_row(bundle, "purposed", 1)])
+
+    assert rc == 1
+    assert "PLAIN purposed@1 status=approved" in lines, lines
+
+    closed_everywhere = _closed()
+    closed_everywhere["purpose_graphs"] = {
+        "cancellation": copy.deepcopy(closed_everywhere["graph"])
+    }
+    rc, lines = _run([_row(closed_everywhere, "purposed", 2)])
+
+    assert rc == 0
+    assert "NOTREACHABLE purposed@2 status=approved (closed-input)" in lines, lines
+
+
 # --- #1906: the two bundles a review found listed NOTREACHABLE while a quote was refused --------
 
 
@@ -697,10 +746,50 @@ def _refusals(bundle: dict[str, Any]) -> list[str]:
     return asyncio.run(score_all())
 
 
+def _closed_with_a_purpose_graph() -> dict[str, Any]:
+    bundle = _closed()
+    bundle["purpose_graphs"] = {"cancellation": copy.deepcopy(bundle["graph"])}
+    return bundle
+
+
+def _mirror_the_second_call(bundle: dict[str, Any], model: str) -> None:
+    """The real loader re-inlines the stored algorithm and compares it with the graph: the second
+    model_call `_with_second_model` put in the graph goes into the algorithm too."""
+    steps = _algorithm(bundle)["steps"]
+    first = next(step for step in steps if step["type"] == "model_call")
+    steps.append({**first, "step_id": "s_risk2", "model_ref": model, "produces": ["risk2"]})
+    bundle["pins"]["models"].append(model)
+
+
+def _two_fits_over_the_whole_domain() -> dict[str, Any]:
+    bundle = _closed()
+    _with_second_model(bundle, ["A", "B"])
+    _mirror_the_second_call(bundle, _SECOND)
+    return bundle
+
+
+def _unscored_glm() -> dict[str, Any]:
+    """The test above's bundle: an open input, and the first GLM scored by no model_call."""
+    bundle = _closed()
+    _set_input(bundle, "region", domain=["A", "B", "C"])
+    _with_second_model(bundle, ["A", "B", "C"])
+    nodes = bundle["graph"]["nodes"]
+    nodes["s_risk"]["model_ref"] = _SECOND
+    del nodes["s_risk2"]
+    next(s for s in _algorithm(bundle)["steps"] if s["type"] == "model_call")["model_ref"] = _SECOND
+    bundle["pins"]["models"].append(_SECOND)
+    return bundle
+
+
 def _closed_fixtures() -> dict[str, dict[str, Any]]:
+    """Every fixture above the sweep lists NOTREACHABLE (closed-input), each scored for real."""
     return {
         "main-effects": _main_effects(),
         "offset-over-the-whole-domain": _her_offset(["A", "B", "C"]),
+        "two-fits-over-the-whole-domain": _two_fits_over_the_whole_domain(),
+        "peril-structure-over-the-whole-domain": _structured(["A", "B"]),
+        "a-glm-no-model-call-scores": _unscored_glm(),
+        "a-closed-version-with-a-purpose-graph": _closed_with_a_purpose_graph(),
     }
 
 

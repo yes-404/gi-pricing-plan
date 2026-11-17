@@ -60,7 +60,7 @@ Classes (each counts versions; a version can carry several):
                             Bundle carries); `not-scored` = nothing the runtime scores reads the
                             GLM. A GLM is scored when a model_call names it, directly or as a Peril
                             Structure's component, or when a scored GLM reads it as its offset
-                            model, however deep (`runtime.inlined_algorithms`, `_load_glm_scorers`
+                            model, however deep (`runtime.inlined_algorithms`, `load_glm_scorers`
                             and `scorer_chain` decide this: the sweep does not re-derive it).
                             Another input type, a nullable input, an approximation call, a value
                             from a step or a second input stays PLAIN, as do an input-contract
@@ -132,10 +132,10 @@ from model_schema import (
 from pricing_core.modelling.glm import _unseen_cell_reports, _unseen_level_gaps
 from pricing_core.rating.compile import Bundle, JdmGraph
 from pricing_core.rating.runtime import (
-    _load_glm_scorers,
-    _step_model_refs,
     inlined_algorithms,
+    load_glm_scorers,
     scorer_chain,
+    step_model_refs,
 )
 
 _DUMMY = re.compile(r"^(?P<slug>.+)\[(?P<level>.*)\]$")
@@ -196,7 +196,7 @@ class _UnreadableError(Exception):
 
 def _model_calls(bundle: Bundle) -> list[tuple[JdmGraph, RatingModelCallStep]]:
     """Every `model_call` node of the Bundle's graphs (the base graph and each purpose graph), with
-    the graph it sits in, as the step the runtime reads (`_step_model_refs` takes that type)."""
+    the graph it sits in, as the step the runtime reads (`step_model_refs` takes that type)."""
     calls: list[tuple[JdmGraph, RatingModelCallStep]] = []
     for graph in (bundle.graph, *bundle.purpose_graphs.values()):
         for step_id, node in graph.nodes.items():
@@ -284,7 +284,7 @@ def _findings(bundle: Bundle) -> tuple[int, set[str], set[str], set[str]]:
     glm_refs = 0
     calls = _model_calls(bundle)
     algorithm, purposes = inlined_algorithms(bundle)
-    scorers = _load_glm_scorers([algorithm, *purposes.values()], payloads)
+    scorers = load_glm_scorers([algorithm, *purposes.values()], payloads)
     chains = {ref: [r for r, _ in scorer_chain(ref, scorer)] for ref, scorer in scorers.items()}
     open_factor = False
     for key, payload in payloads.items():
@@ -319,7 +319,7 @@ def _findings(bundle: Bundle) -> tuple[int, set[str], set[str], set[str]]:
             (graph, call)
             for graph, call in calls
             if any(
-                key in chains.get(ref, [ref]) for ref in _step_model_refs(call, payloads)
+                key in chains.get(ref, [ref]) for ref in step_model_refs(call, payloads)
             )
         ]
         operands = _interaction_operand_ids(factors)

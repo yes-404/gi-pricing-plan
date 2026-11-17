@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { router } from "@/router";
 import ModelComparisonView from "@/views/ModelComparisonView.vue";
 
-import { COMPARISON } from "./fixtures";
+import { COMPARISON, EBM_MODEL, GBM_MODEL, GLM_MODEL } from "./fixtures";
 
 // The three panels are tested in their own files; stub them so this test is about the state
 // machine. ProfileView.test.ts is the precedent for the template-stub shape.
@@ -233,5 +233,35 @@ describe("ModelComparisonView, the rows left out on an unseen level (FR-2143)", 
 
     expect(section).toHaveTextContent("Shared holdout: not recorded");
     expect(section).not.toHaveTextContent("none left out");
+  });
+  // The candidates are COMPARISON's two refs: `-gbm@2` first, as the stub matches by substring.
+  const openWith = (second: unknown, first: unknown = GBM_MODEL): void => {
+    routeQuery.ids = IDS;
+    stubByUrl({
+      "/models/compare": { status: 202, body: job("queued") },
+      "/jobs/": { status: 200, body: job("succeeded", COMPARISON_REF) },
+      [`/models/comparisons/${COMPARISON.id}`]: { status: 200, body: withExcluded(0, "0") },
+      "/models/motor-ad-frequency-gbm": { status: 200, body: first },
+      "/models/motor-ad-frequency": { status: 200, body: second },
+    });
+  };
+
+  it("shows no count when no candidate is a GLM: a GBM or an EBM refuses, it never records one", async () => {
+    openWith(EBM_MODEL);
+    render(ModelComparisonView, { props: { pollIntervalMs: 0 }, global });
+    await screen.findByTestId("metrics");
+
+    await waitFor(() => {
+      expect(screen.queryByLabelText("Rows on a level this fit never saw")).toBeNull();
+    });
+    expect(screen.queryByText(/none left out/)).toBeNull();
+  });
+
+  it("keeps the count when one candidate is a GLM", async () => {
+    openWith(GLM_MODEL);
+    render(ModelComparisonView, { props: { pollIntervalMs: 0 }, global });
+    const section = await screen.findByLabelText("Rows on a level this fit never saw");
+
+    expect(section).toHaveTextContent("Shared holdout: none left out");
   });
 });
