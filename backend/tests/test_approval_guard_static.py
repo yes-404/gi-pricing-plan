@@ -142,12 +142,17 @@ def _flag_beyond_a_read(source: str) -> bool:
     manager, never preceded by `app.`) are removed; and **any** `SET`, `SET LOCAL`,
     `SESSION` or `set_config` that names an `app.` setting, whatever follows it.
 
-    **What this still cannot see** (it reads literals, not values): a setting name built from
-    pieces that never appear in one string next to `app.` (a `chr()` or `bytes` assembly, a
-    name read from a column, an environment variable or a function argument); a `set_config`
-    whose first argument is a parameter of the statement; a statement composed by a helper in
-    another file; and a comment (a comment is not executed). Each is what review of the reader
-    list, which is pinned by file name, exists for.
+    **What this still cannot see** (it reads literals, not values; six cases, each is what review
+    of the reader list, which is pinned by file name, exists for):
+
+    1. a setting name assembled from pieces that never appear in one string next to `app.` (a
+       `chr()` or `bytes` assembly);
+    2. a name read from a column, an environment variable or a function argument;
+    3. a `set_config` whose first argument is a parameter of the statement;
+    4. a statement composed by a helper in another file;
+    5. a comment (a comment is not executed);
+    6. the flag name built at run time from a variable defined in another module (an imported
+       constant or a value computed there), which no literal of the reader file contains.
     """
     tree = ast.parse(source)
     docstrings = _docstring_ids(tree)
