@@ -36,6 +36,8 @@ from pathlib import Path
 from typing import Any
 from uuid import UUID
 
+from _gitenv import clean_env
+
 ROOT = Path(__file__).resolve().parent.parent
 FIXTURE = ROOT / "examples" / "fremtpl2" / "rating"
 DATA = ROOT / "examples" / "fremtpl2" / "data" / "freMTPL2freq.arff"
@@ -623,7 +625,8 @@ def replay_subset(
 
 def _env() -> dict[str, Any]:
     tree = subprocess.run(
-        ["/usr/bin/git", "-C", str(ROOT), "rev-parse", "HEAD"], capture_output=True, text=True
+        ["/usr/bin/git", "-C", str(ROOT), "rev-parse", "HEAD"],
+        capture_output=True, text=True, env=clean_env(),
     ).stdout.strip()
     return {"load1": round(os.getloadavg()[0], 2), "tree": tree,
             "stamp": datetime.now(UTC).isoformat(timespec="seconds")}  # fmt: skip

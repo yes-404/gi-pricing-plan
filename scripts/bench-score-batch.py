@@ -46,6 +46,7 @@ from pathlib import Path
 from uuid import UUID
 
 import polars as pl
+from _gitenv import clean_env
 
 from app.config import Settings
 from app.db.models import DatasetVersionRow, RatingVersionRow
@@ -203,23 +204,6 @@ async def _time_handler(
 
 REPO = Path(__file__).resolve().parent.parent
 
-# The GIT_* variables that point git at another repository, as a git hook exports them. `git -C`
-# does not override them, so each git call below runs without them (#1900): the script reads the
-# checkout it names, never one the caller's environment names. Named, not a GIT_ prefix match.
-_GIT_REDIRECTS = (
-    "GIT_DIR",
-    "GIT_WORK_TREE",
-    "GIT_INDEX_FILE",
-    "GIT_COMMON_DIR",
-    "GIT_OBJECT_DIRECTORY",
-    "GIT_ALTERNATE_OBJECT_DIRECTORIES",
-    "GIT_NAMESPACE",
-)
-
-
-def _git_env() -> dict[str, str]:
-    return {k: v for k, v in os.environ.items() if k not in _GIT_REDIRECTS}
-
 
 def _git_head() -> str:
     import subprocess
@@ -230,7 +214,7 @@ def _git_head() -> str:
             capture_output=True,
             text=True,
             check=True,
-            env=_git_env(),
+            env=clean_env(),
         ).stdout.strip()
     except Exception as exc:  # pragma: no cover - diagnostic path only
         return f"(unavailable: {exc})"

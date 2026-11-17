@@ -39,6 +39,8 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from uuid import UUID
 
+from _gitenv import clean_env
+
 ROOT = Path(__file__).resolve().parent.parent
 
 #: The shared development database every `-T` copy is made from; no DSN a database arm runs on
@@ -372,7 +374,8 @@ def mem_available_gb() -> float:
 
 def git_head() -> str:
     return subprocess.run(
-        ["git", "-C", str(ROOT), "rev-parse", "HEAD"], capture_output=True, text=True, check=True
+        ["git", "-C", str(ROOT), "rev-parse", "HEAD"],
+        capture_output=True, text=True, check=True, env=clean_env(),
     ).stdout.strip()
 
 
@@ -380,7 +383,7 @@ def session_header() -> dict[str, Any]:
     """PL-1735 Task 0 Step 5: what every session records at its start and end."""
 
     def run(*cmd: str) -> str:
-        return subprocess.run(cmd, capture_output=True, text=True).stdout.strip()
+        return subprocess.run(cmd, capture_output=True, text=True, env=clean_env()).stdout.strip()
 
     return {
         "head": git_head(),

@@ -15,14 +15,13 @@ import pathlib
 import subprocess
 import sys
 import types
-from typing import Any
 
 import pytest
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 SCRIPTS = ROOT / "scripts"
 # `scripts/` is not a package; a by-path load of a script that does `from _gitenv import ...`
-# needs it on `sys.path` (a direct run gets it as `sys.path[0]`; tests/test_doc_id.py says the same).
+# needs it on `sys.path` (a direct run gets it as `sys.path[0]`; tests/test_doc_id.py says so too).
 if str(SCRIPTS) not in sys.path:
     sys.path.insert(0, str(SCRIPTS))
 
@@ -32,7 +31,8 @@ import _gitenv  # noqa: E402  (after the sys.path insert)
 def _load(name: str, path: pathlib.Path | None = None) -> types.ModuleType:
     path = path or SCRIPTS / f"{name}.py"
     spec = importlib.util.spec_from_file_location(f"_t1913_{name.replace('-', '_')}", path)
-    assert spec is not None and spec.loader is not None
+    assert spec is not None
+    assert spec.loader is not None
     module = importlib.util.module_from_spec(spec)
     sys.modules[spec.name] = module
     spec.loader.exec_module(module)
@@ -166,7 +166,8 @@ def test_bench_and_measure_scripts_head_is_their_own(
     elif name == "measure-p2-nfr-sweep":
         assert module.git_head() == own_head
         header = module.session_header()
-        assert header["head"] == own_head and header["tree"] == own_tree
+        assert header["head"] == own_head
+        assert header["tree"] == own_tree
     else:
         assert module._env()["tree"] == own_head
 
@@ -243,7 +244,7 @@ def census(scripts: pathlib.Path) -> tuple[list[str], int]:
 
 
 def redirect_holders(scripts: pathlib.Path) -> list[str]:
-    """The files under `scripts/` holding the string constant "GIT_WORK_TREE" (a copy of the tuple)."""
+    """The files under `scripts/` holding the string constant "GIT_WORK_TREE" (a tuple copy)."""
     return [
         path.name
         for path in sorted(scripts.rglob("*.py"))
@@ -261,16 +262,16 @@ def test_every_git_call_under_scripts_is_covered_by_clean_env() -> None:
 
 
 def test_the_census_sees_a_planted_uncovered_git_call(tmp_path: pathlib.Path) -> None:
-    (tmp_path / "a.py").write_text(
-        "import subprocess\nsubprocess.run(['git', 'status'])\n"
-    )
+    (tmp_path / "a.py").write_text("import subprocess\nsubprocess.run(['git', 'status'])\n")
     (tmp_path / "b.py").write_text(
         "import subprocess\n"
         "def x(*cmd):\n    return subprocess.run(cmd)\n"
         "x('git', 'status')\nsubprocess.run(['git', 'log'], env=None)\n"
     )
     (tmp_path / "c.py").write_text("import subprocess\nsubprocess.run(['/usr/bin/git', 'log'])\n")
-    (tmp_path / "d.py").write_text("T = ('GIT_WORK_TREE',)\nimport subprocess\nsubprocess.run(['git'])\n")
+    (tmp_path / "d.py").write_text(
+        "T = ('GIT_WORK_TREE',)\nimport subprocess\nsubprocess.run(['git'])\n"
+    )
     offenders, covered = census(tmp_path)
     assert covered == 0
     assert redirect_holders(tmp_path) == ["d.py"]

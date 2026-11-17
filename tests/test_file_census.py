@@ -44,6 +44,8 @@ SCRIPT = ROOT / "scripts" / "file-census.py"
 # "ImportError / ModuleNotFoundError naming file_census ... A failure with any other cause
 # means the import path is wrong, not that the test is correct" — so the check exists to make
 # that true, not to be defensive for its own sake.
+if str(SCRIPT.parent) not in sys.path:  # the script does `from _gitenv import clean_env`
+    sys.path.insert(0, str(SCRIPT.parent))
 if not SCRIPT.exists():
     raise ModuleNotFoundError(f"No module named 'file_census': not found at {SCRIPT}")
 _spec = importlib.util.spec_from_file_location("_file_census_under_test", SCRIPT)
@@ -355,6 +357,9 @@ def test_default_root_is_the_checkout_the_script_lives_in(
     (own / "scripts").mkdir()
     copy = own / "scripts" / "file-census.py"
     copy.write_text(SCRIPT.read_text(encoding="utf-8"), encoding="utf-8")
+    (own / "scripts" / "_gitenv.py").write_text(
+        (SCRIPT.parent / "_gitenv.py").read_text(encoding="utf-8"), encoding="utf-8"
+    )
 
     done = subprocess.run(
         [sys.executable, str(copy)], cwd=other, capture_output=True, text=True, check=True
@@ -390,6 +395,9 @@ def test_an_exported_git_variable_does_not_redirect_the_read(
     (own / "scripts").mkdir()
     copy = own / "scripts" / "file-census.py"
     copy.write_text(SCRIPT.read_text(encoding="utf-8"), encoding="utf-8")
+    (own / "scripts" / "_gitenv.py").write_text(
+        (SCRIPT.parent / "_gitenv.py").read_text(encoding="utf-8"), encoding="utf-8"
+    )
 
     done = subprocess.run(
         [sys.executable, str(copy)], cwd=other, capture_output=True, text=True, check=True,

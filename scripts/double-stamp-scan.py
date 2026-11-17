@@ -85,6 +85,8 @@ import sys
 import types
 from pathlib import Path
 
+from _gitenv import clean_env
+
 REPO = Path(__file__).resolve().parent.parent
 
 
@@ -183,6 +185,7 @@ def vendored_leading_blocks(root: Path, baseline: str) -> tuple[list[str], list[
             capture_output=True,
             text=True,
             check=False,
+            env=clean_env(),
         )
         if before.returncode != 0:
             continue
@@ -213,7 +216,7 @@ def _changed_since(root: Path, ref: str) -> set[str]:
     """
     diff = subprocess.run(
         ["git", "diff", "--name-only", ref],
-        cwd=root, capture_output=True, text=True, check=False,
+        cwd=root, capture_output=True, text=True, check=False, env=clean_env(),
     )
     if diff.returncode != 0:
         raise SystemExit(f"--changed-since {ref}: git diff failed in {root}")
@@ -221,7 +224,7 @@ def _changed_since(root: Path, ref: str) -> set[str]:
 
     status = subprocess.run(
         ["git", "status", "--porcelain", "--untracked-files=all"],
-        cwd=root, capture_output=True, text=True, check=False,
+        cwd=root, capture_output=True, text=True, check=False, env=clean_env(),
     )
     if status.returncode != 0:
         raise SystemExit(f"--changed-since {ref}: git status failed in {root}")

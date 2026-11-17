@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import importlib.util
 import pathlib
+import sys
 from types import SimpleNamespace
 
 import pytest
@@ -16,6 +17,8 @@ SCRIPT = pathlib.Path(__file__).resolve().parents[2] / "scripts" / "bench-deploy
 
 
 def _harness():
+    if str(SCRIPT.parent) not in sys.path:  # the script does `from _gitenv import clean_env`
+        sys.path.insert(0, str(SCRIPT.parent))
     spec = importlib.util.spec_from_file_location("bench_deploy_path", SCRIPT)
     assert spec is not None
     assert spec.loader is not None
