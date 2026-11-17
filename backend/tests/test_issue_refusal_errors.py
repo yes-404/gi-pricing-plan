@@ -47,3 +47,34 @@ def test_an_issue_with_no_step_is_located_by_its_field_alone() -> None:
 
 def test_an_empty_issue_list_does_not_refuse() -> None:
     raise_first_issue([])
+
+
+def test_a_real_validation_refusal_has_a_literal_detail_and_the_step_only_in_errors() -> None:
+    """Through `validate_algorithm`: the sentinel is in the step id and the expression text."""
+    from model_schema.rating import RatingAlgorithm
+    from pricing_core.rating.compile import validate_algorithm
+
+    data = {
+        "slug": "motor-gb", "version": 1,
+        "input_contract": [{"name": "driver_age", "type": "int", "nullable": False}],
+        "outputs": [{"name": "payable_premium_minor", "type": "money_minor", "required": True}],
+        "steps": [
+            {"step_id": "s_in", "type": "input", "label": "age", "input_name": "driver_age",
+             "on_missing": "error", "produces": "driver_age"},
+            {"step_id": f"s_calc_{SENT}", "type": "expression", "label": "c",
+             "expr": f"fn_{SENT}(driver_age) / 2", "result_type": "money_minor",
+             "consumes": ["driver_age"], "produces": "premium"},
+            {"step_id": "s_out", "type": "output", "label": "o",
+             "output_name": "payable_premium_minor", "rounding": {"mode": "half_even", "dp": 0},
+             "consumes": ["premium"]},
+        ],
+    }
+    issues = validate_algorithm(RatingAlgorithm.model_validate(data))
+    assert issues, "the plant must fire"
+    with pytest.raises(PlatformError) as caught:
+        raise_first_issue(issues)
+    problem = caught.value.to_problem()
+    assert SENT not in (problem.detail or "")
+    assert SENT not in problem.title
+    assert all(SENT not in e.message for e in problem.errors)
+    assert [SENT in e.field for e in problem.errors] == [True]
