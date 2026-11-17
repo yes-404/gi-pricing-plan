@@ -9,6 +9,7 @@ from __future__ import annotations
 import importlib.util
 import json
 import pathlib
+import sys
 from types import ModuleType
 from uuid import uuid4
 
@@ -116,9 +117,20 @@ def test_a_run_that_cannot_complete_exits_two(
 
 
 def _test_database_url() -> str:
-    """The application's DSN for the test database, from the suite's own helper (imported by
-    name so the type checker does not follow it into the whole test fixture module)."""
-    module = importlib.import_module("backend.tests.conftest_db")
+    """The application's DSN for the test database, from the suite's own helper.
+
+    Loaded by file path, not `import backend.tests.conftest_db`: `backend/` is not a package on
+    `sys.path`, so the name import worked only when a backend test had been collected first
+    (pytest's rootdir insertion), i.e. it depended on collection order (#1915). The helper's own
+    imports (`app`, `model_schema`) are installed workspace packages. Loading it by path also keeps
+    the type checker out of the whole test fixture module."""
+    path = pathlib.Path(__file__).resolve().parents[1] / "backend" / "tests" / "conftest_db.py"
+    spec = importlib.util.spec_from_file_location("_conftest_db_by_path", path)
+    assert spec is not None
+    assert spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
     return str(module.test_database_url())
 
 
