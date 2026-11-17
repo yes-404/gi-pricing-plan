@@ -89,7 +89,7 @@ The substrate every other module stands on:
 | **FR-400** | Jobs report **structured progress**: a fraction complete, a current-stage label, and optional counters (rows processed, rules evaluated, boosting rounds). `pricing-core` reports through the injected `ProgressCallback` (ADR-703); the worker translates it into Job state. |
 | **FR-401** | Jobs are **cancellable**. Cancellation is cooperative: the callback signals cancellation and `pricing-core` returns at the next checkpoint. A cancelled Job leaves no partially-visible artifact (`01` NFR-474). |
 | **FR-402** | Job logs are captured, retained with the Job, and viewable in the UI with the `trace_id` (R4). Logs never contain secrets or full quote inputs (R3, `06` FR-375). |
-| **FR-403** | Failed Jobs record a typed error code, a human message, and — where the failure is deterministic (bad spec, invalid rule) — the field-level cause. Infrastructure failures are retried with exponential backoff; deterministic failures are not retried. *(Clarified 2026-11-14, #1510, closing #1658.)* A coded refusal from `pricing-core` (a `CodedError`, text `CODE: message`) raised inside a Job handler is stored under its own code when that code is registered in a module's catalogue, with the message part as the human message. It is a deterministic failure and is not retried. An unregistered code, and every other unexpected exception, stays `JOB_HANDLER_FAILED`. |
+| **FR-403** | Failed Jobs record a typed error code, a human message, and — where the failure is deterministic (bad spec, invalid rule) — the field-level cause. Infrastructure failures are retried with exponential backoff; deterministic failures are not retried. *(Clarified 2026-11-14, #1510, closing #1658.)* A coded refusal from `pricing-core` (a `CodedError`, text `CODE: message`) raised inside a Job handler is stored under its own code when that code is registered in a module's catalogue, with the message part as the human message. It is a deterministic failure and is not retried. An unregistered code, and every other unexpected exception, stays `JOB_HANDLER_FAILED`. *(Added 2026-11-17, #1917.)* The field-level cause of a deterministic refusal is `JobError.location` (§4.1), a typed set of identifiers of the caller's own artifact and never a submitted value; `detail` keeps its other uses. |
 | **FR-404** | Jobs are **idempotent by key**: a submission carrying an `Idempotency-Key` that matches a Job from the last 24 h returns the original Job (`00` §5.4). *Amended 2026-08-23 (OQ-647): the **"from the last 24 h" clause is withdrawn**. It was never implemented — `platform.jobs.submit()` has always applied no window — and a window is the one thing a key must not have, because the duplicate a key exists to prevent is precisely the one that arrives late. Keys are permanent, with a single release on terminal failure: the semantics are FR-414, which supersedes this row's window and nothing else about it.* |
 | **FR-405** | Jobs are routed to queues by Kind, with per-queue worker pools sized independently: `compute` (fitting, certification, optimisation — few, large workers), `scoring` (batch scoring — many, moderate), `io` (ingestion, exports), `default` (everything else). |
 | **FR-406** | **Job enqueue is transactionally safe.** Celery is the chosen broker (OQ-640, decided 2026-08-14), which does **not** enlist in the database transaction — a task can be published to Redis and the surrounding transaction then roll back, leaving a worker acting on state that was never committed. Since audit writes share the caller's transaction (`06` R2), this would produce work with no audit record. Jobs are therefore enqueued through a **transactional outbox**: the job row is written in the same transaction as the domain change and the audit event, and a relay publishes to Celery only after commit. Publishing directly from inside a request transaction is refused at the service layer, not left to convention. |
@@ -237,9 +237,12 @@ Failure shape: `Job.error` on a failed Job is a `JobError`, shown here without t
   "message": "GLM failed to converge after 200 iterations.",
   "retryable": false,
   "detail": {"factors_suspected": ["vehicle_group_rated"], "max_gradient": 4.1e-3},
+  "location": {"step_id": "s_rp", "field": "mode"},
   "trace_id": "4bf92f3577b34da6a3ce929d0e0e4736"
 }
 ```
+
+*Added 2026-11-17 (#1917).* `location` is `JobErrorLocation` (`model_schema.jobs`), optional and null on every Job that stored an error before it existed. Its keys are `step_id`, `field`, `ref`, `objective`, `structure`, `factor`, `key`, `feature`, `interaction`, `operand` and `peril`, each a `str` in the grammar of the field it names, at least one set, no other key. It carries identifiers of the caller's own artifact (a step id, a path inside a step, a reference) and **never a submitted value**: no quote input, no rate-table cell, no factor level, no bound, no number, no free text. A refusal sets it on `PlatformError.location`, and the worker copies it into the stored error; the problem response of a request does not carry it.
 
 ### 4.2 `Environment`
 
@@ -435,7 +438,7 @@ def get(key: str, workspace_id: UUID, environment: str | None = None) -> Setting
 | View | Route | Contents |
 |---|---|---|
 | Jobs | `/jobs` | Filterable list with kind, status, progress bars, submitter, duration; live updates via SSE |
-| Job detail | `/jobs/:id` | Parameters, progress stages, logs with `trace_id`, result link, cancel action, error detail |
+| Job detail | `/jobs/:id` | Parameters, progress stages, logs with `trace_id`, result link, cancel action, error detail *(Added 2026-11-17, #1917: error detail includes `error.location` when present. No Job detail view is built yet; this row states what the page shows when it is.)* |
 | Environments | `/admin/environments` | Live deployments per environment, settings, shadow configuration, promotion order |
 | Service accounts | `/admin/service-accounts` | Keys with prefix, expiry, last used; create/rotate/revoke with one-time key display |
 | Settings | `/admin/settings` | Effective values with their resolution source and constraints |
