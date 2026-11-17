@@ -46,5 +46,5 @@ A rating version is the unit a quote is priced against. Its status was already h
 ## Consequences
 
 - A test that must put a version past `draft` into a state its writers never produce (a bundle edit on an approved version, evidence removed from one in review) simulates it in an owner transaction with triggers disabled, and says so.
-- The comparison costs nothing on a slot hit; on a cold load it adds string comparisons and one canonical hash of the bundle, against the blob read and parse the cold load already pays.
+- The comparison costs nothing on a slot hit; on a cold load it adds string comparisons, a sha256 of the payload bytes and one canonical hash of the bundle, against the blob read and parse the cold load already pays.
 - The pointer and provenance columns of the other governed tables, and a validation rule's status vocabulary, are PR-2 of #1907.
