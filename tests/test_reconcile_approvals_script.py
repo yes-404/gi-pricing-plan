@@ -49,6 +49,7 @@ def test_a_clean_run_exits_zero_with_one_line_per_workspace_and_a_summary() -> N
         "summary": True,
         "workspaces": 2,
         "chain_broken": 0,
+        "chain_unreadable": 0,
         "workspaces_with_mismatches": 0,
     }
 
@@ -83,6 +84,18 @@ def test_a_broken_chain_exits_two_and_outranks_a_mismatch_elsewhere() -> None:
     assert code == 2
     assert json.loads(lines[1])["mismatches"] == []
     assert json.loads(lines[-1])["chain_broken"] == 1
+
+
+@pytest.mark.req("FR-2163")
+def test_an_unreadable_workspace_exits_two_and_the_others_still_print() -> None:
+    script = _load()
+    unreadable = _report("unreadable")
+    lines, code = script.render([_report(mismatches=(_mismatch(),)), unreadable, _report()])
+    assert code == 2
+    assert len(lines) == 4
+    assert [json.loads(line)["chain"] for line in lines[:3]] == ["intact", "unreadable", "intact"]
+    assert json.loads(lines[0])["mismatches"], "another workspace's result is still printed"
+    assert json.loads(lines[-1])["chain_unreadable"] == 1
 
 
 @pytest.mark.req("FR-2163")

@@ -11,15 +11,17 @@ read-only login where one exists; the application login is acceptable because th
 reads.
 
 Output: one JSON line per workspace, then one summary line.
-`{"workspace_id", "chain": "intact"|"broken", "events_verified", "artifacts_checked",
+`{"workspace_id", "chain": "intact"|"broken"|"unreadable", "events_verified", "artifacts_checked",
 "requests_checked", "mismatches": [{"rule", "ref", "detail", "legacy"}]}`.
 A mismatch with `"legacy": true` has chain evidence only before the workspace's first
 decision event that carries its ids (by sequence, never by timestamp); it is reported and
 counted like any other.
 
 Exit codes: **0** every chain verifies and nothing mismatches; **1** at least one mismatch
-(legacy ones included); **2** a chain is broken, or the run could not complete. A broken
-chain outranks a mismatch, and a broken workspace prints no rule output.
+(legacy ones included); **2** a chain is broken or unreadable (a stored row the models
+refuse: that workspace prints `"chain": "unreadable"` and the run still prints every other
+workspace), or the run could not complete. A broken or unreadable chain outranks a mismatch,
+and such a workspace prints no rule output.
 """
 
 from __future__ import annotations
@@ -45,12 +47,14 @@ EXIT_CLEAN, EXIT_MISMATCH, EXIT_BROKEN = 0, 1, 2
 def render(reports: Iterable[Any]) -> tuple[list[str], int]:
     """The output lines and the exit code for a run's per-workspace reports."""
     lines: list[str] = []
-    broken = mismatched = 0
+    broken = unreadable = mismatched = 0
     total = 0
     for report in reports:
         total += 1
         if report.chain == "broken":
             broken += 1
+        elif report.chain == "unreadable":
+            unreadable += 1
         elif report.mismatches:
             mismatched += 1
         lines.append(
@@ -76,12 +80,16 @@ def render(reports: Iterable[Any]) -> tuple[list[str], int]:
                 "summary": True,
                 "workspaces": total,
                 "chain_broken": broken,
+                "chain_unreadable": unreadable,
                 "workspaces_with_mismatches": mismatched,
             },
             sort_keys=True,
         )
     )
-    return lines, EXIT_BROKEN if broken else EXIT_MISMATCH if mismatched else EXIT_CLEAN
+    return (
+        lines,
+        EXIT_BROKEN if broken or unreadable else EXIT_MISMATCH if mismatched else EXIT_CLEAN,
+    )
 
 
 def _settings() -> Any:

@@ -49,13 +49,15 @@ Options considered:
    `scripts/reconcile-approvals.py` implement FR-2163's five rules per workspace. The chain
    must verify first; a broken chain stops the rules for that workspace.
 2. The run is read-only: each workspace is read in a `READ ONLY` transaction and no event is
-   written. Exit `0` clean, `1` any mismatch, `2` a broken chain or a run that could not
-   complete. It should run with a read-only login where one exists; the application login is
+   written. Exit `0` clean, `1` any mismatch, `2` a broken or unreadable chain (a stored row the models refuse: the run
+   still prints every other workspace) or a run that could not complete. It should run with a read-only login where one exists; the application login is
    acceptable because the run only reads. `deploy/README.md` says so.
 3. A mismatch whose chain evidence lies wholly before the workspace's first decision event that
    carries its ids is reported like any other mismatch, marked `legacy`; the exit code stays `1`.
    The mark is by chain sequence, never by timestamp, because an event's time is its writer's
-   choice. Nothing is silenced by default.
+   choice. Nothing is silenced by default. A workspace with no id-carrying decision event has
+   no cut-over: nothing in it is marked, so `legacy` means "no later than the cut-over as far as
+   the chain shows", never "benign".
 4. The decision event's `after` gains `approval_request_id` and `decision_id`, for new events only,
    so rule 3 matches exactly; earlier events are matched by `(entity_ref, actor, decision)`.
 5. The set of governed tables and "approved or later" states the run covers is derived from the
@@ -63,9 +65,14 @@ Options considered:
    fails when a guarded table has no coverage.
 6. A row in a status no lifecycle edge leads to (today a rating version that is `live` or
    `retired`) is reported by rule 1 as a status the product does not write, whatever requests
-   exist. A model archived after it was superseded is not claimed by rule 1, because
+   exist; the rule reads the lifecycle, so the day a writer of such a status lands it is the
+   rule that is changed. A model archived after it was superseded is not claimed by rule 1, because
    `archived` is reachable from `draft`; rules 2 to 4 cover its approval through the chain.
-7. Dataset Versions are outside this Work (their `validated` state is set by a job, not an
+7. Rule 5 also reports a deployment whose version is not approved or later (FR-238), and rule 3
+   compares an id-matched event's actor, action and entity reference with its decision row.
+8. The issue's sixth rule, checking caller-supplied anchors (FR-373), is out of this Work and
+   deferred to #1919.
+9. Dataset Versions are outside this Work (their `validated` state is set by a job, not an
    approval) and a scheduled run is a later Work.
 
 ## Consequences

@@ -190,6 +190,76 @@ def test_r3_an_earlier_event_matches_by_entity_actor_and_decision() -> None:
     assert [m.rule for m in found] == [], found
 
 
+# -- R3: an id match compares the event to its decision row (S1) -----------------------------
+
+
+def _event_with(**changes: object) -> WorkspaceData:
+    data = _reconciled()
+    return replace(
+        data, events=(data.events[0], replace(data.events[1], **changes), data.events[2])
+    )
+
+
+def test_r3_an_event_with_the_decision_id_but_another_actor() -> None:
+    found = reconcile_data(_event_with(actor_id=OTHER))
+    assert "R3" in _rules(found), found
+    assert "actor" in " ".join(m.detail for m in found)
+
+
+def test_r3_an_event_with_the_decision_id_but_another_action() -> None:
+    found = reconcile_data(_event_with(action="approval_request.reject"))
+    assert "R3" in _rules(found), found
+    assert "action" in " ".join(m.detail for m in found)
+
+
+def test_r3_an_event_with_the_decision_id_but_another_entity_ref() -> None:
+    found = reconcile_data(_event_with(entity_ref="rating_version:elsewhere@1"))
+    assert "R3" in _rules(found), found
+    assert "entity" in " ".join(m.detail for m in found)
+
+
+# -- a malformed event does not end the run (S3) ----------------------------------------------
+
+
+def _validation_error() -> Exception:
+    try:
+        Principal.model_validate({})
+    except ValueError as exc:  # pydantic's ValidationError is a ValueError
+        return exc
+    raise AssertionError("an empty principal validated")
+
+
+async def test_a_workspace_whose_chain_cannot_be_read_is_reported_unreadable(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    async def _raises(*_a: object, **_k: object) -> int:
+        raise _validation_error()
+
+    monkeypatch.setattr(rc.audit, "verify_chain", _raises)
+    report = await rc.reconcile(None, uuid4())  # type: ignore[arg-type]
+    assert report.chain == "unreadable"
+    assert report.mismatches == ()
+    assert report.chain_detail
+
+
+async def test_a_workspace_with_a_malformed_event_body_is_reported_unreadable(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    async def _verified(*_a: object, **_k: object) -> int:
+        return 3
+
+    async def _load(*_a: object, **_k: object) -> WorkspaceData:
+        data = _reconciled()
+        bad = replace(data.events[1], after=["not", "an", "object"])  # type: ignore[arg-type]
+        return replace(data, events=(data.events[0], bad, data.events[2]))
+
+    monkeypatch.setattr(rc.audit, "verify_chain", _verified)
+    monkeypatch.setattr(rc, "load_workspace_data", _load)
+    report = await rc.reconcile(None, uuid4())  # type: ignore[arg-type]
+    assert report.chain == "unreadable"
+    assert report.mismatches == ()
+
+
 # -- R4 ---------------------------------------------------------------------------------------
 
 
@@ -246,6 +316,20 @@ def test_r5_a_deployment_request_must_be_executed() -> None:
     assert "'executed'" in found[0].detail
 
 
+@pytest.mark.parametrize("status", ["draft", "review"])
+def test_r5_a_deployment_of_a_version_that_is_not_approved_is_reported(status: str) -> None:
+    """FR-238: only an approved version deploys. A draft or review version has no R1 mismatch
+    (R1 reads approved-or-later states only), so R5 must name it on its own."""
+    version = ArtifactState("rating_versions", REF, "rating_version", status)
+    data = _with_deployment(
+        replace(_reconciled(), artifacts=(version,), requests=(), decisions=(), events=())
+    )
+    found = reconcile_data(data)
+    assert [m.rule for m in found] == ["R5"], found
+    assert status in found[0].detail
+    assert "not approved" in found[0].detail
+
+
 # -- legacy marking (D2) ----------------------------------------------------------------------
 
 
@@ -282,10 +366,29 @@ def test_a_mismatch_with_no_chain_evidence_is_not_legacy() -> None:
     assert [(m.rule, m.legacy) for m in found] == [("R1", False)]
 
 
+def test_a_workspace_with_no_id_carrying_event_marks_nothing_legacy() -> None:
+    """Strict: with no decision event carrying its ids there is no cut-over to place anything
+    before, so an invented approval with chain evidence is a plain mismatch, not a legacy one."""
+    invented = WorkspaceData(
+        artifacts=(ArtifactState("rating_versions", REF, "rating_version", "approved"),),
+        requests=(
+            RequestState(REQUEST_ID, REF, "rating_version", "approved", SUBMITTER, 1, _t(1)),
+        ),
+        events=(
+            EventState(1, _t(1), "approval_request.submitted", REF, SUBMITTER),
+            EventState(2, _t(2), "approval_request.approve", REF, APPROVER, None),
+            EventState(3, _t(2), "rating_version.approved", REF, APPROVER),
+        ),
+    )
+    found = reconcile_data(invented)
+    assert found, "the invented approval must be reported"
+    assert [m.legacy for m in found] == [False] * len(found), found
+
+
 # -- census (DB-free half): the covered tables are the ones the guard migration installs -----
 
 
-def test_census_covered_tables_equal_the_guard_migration_tables_plus_deployment_requests() -> None:
+def _guard_migration_tables() -> set[str]:
     import importlib.util
     from pathlib import Path
 
@@ -300,9 +403,25 @@ def test_census_covered_tables_equal_the_guard_migration_tables_plus_deployment_
     assert spec.loader is not None
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
-    guarded = set(module.GUARDED_TABLES) - {"approval_requests"}
-    assert set(rc.COVERED_TABLES) == guarded | {"deployment_requests"}
+    return set(module.GUARDED_TABLES) - {"approval_requests"} | {"deployment_requests"}
+
+
+def _census_gap(covered: set[str], guarded: set[str]) -> set[str]:
+    """The tables in one set and not the other: empty when the census holds."""
+    return covered ^ guarded
+
+
+def test_census_covered_tables_equal_the_guard_migration_tables_plus_deployment_requests() -> None:
+    assert _census_gap(set(rc.COVERED_TABLES), _guard_migration_tables()) == set()
     assert {t for t, *_ in rc.COVERED_TABLES.values()} <= set(rc.STATE_GRAPHS)
+
+
+def test_census_a_planted_governed_table_without_coverage_fails_it() -> None:
+    """The census shown red: a new guarded table the reconcile run does not cover is named."""
+    planted = _guard_migration_tables() | {"planted_governed_table"}
+    assert _census_gap(set(rc.COVERED_TABLES), planted) == {"planted_governed_table"}
+    dropped = set(rc.COVERED_TABLES) - {"models"}
+    assert _census_gap(dropped, _guard_migration_tables()) == {"models"}
 
 
 def test_census_every_covered_type_has_a_derivable_approved_state() -> None:
@@ -317,6 +436,12 @@ def test_census_every_covered_type_has_a_derivable_approved_state() -> None:
 # test_reconcile_db_the_decision_route_reconciles_clean
 # test_reconcile_db_a_planted_approved_request_without_decisions_is_reported
 # test_reconcile_db_a_broken_chain_stops_the_rules
+# test_reconcile_db_a_planted_live_rating_version_is_a_status_the_product_does_not_write (R1)
+# test_reconcile_db_a_planted_stray_decision_event_is_reported (R3)
+# test_reconcile_db_a_planted_second_approval_event_is_reported (R4)
+# test_reconcile_db_a_planted_deployment_of_a_draft_version_is_reported (R5)
+# (R2 is the planted request test above; each is planted, then run, red before and green on
+# the route-written state of `the_decision_route_reconciles_clean`. Written for batch 2.)
 
 
 async def _decide_once(
@@ -464,6 +589,112 @@ async def test_reconcile_db_a_broken_chain_stops_the_rules(
         report = await rc.reconcile(session, workspace_id)
     assert report.chain == "broken"
     assert report.mismatches == ()
+
+
+async def _rules_reported(database: Database, workspace_id: UUID) -> set[str]:
+    async with database.session() as session:
+        report = await rc.reconcile(session, workspace_id)
+    assert report.chain == "intact"
+    return {m.rule for m in report.mismatches}
+
+
+def _draft_rating_version(workspace_id: UUID, status: str) -> object:
+    from app.db.models import RatingVersionRow
+
+    return RatingVersionRow(
+        workspace_id=workspace_id,
+        slug=f"rv-{uuid4().hex[:8]}",
+        version=1,
+        status=status,
+        dataset_version_id=uuid4(),
+        model_ref="model:motor-ad-frequency@7",
+        created_by=uuid4(),
+    )
+
+
+async def test_reconcile_db_a_planted_live_rating_version_is_a_status_the_product_does_not_write(
+    database: Database, workspace_id: UUID
+) -> None:
+    """R1 and the unwritten status: a `live` row, which no writer produces, planted through the
+    application connection (the guard acts on `approved` only)."""
+    async with database.unit_of_work() as session:
+        session.add(_draft_rating_version(workspace_id, "live"))
+    async with database.session() as session:
+        report = await rc.reconcile(session, workspace_id)
+    assert [m.rule for m in report.mismatches] == ["R1"]
+    assert "does not write" in report.mismatches[0].detail
+
+
+async def test_reconcile_db_a_planted_stray_decision_event_is_reported(
+    database: Database, workspace_id: UUID
+) -> None:
+    """R3: after a clean decision, one more decision event with no decision row behind it."""
+    from app.platform import audit
+    from model_schema import JobSource
+
+    _request_id, approver, ref = await _decide_once(database, workspace_id)
+    assert await _rules_reported(database, workspace_id) == set()
+    async with database.unit_of_work() as session:
+        await audit.record(
+            session,
+            workspace_id=workspace_id,
+            actor=approver,
+            source=JobSource.API,
+            action="approval_request.approve",
+            entity_ref=str(ref),
+        )
+    assert "R3" in await _rules_reported(database, workspace_id)
+
+
+async def test_reconcile_db_a_planted_second_approval_event_is_reported(
+    database: Database, workspace_id: UUID
+) -> None:
+    """R4: the artifact's approval event must exist exactly once; a second one is appended."""
+    from app.platform import audit
+    from model_schema import JobSource
+
+    _request_id, approver, ref = await _decide_once(database, workspace_id)
+    assert await _rules_reported(database, workspace_id) == set()
+    async with database.unit_of_work() as session:
+        await audit.record(
+            session,
+            workspace_id=workspace_id,
+            actor=approver,
+            source=JobSource.API,
+            action="model.approved",
+            entity_ref=str(ref),
+        )
+    assert "R4" in await _rules_reported(database, workspace_id)
+
+
+async def test_reconcile_db_a_planted_deployment_of_a_draft_version_is_reported(
+    database: Database, workspace_id: UUID
+) -> None:
+    """R5 and FR-238: a deployment row on a `draft` version, with no creation event."""
+    from sqlalchemy import select
+
+    from app.db.models import DeploymentRow, EnvironmentRow
+    from model_schema import new_uuid7
+
+    version = _draft_rating_version(workspace_id, "draft")
+    async with database.unit_of_work() as session:
+        session.add(version)
+        env_id = (
+            await session.execute(select(EnvironmentRow.id).where(EnvironmentRow.slug == "uat"))
+        ).scalar_one()
+        session.add(
+            DeploymentRow(
+                workspace_id=workspace_id,
+                environment_id=env_id,
+                rating_version_ref=f"rating_version:{version.slug}@1",  # type: ignore[attr-defined]
+                bundle_hash="sha256:" + "a" * 64,
+                deployed_by=new_uuid7(),
+                reason="planted",
+            )
+        )
+    async with database.session() as session:
+        report = await rc.reconcile(session, workspace_id)
+    assert any("not approved or later" in m.detail for m in report.mismatches), report.mismatches
 
 
 pytestmark = pytest.mark.req("FR-2163")

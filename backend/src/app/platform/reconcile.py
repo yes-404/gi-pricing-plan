@@ -21,17 +21,20 @@ Rules (rule ids are this module's vocabulary, not requirement ids):
   `draft`, so R2 to R4 cover its approval through the chain.
 * **R2** — every approved request has enough approving decisions, from distinct approvers,
   none of them its submitter (FR-353).
-* **R3** — every decision row has exactly one matching chain event, and every such event has
-  its decision row. Events written since the decision event carries its ids match by id;
-  earlier events match by `(entity_ref, actor, decision)` in order.
+* **R3** — every decision row has exactly one matching chain event (its actor, action and
+  entity reference those of the row), and every such event has its decision row. Events
+  written since the decision event carries its ids match by id; earlier events match by
+  `(entity_ref, actor, decision)` in order.
 * **R4** — the chain order is the process order: submitted, then the decisions, then the
   artifact's approval event, once.
-* **R5** — every deployment rests on a version that passes R1 to R4 and has its creation
-  event; where it names a deployment request, that request is `executed` and passes R1 to R4.
+* **R5** — every deployment rests on an approved-or-later version that passes R1 to R4 and has
+  its creation event (FR-238: a draft or review version does not deploy); where it names a
+  deployment request, that request is `executed` and passes R1 to R4.
 
 A mismatch whose chain evidence all lies before the workspace's first id-carrying decision
 event (by sequence, never by timestamp) is marked `legacy`; it is reported and counted like any
-other (nothing is silenced).
+other (nothing is silenced). A workspace with no id-carrying decision event has no cut-over:
+nothing in it is legacy. Rule 6 of the issue (anchors, FR-373) is deferred to #1919.
 """
 
 from __future__ import annotations
@@ -92,6 +95,8 @@ APPROVED: Final = "approved"
 DECISION_ACTIONS: Final[Mapping[str, str]] = {
     kind.value: f"approval_request.{kind.value}" for kind in DecisionKind
 }
+#: What a malformed stored row raises while it is read or its rules run.
+_UNREADABLE: Final = (ValueError, TypeError, AttributeError, KeyError)
 SUBMITTED_ACTION: Final = "approval_request.submitted"
 DEPLOYMENT_CREATED_ACTION: Final = "deployment.created"
 
@@ -273,7 +278,7 @@ class Mismatch:
 @dataclass(frozen=True)
 class WorkspaceReport:
     workspace_id: UUID
-    chain: str  # "intact" | "broken"
+    chain: str  # "intact" | "broken" | "unreadable"
     events_verified: int = 0
     artifacts_checked: int = 0
     requests_checked: int = 0
@@ -381,6 +386,19 @@ def _match_decisions(
                 )
             )
         event = events[0]
+        for what, got, expected in (
+            ("actor", event.actor_id, decision.approver_id),
+            ("action", event.action, DECISION_ACTIONS[decision.decision]),
+            ("entity_ref", event.entity_ref, request.ref),
+        ):
+            if got != expected:
+                found.append(
+                    Mismatch(
+                        "R3",
+                        request.ref,
+                        f"event {event.sequence} has {what} {got}, its decision row {expected}",
+                    )
+                )
         named = (event.after or {}).get("approval_request_id")
         if named is not None and str(named) != str(decision.request_id):
             found.append(
@@ -460,7 +478,8 @@ def _r4(data: WorkspaceData, matched: Mapping[UUID, EventState]) -> list[Mismatc
 def _r5(data: WorkspaceData, upstream: Collection[Mismatch]) -> list[Mismatch]:
     found: list[Mismatch] = []
     unreconciled = {m.ref for m in upstream}
-    versions = {a.ref for a in data.artifacts if a.type == "rating_version"}
+    versions = {a.ref: a.status for a in data.artifacts if a.type == "rating_version"}
+    deployable = approved_states("rating_version")
     created = {
         str((e.after or {}).get("id")) for e in data.events if e.action == DEPLOYMENT_CREATED_ACTION
     }
@@ -469,6 +488,14 @@ def _r5(data: WorkspaceData, upstream: Collection[Mismatch]) -> list[Mismatch]:
         subject = f"deployment:{deployment.id}"
         if ref not in versions:
             found.append(Mismatch("R5", subject, f"its version {ref} is not a stored version"))
+        elif versions[ref] not in deployable:
+            found.append(
+                Mismatch(
+                    "R5",
+                    subject,
+                    f"its version {ref} is {versions[ref]!r}, not approved or later (FR-238)",
+                )
+            )
         elif ref in unreconciled:
             found.append(Mismatch("R5", subject, f"its version {ref} does not reconcile"))
         if str(deployment.id) not in created:
@@ -500,7 +527,9 @@ def _mark_legacy(data: WorkspaceData, mismatches: list[Mismatch]) -> list[Mismat
     `at` is chosen by whoever writes the event, so it cannot say what is old. A mismatch is
     legacy only when it has chain evidence and all of it, every event naming its reference, lies
     at a sequence before the workspace's first decision event that carries its ids. A mismatch
-    with no event naming its reference has nothing to place and is not legacy.
+    with no event naming its reference has nothing to place and is not legacy, and a workspace
+    with no id-carrying decision event has no cut-over to place anything before: nothing in it
+    is legacy.
     """
     first_new = min(
         (
@@ -516,7 +545,7 @@ def _mark_legacy(data: WorkspaceData, mismatches: list[Mismatch]) -> list[Mismat
     out: list[Mismatch] = []
     for m in mismatches:
         last = latest.get(m.ref)
-        legacy = last is not None and (first_new is None or last < first_new)
+        legacy = first_new is not None and last is not None and last < first_new
         out.append(Mismatch(m.rule, m.ref, m.detail, legacy))
     return out
 
@@ -622,14 +651,21 @@ async def reconcile(session: AsyncSession, workspace_id: UUID) -> WorkspaceRepor
     """One workspace: the chain first, then the rules. A broken chain stops the rules."""
     try:
         verified = await audit.verify_chain(session, workspace_id)
+        data = await load_workspace_data(session, workspace_id)
+        mismatches = tuple(reconcile_data(data))
     except audit.ChainBrokenError as exc:
         return WorkspaceReport(workspace_id, "broken", chain_detail=str(exc))
-    data = await load_workspace_data(session, workspace_id)
+    except _UNREADABLE as exc:
+        # A row whose stored shape the models refuse: this workspace cannot be read, the run
+        # carries on with the others (a pydantic `ValidationError` is a `ValueError`).
+        return WorkspaceReport(
+            workspace_id, "unreadable", chain_detail=f"{type(exc).__name__}: {exc}"
+        )
     return WorkspaceReport(
         workspace_id,
         "intact",
         events_verified=verified,
         artifacts_checked=len(data.artifacts),
         requests_checked=len(data.requests),
-        mismatches=tuple(reconcile_data(data)),
+        mismatches=mismatches,
     )
