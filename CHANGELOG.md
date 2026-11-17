@@ -7,6 +7,7 @@ about. The format follows [Keep a Changelog 1.1.0](https://keepachangelog.com/en
 
 ### Changed
 
+- **`POST /api/v1/models`, `POST /api/v1/model-specs/validate` and `POST /api/v1/peril-structures` now refuse an `evidence_blob` that is absent or that the workspace cannot read, with `422 EVIDENCE_BLOB_UNREADABLE`;** they accepted any digest before. Upload the evidence first. Stored models and structures are not re-checked (FR-127, FR-189).
 - **A GLM now refuses a level of a categorical Factor that its fit never saw, unless the Factor
   declares `map_to_base`; it scored such a level as the base level before.** A Factor gains `unseen_level_behaviour` (`error` or `map_to_base`;
   unset refuses), on `POST /api/v1/factors` and in the factor form. The refusal is
