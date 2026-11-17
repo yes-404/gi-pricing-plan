@@ -74,6 +74,11 @@ the reverse of what it was asked.
    both sides**. Nothing reports those. `OQ-649` owns the general question — every layer of
    the guard is scoped to the intersection of its two sides — so a new comparison should state
    which half of its axis it can and cannot see rather than inherit this sentence's old promise.
+   **Since #1918 a path on one side only below the top level is not silent:**
+   `test_one_sided_path_census_has_no_undeclared_path` fails on any nested path in
+   `_field_paths`' symmetric difference that is not in `ONE_SIDED_PATHS` (exact path, with a
+   `<O|S|D|U>: why; owner #n` reason), the stale and ceiling tests keep the list honest, and the
+   list only shrinks. A new comparison still intersects; the census is what says what it dropped.
 4. **Resolve every disagreement it finds** before the slice ends. A red guard at the end of a
    slice is the same artifact as no guard.
 5. **Prove it fails on deliberately broken input** (`CLAUDE.md` §13 rule 4) — break the
@@ -273,6 +278,15 @@ now drift. `test_two_arms_declaring_different_bounds_are_both_kept`,
 `test_a_bound_moved_between_arms_is_drift` and `test_a_closed_map_moved_between_arms_is_drift`
 hold the cases.
 
+**One-sidedness below the top level is declared (#1918, 2026-11-17).** `ONE_SIDED_PATHS` lists
+every nested path that is on one side only (85 at main `3aed71d9`, over 12 of the 21 compared
+slugs), each exact, each with its class and owner, under `ONE_SIDED_PATHS_CEILING`. The census
+tests are named `test_one_sided_path_census_*` so the census selection (`-k census`) runs them.
+It does **not** see: a top-level name (`ONE_SIDED_SLUGS` and the two name tests own that, and
+`validation-rule` is outside the second), arm-level existence below, or type and bound
+disagreement on a shared path (the comparisons above own that). Fixing an entry removes it and
+lowers the ceiling in the same commit.
+
 **What arm attribution did *not* close is arm-level *existence*.** W32-1b delivers type and bound
 disagreement on paths shared by both sides *within an arm*; a field that leaves the shared set
 entirely — moved between arms so that no arm holds it on both sides — is still reported by
@@ -360,3 +374,10 @@ carry: **an allow-list of known exceptions is only as honest as its stale check.
 twelve pending response entries and two of its five request entries had been typed by other slices
 before this one started, and it was the stale check, not a reading, that said which.
 
+2026-11-17 — #1918 slice 1, on the tree `origin/main` `3aed71d9` plus that slice. Step 3 and "What the guard
+does not reach" gained the path-level census. Built red first: with `ONE_SIDED_PATHS` empty, the
+parametrized test failed on exactly 12 slugs naming 85 paths; the #1917 shape planted on a scratch copy
+of `generated/job.schema.json` failed naming `error.location`; a stale entry and an extra entry failed the
+stale and ceiling tests; a walker that stopped at `items` failed the reach control naming
+`columns.[].top_levels.[].level`. The lesson to carry: a scoped guard's silence is found by asking what
+its intersection drops, and then counting that with the guard's own walker.

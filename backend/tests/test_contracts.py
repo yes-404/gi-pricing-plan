@@ -2877,6 +2877,424 @@ def test_every_one_sided_slug_is_declared() -> None:
     )
 
 
+# --- #1918: one-sided paths BELOW the top level --------------------------------------------
+#
+# `ONE_SIDED_SLUGS` above declares a shape present on one side only. This is the same rule
+# (OQ-649 (b): one-sidedness is declared, never inferred) one level down: a property path that
+# exists on one side of a compared slug and not the other. Every other comparison here
+# intersects its two sides' paths, and the two name tests read the top level only, so a nested
+# field added to the model and never published (#1917's `error.location`) was reported by
+# nothing. Measured at main 3aed71d9: 85 such paths over 12 of the 21 `COMPARED_SLUGS`.
+#
+# Every path is listed exactly: a wildcard over a one-sided object would let a new field under
+# it pass silently, which is the defect in a smaller form. Each reason carries its class
+# (O open map keyed on one side only / S item shape differs / D field on one side only /
+# U declared and unbuilt) and the issue that owns the decision. The list only shrinks: the
+# fix for an entry removes it and lowers `ONE_SIDED_PATHS_CEILING` in the same change.
+#
+# NOT seen here: arm-level existence (a field moved between conditional arms, OQ-649's
+# remaining boundary, D2 of #1918), and type or bound disagreement on a path both sides carry
+# (the comparisons above own that).
+
+ONE_SIDED_PATHS: Final[dict[str, dict[str, str]]] = {
+    "custom-objective": {
+        "applicability.y_domain.max_exclusive": (
+            "D: field on the model only, never published in the contract; owner #1918"
+        ),
+        "applicability.y_domain.min_exclusive": (
+            "D: field on the model only, never published in the contract; owner #1918"
+        ),
+    },
+    "dataset-version": {
+        "tables.[].source_names": (
+            "D: field on the model only, never published in the contract; owner #1918"
+        ),
+    },
+    "diagnostics": {
+        "gbm.partial_dependence.[].omitted": (
+            "D: field on the model only, never published in the contract; owner #1918"
+        ),
+        "gbm.partial_dependence.[].omitted.exposure_share": (
+            "D: field on the model only, never published in the contract; owner #1918"
+        ),
+        "gbm.partial_dependence.[].omitted.levels": (
+            "D: field on the model only, never published in the contract; owner #1918"
+        ),
+        "gbm.partial_dependence.[].omitted.reason": (
+            "D: field on the model only, never published in the contract; owner #1918"
+        ),
+        "glm.monotonicity": (
+            "D: field on the model only, never published in the contract; owner #1918"
+        ),
+        "glm.monotonicity.[]": (
+            "D: field on the model only, never published in the contract; owner #1918"
+        ),
+        "glm.monotonicity.[].declared": (
+            "D: field on the model only, never published in the contract; owner #1918"
+        ),
+        "glm.monotonicity.[].factor": (
+            "D: field on the model only, never published in the contract; owner #1918"
+        ),
+        "glm.monotonicity.[].holds": (
+            "D: field on the model only, never published in the contract; owner #1918"
+        ),
+        "glm.monotonicity.[].worst_violation": (
+            "D: field on the model only, never published in the contract; owner #1918"
+        ),
+        "glm.monotonicity_omitted": (
+            "D: field on the model only, never published in the contract; owner #1918"
+        ),
+        "glm.monotonicity_omitted.[]": (
+            "D: field on the model only, never published in the contract; owner #1918"
+        ),
+        "glm.monotonicity_omitted.[].factor": (
+            "D: field on the model only, never published in the contract; owner #1918"
+        ),
+        "glm.monotonicity_omitted.[].reason": (
+            "D: field on the model only, never published in the contract; owner #1918"
+        ),
+        "universal.holdout.exposure_excluded_unseen_level": (
+            "D: field on the model only, never published in the contract; owner #1918"
+        ),
+        "universal.holdout.rows_excluded_unknown_response": (
+            "D: field on the model only, never published in the contract; owner #1918"
+        ),
+        "universal.holdout.rows_excluded_unseen_level": (
+            "D: field on the model only, never published in the contract; owner #1918"
+        ),
+        "universal.train.exposure_excluded_unseen_level": (
+            "D: field on the model only, never published in the contract; owner #1918"
+        ),
+        "universal.train.rows_excluded_unknown_response": (
+            "D: field on the model only, never published in the contract; owner #1918"
+        ),
+        "universal.train.rows_excluded_unseen_level": (
+            "D: field on the model only, never published in the contract; owner #1918"
+        ),
+    },
+    "grouping": {
+        "evidence.credibility_components.evpv": (
+            "O: open map on one side, keyed properties on the other; owner #1918"
+        ),
+        "evidence.credibility_components.k": (
+            "O: open map on one side, keyed properties on the other; owner #1918"
+        ),
+        "evidence.credibility_components.vhm": (
+            "O: open map on one side, keyed properties on the other; owner #1918"
+        ),
+        "method_params.credibility_model": (
+            "O: open map on one side, keyed properties on the other; owner #1918"
+        ),
+        "method_params.credibility_pk": (
+            "O: open map on one side, keyed properties on the other; owner #1918"
+        ),
+        "method_params.credibility_pk.k": (
+            "O: open map on one side, keyed properties on the other; owner #1918"
+        ),
+        "method_params.credibility_pk.p": (
+            "O: open map on one side, keyed properties on the other; owner #1918"
+        ),
+        "method_params.credibility_standard_claims": (
+            "O: open map on one side, keyed properties on the other; owner #1918"
+        ),
+        "method_params.merge_tolerance_relativity": (
+            "O: open map on one side, keyed properties on the other; owner #1918"
+        ),
+        "method_params.reference_table_ref": (
+            "O: open map on one side, keyed properties on the other; owner #1918"
+        ),
+    },
+    "job": {
+        "submitted_by.display": (
+            "O: open map on one side, keyed properties on the other; owner #1918"
+        ),
+        "submitted_by.id": (
+            "O: open map on one side, keyed properties on the other; owner #1918"
+        ),
+        "submitted_by.kind": (
+            "O: open map on one side, keyed properties on the other; owner #1918"
+        ),
+    },
+    "model": {
+        "fit_result.banding_warnings": (
+            "D: field on the model only, never published in the contract; owner #1918"
+        ),
+        "fit_result.banding_warnings.[]": (
+            "D: field on the model only, never published in the contract; owner #1918"
+        ),
+        "fit_result.banding_warnings.[].band_index": (
+            "D: field on the model only, never published in the contract; owner #1918"
+        ),
+        "fit_result.banding_warnings.[].band_label": (
+            "D: field on the model only, never published in the contract; owner #1918"
+        ),
+        "fit_result.banding_warnings.[].banding": (
+            "D: field on the model only, never published in the contract; owner #1918"
+        ),
+        "fit_result.banding_warnings.[].measure": (
+            "D: field on the model only, never published in the contract; owner #1918"
+        ),
+        "fit_result.banding_warnings.[].minimum": (
+            "D: field on the model only, never published in the contract; owner #1918"
+        ),
+        "fit_result.banding_warnings.[].observed": (
+            "D: field on the model only, never published in the contract; owner #1918"
+        ),
+        "fit_result.unseen_cell_reports": (
+            "D: field on the model only, never published in the contract; owner #1918"
+        ),
+        "fit_result.unseen_cell_reports.[]": (
+            "D: field on the model only, never published in the contract; owner #1918"
+        ),
+        "fit_result.unseen_cell_reports.[].example_cap": (
+            "D: field on the model only, never published in the contract; owner #1918"
+        ),
+        "fit_result.unseen_cell_reports.[].examples": (
+            "D: field on the model only, never published in the contract; owner #1918"
+        ),
+        "fit_result.unseen_cell_reports.[].examples.[]": (
+            "D: field on the model only, never published in the contract; owner #1918"
+        ),
+        "fit_result.unseen_cell_reports.[].factor": (
+            "D: field on the model only, never published in the contract; owner #1918"
+        ),
+        "fit_result.unseen_cell_reports.[].producible": (
+            "D: field on the model only, never published in the contract; owner #1918"
+        ),
+        "fit_result.unseen_cell_reports.[].state": (
+            "D: field on the model only, never published in the contract; owner #1918"
+        ),
+        "fit_result.unseen_cell_reports.[].unfitted": (
+            "D: field on the model only, never published in the contract; owner #1918"
+        ),
+        "fit_result.unseen_level_gaps": (
+            "D: field on the model only, never published in the contract; owner #1918"
+        ),
+        "fit_result.unseen_level_gaps.[]": (
+            "D: field on the model only, never published in the contract; owner #1918"
+        ),
+        "fit_result.unseen_level_gaps.[].factor": (
+            "D: field on the model only, never published in the contract; owner #1918"
+        ),
+        "fit_result.unseen_level_gaps.[].level": (
+            "D: field on the model only, never published in the contract; owner #1918"
+        ),
+        "fit_result.unseen_level_gaps.[].reached_by": (
+            "D: field on the model only, never published in the contract; owner #1918"
+        ),
+        "fit_result.unseen_level_gaps.[].reached_by.[]": (
+            "D: field on the model only, never published in the contract; owner #1918"
+        ),
+        "spec.custom_objective_ref": (
+            "U: declared and unbuilt (FR-207); owner #1918"
+        ),
+        "spec.factors.[].factor_id": (
+            "S: items are a string ref on the model, an object on the contract; owner #1918"
+        ),
+        "spec.factors.[].factor_version": (
+            "S: items are a string ref on the model, an object on the contract; owner #1918"
+        ),
+        "spec.filter": (
+            "U: declared and unbuilt (FR-207); owner #1918"
+        ),
+    },
+    "model-spec": {
+        "factors.[].factor_id": (
+            "S: items are a string ref on the model, an object on the contract; owner #1918"
+        ),
+        "factors.[].factor_version": (
+            "S: items are a string ref on the model, an object on the contract; owner #1918"
+        ),
+    },
+    "peril-structure": {
+        "reconciliation.ratio": (
+            "D: field on the contract only, absent from the model; owner #1918"
+        ),
+        "reconciliation.status": (
+            "D: field on the contract only, absent from the model; owner #1918"
+        ),
+    },
+    "profile": {
+        "columns.[].quantiles.p1": (
+            "O: open map on one side, keyed properties on the other; owner #1918"
+        ),
+        "columns.[].quantiles.p25": (
+            "O: open map on one side, keyed properties on the other; owner #1918"
+        ),
+        "columns.[].quantiles.p5": (
+            "O: open map on one side, keyed properties on the other; owner #1918"
+        ),
+        "columns.[].quantiles.p50": (
+            "O: open map on one side, keyed properties on the other; owner #1918"
+        ),
+        "columns.[].quantiles.p75": (
+            "O: open map on one side, keyed properties on the other; owner #1918"
+        ),
+        "columns.[].quantiles.p95": (
+            "O: open map on one side, keyed properties on the other; owner #1918"
+        ),
+        "columns.[].quantiles.p99": (
+            "O: open map on one side, keyed properties on the other; owner #1918"
+        ),
+    },
+    "transparency-artifact": {
+        "shap_summary.top_interactions.[].holdout_strength_ratio": (
+            "D: field on the model only, never published in the contract; owner #1918"
+        ),
+    },
+    "validation-report": {
+        "results.[].evidence_blob": (
+            "D: field on the contract only, absent from the model; owner #1918"
+        ),
+    },
+    "validation-rule": {
+        "params.query": (
+            "O: open map on one side, keyed properties on the other; owner #1918"
+        ),
+        "scope.filter": (
+            "O: open map on one side, keyed properties on the other; owner #1918"
+        ),
+        "scope.skip_on_derived": (
+            "O: open map on one side, keyed properties on the other; owner #1918"
+        ),
+        "target.column": (
+            "O: open map on one side, keyed properties on the other; owner #1918"
+        ),
+        "target.columns": (
+            "O: open map on one side, keyed properties on the other; owner #1918"
+        ),
+        "target.columns.[]": (
+            "O: open map on one side, keyed properties on the other; owner #1918"
+        ),
+        "target.table": (
+            "O: open map on one side, keyed properties on the other; owner #1918"
+        ),
+        "tolerance.max_violating_exposure_fraction": (
+            "O: open map on one side, keyed properties on the other; owner #1918"
+        ),
+        "tolerance.max_violating_rows": (
+            "O: open map on one side, keyed properties on the other; owner #1918"
+        ),
+    },
+}
+
+#: The registry's size at its last edit. Raising it is a visible second edit; lower it in the
+#: same change that removes entries (`test_one_sided_path_census_ceiling_only_shrinks`).
+ONE_SIDED_PATHS_CEILING: Final = 85
+
+
+def _one_sided_paths(generated: dict[str, Any], authored: dict[str, Any]) -> dict[str, str]:
+    """Every nested field path on exactly one side, mapped to `generated` or `authored`.
+
+    Whole paths from `_field_paths`, as sets: a path is never rebuilt from a segment. The
+    root is excluded; a top-level name is `ONE_SIDED_SLUGS`' and the two name tests' business.
+    """
+    produced = set(_field_paths(generated, generated, GENERATED))
+    declared = set(_field_paths(authored, authored, AUTHORED))
+    return {
+        path: "generated" if path in produced else "authored"
+        for path in produced ^ declared
+        if path != _ROOT_PATH and "." in path
+    }
+
+
+def _slug_one_sided_paths(slug: str) -> dict[str, str]:
+    return _one_sided_paths(
+        _load(GENERATED / f"{slug}.schema.json"), _load(_authored_schema(slug))
+    )
+
+
+@pytest.mark.req("FR-451")
+@pytest.mark.parametrize("slug", COMPARED_SLUGS)
+def test_one_sided_path_census_has_no_undeclared_path(slug: str) -> None:
+    """OQ-649 (b) at path granularity: a nested path on one side only must be declared."""
+    undeclared = {
+        path: side
+        for path, side in _slug_one_sided_paths(slug).items()
+        if path not in ONE_SIDED_PATHS.get(slug, {})
+    }
+    assert not undeclared, (
+        f"{slug}: {len(undeclared)} nested path(s) exist on one side only and are not in "
+        f"ONE_SIDED_PATHS (OQ-649 (b)); publish the field or declare it with a reason: "
+        f"{dict(sorted(undeclared.items()))}"
+    )
+
+
+@pytest.mark.req("FR-451")
+def test_one_sided_path_census_declarations_are_still_one_sided() -> None:
+    """A declared path that now exists on both sides, or on neither, is stale: remove it."""
+    stale = {
+        slug: sorted(set(paths) - set(_slug_one_sided_paths(slug)))
+        for slug, paths in ONE_SIDED_PATHS.items()
+    }
+    stale = {slug: paths for slug, paths in stale.items() if paths}
+    unknown = sorted(set(ONE_SIDED_PATHS) - set(COMPARED_SLUGS))
+    assert not unknown, f"ONE_SIDED_PATHS names a slug that is not compared: {unknown}"
+    assert not stale, (
+        "a declared one-sided path is no longer one-sided; remove it and lower "
+        f"ONE_SIDED_PATHS_CEILING: {stale}"
+    )
+
+
+@pytest.mark.req("FR-451")
+def test_one_sided_path_census_ceiling_only_shrinks() -> None:
+    """The registry may not exceed the ceiling; the ceiling is a second visible edit."""
+    size = sum(len(paths) for paths in ONE_SIDED_PATHS.values())
+    assert size <= ONE_SIDED_PATHS_CEILING, (
+        f"ONE_SIDED_PATHS holds {size} entries, over its ceiling {ONE_SIDED_PATHS_CEILING}: "
+        "the list only shrinks (#1918); fix the drift instead of declaring it"
+    )
+
+
+@pytest.mark.req("FR-451")
+def test_one_sided_path_census_reasons_name_class_and_owner() -> None:
+    """Each entry says which class it is in and which issue owns its decision."""
+    bad = {
+        (slug, path): reason
+        for slug, paths in ONE_SIDED_PATHS.items()
+        for path, reason in paths.items()
+        if not re.fullmatch(r"[OSDU]: .+; owner #\d+", reason)
+    }
+    assert not bad, f"a reason must read '<O|S|D|U>: <why>; owner #<issue>': {bad}"
+
+
+@pytest.mark.req("FR-451")
+def test_one_sided_path_census_walker_reaches_a_nested_path() -> None:
+    """Control: a walker that stops descending reports nothing, so name a path it must reach.
+
+    `profile` `columns.[].top_levels.[].level` sits three levels down through two `items`
+    hops, on both sides. It must be reached by both walks and reported one-sided by neither.
+    """
+    path = "columns.[].top_levels.[].level"
+    generated = _load(GENERATED / "profile.schema.json")
+    authored = _load(_authored_schema("profile"))
+    assert path in _field_paths(generated, generated, GENERATED)
+    assert path in _field_paths(authored, authored, AUTHORED)
+    assert path not in _slug_one_sided_paths("profile")
+
+
+@pytest.mark.req("FR-451")
+def test_one_sided_path_census_sees_a_planted_nested_property() -> None:
+    """The #1917 shape, planted in memory: `error.location` on the model, not published.
+
+    Also the mirror: a nested property the contract keeps and the model drops. Neither edit
+    touches a file on disk.
+    """
+    generated = _load(GENERATED / "job.schema.json")
+    authored = _load(_authored_schema("job"))
+    assert not {p for p in _one_sided_paths(generated, authored) if p.startswith("error.")}
+
+    planted = copy.deepcopy(generated)
+    planted["$defs"]["JobError"]["properties"]["location"] = {"type": "string"}
+    found = {p: s for p, s in _one_sided_paths(planted, authored).items() if p.startswith("error.")}
+    assert found == {"error.location": "generated"}
+
+    dropped = copy.deepcopy(generated)
+    del dropped["$defs"]["JobError"]["properties"]["code"]
+    found = {p: s for p, s in _one_sided_paths(dropped, authored).items() if p.startswith("error.")}
+    assert found == {"error.code": "authored"}
+
+
 @pytest.mark.req("FR-64")
 @pytest.mark.parametrize(
     ("slug", "row"), [("banding", "band_stats.[]"), ("profile", "one_ways.[].rows.[]")]
