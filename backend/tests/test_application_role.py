@@ -525,6 +525,51 @@ async def test_the_grant_comparison_sees_a_drift_in_both_directions(
             await transaction.rollback()
 
 
+# The roles each application role is a member of, directly or through a chain. Written here,
+# never read from `deploy/postgres/app-login-role.sql`: a map read from the provisioner would be
+# the declaration checking itself. `gip_app` is a member of nothing; the login role of `gip_app`.
+EXPECTED_MEMBERSHIPS: set[tuple[str, str]] = {(_LOGIN_ROLE, _APP_ROLE)}
+
+
+async def _membership_differences(connection: AsyncConnection) -> list[str]:
+    """Every (member, role) pair the two application roles hold through `pg_auth_members`,
+    chains followed, compared with `EXPECTED_MEMBERSHIPS` both ways. A privilege held through a
+    membership is invisible to `_grant_differences`, which reads direct grants only."""
+    held = {
+        (member, role)
+        for member, role in await connection.execute(
+            text(
+                "WITH RECURSIVE held(member, roleid) AS ("
+                " SELECT a.member, a.roleid FROM pg_auth_members a"
+                f"  WHERE a.member IN ('{_APP_ROLE}'::regrole, '{_LOGIN_ROLE}'::regrole)"
+                " UNION"
+                " SELECT h.member, a.roleid FROM held h JOIN pg_auth_members a"
+                "  ON a.member = h.roleid) "
+                "SELECT member::regrole::text, roleid::regrole::text FROM held"
+            )
+        )
+    }
+    differences = [
+        f"{m} is a member of {r}: undeclared" for m, r in sorted(held - EXPECTED_MEMBERSHIPS)
+    ]
+    differences += [
+        f"{m} is not a member of {r}: declared" for m, r in sorted(EXPECTED_MEMBERSHIPS - held)
+    ]
+    return differences
+
+
+@pytest.mark.req("FR-44")
+async def test_the_application_roles_are_members_of_exactly_the_declared_roles(
+    database: Database,
+) -> None:
+    """The memberships of `gip_app` and `gip_app_login`, chains followed, equal the declared
+    set. A membership carries its role's privileges to the application without a line of the
+    grant map above changing. Read as the login role: `pg_auth_members` is readable by every
+    role, so this needs no owner connection."""
+    async with database.engine.connect() as connection:
+        assert await _membership_differences(connection) == []
+
+
 # --------------------------------------------------------------------------- T8 (Step 4.2)
 
 
