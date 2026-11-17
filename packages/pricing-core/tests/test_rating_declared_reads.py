@@ -106,14 +106,31 @@ def test_the_location_is_the_position_of_the_read_and_the_order_is_fixed() -> No
             step["expr"] = "risk_premium_minor * expense_factor * stray_expr"
     expected = [
         ("s_expense", UNDECLARED_READ_CODE, "key_expr[1]"),
-        ("s_risk", UNDECLARED_READ_CODE, "feature_map[1]"),
+        ("s_risk", UNDECLARED_READ_CODE, "feature_map.stray_feature"),
         ("s_office", UNDECLARED_READ_CODE, "expr"),
     ]
     for _ in range(2):  # the same order on a second call
         issues = _fr246(validate_algorithm(RatingAlgorithm.model_validate(payload)))
         assert [(i.step_id, i.code, i.field) for i in issues] == expected, issues
-    assert not any(n in i.field or n in i.message
-                   for i in issues for n in ("stray_key", "stray_feature", "stray_expr"))
+    # the field of a list or an expression location holds no name; a keyed-map entry's holds the
+    # key (it goes back to the caller), and no message holds any
+    assert not any(n in i.message for i in issues
+                   for n in ("stray_key", "stray_feature", "stray_expr"))
+    assert not any(n in i.field for i in issues for n in ("stray_key", "stray_expr"))
+
+
+@pytest.mark.req("FR-246")
+async def test_the_compile_refusal_for_an_undeclared_feature_map_key_carries_no_key() -> None:
+    """#1712 S7c: what a Job stores is the `CodedError` text. It is the code and the literal
+    message, no field and no key. (DB-free: the text is raised here, before any Job row.)"""
+    example = _one_name_example()
+    step = next(s for s in example["steps"] if s["type"] == "model_call")
+    step["feature_map"] = {**step.get("feature_map", {}), "stray_feature": "x"}
+    with pytest.raises(CodedError) as caught:
+        await _compile(example)
+    text = str(caught.value)
+    assert text.startswith("RATING_STEP_UNDECLARED_READ:"), text
+    assert "stray_feature" not in text, text
 
 
 @pytest.mark.req("FR-246")

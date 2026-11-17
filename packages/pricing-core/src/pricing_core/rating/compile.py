@@ -440,8 +440,9 @@ def _check_declared_reads(algo: RatingAlgorithm) -> list[ValidationIssue]:
         # One issue per READING LOCATION (#1712 S7c; the maintainer's ruling, 2026-11-17): the
         # field is where the step reads, never a name the author submitted. Fixed order: step
         # order, then `authored_expression_fields`' field order, then a model_call's
-        # `feature_map` by position in the map's stored order (insertion order, which
-        # `RatingModelCallStep` keeps from the authored JSON).
+        # `feature_map` keys in the map's stored order. A keyed-map entry is located by the
+        # map name and key (`feature_map.<key>`, the form `clamp_bounds.min` has): the field
+        # goes back to the caller, it is not the message, which names no name (NFR-499).
         locations = [
             authored.field
             for authored in authored_by_step.get(step.step_id, [])
@@ -449,7 +450,7 @@ def _check_declared_reads(algo: RatingAlgorithm) -> list[ValidationIssue]:
         ]
         if isinstance(step, RatingModelCallStep):
             locations.extend(
-                f"feature_map[{i}]" for i, key in enumerate(step.feature_map) if key not in declared
+                f"feature_map.{key}" for key in step.feature_map if key not in declared
             )
         issues.extend(
             ValidationIssue(
