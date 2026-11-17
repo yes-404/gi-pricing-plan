@@ -146,7 +146,7 @@ async def test_a_structure_citing_an_unreadable_evidence_blob_is_refused(
     with pytest.raises(PlatformError) as refused:
         await _structure(database, workspace_id, actor, [_capped(peril, sha256)])
     assert refused.value.code == CODE
-    assert refused.value.status == 422
+    assert refused.value.status_code == 422
 
 
 @pytest.mark.req("FR-189")
