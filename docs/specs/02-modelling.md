@@ -137,6 +137,16 @@ Terms from `00-overview.md` §2.2 are used unchanged. Additional terms owned her
 > review** for an owner (the maintainer's entry "2026-10-14 11:28:56 BST": "Owners at §14: …
 > FR-109"). Until it is owned, no behaviour may be built on the stored chain.
 
+> **FR-109, dated amendment 2026-11-17 (the maintainer's decision of that date).** The
+> sentence "no behaviour may be built on the stored chain" is **narrowed**: the platform reads
+> the stored chain to refuse, and for nothing else; following it to resolve a value is not
+> built. **(1) At creation**, a Grouping that names a parent is refused with a 422 unless the
+> parent exists in the same workspace (`GROUPING_PARENT_NOT_FOUND`; a parent in another
+> workspace reads the same) and the chain's levels chain: every source level of the child is a
+> target level of its parent, and none is also a source level of an ancestor
+> (`GROUPING_CHAIN_LEVELS_MISMATCH`). The refusal names the Grouping and a count, never a
+> level (NFR-499). A Grouping stored before this clause is not re-checked.
+
 ### 3.4 GLM fitting
 
 | ID | Requirement |
@@ -2271,7 +2281,7 @@ Dataset.
 **Error codes owned by this module:** `DATASET_NOT_VALIDATED` (re-raised from `01`),
 `PROXY_REFERENCE_INVALID` (a Reference Population that FR-2138 refuses: a missing column, a repeated key, a null or out-of-range share, or shares that do not sum to 1; *added 2026-11-15 for #1501 (WK-691), on the maintainer's ruling*), `PROXY_INPUT_INVALID` (a Proxy Assessment call that cannot be assessed: the classes, the frame's columns or the exposure; same date). Both messages name the column and, for rows, their key in the reference — never a share or a value from the caller's frame (NFR-499),
 `FACTOR_PROHIBITED`, `FACTOR_RESOLUTION_FAILED`, `BAND_EMPTY`, `BAND_BELOW_MIN_EXPOSURE`,
-`GROUPING_NOT_EXHAUSTIVE`, `CREDIBILITY_VARIANCE_NOT_ESTIMABLE`,
+`GROUPING_NOT_EXHAUSTIVE`, `GROUPING_PARENT_NOT_FOUND` and `GROUPING_CHAIN_LEVELS_MISMATCH` (FR-109's creation check; names a Grouping and a count, never a level; *added 2026-11-17*), `CREDIBILITY_VARIANCE_NOT_ESTIMABLE`,
 `UNSEEN_LEVEL_BEHAVIOUR_REQUIRED`, `GLM_CV_FOLD_EMPTY`,
 `GLM_TWEEDIE_POWER_GRID_EDGE`, `GLM_DID_NOT_CONVERGE`, `GLM_RANK_DEFICIENT`,
 `GLM_SEPARATION_DETECTED`, `GLM_FIT_FAILED`, `DECLARED_WEIGHT_INVALID`,

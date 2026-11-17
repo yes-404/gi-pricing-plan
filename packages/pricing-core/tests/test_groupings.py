@@ -32,6 +32,7 @@ from pricing_core.modelling import (
     FactorResolutionError,
     GroupingError,
     apply_grouping,
+    check_grouping_chain,
     grouping_evidence,
     propose_grouping,
 )
@@ -624,3 +625,64 @@ def test_a_grouping_can_name_its_parent_in_a_chain() -> None:
     assert region.parent_grouping_id == area.id
     rolled = apply_grouping(apply_grouping(pl.Series("vehicle_group", ["AB2"]), area), region)
     assert rolled.to_list() == ["NORTH"]
+
+
+# --- a chain must chain (FR-109) ---------------------------------------------------------
+
+
+def _area_and_region(**region_over: object) -> tuple[Grouping, Grouping]:
+    area = _manual(slug="area", mapping={"AB1": "AB", "AB2": "AB", "CD1": "CD"})
+    region = _manual(
+        slug="region",
+        column="area",
+        mapping={"AB": "R1", "CD": "R2"},
+        parent_grouping_id=area.id,
+        **region_over,
+    )
+    return area, region
+
+
+@pytest.mark.req("FR-109")
+def test_a_chain_whose_levels_chain_is_accepted() -> None:
+    area, region = _area_and_region()
+    check_grouping_chain(region, [area])
+
+
+@pytest.mark.req("FR-109")
+def test_a_child_source_level_the_parent_does_not_produce_is_refused_without_naming_it() -> None:
+    area = _manual(slug="area", mapping={"AB1": "AB", "CD1": "CD"})
+    region = _manual(
+        slug="region",
+        mapping={"AB": "R1", "ZZ-SENTINEL-9": "R2"},
+        parent_grouping_id=area.id,
+    )
+    with pytest.raises(GroupingError) as refused:
+        check_grouping_chain(region, [area])
+    assert refused.value.code == "GROUPING_CHAIN_LEVELS_MISMATCH"
+    assert "ZZ-SENTINEL-9" not in str(refused.value)
+    assert "region" in str(refused.value)
+    assert "1 " in str(refused.value)  # the count of unproduced levels
+
+
+@pytest.mark.req("FR-109")
+def test_a_level_that_is_a_source_level_of_two_links_is_refused_without_naming_it() -> None:
+    """One label at two levels of a chain cannot be told apart at resolution."""
+    area = _manual(slug="area", mapping={"AB1": "AB", "AB": "AB"})
+    region = _manual(
+        slug="region", mapping={"AB": "R1"}, parent_grouping_id=area.id
+    )
+    with pytest.raises(GroupingError) as refused:
+        check_grouping_chain(region, [area])
+    assert refused.value.code == "GROUPING_CHAIN_LEVELS_MISMATCH"
+    assert "'AB'" not in str(refused.value)
+
+
+@pytest.mark.req("FR-109")
+def test_the_overlap_is_checked_against_every_ancestor_not_only_the_parent() -> None:
+    fine = _manual(slug="fine", mapping={"AB1": "AB", "CD1": "CD"})
+    area = _manual(slug="area", mapping={"AB": "N", "CD": "S"}, parent_grouping_id=fine.id)
+    zone = _manual(slug="zone", mapping={"N": "ALL", "S": "ALL", "AB1": "ALL"},
+                   parent_grouping_id=area.id)
+    with pytest.raises(GroupingError) as refused:
+        check_grouping_chain(zone, [area, fine])
+    assert refused.value.code == "GROUPING_CHAIN_LEVELS_MISMATCH"

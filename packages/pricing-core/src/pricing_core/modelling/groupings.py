@@ -51,7 +51,7 @@ from model_schema import (
 from pricing_core.data.profile import one_way
 from pricing_core.modelling.errors import FactorResolutionError, GroupingError
 
-__all__ = ["apply_grouping", "grouping_evidence", "propose_grouping"]
+__all__ = ["apply_grouping", "check_grouping_chain", "grouping_evidence", "propose_grouping"]
 
 def _full_credibility_claims(p: float, k: float) -> float:
     """The claim count at which a Poisson estimate is within ±`k` with probability `p`.
@@ -548,6 +548,41 @@ def apply_grouping(series: pl.Series, grouping: Grouping) -> pl.Series:
     if text.len() == 1:
         return pl.Series(series.name, [targets[levels[0]]], dtype=pl.String)
     return text.replace_strict(targets, return_dtype=pl.String).rename(series.name)
+
+
+def check_grouping_chain(child: Grouping, ancestors: Sequence[Grouping]) -> None:
+    """Refuse a chain whose levels do not chain (FR-109).
+
+    `ancestors` runs parent first. Two rules, each stated once for every caller:
+
+    * the child's source levels must be target levels of its parent, or the chain names a
+      step nothing produces;
+    * no child source level may also be a source level of an ancestor, or one label would
+      sit at two levels of the chain and a value carrying it could not be placed.
+
+    The text names the Groupings and a count, never a level: a level is a value from the
+    caller's data (NFR-499).
+    """
+    if child.parent_grouping_id is None or not ancestors:
+        return
+    parent = ancestors[0]
+    own = set(child.mapping)
+    unproduced = own - set(parent.mapping.values())
+    if unproduced:
+        raise GroupingError(
+            "GROUPING_CHAIN_LEVELS_MISMATCH",
+            f"grouping {child.slug!r} names {parent.slug!r}@{parent.version} as its parent, "
+            f"but {len(unproduced)} of its {len(own)} source levels are not target levels "
+            "of that parent, so the chain does not chain (FR-109).",
+        )
+    shared = own & {level for ancestor in ancestors for level in ancestor.mapping}
+    if shared:
+        raise GroupingError(
+            "GROUPING_CHAIN_LEVELS_MISMATCH",
+            f"grouping {child.slug!r} has {len(shared)} source level(s) that are also source "
+            "levels of an ancestor in its chain, so one label would sit at two levels of the "
+            "chain (FR-109).",
+        )
 
 
 def _targets(levels: Sequence[str], grouping: Grouping) -> dict[str, str | None]:

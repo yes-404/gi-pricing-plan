@@ -131,6 +131,9 @@ MODELLING_ERROR_CODES: Final[frozenset[str]] = frozenset(
         "BAND_EMPTY",
         "BAND_BELOW_MIN_EXPOSURE",
         "GROUPING_NOT_EXHAUSTIVE",
+        # FR-109, 2026-11: a chain is checked when it is made, not when it is used.
+        "GROUPING_PARENT_NOT_FOUND",
+        "GROUPING_CHAIN_LEVELS_MISMATCH",
         # FR-106's Bühlmann-Straub arm, 2026-08-22. `GROUPING_NOT_EXHAUSTIVE` is about
         # a mapping that misses an observed level and says nothing a caller of
         # `/groupings/propose` could act on here: the mapping is fine, the *book* cannot

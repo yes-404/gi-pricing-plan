@@ -45,8 +45,10 @@ from model_schema import (
     Principal,
 )
 from pricing_core.modelling import (
+    GroupingError,
     ModellingError,
     band_statistics,
+    check_grouping_chain,
     grouping_evidence,
     propose_banding,
     propose_grouping,
@@ -331,6 +333,7 @@ async def create_grouping(
     await rbac.require_permission(
         session, workspace_id=workspace_id, principal=actor, permission=Permission.MODEL_FIT
     )
+    parent_ref = await _require_chain(session, workspace_id=workspace_id, grouping=grouping)
     version = 1 + (
         await session.execute(
             select(func.coalesce(func.max(GroupingRow.version), 0)).where(
@@ -366,9 +369,55 @@ async def create_grouping(
             "source_levels": len(grouping.mapping),
             "target_levels": len(grouping.target_levels),
             "unseen_level_behaviour": grouping.unseen_level_behaviour.value,
+            "parent_grouping_ref": parent_ref,
         },
     )
     return row
+
+
+#: A chain deeper than this is not a chain anyone drew (FR-109); the walk stops there.
+_MAX_CHAIN_DEPTH = 16
+
+
+async def _require_chain(
+    session: AsyncSession, *, workspace_id: UUID, grouping: Grouping
+) -> str | None:
+    """FR-109: a Grouping's parent exists in this workspace and the levels chain.
+
+    Groupings are immutable rows, so a parent that exists when the child is created cannot
+    later close a cycle: only the child's own creation can be refused here.
+    """
+    parent_id = grouping.parent_grouping_id
+    if parent_id is None:
+        return None
+    ancestors: list[Grouping] = []
+    seen: set[UUID] = set()
+    while parent_id is not None and parent_id not in seen and len(ancestors) < _MAX_CHAIN_DEPTH:
+        seen.add(parent_id)
+        parent = await session.scalar(
+            select(GroupingRow).where(
+                GroupingRow.workspace_id == workspace_id, GroupingRow.id == parent_id
+            )
+        )
+        if parent is None:
+            if not ancestors:
+                raise PlatformError(
+                    "GROUPING_PARENT_NOT_FOUND",
+                    "The grouping's parent does not exist",
+                    422,
+                    f"Grouping {grouping.slug!r} names a parent grouping that is not in "
+                    "this workspace (FR-109).",
+                )
+            break  # a stored ancestor whose own parent is gone is legacy data, not this request
+        ancestors.append(to_grouping(parent))
+        parent_id = parent.parent_grouping_id
+    try:
+        check_grouping_chain(grouping, ancestors)
+    except GroupingError as refused:
+        raise PlatformError(
+            refused.code, "The grouping's levels do not chain", 422, str(refused)
+        ) from refused
+    return f"grouping:{ancestors[0].slug}@{ancestors[0].version}"
 
 
 async def list_bandings(
