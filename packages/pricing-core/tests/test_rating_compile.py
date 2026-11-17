@@ -806,7 +806,7 @@ def test_the_type_mismatch_text_names_no_output() -> None:
 
 
 @pytest.mark.req("FR-240")
-def test_a_clamp_on_the_placeable_rung_that_consumes_another_name_is_located_at_consumes_0() -> None:
+def test_a_clamp_consuming_another_name_is_located_at_consumes_0() -> None:
     """#1914 review (freynia404, at 267e8507), blocking 1: the `consumes[0]` limb of the clamp
     location is reachable. A clamp whose produced name is the source of the last rung before
     `constraints` (`clamped_value`, read by the `optimisation_adjustment` output step) but which
