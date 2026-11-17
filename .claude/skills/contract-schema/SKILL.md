@@ -118,19 +118,29 @@ to `grouping.schema.json` that way produced a 189-line diff for a 13-line change
 the edit in reflow and destroying the layout a reader relies on. Patch the text, then
 `json.loads` the result to prove it still parses.
 
-**A new generated schema is a new file the audit must be told about.** Registering its slug
-in `GENERATED_SHAPES` is not enough: the file under `docs/contracts/schemas/generated/` cannot
-carry a front-matter header, so checks 30 and 35 of `scripts/audit-docs.py` red on it by name
-until you (1) add its literal path to `_CONTRACT_ARTIFACT_PATHS` in that script (the generated
-block), with a dated comment line, and (2) bump the count assert in
-`tests/test_audit_docs_ids.py::test_widening_the_scope_roots_reaches_every_non_markdown_file_the_register_exempts`
-by the number of paths added (run that test **unmodified on your base first** and record the
-integer it asserts; a base other than the last one you saw is normal when another slice has
-registered files). Both edits are in the same commit as the schema, and `git add` the new
-files before running the audit: it reads the tracked tree, so an untracked file reports as a
-stale register entry. If another open slice also adds generated schemas, whichever merges
-second re-applies its entries on the merged tuple and re-bumps the count. Found by the
-FD-1357 fix (WK-1178 SL-1377), which added `rate-table-version` and `seed-from-model-request`.
+**A new generated schema needs no registration with the audit.** Add its slug to
+`GENERATED_SHAPES` in `scripts/generate-contracts.py`, run that script, and commit the file it
+writes under `docs/contracts/schemas/generated/`. Measured on a scratch copy of the tree at
+`3aed71d9` (a second `Job` entry, slug `scratch-job-copy`, generated, then
+`python3 scripts/audit-docs.py` run untracked and again after `git add`): the audit stayed
+green both times and its output differed from the baseline in one line only, check 7's
+`89 JSON schemas parsed, $refs checked` becoming `90`. What the audit does with the file today:
+
+- **Checks 7 and 8** (`audit-docs.py`, the `# 7. JSON schemas` and `# 8. $ref resolution`
+  blocks) parse every `*.json` under `docs/contracts/` with a duplicate-key hook and resolve
+  every `$ref`. This is the whole of what a new schema is held to.
+- **Checks 30 to 39** do not red on it. `unstampable_reason` (`scripts/audit-docs.py`) answers
+  "cannot carry a header" by predicate — any file that does not end `.md` — so there is no
+  per-file register to extend and no count to bump. Checks 32 and 36 skip the file through
+  `_docid.generated_contract_tier_reason`, which reads `generate-contracts.py`'s own
+  `SCHEMA_DIR` and `OPENAPI_PATH` by symbol.
+
+Earlier text of this skill told you to add the path to a literal tuple in the audit and to
+bump a count in a named test. Neither exists on `3aed71d9`: that tuple and that test are gone
+from `scripts/` and `tests/`, and nothing in the audit's output asks for either edit. Drift
+between the models and the committed file is a different gate:
+`uv run python scripts/generate-contracts.py --check` (FR-451). `git add` is still needed
+before running the audit only because the audit reads the tracked tree.
 
 ## Verified
 
@@ -171,3 +181,12 @@ audit must be told about" paragraph above was added (the registry step RL-1375 D
 amendments name). Verified against origin/main `cf074d20` plus this slice's tree, by running
 `python3 scripts/audit-docs.py` red (check 30 and 35 on both new files) and green after the
 register edit.
+
+2026-11-17 — #1920 (WK-1920 working id): the "a new generated schema is a new file the audit
+must be told about" paragraph was rewritten. The 2026-10-03 text above named two edits that no
+longer exist (see the paragraph). Verified on a scratch copy of tree `3aed71d9` (`git archive`,
+fresh `git init`, `origin/main` set to its base commit): baseline green; one generated schema
+added; `generate-contracts.py --check` printed `59 generated contracts match the models`; audit
+green untracked and staged, one output line differing (`89` to `90` schemas parsed).
+`backend/tests/test_contracts.py` was **not** run there: `run-small.sh` refused at load, then the
+scratch venv lacked `--all-packages` (`No module named 'fastapi'`, rc 4); owed to a window.
