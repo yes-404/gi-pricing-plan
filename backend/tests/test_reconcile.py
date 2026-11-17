@@ -412,25 +412,15 @@ async def test_reconcile_db_the_decision_route_reconciles_clean(
 async def test_reconcile_db_a_planted_approved_request_without_decisions_is_reported(
     database: Database, workspace_id: UUID
 ) -> None:
-    """The planted state: an approved request with no decision rows and no events, written
-    by the owner with triggers off (`session_replication_role = replica`)."""
+    """The planted state: an approved request with no decision rows and no events, written the
+    governed way: the decided-request fixture of `approved_rows` under `approval_decision()`,
+    through the owner seam. No trigger is disabled and no superuser is assumed."""
+    from backend.tests.approved_rows import decided_request
     from backend.tests.conftest_db import seed_as_owner
-    from sqlalchemy import text
-
-    from app.db.models import ApprovalRequestRow
 
     async def _plant(session: AsyncSession) -> None:
-        await session.execute(text("SET LOCAL session_replication_role = 'replica'"))
-        session.add(
-            ApprovalRequestRow(
-                workspace_id=workspace_id,
-                artifact_ref="model:planted@1",
-                artifact_type="model",
-                submitted_by=SUBMITTER,
-                change_summary="planted",
-                status="approved",
-                approvers_required=1,
-            )
+        await decided_request(
+            session, workspace_id=workspace_id, artifact_type="model", slug="planted", version=1
         )
 
     await seed_as_owner(_plant)
@@ -449,11 +439,17 @@ async def test_reconcile_db_a_broken_chain_stops_the_rules(
     await _decide_once(database, workspace_id)
 
     async def _tamper(session: AsyncSession) -> None:
-        await session.execute(text("SET LOCAL session_replication_role = 'replica'"))
+        # An UPDATE of an audit row is refused for the owner too, so the chain is broken by an
+        # append the owner may make: one more event whose stored hash is not its content's.
         await session.execute(
             text(
-                "UPDATE audit_events SET justification = 'edited' "
-                "WHERE workspace_id = :w AND sequence = 1"
+                "INSERT INTO audit_events (id, workspace_id, at, actor, source, action, "
+                "entity_ref, before, after, justification, trace_id, job_id, "
+                "prev_event_hash, event_hash, sequence) "
+                "SELECT gen_random_uuid(), workspace_id, at, actor, source, action, "
+                "entity_ref, before, after, justification, trace_id, job_id, "
+                "event_hash, 'sha256:' || repeat('0', 64), sequence + 1 "
+                "FROM audit_events WHERE workspace_id = :w ORDER BY sequence DESC LIMIT 1"
             ),
             {"w": workspace_id},
         )

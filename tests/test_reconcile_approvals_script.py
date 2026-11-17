@@ -99,6 +99,73 @@ def test_a_run_that_cannot_complete_exits_two(
     assert "ConnectionRefusedError" in capsys.readouterr().err
 
 
-# DB-backed (run in the database window; named, not run here):
-#   test_script_db_a_migrated_demo_database_exits_zero_or_one_and_prints_json
-#   test_script_db_writes_nothing_the_audit_chain_head_is_unchanged
+# -- DB-backed: run in the slice's database window ----------------------------------------------
+
+
+def _test_database_url() -> str:
+    """The application's DSN for the test database, from the suite's own helper (imported by
+    name so the type checker does not follow it into the whole test fixture module)."""
+    module = importlib.import_module("backend.tests.conftest_db")
+    return str(module.test_database_url())
+
+
+def _run_script_against_the_test_database() -> tuple[int, list[dict[str, object]], str]:
+    import os
+    import subprocess
+    import sys
+
+    env = {**os.environ, "GIP_DATABASE_URL": _test_database_url()}
+    done = subprocess.run(
+        [sys.executable, str(SCRIPT)],
+        cwd=ROOT,
+        env=env,
+        capture_output=True,
+        text=True,
+        timeout=300,
+        check=False,
+    )
+    return done.returncode, [json.loads(line) for line in done.stdout.splitlines()], done.stderr
+
+
+def _chain_heads() -> dict[str, tuple[int, str]]:
+    """Per workspace: the chain head, read through the application's connection."""
+    import asyncio
+
+    from sqlalchemy import text
+    from sqlalchemy.ext.asyncio import create_async_engine
+
+    async def _read() -> dict[str, tuple[int, str]]:
+        engine = create_async_engine(_test_database_url())
+        try:
+            async with engine.connect() as conn:
+                rows = await conn.execute(
+                    text(
+                        "SELECT DISTINCT ON (workspace_id) workspace_id, sequence, event_hash "
+                        "FROM audit_events ORDER BY workspace_id, sequence DESC"
+                    )
+                )
+                return {str(r[0]): (r[1], r[2]) for r in rows}
+        finally:
+            await engine.dispose()
+
+    return asyncio.run(_read())
+
+
+def test_script_db_a_migrated_demo_database_exits_zero_or_one_and_prints_json() -> None:
+    code, lines, stderr = _run_script_against_the_test_database()
+    assert code in (0, 1), stderr
+    *workspaces, summary = lines
+    assert summary["summary"] is True
+    assert summary["workspaces"] == len(workspaces)
+    for line in workspaces:
+        assert line["chain"] == "intact"
+        assert set(line) >= {"workspace_id", "events_verified", "mismatches"}
+    expected = 1 if any(line["mismatches"] for line in workspaces) else 0
+    assert code == expected
+
+
+def test_script_db_writes_nothing_the_audit_chain_head_is_unchanged() -> None:
+    before = _chain_heads()
+    code, _lines, stderr = _run_script_against_the_test_database()
+    assert code in (0, 1), stderr
+    assert _chain_heads() == before
