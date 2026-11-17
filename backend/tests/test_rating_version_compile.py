@@ -16,7 +16,7 @@ from pathlib import Path
 from uuid import UUID, uuid4
 
 import pytest
-from backend.tests.approved_rows import mark_approved
+from backend.tests.approved_rows import decided_request, mark_approved
 from backend.tests.test_api_reference import _table as _seed_reference_table
 from backend.tests.test_custom_objectives_api import _advance, _create
 from backend.tests.test_model_jobs_gbm import _fitted_gbm
@@ -781,6 +781,14 @@ def _set_status(database: Database, rating_version_id: UUID, status: str) -> Non
             assert row is not None
             if status == "approved":
                 await mark_approved(session, row)
+            elif status in ("live", "retired"):
+                # Reached through a decided approval request, as the decision path leaves it.
+                await decided_request(
+                    session, workspace_id=row.workspace_id, artifact_type="rating_version",
+                    slug=row.slug, version=row.version,
+                )
+                row.status = status
+                await session.flush()
             else:
                 row.status = status
                 await session.flush()
