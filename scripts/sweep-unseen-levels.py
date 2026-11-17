@@ -20,12 +20,15 @@ Output, in this order (a zero over an empty corpus is vacuous, so the denominato
     checked: K             those whose bundle was read and checked (M minus unreadable)
     unreadable: U
     glm refs read: G       GLM models read across the checked bundles
+    glm models examined: G the same G: every GLM read is examined, whatever else its version pins
     <CLASS> <ref>          one line per version and class (below)
     UNREADABLE <ref> (<reason>)   one line per unreadable version (below)
     plain: .. not-reachable: .. null-level-unfitted: .. grouping-unfitted: ..
     interaction-unfitted: ..
     interaction-unfitted-lower-bound: .. no-relativities: .. not-examined-interaction: ..
-    not-examined-other-family: n (families: ..)   versions pinning a model of another family
+    not-examined-other-family <ref> (families: ..; glm models examined: g; ...)
+                           one line per version pinning a model of another family
+    not-examined-other-family: n (families: ..)   how many such versions there are
     NOTEXAMINED-CONTRACT n / NOTEXAMINED-GROUPING-SOURCE n   (what the sweep did not classify)
 
 Each `model:` payload of a Bundle is classified by its `fit_result.model_type`:
@@ -34,7 +37,9 @@ Each `model:` payload of a Bundle is classified by its `fit_result.model_type`:
                     that fails validation makes its version UNREADABLE.
     another family  a family the fit-result union names (read from model-schema, not listed here):
                     not examined and counted on `not-examined-other-family`, never a finding. It
-                    keeps FR-131's refusal whatever a Factor declares.
+                    keeps FR-131's refusal whatever a Factor declares. The GLMs of the same
+                    version ARE examined: a reachable class in one is listed and counts in the
+                    exit code whatever else the version pins.
     anything else   an unknown `model_type`, a payload with no `fit_result` or with no
                     `model_type`: UNREADABLE.
 
@@ -52,8 +57,11 @@ Classes (each counts versions; a version can carry several):
     NOTREACHABLE            a version whose every such Factor is one no quote can bring an unseen
                             level to, listed with reason words, and that carries NO other class
                             and no line the sweep did not examine (a NOTEXAMINED-* line, or a
-                            model of another family; a version with one is listed under that
-                            class alone). Not a finding, not reachable:
+                            model of another family). A version with such a line is never
+                            NOTREACHABLE; its GLMs are examined all the same, so it still carries
+                            every reachable class they show, and with none it reads under that
+                            not-examined line (its other models) and nowhere else.
+                            Not a finding, not reachable:
                             `closed-input` = every model_call that scores the GLM is exact and
                             feeds the Factor only from a non-nullable enum input, read with
                             on_missing = error, produced by that one input node, whose domain lies
@@ -434,6 +442,10 @@ def sweep(versions: list[dict[str, Any]], out: TextIO) -> int:
         if others:
             other_versions += 1
             other_families |= others
+            lines.append(
+                f"not-examined-other-family {ref} (families: {', '.join(sorted(others))}; "
+                f"glm models examined: {refs}; its other models were not)"
+            )
         for kind in sorted(kinds):
             counts[kind] += 1
             if kind == NOTREACHABLE:
@@ -445,6 +457,7 @@ def sweep(versions: list[dict[str, Any]], out: TextIO) -> int:
     print(f"checked: {len(with_bundle) - unreadable}", file=out)
     print(f"unreadable: {unreadable}", file=out)
     print(f"glm refs read: {glm_refs}", file=out)
+    print(f"glm models examined: {glm_refs}", file=out)
     for line in lines:
         print(line, file=out)
     print(f"plain: {counts['PLAIN']}", file=out)
@@ -461,8 +474,9 @@ def sweep(versions: list[dict[str, Any]], out: TextIO) -> int:
     print(f"not-examined-interaction: {counts['NOTEXAMINED-INTERACTION']}", file=out)
     print(
         f"not-examined-other-family: {other_versions} (families: "
-        f"{', '.join(sorted(other_families)) or 'none'}; a model of another family keeps "
-        "FR-131's refusal whatever a Factor declares, so it is not examined here)",
+        f"{', '.join(sorted(other_families)) or 'none'}; the GLMs of these versions were examined "
+        "and their other models were not; a model of another family keeps FR-131's refusal "
+        "whatever a Factor declares)",
         file=out,
     )
     print(

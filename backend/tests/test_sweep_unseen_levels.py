@@ -945,3 +945,80 @@ def test_a_version_carrying_a_not_examined_line_is_never_listed_notreachable(
     assert "not-reachable: 0" in lines
     reachable = any(line.startswith(_REACHABLE_LINES) for line in lines)
     assert rc == (1 if reachable else 0), (rc, lines)
+
+
+# --- the rule: the GLMs of every version are examined, whatever else the version pins -----------
+
+
+def _open_input() -> dict[str, Any]:
+    bundle = _closed()
+    _set_input(bundle, "region", domain=["A", "B", "C"])
+    return bundle
+
+
+def _ghost_term() -> dict[str, Any]:
+    bundle = _closed()
+    fit = bundle["resolved_payloads"][_MODEL]["fit_result"]
+    fit["coefficients"].append({**fit["coefficients"][1], "term": "ghost[x]"})
+    return bundle
+
+
+_REACHABLE_FIXTURES = {
+    "a-cell-the-fit-lacks": _without_a_cell,
+    "an-open-input": _open_input,
+    "a-level-indicator-with-no-relativities": _ghost_term,
+}
+
+
+@pytest.mark.req("FR-2143")
+@pytest.mark.parametrize("name", sorted({*_REACHABLE_FIXTURES, "clean", *_closed_fixtures()}))
+def test_a_versions_glm_classes_are_the_same_with_or_without_another_family_beside_them(
+    name: str,
+) -> None:
+    """The rule (the maintainer, #1510): a reachable class in a GLM is listed and counts in the
+    exit code whatever else the version pins. It describes behaviour the sweep already had."""
+    make = {**_REACHABLE_FIXTURES, "clean": _clean, **_closed_fixtures_by_name()}[name]
+    alone_rc, alone = _run([_row(make(), "v", 1)])
+    mixed_rc, mixed = _run([_row(_with_a_gbm(make()), "v", 1)])
+
+    def classes(lines: list[str]) -> list[str]:
+        return [ln for ln in lines if ln.startswith(_REACHABLE_LINES)]
+
+    assert classes(mixed) == classes(alone), (alone, mixed)
+    assert (mixed_rc == 1) == (alone_rc == 1) == bool(classes(alone)), (alone_rc, mixed_rc)
+
+
+def _closed_fixtures_by_name() -> dict[str, Any]:
+    return {name: (lambda n=name: _closed_fixtures()[n]) for name in _closed_fixtures()}
+
+
+@pytest.mark.req("FR-2143")
+def test_the_other_family_count_line_says_the_glms_were_examined_and_the_other_models_not() -> None:
+    _rc, lines = _run([_row(_with_a_gbm(_closed()), "v", 1)])
+
+    count = next(ln for ln in lines if ln.startswith("not-examined-other-family: "))
+    assert "the GLMs of these versions were examined and their other models were not" in count
+
+
+@pytest.mark.req("FR-2143")
+def test_the_report_gives_the_number_of_glm_models_examined() -> None:
+    _rc, lines = _run([_row(_with_a_gbm(_clean()), "v", 1), _row(_clean(), "w", 2)])
+
+    assert "glm models examined: 2" in lines
+
+
+@pytest.mark.req("FR-2143")
+def test_each_version_pinning_another_family_gets_its_own_line() -> None:
+    _rc, lines = _run(
+        [_row(_with_a_gbm(_closed()), "mixed", 1), _row(_closed(), "alone", 2),
+         _row(_with_a_gbm(_without_a_cell()), "reachable", 3)]
+    )
+
+    per_version = [ln for ln in lines if ln.startswith("not-examined-other-family ")]
+    assert per_version == [
+        "not-examined-other-family mixed@1 status=approved (families: xgboost; "
+        "glm models examined: 1; its other models were not)",
+        "not-examined-other-family reachable@3 status=approved (families: xgboost; "
+        "glm models examined: 1; its other models were not)",
+    ]
+    assert "INTERACTION-LOWERBOUND reachable@3 status=approved" in lines
