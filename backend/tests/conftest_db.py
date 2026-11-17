@@ -1513,16 +1513,16 @@ _DISABLABLE: frozenset[tuple[str, str]] = frozenset(
         ("approval_requests", "approval_requests_decision_guard"),
     }
 )
-#: The name of the migrated template database the tests copy; never edited.
-_TEMPLATE_DATABASE = "gipricing"
 
 
 async def disable_trigger(executor: Any, table: str, trigger: str) -> None:
     """`ALTER TABLE <table> DISABLE TRIGGER <trigger>` for an allow-listed pair, on an owner
-    connection or session; refuses on the template database. The caller rolls back or re-enables."""
+    connection or session; refuses a database named by `GIP_TEST_PROTECTED_DATABASE` (for a
+    machine that keeps a template under a known name). Unset, nothing is refused: CI sets
+    nothing. The caller rolls back or re-enables."""
     assert (table, trigger) in _DISABLABLE, (table, trigger)
     name = (await executor.execute(text("SELECT current_database()"))).scalar_one()
-    assert name != _TEMPLATE_DATABASE, "never edit the template database"
+    assert name != os.environ.get("GIP_TEST_PROTECTED_DATABASE"), "never edit the template database"
     await executor.execute(text(f"ALTER TABLE {table} DISABLE TRIGGER {trigger}"))
 
 
