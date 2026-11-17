@@ -28,7 +28,8 @@ _Site = tuple[str, str, int]
 #: rewrites one decrements it; a new plain raise fails. Holds only sites no request body
 #: reaches (PL-1599 Appendix A: B1 and B2, carried to P3). Emptied and deleted by the last slice.
 # `RatingAlgorithm._graph_invariants`: WK-675 S3 moved the checks to `graph_invariant_issues`; the
-# cycle, unresolved-ref and `raise ValueError(first.message)` raises remain (B1, P3, owner SL-1601).
+# cycle and unresolved-ref typed signals remain (B1, P3, owner SL-1601), mapped by class to fixed
+# text. The `raise ValueError(first.message)` became one literal raise per rule (#1712 S7b).
 # Every entry's owner is SL-1601, the P3 carry for B1/B2 (roadmap.md, minted from working id 9958).
 _RESIDUAL: dict[tuple[str, str], int] = {
     ("approvals.py", "ApprovalRequest._recorded_matches_decisions"): 1,  # owner: SL-1601
@@ -45,8 +46,6 @@ _RESIDUAL: dict[tuple[str, str], int] = {
     ("diagnostics.py", "QuantileCrossing._the_two_numbers_describe_the_same_comparison"): 2,  # owner: SL-1601  # noqa: E501
     ("dislocation.py", "DislocationRun._quantile_keys_are_the_fixed_set"): 1,  # owner: SL-1601
     ("jobs.py", "JobResult._reference_required_unless_none"): 1,  # owner: SL-1601
-    ("metrics.py", "CustomMetric._applicability_is_within_the_template"): 1,  # owner: SL-1601
-    ("metrics.py", "CustomMetric._the_parameters_are_the_templates_own"): 2,  # owner: SL-1601
     ("modelling.py", "Coefficient._the_interval_contains_the_estimate"): 1,  # owner: SL-1601
     ("modelling.py", "EbmFitResult._every_term_names_existing_features"): 2,  # owner: SL-1601
     ("modelling.py", "EbmFitResult._the_base_slot_is_never_a_real_bin"): 1,  # owner: SL-1601
@@ -62,19 +61,14 @@ _RESIDUAL: dict[tuple[str, str], int] = {
     ("modelling.py", "Model._the_fit_matches_the_specification"): 1,  # owner: SL-1601
     ("modelling.py", "SpecValidation._ok_means_no_problems"): 1,  # owner: SL-1601
     ("modelling.py", "TweediePowerFit._the_estimate_is_the_curves_argmax_and_the_interval_brackets_it"): 3,  # owner: SL-1601  # noqa: E501
-    ("objectives.py", "CustomObjective._a_status_past_draft_rests_on_a_certificate"): 1,  # owner: SL-1601  # noqa: E501
-    ("objectives.py", "CustomObjective._applicability_is_within_the_template"): 1,  # owner: SL-1601
-    ("objectives.py", "CustomObjective._each_field_belongs_to_one_arm"): 6,  # owner: SL-1601
-    ("objectives.py", "CustomObjective._the_parameters_are_the_templates_own"): 2,  # owner: SL-1601
-    ("objectives.py", "TemplateParameter.check"): 4,  # owner: SL-1601
     ("perils.py", "PerilStructure._coherent"): 3,  # owner: SL-1601
     ("perils.py", "Reconciliation._coherent"): 1,  # owner: SL-1601
     ("prediction.py", "PredictedRow._the_bounds_are_a_pair_and_ordered"): 2,  # owner: SL-1601
     ("prediction.py", "Prediction._every_row_matches_the_declared_uncertainty"): 1,  # owner: SL-1601  # noqa: E501
     ("prediction.py", "Uncertainty._the_kind_and_its_evidence_agree"): 8,  # owner: SL-1601
-    ("rating.py", "RatingAlgorithm._graph_invariants"): 3,  # owner: SL-1601
+    ("rating.py", "RatingAlgorithm._graph_invariants"): 2,  # owner: SL-1601
     ("regression.py", "RegressionSuiteContent._unique_names"): 1,  # owner: SL-1601
-    ("sub_graphs.py", "SubGraphBody._graph_invariants"): 5,  # owner: SL-1601
+    ("sub_graphs.py", "SubGraphBody._graph_invariants"): 2,  # owner: SL-1601
     ("sub_graphs.py", "_topological_order"): 1,  # owner: SL-1601
     ("validation.py", "RuleSetEntry._an_override_may_only_raise"): 1,  # owner: SL-1601
     ("validation.py", "ValidationRule._catalogue_id_names_a_catalogue_entry"): 1,  # owner: SL-1601

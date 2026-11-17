@@ -63,6 +63,8 @@ from model_schema import (
     Slug,
     new_uuid7,
 )
+from model_schema.objectives import unknown_parameter_names
+from pricing_core.safe_error import safe_error_detail
 
 __all__ = [
     "DEFAULT_SEED",
@@ -760,11 +762,20 @@ def _validated(payload: dict[str, Any], *, template: ObjectiveTemplate) -> Custo
     try:
         return CustomMetric.model_validate(payload)
     except ValueError as exc:
+        # FD-1589 row 5: the detail is the validators' input-free text (an `InputFreeError`
+        # is kept, any other value error is dropped), never the exception's own rendering,
+        # which echoes the submitted value.
+        detail = safe_error_detail(exc) or type(exc).__name__
+        # The caller's own well-formed parameter keys go back to that caller in this 422
+        # (#1712 Q1 (B)); a malformed key is not shown. This path stores and logs nothing.
+        params = payload.get("params")
+        if isinstance(params, dict) and (names := unknown_parameter_names(template, params)):
+            detail += f" Parameters not accepted: {', '.join(repr(n) for n in names)}."
         raise PlatformError(
             "VALIDATION_FAILED",
             "This custom metric is not valid",
             422,
-            f"{exc}",
+            detail,
         ) from exc
 
 
