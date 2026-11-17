@@ -180,7 +180,7 @@ def _assert_coded_no_identifier(error: CodedError, code: str, value: str) -> Non
     text = str(error)
     assert text.startswith(f"{code}: "), text
     assert "s_area" not in text
-    assert f"'{value}'" not in text
+    assert value not in text  # the UNQUOTED name too: it covers every quoted form
 
 
 _DATE_INPUT = {"name": "inception", "type": "date", "nullable": False}
@@ -212,7 +212,7 @@ async def test_a_declared_effective_date_must_be_date_typed() -> None:
     algo = _algo(contract=contract)
     with pytest.raises(CodedError) as caught:
         await _compiled(algo)
-    _assert_coded_no_identifier(caught.value, "RATING_TYPE_MISMATCH", "string")
+    _assert_coded_no_identifier(caught.value, "RATING_TYPE_MISMATCH", "effective_date")
     assert _located(algo) == [("RATING_TYPE_MISMATCH", "s_area", "as_at")]
 
 

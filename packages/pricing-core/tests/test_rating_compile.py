@@ -775,6 +775,28 @@ def test_no_issue_text_carries_a_step_id_a_value_name_or_authored_text() -> None
     assert any(i.step_id is not None and SENT in i.step_id for i in issues)
 
 
+# S7c audit S3: the one test above plants `now()` first, and `check_allow_list` returns only the
+# FIRST refused token, so it cannot see the allow-list text, the scale-cap text or the engine's
+# own text. Each of those three refusals is planted ALONE here, so reverting one fix is red.
+_LONG_LITERAL = "0.12345678901234567890123456789012"
+
+
+@pytest.mark.parametrize(
+    ("expr", "code", "authored"),
+    [
+        (f"risk_premium_minor + fn_{SENT}(1)", "EXPRESSION_INVALID_VOCABULARY", f"fn_{SENT}"),
+        (f"risk_premium_minor + {_LONG_LITERAL}", "EXPRESSION_SCALE_OVERFLOW", _LONG_LITERAL),
+        ("risk_premium_minor @ 2", "EXPRESSION_INVALID_VOCABULARY", "@"),
+    ],
+    ids=["allow-list", "scale-cap", "engine-vocabulary"],
+)
+def test_a_refusal_text_carries_no_authored_token(expr: str, code: str, authored: str) -> None:
+    issues = _issues(_with("s_office", expr=expr), code)
+    assert issues, f"the plant did not fire {code}"
+    assert [i.message for i in issues if authored in i.message] == []
+    assert {i.field for i in issues} == {"expr"}
+
+
 def test_the_type_mismatch_text_names_no_output() -> None:
     outputs = [(f"s_out_{SENT}", f"out_{SENT}", "decimal", f"src_{SENT}")]
     issues = output_type_issues({f"src_{SENT}": "money_minor"}, outputs, at_output_step=True)
