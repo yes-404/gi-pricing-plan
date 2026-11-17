@@ -225,8 +225,12 @@ def test_every_template_builds_from_its_own_defaults_where_it_has_them(
 
 @pytest.mark.req("FR-143")
 def test_a_parameter_the_template_does_not_take_is_refused_by_name() -> None:
-    with pytest.raises(pydantic.ValidationError, match="does not take w_overs"):
+    """The message names the template and what it takes, never the caller's key (the 422
+    builder adds a well-formed key; `test_validation_error_sinks.py`)."""
+    with pytest.raises(pydantic.ValidationError, match="does not take a key in params") as caught:
         _objective(ObjectiveTemplate.ASYMMETRIC_SQUARED, {"w_overs": 2.0})
+    assert "w_overs" not in str(caught.value.errors()[0]["ctx"]["error"])
+    assert "'w_under, w_over'" in str(caught.value.errors()[0]["ctx"]["error"])
 
 
 @pytest.mark.req("FR-143")
@@ -238,10 +242,14 @@ def test_a_required_parameter_with_no_default_cannot_be_omitted() -> None:
 @pytest.mark.req("FR-143")
 def test_a_parameter_outside_its_declared_range_is_refused() -> None:
     """`tweedie.p ∈ (1, 2)` **exclusive** — §4.5 says so, and `p = 2` is Gamma."""
-    with pytest.raises(pydantic.ValidationError, match=r"less than 2\.0"):
+    with pytest.raises(pydantic.ValidationError, match=r"less than '2\.0'"):
         _objective(ObjectiveTemplate.TWEEDIE, {"p": 2.0})
-    with pytest.raises(pydantic.ValidationError, match=r"greater than 1\.0"):
+    with pytest.raises(pydantic.ValidationError, match=r"greater than '1\.0'"):
         _objective(ObjectiveTemplate.TWEEDIE, {"p": 1.0})
+    # The value that was sent is not in the message; only the bound is.
+    with pytest.raises(pydantic.ValidationError) as caught:
+        _objective(ObjectiveTemplate.TWEEDIE, {"p": 2.987654})
+    assert "2.987654" not in str(caught.value.errors()[0]["ctx"]["error"])
 
 
 @pytest.mark.req("FR-143")
@@ -485,3 +493,39 @@ def test_battery_refuses_a_certificate_that_mixes_the_two_pairs() -> None:
 def test_battery_refuses_a_symbolic_certificate_short_of_nine() -> None:
     with pytest.raises(pydantic.ValidationError, match="missing"):
         _certificate(_battery(OBJECTIVE_CERTIFICATE_CHECKS_SYMBOLIC[:8]))
+
+
+@pytest.mark.req("FR-143")
+def test_the_patterns_hold_every_value_the_module_names_in_a_message() -> None:
+    """The messages carry a template, a parameter name, a list of names and a bound through
+    `identifier`; each is module data, and a value outside its pattern would turn that
+    refusal generic. A parameter added later is held here."""
+    import re
+
+    from model_schema.objectives import (
+        BOUND_PATTERN,
+        NAME_LIST_PATTERN,
+        PARAMETER_NAME_PATTERN,
+        TEMPLATE_NAME_PATTERN,
+    )
+
+    for template, parameters in TEMPLATE_PARAMETERS.items():
+        assert re.fullmatch(TEMPLATE_NAME_PATTERN, template.value), template
+        if parameters:
+            assert re.fullmatch(NAME_LIST_PATTERN, ", ".join(p.name for p in parameters))
+        for parameter in parameters:
+            assert re.fullmatch(PARAMETER_NAME_PATTERN, parameter.name), parameter.name
+            for bound in (parameter.minimum, parameter.maximum):
+                if bound is not None:
+                    assert re.fullmatch(BOUND_PATTERN, repr(float(bound))), bound
+
+
+@pytest.mark.req("FR-143")
+def test_unknown_parameter_names_drops_a_malformed_key_and_keeps_a_well_formed_one() -> None:
+    from model_schema.objectives import unknown_parameter_keys, unknown_parameter_names
+
+    params = {"w_under": 1.0, "w_overs": 2.0, "SENTINEL key<>": 3.0}
+    template = ObjectiveTemplate.ASYMMETRIC_SQUARED
+    assert unknown_parameter_names(template, params) == ["w_overs"]
+    # The validators use the full set: a malformed key is unknown too.
+    assert unknown_parameter_keys(template, params) == ["SENTINEL key<>", "w_overs"]
