@@ -556,3 +556,46 @@ def test_every_custom_metric_route_is_in_the_published_contract() -> None:
         ("get", "/api/v1/custom-metrics/{metric_id}/usage"),
     ):
         assert method in paths.get(path, {}), f"{method.upper()} {path} is unpublished"
+
+
+#: FD-1589 row 5 (#1712 S7b): the 422 for a metric's parameters states the rule and what the
+#: template takes, returns the caller's own well-formed key, and never a value the caller sent.
+#: (template, params, substrings the detail keeps, substrings it must not carry)
+_PARAMETER_REFUSALS = [
+    ("capped_gamma", {}, ["'cap'", "requires"], []),
+    # A metric lists the declared names sorted (an objective, in §4.5's order).
+    ("asymmetric_squared", {"w_overs": 2.0}, ["'w_overs'", "it takes 'w_over, w_under'"], []),
+    ("tweedie", {"p": 2.0}, ["less than '2.0'"], []),
+    ("tweedie", {"p": 2.987654}, ["less than '2.0'"], ["2.987654"]),
+    ("capped_gamma", {"cap": 987654321.5}, ["integer minor units"], ["987654321"]),
+]
+
+
+@pytest.mark.req("FR-155")
+@pytest.mark.parametrize(
+    ("template", "params", "kept", "absent"),
+    _PARAMETER_REFUSALS,
+    ids=["missing", "unknown-key", "bound", "bound-value-not-echoed", "money-value-not-echoed"],
+)
+def test_a_refused_metric_parameter_keeps_the_rule_and_drops_the_value(
+    client: TestClient,
+    actuary: dict[str, str],
+    template: str,
+    params: dict[str, Any],
+    kept: list[str],
+    absent: list[str],
+) -> None:
+    body = {
+        "slug": "refused-parameter",
+        "template": template,
+        "params": params,
+        "direction": "lower_is_better",
+    }
+    response = client.post("/api/v1/custom-metrics", json=body, headers=actuary)
+    assert response.status_code == 422, response.text
+    problem = response.json()
+    assert problem["code"] == "VALIDATION_FAILED"
+    for text in absent:
+        assert text not in problem["detail"], problem["detail"]
+    for text in kept:
+        assert text in problem["detail"], problem["detail"]

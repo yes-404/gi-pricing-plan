@@ -97,7 +97,7 @@ def test_producing_an_input_port_without_consuming_it_is_refused() -> None:
          "result_type": "int", "produces": "ncd_years"}
     )
     err = refusal(payload)
-    assert type(err["ctx"]["error"]) is ValueError
+    assert type(err["ctx"]["error"]) is InputFreeError
     assert "re-production chain" in str(err["ctx"]["error"])
 
 
@@ -108,7 +108,7 @@ def test_an_orphan_step_is_refused() -> None:
          "result_type": "int", "produces": "unused"}
     )
     err = refusal(payload)
-    assert type(err["ctx"]["error"]) is ValueError
+    assert type(err["ctx"]["error"]) is InputFreeError
     assert "unreachable" in str(err["ctx"]["error"])
 
 
