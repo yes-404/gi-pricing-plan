@@ -11,7 +11,7 @@
     },
     "JobError": {
       "additionalProperties": false,
-      "description": "A typed failure (FR-403).\n\n`code` is the contract and `retryable` decides whether the platform will try again;\n`detail` carries the field-level cause where the failure is deterministic, which is\nwhat lets the UI point at the offending input instead of showing a stack trace.",
+      "description": "A typed failure (FR-403).\n\n`code` is the contract and `retryable` decides whether the platform will try again;\n`detail` carries the field-level cause where the failure is deterministic, which is\nwhat lets the UI point at the offending input instead of showing a stack trace.\n`location` is the typed form of that pointer (#1917): identifiers of the caller's own\nartifact, never a submitted value.",
       "properties": {
         "code": {
           "pattern": "^[A-Z][A-Z0-9_]*$",
@@ -22,6 +22,17 @@
           "additionalProperties": true,
           "title": "Detail",
           "type": "object"
+        },
+        "location": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/JobErrorLocation"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         },
         "message": {
           "title": "Message",
@@ -51,6 +62,158 @@
         "retryable"
       ],
       "title": "JobError",
+      "type": "object"
+    },
+    "JobErrorLocation": {
+      "additionalProperties": false,
+      "description": "Where in the caller's own artifact a deterministic refusal points (#1917, `07` §4.1).\n\nIdentifiers only: a step id, a path inside that step, a reference, a name the artifact\nitself declares. **Never a submitted value**: no quote input, no rate-table cell, no factor\nlevel, no bound, no number, no type, no free text. That is enforced by `extra=\"forbid\"`\n(no other key), `str` only, and the grammar of each key; a name that looks like an\nidentifier is kept out of the value space by construction alone (only raise sites that\nread the caller's artifact fill it), which no pattern can prove. The key set is the one\n`InputFreeError.located` uses, so a `located` mapping builds this one to one.",
+      "properties": {
+        "factor": {
+          "anyOf": [
+            {
+              "pattern": "^((banding|custom_metric|custom_objective|dataset|dataset_version|deployment|dossier|gipp_check|grouping|model|monitor|optimisation_run|peril_structure|rate_table|rating_algorithm|rating_version|reference_table|regression_suite|sub_graph|validation_rule|validation_rule_set):[a-z0-9][a-z0-9-]{1,62}|factor:[a-z0-9][a-z0-9_-]{1,62})@[1-9][0-9]*$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Factor"
+        },
+        "feature": {
+          "anyOf": [
+            {
+              "pattern": "^[A-Za-z0-9_][A-Za-z0-9_.:-]{0,127}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Feature"
+        },
+        "field": {
+          "anyOf": [
+            {
+              "maxLength": 256,
+              "pattern": "^[A-Za-z_][A-Za-z0-9_]*(\\[[0-9]+\\])?(\\.[A-Za-z_][A-Za-z0-9_]*(\\[[0-9]+\\])?)*$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Field"
+        },
+        "interaction": {
+          "anyOf": [
+            {
+              "pattern": "^[A-Za-z0-9_][A-Za-z0-9_.:-]{0,127}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Interaction"
+        },
+        "key": {
+          "anyOf": [
+            {
+              "pattern": "^[A-Za-z0-9_][A-Za-z0-9_.:-]{0,127}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Key"
+        },
+        "objective": {
+          "anyOf": [
+            {
+              "pattern": "^((banding|custom_metric|custom_objective|dataset|dataset_version|deployment|dossier|gipp_check|grouping|model|monitor|optimisation_run|peril_structure|rate_table|rating_algorithm|rating_version|reference_table|regression_suite|sub_graph|validation_rule|validation_rule_set):[a-z0-9][a-z0-9-]{1,62}|factor:[a-z0-9][a-z0-9_-]{1,62})@[1-9][0-9]*$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Objective"
+        },
+        "operand": {
+          "anyOf": [
+            {
+              "pattern": "^[A-Za-z0-9_][A-Za-z0-9_.:-]{0,127}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Operand"
+        },
+        "peril": {
+          "anyOf": [
+            {
+              "pattern": "^[A-Za-z0-9_][A-Za-z0-9_.:-]{0,127}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Peril"
+        },
+        "ref": {
+          "anyOf": [
+            {
+              "pattern": "^((banding|custom_metric|custom_objective|dataset|dataset_version|deployment|dossier|gipp_check|grouping|model|monitor|optimisation_run|peril_structure|rate_table|rating_algorithm|rating_version|reference_table|regression_suite|sub_graph|validation_rule|validation_rule_set):[a-z0-9][a-z0-9-]{1,62}|factor:[a-z0-9][a-z0-9_-]{1,62})@[1-9][0-9]*$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ref"
+        },
+        "step_id": {
+          "anyOf": [
+            {
+              "pattern": "^\\S{1,128}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Step Id"
+        },
+        "structure": {
+          "anyOf": [
+            {
+              "pattern": "^((banding|custom_metric|custom_objective|dataset|dataset_version|deployment|dossier|gipp_check|grouping|model|monitor|optimisation_run|peril_structure|rate_table|rating_algorithm|rating_version|reference_table|regression_suite|sub_graph|validation_rule|validation_rule_set):[a-z0-9][a-z0-9-]{1,62}|factor:[a-z0-9][a-z0-9_-]{1,62})@[1-9][0-9]*$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Structure"
+        }
+      },
+      "title": "JobErrorLocation",
       "type": "object"
     },
     "JobKind": {

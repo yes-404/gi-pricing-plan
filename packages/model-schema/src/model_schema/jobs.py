@@ -18,6 +18,7 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from model_schema.input_free import InputFreeError
+from model_schema.refs import REF_PATTERN
 
 __all__ = [
     "TERMINAL_STATUSES",
@@ -25,6 +26,7 @@ __all__ = [
     "ActorKind",
     "Job",
     "JobError",
+    "JobErrorLocation",
     "JobKind",
     "JobQueue",
     "JobResult",
@@ -171,12 +173,56 @@ class JobResult(BaseModel):
         return self
 
 
+#: A step id or mount point: the source field (`RatingStepBase.step_id`) constrains only
+#: `min_length=1`; whitespace is excluded here so the value cannot be prose.
+_STEP_ID = r"^\S{1,128}$"
+#: A dotted path of identifiers with optional `[<int>]` indices: `inputs.age`, `pins.models[2]`.
+_FIELD_PATH = r"^[A-Za-z_][A-Za-z0-9_]*(\[[0-9]+\])?(\.[A-Za-z_][A-Za-z0-9_]*(\[[0-9]+\])?)*$"
+#: A name inside a pinned artifact (a key column, a feature, an interaction, an operand, a peril).
+_NAME = r"^[A-Za-z0-9_][A-Za-z0-9_.:-]{0,127}$"
+
+
+class JobErrorLocation(BaseModel):
+    """Where in the caller's own artifact a deterministic refusal points (#1917, `07` §4.1).
+
+    Identifiers only: a step id, a path inside that step, a reference, a name the artifact
+    itself declares. **Never a submitted value**: no quote input, no rate-table cell, no factor
+    level, no bound, no number, no type, no free text. That is enforced by `extra="forbid"`
+    (no other key), `str` only, and the grammar of each key; a name that looks like an
+    identifier is kept out of the value space by construction alone (only raise sites that
+    read the caller's artifact fill it), which no pattern can prove. The key set is the one
+    `InputFreeError.located` uses, so a `located` mapping builds this one to one.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    step_id: str | None = Field(default=None, pattern=_STEP_ID)
+    field: str | None = Field(default=None, pattern=_FIELD_PATH, max_length=256)
+    ref: str | None = Field(default=None, pattern=REF_PATTERN)
+    objective: str | None = Field(default=None, pattern=REF_PATTERN)
+    structure: str | None = Field(default=None, pattern=REF_PATTERN)
+    factor: str | None = Field(default=None, pattern=REF_PATTERN)
+    key: str | None = Field(default=None, pattern=_NAME)
+    feature: str | None = Field(default=None, pattern=_NAME)
+    interaction: str | None = Field(default=None, pattern=_NAME)
+    operand: str | None = Field(default=None, pattern=_NAME)
+    peril: str | None = Field(default=None, pattern=_NAME)
+
+    @model_validator(mode="after")
+    def _points_somewhere(self) -> JobErrorLocation:
+        if all(value is None for value in self.model_dump().values()):
+            raise ValueError("a location must name at least one identifier")
+        return self
+
+
 class JobError(BaseModel):
     """A typed failure (FR-403).
 
     `code` is the contract and `retryable` decides whether the platform will try again;
     `detail` carries the field-level cause where the failure is deterministic, which is
     what lets the UI point at the offending input instead of showing a stack trace.
+    `location` is the typed form of that pointer (#1917): identifiers of the caller's own
+    artifact, never a submitted value.
     """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
@@ -185,6 +231,7 @@ class JobError(BaseModel):
     message: str
     retryable: bool
     detail: dict[str, Any] = Field(default_factory=dict)
+    location: JobErrorLocation | None = None
     trace_id: str | None = Field(default=None, pattern="^[0-9a-f]{32}$")
 
 

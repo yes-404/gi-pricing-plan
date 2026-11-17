@@ -152,6 +152,61 @@
         "detail": {
           "type": "object"
         },
+        "location": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": false,
+          "description": "Where in the caller's own artifact a deterministic refusal points (#1917): identifiers only, never a submitted value. At least one key is set.",
+          "properties": {
+            "factor": {
+              "pattern": "^((banding|custom_metric|custom_objective|dataset|dataset_version|deployment|dossier|gipp_check|grouping|model|monitor|optimisation_run|peril_structure|rate_table|rating_algorithm|rating_version|reference_table|regression_suite|sub_graph|validation_rule|validation_rule_set):[a-z0-9][a-z0-9-]{1,62}|factor:[a-z0-9][a-z0-9_-]{1,62})@[1-9][0-9]*$",
+              "type": "string"
+            },
+            "feature": {
+              "pattern": "^[A-Za-z0-9_][A-Za-z0-9_.:-]{0,127}$",
+              "type": "string"
+            },
+            "field": {
+              "maxLength": 256,
+              "pattern": "^[A-Za-z_][A-Za-z0-9_]*(\\[[0-9]+\\])?(\\.[A-Za-z_][A-Za-z0-9_]*(\\[[0-9]+\\])?)*$",
+              "type": "string"
+            },
+            "interaction": {
+              "pattern": "^[A-Za-z0-9_][A-Za-z0-9_.:-]{0,127}$",
+              "type": "string"
+            },
+            "key": {
+              "pattern": "^[A-Za-z0-9_][A-Za-z0-9_.:-]{0,127}$",
+              "type": "string"
+            },
+            "objective": {
+              "pattern": "^((banding|custom_metric|custom_objective|dataset|dataset_version|deployment|dossier|gipp_check|grouping|model|monitor|optimisation_run|peril_structure|rate_table|rating_algorithm|rating_version|reference_table|regression_suite|sub_graph|validation_rule|validation_rule_set):[a-z0-9][a-z0-9-]{1,62}|factor:[a-z0-9][a-z0-9_-]{1,62})@[1-9][0-9]*$",
+              "type": "string"
+            },
+            "operand": {
+              "pattern": "^[A-Za-z0-9_][A-Za-z0-9_.:-]{0,127}$",
+              "type": "string"
+            },
+            "peril": {
+              "pattern": "^[A-Za-z0-9_][A-Za-z0-9_.:-]{0,127}$",
+              "type": "string"
+            },
+            "ref": {
+              "pattern": "^((banding|custom_metric|custom_objective|dataset|dataset_version|deployment|dossier|gipp_check|grouping|model|monitor|optimisation_run|peril_structure|rate_table|rating_algorithm|rating_version|reference_table|regression_suite|sub_graph|validation_rule|validation_rule_set):[a-z0-9][a-z0-9-]{1,62}|factor:[a-z0-9][a-z0-9_-]{1,62})@[1-9][0-9]*$",
+              "type": "string"
+            },
+            "step_id": {
+              "pattern": "^\\S{1,128}$",
+              "type": "string"
+            },
+            "structure": {
+              "pattern": "^((banding|custom_metric|custom_objective|dataset|dataset_version|deployment|dossier|gipp_check|grouping|model|monitor|optimisation_run|peril_structure|rate_table|rating_algorithm|rating_version|reference_table|regression_suite|sub_graph|validation_rule|validation_rule_set):[a-z0-9][a-z0-9-]{1,62}|factor:[a-z0-9][a-z0-9_-]{1,62})@[1-9][0-9]*$",
+              "type": "string"
+            }
+          }
+        },
         "trace_id": {
           "type": "string",
           "pattern": "^[0-9a-f]{32}$",
