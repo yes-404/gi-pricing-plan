@@ -107,7 +107,7 @@ def test_check_30_field_policy_changes_with_the_template(
 
     templates_copy = tmp_path / "templates"
     shutil.copytree(audit._TEMPLATES_DIR, templates_copy)
-    setattr(audit, "_TEMPLATES_DIR", templates_copy)  # noqa: B010 -- mypy needs setattr here; see _run_all_ten's comment
+    setattr(audit, "_TEMPLATES_DIR", templates_copy)  # noqa: B010 -- mypy has no __setattr__ for types.ModuleType, so assignment needs setattr
 
     before = audit.derive_field_policies()
     assert "extra_test_field" not in before["decision"].permitted
@@ -140,7 +140,7 @@ def test_check_30_silent_empty_coverage_is_impossible(
     templates_copy = tmp_path / "templates"
     shutil.copytree(audit._TEMPLATES_DIR, templates_copy)
     (templates_copy / "PHASE.md").unlink()
-    setattr(audit, "_TEMPLATES_DIR", templates_copy)  # noqa: B010 -- mypy needs setattr here; see _run_all_ten's comment
+    setattr(audit, "_TEMPLATES_DIR", templates_copy)  # noqa: B010 -- mypy has no __setattr__ for types.ModuleType, so assignment needs setattr
 
     with pytest.raises(RuntimeError, match="expected exactly"):
         audit.derive_field_policies()
@@ -648,7 +648,7 @@ def test_check_36_reds_alone_when_a_was_field_has_no_redirects_row(
     (FR-DATA-32) — found on this slice's own CI run, which scans the whole tree for
     `*.csv`/`*.parquet`/`*.xlsx` outside two narrow, unrelated exemptions and does not
     know or care that this one is empty. `check_redirects` is called directly (not
-    through `_run_all_ten`'s ten-check orchestrator) specifically so this test needs no
+    through an orchestrator of checks 30-39) specifically so this test needs no
     `audit.REPO` reassignment: the orchestrator's other checks (30's field-policy note,
     39's whole-tree scan) depend on `REPO`/`_TEMPLATES_DIR` staying mutually consistent,
     which a `tmp_path` tree run through only `check_redirects` never needs to be.
@@ -667,7 +667,7 @@ def test_check_36_reds_alone_when_a_was_field_has_no_redirects_row(
         "also trip clause 3's sweep.\n",
         encoding="utf-8",
     )
-    setattr(audit, "ROOT", docs_root)  # noqa: B010 -- mypy needs setattr here; see _run_all_ten's comment
+    setattr(audit, "ROOT", docs_root)  # noqa: B010 -- mypy has no __setattr__ for types.ModuleType, so assignment needs setattr
     setattr(audit, "_ID_SCOPE_ROOTS", (doc,))  # noqa: B010 -- ditto
     audit.failures.clear()
     audit.notes.clear()
@@ -696,7 +696,7 @@ def test_check_36_is_gated_on_redirects_csv_and_skips_cleanly_pre_migration(
     assert not (audit.ROOT / "REDIRECTS.csv").is_file(), "fixture assumption: no real REDIRECTS.csv"
     audit.failures.clear()
     audit.notes.clear()
-    setattr(audit, "_ID_SCOPE_ROOTS", (real_document_ids,))  # noqa: B010 -- mypy needs setattr here; see _run_all_ten's comment
+    setattr(audit, "_ID_SCOPE_ROOTS", (real_document_ids,))  # noqa: B010 -- mypy has no __setattr__ for types.ModuleType, so assignment needs setattr
     audit.check_redirects()
     assert audit.failures == [], audit.failures
     assert any("post-migration invariant" in n for n in audit.notes), audit.notes
@@ -731,7 +731,7 @@ def test_check_36_alias_and_slice_key_forms_are_disclosed_not_fatal(
         "F-W9-3 and F27 and W11-3 are all cited in this still-governed prose.\n",
         encoding="utf-8",
     )
-    setattr(audit, "ROOT", docs_root)  # noqa: B010 -- see _run_all_ten's comment
+    setattr(audit, "ROOT", docs_root)  # noqa: B010 -- mypy has no __setattr__ for types.ModuleType, so assignment needs setattr
     setattr(audit, "_ID_SCOPE_ROOTS", (doc,))  # noqa: B010 -- ditto
     audit.failures.clear()
     audit.notes.clear()
@@ -752,7 +752,7 @@ def test_check_36_fence_excludes_a_legacy_form_exhibit(
     doc = docs_root / "specs" / "doc.md"  # a governed family (`_frozen.is_governed`)
     doc.parent.mkdir(parents=True)
     doc.write_text("```\nNT-0016\n```\n\nNo other legacy form here.\n", encoding="utf-8")
-    setattr(audit, "ROOT", docs_root)  # noqa: B010 -- see _run_all_ten's comment
+    setattr(audit, "ROOT", docs_root)  # noqa: B010 -- mypy has no __setattr__ for types.ModuleType, so assignment needs setattr
     setattr(audit, "_ID_SCOPE_ROOTS", (doc,))  # noqa: B010 -- ditto
     audit.failures.clear()
     audit.notes.clear()
