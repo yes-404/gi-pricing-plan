@@ -127,45 +127,73 @@ _FLAG_READ = re.compile(r"current_setting\(\s*'" + re.escape(FLAG) + r"'", re.IG
 _FLAG_NAME = FLAG.partition(".")[2]
 #: A message that names the Python context manager, `approval_decision()`, is not the setting.
 _CONTEXT_MANAGER_NAME = re.compile(r"(?<!app\.)(?<!app\.\n)" + _FLAG_NAME + r"\(\)", re.IGNORECASE)
-_SETS_AN_APP_SETTING = re.compile(
-    r"\bSET\s+(?:LOCAL\s+|SESSION\s+)?app\.|set_config\(\s*['\"]\s*app\.", re.IGNORECASE
+#: **A reader migration contains no data-changing statement and no session setting at all: it
+#: only reads.** Refused, whatever the name or the spelling: `set_config`; a `SET` statement (the
+#: word followed by `LOCAL`/`SESSION`, a parenthesis, a `ROLE`/`SCHEMA`/`TIME ZONE`-style keyword,
+#: or a name and `=`/`TO`; so `UPDATE ... SET column = ...` is one, and prose such as "set by" is
+#: not); `INSERT INTO`, `DELETE FROM`, `TRUNCATE`, `MERGE INTO`, `COPY ... FROM/TO`; and a
+#: plpgsql or SQL `EXECUTE` of anything but `FUNCTION`/`PROCEDURE` (the trigger DDL's own).
+_NO_WRITE_NO_SETTING = re.compile(
+    r"\bset_config\b"
+    r"|\bSET\s*\("
+    r"|\bSET\s+(?:LOCAL|SESSION|ROLE|SCHEMA|TIME\s+ZONE|CONSTRAINTS|TRANSACTION|NAMES)\b"
+    r"|\bSET\s+[^\s=;]+\s*(?:=|\bTO\b)"
+    r"|\bINSERT\s+INTO\b|\bDELETE\s+FROM\b|\bTRUNCATE\b|\bMERGE\s+INTO\b"
+    r"|\bCOPY\s+\S+\s+(?:FROM|TO)\b"
+    r"|\bEXECUTE\b(?!\s+(?:FUNCTION|PROCEDURE)\b)",
+    re.IGNORECASE,
 )
 
 
 def _flag_beyond_a_read(source: str) -> bool:
-    """True when a reader migration does anything with the flag but read it.
+    """True when a reader migration breaks the rule: a reader migration contains no data-changing
+    statement and no session setting at all: it only reads (`_NO_WRITE_NO_SETTING`), and it names
+    the flag only in a `current_setting` read.
 
-    The strings that are not docstrings (every `Constant`, so the pieces of an f-string and of
-    a concatenation too) are joined and read case-insensitively, as Postgres reads a setting
-    name. Two refusals: **any** occurrence of the flag's name once the plain
+    The strings that are not docstrings (every `Constant`, so the pieces of an f-string and of a
+    concatenation too, in source order) are joined, once with a newline between them and once with
+    nothing, and read case-insensitively, as Postgres reads a setting name. Three refusals: a
+    statement `_NO_WRITE_NO_SETTING` names; **any** occurrence of the flag's name once the plain
     `current_setting('<flag>', …)` reads and a message's `approval_decision()` (the context
-    manager, never preceded by `app.`) are removed; and **any** `SET`, `SET LOCAL`,
-    `SESSION` or `set_config` that names an `app.` setting, whatever follows it.
+    manager, never preceded by `app.`) are removed; and, together, that makes a split or escaped
+    spelling of the name refused by the statement around it, whatever the name.
 
-    **What this still cannot see** (it reads literals, not values; six cases, each is what review
-    of the reader list, which is pinned by file name, exists for):
+    **What this still cannot see** (it reads literals, not values; each is what review of the
+    reader list, which is pinned by file name, exists for):
 
-    1. a setting name assembled from pieces that never appear in one string next to `app.` (a
-       `chr()` or `bytes` assembly);
-    2. a name read from a column, an environment variable or a function argument;
-    3. a `set_config` whose first argument is a parameter of the statement;
-    4. a statement composed by a helper in another file;
-    5. a comment (a comment is not executed);
-    6. the flag name built at run time from a variable defined in another module (an imported
-       constant or a value computed there), which no literal of the reader file contains.
+    1. a keyword or name assembled so that its pieces are not adjacent string literals (a
+       `chr()` or `bytes` assembly, or pieces separated by another literal);
+    2. a name or a statement read from a column, an environment variable or a function argument;
+    3. a statement composed by a helper in another file;
+    4. a comment (a comment is not executed);
+    5. the flag name built at run time from a variable defined in another module (an imported
+       constant or a value computed there), which no literal of the reader file contains;
+    6. **`op.execute(...)` of a string built from parts in Python** (an f-string, `.format`, a
+       helper's return value): the literals are read, the substituted values are not. Both real
+       readers do this today, for DDL only: `a9f3c6d21b87_approval_guard.py`
+       (`op.execute(create_trigger_sql(table))`, ``op.execute(f"DROP TRIGGER ... {table}")``) and
+       `e5b2a7d94c13_rating_version_content_guard.py` (`_RV_TRIGGER.format(...)`, f-strings over
+       `CHECK_NAME` and `known`), so the rule cannot refuse it. A plpgsql `EXECUTE` is refused.
     """
     tree = ast.parse(source)
     docstrings = _docstring_ids(tree)
-    text = "\n".join(
-        node.value
-        for node in ast.walk(tree)
-        if isinstance(node, ast.Constant)
-        and isinstance(node.value, str)
-        and id(node) not in docstrings
+    pieces = sorted(
+        (
+            node
+            for node in ast.walk(tree)
+            if isinstance(node, ast.Constant)
+            and isinstance(node.value, str)
+            and id(node) not in docstrings
+        ),
+        key=lambda node: (node.lineno, node.col_offset),
     )
-    return (
-        _FLAG_NAME in _CONTEXT_MANAGER_NAME.sub("", _FLAG_READ.sub("", text)).lower()
-        or _SETS_AN_APP_SETTING.search(text) is not None
+    return any(
+        _NO_WRITE_NO_SETTING.search(text) is not None
+        or _FLAG_NAME in _CONTEXT_MANAGER_NAME.sub("", _FLAG_READ.sub("", text)).lower()
+        for text in (
+            "\n".join(str(node.value) for node in pieces),
+            "".join(str(node.value) for node in pieces),
+        )
     )
 
 
@@ -377,6 +405,68 @@ def test_a_planted_set_of_the_flag_in_a_reader_migration_is_refused(sql: str) ->
 def test_a_reader_migration_that_sets_the_flag_by_any_spelling_is_refused(statement: str) -> None:
     planted = _plant(_READER, _sources()[_READER] + f"\n{statement}\n")
     assert _flag_literal_outside_its_owners(planted) == [_READER]
+
+
+_SPLIT_FORMS = {
+    "split_set_local": 'BAD = "SET LOCAL " + "app" + "." + "approval_" + "decision"',
+    "split_inside_set_config": (
+        'BAD = "SELECT set_config(\'" + "app" + "." + "approval_" + "decision" '
+        "+ \"', 'on', true)\""
+    ),
+    "spaced_name": 'BAD = "SET LOCAL app . approval_ " + "decision"',
+    "escaped_name": "BAD = " + repr("SELECT set_config(E'app.approval\\x5fdecision', 'on', true)"),
+    "unicode_escaped_name": "BAD = "
+    + repr('SET LOCAL U&"app".U&"approval\\005fdecision" = \'on\''),
+}
+
+
+@pytest.mark.req("FR-351")
+@pytest.mark.parametrize("statement", list(_SPLIT_FORMS.values()), ids=list(_SPLIT_FORMS))
+def test_a_reader_migration_with_a_split_or_escaped_flag_name_is_refused(statement: str) -> None:
+    """The rule is not a spelling of the flag: a reader contains no `SET` statement and no
+    `set_config` at all, so a name split across literals or escaped in SQL is refused by the
+    statement around it."""
+    planted = _plant(_READER, _sources()[_READER] + f"\n{statement}\n")
+    assert _flag_literal_outside_its_owners(planted) == [_READER]
+
+
+_NOT_A_READER = {
+    "update_set_column": "UPDATE rating_versions SET change_summary = 'x' WHERE false",
+    "insert": "INSERT INTO rating_versions (id) VALUES (gen_random_uuid())",
+    "delete": "DELETE FROM rating_versions WHERE false",
+    "truncate": "TRUNCATE rating_versions",
+    "set_config_other_name": "SELECT set_config('app.something_else', 'x', true)",
+    "set_role": "SET LOCAL ROLE gip_owner",
+    "plpgsql_execute": "DO $$ BEGIN EXECUTE format('SELECT %s', 1); END $$",
+    "plpgsql_execute_literal": "DO $$ BEGIN EXECUTE 'SELECT 1'; END $$",
+}
+
+
+@pytest.mark.req("FR-351")
+@pytest.mark.parametrize("sql", list(_NOT_A_READER.values()), ids=list(_NOT_A_READER))
+def test_a_reader_migration_contains_no_data_changing_statement_and_no_session_setting(
+    sql: str,
+) -> None:
+    """A reader migration contains no data-changing statement and no session setting at all: it
+    only reads. `UPDATE ... SET column = ...` is refused in a reader too: a migration that
+    writes is not a reader. Nor does a reader run a built string (`EXECUTE`)."""
+    planted = _plant(_READER, _sources()[_READER] + f"\nBAD = {sql!r}\n")
+    assert _flag_literal_outside_its_owners(planted) == [_READER]
+
+
+@pytest.mark.req("FR-351")
+@pytest.mark.parametrize(
+    "sql",
+    [
+        "CREATE TRIGGER t BEFORE INSERT OR UPDATE OF status ON x FOR EACH ROW "
+        "EXECUTE FUNCTION f('a')",
+        "RAISE EXCEPTION 'the decision flag set by approval_decision()'",
+        "SELECT current_setting('app.approval_decision', true)",
+    ],
+    ids=["trigger_ddl", "prose_set_by", "plain_read"],
+)
+def test_what_a_reader_may_contain_is_not_refused(sql: str) -> None:
+    assert _flag_literal_outside_its_owners({_READER: f"BAD = {sql!r}\n"}) == []
 
 
 @pytest.mark.req("FR-351")
