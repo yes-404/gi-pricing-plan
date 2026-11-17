@@ -14,6 +14,7 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import json
+import logging
 import pathlib
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
@@ -128,41 +129,87 @@ def _changed_content(bundle: Bundle) -> Bundle:
     return bundle.model_copy(update={"purpose_graphs": {"x": bundle.graph}})
 
 
+_OTHER = "sha256:" + "1" * 64
+#: Every hash `verify_bundle` compares, and for each a plant that changes that one thing and
+#: nothing else (the other recorded hashes all stay the clean bundle's own): the hash recorded on
+#: the version's row, the bundle's own stored `content_hash`, the Deployment's recorded hash, and
+#: the hash recomputed from the bundle's three hashed inputs (`bundle_hash(graph, pins,
+#: purpose_graphs)`), changed one input at a time. The value is the limb the log line and the
+#: audit event name: the hashes that differ from the recomputed one. A changed input moves the
+#: recomputed hash, so the three stored hashes are the ones left disagreeing with it.
+_PLANTS: dict[str, tuple[Any, str]] = {
+    "recorded_differs": (lambda b: (b, {"recorded": _OTHER}), "recorded"),
+    "recorded_absent": (lambda b: (b, {"recorded": None}), "recorded"),
+    "own_hash_differs": (
+        lambda b: (b.model_copy(update={"content_hash": _OTHER}), {}),
+        "bundle",
+    ),
+    "deployment_differs": (lambda b: (b, {"deployment": _OTHER}), "deployment"),
+    "graph_differs": (
+        lambda b: (
+            b.model_copy(update={"graph": b.graph.model_copy(update={"slug": "other"})}),
+            {},
+        ),
+        "recorded, bundle, deployment",
+    ),
+    "pins_differ": (
+        lambda b: (
+            b.model_copy(
+                update={"pins": b.pins.model_copy(update={"models": ["model:motor-freq-glm@2"]})}
+            ),
+            {},
+        ),
+        "recorded, bundle, deployment",
+    ),
+    "purpose_graphs_differ": (lambda b: (_changed_content(b), {}), "recorded, bundle, deployment"),
+}
+
+
 @pytest.mark.req("FR-240")
-@pytest.mark.parametrize(
-    "case",
-    [
-        "recorded_differs",
-        "recorded_absent",
-        "own_hash_differs",
-        "content_differs",
-        "deployment_differs",
-    ],
-)
-async def test_a_bundle_that_disagrees_with_any_hash_is_refused_as_an_integrity_error(
-    database: Database, workspace_id: UUID, case: str
+async def test_each_compared_hash_has_its_own_plant_and_the_caller_sees_one_refusal(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
 ) -> None:
-    bundle = _clean()
-    other = "sha256:" + "1" * 64
-    kwargs: dict[str, Any] = {"recorded": bundle.content_hash}
-    if case == "recorded_differs":
-        kwargs["recorded"] = other
-    elif case == "recorded_absent":
-        kwargs["recorded"] = None
-    elif case == "own_hash_differs":
-        bundle = bundle.model_copy(update={"content_hash": other})
-    elif case == "content_differs":
-        bundle = _changed_content(bundle)
-    else:
-        kwargs["deployment"] = other
-    with pytest.raises(PlatformError) as refused:
-        await _verify(database, workspace_id, bundle, **kwargs)
-    assert (refused.value.code, refused.value.status_code) == (CODE, 500)
-    events = await refusal_events(database, workspace_id)
-    assert len(events) == 1
-    after = events[0].after or {}
-    assert "hash mismatch" in str(after.get("refusal"))
-    assert "graph" not in json.dumps(after)  # the event names hashes, never content
+    """For each hash `verify_bundle` compares (`_PLANTS`), a plant that changes that one thing is
+    refused, and the limb that refused is read from the log line and the audit event: the plant
+    determines the limb, so a compare that stopped being made fails ITS plant, not another's.
+
+    The caller sees ONE refusal for all of them: the same code, status, title and detail (no
+    detail of which compare failed, so no oracle); the limb is in the log and the audit only, and
+    neither carries content. Database-free: the refusal's audit write is replaced."""
+    audited: list[dict[str, Any]] = []
+
+    async def record(session: object, **kwargs: Any) -> None:
+        audited.append(kwargs["after"])
+
+    monkeypatch.setattr(bundle_hydration.audit, "record", record)
+    ref = ArtifactRef.parse("rating_version:hash-check@1")
+    clean = _clean()
+    seen: dict[str, tuple[Any, ...]] = {}
+    for case, (plant, limb) in _PLANTS.items():
+        bundle, changed = plant(clean)
+        hashes = {"recorded": clean.content_hash, "deployment": clean.content_hash, **changed}
+        audited.clear()
+        caplog.clear()
+        with (
+            caplog.at_level(logging.ERROR, logger=bundle_hydration.__name__),
+            pytest.raises(PlatformError) as refused,
+        ):
+            await verify_bundle(
+                bundle,
+                slot=BundleSlot(),
+                database=_NoDatabase(),  # type: ignore[arg-type]
+                workspace_id=uuid4(),
+                ref=ref,
+                **hashes,
+            )
+        err = refused.value
+        seen[case] = (err.code, err.status_code, err.title, err.detail)
+        assert (err.code, err.status_code) == (CODE, 500), case
+        assert [getattr(r, "disagreeing", None) for r in caplog.records] == [limb], case
+        assert [a["refusal"] for a in audited] == [f"hash mismatch ({limb})"], case
+        assert "graph" not in json.dumps(audited), case  # hashes, never content
+    assert len(set(seen.values())) == 1, seen
+    assert set(seen) == set(_PLANTS)
 
 
 @pytest.mark.req("FR-240")
@@ -514,15 +561,16 @@ async def test_a_stored_payload_is_held_to_the_digest_its_row_records(
     The digest is `bundle -> blob_sha256` on the version's row, which the content guard holds
     once the version is past draft (`test_rating_version_content_guard.py`). The content hash
     covers the graph and pins only; here the graph, the pins and the recorded content hash are
-    all unchanged and one other part of the payload differs, so the digest alone refuses: the
+    all unchanged and one other part of the payload differs, so the digest alone refuses, as it
+    does for a digest that differs from the bytes' (the bytes unchanged) and for none: the
     resolved payloads (rate table cells, coefficients, boosters), and the `algorithm_ref` the
     bundle carries, which travels in the payload bytes and by no other path.
     Database-free: the refusal's audit write is replaced.
     """
-    audited: list[str] = []
+    audited: list[tuple[str, str]] = []
 
     async def record(session: object, **kwargs: Any) -> None:
-        audited.append(kwargs["action"])
+        audited.append((kwargs["action"], kwargs["after"]["refusal"]))
 
     monkeypatch.setattr(bundle_hydration.audit, "record", record)
     original = (FIXTURES / "clean.bundle.json").read_bytes()
@@ -556,11 +604,20 @@ async def test_a_stored_payload_is_held_to_the_digest_its_row_records(
         )
 
     assert (await load(original, digest)).content_hash == clean.content_hash
-    for refused, recorded_digest in ((swapped, digest), (original, None)):
+    # the same bytes under the digest with its `sha256:` prefix: one value, not a mismatch
+    assert (await load(original, "sha256:" + digest)).content_hash == clean.content_hash
+    #: A plant for each way the digest compare can fail, each changing that one thing: the bytes
+    #: (digest unchanged), the digest (bytes unchanged), and the digest absent.
+    plants = (
+        ("bytes", swapped, digest),
+        ("digest", original, "f" * 64),
+        ("digest absent", original, None),
+    )
+    for name, refused, recorded_digest in plants:
         with pytest.raises(PlatformError) as raised:
             await load(refused, recorded_digest)
-        assert raised.value.code == CODE
-    assert audited == [REFUSAL_ACTION, REFUSAL_ACTION]
+        assert raised.value.code == CODE, name
+    assert audited == [(REFUSAL_ACTION, "hash mismatch (payload digest)")] * len(plants)
 
 
 class _BlobReadReachedError(Exception):

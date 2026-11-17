@@ -50,9 +50,30 @@ NEW_VALUE: dict[str, str] = {
 HELD_STATUSES = ("review", "approved", "live", "retired")
 GUARD = "rating_versions_content_guard"
 CHECK_NAME = "rating_version_status_is_in_the_lifecycle"
-#: The two SQLSTATEs a refusal may carry: this guard's, and the approval guard's, which fires
-#: first (by name) on the identity columns of an approved or later row.
-REFUSED = {"42501", "GP001"}
+#: A refuser: the SQLSTATE and the fragment of the message that names the rule.
+#: The content guard refuses every change to a row past `draft`; the approval guard
+#: (`approval_guard`, `BEFORE INSERT OR UPDATE OF status, workspace_id, slug, version`, which sorts
+#: first by name) is the refuser of a changed identity on an approved, live or retired row,
+#: because the row's ref no longer names the decided request.
+CONTENT_GUARD = ("42501", "a rating version past draft is held")
+APPROVAL_GUARD = ("GP001", "only the approval decision path may write approved")
+IDENTITY = ("workspace_id", "slug", "version")
+#: The statuses at which the approval guard holds the identity columns (`approved`, and the
+#: `live,retired` its trigger names).
+APPROVAL_HELD = ("approved", "live", "retired")
+#: EVERY column's declared refuser, one entry per column of `rating_versions`: the three identity
+#: columns the approval guard, every other column the content guard. Each cell of the sweep is
+#: asserted against this, never against "either of the two": a column the content guard stopped
+#: holding would still be refused by nothing, or by the wrong rule, and fail its own cell.
+REFUSER: dict[str, tuple[str, str]] = {
+    column: APPROVAL_GUARD if column in IDENTITY else CONTENT_GUARD for column in NEW_VALUE
+}
+
+
+def refuser(status: str, column: str) -> tuple[str, str]:
+    """The refuser declared for `column` of a row at `status`. The approval guard does not fire on
+    a `review` row (its status is not one the guard holds), so the content guard refuses there."""
+    return REFUSER[column] if status in APPROVAL_HELD else CONTENT_GUARD
 
 
 async def _sqlstate(conn: AsyncConnection, sql: str) -> str | None:
@@ -66,6 +87,20 @@ async def _sqlstate(conn: AsyncConnection, sql: str) -> str | None:
         return getattr(exc.orig, "sqlstate", None) or getattr(exc.orig, "pgcode", None)
     await nested.rollback()
     return None
+
+
+async def _refusal(conn: AsyncConnection, sql: str) -> tuple[str | None, str]:
+    """`(SQLSTATE, message)` of the refusal `sql` raises, or `(None, "")` when it runs; inside a
+    savepoint, like `_sqlstate`. The message names the rule that refused."""
+    nested = await conn.begin_nested()
+    try:
+        await conn.execute(text(sql))
+    except DBAPIError as exc:
+        await nested.rollback()
+        state = getattr(exc.orig, "sqlstate", None) or getattr(exc.orig, "pgcode", None)
+        return state, str(exc.orig)
+    await nested.rollback()
+    return None, ""
 
 
 async def plant(conn: AsyncConnection, status: str, *, slug: str = "held") -> UUID:
@@ -120,9 +155,10 @@ async def _columns(conn: AsyncConnection) -> list[str]:
 
 async def _sweep(
     conn: AsyncConnection, statuses: tuple[str, ...]
-) -> dict[tuple[str, str], str | None]:
-    """(status, column) -> the SQLSTATE of one UPDATE of that column on a row at that status."""
-    out: dict[tuple[str, str], str | None] = {}
+) -> dict[tuple[str, str], tuple[str | None, str]]:
+    """(status, column) -> `(SQLSTATE, message)` of one UPDATE of that column on a row at that
+    status; `(None, "")` where it runs."""
+    out: dict[tuple[str, str], tuple[str | None, str]] = {}
     for status in statuses:
         row_id = await plant(conn, status, slug=f"held-{status}")
         for column in await _columns(conn):
@@ -130,7 +166,7 @@ async def _sweep(
             if column == "status" and status == "retired":
                 new = "'live'"  # retired -> retired changes nothing, and a no-op is allowed
             sql = f"UPDATE rating_versions SET {column} = {new} WHERE id = '{row_id}'"
-            out[(status, column)] = await _sqlstate(conn, sql)
+            out[(status, column)] = await _refusal(conn, sql)
     return out
 
 
@@ -142,27 +178,19 @@ async def test_the_sweep_covers_every_column(database: Database) -> None:
 
 @pytest.mark.req("FR-44")
 async def test_a_version_past_draft_refuses_every_content_column(database: Database) -> None:
-    """19 columns by 4 statuses, on the application's connection: each UPDATE is refused."""
+    """19 columns by 4 statuses, on the application's connection: each UPDATE is refused, and
+    each cell by the rule declared for its column (`REFUSER`): SQLSTATE and the rule's message."""
     async with rolled_back(database) as conn:
         who = (await conn.execute(text("SELECT current_user"))).scalar_one()
         assert who == "gip_app_login", who
         results = await _sweep(conn, HELD_STATUSES)
-    allowed = {key: state for key, state in results.items() if state not in REFUSED}
-    assert allowed == {}
-
-
-async def _refusal(conn: AsyncConnection, sql: str) -> tuple[str | None, str]:
-    """`(SQLSTATE, message)` of the refusal `sql` raises, or `(None, "")` when it runs; inside a
-    savepoint, like `_sqlstate`. The message names the rule that refused."""
-    nested = await conn.begin_nested()
-    try:
-        await conn.execute(text(sql))
-    except DBAPIError as exc:
-        await nested.rollback()
-        state = getattr(exc.orig, "sqlstate", None) or getattr(exc.orig, "pgcode", None)
-        return state, str(exc.orig)
-    await nested.rollback()
-    return None, ""
+    assert len(results) == len(NEW_VALUE) * len(HELD_STATUSES)
+    wrong = {}
+    for (status, column), (state, message) in results.items():
+        want_state, want_message = refuser(status, column)
+        if state != want_state or want_message not in message:
+            wrong[(status, column)] = (state, message, want_state, want_message)
+    assert wrong == {}
 
 
 @pytest.mark.req("FR-44")
@@ -268,11 +296,11 @@ async def test_the_two_transitions_the_application_makes_are_permitted(database:
             conn, update.format("status = 'draft', updated_at = now()", to_draft)
         )
         # the same transition carrying any content change is refused
-        with_content = await _sqlstate(
+        with_content, message = await _refusal(
             conn, update.format("status = 'approved', change_summary = 'x'", to_approved)
         )
     assert (approved, drafted) == (None, None)
-    assert with_content in REFUSED
+    assert (with_content, CONTENT_GUARD[1] in message) == (CONTENT_GUARD[0], True), message
 
 
 @pytest.mark.req("FR-44")
@@ -316,15 +344,25 @@ async def test_live_and_retired_need_the_decided_request(database: Database) -> 
 
 @pytest.mark.req("FR-44")
 async def test_each_refusal_is_the_guards_own(owner_database: Database) -> None:
-    """The control: with the content guard disabled (owner, rolled back) the same sweep is
-    refused only where the approval guard refuses on its own, the identity columns of an
-    approved, live or retired row (GP001). Every other cell is the content guard's."""
+    """The control, per cell: with the content guard disabled (owner, rolled back) the same sweep
+    is refused exactly where `REFUSER` declares the approval guard (the identity columns of an
+    approved, live or retired row), by that guard's own message, and every other cell runs. So
+    every other cell of the main sweep is the content guard's ALONE: the approval guard does not
+    fire on it, and no other trigger or CHECK refuses it.
+
+    What this cannot show, and nothing here does: the content guard refusing an identity column
+    of an approved, live or retired row on its own. The approval guard fires first there, and
+    `conftest_db._DISABLABLE` does not list it, so the helper will not switch it off. On a `review`
+    row the approval guard does not fire, and the main sweep shows the content guard refusing the
+    identity columns alone."""
     async with rolled_back(owner_database) as conn:
         await disable_trigger(conn, "rating_versions", GUARD)
         results = await _sweep(conn, HELD_STATUSES)
-    refused = {key: state for key, state in results.items() if state is not None}
-    identity = ("workspace_id", "slug", "version")
-    assert refused == {(s, c): "GP001" for s in ("approved", "live", "retired") for c in identity}
+    approval_cells = {(s, c) for s in APPROVAL_HELD for c in IDENTITY}
+    assert {key for key, (state, _) in results.items() if state is not None} == approval_cells
+    for key in approval_cells:
+        state, message = results[key]
+        assert (state, APPROVAL_GUARD[1] in message) == (APPROVAL_GUARD[0], True), (key, message)
 
 
 async def _guard_enabled(database: Database) -> str:
