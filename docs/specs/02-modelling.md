@@ -170,6 +170,13 @@ Terms from `00-overview.md` §2.2 are used unchanged. Additional terms owned her
 > after this clause carries them in its Bundle. A Bundle stored before carries none and keeps its
 > behaviour (`03` FR-239). Following the chain to resolve a value is **not built**. The `error`
 > message counts the unmapped levels and no longer lists them.
+>
+> **FR-109 (3), dated amendment 2026-11-18 (the maintainer's ruling).** The
+> predict route (`POST /models/{id}/predict`) answers this refusal **409**
+> `GROUPING_VALUE_AT_ANCESTOR_LEVEL`, as it answers every refusal of a row value against stored
+> model data: the request is well formed and the value conflicts with the stored chain; the 422s
+> of that route refuse the request body's shape. The scoring route reports the same refusal per
+> quote as 422 `MODEL_CALL_FAILED` carrying the code.
 
 ### 3.4 GLM fitting
 

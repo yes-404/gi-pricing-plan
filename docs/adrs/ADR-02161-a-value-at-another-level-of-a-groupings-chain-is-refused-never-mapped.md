@@ -46,6 +46,11 @@ Refuse, and change no price that is right today.
    ancestors travel with the Groupings: every database-backed path loads them, and a Rating
    Version compiled from now on carries them in its Bundle. `error` behaviour is unchanged,
    and its message now counts the levels it did not map rather than listing them (NFR-499).
+   *(Amended 2026-11-18, the maintainer's ruling.)* The predict route
+   (`POST /models/{id}/predict`) answers this refusal 409, as it answers every refusal of a row
+   value against stored model data: a well-formed request whose value conflicts with the stored
+   chain. The scoring route reports the same refusal per quote as 422 `MODEL_CALL_FAILED`
+   carrying the code.
 4. **Not taken:** resolving a Factor by following the chain (mapping a finer value through an
    ancestor). It changes what a stored model scores; if it is wanted it is its own decision,
    with a new Factor version.
