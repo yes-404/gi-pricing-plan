@@ -26,7 +26,11 @@ about. The format follows [Keep a Changelog 1.1.0](https://keepachangelog.com/en
   line names the version and a reason word or the exception's type only. The GLMs of every version are examined, whatever else the version pins: a reachable class in a GLM is listed and counts in the exit code even when the version also pins a model of another family. A version with no reachable class and a model of another family is listed as `not-examined-other-family`, never as `NOTREACHABLE`, and its line says that its GLMs were examined and its other models were not. A version whose every
   undeclared identity Factor cannot be reached by a quote, and that carries no other class and no line the sweep did not examine, is
   listed as `NOTREACHABLE`, with the reason word `closed-input` or `not-scored`, and `PLAIN` is
-  what the sweep cannot classify. The sweep also changes what it prints for a version with an
+  what the sweep cannot classify. A Factor a GLM takes only as an operand of a cross is judged
+  on the levels the cross's cells show for it: a cross that lacks a level the input admits leaves
+  the version `PLAIN` (exit 1), as the scorer refuses that level. The sweep also adds a
+  `glm models examined: N` line and one `not-examined-other-family <version>` line per version
+  pinning another family. The sweep also changes what it prints for a version with an
   `expression` Factor that has no Banding and has relativities: it now lists it `PLAIN` (exit 1),
   where it listed no class. A version the runtime cannot load (a GLM whose Factor the bundle does
   not carry, or whose fit names a level its Factor cannot produce) now reads `UNREADABLE`, with the

@@ -141,7 +141,7 @@ docker compose -f deploy/docker-compose.yml --profile app up -d --wait --scale a
   script that lists the stored versions that can refuse such quotes:
   `uv run python scripts/sweep-unseen-levels.py [--dsn <read-only URL>] [--workspace <id>]`. It
   prints its denominators first, then one line per version and class (reference only, never a
-  level or a hash), and exits 0 (none reachable), 1 (a version is reachable), 2 (a bundle could
+  level or a hash), and exits 0 (none reachable in the shapes the sweep examines; it says nothing of an unbanded `expression` operand of a cross, an operand's `map_to_base` under an undeclared cross and a nested-interaction operand, #1944), 1 (a version is reachable), 2 (a bundle could
   not be read), 3 (no version with a bundle was found, so nothing was checked), 64 (an argument
   error) or 70 (the sweep itself failed: it prints the exception's type only; never read 70 as
   clean or as reachable). A version whose GLM has an indicator term for a level its numeric input
@@ -153,7 +153,8 @@ docker compose -f deploy/docker-compose.yml --profile app up -d --wait --scale a
   carries no other class and no line the sweep did not examine (a NOTEXAMINED line, or a model of another family), is listed as `NOTREACHABLE`, never `PLAIN`,
   with a reason word on its line: `closed-input` (the Factor is fed only by an input that is a
   closed enum over the fit's own levels, on every GLM that input feeds, and no interaction Factor
-  of that fit takes it as an operand) or `not-scored` (nothing the runtime scores reads the GLM:
+  of that fit takes it as an operand, and no other GLM takes it only as an operand of a cross
+  whose cells show a level short of the input's domain) or `not-scored` (nothing the runtime scores reads the GLM:
   no `model_call` names it, directly or through a Peril Structure, and no scored GLM reads it as
   its offset model). An `expression` Factor with no Banding and with relativities is `PLAIN`. A version with no reachable class and a model of another family is `not-examined-other-family`, never `NOTREACHABLE`: its GLMs were examined and its other models were not. A version the runtime
   cannot load (a GLM whose Factor the bundle does not carry, or whose fit names a level its Factor
