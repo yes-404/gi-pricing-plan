@@ -30,14 +30,14 @@ on:
       # docs.yml (which did trigger) runs only `audit-docs.py`, never `pytest`.
       - 'docs/**'
       # tests/** for the third time this has bitten: the repository-invariant suite
-      # lives here and `uv run pytest -q` runs it, so a change touching only this
+      # lives here and `uv run pytest -q -rs` runs it, so a change touching only this
       # directory was checked by nothing. Noticed when FR-417's single-head guard
       # triggered only the docs workflow — a check that cannot run is not enforcement.
       - 'tests/**'
       # .claude/skills/reporter-cycle/** for the fifth time this has bitten (the
       # fourth is pyproject.toml's own testpaths comment, which registered this same
       # directory's tests as collectable but not as triggered): reporter.py's tests
-      # are stdlib-only and outside the uv workspace, but `uv run pytest -q` still
+      # are stdlib-only and outside the uv workspace, but `uv run pytest -q -rs` still
       # collects and runs them via testpaths, so a PR touching only this directory
       # was checked by nothing here — a check that cannot run is not enforcement.
       # Scoped to this one skill's scripts, not all of .claude/**, so an unrelated
@@ -72,14 +72,14 @@ on:
       # docs.yml (which did trigger) runs only `audit-docs.py`, never `pytest`.
       - 'docs/**'
       # tests/** for the third time this has bitten: the repository-invariant suite
-      # lives here and `uv run pytest -q` runs it, so a change touching only this
+      # lives here and `uv run pytest -q -rs` runs it, so a change touching only this
       # directory was checked by nothing. Noticed when FR-417's single-head guard
       # triggered only the docs workflow — a check that cannot run is not enforcement.
       - 'tests/**'
       # .claude/skills/reporter-cycle/** for the fifth time this has bitten (the
       # fourth is pyproject.toml's own testpaths comment, which registered this same
       # directory's tests as collectable but not as triggered): reporter.py's tests
-      # are stdlib-only and outside the uv workspace, but `uv run pytest -q` still
+      # are stdlib-only and outside the uv workspace, but `uv run pytest -q -rs` still
       # collects and runs them via testpaths, so a PR touching only this directory
       # was checked by nothing here — a check that cannot run is not enforcement.
       # Scoped to this one skill's scripts, not all of .claude/**, so an unrelated
