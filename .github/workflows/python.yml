@@ -346,7 +346,7 @@ jobs:
         id: pytest
         if: steps.minio.outcome == 'success'
         continue-on-error: true
-        run: uv run pytest -q
+        run: uv run pytest -q -rs
         env:
           GIP_DATABASE_URL: postgresql+asyncpg://gip_app_login:gip_app_login@localhost:5432/gipricing
           GIP_TEST_DATABASE_URL: postgresql+asyncpg://gipricing:gipricing@localhost:5432/gipricing
