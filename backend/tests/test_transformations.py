@@ -830,12 +830,16 @@ async def test_a_fit_whose_grouping_factor_maps_none_of_the_column_fails_the_job
         )
         factor_id = factor_row.id
 
+    # A fit with no split is refused first, `MODEL_SPLIT_REQUIRED` (02-modelling.md: "before
+    # any compute is spent"), so this fit carries one and reaches the refusal the test is about.
+    split = await _split(database, blob_store, workspace_id, actor, version_id)
+
     async with database.unit_of_work() as session:
         row, _ = await model_service.reserve_model(
             session,
             workspace_id=workspace_id,
             actor=actor,
-            spec=_spec(version_id, (factor_id,)),
+            spec=_spec(version_id, (factor_id,), split_ref=split),
         )
         job = await job_service.submit(
             session,
