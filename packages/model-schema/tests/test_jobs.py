@@ -1,7 +1,9 @@
 """The `Job` shape (`07` §4.1)."""
 
 import json
+import re
 from datetime import UTC, datetime
+from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
@@ -229,3 +231,90 @@ def test_a_failing_fold_keeps_the_code_and_stores_no_location(
     assert "_location" not in stored["detail"]
     assert "location" not in stored
     _PreviousJobError.model_validate(stored)
+
+
+# -- the two JSON schemas ------------------------------------------------------------------
+
+_CONTRACTS = Path(__file__).resolve().parents[3] / "docs" / "contracts" / "schemas"
+
+
+def _refusals(schema: dict[str, Any], value: Any, defs: dict[str, Any], at: str = "$") -> list[str]:
+    """The JSON Schema keywords the two Job contracts use, and no others: `$ref`, `anyOf`,
+    `type`, `properties`, `additionalProperties: false`, `required`, `pattern`, `maxLength`,
+    `minLength`. There is no `jsonschema` in the workspace, and a new dependency is not this
+    change's to add. Returns the places `value` is refused."""
+    if "$ref" in schema:
+        return _refusals(defs[schema["$ref"].rsplit("/", 1)[1]], value, defs, at)
+    if "anyOf" in schema:
+        options = [_refusals(option, value, defs, at) for option in schema["anyOf"]]
+        return [] if any(not refused for refused in options) else [f"{at}: no anyOf arm"]
+    types = schema.get("type")
+    kinds = {"string": str, "object": dict, "boolean": bool, "null": type(None), "integer": int}
+    if types is not None:
+        allowed = [types] if isinstance(types, str) else types
+        if not any(isinstance(value, kinds[t]) for t in allowed):
+            return [f"{at}: {type(value).__name__} is not {allowed}"]
+    out: list[str] = []
+    if isinstance(value, str):
+        if "pattern" in schema and not re.search(schema["pattern"], value):
+            out.append(f"{at}: pattern")
+        if len(value) > schema.get("maxLength", len(value)):
+            out.append(f"{at}: maxLength")
+        if len(value) < schema.get("minLength", 0):
+            out.append(f"{at}: minLength")
+    if isinstance(value, dict):
+        properties = schema.get("properties", {})
+        out += [f"{at}.{k}: required" for k in schema.get("required", []) if k not in value]
+        if schema.get("additionalProperties") is False:
+            out += [f"{at}.{k}: not declared" for k in value if k not in properties]
+        for key, sub in properties.items():
+            if key in value:
+                out += _refusals(sub, value[key], defs, f"{at}.{key}")
+    return out
+
+
+def _wire_refusals(schema_file: str, error: dict[str, Any]) -> list[str]:
+    schema = json.loads((_CONTRACTS / schema_file).read_text())
+    return _refusals(schema["properties"]["error"], error, schema.get("$defs", {}))
+
+
+def test_the_schema_walker_is_not_blind_to_a_null_in_a_string_only_key() -> None:
+    """The control: it refuses what the hand-authored schema used to, so a pass means something."""
+    schema = {"type": ["object", "null"], "properties": {"step_id": {"type": "string"}}}
+    assert _refusals(schema, {"step_id": None}, {})
+
+
+@pytest.mark.req("FR-403")
+@pytest.mark.parametrize("schema", ["job.schema.json", "generated/job.schema.json"])
+@pytest.mark.parametrize("location", [None, _LOCATED, *({k: v} for k, v in _SOURCE_FIELD_VALUES)])
+def test_both_job_schemas_accept_the_error_the_api_sends(
+    schema: str, location: dict[str, str] | None
+) -> None:
+    """Every location key the API does not set goes on the wire as `null`: the hand-authored
+    schema typed each key `"string"` and refused a located error (review of #1930, point 2)."""
+    wire = _failed_error(location=location).model_dump(mode="json")
+    assert _wire_refusals(schema, wire) == []
+
+
+@pytest.mark.req("FR-403")
+@pytest.mark.parametrize("schema", ["job.schema.json", "generated/job.schema.json"])
+@pytest.mark.parametrize(
+    ("key", "bad"),
+    [
+        ("ref", "not-a-reference"),
+        ("structure", "not-a-reference"),
+        ("peril", "has a space"),
+        ("step_id", ""),
+        ("step_id", 42),
+        ("nope", "x"),
+    ],
+)
+def test_both_real_job_schemas_refuse_a_located_error_with_a_bad_value(
+    schema: str, key: str, bad: Any
+) -> None:
+    """The control on the real files: a walker that stopped descending into `location` would
+    pass the test above and fail this one."""
+    wire = _failed_error(location=_LOCATED).model_dump(mode="json")
+    wire["location"][key] = bad
+    refused = _wire_refusals(schema, wire)
+    assert refused, (schema, key, bad)
