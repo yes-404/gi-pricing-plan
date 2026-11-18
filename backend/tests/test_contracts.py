@@ -3192,6 +3192,10 @@ def _one_sided_paths(generated: dict[str, Any], authored: dict[str, Any]) -> dic
 
     Whole paths from `_field_paths`, as sets: a path is never rebuilt from a segment. The
     root is excluded; a top-level name is `ONE_SIDED_SLUGS`' and the two name tests' business.
+    Eight compared slugs are in neither, so a top-level property added on one side of one of
+    them is not caught today: `artifact-envelope`, `artifact-ref`, `blob-ref`,
+    `dataset-version`, `dislocation-run`, `regression-run`, `regression-suite` and
+    `validation-rule`.
     """
     produced = set(_field_paths(generated, generated, GENERATED))
     declared = set(_field_paths(authored, authored, AUTHORED))
@@ -3242,11 +3246,16 @@ def test_one_sided_path_census_declarations_are_still_one_sided() -> None:
 
 @pytest.mark.req("FR-451")
 def test_one_sided_path_census_ceiling_only_shrinks() -> None:
-    """The registry may not exceed the ceiling; the ceiling is a second visible edit."""
+    """The registry's size equals the ceiling; the ceiling is a second visible edit.
+
+    Equal, not at most: with `<=`, fixing a path and leaving the ceiling frees a slot a later
+    declaration can fill unseen.
+    """
     size = sum(len(paths) for paths in ONE_SIDED_PATHS.values())
-    assert size <= ONE_SIDED_PATHS_CEILING, (
-        f"ONE_SIDED_PATHS holds {size} entries, over its ceiling {ONE_SIDED_PATHS_CEILING}: "
-        "the list only shrinks (#1918); fix the drift instead of declaring it"
+    assert size == ONE_SIDED_PATHS_CEILING, (
+        f"ONE_SIDED_PATHS holds {size} entries and its ceiling is {ONE_SIDED_PATHS_CEILING}: "
+        "the list only shrinks (#1918); lower the ceiling with every entry removed, and fix "
+        "the drift instead of declaring it"
     )
 
 

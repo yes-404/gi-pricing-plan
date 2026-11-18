@@ -282,8 +282,10 @@ hold the cases.
 every nested path that is on one side only (85 at main `3aed71d9`, over 12 of the 21 compared
 slugs), each exact, each with its class and owner, under `ONE_SIDED_PATHS_CEILING`. The census
 tests are named `test_one_sided_path_census_*` so the census selection (`-k census`) runs them.
-It does **not** see: a path below an object-valued `additionalProperties` or `patternProperties` (a map's value shape, e.g. `fit_result.relativities`; a later slice of #1918), a top-level name (`ONE_SIDED_SLUGS` and the two name tests own that, and
-`validation-rule` is outside the second), arm-level existence below, or type and bound
+It does **not** see: a path below an object-valued `additionalProperties` or `patternProperties` (a map's value shape, e.g. `fit_result.relativities`; a later slice of #1918), a top-level name (`ONE_SIDED_SLUGS` and the two name tests own that; eight compared slugs
+are in neither, so a top-level property added on one side of one of them is not caught today:
+`artifact-envelope`, `artifact-ref`, `blob-ref`, `dataset-version`, `dislocation-run`,
+`regression-run`, `regression-suite`, `validation-rule`), arm-level existence below, or type and bound
 disagreement on a shared path (the comparisons above own that). Fixing an entry removes it and
 lowers the ceiling in the same commit.
 
