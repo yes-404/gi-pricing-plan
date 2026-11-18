@@ -92,6 +92,40 @@ def test_redirects_cover_gits_own_local_env_vars() -> None:
     assert set(out) <= set(_gitenv.REDIRECTS), set(out) - set(_gitenv.REDIRECTS)
 
 
+# `git rev-parse --local-env-vars` as two git versions print it: 2.47.3 is the output of the git
+# this was written under; 2.39.5 is the same list plus GIT_INTERNAL_SUPER_PREFIX, as the #1925
+# review reported it. Held as data, so the check does not depend on the installed git.
+_LOCAL_ENV_47 = [
+    "GIT_ALTERNATE_OBJECT_DIRECTORIES",
+    "GIT_COMMON_DIR",
+    "GIT_CONFIG",
+    "GIT_CONFIG_COUNT",
+    "GIT_CONFIG_PARAMETERS",
+    "GIT_DIR",
+    "GIT_GRAFT_FILE",
+    "GIT_IMPLICIT_WORK_TREE",
+    "GIT_INDEX_FILE",
+    "GIT_NO_REPLACE_OBJECTS",
+    "GIT_OBJECT_DIRECTORY",
+    "GIT_PREFIX",
+    "GIT_REPLACE_REF_BASE",
+    "GIT_SHALLOW_FILE",
+    "GIT_WORK_TREE",
+]
+_LOCAL_ENV_239 = [*_LOCAL_ENV_47, "GIT_INTERNAL_SUPER_PREFIX"]
+
+
+@pytest.mark.parametrize(
+    "reported", [_LOCAL_ENV_47, _LOCAL_ENV_239], ids=["git-2.47.3", "git-2.39.5"]
+)
+def test_redirects_cover_each_supported_gits_list(reported: list[str]) -> None:
+    assert set(reported) <= set(_gitenv.REDIRECTS), set(reported) - set(_gitenv.REDIRECTS)
+
+
+def test_redirects_keep_the_names_older_git_lists() -> None:
+    assert "GIT_INTERNAL_SUPER_PREFIX" in _gitenv.REDIRECTS
+
+
 def test_audit_docs_reads_its_own_base_text(
     two_repos: tuple[pathlib.Path, pathlib.Path], monkeypatch: pytest.MonkeyPatch
 ) -> None:
