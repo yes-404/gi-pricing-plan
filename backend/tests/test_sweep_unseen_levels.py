@@ -1213,6 +1213,22 @@ def test_a_cross_showing_every_level_the_input_admits_leaves_the_factor_closed()
     assert _refusals(bundle) == []
 
 
+@pytest.mark.req("FR-2143")
+def test_a_version_whose_cross_cells_cannot_be_read_is_plain_and_the_sweep_exits_one() -> None:
+    """The cross that shows every level the input admits (the test above, NOTREACHABLE), with one
+    cell label that does not split into one part per operand: the levels the cross shows cannot be
+    read, so the sweep does not pass what it could not read."""
+    bundle = _cross_showing_every_level_as_the_offset_model()
+    cells = bundle["resolved_payloads"][_CROSS_GLM]["fit_result"]["relativities"]["region_x_yoa"]
+    assert cells[0]["level"] == "A | 2010"  # a cell of the cross's 2 x 2 grid
+    cells[0]["level"] = "A"  # one part, where the cross has two operands
+    rc, lines = _run([_row(bundle, "unreadable", 1)])
+
+    assert "PLAIN unreadable@1 status=approved" in lines, lines
+    assert not any(line.startswith("NOTREACHABLE ") for line in lines), lines
+    assert rc == 1
+
+
 def _agree(bundle: dict[str, Any], lines: list[str]) -> None:
     """The sweep and the real scorer agree: a version the sweep lists NOTREACHABLE has no quote the
     scorer refuses, over every combination of the input contract's enums."""

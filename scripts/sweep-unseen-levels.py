@@ -110,7 +110,11 @@ a Grouping Factor: how an unseen SOURCE level maps is the Grouping's own declare
 
 Exit code (a distinct non-zero for each condition; the first that applies wins):
 
-    0   every version with a bundle was read, there is at least one, and none is reachable
+    0   every version with a bundle was read, there is at least one, and none is reachable in
+        the shapes the sweep examines. It says nothing of a shape the sweep does not examine (an
+        `expression` operand of a cross with no Banding, an operand's `map_to_base` under an
+        undeclared cross, a nested-interaction operand; #1944): a NOTEXAMINED-* line is not a
+        pass, and a shape may print no line at all.
     1   at least one version is reachable (any class above except NOTREACHABLE and NOTEXAMINED-*)
     2   a version's bundle could not be read: an unchecked version is not a clean one
     3   the corpus is empty (no version with a bundle): a zero over nothing is not a clean result
@@ -290,7 +294,8 @@ def _levels_a_cross_shows(
     """For each Factor an interaction in `factors` takes as a direct operand, one entry per such
     interaction: the levels that operand shows in that interaction's fitted cells (the cell label
     split at its separator, the operand's own position), or `None` when they cannot be read (a
-    nested interaction as the operand, or a cell that does not split into one part per operand).
+    cell that does not split into one part per operand). An operand that is itself an
+    interaction, or that is not among `factors`, gets no entry.
     These are the only levels the cross can score for the operand (FR-2143)."""
     by_id = {f.id: f for f in factors}
     shown: dict[Any, list[set[str] | None]] = {}
@@ -399,9 +404,10 @@ def _findings(bundle: Bundle) -> tuple[int, set[str], set[str], set[str]]:
                 open_factor = True
         # A Factor this GLM consumes only as an operand of a cross has no relativities of its own
         # here, so the loop above never reaches it. Its reachable levels are those the closed input
-        # allows, and each cross that takes it must show every one of them (FR-2143): the levels
-        # the cross's own cells show are never the whole story. A Factor with a main effect
-        # in this GLM is the first branch above, and is never closed when a cross takes it.
+        # allows, not those the cross's cells show, and each cross that takes it must show every
+        # one of them (FR-2143); a cross whose cells cannot be read leaves the version PLAIN. A
+        # Factor with a main effect in this GLM is the first branch above, and is never closed
+        # when a cross takes it.
         for factor in undeclared:
             if factor.slug in fitted or factor.type is not FactorType.IDENTITY or not scoring:
                 continue
