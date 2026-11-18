@@ -1162,6 +1162,7 @@ def test_compile_refuses_a_model_whose_offset_source_has_a_model_offset(
                 spec=_residual_spec(pair.v2_id, pair.resid_flag_id, pair.split2, ref=b_ref),
             )
             c_row.fit_result = b_row.fit_result  # past the fit: a hand-written row
+            c_row.diagnostics_id = b_row.diagnostics_id  # a fitted row must carry diagnostics
             c_row.status = "fitted"
             await session.flush()
             await mark_approved(session, c_row)
