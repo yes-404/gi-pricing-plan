@@ -470,11 +470,15 @@ def test_census_every_covered_type_has_a_derivable_approved_state() -> None:
 # the route-written state of `the_decision_route_reconciles_clean`. Written for batch 2.)
 
 
-async def _decide_once(
-    database: Database, workspace_id: UUID
+async def _decide_to_approval(
+    database: Database, workspace_id: UUID, ref_text: str = "model:motor-ad-frequency@7"
 ) -> tuple[UUID, Principal, ArtifactRef]:
-    """Submit and approve one model version through the approval service, as the platform
-    does, and record the artifact's approval event the owning module writes after it."""
+    """Submit one artifact version (a model unless `ref_text` names another) and approve it
+    through the approval service, as the platform does: as many APPROVE decisions as the
+    stored request requires (`approvers_required`, fixed at submission; one for a model, two
+    for a rating version under the default policy), each by a new approver distinct from the
+    submitter and the creation author. Then the artifact's approval event the owning module
+    writes after the last decision. Returns the request, the last approver and the ref."""
     from backend.tests.test_approvals import (
         _no_evidence_authors,
         _submit,
@@ -482,29 +486,35 @@ async def _decide_once(
         _with_role,
     )
 
+    from app.db.models import ApprovalRequestRow
     from app.platform import approvals, audit
     from model_schema import ArtifactRef, DecisionKind, JobSource
 
-    ref = ArtifactRef.parse("model:motor-ad-frequency@7")
-    submitter, approver = _user("s"), _user("a")
-    await _with_role(database, workspace_id, approver, "approver")
-    request_id = await _submit(database, workspace_id, submitter, ref=ref)
+    ref = ArtifactRef.parse(ref_text)
+    request_id = await _submit(database, workspace_id, _user("s"), ref=ref)
+    async with database.session() as session:
+        required = (await session.get(ApprovalRequestRow, request_id)).approvers_required  # type: ignore[union-attr]
+    approver = _user("a")
+    for n in range(required):
+        approver = _user(f"a{n}")
+        await _with_role(database, workspace_id, approver, "approver")
+        async with database.unit_of_work() as session:
+            await approvals.decide(
+                session,
+                evidence_authors=_no_evidence_authors,
+                workspace_id=workspace_id,
+                request_id=request_id,
+                approver=approver,
+                decision=DecisionKind.APPROVE,
+                comment="clean",
+            )
     async with database.unit_of_work() as session:
-        await approvals.decide(
-            session,
-            evidence_authors=_no_evidence_authors,
-            workspace_id=workspace_id,
-            request_id=request_id,
-            approver=approver,
-            decision=DecisionKind.APPROVE,
-            comment="clean",
-        )
         await audit.record(
             session,
             workspace_id=workspace_id,
             actor=approver,
             source=JobSource.API,
-            action="model.approved",
+            action=f"{ref.type}.approved",
             entity_ref=str(ref),
         )
     return request_id, approver, ref
@@ -535,7 +545,7 @@ async def test_reconcile_db_the_decision_event_carries_both_ids(
 
     from app.db.models import ApprovalDecisionRow, AuditEventRow
 
-    request_id, _approver, _ref = await _decide_once(database, workspace_id)
+    request_id, _approver, _ref = await _decide_to_approval(database, workspace_id)
     async with database.session() as session:
         decision = (
             await session.execute(
@@ -557,7 +567,7 @@ async def test_reconcile_db_the_decision_event_carries_both_ids(
 async def test_reconcile_db_the_decision_route_reconciles_clean(
     database: Database, workspace_id: UUID
 ) -> None:
-    await _decide_once(database, workspace_id)
+    await _decide_to_approval(database, workspace_id)
     async with database.session() as session:
         report = await rc.reconcile(session, workspace_id)
     assert report.chain == "intact"
@@ -592,7 +602,7 @@ async def test_reconcile_db_a_broken_chain_stops_the_rules(
     from backend.tests.conftest_db import seed_as_owner
     from sqlalchemy import text
 
-    await _decide_once(database, workspace_id)
+    await _decide_to_approval(database, workspace_id)
 
     async def _tamper(session: AsyncSession) -> None:
         # An UPDATE of an audit row is refused for the owner too, so the chain is broken by an
@@ -624,12 +634,12 @@ async def _rules_reported(database: Database, workspace_id: UUID) -> set[str]:
     return {m.rule for m in report.mismatches}
 
 
-def _draft_rating_version(workspace_id: UUID, status: str) -> object:
+def _draft_rating_version(workspace_id: UUID, status: str, slug: str | None = None) -> object:
     from app.db.models import RatingVersionRow
 
     return RatingVersionRow(
         workspace_id=workspace_id,
-        slug=f"rv-{uuid4().hex[:8]}",
+        slug=slug or f"rv-{uuid4().hex[:8]}",
         version=1,
         status=status,
         dataset_version_id=uuid4(),
@@ -642,9 +652,24 @@ async def test_reconcile_db_a_planted_live_rating_version_is_a_status_the_produc
     database: Database, workspace_id: UUID
 ) -> None:
     """R1 and the unwritten status: a `live` row, which no writer produces, planted through the
-    application connection (the guard acts on `approved` only)."""
+    application connection WITH an approved approval request for its ref (two approvers, as the
+    default policy requires for a rating version). R1 reports a row in a status no lifecycle
+    edge leads to whatever requests exist, so the approved request does not cover it. The
+    request is also what lets the plant through wherever the database holds `live` like
+    `approved` (an approved request for the ref is that guard's evidence): no guard is
+    switched off. Only R1 reports: the request's trail is the product's own (R2 to R4)."""
+    from app.db.models import ApprovalRequestRow
+
+    slug = f"rv-{uuid4().hex[:8]}"
+    request_id, _approver, _ref = await _decide_to_approval(
+        database, workspace_id, f"rating_version:{slug}@1"
+    )
+    async with database.session() as session:
+        request = await session.get(ApprovalRequestRow, request_id)
+    assert request is not None
+    assert request.status == "approved"  # the planted evidence, checked, not presumed
     async with database.unit_of_work() as session:
-        session.add(_draft_rating_version(workspace_id, "live"))
+        session.add(_draft_rating_version(workspace_id, "live", slug))
     async with database.session() as session:
         report = await rc.reconcile(session, workspace_id)
     assert [m.rule for m in report.mismatches] == ["R1"]
@@ -658,7 +683,7 @@ async def test_reconcile_db_a_planted_stray_decision_event_is_reported(
     from app.platform import audit
     from model_schema import JobSource
 
-    _request_id, approver, ref = await _decide_once(database, workspace_id)
+    _request_id, approver, ref = await _decide_to_approval(database, workspace_id)
     assert await _rules_reported(database, workspace_id) == set()
     async with database.unit_of_work() as session:
         await audit.record(
@@ -679,7 +704,7 @@ async def test_reconcile_db_a_planted_second_approval_event_is_reported(
     from app.platform import audit
     from model_schema import JobSource
 
-    _request_id, approver, ref = await _decide_once(database, workspace_id)
+    _request_id, approver, ref = await _decide_to_approval(database, workspace_id)
     assert await _rules_reported(database, workspace_id) == set()
     async with database.unit_of_work() as session:
         await audit.record(
