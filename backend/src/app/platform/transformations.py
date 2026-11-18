@@ -45,8 +45,11 @@ from model_schema import (
     Principal,
 )
 from pricing_core.modelling import (
+    MAX_CHAIN_DEPTH,
+    GroupingError,
     ModellingError,
     band_statistics,
+    check_grouping_chain,
     grouping_evidence,
     propose_banding,
     propose_grouping,
@@ -331,6 +334,7 @@ async def create_grouping(
     await rbac.require_permission(
         session, workspace_id=workspace_id, principal=actor, permission=Permission.MODEL_FIT
     )
+    parent_ref = await _require_chain(session, workspace_id=workspace_id, grouping=grouping)
     version = 1 + (
         await session.execute(
             select(func.coalesce(func.max(GroupingRow.version), 0)).where(
@@ -366,9 +370,43 @@ async def create_grouping(
             "source_levels": len(grouping.mapping),
             "target_levels": len(grouping.target_levels),
             "unseen_level_behaviour": grouping.unseen_level_behaviour.value,
+            "parent_grouping_ref": parent_ref,
         },
     )
     return row
+
+
+async def _require_chain(
+    session: AsyncSession, *, workspace_id: UUID, grouping: Grouping
+) -> str | None:
+    """FR-109: a Grouping's parent exists in this workspace and the levels chain.
+
+    Groupings are immutable rows, so a parent that exists when the child is created cannot
+    later close a cycle: only the child's own creation can be refused here.
+    """
+    parent_id = grouping.parent_grouping_id
+    if parent_id is None:
+        return None
+    ancestors: list[Grouping] = []
+    seen: set[UUID] = set()
+    while parent_id is not None and parent_id not in seen and len(ancestors) < MAX_CHAIN_DEPTH:
+        seen.add(parent_id)
+        parent = await session.scalar(
+            select(GroupingRow).where(
+                GroupingRow.workspace_id == workspace_id, GroupingRow.id == parent_id
+            )
+        )
+        if parent is None:
+            break  # absent: the pure check refuses it for a first parent; deeper is legacy data
+        ancestors.append(to_grouping(parent))
+        parent_id = parent.parent_grouping_id
+    try:
+        check_grouping_chain(grouping, ancestors)
+    except GroupingError as refused:
+        raise PlatformError(
+            refused.code, "The grouping's chain is invalid", 422, str(refused)
+        ) from refused
+    return f"grouping:{ancestors[0].slug}@{ancestors[0].version}"
 
 
 async def list_bandings(
@@ -436,19 +474,44 @@ async def load_banding_by_ref(
 async def load_groupings(
     session: AsyncSession, *, workspace_id: UUID, ids: list[UUID]
 ) -> dict[UUID, Grouping]:
+    """The Groupings `ids` name **and their ancestors**, keyed by id (FR-109).
+
+    The ancestors ride in the same map so every caller that resolves a Factor, and the compile
+    that writes a Bundle, holds the chain without a second lookup; callers index by
+    `factor.grouping_id`, so the extra entries change nothing for them. The walk stops at a
+    parent the workspace does not hold (no foreign key guarantees one) and at
+    `MAX_CHAIN_DEPTH`: a chain that cannot be followed further is resolved as far as it goes.
+    """
     if not ids:
         return {}
-    rows = list(
-        (
+    rows = await _grouping_rows(session, workspace_id, ids)
+    _refuse_missing({row.id for row in rows.values()}, ids, kind="grouping")
+    for _ in range(MAX_CHAIN_DEPTH):
+        parents = {
+            row.parent_grouping_id
+            for row in rows.values()
+            if row.parent_grouping_id is not None and row.parent_grouping_id not in rows
+        }
+        found = await _grouping_rows(session, workspace_id, list(parents)) if parents else {}
+        if not found:
+            break
+        rows.update(found)
+    return {row.id: to_grouping(row) for row in rows.values()}
+
+
+async def _grouping_rows(
+    session: AsyncSession, workspace_id: UUID, ids: list[UUID]
+) -> dict[UUID, GroupingRow]:
+    return {
+        row.id: row
+        for row in (
             await session.execute(
                 select(GroupingRow).where(
                     GroupingRow.workspace_id == workspace_id, GroupingRow.id.in_(ids)
                 )
             )
         ).scalars()
-    )
-    _refuse_missing({row.id for row in rows}, ids, kind="grouping")
-    return {row.id: to_grouping(row) for row in rows}
+    }
 
 
 def _refuse_missing(found: set[UUID], wanted: list[UUID], *, kind: str) -> None:

@@ -26,7 +26,7 @@ from backend.tests.test_model_jobs import (
 )
 from sqlalchemy import select
 
-from app.db.models import AuditEventRow, BandingRow, GroupingRow, ModelRow
+from app.db.models import AuditEventRow, BandingRow, GroupingRow, JobRow, ModelRow
 from app.db.session import Database
 from app.errors import PlatformError
 from app.platform import jobs as job_service
@@ -42,6 +42,7 @@ from model_schema import (
     BandingProposal,
     Factor,
     FactorType,
+    Grouping,
     GroupingMethod,
     GroupingProposal,
     JobKind,
@@ -622,32 +623,48 @@ async def test_loading_a_banding_that_does_not_exist_names_the_id(
     assert str(missing) in (refused.value.detail or "")
 
 
+def _chain_link(
+    dataset_id: UUID,
+    slug: str,
+    mapping: dict[str, str],
+    *,
+    parent_id: UUID | None = None,
+) -> Grouping:
+    return Grouping(
+        id=uuid4(),
+        slug=f"{slug}-{uuid4().hex[-6:]}",
+        dataset_id=dataset_id,
+        version=1,
+        column=slug,
+        method=GroupingMethod.MANUAL,
+        mapping=mapping,
+        unseen_level_behaviour=UnseenLevelBehaviour.ERROR,
+        parent_grouping_id=parent_id,
+    )
+
+
 @pytest.mark.req("FR-105")
 async def test_a_grouping_row_records_its_parent_for_a_hierarchy(
     database: Database, blob_store: BlobStore, workspace_id
 ) -> None:
     """FR-109's chain, stored as a column so it is queryable rather than only in JSON."""
-    from model_schema import Grouping
-
     actor = await _actuary(database, workspace_id)
     dataset_id = await _dataset(database, blob_store, workspace_id, actor)
-    parent_id = uuid4()
 
     async with database.unit_of_work() as session:
+        parent = await transform_service.create_grouping(
+            session,
+            workspace_id=workspace_id,
+            actor=actor,
+            grouping=_chain_link(dataset_id, "fine", {"u1": "urban", "r1": "rural"}),
+        )
+        parent_id = parent.id
         row = await transform_service.create_grouping(
             session,
             workspace_id=workspace_id,
             actor=actor,
-            grouping=Grouping(
-                id=uuid4(),
-                slug=f"area-{uuid4().hex[-6:]}",
-                dataset_id=dataset_id,
-                version=1,
-                column="area",
-                method=GroupingMethod.MANUAL,
-                mapping={"urban": "ALL", "rural": "ALL"},
-                unseen_level_behaviour=UnseenLevelBehaviour.ERROR,
-                parent_grouping_id=parent_id,
+            grouping=_chain_link(
+                dataset_id, "area", {"urban": "ALL", "rural": "ALL"}, parent_id=parent_id
             ),
         )
         stored_id = row.id
@@ -657,3 +674,252 @@ async def test_a_grouping_row_records_its_parent_for_a_hierarchy(
         assert stored is not None
         assert stored.parent_grouping_id == parent_id
         assert transform_service.to_grouping(stored).parent_grouping_id == parent_id
+
+
+@pytest.mark.req("FR-109")
+async def test_a_grouping_whose_parent_does_not_exist_is_refused(
+    database: Database, blob_store: BlobStore, workspace_id
+) -> None:
+    actor = await _actuary(database, workspace_id)
+    dataset_id = await _dataset(database, blob_store, workspace_id, actor)
+    with pytest.raises(PlatformError) as refused:
+        async with database.unit_of_work() as session:
+            await transform_service.create_grouping(
+                session,
+                workspace_id=workspace_id,
+                actor=actor,
+                grouping=_chain_link(dataset_id, "area", {"a": "A"}, parent_id=uuid4()),
+            )
+    assert refused.value.code == "GROUPING_PARENT_NOT_FOUND"
+    assert refused.value.status_code == 422
+
+
+@pytest.mark.req("FR-109")
+async def test_a_parent_in_another_workspace_reads_as_not_found(
+    database: Database, blob_store: BlobStore, workspace_id
+) -> None:
+    """The same code and the same text, so the answer does not say the id exists elsewhere."""
+    actor = await _actuary(database, workspace_id)
+    dataset_id = await _dataset(database, blob_store, workspace_id, actor)
+    async with database.unit_of_work() as session:
+        parent = await transform_service.create_grouping(
+            session,
+            workspace_id=workspace_id,
+            actor=actor,
+            grouping=_chain_link(dataset_id, "fine", {"a1": "A"}),
+        )
+        parent_id = parent.id
+    child = _chain_link(dataset_id, "area", {"A": "X"}, parent_id=parent_id)
+    with pytest.raises(PlatformError) as refused:
+        async with database.unit_of_work() as session:
+            await transform_service._require_chain(session, workspace_id=uuid4(), grouping=child)
+    assert refused.value.code == "GROUPING_PARENT_NOT_FOUND"
+
+
+@pytest.mark.req("FR-109")
+async def test_a_child_level_the_parent_does_not_produce_is_refused_without_the_level(
+    database: Database, blob_store: BlobStore, workspace_id
+) -> None:
+    actor = await _actuary(database, workspace_id)
+    dataset_id = await _dataset(database, blob_store, workspace_id, actor)
+    async with database.unit_of_work() as session:
+        parent = await transform_service.create_grouping(
+            session,
+            workspace_id=workspace_id,
+            actor=actor,
+            grouping=_chain_link(dataset_id, "fine", {"a1": "A"}),
+        )
+        parent_id = parent.id
+    with pytest.raises(PlatformError) as refused:
+        async with database.unit_of_work() as session:
+            await transform_service.create_grouping(
+                session,
+                workspace_id=workspace_id,
+                actor=actor,
+                grouping=_chain_link(
+                    dataset_id, "area", {"A": "X", "ZZ-SENTINEL-9": "Y"}, parent_id=parent_id
+                ),
+            )
+    assert refused.value.code == "GROUPING_CHAIN_LEVELS_MISMATCH"
+    assert refused.value.status_code == 422
+    assert "ZZ-SENTINEL-9" not in (refused.value.detail or "")
+
+
+@pytest.mark.req("FR-109")
+async def test_a_three_link_chain_whose_levels_chain_is_created_and_audited(
+    database: Database, blob_store: BlobStore, workspace_id
+) -> None:
+    actor = await _actuary(database, workspace_id)
+    dataset_id = await _dataset(database, blob_store, workspace_id, actor)
+    async with database.unit_of_work() as session:
+        fine_link = await transform_service.create_grouping(
+            session,
+            workspace_id=workspace_id,
+            actor=actor,
+            grouping=_chain_link(dataset_id, "fine", {"ab1": "AB", "cd1": "CD"}),
+        )
+        area = await transform_service.create_grouping(
+            session,
+            workspace_id=workspace_id,
+            actor=actor,
+            grouping=_chain_link(
+                dataset_id, "area", {"AB": "N", "CD": "S"}, parent_id=fine_link.id
+            ),
+        )
+        region = await transform_service.create_grouping(
+            session,
+            workspace_id=workspace_id,
+            actor=actor,
+            grouping=_chain_link(dataset_id, "region", {"N": "ALL", "S": "ALL"}, parent_id=area.id),
+        )
+        assert region.parent_grouping_id == area.id
+        # The event of the region link, read by its entity ref and not by time: the three links
+        # are created in one transaction, so their events share its `at` (audit.py: "`at` is the
+        # transaction's start time"), and ordering by it picks any of them.
+        region_ref = f"grouping:{region.slug}@{region.version}"
+    async with database.session() as session:
+        event = (
+            (
+                await session.execute(
+                    select(AuditEventRow).where(
+                        AuditEventRow.action == "grouping.created",
+                        AuditEventRow.entity_ref == region_ref,
+                    )
+                )
+            )
+            .scalars()
+            .first()
+        )
+        assert event is not None
+        assert event.after["parent_grouping_ref"].startswith("grouping:area-")
+
+
+@pytest.mark.req("FR-109")
+async def test_a_fit_whose_grouping_factor_maps_none_of_the_column_fails_the_job_with_its_code(
+    database: Database, blob_store: BlobStore, workspace_id
+) -> None:
+    """The book's `area` holds `urban` and `rural`; the grouping maps neither."""
+    actor = await _actuary(database, workspace_id)
+    dataset_id = await _dataset(database, blob_store, workspace_id, actor)
+    version_id = await _validated_version(database, blob_store, workspace_id, actor, dataset_id)
+    async with database.unit_of_work() as session:
+        grouping_row = await transform_service.create_grouping(
+            session,
+            workspace_id=workspace_id,
+            actor=actor,
+            grouping=Grouping(
+                id=uuid4(),
+                slug=f"region-{uuid4().hex[-6:]}",
+                dataset_id=dataset_id,
+                version=1,
+                column="area",
+                method=GroupingMethod.MANUAL,
+                mapping={"AB": "R1", "CD": "R2"},
+                unseen_level_behaviour=UnseenLevelBehaviour.MAP_TO_DEFAULT,
+                default_target_level="R1",
+            ),
+        )
+        factor_row = await model_service.create_factor(
+            session,
+            workspace_id=workspace_id,
+            actor=actor,
+            factor=Factor(
+                id=uuid4(),
+                slug=f"region-f-{uuid4().hex[-6:]}",
+                dataset_id=dataset_id,
+                version=1,
+                type=FactorType.GROUPING,
+                source_columns=("area",),
+                grouping_id=grouping_row.id,
+            ),
+        )
+        factor_id = factor_row.id
+
+    # A fit with no split is refused first, `MODEL_SPLIT_REQUIRED` (02-modelling.md: "before
+    # any compute is spent"), so this fit carries one and reaches the refusal the test is about.
+    split = await _split(database, blob_store, workspace_id, actor, version_id)
+
+    async with database.unit_of_work() as session:
+        row, _ = await model_service.reserve_model(
+            session,
+            workspace_id=workspace_id,
+            actor=actor,
+            spec=_spec(version_id, (factor_id,), split_ref=split),
+        )
+        job = await job_service.submit(
+            session,
+            JobKind.MODEL_FIT,
+            {
+                "workspace_id": str(workspace_id),
+                "actor": actor.model_dump(mode="json"),
+                "model_id": str(row.id),
+            },
+            actor,
+            workspace_id=workspace_id,
+        )
+    assert await execute_job(database, job.id, blob_store) is JobStatus.FAILED
+    async with database.session() as session:
+        job_row = await session.get(JobRow, job.id)
+    assert job_row is not None
+    assert job_row.error is not None
+    assert job_row.error["code"] == "GROUPING_MAPS_NO_VALUE"
+    assert "urban" not in job_row.error["message"]
+    assert "rural" not in job_row.error["message"]
+    assert "region-f-" in job_row.error["message"]  # the Factor is named; the 409 is the handler's
+
+
+@pytest.mark.req("FR-109")
+async def test_a_grouping_cannot_name_its_own_request_id_as_its_parent(
+    database: Database, blob_store: BlobStore, workspace_id
+) -> None:
+    """The row's id is the application's `new_uuid7` default, never the request's, so a body id
+    that equals its own `parent_grouping_id` names no stored row and reads as not found.
+
+    A later change that took the id from the request would let a Grouping be its own parent;
+    this test turns red then.
+    """
+    actor = await _actuary(database, workspace_id)
+    dataset_id = await _dataset(database, blob_store, workspace_id, actor)
+    own = uuid4()
+    child = _chain_link(dataset_id, "area", {"a": "A"}, parent_id=own).model_copy(
+        update={"id": own}
+    )
+    with pytest.raises(PlatformError) as refused:
+        async with database.unit_of_work() as session:
+            await transform_service.create_grouping(
+                session, workspace_id=workspace_id, actor=actor, grouping=child
+            )
+    assert refused.value.code == "GROUPING_PARENT_NOT_FOUND"
+
+
+@pytest.mark.req("FR-109")
+async def test_loading_a_grouping_brings_its_whole_chain(
+    database: Database, blob_store: BlobStore, workspace_id
+) -> None:
+    actor = await _actuary(database, workspace_id)
+    dataset_id = await _dataset(database, blob_store, workspace_id, actor)
+    async with database.unit_of_work() as session:
+        fine = await transform_service.create_grouping(
+            session,
+            workspace_id=workspace_id,
+            actor=actor,
+            grouping=_chain_link(dataset_id, "fine", {"ab1": "AB", "cd1": "CD"}),
+        )
+        area = await transform_service.create_grouping(
+            session,
+            workspace_id=workspace_id,
+            actor=actor,
+            grouping=_chain_link(dataset_id, "area", {"AB": "N", "CD": "S"}, parent_id=fine.id),
+        )
+        region = await transform_service.create_grouping(
+            session,
+            workspace_id=workspace_id,
+            actor=actor,
+            grouping=_chain_link(dataset_id, "region", {"N": "ALL", "S": "ALL"}, parent_id=area.id),
+        )
+        ids = (fine.id, area.id, region.id)
+    async with database.session() as session:
+        loaded = await transform_service.load_groupings(
+            session, workspace_id=workspace_id, ids=[ids[2]]
+        )
+    assert set(loaded) == set(ids)

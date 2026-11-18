@@ -51,8 +51,8 @@ from pricing_core.data.expressions import (
     parse_expression,
 )
 from pricing_core.modelling.bandings import apply_banding
-from pricing_core.modelling.errors import FactorResolutionError
-from pricing_core.modelling.groupings import apply_grouping
+from pricing_core.modelling.errors import FactorResolutionError, GroupingAncestorLevelError
+from pricing_core.modelling.groupings import apply_grouping, grouping_ancestors
 from pricing_core.safe_error import safe_error_text
 
 #: FR-83 arms refused **permanently** rather than pending a slice, so the refusal must
@@ -237,7 +237,14 @@ def resolve_factor_columns(
         elif factor.type is FactorType.GROUPING:
             grouping = _grouping(groupings, factor)
             _column_matches(grouping.column, source, factor, kind="grouping")
-            series = apply_grouping(frame[source], grouping)
+            try:
+                series = apply_grouping(
+                    frame[source], grouping, grouping_ancestors(grouping, groupings)
+                )
+            except GroupingAncestorLevelError as refused:
+                raise GroupingAncestorLevelError(
+                    refused.code, f"factor {factor.slug!r}: {refused}"
+                ) from None
         elif factor.type in SUPERSEDED_FACTOR_TYPES:
             raise FactorResolutionError(
                 f"factor {factor.slug!r} is of type {factor.type.value!r}, which is "

@@ -30,7 +30,8 @@ this factor alone, not the deviance the eventual multi-factor model will report.
 from __future__ import annotations
 
 import math
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
+from decimal import Decimal
 from uuid import UUID
 
 import numpy as np
@@ -39,19 +40,37 @@ from scipy import stats
 
 from model_schema import (
     CredibilityModel,
+    Factor,
+    FactorType,
     Grouping,
     GroupingEvidence,
     GroupingMethod,
     GroupingProposal,
+    GroupingUnmapped,
+    OffsetSpec,
     OneWayRow,
     OneWaySummary,
     UnseenLevelBehaviour,
     new_uuid7,
 )
 from pricing_core.data.profile import one_way
-from pricing_core.modelling.errors import FactorResolutionError, GroupingError
+from pricing_core.modelling.errors import (
+    FactorResolutionError,
+    GroupingAncestorLevelError,
+    GroupingCoverageError,
+    GroupingError,
+)
 
-__all__ = ["apply_grouping", "grouping_evidence", "propose_grouping"]
+__all__ = [
+    "MAX_CHAIN_DEPTH",
+    "apply_grouping",
+    "check_fit_groupings",
+    "check_grouping_chain",
+    "fit_exposure",
+    "grouping_ancestors",
+    "grouping_evidence",
+    "propose_grouping",
+]
 
 def _full_credibility_claims(p: float, k: float) -> float:
     """The claim count at which a Poisson estimate is within ±`k` with probability `p`.
@@ -523,11 +542,43 @@ def _tree(
     return clusters
 
 
-def apply_grouping(series: pl.Series, grouping: Grouping) -> pl.Series:
+#: A chain deeper than this is not a chain anyone drew (FR-109); the walk stops there.
+MAX_CHAIN_DEPTH = 16
+
+
+def grouping_ancestors(
+    grouping: Grouping, groupings: Mapping[UUID, Grouping]
+) -> tuple[Grouping, ...]:
+    """`grouping`'s ancestors that `groupings` holds, parent first (FR-109).
+
+    The walk follows `parent_grouping_id` through the map and stops at a link the map lacks, at
+    one it has already met, and at `MAX_CHAIN_DEPTH`: a caller that supplies no ancestors (a
+    stored Bundle carries none) gets `()`, and so today's behaviour. It collects Groupings to
+    read their source levels; it never maps a value through one (FR-109, 2026-11-17).
+    """
+    found: list[Grouping] = []
+    seen = {grouping.id}
+    link = grouping
+    while link.parent_grouping_id is not None and len(found) < MAX_CHAIN_DEPTH:
+        parent = groupings.get(link.parent_grouping_id)
+        if parent is None or parent.id in seen:
+            break
+        found.append(parent)
+        seen.add(parent.id)
+        link = parent
+    return tuple(found)
+
+
+def apply_grouping(
+    series: pl.Series, grouping: Grouping, ancestors: Sequence[Grouping] = ()
+) -> pl.Series:
     """Map a column's Levels onto their target Levels (FR-104).
 
     Unseen levels follow the declared behaviour, and `error` names them — the behaviour is
-    mandatory precisely so that the silent case does not exist.
+    mandatory precisely so that the silent case does not exist. `ancestors` are the Groupings
+    above this one in its chain, when the caller holds them: a value that is a source level of
+    one of them is at the wrong level for this Grouping and is refused (FR-109). A caller
+    that holds none keeps the declared behaviour.
     """
     text = series.cast(pl.String)
     if text.null_count():
@@ -542,7 +593,7 @@ def apply_grouping(series: pl.Series, grouping: Grouping) -> pl.Series:
     # measured.
     # The rule below is the same for one value or a million.
     levels = text.to_list() if text.len() == 1 else text.unique().to_list()
-    targets = _targets(levels, grouping)
+    targets = _targets(levels, grouping, ancestors)
     if not targets:
         return text.rename(series.name)
     if text.len() == 1:
@@ -550,7 +601,128 @@ def apply_grouping(series: pl.Series, grouping: Grouping) -> pl.Series:
     return text.replace_strict(targets, return_dtype=pl.String).rename(series.name)
 
 
-def _targets(levels: Sequence[str], grouping: Grouping) -> dict[str, str | None]:
+def fit_exposure(data: pl.DataFrame, offset: OffsetSpec) -> pl.Series | None:
+    """The exposure column a fit's offset names, or `None` when it names none the frame has."""
+    if offset.kind == "log_column" and offset.column in data.columns:
+        return data[str(offset.column)]
+    return None
+
+
+def check_fit_groupings(
+    data: pl.DataFrame,
+    factors: Sequence[Factor],
+    groupings: Mapping[UUID, Grouping] | None,
+    exposure: pl.Series | None = None,
+    *,
+    refuse_when_none_mapped: bool = True,
+) -> tuple[GroupingUnmapped, ...]:
+    """FR-109 at fit time: what each Grouping Factor does not map of `data`'s column.
+
+    A Factor none of whose rows is a source level of its Grouping is refused when
+    `refuse_when_none_mapped` (the fit's own rows): none of the column's rows is a level the
+    Grouping maps, so the Factor carries nothing of its column. Some rows unmapped is never a
+    refusal; it is returned, with the exposure of those rows, for the fit result to carry.
+    The holdout is counted with the flag off (it is
+    evidence, not a fit input). A Grouping the mapping lacks, or whose column the frame lacks
+    or differs from the Factor's, is left to `resolve_factors`, which refuses each by name.
+    A Grouping declaring `error` is left to it too: it refuses an unseen value already, under
+    its existing code.
+
+    Membership is `_targets`'s: a value is mapped iff it is a key of `grouping.mapping`. A null
+    is not a level and is `apply_grouping`'s refusal, so it is in neither count. The text names
+    the Factor, the Grouping and a count, never a value (NFR-499).
+    """
+    mapping = groupings or {}
+    report: list[GroupingUnmapped] = []
+    seen: set[str] = set()
+    for factor in factors:
+        if factor.type is not FactorType.GROUPING or factor.slug in seen:
+            continue
+        grouping = mapping.get(factor.grouping_id) if factor.grouping_id else None
+        source = factor.source_columns[0] if factor.source_columns else ""
+        if grouping is None or grouping.column != source or source not in data.columns:
+            continue
+        if grouping.unseen_level_behaviour is UnseenLevelBehaviour.ERROR:
+            # `error` already refuses every unseen value, with the published
+            # `FACTOR_RESOLUTION_FAILED`: this check covers the two lenient behaviours only.
+            continue
+        seen.add(factor.slug)
+        values = data[source].cast(pl.String)
+        present = values.is_not_null()
+        unmapped = present & ~values.is_in(list(grouping.mapping))
+        rows_present, rows_unmapped = int(present.sum()), int(unmapped.sum())
+        if refuse_when_none_mapped and rows_present and rows_unmapped == rows_present:
+            raise GroupingCoverageError(
+                "GROUPING_MAPS_NO_VALUE",
+                f"factor {factor.slug!r} pins grouping {grouping.slug!r}@{grouping.version} "
+                f"over column {source!r}, and none of the column's {rows_present} row(s) is a "
+                "source level that grouping maps: the column holds values at a different level "
+                "from the grouping's source levels (FR-109).",
+            )
+        if rows_unmapped:
+            total = (
+                None
+                if exposure is None
+                else Decimal(repr(float(exposure.filter(unmapped).sum())))
+            )
+            report.append(
+                GroupingUnmapped(
+                    factor=factor.slug,
+                    grouping=f"{grouping.slug}@{grouping.version}",
+                    rows=rows_unmapped,
+                    exposure=total,
+                )
+            )
+    return tuple(report)
+
+
+def check_grouping_chain(child: Grouping, ancestors: Sequence[Grouping]) -> None:
+    """Refuse a chain whose levels do not chain (FR-109).
+
+    `ancestors` runs parent first, and is empty when the parent could not be found. Three
+    rules, each stated once for every caller:
+
+    * a Grouping that names a parent has one;
+
+    * the child's source levels must be target levels of its parent, or the chain names a
+      step nothing produces;
+    * no child source level may also be a source level of an ancestor, or one label would
+      sit at two levels of the chain and a value carrying it could not be placed.
+
+    The text names the Groupings and a count, never a level: a level is a value from the
+    caller's data (NFR-499).
+    """
+    if child.parent_grouping_id is None:
+        return
+    if not ancestors:
+        raise GroupingError(
+            "GROUPING_PARENT_NOT_FOUND",
+            f"grouping {child.slug!r} names a parent grouping that is not in this "
+            "workspace (FR-109).",
+        )
+    parent = ancestors[0]
+    own = set(child.mapping)
+    unproduced = own - set(parent.mapping.values())
+    if unproduced:
+        raise GroupingError(
+            "GROUPING_CHAIN_LEVELS_MISMATCH",
+            f"grouping {child.slug!r} names {parent.slug!r}@{parent.version} as its parent, "
+            f"but {len(unproduced)} of its {len(own)} source levels are not target levels "
+            "of that parent, so the chain does not chain (FR-109).",
+        )
+    shared = own & {level for ancestor in ancestors for level in ancestor.mapping}
+    if shared:
+        raise GroupingError(
+            "GROUPING_CHAIN_LEVELS_MISMATCH",
+            f"grouping {child.slug!r} has {len(shared)} source level(s) that are also source "
+            "levels of an ancestor in its chain, so one label would sit at two levels of the "
+            "chain (FR-109).",
+        )
+
+
+def _targets(
+    levels: Sequence[str], grouping: Grouping, ancestors: Sequence[Grouping] = ()
+) -> dict[str, str | None]:
     """The target Level of every distinct source Level, or the refusal for an unseen one.
 
     The one statement of the unseen-level behaviour (FR-104): `apply_grouping` reads it for a
@@ -563,10 +735,20 @@ def _targets(levels: Sequence[str], grouping: Grouping) -> dict[str, str | None]
     if unseen:
         if grouping.unseen_level_behaviour is UnseenLevelBehaviour.ERROR:
             raise FactorResolutionError(
-                f"grouping {grouping.slug!r} met level(s) {unseen[:10]} in "
+                f"grouping {grouping.slug!r} met {len(unseen)} level(s) in "
                 f"{grouping.column!r} that it does not map, and its unseen-level behaviour "
                 "is `error` (FR-104). Re-derive the grouping on this version, or "
                 "declare where an unknown level should go."
+            )
+        above = {level for ancestor in ancestors for level in ancestor.mapping}
+        if above.intersection(unseen):
+            chain = [f"{ancestor.slug!r}@{ancestor.version}" for ancestor in ancestors]
+            raise GroupingAncestorLevelError(
+                "GROUPING_VALUE_AT_ANCESTOR_LEVEL",
+                f"grouping {grouping.slug!r}@{grouping.version} has the parent chain "
+                f"{', '.join(chain)}, and a value in {grouping.column!r} is a source level of "
+                "an ancestor grouping, not of this one: it is at the wrong level for this grouping "
+                "and is refused (FR-109).",
             )
         fallback = (
             grouping.default_target_level

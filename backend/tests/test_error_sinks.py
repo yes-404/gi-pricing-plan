@@ -172,6 +172,12 @@ _SINKS: dict[tuple[str, str, str], tuple[int, str]] = {
         1, "a workspace setting's type error; not a quote input"),
     ("backend/src/app/platform/transformations.py", "_refuse", "str(exc)"): (
         1, "a dataset transformation's named refusal; Dataset Version path"),
+    ("backend/src/app/platform/transformations.py", "_require_chain", "str(exc)"): (
+        1, "`GroupingError` from `check_grouping_chain` (FR-109), the creation-time refusal of a "
+        "chain: its three texts name the Grouping's slug, its parent's slug and version and a "
+        "count, never a level; the 422 detail of POST /groupings, an author path, not stored or "
+        "logged. Sentinel test: packages/pricing-core/tests/test_groupings.py::"
+        "test_every_text_of_the_chain_refusal_names_the_groupings_and_a_count_never_a_level"),
     ("backend/src/app/platform/validation_rules.py", "create_rule", "str(exc)"): (
         1, "a validation-rule catalogue lookup miss; Dataset Version path"),
     ("backend/src/app/api/demo.py", "get_guide", "{exc}"): (
@@ -204,6 +210,15 @@ _SINKS: dict[tuple[str, str, str], tuple[int, str]] = {
         1, "a dataset validation rule's failure text; Dataset Version path, not a quote"),
     ("packages/pricing-core/src/pricing_core/data/validate.py", "_sql", "{exc}"): (
         1, "a dataset validation rule's DuckDB error; Dataset Version path, not a quote"),
+    ("packages/pricing-core/src/pricing_core/modelling/factors.py", "resolve_factor_columns",
+     "{exc}"): (
+        1, "the re-wrap of `GroupingAncestorLevelError` (a `CodedError`; its one raise site names "
+        "the Grouping, its chain and the column, never the level) with the Factor's slug (FR-109): "
+        "reached by a fit (stored through `safe_error_detail`), by predict (`_unscoreable`, a 409 "
+        "detail, not stored or logged) and by score (the fixed `model_call` sentence). Sentinel "
+        "test, at the raise site, for every caller: packages/pricing-core/tests/"
+        "test_grouping_chain_resolution.py::"
+        "test_the_refusal_resolve_factor_columns_raises_names_no_level"),
     ("packages/pricing-core/src/pricing_core/modelling/ebm.py", "fit_ebm", "{exc}"): (
         1, "`interpret`'s refusal of a fit; model path, not a quote"),
     ("packages/pricing-core/src/pricing_core/modelling/glm.py", "decode_covariance", "{exc}"): (
