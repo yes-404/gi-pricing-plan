@@ -551,9 +551,7 @@ async def _membership_rows(
     return {(member, role) for member, role in result}
 
 
-def _compare_memberships(
-    held: set[tuple[str, str]], expected: set[tuple[str, str]]
-) -> list[str]:
+def _compare_memberships(held: set[tuple[str, str]], expected: set[tuple[str, str]]) -> list[str]:
     """Pure comparison, both ways: a membership held and not declared, and one declared and
     not held. A privilege held through a membership is invisible to `_grant_differences`,
     which reads direct grants only."""
@@ -580,7 +578,8 @@ def test_the_membership_comparison_sees_a_drift_in_both_directions(
 ) -> None:
     """Database-free. Planted rows are fed to the pure comparison; no role is touched."""
     differences = _compare_memberships(held, EXPECTED_MEMBERSHIPS)
-    assert len(differences) == 1 and differences[0].endswith(f": {needle}"), differences
+    assert len(differences) == 1, differences
+    assert differences[0].endswith(f": {needle}"), differences
     assert _compare_memberships(EXPECTED_MEMBERSHIPS, EXPECTED_MEMBERSHIPS) == []
 
 
