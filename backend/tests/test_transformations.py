@@ -773,13 +773,18 @@ async def test_a_three_link_chain_whose_levels_chain_is_created_and_audited(
             grouping=_chain_link(dataset_id, "region", {"N": "ALL", "S": "ALL"}, parent_id=area.id),
         )
         assert region.parent_grouping_id == area.id
+        # The event of the region link, read by its entity ref and not by time: the three links
+        # are created in one transaction, so their events share its `at` (audit.py: "`at` is the
+        # transaction's start time"), and ordering by it picks any of them.
+        region_ref = f"grouping:{region.slug}@{region.version}"
     async with database.session() as session:
         event = (
             (
                 await session.execute(
-                    select(AuditEventRow)
-                    .where(AuditEventRow.action == "grouping.created")
-                    .order_by(AuditEventRow.at.desc())
+                    select(AuditEventRow).where(
+                        AuditEventRow.action == "grouping.created",
+                        AuditEventRow.entity_ref == region_ref,
+                    )
                 )
             )
             .scalars()
