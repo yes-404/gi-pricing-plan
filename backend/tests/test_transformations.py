@@ -779,7 +779,7 @@ async def test_a_three_link_chain_whose_levels_chain_is_created_and_audited(
                 await session.execute(
                     select(AuditEventRow)
                     .where(AuditEventRow.action == "grouping.created")
-                    .order_by(AuditEventRow.created_at.desc())
+                    .order_by(AuditEventRow.at.desc())
                 )
             )
             .scalars()
