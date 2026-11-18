@@ -11,13 +11,15 @@ the job sits `queued` forever with nothing to explain why.
 from __future__ import annotations
 
 import enum
+from collections.abc import Mapping
 from datetime import datetime
 from typing import Annotated, Any
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator, model_validator
 
 from model_schema.input_free import InputFreeError
+from model_schema.perils import PerilCode
 from model_schema.refs import REF_PATTERN
 
 __all__ = [
@@ -119,7 +121,9 @@ TERMINAL_STATUSES: frozenset[JobStatus] = frozenset(
 #: common case, and it needs no cooperation from `pricing-core`.
 VALID_TRANSITIONS: dict[JobStatus, frozenset[JobStatus]] = {
     JobStatus.QUEUED: frozenset({JobStatus.RUNNING, JobStatus.CANCELLED, JobStatus.FAILED}),
-    JobStatus.RUNNING: frozenset({JobStatus.SUCCEEDED, JobStatus.FAILED, JobStatus.CANCELLED}),
+    JobStatus.RUNNING: frozenset(
+        {JobStatus.SUCCEEDED, JobStatus.FAILED, JobStatus.CANCELLED}
+    ),
     JobStatus.SUCCEEDED: frozenset(),
     JobStatus.FAILED: frozenset(),
     JobStatus.CANCELLED: frozenset(),
@@ -171,13 +175,9 @@ class JobResult(BaseModel):
         return self
 
 
-#: A step id or mount point: the source field (`RatingStepBase.step_id`) constrains only
-#: `min_length=1`; whitespace is excluded here so the value cannot be prose.
-_STEP_ID = r"^\S{1,128}$"
-#: A dotted path of identifiers with optional `[<int>]` indices: `inputs.age`, `pins.models[2]`.
-_FIELD_PATH = r"^[A-Za-z_][A-Za-z0-9_]*(\[[0-9]+\])?(\.[A-Za-z_][A-Za-z0-9_]*(\[[0-9]+\])?)*$"
-#: A name inside a pinned artifact (a key column, a feature, an interaction, an operand, a peril).
-_NAME = r"^[A-Za-z0-9_][A-Za-z0-9_.:-]{0,127}$"
+#: Where a location is stored inside a Job error's `detail`: the one place the previous version's
+#: reader (`extra="forbid"`, `detail: dict[str, Any]`) already accepts free content (`07` NFR-531).
+LOCATION_DETAIL_KEY = "_location"
 
 
 class JobErrorLocation(BaseModel):
@@ -185,27 +185,26 @@ class JobErrorLocation(BaseModel):
 
     Identifiers only: a step id, a path inside that step, a reference, a name the artifact
     itself declares. **Never a submitted value** is what the raise sites guarantee, by filling
-    this only from the caller's own artifact; no pattern can prove it. What the model itself
-    enforces is the source field's grammar (DP-2): `extra="forbid"` (no other key), `str` only
-    (a JSON number is refused), and one pattern per key (no whitespace or free text in a step
-    id, a reference, a dotted path of identifiers). A digit string such as `"42"` or `"0.05"`
-    satisfies the `step_id` and name patterns and is NOT refused. The key set is the one
-    `InputFreeError.located` uses, so a `located` mapping builds this one to one.
+    this only from the caller's own artifact; no pattern can prove it. The model gives `ref` and
+    `structure` the wire form of an artifact reference (`REF_PATTERN`), `peril` a `PerilCode`
+    and every other key a non-empty `str`; it refuses any other key, a JSON number and a location
+    with no key set. A digit string such as `"42"` is a valid value and is NOT refused. The key
+    set is the one #1911 accepted.
     """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
-    step_id: str | None = Field(default=None, pattern=_STEP_ID)
-    field: str | None = Field(default=None, pattern=_FIELD_PATH, max_length=256)
+    step_id: str | None = Field(default=None, min_length=1)
+    field: str | None = Field(default=None, min_length=1)
     ref: str | None = Field(default=None, pattern=REF_PATTERN)
-    objective: str | None = Field(default=None, pattern=REF_PATTERN)
+    objective: str | None = Field(default=None, min_length=1)
     structure: str | None = Field(default=None, pattern=REF_PATTERN)
-    factor: str | None = Field(default=None, pattern=REF_PATTERN)
-    key: str | None = Field(default=None, pattern=_NAME)
-    feature: str | None = Field(default=None, pattern=_NAME)
-    interaction: str | None = Field(default=None, pattern=_NAME)
-    operand: str | None = Field(default=None, pattern=_NAME)
-    peril: str | None = Field(default=None, pattern=_NAME)
+    factor: str | None = Field(default=None, min_length=1)
+    key: str | None = Field(default=None, min_length=1)
+    feature: str | None = Field(default=None, min_length=1)
+    interaction: str | None = Field(default=None, min_length=1)
+    operand: str | None = Field(default=None, min_length=1)
+    peril: PerilCode | None = None
 
     @model_validator(mode="after")
     def _points_somewhere(self) -> JobErrorLocation:
@@ -232,6 +231,52 @@ class JobError(BaseModel):
     detail: dict[str, Any] = Field(default_factory=dict)
     location: JobErrorLocation | None = None
     trace_id: str | None = Field(default=None, pattern="^[0-9a-f]{32}$")
+
+    @field_validator("detail")
+    @classmethod
+    def _detail_does_not_carry_the_reserved_key(cls, detail: dict[str, Any]) -> dict[str, Any]:
+        if LOCATION_DETAIL_KEY in detail:
+            raise InputFreeError(f"detail may not carry the reserved key {LOCATION_DETAIL_KEY!r}")
+        return detail
+
+    # Two forms. The wire form (`model_dump`) carries `location` and is what the API returns. The
+    # stored form (`stored_form`) keeps the location inside `detail` under `LOCATION_DETAIL_KEY`,
+    # so the previous version can read every row this one writes (`07` NFR-531); `from_stored` is
+    # its one reader. The constructor refuses that key in `detail`, so only `from_stored` can
+    # consume it.
+    def stored_form(self) -> dict[str, Any]:
+        """The mapping to store: no `location` key, the location folded into `detail`.
+
+        A location is an aid and never costs the error its code: if folding fails, the mapping
+        is returned without a location.
+        """
+        stored = self.model_dump(mode="json", exclude={"location"})
+        if self.location is not None:
+            try:
+                folded = self.location.model_dump(mode="json", exclude_none=True)
+            except Exception:  # a location is an aid: nothing about it may lose the error
+                return stored
+            stored["detail"] = {**stored["detail"], LOCATION_DETAIL_KEY: folded}
+        return stored
+
+    @classmethod
+    def from_stored(cls, stored: Mapping[str, Any]) -> JobError:
+        """Build the error from a stored row, lifting the folded location into `location`.
+
+        Never raises on the location: a stored `_location` that is not a valid
+        `JobErrorLocation` is dropped and the error carries none. A row stored before
+        `location` existed has no such key and reads back with none.
+        """
+        fields = dict(stored)
+        detail = fields.get("detail")
+        if isinstance(detail, Mapping) and LOCATION_DETAIL_KEY in detail:
+            rest = {k: v for k, v in detail.items() if k != LOCATION_DETAIL_KEY}
+            fields["detail"] = rest
+            try:
+                fields["location"] = JobErrorLocation.model_validate(detail[LOCATION_DETAIL_KEY])
+            except ValidationError:
+                fields.pop("location", None)
+        return cls.model_validate(fields)
 
 
 class ResourceBudget(BaseModel):

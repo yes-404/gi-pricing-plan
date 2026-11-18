@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import logging
+
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
@@ -285,3 +287,80 @@ def test_a_malformed_json_body_renders_the_authored_text_and_no_input(
     (error,) = response.json()["errors"]
     assert error["code"] == "JSON_INVALID"
     assert error["message"] == "The request body is not valid JSON."
+
+
+@pytest.mark.req("FR-403")
+@pytest.mark.parametrize(
+    "value",
+    [
+        {"step_id": "base premium"},
+        {"step_id": "s" * 129},
+        {"interaction": "VehAge & DrivAge"},
+        {"feature": "Veh Age"},
+        {"key": "Driver Age"},
+        {"objective": "reg:tweedie"},
+        {"factor": "vehicle_group_rated"},
+    ],
+)
+def test_a_refusal_built_from_a_mapping_keeps_a_location_that_fits_its_source_field(
+    value: dict[str, str],
+) -> None:
+    """Review of #1930, point 3: each is a valid value of its source field."""
+    from model_schema.jobs import JobErrorLocation
+
+    refusal = PlatformError("VALIDATION_FAILED", "Nope", 422, location=value)
+    assert refusal.location == JobErrorLocation(**value)
+
+
+@pytest.mark.req("FR-403")
+@pytest.mark.parametrize(
+    "bad",
+    [{}, {"nope": "x"}, {"step_id": 42}, {"ref": "not-a-reference"}, {"peril": "has a space"}],
+)
+def test_a_location_that_cannot_be_built_never_costs_the_refusal_its_code(
+    bad: dict[str, object],
+) -> None:
+    """A location is an aid: when it cannot be built the refusal is raised without one, under
+    its own code, never as a `ValidationError` from the raise site."""
+    refusal = PlatformError("VALIDATION_FAILED", "Nope", 422, "Nope.", location=bad)  # type: ignore[arg-type]
+    assert (refusal.code, refusal.status_code, refusal.location) == ("VALIDATION_FAILED", 422, None)
+
+
+_LOCATION_SENTINEL = "SENTINEL-submitted-value-3c9e"
+
+
+@pytest.mark.req("FR-403")
+@pytest.mark.parametrize(
+    ("bad", "key"),
+    [
+        ({"ref": _LOCATION_SENTINEL}, "ref"),
+        ({"peril": _LOCATION_SENTINEL}, "peril"),
+        ({"step_id": "s_rp", "structure": _LOCATION_SENTINEL}, "structure"),
+        ({"undeclared": _LOCATION_SENTINEL}, "undeclared:1"),
+        ({_LOCATION_SENTINEL: "x", "step_id": "s_rp"}, "undeclared:1"),
+        (
+            {_LOCATION_SENTINEL: "x", _LOCATION_SENTINEL + "2": "y", "ref": "bad"},
+            "ref,undeclared:2",
+        ),
+        ({}, "(none)"),
+    ],
+)
+def test_a_dropped_location_is_logged_with_the_code_and_the_key_and_never_the_value(
+    bad: dict[str, str], key: str, caplog: pytest.LogCaptureFixture
+) -> None:
+    with caplog.at_level(logging.WARNING, logger="app.errors"):
+        refusal = PlatformError("VALIDATION_FAILED", "Nope", 422, location=bad)
+
+    assert refusal.location is None
+    lines = [r.getMessage() for r in caplog.records if r.name == "app.errors"]
+    assert len(lines) == 1, lines
+    assert "VALIDATION_FAILED" in lines[0]
+    assert f"keys={key}" in lines[0]
+    assert _LOCATION_SENTINEL not in caplog.text
+
+
+@pytest.mark.req("FR-403")
+def test_a_location_that_builds_is_not_logged(caplog: pytest.LogCaptureFixture) -> None:
+    with caplog.at_level(logging.WARNING, logger="app.errors"):
+        PlatformError("VALIDATION_FAILED", "Nope", 422, location={"step_id": "base premium"})
+    assert [r for r in caplog.records if r.name == "app.errors"] == []

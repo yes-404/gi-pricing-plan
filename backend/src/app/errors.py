@@ -17,6 +17,7 @@ from typing import Any, Final
 from fastapi import FastAPI, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from pydantic import ValidationError
 from pydantic_core import PydanticSerializationError
 from sqlalchemy.exc import DBAPIError
 from starlette.exceptions import HTTPException as StarletteHTTPException
@@ -482,6 +483,29 @@ def _type_uri(code: str) -> str:
     return _DOC_BASE + code.lower().replace("_", "-")
 
 
+def _build_location(
+    code: str, location: JobErrorLocation | Mapping[str, str] | None
+) -> JobErrorLocation | None:
+    if location is None or isinstance(location, JobErrorLocation):
+        return location
+    try:
+        return JobErrorLocation.model_validate(location)
+    except ValidationError as exc:
+        # A dropped location is not silent. The line names the code and the DECLARED keys that
+        # did not fit; an undeclared key is counted, never named (a key is the raise site's
+        # own text, and no value or message is read: only each error's `loc`).
+        refused = {str(error["loc"][0]) for error in exc.errors() if error["loc"]}
+        declared = sorted(refused & set(JobErrorLocation.model_fields))
+        if undeclared := len(refused) - len(declared):
+            declared.append(f"undeclared:{undeclared}")
+        _log.warning(
+            "a refusal's location was dropped: code=%s keys=%s",
+            code,
+            ",".join(declared) or "(none)",
+        )
+        return None
+
+
 class PlatformError(Exception):
     """An expected failure with a stable code, renderable as a problem response.
 
@@ -498,7 +522,7 @@ class PlatformError(Exception):
         *,
         errors: tuple[FieldError, ...] = (),
         headers: Mapping[str, str] | None = None,
-        location: JobErrorLocation | None = None,
+        location: JobErrorLocation | Mapping[str, str] | None = None,
     ) -> None:
         if code not in _KNOWN_CODES:
             raise ValueError(
@@ -515,8 +539,11 @@ class PlatformError(Exception):
         self.headers = dict(headers) if headers else {}
         #: Where in the caller's own artifact the refusal points (#1917). Read only by the Job
         #: worker, which stores it in `JobError.location`; `to_problem` does not render it, so a
-        #: request's problem response is unchanged.
-        self.location = location
+        #: request's problem response is unchanged. A raise site passes a mapping and the build
+        #: happens here: a location is an aid, so one that cannot be built is dropped (with a
+        #: warning naming the code and the declared keys) and the refusal keeps its code (a
+        #: `ValidationError` from the raise site would turn it into `JOB_HANDLER_FAILED`).
+        self.location = _build_location(code, location)
 
     def to_problem(self, instance: str | None = None) -> ProblemDetail:
         return ProblemDetail(

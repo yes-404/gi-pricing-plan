@@ -245,7 +245,7 @@ async def transition(
     if result is not None:
         row.result = result.model_dump(mode="json")
     if error is not None:
-        row.error = error.model_dump(mode="json")
+        row.error = error.stored_form()
 
     await session.flush()
 
@@ -332,7 +332,7 @@ def to_schema(row: JobRow, *, stall_seconds: int | None = None) -> Job:
         parameters=row.parameters,
         progress=Progress.model_validate(row.progress) if row.progress else None,
         result=JobResult.model_validate(row.result) if row.result else None,
-        error=JobError.model_validate(row.error) if row.error else None,
+        error=JobError.from_stored(row.error) if row.error else None,
         trace_id=row.trace_id,
         platform_build=row.platform_build,
         progress_at=row.progress_at,

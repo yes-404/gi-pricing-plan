@@ -424,3 +424,38 @@ async def test_detail_returns_a_failed_jobs_error_location(
     body = client.get(f"/api/v1/jobs/{job.id}", headers=caller_headers).json()
     assert body["error"]["location"] == error.model_dump(mode="json")["location"]
     assert body["error"]["location"]["step_id"] == "s_rp"
+
+
+@pytest.mark.req("FR-403")
+async def test_a_refusal_raised_in_a_handler_reaches_the_route_with_its_location(
+    client: TestClient, database: Database, workspace_id, principal, caller_headers
+) -> None:
+    """The route half of the revert proof: through the worker, not a hand-built `JobError`, so
+    reverting only the worker's `location=exc.location` line turns this red."""
+    from app.errors import PlatformError
+    from app.worker import handlers
+    from app.worker.tasks import execute_job
+
+    def handler(params, progress):
+        raise PlatformError(
+            "VALIDATION_FAILED",
+            "The step is invalid",
+            422,
+            "The step is invalid.",
+            location={"step_id": "base premium", "field": "inputs.age"},
+        )
+
+    original = dict(handlers.HANDLERS)
+    handlers.register_handler(JobKind.MODEL_FIT, handler)
+    try:
+        job = await _submit(database, workspace_id, principal, kind=JobKind.MODEL_FIT)
+        assert await execute_job(database, job.id) is JobStatus.FAILED
+    finally:
+        handlers.HANDLERS.clear()
+        handlers.HANDLERS.update(original)
+
+    error = client.get(f"/api/v1/jobs/{job.id}", headers=caller_headers).json()["error"]
+    assert error["code"] == "VALIDATION_FAILED"
+    assert error["location"]["step_id"] == "base premium"
+    assert error["location"]["field"] == "inputs.age"
+    assert "_location" not in error["detail"]

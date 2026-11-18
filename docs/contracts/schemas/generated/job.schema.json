@@ -66,12 +66,12 @@
     },
     "JobErrorLocation": {
       "additionalProperties": false,
-      "description": "Where in the caller's own artifact a deterministic refusal points (#1917, `07` §4.1).\n\nIdentifiers only: a step id, a path inside that step, a reference, a name the artifact\nitself declares. **Never a submitted value** is what the raise sites guarantee, by filling\nthis only from the caller's own artifact; no pattern can prove it. What the model itself\nenforces is the source field's grammar (DP-2): `extra=\"forbid\"` (no other key), `str` only\n(a JSON number is refused), and one pattern per key (no whitespace or free text in a step\nid, a reference, a dotted path of identifiers). A digit string such as `\"42\"` or `\"0.05\"`\nsatisfies the `step_id` and name patterns and is NOT refused. The key set is the one\n`InputFreeError.located` uses, so a `located` mapping builds this one to one.",
+      "description": "Where in the caller's own artifact a deterministic refusal points (#1917, `07` §4.1).\n\nIdentifiers only: a step id, a path inside that step, a reference, a name the artifact\nitself declares. **Never a submitted value** is what the raise sites guarantee, by filling\nthis only from the caller's own artifact; no pattern can prove it. The model gives `ref` and\n`structure` the wire form of an artifact reference (`REF_PATTERN`), `peril` a `PerilCode`\nand every other key a non-empty `str`; it refuses any other key, a JSON number and a location\nwith no key set. A digit string such as `\"42\"` is a valid value and is NOT refused. The key\nset is the one #1911 accepted.",
       "properties": {
         "factor": {
           "anyOf": [
             {
-              "pattern": "^((banding|custom_metric|custom_objective|dataset|dataset_version|deployment|dossier|gipp_check|grouping|model|monitor|optimisation_run|peril_structure|rate_table|rating_algorithm|rating_version|reference_table|regression_suite|sub_graph|validation_rule|validation_rule_set):[a-z0-9][a-z0-9-]{1,62}|factor:[a-z0-9][a-z0-9_-]{1,62})@[1-9][0-9]*$",
+              "minLength": 1,
               "type": "string"
             },
             {
@@ -84,7 +84,7 @@
         "feature": {
           "anyOf": [
             {
-              "pattern": "^[A-Za-z0-9_][A-Za-z0-9_.:-]{0,127}$",
+              "minLength": 1,
               "type": "string"
             },
             {
@@ -97,8 +97,7 @@
         "field": {
           "anyOf": [
             {
-              "maxLength": 256,
-              "pattern": "^[A-Za-z_][A-Za-z0-9_]*(\\[[0-9]+\\])?(\\.[A-Za-z_][A-Za-z0-9_]*(\\[[0-9]+\\])?)*$",
+              "minLength": 1,
               "type": "string"
             },
             {
@@ -111,7 +110,7 @@
         "interaction": {
           "anyOf": [
             {
-              "pattern": "^[A-Za-z0-9_][A-Za-z0-9_.:-]{0,127}$",
+              "minLength": 1,
               "type": "string"
             },
             {
@@ -124,7 +123,7 @@
         "key": {
           "anyOf": [
             {
-              "pattern": "^[A-Za-z0-9_][A-Za-z0-9_.:-]{0,127}$",
+              "minLength": 1,
               "type": "string"
             },
             {
@@ -137,7 +136,7 @@
         "objective": {
           "anyOf": [
             {
-              "pattern": "^((banding|custom_metric|custom_objective|dataset|dataset_version|deployment|dossier|gipp_check|grouping|model|monitor|optimisation_run|peril_structure|rate_table|rating_algorithm|rating_version|reference_table|regression_suite|sub_graph|validation_rule|validation_rule_set):[a-z0-9][a-z0-9-]{1,62}|factor:[a-z0-9][a-z0-9_-]{1,62})@[1-9][0-9]*$",
+              "minLength": 1,
               "type": "string"
             },
             {
@@ -150,7 +149,7 @@
         "operand": {
           "anyOf": [
             {
-              "pattern": "^[A-Za-z0-9_][A-Za-z0-9_.:-]{0,127}$",
+              "minLength": 1,
               "type": "string"
             },
             {
@@ -163,7 +162,7 @@
         "peril": {
           "anyOf": [
             {
-              "pattern": "^[A-Za-z0-9_][A-Za-z0-9_.:-]{0,127}$",
+              "pattern": "^[A-Z][A-Z0-9_]{0,31}$",
               "type": "string"
             },
             {
@@ -189,7 +188,7 @@
         "step_id": {
           "anyOf": [
             {
-              "pattern": "^\\S{1,128}$",
+              "minLength": 1,
               "type": "string"
             },
             {

@@ -387,14 +387,56 @@ async def test_a_refusal_carrying_a_location_stores_it_and_never_a_submitted_val
     row = await _run(database, workspace_id, principal, handler, params={"step_id": _SENTINEL})
 
     assert row.error is not None
-    located = JobError.model_validate(row.error).location
+    located = JobError.from_stored(row.error).location
     assert located == JobErrorLocation(step_id="s_rp", field="inputs.age")
     assert _SENTINEL not in str(row.error)
     assert row.parameters == {"step_id": _SENTINEL}  # the one place the request's value lives
 
 
+#: The keys of `JobError` as it stood at origin/main 5564a6d1: a stored row holds these and no
+#: other, so the previous version (`extra="forbid"`) reads it (`07` NFR-531). The frozen copy of
+#: that model itself is held in `packages/model-schema/tests/test_jobs.py`.
+_PREVIOUS_JOB_ERROR_KEYS = {"code", "message", "retryable", "detail", "trace_id"}
+
+
+@pytest.mark.req("NFR-531")
+async def test_a_stored_located_row_keeps_the_location_in_detail_for_the_previous_reader(
+    database: Database, workspace_id, principal
+) -> None:
+    def handler(params: dict[str, Any], progress: ProgressCallback) -> JobResult:
+        raise PlatformError(
+            "VALIDATION_FAILED", "The step is invalid", 422, location={"step_id": "base premium"}
+        )
+
+    row = await _run(database, workspace_id, principal, handler)
+
+    assert row.error is not None
+    assert set(row.error) <= _PREVIOUS_JOB_ERROR_KEYS, row.error
+    assert row.error["detail"] == {"_location": {"step_id": "base premium"}}
+    assert JobError.from_stored(row.error).location == JobErrorLocation(step_id="base premium")
+
+
 @pytest.mark.req("FR-403")
-async def test_a_refusal_without_a_location_stores_none_and_an_old_row_still_validates(
+@pytest.mark.parametrize("bad", [{}, {"nope": "x"}, {"step_id": 42}, {"ref": "not-a-reference"}])
+async def test_a_location_that_cannot_be_built_leaves_the_job_under_its_own_code(
+    database: Database, workspace_id, principal, bad: dict[str, Any]
+) -> None:
+    """Review of #1930, point 3: a refusal never loses its code to its own location."""
+
+    def handler(params: dict[str, Any], progress: ProgressCallback) -> JobResult:
+        raise PlatformError("VALIDATION_FAILED", "The step is invalid", 422, location=bad)
+
+    row = await _run(database, workspace_id, principal, handler)
+
+    assert row.error is not None
+    assert row.error["code"] == "VALIDATION_FAILED"
+    assert set(row.error) <= _PREVIOUS_JOB_ERROR_KEYS
+    assert row.error["detail"] == {}
+    assert JobError.from_stored(row.error).location is None
+
+
+@pytest.mark.req("FR-403")
+async def test_a_refusal_without_a_location_stores_no_location_key_at_all(
     database: Database, workspace_id, principal
 ) -> None:
     def handler(params: dict[str, Any], progress: ProgressCallback) -> JobResult:
@@ -403,7 +445,6 @@ async def test_a_refusal_without_a_location_stores_none_and_an_old_row_still_val
     row = await _run(database, workspace_id, principal, handler)
 
     assert row.error is not None
-    assert row.error["location"] is None
-    # A row stored before `location` existed has no such key at all.
-    old = {k: v for k, v in row.error.items() if k != "location"}
-    assert JobError.model_validate(old).location is None
+    assert set(row.error) <= _PREVIOUS_JOB_ERROR_KEYS
+    assert row.error["detail"] == {}
+    assert JobError.from_stored(row.error).location is None
