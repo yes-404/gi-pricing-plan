@@ -86,8 +86,11 @@ async def stored_version_bytes(
     payload: bytes,
     *,
     author: UUID | None = None,
+    algorithm_ref: str | None = None,
+    pins: dict[str, Any] | None = None,
 ) -> tuple[str, str]:
-    """`stored_version` for a bundle's bytes built in the test (#1943)."""
+    """`stored_version` for a bundle's bytes built in the test (#1943). `algorithm_ref` and
+    `pins` are the row's, for a test that needs `revalidate` to read them."""
     import json
 
     content_hash = json.loads(payload)["content_hash"]
@@ -103,6 +106,8 @@ async def stored_version_bytes(
                 status="approved",
                 dataset_version_id=uuid4(),
                 model_ref="model:motor-ad-frequency@7",
+                algorithm_ref=algorithm_ref,
+                pins=pins,
                 created_by=author or new_uuid7(),
                 bundle={
                     "content_hash": content_hash,
@@ -375,6 +380,51 @@ async def test_submit_and_deploy_refuse_a_bundle_missing_its_offset_source_by_na
         else deploy(client, deployer, "dev", ref)
     )
     _assert_unpinned_problem(refused, ref, content_hash)
+    assert await deployments_written(database, workspace_id) == 0
+    events = await refusal_events(database, workspace_id)
+    assert [e.entity_ref for e in events] == [ref]
+
+
+@pytest.mark.req("FR-217")
+@pytest.mark.req("FR-237")
+@pytest.mark.req("FR-240")
+@pytest.mark.asyncio
+async def test_deploy_refuses_a_version_mounting_a_sub_graph_its_pins_do_not_carry_by_name(
+    client: TestClient, database: Database, blob_store: Any, workspace_id: UUID, seat: Any
+) -> None:
+    """#1943: `revalidate`'s second half (`check_rateable_intent`) refuses a version, with pins,
+    whose algorithm mounts a sub-graph those pins do not carry at that version
+    (`RATING_VERSION_UNPINNED`). It answered 500 (the code was not a load-guard code); it is now a
+    409 with one `rating_version.load_refused` event and no Deployment. The stored Bundle is the
+    clean fixture, so the first half passes and the refusal is the second half's."""
+    from backend.tests.test_rating_version_compile import (
+        _empty_pins,
+        _mounting_algorithm,
+        _ncd_sub_graph,
+    )
+
+    deployer = await seat("deployer", "analyst")
+    made = client.post("/api/v1/sub-graphs", json=_ncd_sub_graph(), headers=deployer.headers)
+    assert made.status_code == 201, made.text
+    algorithm = client.post(
+        "/api/v1/rating-algorithms", json=_mounting_algorithm(), headers=deployer.headers
+    )
+    assert algorithm.status_code == 201, algorithm.text
+    ref, content_hash = await stored_version_bytes(
+        database,
+        blob_store,
+        workspace_id,
+        (FIXTURES / "clean.bundle.json").read_bytes(),
+        algorithm_ref="rating_algorithm:mounting@1",
+        pins=_empty_pins(),
+    )
+    refused = deploy(client, deployer, "dev", ref)
+    assert refused.status_code == REFUSAL_STATUS, refused.text
+    body = refused.json()
+    assert body["code"] == "RATING_VERSION_UNPINNED"
+    assert ref in body["detail"]
+    assert "sub_graph:ncd-ladder@1" in body["detail"]
+    assert content_hash.removeprefix("sha256:") in body["detail"]
     assert await deployments_written(database, workspace_id) == 0
     events = await refusal_events(database, workspace_id)
     assert [e.entity_ref for e in events] == [ref]
