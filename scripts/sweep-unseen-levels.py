@@ -69,13 +69,20 @@ Classes (each counts versions; a version can carry several):
                             Bundle carries); `not-scored` = nothing the runtime scores reads the
                             GLM. A GLM is scored when a model_call names it, directly or as a Peril
                             Structure's component, or when a scored GLM reads it as its offset
-                            model, however deep (`runtime.inlined_algorithms`, `load_glm_scorers`
-                            and `scorer_chain` decide this: the sweep does not re-derive it).
+                            model (`runtime.inlined_algorithms`, `load_glm_scorers` and
+                            `scorer_chain` decide this, and follow an offset chain to its end: the
+                            sweep does not re-derive it. That the chain is followed says nothing of
+                            whether the scorer prices it: it refuses a chain two deep).
                             Another input type, a nullable input, an approximation call, a value
                             from a step or a second input stays PLAIN, as do an input-contract
                             entry with no `nullable` key, a Factor that no model_call maps in its
                             `feature_map`, and a Factor that any interaction Factor of the same
-                            fit takes as an operand (a cell of the cross may be one the fit lacks).
+                            fit takes as an operand (a cell of the cross may be one the fit
+                            lacks). A Factor that a GLM takes ONLY as an operand of a
+                            cross (no main effect in that GLM) is judged on the levels the
+                            cross's cells show for it: the closed input's domain must lie
+                            within them, in every cross that takes it, or the version is
+                            PLAIN.
     NULLLEVEL               a Banding Factor whose Banding names a `null_level` the fit has no
                             relativity for: a missing or out-of-range quote reaches it.
     GROUPING                a Grouping Factor with a target level the fit has no relativity for.
@@ -139,6 +146,7 @@ from model_schema import (
     UnseenCellState,
     UnseenLevelBehaviour,
 )
+from pricing_core.modelling.factors import CROSS_SEPARATOR
 from pricing_core.modelling.glm import _unseen_cell_reports, _unseen_level_gaps
 from pricing_core.rating.compile import Bundle, JdmGraph
 from pricing_core.rating.runtime import (
@@ -276,6 +284,32 @@ def _interaction_operand_ids(factors: list[Factor]) -> set[Any]:
     return seen
 
 
+def _levels_a_cross_shows(
+    factors: list[Factor], relativities: dict[str, Any]
+) -> dict[Any, list[set[str] | None]]:
+    """For each Factor an interaction in `factors` takes as a direct operand, one entry per such
+    interaction: the levels that operand shows in that interaction's fitted cells (the cell label
+    split at its separator, the operand's own position), or `None` when they cannot be read (a
+    nested interaction as the operand, or a cell that does not split into one part per operand).
+    These are the only levels the cross can score for the operand (FR-2143)."""
+    by_id = {f.id: f for f in factors}
+    shown: dict[Any, list[set[str] | None]] = {}
+    for cross in factors:
+        if cross.type is not FactorType.INTERACTION:
+            continue
+        cells = [e.level.split(CROSS_SEPARATOR) for e in relativities.get(cross.slug, ())]
+        width = len(cross.operand_factor_ids)
+        readable = all(len(parts) == width for parts in cells)
+        for position, operand_id in enumerate(cross.operand_factor_ids):
+            operand = by_id.get(operand_id)
+            if operand is None or operand.type is FactorType.INTERACTION:
+                continue
+            shown.setdefault(operand_id, []).append(
+                {parts[position] for parts in cells} if readable else None
+            )
+    return shown
+
+
 def _findings(bundle: Bundle) -> tuple[int, set[str], set[str], set[str]]:
     """The GLM models in `bundle`, the classes its fits and Factors fall into, the reason words of a
     NOTREACHABLE version, and the other model families it pins. Each `model:` payload is classified
@@ -363,6 +397,20 @@ def _findings(bundle: Bundle) -> tuple[int, set[str], set[str], set[str]]:
                 reasons.add("closed-input")
             else:
                 open_factor = True
+        # A Factor this GLM consumes only as an operand of a cross has no relativities of its own
+        # here, so the loop above never reaches it. Its reachable levels are those the closed input
+        # allows, and each cross that takes it must show every one of them (FR-2143): the levels
+        # the cross's own cells show are never the whole story. A Factor with a main effect
+        # in this GLM is the first branch above, and is never closed when a cross takes it.
+        for factor in undeclared:
+            if factor.slug in fitted or factor.type is not FactorType.IDENTITY or not scoring:
+                continue
+            for shown in _levels_a_cross_shows(factors, fit.relativities).get(factor.id, ()):
+                if shown is None or not all(
+                    _fed_by_a_closed_input(graph, scored_by, call, factor.slug, shown)
+                    for graph, scored_by, call in scoring
+                ):
+                    open_factor = True
         for gap in _unseen_level_gaps(fit.relativities, undeclared, bandings, groupings):
             reached = {r.value for r in gap.reached_by}
             kinds.add("GROUPING" if reached == {"grouping_target"} else "NULLLEVEL")

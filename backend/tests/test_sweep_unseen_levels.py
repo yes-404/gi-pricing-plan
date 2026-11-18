@@ -623,7 +623,9 @@ def test_an_offset_glm_over_the_whole_domain_is_scored_not_unscored() -> None:
 
 
 @pytest.mark.req("FR-2143")
-def test_an_offset_of_an_offset_is_followed_to_its_end() -> None:
+def test_the_sweep_follows_an_offset_chain_to_classify_it_and_says_nothing_of_pricing_it() -> None:
+    """The sweep follows a chain of offset models to its end to decide which GLMs are scored. It
+    does not say the scorer prices the chain: `test_a_chain_two_deep_is_refused_by_the_scorer`."""
     bundle = _her_offset(["A", "B", "C"])
     payloads = bundle["resolved_payloads"]
     third = "model:motor-third-glm@1"
@@ -1103,3 +1105,172 @@ def test_each_version_pinning_another_family_gets_its_own_line() -> None:
         "glm models examined: 1; its other models were not)",
     ]
     assert "INTERACTION-LOWERBOUND reachable@3 status=approved" in lines
+
+
+# --- her 2026-11-18 case: a Factor consumed as a main effect AND only as an operand of a cross ---
+
+_CROSS_GLM = "model:motor-cross-glm@1"
+
+
+def _cross_only_glm() -> dict[str, Any]:
+    """A GLM payload fitted on the cross alone (region x yoa, cells for A and B only): the clean
+    bundle's own model, whose fit has no `region` relativities."""
+    payload: dict[str, Any] = copy.deepcopy(_clean()["resolved_payloads"][_MODEL])
+    assert set(payload["fit_result"]["relativities"]) == {"region_x_yoa"}
+    return payload
+
+
+def _region_main_effect_over_abc() -> dict[str, Any]:
+    """Region a main effect fitted A, B, C, the input's domain A, B, C (closed): 3 x 2 x 4 = 24
+    combinations of the contract's enums."""
+    bundle = _main_effects()
+    _region_fitted(bundle, _MODEL, ["A", "B", "C"])
+    _set_input(bundle, "region", domain=["A", "B", "C"])
+    return bundle
+
+
+def _her_cross_as_the_offset_model() -> dict[str, Any]:
+    bundle = _region_main_effect_over_abc()
+    payloads = bundle["resolved_payloads"]
+    payloads[_CROSS_GLM] = _cross_only_glm()
+    payloads[_MODEL]["spec"]["offset"] = {
+        "kind": "model", "column": None, "offset_model_ref": _CROSS_GLM,
+    }
+    return bundle
+
+
+def _her_cross_on_a_second_model_call() -> dict[str, Any]:
+    bundle = _region_main_effect_over_abc()
+    bundle["resolved_payloads"][_CROSS_GLM] = _cross_only_glm()
+    nodes = bundle["graph"]["nodes"]
+    nodes["s_risk2"] = {**nodes["s_risk"], "model_ref": _CROSS_GLM, "produces": ["risk2"]}
+    _mirror_the_second_call(bundle, _CROSS_GLM)
+    return bundle
+
+
+def _cross_showing_every_level_as_the_offset_model() -> dict[str, Any]:
+    """Her shape (a) with the domain A, B: the cross's cells show every level the input admits."""
+    bundle = _main_effects()
+    payloads = bundle["resolved_payloads"]
+    payloads[_CROSS_GLM] = _cross_only_glm()
+    payloads[_MODEL]["spec"]["offset"] = {
+        "kind": "model", "column": None, "offset_model_ref": _CROSS_GLM,
+    }
+    return bundle
+
+
+_HER_SHAPES = {
+    "cross-as-the-offset-model": _her_cross_as_the_offset_model,
+    "cross-on-a-second-model-call": _her_cross_on_a_second_model_call,
+}
+
+
+@pytest.mark.req("FR-2143")
+@pytest.mark.parametrize("name", sorted(_HER_SHAPES))
+def test_a_factor_a_cross_only_glm_takes_as_an_operand_is_reachable_with_a_level_the_cross_lacks(
+    name: str,
+) -> None:
+    bundle = _HER_SHAPES[name]()
+    rc, lines = _run([_row(bundle, "probe", 1)])
+    refusals = _refusals(bundle)
+
+    assert len(_quote_combinations(bundle)) == 24
+    assert len(refusals) == 8, refusals  # every region=C quote
+    assert all("UNSEEN_LEVEL_BEHAVIOUR_REQUIRED" in line for line in refusals), refusals
+    assert all("'region', 'C'" in line for line in refusals), refusals
+    assert "PLAIN probe@1 status=approved" in lines, lines
+    assert not any(line.startswith("NOTREACHABLE ") for line in lines), lines
+    assert rc == 1
+
+
+def _operand_only_open() -> dict[str, Any]:
+    """Her first note: the clean bundle, whose region feeds only the cross (no main effect), with
+    the input's domain widened to A, B, C: the cross has no cell for region C."""
+    bundle = copy.deepcopy(_clean())
+    _set_input(bundle, "region", domain=["A", "B", "C"])
+    return bundle
+
+
+@pytest.mark.req("FR-2143")
+def test_a_factor_that_only_feeds_a_cross_is_reachable_with_a_level_the_cross_lacks() -> None:
+    bundle = _operand_only_open()
+    rc, lines = _run([_row(bundle, "operand", 1)])
+    refusals = _refusals(bundle)
+
+    assert refusals, "the real scorer scored every combination"
+    assert all("UNSEEN_LEVEL_BEHAVIOUR_REQUIRED" in line for line in refusals), refusals
+    assert "PLAIN operand@1 status=approved" in lines, lines
+    assert rc == 1
+
+
+@pytest.mark.req("FR-2143")
+def test_a_cross_showing_every_level_the_input_admits_leaves_the_factor_closed() -> None:
+    bundle = _cross_showing_every_level_as_the_offset_model()
+    rc, lines = _run([_row(bundle, "covered", 1)])
+
+    assert "NOTREACHABLE covered@1 status=approved (closed-input)" in lines, lines
+    assert rc == 0
+    assert _refusals(bundle) == []
+
+
+def _agree(bundle: dict[str, Any], lines: list[str]) -> None:
+    """The sweep and the real scorer agree: a version the sweep lists NOTREACHABLE has no quote the
+    scorer refuses, over every combination of the input contract's enums."""
+    listed = any(line.startswith("NOTREACHABLE fixture@1 ") for line in lines)
+    refusals = _refusals(bundle)
+    assert not (listed and refusals), (
+        f"the sweep lists NOTREACHABLE and the scorer refuses {len(refusals)} of "
+        f"{len(_quote_combinations(bundle))} quotes"
+    )
+
+
+def _decides_the_outcome() -> dict[str, dict[str, Any]]:
+    """Fixtures where a wrong classification changes the outcome: the scorer refuses a quote that
+    NOTREACHABLE would call impossible. The older fixtures list C in a Factor's relativities with
+    no coefficient, so the scorer scores C as the base level and refuses nothing: they agree with
+    any classification that says NOTREACHABLE, and the test could not fail on them."""
+    return {
+        **{name: build() for name, build in _HER_SHAPES.items()},
+        "operand-only-open": _operand_only_open(),
+    }
+
+
+@pytest.mark.req("FR-2143")
+@pytest.mark.parametrize("name", sorted(_decides_the_outcome()))
+def test_the_sweep_does_not_list_notreachable_a_version_whose_quotes_the_scorer_refuses(
+    name: str,
+) -> None:
+    bundle = _decides_the_outcome()[name]
+    _rc, lines = _run([_row(bundle, "fixture", 1)])
+
+    assert _refusals(bundle), "the fixture was meant to be refused by the real scorer"
+    _agree(bundle, lines)
+
+
+@pytest.mark.req("FR-2143")
+@pytest.mark.parametrize("name", sorted(_decides_the_outcome()))
+def test_the_agreement_check_fails_for_a_wrong_classification(name: str) -> None:
+    """The check bites: given the line a wrong classification would print, it raises."""
+    bundle = _decides_the_outcome()[name]
+    wrong = ["NOTREACHABLE fixture@1 status=approved (closed-input)"]
+
+    with pytest.raises(AssertionError, match="the scorer refuses 8 of 24"):
+        _agree(bundle, wrong)
+
+
+@pytest.mark.req("FR-2143")
+def test_a_chain_two_deep_is_refused_by_the_scorer() -> None:
+    """The gap the sweep's chain-following text does not hide (FR-116 says an offset includes the
+    source model's own offset): the scorer refuses every quote of a chain two deep with
+    `MODEL_OFFSET_MISSING`. Not fixed here; it is recorded as its own issue under #1510."""
+    bundle = _her_offset(["A", "B", "C"])
+    payloads = bundle["resolved_payloads"]
+    third = "model:motor-third-glm@1"
+    payloads[third] = copy.deepcopy(payloads[_SECOND])
+    payloads[_SECOND]["spec"]["offset"] = {
+        "kind": "model", "column": None, "offset_model_ref": third,
+    }
+    refusals = _refusals(bundle)
+
+    assert len(refusals) == len(_quote_combinations(bundle)) == 24
+    assert all("MODEL_OFFSET_MISSING" in line for line in refusals), refusals
