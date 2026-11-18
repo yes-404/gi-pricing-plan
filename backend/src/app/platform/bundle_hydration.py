@@ -2,11 +2,11 @@
 
 `hydrate` is the only caller of `load_bundle` in `backend/src`, so a Bundle compiled before the
 `control`-intent guard existed cannot price: `load_bundle` refuses it with a load-guard code
-(`LOAD_GUARD_CODES`: `CONTROL_FACTOR_IN_RATEABLE_PATH`, or `MODEL_TERM_UNRESOLVED` for a GLM level
-its Factor cannot produce), and this wrapper turns that into a decided answer — a 409
-problem (the request is valid; the stored artifact conflicts with the current rules), never a
-500 — and records the refusal as an Audit Event (NFR-498). `test_hydration_census` holds both
-"only caller" claims.
+(`LOAD_GUARD_CODES`: `CONTROL_FACTOR_IN_RATEABLE_PATH`; `MODEL_TERM_UNRESOLVED` for a GLM level
+its Factor cannot produce; `RATING_VERSION_UNPINNED` for a payload the Bundle pins and does not
+carry), and this wrapper turns that into a decided answer — a 409 problem (the request is
+valid; the stored artifact conflicts with the current rules), never a 500 — and records the
+refusal as an Audit Event (NFR-498). `test_hydration_census` holds both "only caller" claims.
 
 **The event survives the refusal**: it is written in its own transaction, because the request
 that raises would otherwise roll it back. **One event per process per hash** (DP-1): the slot's
@@ -50,6 +50,7 @@ __all__ = [
 LOAD_GUARD_CODES: Mapping[str, str] = {
     "CONTROL_FACTOR_IN_RATEABLE_PATH": "A stored bundle prices on a control-intent Factor",
     "MODEL_TERM_UNRESOLVED": "A stored bundle prices a level its Factor cannot produce",
+    "RATING_VERSION_UNPINNED": "A stored bundle does not carry what it pins",
 }
 #: The Audit Event action for a refused load (`03` §4.3, NFR-498).
 REFUSAL_ACTION = "rating_version.load_refused"
