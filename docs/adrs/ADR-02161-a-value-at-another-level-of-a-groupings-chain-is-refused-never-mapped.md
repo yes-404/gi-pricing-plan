@@ -43,8 +43,10 @@ Refuse, and change no price that is right today.
    refuses a value that is a source level of one of its ancestors
    (`GROUPING_VALUE_AT_ANCESTOR_LEVEL`), naming the Factor and never the value. A value the
    Grouping maps is untouched; a value no ancestor knows keeps the declared behaviour. The
-   ancestors travel with the Groupings: every database-backed path loads them, and a Rating
-   Version compiled from now on carries them in its Bundle. `error` behaviour is unchanged,
+   ancestors travel with the Groupings. What must hold: every path that resolves a Grouping Factor
+   on stored data is given the chain as far as the workspace holds it; `load_groupings` owns
+   that, and a path that reads a stored Grouping for resolution any other way is a defect against
+   this decision. A Rating Version compiled from now on carries them in its Bundle. `error` behaviour is unchanged,
    and its message now counts the levels it did not map rather than listing them (NFR-499).
    *(Amended 2026-11-18, the maintainer's ruling.)* The predict route
    (`POST /models/{id}/predict`) answers this refusal 409, as it answers every refusal of a row

@@ -153,7 +153,8 @@ Terms from `00-overview.md` §2.2 are used unchanged. Additional terms owned her
 > rows are unmapped the fit is not refused: each of a GLM, a GBM and an EBM fit result records
 > `grouping_unmapped`, one entry per such Factor with its `rows` and `exposure` (`None` for a fit with no exposure column), and a GBM
 > fit records the same count over its holdout as `holdout_grouping_unmapped`, which is counted
-> and never refused. Both fields are optional: `None` is *not recorded* (a Model fitted before
+> and never refused by this none-mapped rule (a holdout value at an ancestor's level is refused like any
+> other value, by the rule of (3)). Both fields are optional: `None` is *not recorded* (a Model fitted before
 > this clause), `()` is *every row mapped*, never one for the other. The model detail view
 > states the rows and exposure in words. A rate-table weights join (`03` FR-231) refuses a
 > Grouping Factor key whose portfolio column maps none of its rows by the same rule, as a
@@ -164,8 +165,10 @@ Terms from `00-overview.md` §2.2 are used unchanged. Additional terms owned her
 > (`GROUPING_VALUE_AT_ANCESTOR_LEVEL`). The text names
 > the Factor and Grouping refs and never the value (NFR-499); a value the Grouping maps is
 > untouched, a value no ancestor knows keeps the declared behaviour, and `error` is unchanged.
-> The ancestors are read from the Groupings the caller supplies: every database-backed path loads
-> them with `load_groupings` (which follows a chain as far as the workspace holds it), and a
+> The ancestors are read from the Groupings the caller supplies. What must hold: every path that
+> resolves a Grouping Factor on stored data is given the Grouping's chain as far as the workspace
+> holds it. `load_groupings` (`backend/src/app/platform/transformations.py`) owns that, and a path
+> that reads a stored Grouping for resolution any other way is a defect against this clause. A
 > Rating Version compiled
 > after this clause carries them in its Bundle. A Bundle stored before carries none and keeps its
 > behaviour (`03` FR-239). Following the chain to resolve a value is **not built**. The `error`
