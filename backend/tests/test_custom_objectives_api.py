@@ -865,15 +865,29 @@ def test_the_objective_create_model_keeps_an_integer_money_param_an_int() -> Non
     assert type(request.params["cap"]) is int
 
 
+_FLOAT_PARAM_BODY = {
+    "slug": "asymmetric-squared-obj",
+    "template": "asymmetric_squared",
+    "params": {"w_over": 1.5},
+}
+
+
 def test_the_objective_create_model_keeps_a_float_param_a_float() -> None:
     """Control, not a red: a float param stays a float (passes at main too)."""
     from app.api.custom_objectives import CreateCustomObjective
 
-    request = CreateCustomObjective.model_validate(
-        {"slug": "capped-gamma-obj", "template": "capped_gamma", "params": {"w_over": 1.5}}
-    )
+    request = CreateCustomObjective.model_validate(_FLOAT_PARAM_BODY)
     assert request.params == {"w_over": 1.5}
     assert type(request.params["w_over"]) is float
+
+
+def test_the_route_accepts_the_float_param_body_the_model_test_sends(
+    client: TestClient, author: dict[str, str]
+) -> None:
+    """The same body, through the route: `asymmetric_squared` defines `w_over`."""
+    response = client.post("/api/v1/custom-objectives", json=_FLOAT_PARAM_BODY, headers=author)
+    assert response.status_code == 201, response.text
+    assert response.json()["params"] == {"w_over": 1.5}
 
 
 def test_creating_an_objective_with_a_boolean_param_is_refused(

@@ -624,13 +624,30 @@ def test_the_metric_create_model_keeps_an_integer_money_param_an_int() -> None:
     assert type(request.params["cap"]) is int
 
 
+_FLOAT_PARAM_BODY = {
+    "slug": "asymmetric-squared-nll",
+    "template": "asymmetric_squared",
+    "params": {"w_over": 1.5},
+    "direction": "lower_is_better",
+}
+
+
 def test_the_metric_create_model_keeps_a_float_param_a_float() -> None:
     """Control, not a red: a float param stays a float (passes at main too)."""
     from app.api.custom_metrics import CreateCustomMetric
 
-    request = CreateCustomMetric.model_validate({**_BODY, "params": {"w_over": 1.5}})
+    request = CreateCustomMetric.model_validate(_FLOAT_PARAM_BODY)
     assert request.params == {"w_over": 1.5}
     assert type(request.params["w_over"]) is float
+
+
+def test_the_route_accepts_the_float_param_body_the_model_test_sends(
+    client: TestClient, actuary: dict[str, str]
+) -> None:
+    """The same body, through the route: `asymmetric_squared` defines `w_over`."""
+    response = client.post("/api/v1/custom-metrics", json=_FLOAT_PARAM_BODY, headers=actuary)
+    assert response.status_code == 201, response.text
+    assert response.json()["params"] == {"w_over": 1.5}
 
 
 def test_creating_a_metric_with_a_boolean_param_is_refused(
