@@ -397,3 +397,34 @@ async def test_a_valid_offset_ref_is_not_reported_as_unresolvable(
     assert result.ok is True
     assert [p for p in result.problems
             if p.kind is SpecProblemKind.MODEL_OFFSET_UNRESOLVABLE] == []
+
+
+async def _ref_of(database, model_id) -> str:
+    from app.db.models import ModelRow
+
+    async with database.session() as session:
+        row = await session.get(ModelRow, model_id)
+    assert row is not None
+    return f"model:{row.model_family_slug}@{row.version}"
+
+
+@pytest.mark.req("FR-116")
+async def test_a_model_offset_whose_source_has_a_model_offset_is_refused_by_validation(
+    database, blob_store, workspace_id
+) -> None:
+    """#1943: version 1 supports one level of model offset. The residual model B (offset from
+    the base A) is fitted, and a spec C offset from B is a chain: refused here, by name, so
+    validation and the fit agree. The one-level case above (offset from A) stays accepted."""
+    pair = await _fitted_residual_pair(database, blob_store, workspace_id)
+    chained_ref = await _ref_of(database, pair.residual_id)
+    result = await _validate(
+        database, workspace_id, pair.actor,
+        _residual_spec(pair.v2_id, pair.resid_flag_id, pair.split2, ref=chained_ref),
+    )
+    assert result.ok is False
+    problem = next(
+        p for p in result.problems
+        if p.kind is SpecProblemKind.MODEL_OFFSET_UNRESOLVABLE
+    )
+    assert problem.subject == chained_ref
+    assert "MODEL_OFFSET_REF_INVALID" in problem.message

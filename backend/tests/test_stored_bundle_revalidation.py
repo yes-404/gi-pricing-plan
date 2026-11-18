@@ -74,9 +74,22 @@ async def stored_version(
     Returns (`rating_version:<slug>@1`, `content_hash`). `row.bundle` carries exactly the two
     keys `_fetch_bundle` reads: `content_hash` and `blob_sha256`.
     """
+    return await stored_version_bytes(
+        database, blob_store, workspace_id, (FIXTURES / fixture).read_bytes(), author=author
+    )
+
+
+async def stored_version_bytes(
+    database: Database,
+    blob_store: Any,
+    workspace_id: UUID,
+    payload: bytes,
+    *,
+    author: UUID | None = None,
+) -> tuple[str, str]:
+    """`stored_version` for a bundle's bytes built in the test (#1943)."""
     import json
 
-    payload = (FIXTURES / fixture).read_bytes()
     content_hash = json.loads(payload)["content_hash"]
     async with database.unit_of_work() as session:
         ref = await blob_store.put(session, payload, "application/json")
@@ -316,3 +329,52 @@ async def test_a_governance_refusal_is_audited_every_time_as_the_acting_principa
     scored = [e for e in events if e.actor.get("kind") == "system"]
     assert len(scored) == 1
     assert (scored[0].after or {}).get("requested_by") == str(requester.id)
+
+
+def _offset_source_absent_bytes() -> bytes:
+    """The clean bundle, its GLM's model offset naming a source the bundle does not carry."""
+    import json
+
+    raw = json.loads((FIXTURES / "clean.bundle.json").read_text())
+    spec = raw["resolved_payloads"]["model:motor-freq-glm@1"]["spec"]
+    spec["offset"] = {"kind": "model", "offset_model_ref": "model:motor-source@1"}
+    return json.dumps(raw).encode()
+
+
+def _assert_unpinned_problem(response: Any, ref: str, content_hash: str) -> None:
+    assert response.status_code == REFUSAL_STATUS, response.text
+    body = response.json()
+    assert body["code"] == "RATING_VERSION_UNPINNED"
+    assert ref in body["detail"]
+    assert "model:motor-source@1" in body["detail"]
+    assert content_hash.removeprefix("sha256:") in body["detail"]
+
+
+@pytest.mark.req("FR-116")
+@pytest.mark.req("FR-240")
+@pytest.mark.asyncio
+@pytest.mark.parametrize("act", ["submit", "deploy"])
+async def test_submit_and_deploy_refuse_a_bundle_missing_its_offset_source_by_name(
+    act: str,
+    client: TestClient,
+    database: Database,
+    blob_store: Any,
+    workspace_id: UUID,
+    seat: Any,
+) -> None:
+    """#1943 D3: a stored Bundle whose model offset names a source it does not carry is refused
+    at submit and at deploy with `RATING_VERSION_UNPINNED` (409, audited once, no Deployment
+    written); it was an unnamed 500."""
+    deployer = await seat("deployer")
+    ref, content_hash = await stored_version_bytes(
+        database, blob_store, workspace_id, _offset_source_absent_bytes()
+    )
+    refused = (
+        request_into(client, deployer, "prod", ref)
+        if act == "submit"
+        else deploy(client, deployer, "dev", ref)
+    )
+    _assert_unpinned_problem(refused, ref, content_hash)
+    assert await deployments_written(database, workspace_id) == 0
+    events = await refusal_events(database, workspace_id)
+    assert [e.entity_ref for e in events] == [ref]

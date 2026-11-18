@@ -1085,7 +1085,10 @@ async def resolve_offset_model(
 
     Every refusal is named: the ref must name a fitted GLM in this workspace whose link
     equals the new spec's — otherwise the fit would be offset by a number from another
-    scale, the defect class FR-126 refuses for `base_margin`.
+    scale, the defect class FR-126 refuses for `base_margin` — and that GLM must not itself
+    declare a model offset (version 1 supports one level, FR-116 as amended 2026-11-18). This
+    is the one place the rule lives: validation, the fit, compile, `/predict` and backtest
+    all resolve a model offset here.
     """
     parsed = ArtifactRef.model_validate(ref)
     if parsed.type != "model":
@@ -1129,6 +1132,15 @@ async def resolve_offset_model(
             409,
             f"{ref} was fitted with a {ref_spec.link} link and the new spec declares "
             f"{caller_link}; the offset would be a number from another scale (FR-116).",
+        )
+    if ref_spec.offset.kind == "model":
+        raise PlatformError(
+            "MODEL_OFFSET_REF_INVALID",
+            "The model the offset names has a model offset of its own",
+            409,
+            f"{ref} declares a model offset itself, and version 1 supports one level of model "
+            "offset: the offset model's own offset may be a column or an exposure, not another "
+            "model (FR-116, amended 2026-11-18).",
         )
     try:
         factors = await load_factors(
