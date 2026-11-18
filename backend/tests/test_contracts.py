@@ -3295,19 +3295,20 @@ def test_one_sided_path_census_walker_reaches_a_nested_path() -> None:
 
 @pytest.mark.req("FR-451")
 def test_one_sided_path_census_sees_a_planted_nested_property() -> None:
-    """The #1917 shape, planted in memory: `error.location` on the model, not published.
+    """A nested property planted in memory: `error.planted_nested_probe`, on the model only.
 
-    Also the mirror: a nested property the contract keeps and the model drops. Neither edit
-    touches a file on disk.
+    The name is one the job contract does not carry, so the test does not depend on which
+    other change publishes what. Also the mirror: a nested property the contract keeps and
+    the model drops. Neither edit touches a file on disk.
     """
     generated = _load(GENERATED / "job.schema.json")
     authored = _load(_authored_schema("job"))
     assert not {p for p in _one_sided_paths(generated, authored) if p.startswith("error.")}
 
     planted = copy.deepcopy(generated)
-    planted["$defs"]["JobError"]["properties"]["location"] = {"type": "string"}
+    planted["$defs"]["JobError"]["properties"]["planted_nested_probe"] = {"type": "string"}
     found = {p: s for p, s in _one_sided_paths(planted, authored).items() if p.startswith("error.")}
-    assert found == {"error.location": "generated"}
+    assert found == {"error.planted_nested_probe": "generated"}
 
     dropped = copy.deepcopy(generated)
     del dropped["$defs"]["JobError"]["properties"]["code"]
