@@ -428,7 +428,7 @@ async def test_detail_returns_a_failed_jobs_error_location(
 
 @pytest.mark.req("FR-403")
 async def test_a_refusal_raised_in_a_handler_reaches_the_route_with_its_location(
-    client: TestClient, database: Database, workspace_id, principal, caller_headers
+    client: TestClient, database: Database, workspace_id, principal, caller_headers, monkeypatch
 ) -> None:
     """The route half of the revert proof: through the worker, not a hand-built `JobError`, so
     reverting only the worker's `location=exc.location` line turns this red."""
@@ -445,14 +445,11 @@ async def test_a_refusal_raised_in_a_handler_reaches_the_route_with_its_location
             location={"step_id": "base premium", "field": "inputs.age"},
         )
 
-    original = dict(handlers.HANDLERS)
-    handlers.register_handler(JobKind.MODEL_FIT, handler)
-    try:
-        job = await _submit(database, workspace_id, principal, kind=JobKind.MODEL_FIT)
-        assert await execute_job(database, job.id) is JobStatus.FAILED
-    finally:
-        handlers.HANDLERS.clear()
-        handlers.HANDLERS.update(original)
+    # `monkeypatch` puts any handler already registered for `model.fit` back when the test ends
+    # (`test_model_jobs.py` registers one at import, and `register_handler` refuses a second).
+    monkeypatch.setitem(handlers.HANDLERS, JobKind.MODEL_FIT, handler)
+    job = await _submit(database, workspace_id, principal, kind=JobKind.MODEL_FIT)
+    assert await execute_job(database, job.id) is JobStatus.FAILED
 
     error = client.get(f"/api/v1/jobs/{job.id}", headers=caller_headers).json()["error"]
     assert error["code"] == "VALIDATION_FAILED"
