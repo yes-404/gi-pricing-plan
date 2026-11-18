@@ -77,8 +77,9 @@ the reverse of what it was asked.
    **Since #1918 a path on one side only below the top level is not silent:**
    `test_one_sided_path_census_has_no_undeclared_path` fails on any nested path in
    `_field_paths`' symmetric difference that is not in `ONE_SIDED_PATHS` (exact path, with a
-   `<gen|auth>: <O|S|D|U>: why; owner #n` reason, the side tested against the walker), the stale and ceiling tests keep the list honest, and the
-   list only shrinks. A new comparison still intersects; the census is what says what it dropped.
+   `<gen|auth>: <O|S|D|U>: why; owner #n` reason, the side tested against the walker), the stale test keeps each entry honest, and
+   `test_one_sided_path_census_count_equals_its_ceiling` holds the count (it cannot grow or leave a free
+   slot without an edit to the ceiling; a like-for-like swap is refused by no test and shows in review). A new comparison still intersects; the census is what says what it dropped.
 4. **Resolve every disagreement it finds** before the slice ends. A red guard at the end of a
    slice is the same artifact as no guard.
 5. **Prove it fails on deliberately broken input** (`CLAUDE.md` §13 rule 4) — break the

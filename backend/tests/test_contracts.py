@@ -2891,8 +2891,10 @@ def test_every_one_sided_slug_is_declared() -> None:
 # (O open map keyed on one side only / S item shape differs / D field on one side only /
 # U declared and unbuilt), the side it is on (`gen:` the model's generated schema, `auth:` the
 # hand-authored contract; a test recomputes it) and the issue that owns the decision. The
-# list only shrinks: the fix for an entry removes it and lowers `ONE_SIDED_PATHS_CEILING` in
-# the same change.
+# count cannot grow, or leave a free slot, without an edit to `ONE_SIDED_PATHS_CEILING` in the
+# same change: the fix for an entry removes it and lowers the ceiling. A like-for-like swap (one
+# entry fixed, another declared) keeps the count and is refused by no test here; it shows in
+# review as an added line in this list.
 #
 # NOT seen here: a path below an object-valued `additionalProperties` or `patternProperties`
 # (a map's value shape, e.g. `fit_result.relativities`; a later slice of #1918), arm-level
@@ -3183,7 +3185,7 @@ ONE_SIDED_PATHS: Final[dict[str, dict[str, str]]] = {
 }
 
 #: The registry's size at its last edit. Raising it is a visible second edit; lower it in the
-#: same change that removes entries (`test_one_sided_path_census_ceiling_only_shrinks`).
+#: same change that removes entries (`test_one_sided_path_census_count_equals_its_ceiling`).
 ONE_SIDED_PATHS_CEILING: Final = 85
 
 
@@ -3245,17 +3247,18 @@ def test_one_sided_path_census_declarations_are_still_one_sided() -> None:
 
 
 @pytest.mark.req("FR-451")
-def test_one_sided_path_census_ceiling_only_shrinks() -> None:
+def test_one_sided_path_census_count_equals_its_ceiling() -> None:
     """The registry's size equals the ceiling; the ceiling is a second visible edit.
 
     Equal, not at most: with `<=`, fixing a path and leaving the ceiling frees a slot a later
-    declaration can fill unseen.
+    declaration can fill unseen. It does not refuse a like-for-like swap (one entry removed,
+    another declared, count unchanged); that shows in review as an added line in the list.
     """
     size = sum(len(paths) for paths in ONE_SIDED_PATHS.values())
     assert size == ONE_SIDED_PATHS_CEILING, (
         f"ONE_SIDED_PATHS holds {size} entries and its ceiling is {ONE_SIDED_PATHS_CEILING}: "
-        "the list only shrinks (#1918); lower the ceiling with every entry removed, and fix "
-        "the drift instead of declaring it"
+        "the count may not grow or leave a free slot without an edit to the ceiling (#1918): "
+        "lower the ceiling with every entry removed, and fix the drift instead of declaring it"
     )
 
 
