@@ -30,11 +30,14 @@ from model_schema import (
 )
 from pricing_core.modelling import (
     FactorResolutionError,
+    GroupingAncestorLevelError,
     GroupingError,
     fit_glm,
     grouping_ancestors,
 )
+from pricing_core.modelling.factors import resolve_factor_columns
 from pricing_core.modelling.predict import predict_glm, predict_glm_row
+from pricing_core.safe_error import CodedError, safe_error_detail
 
 pytestmark = pytest.mark.req("FR-109")
 
@@ -244,3 +247,29 @@ def test_an_error_behaviour_refusal_names_a_count_never_the_values() -> None:
         text = str(refused.value)
         assert SENTINEL not in text
         assert "1 level" in text
+
+
+# --- the raise site, called directly -------------------------------------------------------
+
+
+@pytest.mark.req("NFR-499", "FR-109")
+def test_the_refusal_resolve_factor_columns_raises_names_no_level() -> None:
+    """The one resolution every caller shares: fit, predict, score and the rate-table weights.
+
+    `test_error_sinks.py` registers the re-wrap in `resolve_factor_columns` (`{refused}` in its
+    f-string) on the strength of this test, so the text is proved free of a level here, once, at
+    the raise site, for every caller. The sentinel is a source level of the ancestor and the
+    value of the column in the frame; the control is that the text names the Factor, the
+    Groupings of the chain and the column, so it is there to be searched.
+    """
+    chain = Chain()
+    frame = pl.DataFrame({"area": [SENTINEL], "fuel": ["x"]})
+    with pytest.raises(GroupingAncestorLevelError) as refused:
+        resolve_factor_columns(frame, chain.factors, groupings=chain.groupings())
+    assert isinstance(refused.value, CodedError)
+    assert refused.value.code == CODE
+    text = str(refused.value)
+    for named in ("'region_f'", "'region'@1", "'fine'@1", "'area'"):
+        assert named in text, f"control: the refusal names {named}"
+    assert SENTINEL not in text
+    assert SENTINEL not in safe_error_detail(refused.value)

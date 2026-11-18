@@ -702,3 +702,39 @@ def test_a_grouping_that_names_a_parent_nobody_supplied_is_refused() -> None:
 @pytest.mark.req("FR-109")
 def test_a_grouping_without_a_parent_needs_no_chain() -> None:
     check_grouping_chain(_manual(), [])
+
+
+@pytest.mark.req("NFR-499", "FR-109")
+def test_every_text_of_the_chain_refusal_names_the_groupings_and_a_count_never_a_level() -> None:
+    """The raise site of the creation-time chain refusal: `test_error_sinks.py` registers
+    `_require_chain`'s `str(exc)` of it (a 422 detail) on the strength of this test.
+
+    The sentinel is a level in the data (a source level the caller's mapping carries) in each of
+    the three shapes `check_grouping_chain` refuses; none of the three texts names it, each names
+    the Grouping (the control: the text is there to be searched), and two carry a count.
+    """
+    sentinel = "ZZ-SENTINEL-1909-CHAIN"
+    # a parent that nobody supplied; the sentinel is one of the child's own source levels
+    orphan = _manual(slug="orphan", mapping={sentinel: "R1"}, parent_grouping_id=uuid4())
+    # a child source level the parent does not produce
+    parent = _manual(slug="parent", mapping={"AB1": "AB"})
+    unproduced = _manual(
+        slug="unproduced", mapping={"AB": "R1", sentinel: "R2"}, parent_grouping_id=parent.id
+    )
+    # one label at two levels: the sentinel is a source level of the parent and of the child
+    both = _manual(slug="both", mapping={sentinel: sentinel})
+    shared = _manual(slug="shared", mapping={sentinel: "R1"}, parent_grouping_id=both.id)
+    cases = (
+        (orphan, [], "GROUPING_PARENT_NOT_FOUND", "orphan", None),
+        (unproduced, [parent], "GROUPING_CHAIN_LEVELS_MISMATCH", "unproduced", "1 of its 2"),
+        (shared, [both], "GROUPING_CHAIN_LEVELS_MISMATCH", "shared", "1 source level"),
+    )
+    for child, ancestors, code, slug, count in cases:
+        with pytest.raises(GroupingError) as refused:
+            check_grouping_chain(child, ancestors)
+        text = str(refused.value)
+        assert refused.value.code == code
+        assert f"'{slug}'" in text, "control: the refusal names the Grouping"
+        if count is not None:
+            assert count in text, "control: the refusal carries its count"
+        assert sentinel not in text
