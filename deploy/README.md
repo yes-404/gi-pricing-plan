@@ -178,11 +178,11 @@ docker compose -f deploy/docker-compose.yml --profile app up -d --wait --scale a
   to its content, and its `status` must be one of the five the platform defines (`draft`,
   `review`, `approved`, `live`, `retired`). **This upgrade is not a rolling upgrade: stop the
   `api` and the `worker`, run `migrate`, then start them. There is no rolling order, and
-  `roll-api.sh` is not used for it.** The new build's start-up check compares the database's
-  guards with the release's own, so a process of one release does not start against the other's
-  schema. The wrong order fails
-  closed: a process refuses to start, and a running process of the previous release answers one
-  action (withdrawing an approved approval request) with a server error that is rolled back.
+  `roll-api.sh` is not used for it.** Each build's start-up check compares the database's guards
+  with its own, so a process of one release does not start against the other's schema. The wrong
+  order fails closed: a process refuses to start, and a running process of the previous release
+  answers one action (withdrawing an approved approval request) with a server error that is
+  rolled back.
   **Before upgrading, run this read-only query** on the database the upgrade will run on. It
   lists the rows the upgrade refuses:
 
@@ -205,9 +205,9 @@ docker compose -f deploy/docker-compose.yml --profile app up -d --wait --scale a
   rows and run the step again.
 
   Optional, and not a condition of the upgrade: `live` and `retired` are held like `approved`,
-  so a later write that touches the `status`, `slug` or `version` of such a row needs a decided
-  approval request for the version's reference. To list versions in `approved`, `live` or
-  `retired` with none:
+  so an update that names `status`, `workspace_id`, `slug` or `version` of such a row, even one
+  that changes nothing, is refused without a decided approval request for the version's
+  reference. To list versions in `approved`, `live` or `retired` with none:
 
   ```sql
   BEGIN READ ONLY;
