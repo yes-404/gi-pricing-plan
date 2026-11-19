@@ -42,6 +42,10 @@ corpus). The corpus uses none of the first four and no other `$ref` sibling, mea
 `docs/contracts/schemas/` (43 `$ref` nodes with a sibling, all `description` or `default`);
 `test_the_contract_corpus_uses_no_keyword_the_walkers_do_not_follow` keeps that true. The
 `prefixItems` merge is declared, not asserted.
+`propertyNames` is not followed either: the corpus uses it once
+(`dislocation-run.schema.json:141`, an `enum` of the quantile keys), declared and not asserted, as
+`prefixItems` is. `unevaluatedItems`, `dependencies` and `$dynamicRef` have no use today and are
+not in the test.
 
 New map walkers take `(document, node, base, path="", *, arm=frozenset())` and return a dict
 keyed by `(arm, dotted.path)`, matching `_type_map` **exactly**, so a key in one map is a key in

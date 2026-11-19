@@ -3334,6 +3334,10 @@ def test_one_sided_path_census_sees_a_planted_nested_property() -> None:
 
 #: Keywords no walker in this file follows. A schema using one would hide fields from every
 #: comparison above while they stay green; the corpus test below keeps the list honest.
+#: `propertyNames` is not followed either, and the corpus uses it once
+#: (`dislocation-run.schema.json:141`, an `enum` of the quantile keys): declared here, and not
+#: asserted, as `prefixItems` is. `unevaluatedItems`, `dependencies` and `$dynamicRef` have no
+#: use today and are not in the test.
 _UNFOLLOWED_KEYWORDS: Final = frozenset(
     {"dependentSchemas", "not", "contains", "unevaluatedProperties"}
 )
