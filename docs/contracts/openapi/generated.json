@@ -5050,6 +5050,16 @@
               }
             ]
           },
+          "finer_level_ae": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FinerLevelDiagnostics"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "gbm": {
             "anyOf": [
               {
@@ -6798,6 +6808,35 @@
         "title": "FactorCreate",
         "type": "object"
       },
+      "FactorFinerLevels": {
+        "additionalProperties": false,
+        "description": "The finer levels of one Factor on a chained grouping, finest first (FR-109).\n\n`factor` is the Factor's slug, as `AeCell.factor` names it; `grouping` is the slug of the\ngrouping the Factor is fitted on, the level each of `levels` is finer than. Only a Factor\nwhose grouping has a parent has an entry: a grouping with no parent has no finer level.",
+        "properties": {
+          "factor": {
+            "title": "Factor",
+            "type": "string"
+          },
+          "grouping": {
+            "title": "Grouping",
+            "type": "string"
+          },
+          "levels": {
+            "items": {
+              "$ref": "#/components/schemas/FinerLevelAe"
+            },
+            "minItems": 1,
+            "title": "Levels",
+            "type": "array"
+          }
+        },
+        "required": [
+          "factor",
+          "grouping",
+          "levels"
+        ],
+        "title": "FactorFinerLevels",
+        "type": "object"
+      },
       "FactorIntent": {
         "description": "What a factor is *for* (FR-88).\n\n`control` is the load-bearing one: a variable present to absorb variance but never to\nbe rated on — year of account is the standard example. `03` refuses a `control` factor\nreaching a rate table, which only works because the intent is declared here rather than\ninferred later from a name.",
         "enum": [
@@ -6923,6 +6962,76 @@
           "message"
         ],
         "title": "FieldError",
+        "type": "object"
+      },
+      "FinerLevelAe": {
+        "additionalProperties": false,
+        "description": "FR-171's actual versus expected at one level finer than a Factor's own grouping (FR-109).\n\n`name` is the level: the deepest grouping's `column` for the finest, then the slug of each\ngrouping of the chain that produces a coarser one (decision #1908, option (B)). `cells` are\nthe values the chain rebuilt, each an `AeCell` computed by the same arithmetic as\n`PartitionDiagnostics.ae_by_factor`.\n\nThe rows the chain could not rebuild (the column absent, a null, or a value a grouping\nrefuses under `error`) are one named row of their own, \"not available\", with their count,\nexposure, actual and expected, so the level's totals equal the partition's (the\nmaintainer's ruling of 2026-11-17 on #1506). They are never dropped, and a level whose\ncolumn is absent is that row and no cells, never an empty table.",
+        "properties": {
+          "cells": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/AeCell"
+            },
+            "title": "Cells",
+            "type": "array"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "unavailable_actual": {
+            "title": "Unavailable Actual",
+            "type": "number"
+          },
+          "unavailable_expected": {
+            "title": "Unavailable Expected",
+            "type": "number"
+          },
+          "unavailable_exposure": {
+            "description": "Exact decimal as a string; never a binary float (FR-10).",
+            "pattern": "^-?[0-9]+(\\.[0-9]+)?$",
+            "title": "Unavailable Exposure",
+            "type": "string"
+          },
+          "unavailable_rows": {
+            "minimum": 0.0,
+            "title": "Unavailable Rows",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "name",
+          "unavailable_rows",
+          "unavailable_exposure",
+          "unavailable_actual",
+          "unavailable_expected"
+        ],
+        "title": "FinerLevelAe",
+        "type": "object"
+      },
+      "FinerLevelDiagnostics": {
+        "additionalProperties": false,
+        "description": "FR-109's finer-level A/E for train and holdout, side by side (FR-183).\n\nEach partition is over the rows and fitted means its `UniversalDiagnostics` partition's\n`ae_by_factor` reads, so it carries that partition's weighting (FR-184). One entry per\nFactor whose grouping has a parent; `()` on both means computed, and no Factor is chained.",
+        "properties": {
+          "holdout": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/FactorFinerLevels"
+            },
+            "title": "Holdout",
+            "type": "array"
+          },
+          "train": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/FactorFinerLevels"
+            },
+            "title": "Train",
+            "type": "array"
+          }
+        },
+        "title": "FinerLevelDiagnostics",
         "type": "object"
       },
       "FloorAndCapOperation": {
@@ -34627,7 +34736,7 @@
     },
     "/api/v1/models/{slug}/diagnostics": {
       "get": {
-        "description": "The evidence behind a fitted model (FR-170, `02` §5.1), with its `provenance` (FR-2159).\n\nRead, never recomputed. FR-170 makes diagnostics a product of the fit, so this\nendpoint returns what that fit recorded — a screen that recalculated them would be\nshowing numbers no approval could cite.\n\n`?version=` selects a model version, like `GET /models/{slug}`; the latest without it.",
+        "description": "The evidence behind a fitted model (FR-170, `02` §5.1), with its `provenance` (FR-2159).\n\nRead, never recomputed. FR-170 makes diagnostics a product of the fit, so this\nendpoint returns what that fit recorded — a screen that recalculated them would be\nshowing numbers no approval could cite.\n\n`?version=` selects a model version, like `GET /models/{slug}`; the latest without it.\n\nFR-109's finer-level A/E is part of what is returned (`finer_level_ae`, train and holdout):\nevery level of every chained Factor without `?level=`, and with it that level only, for\neach chained Factor that has it. A `level` that is not a level of a chain on the model's\ngroupings is `422 VALIDATION_FAILED`. The valid levels are the stored ones, so the\nparameter is a string checked against the artifact, not an enum. It filters what the fit\nstored and computes nothing (FR-170). `null` is a model fitted before the field was\nstored, with or without `level`, and only a refit gives it one (#1870 (b)).",
         "operationId": "get_model_diagnostics_api_v1_models__slug__diagnostics_get",
         "parameters": [
           {
@@ -34654,6 +34763,23 @@
                 }
               ],
               "title": "Version"
+            }
+          },
+          {
+            "in": "query",
+            "name": "level",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Level"
             }
           },
           {

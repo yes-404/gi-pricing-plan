@@ -674,6 +674,7 @@ async def get_model_diagnostics(
     caller: ReadModels,
     database: DatabaseDep,
     version: Annotated[int | None, Query(ge=1)] = None,
+    level: Annotated[str | None, Query(min_length=1)] = None,
 ) -> DiagnosticsRead:
     """The evidence behind a fitted model (FR-170, `02` §5.1), with its `provenance` (FR-2159).
 
@@ -682,6 +683,14 @@ async def get_model_diagnostics(
     showing numbers no approval could cite.
 
     `?version=` selects a model version, like `GET /models/{slug}`; the latest without it.
+
+    FR-109's finer-level A/E is part of what is returned (`finer_level_ae`, train and holdout):
+    every level of every chained Factor without `?level=`, and with it that level only, for
+    each chained Factor that has it. A `level` that is not a level of a chain on the model's
+    groupings is `422 VALIDATION_FAILED`. The valid levels are the stored ones, so the
+    parameter is a string checked against the artifact, not an enum. It filters what the fit
+    stored and computes nothing (FR-170). `null` is a model fitted before the field was
+    stored, with or without `level`, and only a refit gives it one (#1870 (b)).
     """
     async with database.session() as session:
         model = await service.load_model(
@@ -690,6 +699,8 @@ async def get_model_diagnostics(
         diagnostics = await diagnostics_service.load_diagnostics(
             session, workspace_id=caller.workspace_id, model_id=model.id
         )
+    if level is not None:
+        diagnostics = diagnostics_service.select_finer_level(diagnostics, level)
     return provenance.diagnostics_read(diagnostics, model=model)
 
 

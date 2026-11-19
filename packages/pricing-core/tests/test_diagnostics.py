@@ -1154,6 +1154,24 @@ def test_a_finer_level_with_its_column_absent_is_not_available_never_empty() -> 
 
 
 @pytest.mark.req("FR-109")
+def test_the_chained_factors_are_the_grouping_factors_whose_grouping_has_a_parent() -> None:
+    """One rule for the fit and the diagnostics read (#1506 slice 5): a `grouping` Factor on a
+    chained grouping has a finer level; one on an unchained grouping, an identity Factor, and a
+    Factor whose grouping was not supplied do not."""
+    from pricing_core.modelling.diagnostics import chained_factors
+
+    region, groupings = _postcode_chain_groupings()
+    area = next(g for g in groupings.values() if g.id != region.id)
+    on_region = _factor("region", type=FactorType.GROUPING, grouping_id=region.id)
+    on_area = _factor("area", type=FactorType.GROUPING, grouping_id=area.id)
+    unsupplied = _factor("lost", type=FactorType.GROUPING, grouping_id=uuid4())
+    plain = _factor("age")
+    found = chained_factors([plain, on_area, on_region, unsupplied], groupings)
+    assert [(factor.slug, grouping.slug) for factor, grouping in found] == [("region", "region")]
+    assert chained_factors([on_region], None) == ()
+
+
+@pytest.mark.req("FR-109")
 def test_a_chain_whose_parent_is_gone_is_not_available_and_never_fails_the_fit() -> None:
     """A stored Grouping can name a parent that is gone. The finer-level diagnostics then show
     that level as not available, with the fit's totals, and raise nothing: a diagnostic never
@@ -1219,3 +1237,116 @@ def test_rows_the_chain_refuses_are_one_not_available_row_and_the_totals_still_a
         assert actual == pytest.approx(float(y.sum()))
         assert expected == pytest.approx(float(mu.sum()))
         assert exposure_total == pytest.approx(float(exposure.sum()))
+
+
+def _region_on_a_chain() -> tuple[pl.DataFrame, Factor, dict[UUID, Grouping]]:
+    """A book whose rating Factor is on `region` (reading `area`), chained under `area`
+    (reading the raw `postcode`): the fit resolves as it does today, and the finer levels are
+    rebuilt from `postcode` (decision #1908)."""
+    rng = np.random.default_rng(20261117)
+    n = 2000
+    postcode = rng.choice(["AB1", "AB2", "CD1"], size=n)
+    rate = {"AB1": 0.3, "AB2": 0.1, "CD1": 0.2}
+    frame = pl.DataFrame(
+        {
+            "postcode": postcode,
+            "area": [p[:2] for p in postcode],
+            "exposure_years": np.ones(n),
+            "claim_count": rng.poisson([rate[p] for p in postcode]).astype(float),
+        }
+    )
+    common: dict[str, object] = {
+        "dataset_id": uuid4(),
+        "version": 1,
+        "method": GroupingMethod.MANUAL,
+        "unseen_level_behaviour": UnseenLevelBehaviour.ERROR,
+    }
+    area = Grouping(
+        id=uuid4(), slug="area", column="postcode",
+        mapping={"AB1": "AB", "AB2": "AB", "CD1": "CD"}, **common,  # type: ignore[arg-type]
+    )
+    region = Grouping(
+        id=uuid4(), slug="region", column="area", mapping={"AB": "NORTH", "CD": "SOUTH"},
+        parent_grouping_id=area.id, **common,  # type: ignore[arg-type]
+    )
+    factor = _factor(
+        "region", "area", type=FactorType.GROUPING, grouping_id=region.id
+    )
+    return frame, factor, {area.id: area, region.id: region}
+
+
+@pytest.mark.req("FR-109")
+@pytest.mark.req("FR-183")
+def test_a_fit_time_diagnostic_stores_the_finer_level_ae_for_both_partitions() -> None:
+    """`compute_diagnostics(..., finer_levels=True)` stores, for train and for holdout, exactly
+    what `finer_level_ae` gives over that partition's rows and fitted means."""
+    from pricing_core.modelling.diagnostics import ae_weights, finer_level_ae
+
+    frame, factor, groupings = _region_on_a_chain()
+    train, holdout = frame[:1500], frame[1500:]
+    spec = _spec([factor])
+    fit = fit_glm(train, spec, [factor], groupings=groupings).result
+    result = compute_diagnostics(
+        fit, spec, [factor], train=train, holdout=holdout, groupings=groupings,
+        finer_levels=True,
+    )
+    assert result.finer_level_ae is not None
+    for part, entries in ((train, result.finer_level_ae.train),
+                          (holdout, result.finer_level_ae.holdout)):
+        (entry,) = entries
+        assert (entry.factor, entry.grouping) == ("region", "region")
+        expected = finer_level_ae(
+            "region", groupings[factor.grouping_id], groupings, part,  # type: ignore[index]
+            y=part["claim_count"].to_numpy(),
+            mu=predict_glm(fit, part, [factor], spec, groupings=groupings),
+            ae_weights=ae_weights(spec, part),
+            exposure=part["exposure_years"].to_numpy(),
+            weighted=False,
+        )
+        assert entry.levels == expected
+        assert [level.name for level in entry.levels] == ["postcode", "area"]
+
+
+@pytest.mark.req("FR-109")
+def test_without_the_chain_loaded_the_finer_level_is_not_computed() -> None:
+    """The default leaves the field `None` ("not available"): a caller that has not loaded a
+    chain's parents (a backtest, a surrogate) records nothing rather than failing or guessing."""
+    frame, factor, groupings = _region_on_a_chain()
+    train, holdout = frame[:1500], frame[1500:]
+    spec = _spec([factor])
+    fit = fit_glm(train, spec, [factor], groupings=groupings).result
+    result = compute_diagnostics(
+        fit, spec, [factor], train=train, holdout=holdout, groupings=groupings
+    )
+    assert result.finer_level_ae is None
+
+
+@pytest.mark.req("FR-109")
+@pytest.mark.req("FR-183")
+def test_the_finer_level_must_report_the_same_levels_for_train_and_holdout() -> None:
+    """FR-183 for the finer level: train and holdout over the same Factors and levels, so they
+    read side by side. A level on one partition alone is refused, as is a Factor on one alone."""
+    from decimal import Decimal
+
+    from pydantic import ValidationError
+
+    from model_schema import FactorFinerLevels, FinerLevelAe, FinerLevelDiagnostics
+
+    def entry(*names: str) -> FactorFinerLevels:
+        return FactorFinerLevels(
+            factor="region", grouping="region",
+            levels=tuple(
+                FinerLevelAe(
+                    name=name, unavailable_rows=0, unavailable_exposure=Decimal("0"),
+                    unavailable_actual=0.0, unavailable_expected=0.0,
+                )
+                for name in names
+            ),
+        )
+
+    both = (entry("postcode", "area"),)
+    FinerLevelDiagnostics(train=both, holdout=both)
+    with pytest.raises(ValidationError, match="same factors and levels"):
+        FinerLevelDiagnostics(train=both, holdout=(entry("postcode"),))
+    with pytest.raises(ValidationError, match="same factors and levels"):
+        FinerLevelDiagnostics(train=(entry("postcode"),), holdout=())
