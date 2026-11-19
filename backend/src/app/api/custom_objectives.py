@@ -115,7 +115,7 @@ class CreateCustomObjective(BaseModel):
     #: string. `TemplateParameter.check` does refuse a boolean (`check(True)` raises
     #: `InputFreeError`); the gap is `model-schema`'s `CustomObjective.params`, which is
     #: `dict[str, int | float]` and turns `true` into `1` before `check` sees it, on any
-    #: path that builds the contract without this request model (#1916 owns that gap).
+    #: path that builds the contract without this request model (#1957 owns that gap).
     params: dict[str, StrictInt | StrictFloat] = Field(default_factory=dict)
     #: Omitted means the template's own (§4.5). An author may narrow it and never widen it.
     applicability: Applicability | None = None
