@@ -35,6 +35,14 @@ combinators on 2026-08-22 — before that, every field in every conditional arm 
 and `model-spec` produced its 12 flat properties and nothing from either arm: no `family`, no
 `link`, no `objective`, no `early_stopping`.
 
+**What the walkers do not see, declared.** No walker follows `dependentSchemas`, `not`,
+`contains` or `unevaluatedProperties`; none reads a sibling of a `$ref` other than
+`description` or `default`; and `prefixItems` positions merge into one `[]` path (17 uses in the
+corpus). The corpus uses none of the first four and no other `$ref` sibling, measured over
+`docs/contracts/schemas/` (43 `$ref` nodes with a sibling, all `description` or `default`);
+`test_the_contract_corpus_uses_no_keyword_the_walkers_do_not_follow` keeps that true. The
+`prefixItems` merge is declared, not asserted.
+
 New map walkers take `(document, node, base, path="", *, arm=frozenset())` and return a dict
 keyed by `(arm, dotted.path)`, matching `_type_map` **exactly**, so a key in one map is a key in
 another and two maps can be read against each other. Carry `*, _depth=0` only if the walker

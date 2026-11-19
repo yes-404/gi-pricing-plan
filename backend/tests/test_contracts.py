@@ -3311,21 +3311,108 @@ def test_one_sided_path_census_sees_a_planted_nested_property() -> None:
 
     The name is one the job contract does not carry, so the test does not depend on which
     other change publishes what. Also the mirror: a nested property the contract keeps and
-    the model drops. Neither edit touches a file on disk.
+    the model drops. Neither edit touches a file on disk. What the real pair already reports
+    under `error.` is read first and held constant, so a real one-sided `error.*` path does
+    not fail this test; only the plant, or the drop, changing the answer does.
     """
     generated = _load(GENERATED / "job.schema.json")
     authored = _load(_authored_schema("job"))
-    assert not {p for p in _one_sided_paths(generated, authored) if p.startswith("error.")}
+
+    def under_error(g: dict[str, Any]) -> dict[str, str]:
+        return {p: s for p, s in _one_sided_paths(g, authored).items() if p.startswith("error.")}
+
+    baseline = under_error(generated)
 
     planted = copy.deepcopy(generated)
     planted["$defs"]["JobError"]["properties"]["planted_nested_probe"] = {"type": "string"}
-    found = {p: s for p, s in _one_sided_paths(planted, authored).items() if p.startswith("error.")}
-    assert found == {"error.planted_nested_probe": "generated"}
+    assert under_error(planted) == baseline | {"error.planted_nested_probe": "generated"}
 
     dropped = copy.deepcopy(generated)
     del dropped["$defs"]["JobError"]["properties"]["code"]
-    found = {p: s for p, s in _one_sided_paths(dropped, authored).items() if p.startswith("error.")}
-    assert found == {"error.code": "authored"}
+    assert under_error(dropped) == baseline | {"error.code": "authored"}
+
+
+#: Keywords no walker in this file follows. A schema using one would hide fields from every
+#: comparison above while they stay green; the corpus test below keeps the list honest.
+_UNFOLLOWED_KEYWORDS: Final = frozenset(
+    {"dependentSchemas", "not", "contains", "unevaluatedProperties"}
+)
+#: The only keywords a `$ref` node may carry beside the reference: the walkers follow the
+#: reference and read nothing else on that node.
+_REF_SIBLINGS: Final = frozenset({"description", "default"})
+#: Keywords whose value maps a *name* to a schema: the names are not keywords.
+_NAMED_SCHEMAS: Final = frozenset({"properties", "$defs", "definitions", "patternProperties"})
+_SCHEMA_VALUED: Final = frozenset(
+    {"items", "additionalProperties", "if", "then", "else", *_UNFOLLOWED_KEYWORDS}
+)
+_SCHEMA_LISTS: Final = frozenset({"allOf", "anyOf", "oneOf", "prefixItems"})
+
+
+def _unfollowed(node: Any, where: str = "$") -> list[str]:
+    """Each use, by location, of a keyword the walkers do not follow or of a `$ref` sibling.
+
+    Schema-aware, so a *property* named `not` is not a use of the keyword, and the values of
+    `enum`, `const` and `default` are not read as schemas.
+    """
+    if not isinstance(node, dict):
+        return []
+    found = [f"{where}: keyword {k!r}" for k in sorted(node.keys() & _UNFOLLOWED_KEYWORDS)]
+    if "$ref" in node:
+        found += [
+            f"{where}: $ref beside {k!r}" for k in sorted(node.keys() - _REF_SIBLINGS - {"$ref"})
+        ]
+    for key, value in node.items():
+        if key in _NAMED_SCHEMAS and isinstance(value, dict):
+            for name, sub in value.items():
+                found += _unfollowed(sub, f"{where}.{key}.{name}")
+        elif key in _SCHEMA_VALUED:
+            found += _unfollowed(value, f"{where}.{key}")
+        elif key in _SCHEMA_LISTS and isinstance(value, list):
+            for i, sub in enumerate(value):
+                found += _unfollowed(sub, f"{where}.{key}[{i}]")
+    return found
+
+
+@pytest.mark.req("FR-451")
+@pytest.mark.parametrize(
+    ("schema", "named"),
+    [
+        ({"dependentSchemas": {"a": {}}}, "keyword 'dependentSchemas'"),
+        ({"properties": {"a": {"not": {"type": "null"}}}}, "keyword 'not'"),
+        ({"properties": {"a": {"contains": {"type": "string"}}}}, "keyword 'contains'"),
+        ({"items": {"unevaluatedProperties": False}}, "keyword 'unevaluatedProperties'"),
+        ({"properties": {"a": {"$ref": "#/$defs/X", "type": "string"}}}, "$ref beside 'type'"),
+    ],
+)
+def test_a_keyword_the_walkers_do_not_follow_is_reported_by_name(
+    schema: dict[str, Any], named: str
+) -> None:
+    assert any(named in use for use in _unfollowed(schema)), _unfollowed(schema)
+
+
+@pytest.mark.req("FR-451")
+def test_a_property_named_like_an_unfollowed_keyword_is_not_a_use_of_it() -> None:
+    schema = {
+        "properties": {"not": {"type": "string"}, "a": {"$ref": "#/$defs/X", "default": 1}}
+    }
+    assert _unfollowed(schema) == []
+
+
+@pytest.mark.req("FR-451")
+def test_the_contract_corpus_uses_no_keyword_the_walkers_do_not_follow() -> None:
+    """The guard's declared blind spots are empty today; this keeps them empty.
+
+    Scanned: every schema under `docs/contracts/schemas/`, generated and authored. A use is a
+    new shape for the walkers to learn, or a comparison that has stopped covering a field.
+    """
+    paths = sorted(AUTHORED.rglob("*.schema.json"))
+    assert paths, "no contract schema found: the scan would pass over nothing"
+    found = {
+        str(path.relative_to(AUTHORED)): uses
+        for path in paths
+        if (uses := _unfollowed(_load(path)))
+    }
+    assert found == {}, f"keywords the walkers do not follow: {found}"
 
 
 @pytest.mark.req("FR-64")
