@@ -1318,9 +1318,9 @@
         "title": "AuditEventListing",
         "type": "object"
       },
-      "Backtest": {
+      "BacktestRead": {
         "additionalProperties": false,
-        "description": "The persisted artifact (`02` §4.12, FR-187).\n\nImmutable, and enforced at the privilege layer as well as here (FR-43): a backtest\nis what a monitoring review and a re-approval argue from, and evidence that can change\nafter the decision is not evidence.\n\nNo slug and no version of its own, for the reason `Diagnostics` and `ModelComparison`\nhave none — it is always reached by id, from the Job that produced it or the record that\ncites it. Unlike `Diagnostics` it is **not** one-per-model: a model backtested against\nfour quarters has four, which is the point.",
+        "description": "A Backtest (`02` §4.12), with its `Provenance` (`00` FR-2159).",
         "properties": {
           "computed_at": {
             "format": "date-time",
@@ -1354,6 +1354,9 @@
             "title": "Model Id",
             "type": "string"
           },
+          "provenance": {
+            "$ref": "#/components/schemas/Provenance"
+          },
           "summary": {
             "$ref": "#/components/schemas/BacktestSummary"
           }
@@ -1363,9 +1366,10 @@
           "model_id",
           "dataset_version_id",
           "computed_at",
-          "summary"
+          "summary",
+          "provenance"
         ],
-        "title": "Backtest",
+        "title": "BacktestRead",
         "type": "object"
       },
       "BacktestSummary": {
@@ -5024,9 +5028,9 @@
         "title": "DerivedFrom",
         "type": "object"
       },
-      "Diagnostics": {
+      "DiagnosticsRead": {
         "additionalProperties": false,
-        "description": "The persisted artifact (`02` §4, `diagnostics.schema.json`).\n\nImmutable: computed at fit time and read thereafter (FR-170).\n\n`gbm` is populated from the GBM slice on (FR-174) and is `None` for a GLM, which\nis the honest reading of \"GBM-specific\".\n\n`cross_validation` is populated iff the fit's `GlmSpec.select_by == \"cv\"`\n(FR-112, FR-182, the regularisation-and-CV slice, 2026-08-21) and `None`\notherwise — a fixed-alpha GLM or a GBM was never cross-validated, and `None` is the\nhonest reading of that.\n\n**`backtest` was here and is gone (2026-08-18).** It was declared from Phase 0 and typed\n`None`, and nothing could ever have populated it. FR-170 makes these diagnostics\ncomputed once at fit time and read thereafter, while FR-187's backtest runs against\na *later* Dataset Version — after this artifact is written, and again for every period\nafter that, which one field has no room for. It is its own artifact (`backtests.Backtest`,\n`02` §4.12), and FR-187 carries the amendment. The same removal, for the same\nreason, that `PartitionDiagnostics.double_lift` got.",
+        "description": "A model's Diagnostics (`02` FR-170), with its `Provenance` (`00` FR-2159).",
         "properties": {
           "complexity": {
             "$ref": "#/components/schemas/ComplexityDiagnostic"
@@ -5088,6 +5092,9 @@
             "title": "Model Id",
             "type": "string"
           },
+          "provenance": {
+            "$ref": "#/components/schemas/Provenance"
+          },
           "universal": {
             "$ref": "#/components/schemas/UniversalDiagnostics"
           }
@@ -5097,9 +5104,10 @@
           "model_id",
           "computed_at",
           "universal",
-          "complexity"
+          "complexity",
+          "provenance"
         ],
-        "title": "Diagnostics",
+        "title": "DiagnosticsRead",
         "type": "object"
       },
       "DictionaryUpdate": {
@@ -5370,9 +5378,9 @@
         "title": "DislocationOutcomes",
         "type": "object"
       },
-      "DislocationRun": {
+      "DislocationRunRead": {
         "additionalProperties": false,
-        "description": "03 §4.6; the four attribution fields are present together or not at all.",
+        "description": "A Dislocation Run (`03` §4.6), with its `Provenance` (`00` FR-2159).",
         "properties": {
           "abs_change_pct_quantiles": {
             "anyOf": [
@@ -5530,6 +5538,9 @@
             "title": "Portfolio Dataset Version Id",
             "type": "string"
           },
+          "provenance": {
+            "$ref": "#/components/schemas/Provenance"
+          },
           "totals": {
             "$ref": "#/components/schemas/DislocationTotals"
           }
@@ -5542,9 +5553,10 @@
           "exposure_years",
           "totals",
           "outcomes",
-          "distribution"
+          "distribution",
+          "provenance"
         ],
-        "title": "DislocationRun",
+        "title": "DislocationRunRead",
         "type": "object"
       },
       "DislocationSpec": {
@@ -10403,9 +10415,9 @@
         "title": "Me",
         "type": "object"
       },
-      "MetricCertificate": {
+      "MetricCertificateRead": {
         "additionalProperties": false,
-        "description": "The identity around `CertificateResult` — the ADR-703 split §4.7 already uses.",
+        "description": "A Custom Metric's certificate (`02` §4.13), with its `Provenance` (`00` FR-2159).",
         "properties": {
           "certified_at": {
             "format": "date-time",
@@ -10439,6 +10451,9 @@
             "title": "Metric Version",
             "type": "integer"
           },
+          "provenance": {
+            "$ref": "#/components/schemas/Provenance"
+          },
           "result": {
             "$ref": "#/components/schemas/CertificateResult"
           }
@@ -10448,9 +10463,10 @@
           "custom_metric_id",
           "metric_version",
           "certified_at",
-          "result"
+          "result",
+          "provenance"
         ],
-        "title": "MetricCertificate",
+        "title": "MetricCertificateRead",
         "type": "object"
       },
       "MetricDirection": {
@@ -10704,9 +10720,9 @@
         "title": "Model",
         "type": "object"
       },
-      "ModelComparison": {
+      "ModelComparisonRead": {
         "additionalProperties": false,
-        "description": "The persisted comparison artifact (`02` §4.11, FR-186).\n\nImmutable, and enforced at the privilege layer as well as here (FR-43): an approval\ncites this, and evidence that can change after the approval is not evidence.\n\nIt has no slug and no version of its own, for the reason `Diagnostics` has none — it is\nalways reached by id, from the Job that produced it or the approval that cites it.",
+        "description": "A Model Comparison (`02` §4.11), with its `Provenance` (`00` FR-2159).",
         "properties": {
           "computed_at": {
             "format": "date-time",
@@ -10730,6 +10746,9 @@
             ],
             "title": "Job Id"
           },
+          "provenance": {
+            "$ref": "#/components/schemas/Provenance"
+          },
           "summary": {
             "$ref": "#/components/schemas/ComparisonSummary"
           }
@@ -10737,9 +10756,10 @@
         "required": [
           "id",
           "computed_at",
-          "summary"
+          "summary",
+          "provenance"
         ],
-        "title": "ModelComparison",
+        "title": "ModelComparisonRead",
         "type": "object"
       },
       "ModelCreate": {
@@ -10996,9 +11016,9 @@
         "title": "ObjectiveBackend",
         "type": "string"
       },
-      "ObjectiveCertificate": {
+      "ObjectiveCertificateRead": {
         "additionalProperties": false,
-        "description": "The persisted certificate (§4.7, FR-146).\n\nImmutable, for the reason `Backtest` is: it is what an approval argues from, and\nevidence that can change after the decision is not evidence. Attached to one objective\n*version* — re-certifying produces another row rather than editing this one, so the\nhistory of what was believed when survives a library upgrade.",
+        "description": "A Custom Objective's certificate (`02` §4.7), with its `Provenance` (`00` FR-2159).",
         "properties": {
           "certified_at": {
             "format": "date-time",
@@ -11032,6 +11052,9 @@
             "title": "Objective Version",
             "type": "integer"
           },
+          "provenance": {
+            "$ref": "#/components/schemas/Provenance"
+          },
           "result": {
             "$ref": "#/components/schemas/CertificateResult"
           }
@@ -11041,9 +11064,10 @@
           "custom_objective_id",
           "objective_version",
           "certified_at",
-          "result"
+          "result",
+          "provenance"
         ],
-        "title": "ObjectiveCertificate",
+        "title": "ObjectiveCertificateRead",
         "type": "object"
       },
       "ObjectiveKind": {
@@ -13229,9 +13253,50 @@
         "title": "ProblemDetail",
         "type": "object"
       },
-      "Profile": {
+      "ProfileComparison": {
         "additionalProperties": false,
-        "description": "The profile artifact for one Dataset Version (`01` §4.7, FR-60/61/62).",
+        "description": "The comparison the distributional validation layer consumes (FR-63).\n\nThe same computation serves an on-demand UI comparison and the `VR-DST-*` rules, so a\nrule's verdict and the screen an actuary is looking at cannot disagree.",
+        "properties": {
+          "columns": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/ColumnComparison"
+            },
+            "title": "Columns",
+            "type": "array"
+          },
+          "current_version_id": {
+            "format": "uuid",
+            "title": "Current Version Id",
+            "type": "string"
+          },
+          "reference_version_id": {
+            "format": "uuid",
+            "title": "Reference Version Id",
+            "type": "string"
+          },
+          "row_count_ratio": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Row Count Ratio"
+          }
+        },
+        "required": [
+          "current_version_id",
+          "reference_version_id"
+        ],
+        "title": "ProfileComparison",
+        "type": "object"
+      },
+      "ProfileRead": {
+        "additionalProperties": false,
+        "description": "A Profile (`01` §4.7), with its `Provenance` (`00` FR-2159).",
         "properties": {
           "columns": {
             "default": [],
@@ -13283,6 +13348,9 @@
             "title": "One Ways",
             "type": "array"
           },
+          "provenance": {
+            "$ref": "#/components/schemas/Provenance"
+          },
           "row_count": {
             "minimum": 0.0,
             "title": "Row Count",
@@ -13298,50 +13366,10 @@
           "id",
           "dataset_version_id",
           "computed_at",
-          "row_count"
+          "row_count",
+          "provenance"
         ],
-        "title": "Profile",
-        "type": "object"
-      },
-      "ProfileComparison": {
-        "additionalProperties": false,
-        "description": "The comparison the distributional validation layer consumes (FR-63).\n\nThe same computation serves an on-demand UI comparison and the `VR-DST-*` rules, so a\nrule's verdict and the screen an actuary is looking at cannot disagree.",
-        "properties": {
-          "columns": {
-            "default": [],
-            "items": {
-              "$ref": "#/components/schemas/ColumnComparison"
-            },
-            "title": "Columns",
-            "type": "array"
-          },
-          "current_version_id": {
-            "format": "uuid",
-            "title": "Current Version Id",
-            "type": "string"
-          },
-          "reference_version_id": {
-            "format": "uuid",
-            "title": "Reference Version Id",
-            "type": "string"
-          },
-          "row_count_ratio": {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Row Count Ratio"
-          }
-        },
-        "required": [
-          "current_version_id",
-          "reference_version_id"
-        ],
-        "title": "ProfileComparison",
+        "title": "ProfileRead",
         "type": "object"
       },
       "Progress": {
@@ -13500,6 +13528,72 @@
           "cases_run"
         ],
         "title": "PropertyResult",
+        "type": "object"
+      },
+      "Provenance": {
+        "additionalProperties": false,
+        "description": "Where a governed artifact came from: itself, the Job that produced it, and its subjects.\n\nRead-side (`00` FR-2159): composed by the API on every read of the ten shapes, and never\npersisted. `produced_by_job_id` is the artifact's stored `job_id`; null means none was\nrecorded, which a view shows as \"not recorded\". It is required and has no default, so a\ncomposer that forgets it fails rather than silently stating \"not recorded\".\n`subject_refs` is never empty for a shape with a governed parent, and its order is\nFR-2159's: `ModelComparison` in `summary.model_refs` order, `DislocationRun` baseline then\ncandidate, `RegressionRun` suite then rating version.\n\n`unnamed_subjects` counts the governed parents whose stored reference cannot be read, for\nexample a model whose family slug is outside the `refs` grammar (nothing holds family\nslugs to it). Such a parent is left out of `subject_refs` and counted here, so a read that\nworked before provenance never fails on it and never drops it silently. It is null when\nevery parent is named. This is #1506's proposal, pending the maintainer's answer on #1506\n(comment 7016302144). Whether #1868's \"never empty\" is amended for this case is theirs to\ndecide.",
+        "properties": {
+          "entity_id": {
+            "format": "uuid",
+            "title": "Entity Id",
+            "type": "string"
+          },
+          "entity_type": {
+            "enum": [
+              "validation_report",
+              "profile",
+              "diagnostics",
+              "model_comparison",
+              "backtest",
+              "regression_run",
+              "objective_certificate",
+              "dislocation_run",
+              "metric_certificate",
+              "transparency_artifact"
+            ],
+            "title": "Entity Type",
+            "type": "string"
+          },
+          "produced_by_job_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Produced By Job Id"
+          },
+          "subject_refs": {
+            "items": {
+              "$ref": "#/components/schemas/ArtifactRef"
+            },
+            "title": "Subject Refs",
+            "type": "array"
+          },
+          "unnamed_subjects": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unnamed Subjects"
+          }
+        },
+        "required": [
+          "entity_type",
+          "entity_id",
+          "produced_by_job_id",
+          "subject_refs"
+        ],
+        "title": "Provenance",
         "type": "object"
       },
       "QuantileCrossing": {
@@ -16019,9 +16113,9 @@
         "title": "RegressionProperty",
         "type": "object"
       },
-      "RegressionRun": {
+      "RegressionRunRead": {
         "additionalProperties": false,
-        "description": "The execution record of a Regression Suite run (03 §4.9, FR-260, FR-261).",
+        "description": "A Regression Run (`03` §4.9), with its `Provenance` (`00` FR-2159).",
         "properties": {
           "bundle_hash": {
             "pattern": "^sha256:[a-f0-9]{64}$",
@@ -16073,6 +16167,9 @@
             "title": "Property Results",
             "type": "array"
           },
+          "provenance": {
+            "$ref": "#/components/schemas/Provenance"
+          },
           "rating_version_ref": {
             "$ref": "#/components/schemas/ArtifactRef"
           },
@@ -16101,9 +16198,10 @@
           "generation",
           "cases_blob",
           "golden_results",
-          "property_results"
+          "property_results",
+          "provenance"
         ],
-        "title": "RegressionRun",
+        "title": "RegressionRunRead",
         "type": "object"
       },
       "RegressionRunSummary": {
@@ -18848,9 +18946,9 @@
         "title": "TransitionRequest",
         "type": "object"
       },
-      "TransparencyArtifact": {
+      "TransparencyArtifactRead": {
         "additionalProperties": false,
-        "description": "The persisted artifact (`02` §4.9, FR-132, FR-133, FR-134, FR-136, FR-140).\n\nImmutable once written, like every other artifact here: it is the evidence a Rating\nVersion's approval was granted against (FR-136), and evidence that can change\nafter the decision is not evidence.",
+        "description": "A Transparency Artifact (`02` §4.9), with its `Provenance` (`00` FR-2159).",
         "properties": {
           "created_at": {
             "format": "date-time",
@@ -18915,6 +19013,9 @@
             ],
             "title": "Monotonicity Verified"
           },
+          "provenance": {
+            "$ref": "#/components/schemas/Provenance"
+          },
           "shap_summary": {
             "anyOf": [
               {
@@ -18930,9 +19031,10 @@
           "id",
           "model_id",
           "created_at",
-          "fidelity_statement"
+          "fidelity_statement",
+          "provenance"
         ],
-        "title": "TransparencyArtifact",
+        "title": "TransparencyArtifactRead",
         "type": "object"
       },
       "TweediePowerFit": {
@@ -19672,9 +19774,9 @@
         "title": "ValidationLayer",
         "type": "string"
       },
-      "ValidationReportView": {
+      "ValidationReportRead": {
         "additionalProperties": false,
-        "description": "A report **as presented** (`01` §4.6): the artifact, plus the outcome derived from it.\n\nNever stored. The stored body is `ValidationReport`, and it stays free of both keys because\nit is the artifact (`ValidationReportRow`); `extra=\"forbid\"` there refuses this shape, so a\nview cannot be read back as a report. `overall` and `counts` are fields so the published\ncontract and the `01` §4.6 example hold them, and checked so neither is ever assigned.",
+        "description": "A Validation Report as presented (`01` §4.6), with its `Provenance` (`00` FR-2159).",
         "properties": {
           "counts": {
             "$ref": "#/components/schemas/ReportCounts"
@@ -19716,6 +19818,9 @@
           },
           "overall": {
             "$ref": "#/components/schemas/OverallOutcome"
+          },
+          "provenance": {
+            "$ref": "#/components/schemas/Provenance"
           },
           "reference_dataset_version_id": {
             "anyOf": [
@@ -19760,9 +19865,10 @@
           "started_at",
           "finished_at",
           "overall",
-          "counts"
+          "counts",
+          "provenance"
         ],
-        "title": "ValidationReportView",
+        "title": "ValidationReportRead",
         "type": "object"
       },
       "ValidationRule": {
@@ -23404,6 +23510,7 @@
     },
     "/api/v1/custom-metrics/{metric_id}/certificate": {
       "get": {
+        "description": "The latest certificate (FR-157), with its `provenance` (FR-2159).",
         "operationId": "get_metric_certificate_api_v1_custom_metrics__metric_id__certificate_get",
         "parameters": [
           {
@@ -23440,7 +23547,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/MetricCertificate"
+                  "$ref": "#/components/schemas/MetricCertificateRead"
                 }
               }
             },
@@ -24532,7 +24639,7 @@
     },
     "/api/v1/custom-objectives/{objective_id}/certificate": {
       "get": {
-        "description": "**Added to `02` §5.1 with this slice** (FR-166).\n\nWithout it the certificate is produced by a Job and readable nowhere — and it is what\nan approver is asked to read (`06` §4.2 names `objective_certificate` as the evidence).",
+        "description": "**Added to `02` §5.1 with this slice** (FR-166).\n\nWithout it the certificate is produced by a Job and readable nowhere — and it is what\nan approver is asked to read (`06` §4.2 names `objective_certificate` as the evidence).\nIt carries its `provenance` (FR-2159).",
         "operationId": "get_certificate_api_v1_custom_objectives__objective_id__certificate_get",
         "parameters": [
           {
@@ -24569,7 +24676,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ObjectiveCertificate"
+                  "$ref": "#/components/schemas/ObjectiveCertificateRead"
                 }
               }
             },
@@ -25924,7 +26031,7 @@
     },
     "/api/v1/dataset-versions/{version_id}/profile": {
       "get": {
-        "description": "FR-60. Read, never recomputed (FR-62).",
+        "description": "FR-60. Read, never recomputed (FR-62), with its `provenance` (FR-2159).",
         "operationId": "get_profile_api_v1_dataset_versions__version_id__profile_get",
         "parameters": [
           {
@@ -25961,7 +26068,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Profile"
+                  "$ref": "#/components/schemas/ProfileRead"
                 }
               }
             },
@@ -28836,7 +28943,7 @@
     },
     "/api/v1/dislocation-runs/{run_id}": {
       "get": {
-        "description": "**200** with the persisted artifact (FR-265); **404** `NOT_FOUND` for an unknown id or\nanother workspace's.",
+        "description": "**200** with the persisted artifact (FR-265) and its `provenance` (FR-2159); **404**\n`NOT_FOUND` for an unknown id or another workspace's.",
         "operationId": "get_dislocation_run_api_v1_dislocation_runs__run_id__get",
         "parameters": [
           {
@@ -28873,7 +28980,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/DislocationRun"
+                  "$ref": "#/components/schemas/DislocationRunRead"
                 }
               }
             },
@@ -33107,7 +33214,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Backtest"
+                  "$ref": "#/components/schemas/BacktestRead"
                 }
               }
             },
@@ -33376,7 +33483,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ModelComparison"
+                  "$ref": "#/components/schemas/ModelComparisonRead"
                 }
               }
             },
@@ -34137,7 +34244,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/TransparencyArtifact"
+                  "$ref": "#/components/schemas/TransparencyArtifactRead"
                 }
               }
             },
@@ -34520,7 +34627,7 @@
     },
     "/api/v1/models/{slug}/diagnostics": {
       "get": {
-        "description": "The evidence behind a fitted model (FR-170, `02` §5.1).\n\nRead, never recomputed. FR-170 makes diagnostics a product of the fit, so this\nendpoint returns what that fit recorded — a screen that recalculated them would be\nshowing numbers no approval could cite.\n\n`?version=` selects a model version, like `GET /models/{slug}`; the latest without it.",
+        "description": "The evidence behind a fitted model (FR-170, `02` §5.1), with its `provenance` (FR-2159).\n\nRead, never recomputed. FR-170 makes diagnostics a product of the fit, so this\nendpoint returns what that fit recorded — a screen that recalculated them would be\nshowing numbers no approval could cite.\n\n`?version=` selects a model version, like `GET /models/{slug}`; the latest without it.",
         "operationId": "get_model_diagnostics_api_v1_models__slug__diagnostics_get",
         "parameters": [
           {
@@ -34573,7 +34680,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Diagnostics"
+                  "$ref": "#/components/schemas/DiagnosticsRead"
                 }
               }
             },
@@ -38458,7 +38565,7 @@
     },
     "/api/v1/rating-versions/{rating_version_id}/regression-runs/{run_id}": {
       "get": {
-        "description": "The run record. A failing property's `counterexample` is a quote-input fragment, so\nthe read is `rating:read` and workspace-scoped (NFR-499, FR-1221).",
+        "description": "The run record, with its `provenance` (FR-2159). A failing property's `counterexample`\nis a quote-input fragment, so the read is `rating:read` and workspace-scoped (NFR-499,\nFR-1221).",
         "operationId": "get_regression_run_api_v1_rating_versions__rating_version_id__regression_runs__run_id__get",
         "parameters": [
           {
@@ -38505,7 +38612,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/RegressionRun"
+                  "$ref": "#/components/schemas/RegressionRunRead"
                 }
               }
             },
@@ -42516,7 +42623,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ValidationReportView"
+                  "$ref": "#/components/schemas/ValidationReportRead"
                 }
               }
             },

@@ -7,7 +7,7 @@ import { formatMinor } from "@/components/dislocation/format";
 import RegressionSuiteView from "../RegressionSuiteView.vue";
 
 type RatingVersion = components["schemas"]["RatingVersion"];
-type RegressionRun = components["schemas"]["RegressionRun"];
+type RegressionRun = components["schemas"]["RegressionRunRead"];
 type RegressionRunSummary = components["schemas"]["RegressionRunSummary"];
 
 /**
@@ -64,6 +64,12 @@ function run(over: Partial<RegressionRun> = {}): RegressionRun {
         shrink: "completed", error_code: "PROPERTY_ASSERTION_FAILED",
       },
     ],
+    provenance: {
+      entity_type: "regression_run",
+      entity_id: "01a04394-0000-7000-8000-0000000000aa",
+      produced_by_job_id: null,
+      subject_refs: ["regression_suite:motor-gb-core@3", "rating_version:motor-gb@27"],
+    },
     ...over,
   };
 }

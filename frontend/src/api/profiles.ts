@@ -1,7 +1,7 @@
 import { request } from "./client";
 import type { components } from "./generated/schema";
 
-export type Profile = components["schemas"]["Profile"];
+export type Profile = components["schemas"]["ProfileRead"];
 export type ColumnProfile = components["schemas"]["ColumnProfile"];
 export type LevelCount = components["schemas"]["LevelCount"];
 export type Histogram = components["schemas"]["Histogram"];

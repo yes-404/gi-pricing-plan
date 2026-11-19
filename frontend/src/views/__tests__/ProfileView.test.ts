@@ -82,6 +82,12 @@ const PROFILE: Profile = {
     { column: "veh_brand", banding: "levels", rows: [] },
     { column: "region", banding: "levels", rows: [] },
   ],
+  provenance: {
+    entity_type: "profile",
+    entity_id: "11111111-1111-4111-8111-111111111111",
+    produced_by_job_id: null,
+    subject_refs: ["dataset_version:motor-policies@1"],
+  },
 };
 
 const ONE_WAY: OneWaySummary = {

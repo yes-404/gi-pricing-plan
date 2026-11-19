@@ -1,7 +1,7 @@
 import { request } from "./client";
 import type { components } from "./generated/schema";
 
-export type Diagnostics = components["schemas"]["Diagnostics"];
+export type Diagnostics = components["schemas"]["DiagnosticsRead"];
 export type UniversalDiagnostics = components["schemas"]["UniversalDiagnostics"];
 export type PartitionDiagnostics = components["schemas"]["PartitionDiagnostics"];
 export type AeCell = components["schemas"]["AeCell"];

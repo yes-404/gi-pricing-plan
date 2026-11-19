@@ -92,6 +92,7 @@ ONE_SIDED_SLUGS: Final[dict[str, str]] = {
     "approval-submission": "first written form — 06 §5.1 (WK-674 Slice 2, PL-1392 Acceptance 16)",
     "approval-withdrawal": "first written form — 06 §5.1 (WK-674 Slice 2, PL-1392 Task 6, FR-357)",
     "approval-request": "generated wins — FD-1416 retired the hand-authored Phase 0 draft",
+    "provenance": "generated wins — #1810 B replaced the hand-authored common/ draft (FR-2159)",
     "rating-version-create": "first written form — 03 §5.1 create row (RL-1428, FD-1421, FR-237)",
     "switch-report": "first written form — 03 §5.1 (WK-674 Slice 5, PL-1766, FR-268)",
     "deployment-created": "first written form — 03 §5.1 (WK-674 Slice 5, PL-1766, FR-268)",
@@ -161,7 +162,6 @@ ONE_SIDED_SLUGS: Final[dict[str, str]] = {
     # rewrite — reported here rather than forced through under time pressure.
     "scoring": "later-phase — 03 rating (see the correction above, 2026-08-29)",
     "money": "shared common/ defs with no Phase 1b emitter",
-    "provenance": "shared common/ defs with no Phase 1b emitter",
 }
 
 

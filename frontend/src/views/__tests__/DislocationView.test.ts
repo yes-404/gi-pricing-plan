@@ -46,6 +46,12 @@ const RUN: DislocationRun = {
   by_segment: [],
   by_ladder_rung: [],
   errors: [],
+  provenance: {
+    entity_type: "dislocation_run",
+    entity_id: "01a04394-0000-7000-8000-0000000000bb",
+    produced_by_job_id: null,
+    subject_refs: ["rating_version:motor-gb@26", "rating_version:motor-gb@27"],
+  },
 };
 
 beforeEach(() => {
