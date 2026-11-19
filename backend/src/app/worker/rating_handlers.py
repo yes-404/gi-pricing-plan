@@ -20,13 +20,12 @@ from app.platform import rating_versions as rating_versions_service
 from app.platform import regression_runs as regression_runs_service
 from app.platform import regression_suites as regression_suites_service
 from app.platform.blobs import to_ref
-from app.platform.bundle_hydration import hydrate
+from app.platform.bundle_hydration import hydrate, load_stored_bundle
 from app.platform.bundle_slot import BundleSlot
 from app.worker.data_handlers import _actor, _bridge, _workspace
 from app.worker.handlers import HANDLERS, register_handler
 from model_schema import ArtifactRef, JobKind, JobResult, JobSource, cases_log_bytes
 from pricing_core.progress import ProgressCallback
-from pricing_core.rating.compile import Bundle
 from pricing_core.rating.properties import UnsweepableProperty
 from pricing_core.rating.testing import run_regression
 
@@ -176,9 +175,20 @@ def _rating_regression(parameters: dict[str, Any], callback: ProgressCallback) -
                     f"{ref}'s compiled bundle is no longer in the blob store.",
                 )
             payload = await progress.blob_store.read(to_ref(blob_row))
+            recorded = (row.bundle or {}).get("content_hash")
+        slot = BundleSlot()
+        bundle = await load_stored_bundle(
+            payload,
+            payload_sha256=blob_sha256,
+            recorded=recorded,
+            slot=slot,
+            database=progress.database,
+            workspace_id=workspace_id,
+            ref=ref,
+        )
         compiled = await hydrate(
-            Bundle.model_validate_json(payload),
-            slot=BundleSlot(),
+            bundle,
+            slot=slot,
             database=progress.database,
             workspace_id=workspace_id,
             ref=ref,

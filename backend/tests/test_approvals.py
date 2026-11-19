@@ -356,6 +356,45 @@ async def test_an_approval_can_be_withdrawn_before_deployment(
     assert row.withdrawn_reason.startswith("Superseded")
 
 
+@pytest.mark.req("FR-351")
+async def test_withdrawing_an_approved_request_leaves_the_moment_it_was_decided(
+    database: Database, workspace_id
+) -> None:
+    """`decided_at` is written once, on leaving `review`: approve, then withdraw, and it still
+    reads the approval's time. The withdrawal's own time is its audit event's `at`, written after
+    the flush (`approvals.withdraw`); the database refuses any other write of `decided_at` on
+    that edge (`approval_requests_decision_guard`), so a writer that overwrote it fails here."""
+    submitter, approver = _user("s"), _user("a")
+    await _with_role(database, workspace_id, approver, "approver")
+    request_id = await _submit(database, workspace_id, submitter)
+    async with database.unit_of_work() as session:
+        approved = await approvals.decide(
+            session,
+            evidence_authors=_no_evidence_authors,
+            workspace_id=workspace_id, request_id=request_id,
+            approver=approver, decision=DecisionKind.APPROVE,
+        )
+        decided_at = approved.decided_at
+    assert decided_at is not None
+    async with database.unit_of_work() as session:
+        withdrawn = await approvals.withdraw(
+            session, workspace_id=workspace_id, request_id=request_id,
+            actor=approver, reason="Superseded by a corrected refit.",
+        )
+    assert withdrawn.status == ApprovalStatus.WITHDRAWN
+    assert withdrawn.decided_at == decided_at
+    async with database.session() as session:
+        event = (
+            await session.execute(
+                select(AuditEventRow).where(
+                    AuditEventRow.workspace_id == workspace_id,
+                    AuditEventRow.action == "approval_request.withdrawn",
+                )
+            )
+        ).scalar_one()
+    assert event.at >= decided_at
+
+
 @pytest.mark.req("FR-357")
 async def test_an_approval_cannot_be_withdrawn_once_the_artifact_is_live(
     database: Database, workspace_id

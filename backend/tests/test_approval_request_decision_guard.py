@@ -1,0 +1,282 @@
+"""A decided approval request's decision does not change (`06` FR-351, clause of 2026-11-16;
+ADR-2157).
+
+The expectation is derived from the state machine itself (`VALID_APPROVAL_TRANSITIONS`): a
+status change is permitted exactly along its edges, and only with the decision's other two
+columns as the edge requires: leaving `review` sets `decided_at`; a decided status other than
+`withdrawn` carries no `withdrawn_reason`; `withdrawn` carries a non-empty one; and
+`approved` to `withdrawn` leaves `decided_at` as it was. Each of those four is a test that goes
+red when only its clause is loosened. The same sweep with the guard disabled (owner, rolled
+back) is not refused by it. The route-level case is the one the
+decision hook decides: withdrawing the request of an approved rating version.
+"""
+
+from __future__ import annotations
+
+import pytest
+from backend.tests.conftest_db import disable_trigger
+from backend.tests.test_api_approvals import (  # noqa: F401  (fixtures and helpers)
+    _create_authored,
+    _headers,
+    _require_two_approvals,
+    api_settings,
+    client,
+    submitter_headers,
+)
+from backend.tests.test_rating_version_content_guard import _sqlstate, rolled_back
+from fastapi.testclient import TestClient
+from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncConnection
+
+from app.db.session import Database
+from model_schema import VALID_APPROVAL_TRANSITIONS, ApprovalStatus, new_uuid7
+
+GUARD = "approval_requests_decision_guard"
+STATUSES = tuple(s.value for s in ApprovalStatus)
+
+
+async def _plant(conn: AsyncConnection, status: str, *, slug: str) -> str:
+    """A request at `status`, decided (with `decided_at`) unless it is still open."""
+    request_id = new_uuid7()
+    await conn.execute(text("SET LOCAL app.approval_decision = 'on'"))
+    await conn.execute(
+        text(
+            "INSERT INTO approval_requests (id, workspace_id, artifact_ref, artifact_type, "
+            "submitted_by, change_summary, status, approvers_required, decided_at, "
+            "withdrawn_reason) VALUES (:id, gen_random_uuid(), :ref, 'model', gen_random_uuid(), "
+            "'c', CAST(:status AS varchar), 1, "
+            "CASE WHEN CAST(:status AS varchar) IN ('draft', 'review') THEN NULL ELSE now() END, "
+            "CASE WHEN CAST(:status AS varchar) = 'withdrawn' THEN 'why' END)"
+        ),
+        {"id": request_id, "ref": f"model:{slug}@1", "status": status},
+    )
+    return str(request_id)
+
+
+_DECIDED = ("approved", "rejected", "changes_requested", "withdrawn")
+
+
+def _edge_assignments(old: str, new: str) -> str:
+    """The UPDATE that makes the edge `old` to `new` with the columns an edge needs, so a refusal
+    in the sweep is the edge's and not a missing column's."""
+    parts = [f"status = '{new}'"]
+    if new in _DECIDED and old == "review":
+        parts.append("decided_at = now()")
+    if new == "withdrawn":
+        parts.append("withdrawn_reason = 'why'")
+    return ", ".join(parts)
+
+
+async def _status_edges(conn: AsyncConnection) -> dict[tuple[str, str], str | None]:
+    """(from, to) -> the SQLSTATE of one status UPDATE, every pair of the six statuses."""
+    out: dict[tuple[str, str], str | None] = {}
+    for old in STATUSES:
+        for new in STATUSES:
+            request_id = await _plant(conn, old, slug=f"{old}-{new}")
+            sets = "status = status" if old == new else _edge_assignments(old, new)
+            out[(old, new)] = await _sqlstate(
+                conn, f"UPDATE approval_requests SET {sets} WHERE id = '{request_id}'"
+            )
+    return out
+
+
+def _permitted() -> set[tuple[str, str]]:
+    return {
+        (old.value, new.value) for old, edges in VALID_APPROVAL_TRANSITIONS.items() for new in edges
+    } | {(s, s) for s in STATUSES}
+
+
+@pytest.mark.req("FR-351")
+async def test_a_status_changes_only_along_the_state_machines_edges(database: Database) -> None:
+    async with rolled_back(database) as conn:
+        who = (await conn.execute(text("SELECT current_user"))).scalar_one()
+        assert who == "gip_app_login", who
+        results = await _status_edges(conn)
+    refused = {edge for edge, state in results.items() if state == "42501"}
+    assert refused == {(o, n) for o in STATUSES for n in STATUSES} - _permitted()
+    # every other edge ran, so none was refused by something that is not the guard
+    assert {edge for edge, state in results.items() if state is None} == _permitted()
+
+
+_EDGE_UPDATES = {
+    "review_to_decided_without_decided_at": (
+        "review",
+        "status = 'approved'",
+    ),
+    "review_to_rejected_with_a_reason_and_no_decided_at": (
+        "review",
+        "status = 'rejected', withdrawn_reason = 'why'",
+    ),
+    "review_to_approved_carrying_a_withdrawn_reason": (
+        "review",
+        "status = 'approved', decided_at = now(), withdrawn_reason = 'why'",
+    ),
+    "review_to_withdrawn_without_a_reason": (
+        "review",
+        "status = 'withdrawn', decided_at = now()",
+    ),
+    "review_to_withdrawn_with_an_empty_reason": (
+        "review",
+        "status = 'withdrawn', decided_at = now(), withdrawn_reason = ''",
+    ),
+    "review_to_withdrawn_with_a_blank_reason": (
+        "review",
+        "status = 'withdrawn', decided_at = now(), withdrawn_reason = '   '",
+    ),
+    "review_to_withdrawn_without_decided_at": (
+        "review",
+        "status = 'withdrawn', withdrawn_reason = 'why'",
+    ),
+    "approved_to_withdrawn_without_a_reason": ("approved", "status = 'withdrawn'"),
+    "approved_to_withdrawn_with_an_empty_reason": (
+        "approved",
+        "status = 'withdrawn', withdrawn_reason = ''",
+    ),
+    "approved_to_withdrawn_with_decided_at_changed": (
+        "approved",
+        "status = 'withdrawn', withdrawn_reason = 'why', decided_at = now() + interval '1 day'",
+    ),
+    "approved_to_withdrawn_with_decided_at_cleared": (
+        "approved",
+        "status = 'withdrawn', withdrawn_reason = 'why', decided_at = NULL",
+    ),
+}
+
+
+@pytest.mark.req("FR-351")
+@pytest.mark.parametrize("case", sorted(_EDGE_UPDATES))
+async def test_an_edge_that_leaves_a_decision_column_wrong_is_refused(
+    database: Database, case: str
+) -> None:
+    """Each loosening of an edge's column clause is refused (SQLSTATE 42501), and the edge with
+    its columns right is accepted, so the refusal is the clause's own."""
+    old, sets = _EDGE_UPDATES[case]
+    async with rolled_back(database) as conn:
+        request_id = await _plant(conn, old, slug=f"edge-{case}")
+        state = await _sqlstate(
+            conn, f"UPDATE approval_requests SET {sets} WHERE id = '{request_id}'"
+        )
+    assert state == "42501", (case, state)
+
+
+_RIGHT_EDGES = {
+    "review_to_approved": ("review", "status = 'approved', decided_at = now()"),
+    "review_to_rejected": ("review", "status = 'rejected', decided_at = now()"),
+    "review_to_changes_requested": (
+        "review",
+        "status = 'changes_requested', decided_at = now()",
+    ),
+    "review_to_withdrawn": (
+        "review",
+        "status = 'withdrawn', decided_at = now(), withdrawn_reason = 'why'",
+    ),
+    "approved_to_withdrawn": ("approved", "status = 'withdrawn', withdrawn_reason = 'why'"),
+}
+
+
+@pytest.mark.req("FR-351")
+@pytest.mark.parametrize("case", sorted(_RIGHT_EDGES))
+async def test_an_edge_with_its_decision_columns_right_is_accepted(
+    database: Database, case: str
+) -> None:
+    old, sets = _RIGHT_EDGES[case]
+    async with rolled_back(database) as conn:
+        request_id = await _plant(conn, old, slug=f"right-{case}")
+        state = await _sqlstate(
+            conn, f"UPDATE approval_requests SET {sets} WHERE id = '{request_id}'"
+        )
+    assert state is None, (case, state)
+
+
+@pytest.mark.req("FR-351")
+async def test_a_decided_requests_other_decision_columns_are_held(database: Database) -> None:
+    async with rolled_back(database) as conn:
+        results = {}
+        for status in ("approved", "rejected", "changes_requested", "withdrawn", "review"):
+            request_id = await _plant(conn, status, slug=f"col-{status}")
+            for column, value in (
+                ("decided_at", "now() + interval '1 day'"),
+                ("withdrawn_reason", "'changed'"),
+            ):
+                results[(status, column)] = await _sqlstate(
+                    conn,
+                    f"UPDATE approval_requests SET {column} = {value} WHERE id = '{request_id}'",
+                )
+    assert set(results.values()) == {"42501"}, results
+
+
+@pytest.mark.req("FR-351")
+async def test_an_update_that_changes_no_decision_column_is_allowed(database: Database) -> None:
+    async with rolled_back(database) as conn:
+        request_id = await _plant(conn, "approved", slug="same")
+        same = await _sqlstate(
+            conn,
+            "UPDATE approval_requests SET status = status, decided_at = decided_at "
+            f"WHERE id = '{request_id}'",
+        )
+    assert same is None
+
+
+@pytest.mark.req("FR-351")
+async def test_each_edge_refusal_is_the_guards_own(owner_database: Database) -> None:
+    """The control: with the guard disabled the same sweep is refused by nothing."""
+    async with rolled_back(owner_database) as conn:
+        await disable_trigger(conn, "approval_requests", GUARD)
+        results = await _status_edges(conn)
+    assert {edge for edge, state in results.items() if state is not None} == set()
+
+
+@pytest.mark.req("FR-351")
+async def test_withdrawing_the_request_of_an_approved_rating_version_moves_nothing(
+    client: TestClient,  # noqa: F811
+    database: Database,
+    workspace_id,
+    grant,
+    submitter_headers,  # noqa: F811
+) -> None:
+    """The decision hook never reopens an approved version: the withdrawal is refused 409 and
+    the request and the version both stay `approved` (the guard's table has no such edge)."""
+    await _require_two_approvals(client, workspace_id, grant, database, "rating_version")
+    slug = "withdraw-approved"
+    ref = await _create_authored(database, workspace_id, "rating_version", slug, 1, new_uuid7())
+    created = client.post(
+        "/api/v1/approval-requests",
+        json={"artifact_ref": ref, "change_summary": "Ship."},
+        headers=submitter_headers,
+    )
+    assert created.status_code == 201, created.text
+    request_id = created.json()["id"]
+    first, second = new_uuid7(), new_uuid7()
+    for who in (first, second):
+        await grant("approver", principal_id=who)
+        decided = client.post(
+            f"/api/v1/approval-requests/{request_id}/decide",
+            json={"decision": "approve", "comment": "Reviewed."},
+            headers=_headers(who, workspace_id),
+        )
+        assert decided.status_code == 200, decided.text
+    assert decided.json()["status"] == "approved"
+
+    withdrawn = client.post(
+        f"/api/v1/approval-requests/{request_id}/withdraw",
+        json={"reason": "second thoughts"},
+        headers=_headers(first, workspace_id),
+    )
+    assert withdrawn.status_code == 409, withdrawn.text
+    assert withdrawn.json()["code"] == "APPROVAL_SUBJECT_NOT_IN_REVIEW"
+
+    async with database.session() as session:
+        request_status = (
+            await session.execute(
+                text("SELECT status, withdrawn_reason FROM approval_requests WHERE id = :id"),
+                {"id": request_id},
+            )
+        ).one()
+        version_status = (
+            await session.execute(
+                text("SELECT status FROM rating_versions WHERE workspace_id = :w AND slug = :s"),
+                {"w": workspace_id, "s": slug},
+            )
+        ).scalar_one()
+    assert tuple(request_status) == ("approved", None)
+    assert version_status == "approved"

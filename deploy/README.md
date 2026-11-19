@@ -173,6 +173,54 @@ docker compose -f deploy/docker-compose.yml --profile app up -d --wait --scale a
   a running process holds the bundles it already hydrated and re-validates nothing it holds
   (`roll-api.sh` keeps the old replicas serving until the new ones pass their healthcheck, so an
   old process serves until it is removed).
+- **Upgrading to the build that holds a Rating Version's content in the database** (`01` FR-44,
+  `06` FR-351, ADR-2157): once a Rating Version has left `draft`, the database refuses a change
+  to its content, and its `status` must be one of the five the platform defines (`draft`,
+  `review`, `approved`, `live`, `retired`). **This upgrade is not a rolling upgrade: stop the
+  `api` and the `worker`, run `migrate`, then start them. There is no rolling order, and
+  `roll-api.sh` is not used for it.** Each build's start-up check compares the database's guards
+  with its own, so a process of one release does not start against the other's schema. The wrong
+  order fails closed: a process refuses to start, and a running process of the previous release
+  answers one action (withdrawing an approved approval request) with a server error that is
+  rolled back.
+  **Before upgrading, run this read-only query** on the database the upgrade will run on. It
+  lists the rows the upgrade refuses:
+
+  ```sql
+  BEGIN READ ONLY;
+  SELECT id, workspace_id, slug, version, status, created_at
+    FROM rating_versions
+   WHERE status NOT IN ('draft', 'review', 'approved', 'live', 'retired')
+   ORDER BY workspace_id, slug, version;
+  ROLLBACK;
+  ```
+
+  An empty result means the upgrade does not stop on data. A listed row holds a status the
+  product never writes, so it came from outside the application. The upgrade does not rewrite
+  it and no migration does: decide what the row is, and correct it with the database owner's
+  rights, before you upgrade. **If a row is missed**, `migrate` (`alembic upgrade head`, FR-435)
+  exits non-zero and prints `<n> rating_versions row(s) hold a status outside the lifecycle;
+  nothing was rewritten and the CHECK was not added`, in that step's output (the `migrate`
+  container's log). The revision is not applied and the listed rows are unchanged. Correct the
+  rows and run the step again.
+
+  Optional, and not a condition of the upgrade: `live` and `retired` are held like `approved`,
+  so an update that names `status`, `workspace_id`, `slug` or `version` of such a row, even one
+  that changes nothing, is refused without a decided approval request for the version's
+  reference. To list versions in `approved`, `live` or `retired` with none:
+
+  ```sql
+  BEGIN READ ONLY;
+  SELECT rv.id, rv.workspace_id, rv.slug, rv.version, rv.status
+    FROM rating_versions rv
+   WHERE rv.status IN ('approved', 'live', 'retired')
+     AND NOT EXISTS (
+           SELECT 1 FROM approval_requests r
+            WHERE r.workspace_id = rv.workspace_id
+              AND r.status = 'approved'
+              AND r.artifact_ref = 'rating_version:' || rv.slug || '@' || rv.version);
+  ROLLBACK;
+  ```
 - **Rolling `api` to a new image is health-gated** (NFR-531). A plain `up --scale api=2`
   recreates every replica at once, so none is healthy until the new ones pass their healthcheck.
   Run `GIP_BUILD=<new> deploy/roll-api.sh [-t <seconds>] <project> <compose-file>...`. `lb`
