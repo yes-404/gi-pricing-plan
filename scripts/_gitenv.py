@@ -3,7 +3,8 @@ hook exports them, and the environment every script under scripts/ runs git with
 
 `git -C` does not override them. Each git call in a script passes `env=clean_env()`, so the script
 reads the checkout it names, never one the caller's environment names. Named, not a GIT_ prefix
-match: `tests/test_gitenv.py` holds this tuple to `git rev-parse --local-env-vars`.
+match: `tests/test_gitenv.py` holds this tuple above the installed git's `git rev-parse
+--local-env-vars` list.
 """
 
 import os
