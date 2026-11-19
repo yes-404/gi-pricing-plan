@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/vue";
+import { render, screen, waitFor, within } from "@testing-library/vue";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { DislocationRun } from "@/api/dislocationRuns";
@@ -70,6 +70,13 @@ describe("DislocationView", () => {
     expect(screen.getByRole("table", { name: /change distribution/i })).toBeInTheDocument();
     // the run total and the single band's mean change
     expect(screen.getAllByText("10.00%")).toHaveLength(2);
+  });
+
+  it("FR-2159: shows the provenance badge, with a Job that was not recorded", async () => {
+    getDislocationRun.mockResolvedValue(RUN);
+    render(DislocationView, { props: { slug: "motor-gb", version: "27", run: "run-1" } });
+    const badge = await screen.findByRole("group", { name: "Provenance" });
+    expect(within(badge).getByText("not recorded")).toBeInTheDocument();
   });
 
   it("FR-265: with no run cited, asks for an id and reads nothing", async () => {

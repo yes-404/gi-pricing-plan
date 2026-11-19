@@ -19,6 +19,7 @@ import {
 import { isProblem, ProblemError } from "@/api/problem";
 import EbmShapePanel from "@/components/EbmShapePanel.vue";
 import GbmFitPanel from "@/components/GbmFitPanel.vue";
+import ProvenanceBadge from "@/components/ProvenanceBadge.vue";
 import QuantileBoundNotice from "@/components/QuantileBoundNotice.vue";
 import SurrogateNotice from "@/components/SurrogateNotice.vue";
 import TransparencyPanel from "@/components/TransparencyPanel.vue";
@@ -576,6 +577,11 @@ onMounted(async () => {
         v-if="model.spec.model_type !== 'glm'"
         :artifact="artifact"
         :state="transparencyState"
+      />
+      <!-- The artifact's own provenance (FR-2159), beside the panel that shows it. -->
+      <ProvenanceBadge
+        v-if="model.spec.model_type !== 'glm' && artifact"
+        :provenance="artifact.provenance"
       />
     </template>
   </section>

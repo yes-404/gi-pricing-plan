@@ -31,6 +31,7 @@ import {
 } from "@/api/objectives";
 import { ProblemError } from "@/api/problem";
 import CheckStatusBadge from "@/components/CheckStatusBadge.vue";
+import ProvenanceBadge from "@/components/ProvenanceBadge.vue";
 
 const props = defineProps<{ id: string }>();
 
@@ -110,6 +111,10 @@ onMounted(async () => {
           requires
         </span>
       </p>
+      <ProvenanceBadge
+        :provenance="certificate.provenance"
+        class="mb-4"
+      />
 
       <!-- FR-152 as amended: the strategy sits beside the findings, because a finding
            without the declared strategy is the half an Approver cannot act on. -->

@@ -61,6 +61,13 @@ const REPORT = {
       offending_sample: [],
     },
   ],
+  // FR-2159: composed by the API on every read, never stored.
+  provenance: {
+    entity_type: "validation_report",
+    entity_id: "33333333-3333-4333-8333-333333333333",
+    produced_by_job_id: "77777777-7777-4777-8777-777777777777",
+    subject_refs: ["dataset_version:fremtpl2@1"],
+  },
 };
 
 function route(url: string): unknown {
@@ -95,6 +102,12 @@ describe("the validation report view", () => {
     expect(banner).toHaveAttribute("data-state", "blocked");
     expect(banner).toHaveTextContent("1 rule must pass before a model can be fitted");
     expect(banner).toHaveTextContent("There is no override");
+  });
+
+  it("shows the provenance badge, naming the Job that produced the report (FR-2159)", async () => {
+    render(ValidationReportView, { props });
+    const badge = await screen.findByRole("group", { name: "Provenance" });
+    expect(within(badge).getByText(REPORT.provenance.produced_by_job_id)).toBeInTheDocument();
   });
 
   it("orders the bands blocking → needs acknowledgement → everything else", async () => {

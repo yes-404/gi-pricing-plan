@@ -441,6 +441,12 @@ describe("the profile view", () => {
     expect(screen.getByText(/2 candidate rating factors/)).toBeInTheDocument();
   });
 
+  it("shows the provenance badge, with a Job that was not recorded (FR-2159)", async () => {
+    render(ProfileView, { props, ...mounted });
+    const badge = await screen.findByRole("group", { name: "Provenance" });
+    expect(within(badge).getByText("not recorded")).toBeInTheDocument();
+  });
+
   it("offers the other versions of the dataset, and never the one being viewed", async () => {
     render(ProfileView, { props, ...mounted });
     const select = await screen.findByLabelText("Compare against");

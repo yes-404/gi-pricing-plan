@@ -14,6 +14,7 @@ import GlmDiagnosticsPanel from "@/components/GlmDiagnosticsPanel.vue";
 import LiftChart from "@/components/LiftChart.vue";
 import PartialDependencePanel from "@/components/PartialDependencePanel.vue";
 import PartitionTable from "@/components/PartitionTable.vue";
+import ProvenanceBadge from "@/components/ProvenanceBadge.vue";
 import SurrogateNotice from "@/components/SurrogateNotice.vue";
 
 const props = defineProps<{ slug: string; version?: string }>();
@@ -169,6 +170,8 @@ onMounted(async () => {
     </p>
 
     <template v-else-if="diagnostics">
+      <ProvenanceBadge :provenance="diagnostics.provenance" />
+
       <section class="mt-8">
         <h2 class="text-sm font-semibold uppercase tracking-wide text-slate-500">
           Universal

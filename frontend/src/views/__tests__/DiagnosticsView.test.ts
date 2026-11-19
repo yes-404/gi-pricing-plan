@@ -116,6 +116,13 @@ describe("DiagnosticsView", () => {
     expect(await screen.findByText(/no such model/i)).toBeInTheDocument();
   });
 
+  it("shows the provenance badge, naming the Job that produced the diagnostics (FR-2159)", async () => {
+    stubBoth();
+    render(DiagnosticsView, { props: { slug: "motor-frequency" }, ...mounted });
+    const badge = await screen.findByRole("group", { name: "Provenance" });
+    expect(within(badge).getByText(DIAGNOSTICS.provenance.produced_by_job_id!)).toBeInTheDocument();
+  });
+
   it("puts train and holdout side by side, each with its rows and overall A/E", async () => {
     stubBoth();
     render(DiagnosticsView, { props: { slug: "motor-frequency" }, ...mounted });

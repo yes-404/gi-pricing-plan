@@ -156,6 +156,13 @@ describe("the Regression suite view (FR-1932)", () => {
     expect(calls.map((c) => c.url.pathname)).toContain(`/api/v1/rating-versions/${RV_ID}/regression-runs/${NEWEST}`);
   });
 
+  it("shows the provenance badge of the open run, with a Job that was not recorded (FR-2159)", async () => {
+    stubFetch({ pages: [{ items: LIST, next_cursor: null }], runs: { [NEWEST]: run() } });
+    render(RegressionSuiteView, { props });
+    const badge = await screen.findByRole("group", { name: "Provenance" });
+    expect(within(badge).getByText("not recorded")).toBeInTheDocument();
+  });
+
   it("?run=<id> selects that run instead of the newest", async () => {
     const { calls } = stubFetch({
       pages: [{ items: LIST, next_cursor: null }],
