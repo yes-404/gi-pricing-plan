@@ -74,7 +74,7 @@ def test_an_unknown_class_is_refused() -> None:
 
 def test_the_example_the_finding_named_fails() -> None:
     body = (ROOT / "tests/fixtures/spec-examples/ra-c535b19d.json").read_text("utf-8")
-    with pytest.raises(ValueError, match=r"premium_ladder.*FR-214"):
+    with pytest.raises(ValueError, match=r"a declared output has no output step \(FR-214\)"):
         _validate("RatingAlgorithm", body)
 
 
