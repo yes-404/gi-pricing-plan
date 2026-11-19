@@ -1107,7 +1107,7 @@ def test_each_version_pinning_another_family_gets_its_own_line() -> None:
     assert "INTERACTION-LOWERBOUND reachable@3 status=approved" in lines
 
 
-# --- her 2026-11-18 case: a Factor consumed as a main effect AND only as an operand of a cross ---
+# --- the 2026-11-18 case: a Factor consumed as a main effect AND only as an operand of a cross ---
 
 _CROSS_GLM = "model:motor-cross-glm@1"
 
@@ -1149,7 +1149,7 @@ def _her_cross_on_a_second_model_call() -> dict[str, Any]:
 
 
 def _cross_showing_every_level_as_the_offset_model() -> dict[str, Any]:
-    """Her shape (a) with the domain A, B: the cross's cells show every level the input admits."""
+    """Shape (a), 2026-11-18, domain A, B: the cross's cells show every level the input admits."""
     bundle = _main_effects()
     payloads = bundle["resolved_payloads"]
     payloads[_CROSS_GLM] = _cross_only_glm()
@@ -1184,7 +1184,7 @@ def test_a_factor_a_cross_only_glm_takes_as_an_operand_is_reachable_with_a_level
 
 
 def _operand_only_open() -> dict[str, Any]:
-    """Her first note: the clean bundle, whose region feeds only the cross (no main effect), with
+    """The 2026-11-18 clean bundle, whose region feeds only the cross (no main effect), with
     the input's domain widened to A, B, C: the cross has no cell for region C."""
     bundle = copy.deepcopy(_clean())
     _set_input(bundle, "region", domain=["A", "B", "C"])
