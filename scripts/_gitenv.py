@@ -9,8 +9,9 @@ match: `tests/test_gitenv.py` holds this tuple above the installed git's `git re
 
 import os
 
-# A superset by design: the names `git rev-parse --local-env-vars` lists across the supported git
-# versions. GIT_INTERNAL_SUPER_PREFIX is listed by git 2.39 and not by 2.47; it stays for older git.
+# A superset by design: it holds every name `git rev-parse --local-env-vars` lists in the supported
+# git versions, and more. GIT_NAMESPACE is in no list read (git 2.47.3, 2.39.5) and stays. So does
+# GIT_INTERNAL_SUPER_PREFIX, listed by git 2.39 and not by 2.47, for older git.
 REDIRECTS: tuple[str, ...] = (
     "GIT_DIR",
     "GIT_WORK_TREE",
