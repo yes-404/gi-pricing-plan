@@ -16,11 +16,42 @@ from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.models import DiagnosticsRow
+from app.db.models import DiagnosticsRow, ModelRow
 from app.errors import PlatformError
-from model_schema import Diagnostics, FactorFinerLevels, FieldError
+from app.platform import modelling as model_service
+from app.platform import transformations as transform_service
+from model_schema import MODEL_SPEC_ADAPTER, Diagnostics, FactorFinerLevels, FieldError
+from pricing_core.modelling.diagnostics import chained_factors
 
-__all__ = ["load_diagnostics", "select_finer_level", "to_diagnostics"]
+__all__ = [
+    "chained_factor_slugs",
+    "load_diagnostics",
+    "select_finer_level",
+    "to_diagnostics",
+]
+
+
+async def chained_factor_slugs(
+    session: AsyncSession, *, workspace_id: UUID, model: ModelRow
+) -> tuple[str, ...]:
+    """The slugs of `model`'s Factors that have a finer level (FR-109, `02` §5.1).
+
+    Read from the model's definition: its spec's Factors and the operands they cross
+    (`load_factors`, as the fit loads them) and the groupings they pin, through
+    `pricing_core`'s `chained_factors`, the one rule the fit also uses. Nothing is read from
+    data (FR-170). A client uses it to tell a model with no finer level from one fitted before
+    the finer level was stored (#1506 slice 5).
+    """
+    spec = MODEL_SPEC_ADAPTER.validate_python(model.spec)
+    factors = await model_service.load_factors(
+        session, workspace_id=workspace_id, factor_ids=list(spec.factors)
+    )
+    groupings = await transform_service.load_groupings(
+        session,
+        workspace_id=workspace_id,
+        ids=[f.grouping_id for f in factors if f.grouping_id],
+    )
+    return tuple(factor.slug for factor, _ in chained_factors(factors, groupings))
 
 
 def select_finer_level(diagnostics: Diagnostics, level: str) -> Diagnostics:

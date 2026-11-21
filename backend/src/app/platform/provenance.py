@@ -25,7 +25,7 @@ The rules FR-2159 states, kept in one place so that a reviewer reads them once:
 
 from __future__ import annotations
 
-from collections.abc import Iterable, Mapping
+from collections.abc import Iterable, Mapping, Sequence
 from typing import Any
 from uuid import UUID
 
@@ -193,11 +193,17 @@ async def profile_read(
     )
 
 
-def diagnostics_read(diagnostics: Diagnostics, *, model: ModelRow) -> DiagnosticsRead:
-    """`model:{slug}@{n}` of the fitted model, the row the route resolved."""
+def diagnostics_read(
+    diagnostics: Diagnostics, *, model: ModelRow, chained_factors: Sequence[str]
+) -> DiagnosticsRead:
+    """`model:{slug}@{n}` of the fitted model, the row the route resolved; `chained_factors` is
+    what `platform.diagnostics.chained_factor_slugs` read from that model's definition."""
     return _read(
         DiagnosticsRead,
-        diagnostics.model_dump(mode="json", by_alias=True),
+        {
+            **diagnostics.model_dump(mode="json", by_alias=True),
+            "chained_factors": list(chained_factors),
+        },
         compose("diagnostics", diagnostics.id, diagnostics.job_id, [_model_ref(model)]),
     )
 

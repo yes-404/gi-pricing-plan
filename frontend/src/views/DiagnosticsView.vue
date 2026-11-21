@@ -2,7 +2,6 @@
 import { computed, onMounted, ref } from "vue";
 
 import {
-  chainedFactorSlugs,
   getDiagnostics,
   partitions,
   weightingLabel,
@@ -12,9 +11,7 @@ import {
   type FinerLevelAe,
   type PartitionLabel,
 } from "@/api/diagnostics";
-import { getModel, listFactors, type Model } from "@/api/models";
-import { listGroupings } from "@/api/transformations";
-import { getVersionById } from "@/api/versions";
+import { getModel, type Model } from "@/api/models";
 import { ProblemError } from "@/api/problem";
 import AeByFactorChart from "@/components/AeByFactorChart.vue";
 import CalibrationChart from "@/components/CalibrationChart.vue";
@@ -70,11 +67,9 @@ const unseenRows = computed(() =>
  * maintainer's (c) on #1506:
  *
  * - no Factor on a chained grouping: no finer-level section at all, whenever the model was
- *   fitted. A `null` field cannot say this by itself, so for that model only the view reads the
- *   model's definition: the spec's Factors and the groupings they pin. This is not part of (c):
- *   it is #1506's proposal, pending the maintainer's answer, with an alternative offered there
- *   (comments 7010674044 and 7016067421). It uses the reads that exist
- *   (the dataset version, then its Factors and Groupings), and no contract changes for it.
+ *   fitted. A `null` field cannot say this by itself, so the read carries `chained_factors`,
+ *   which the API composes from the model's definition by the fit's own rule (`02` §5.1;
+ *   decided on #1961, comment 7060609084, point 1). The view applies no rule of its own.
  * - such a Factor, and `finer_level_ae` `null` or absent: fitted before the finer level was
  *   stored. The view says "not available", in those words, names the Factors, and shows no
  *   table.
@@ -90,31 +85,11 @@ const finer = computed(() => diagnostics.value?.finer_level_ae ?? null);
 
 const finerAvailable = computed(() => finer.value !== null);
 
-/**
- * For a model with no finer level stored: its Factors on a chained grouping, read from its
- * definition. `null` is "could not be read", which keeps the plain "not available" rather than
- * hiding a section the model may have.
- */
-const chainedSlugs = ref<string[] | null>([]);
+/** The model's Factors on a chained grouping, as the read names them (`chained_factors`). */
+const chainedSlugs = computed<string[]>(() => [...(diagnostics.value?.chained_factors ?? [])]);
 
-/** "Not available": a Factor that has (or may have) a finer level, and none stored for it. */
-const finerNotAvailable = computed(
-  () => !finerAvailable.value && (chainedSlugs.value === null || chainedSlugs.value.length > 0),
-);
-
-/**
- * The model's Factors with a finer level, by the fit's rule (`chainedFactorSlugs`, held to
- * `pricing_core`'s `chained_factors` by a parity test), read from its definition: the dataset
- * version, then its Factors and Groupings. Definitions only, nothing computed from data (FR-170).
- */
-async function chainedFactorsOf(fitted: Model): Promise<string[]> {
-  const version = await getVersionById(fitted.dataset_version_id);
-  const [factors, groupings] = await Promise.all([
-    listFactors(version.dataset_id),
-    listGroupings(version.dataset_id),
-  ]);
-  return chainedFactorSlugs(fitted.spec.factors ?? [], factors, groupings);
-}
+/** "Not available": a Factor that has a finer level, and none stored for it. */
+const finerNotAvailable = computed(() => !finerAvailable.value && chainedSlugs.value.length > 0);
 
 const chainedFactors = computed<FactorFinerLevels[]>(() => finer.value?.holdout ?? []);
 
@@ -285,14 +260,6 @@ onMounted(async () => {
     ]);
     diagnostics.value = artifact;
     model.value = fetched;
-    if (artifact.finer_level_ae == null) {
-      try {
-        chainedSlugs.value = await chainedFactorsOf(fetched);
-      } catch (error) {
-        if (!(error instanceof ProblemError)) throw error;
-        chainedSlugs.value = null;
-      }
-    }
   } catch (error) {
     if (error instanceof ProblemError) problem.value = error;
     else throw error;

@@ -10,9 +10,6 @@ workstream closure. A test at the HTTP layer is what makes the absence detectabl
 from __future__ import annotations
 
 import asyncio
-import json
-import re
-from pathlib import Path
 
 import pytest
 from backend.tests.test_api_datasets import _headers
@@ -287,57 +284,24 @@ def test_a_fit_on_a_chained_grouping_stores_the_finer_level_ae_and_the_read_retu
         assert _cells(postcode)["AB1"]["ae"] > 1.0 > _cells(postcode)["AB2"]["ae"]
 
 
-#: The parity table the view's TypeScript rule is held to (#1506 slice 5).
-_PARITY_FILE = (
-    Path(__file__).resolve().parents[2]
-    / "frontend/src/views/__tests__/chainedFactorParity.test.ts"
-)
-
-
-def _parity_cases() -> list[dict]:
-    """The JSON between the parity markers of the TypeScript test, read as written there."""
-    text = _PARITY_FILE.read_text(encoding="utf-8")
-    block = text.split("// parity-cases:begin", 1)[1].split("// parity-cases:end", 1)[0]
-    literal = block.split("=", 1)[1].strip().rstrip(";")
-    # The block is a TypeScript literal: quote its bare keys and drop trailing commas so `json`
-    # can read it.
-    quoted = re.sub(r"([{,]\s*)([a-z_]+):", r'\1"\2":', literal)
-    return json.loads(re.sub(r",(\s*[\]}])", r"\1", quoted))
-
-
 @pytest.mark.req("FR-109")
-@pytest.mark.parametrize("example", _parity_cases(), ids=lambda example: example["name"])
-def test_the_fits_chained_factor_rule_agrees_with_the_views_on_the_parity_table(
-    example: dict,
+@pytest.mark.parametrize(("chained", "named"), [(True, ["region"]), (False, [])])
+def test_the_read_names_the_factors_that_have_a_finer_level(
+    api_client: TestClient, workspace_id, chained: bool, named: list[str]
 ) -> None:
-    """The Python side of the parity table: the fit's rule (`chained_factors`) on the Factors
-    `load_factors` would return names exactly the Factors the TypeScript rule names."""
-    from uuid import NAMESPACE_URL, uuid5
-
-    from model_schema import Factor, FactorType, Grouping
-    from pricing_core.modelling.diagnostics import chained_factors
-
-    def uid(key: str | None):
-        return None if key is None else uuid5(NAMESPACE_URL, key)
-
-    factors = {
-        f["id"]: Factor.model_construct(
-            id=uid(f["id"]),
-            slug=f["slug"],
-            type=FactorType(f["type"]),
-            grouping_id=uid(f.get("grouping_id")),
-        )
-        for f in example["factors"]
-    }
-    groupings = {
-        uid(g["id"]): Grouping.model_construct(
-            id=uid(g["id"]), parent_grouping_id=uid(g.get("parent_grouping_id"))
-        )
-        for g in example["groupings"]
-    }
-    loaded = [factors[key] for key in example["loaded"]]
-    named = [factor.slug for factor, _ in chained_factors(loaded, groupings)]
-    assert named == example["expected"]
+    """`chained_factors` (`02` §5.1, #1506 slice 5): the route composes it from the model's
+    definition by the fit's own rule, so the view needs no rule of its own to tell "no finer
+    level" from "fitted before the finer level was stored"."""
+    actor, slug, _ = _on_own_loop(
+        lambda db, store: _chain_fit(db, store, workspace_id, chained=chained)
+    )
+    read = api_client.get(
+        f"/api/v1/models/{slug}/diagnostics", headers=_headers(actor.id, workspace_id)
+    )
+    assert read.status_code == 200, read.text
+    assert read.json()["chained_factors"] == named
+    # The fit's rule and the read's agree: the Factors named are those that got a finer level.
+    assert [entry["factor"] for entry in read.json()["finer_level_ae"]["holdout"]] == named
 
 
 @pytest.mark.req("FR-109")

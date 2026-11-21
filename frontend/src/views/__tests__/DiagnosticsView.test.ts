@@ -322,8 +322,8 @@ describe("DiagnosticsView", () => {
  * #1506, each tested below: a model with no Factor on a chained grouping has no finer-level
  * section at all; one with such a Factor, fitted before the change (`finer_level_ae` null), says
  * "not available", never an empty table; one fitted after shows the tables. Which case a null
- * field is comes from the model's definition, read through the dataset version, its Factors and
- * its Groupings, which `serve` stubs.
+ * field is comes from the read's `chained_factors`, which the API composes by the fit's rule;
+ * the view reads nothing else for it.
  */
 describe("DiagnosticsView, finer level", () => {
   const REGION: FactorFinerLevels = {
@@ -383,35 +383,17 @@ describe("DiagnosticsView, finer level", () => {
   }
 
   /**
-   * The artifact, and the model's definition: one Factor, `region`, on a grouping that has a
-   * parent when `chained`. `definition: false` leaves those reads unanswered (404).
+   * The artifact and the model. `chained` puts `region` in the read's `chained_factors`, as the
+   * API does for a Factor on a grouping with a parent. No dataset version, Factor or Grouping
+   * read is stubbed: the view must not need one (it would get a 404).
    */
   function serve(
     body: Diagnostics,
-    { chained = false, model = GBM_MODEL, definition = true }:
-      { chained?: boolean; model?: Model; definition?: boolean } = {},
-  ): void {
-    const pinned = { ...model, spec: { ...model.spec, factors: ["f-region"] } } as unknown as Model;
-    stubByUrl({
-      "/diagnostics": { body },
-      "/models/motor-frequency": { body: pinned },
-      ...(definition
-        ? {
-            "/dataset-versions/": { body: { id: model.dataset_version_id, dataset_id: "d-motor" } },
-            "/factors": {
-              body: [
-                {
-                  id: "f-region",
-                  slug: "region",
-                  type: "grouping",
-                  grouping_id: "g-region",
-                  operand_factor_ids: [],
-                },
-              ],
-            },
-            "/groupings": { body: [{ id: "g-region", parent_grouping_id: chained ? "g-area" : null }] },
-          }
-        : {}),
+    { chained = false, model = GBM_MODEL }: { chained?: boolean; model?: Model } = {},
+  ): ReturnType<typeof vi.fn> {
+    return stubByUrl({
+      "/diagnostics": { body: { ...body, chained_factors: chained ? ["region"] : [] } },
+      "/models/motor-frequency": { body: model },
     });
   }
 
@@ -482,13 +464,15 @@ describe("DiagnosticsView, finer level", () => {
     expect(screen.queryByRole("combobox", { name: /level for/i })).not.toBeInTheDocument();
   });
 
-  it("keeps a plain not available when the model's definition cannot be read", async () => {
-    serve(withFiner(null), { definition: false });
+  it("names the chained factors from the diagnostics read alone, with no definition read", async () => {
+    const fetchMock = serve(withFiner(null), { chained: true });
     render(DiagnosticsView, { props: { slug: "motor-frequency" }, ...mounted });
 
     const section = await screen.findByLabelText("Actual versus expected at a finer level");
-    expect(section).toHaveTextContent("Finer level: not available");
-    expect(within(section).queryByRole("table")).not.toBeInTheDocument();
+    expect(section).toHaveTextContent("Finer level for region");
+    expect(section).toHaveTextContent("not available");
+    const urls = fetchMock.mock.calls.map(([input]) => String(input));
+    expect(urls.some((url) => /\/(dataset-versions|factors|groupings)\b/.test(url))).toBe(false);
   });
 
   it("shows the tables for a chained factor fitted after the change", async () => {

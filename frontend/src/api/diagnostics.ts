@@ -11,46 +11,6 @@ export type FactorFinerLevels = components["schemas"]["FactorFinerLevels"];
 export type FinerLevelAe = components["schemas"]["FinerLevelAe"];
 export type LiftBin = components["schemas"]["LiftBin"];
 
-/** The parts of a Factor the chained-Factor rule reads, taken from the generated shape. */
-export type ChainFactor = Pick<
-  components["schemas"]["Factor"],
-  "id" | "slug" | "type" | "grouping_id" | "operand_factor_ids"
->;
-
-/** The part of a Grouping the chained-Factor rule reads, taken from the generated shape. */
-export type ChainGrouping = Pick<components["schemas"]["Grouping"], "id" | "parent_grouping_id">;
-
-/**
- * FR-109: the slugs of a model's Factors that have a finer level. These are the `grouping`
- * Factors whose grouping has a parent, among the spec's Factors and, transitively, the
- * operands of its interactions (the platform's `load_factors`). It mirrors the fit's rule,
- * `pricing_core.modelling.diagnostics.chained_factors`, which a parity test holds it to
- * (#1506 slice 5). Definitions only; nothing is computed from data (FR-170).
- */
-export function chainedFactorSlugs(
-  specFactorIds: readonly string[],
-  factors: readonly ChainFactor[],
-  groupings: readonly ChainGrouping[],
-): string[] {
-  const byId = new Map(factors.map((factor) => [factor.id, factor]));
-  const chained = new Set(
-    groupings.filter((grouping) => grouping.parent_grouping_id).map((grouping) => grouping.id),
-  );
-  const loaded: string[] = [];
-  const pending = [...specFactorIds];
-  while (pending.length > 0) {
-    const id = pending.shift() as string;
-    if (loaded.includes(id)) continue;
-    loaded.push(id);
-    pending.push(...(byId.get(id)?.operand_factor_ids ?? []));
-  }
-  return loaded.flatMap((id) => {
-    const factor = byId.get(id);
-    return factor?.type === "grouping" && factor.grouping_id && chained.has(factor.grouping_id)
-      ? [factor.slug]
-      : [];
-  });
-}
 export type CalibrationBin = components["schemas"]["CalibrationBin"];
 export type ResidualSummary = components["schemas"]["ResidualSummary"];
 export type ComplexityDiagnostic = components["schemas"]["ComplexityDiagnostic"];

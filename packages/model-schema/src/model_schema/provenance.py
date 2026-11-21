@@ -117,9 +117,18 @@ class ProfileRead(Profile):
 
 
 class DiagnosticsRead(Diagnostics):
-    """A model's Diagnostics (`02` FR-170), with its `Provenance` (`00` FR-2159)."""
+    """A model's Diagnostics (`02` FR-170), with its `Provenance` (`00` FR-2159).
+
+    `chained_factors` (`02` FR-109, §5.1): the slugs of the model's Factors on a chained
+    grouping, those that have a finer level. The read composes it from the model's definition
+    by the rule the fit uses, never from data (FR-170), so a client can tell "no finer level"
+    from "fitted before the finer level was stored" without a rule of its own. The route always
+    sets it, to an empty tuple when no Factor has a finer level; the `None` default only keeps
+    the field optional in the contract and the generated client, as `finer_level_ae` is.
+    """
 
     provenance: Provenance
+    chained_factors: tuple[str, ...] | None = None
 
 
 class ModelComparisonRead(ModelComparison):

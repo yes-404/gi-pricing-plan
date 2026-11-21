@@ -699,9 +699,12 @@ async def get_model_diagnostics(
         diagnostics = await diagnostics_service.load_diagnostics(
             session, workspace_id=caller.workspace_id, model_id=model.id
         )
+        chained = await diagnostics_service.chained_factor_slugs(
+            session, workspace_id=caller.workspace_id, model=model
+        )
     if level is not None:
         diagnostics = diagnostics_service.select_finer_level(diagnostics, level)
-    return provenance.diagnostics_read(diagnostics, model=model)
+    return provenance.diagnostics_read(diagnostics, model=model, chained_factors=chained)
 
 
 @router.post(

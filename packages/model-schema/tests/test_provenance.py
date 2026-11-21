@@ -286,6 +286,11 @@ def test_the_schema_declares_subject_refs_as_the_artifact_ref_string() -> None:
 # -- The ten read classes -------------------------------------------------------------------
 
 
+#: Read-side fields beyond `provenance`, by read class. Only one, and it is named here so that a
+#: second one cannot be added without this test saying so (#1506 slice 5).
+_READ_SIDE_EXTRAS: dict[str, set[str]] = {"DiagnosticsRead": {"chained_factors"}}
+
+
 def _read_and_base(read_name: str) -> tuple[type[pydantic.BaseModel], type[pydantic.BaseModel]]:
     read: type[pydantic.BaseModel] = getattr(model_schema, read_name)
     base: type[pydantic.BaseModel] = getattr(model_schema, READ_CLASSES[read_name])
@@ -296,10 +301,17 @@ def _read_and_base(read_name: str) -> tuple[type[pydantic.BaseModel], type[pydan
 @pytest.mark.req("FR-6")
 @pytest.mark.parametrize("read_name", sorted(READ_CLASSES))
 def test_each_read_class_is_its_shape_plus_provenance(read_name: str) -> None:
-    """The accepted approach: a subclass, the shape's fields unchanged, plus one field."""
+    """The accepted approach: a subclass, the shape's fields unchanged, plus one field.
+
+    One named exception, `DiagnosticsRead`, also carries `chained_factors`, which the route
+    composes from the model's definition by the fit's rule and which is never persisted (`02`
+    §5.1, #1506 slice 5). It is optional, so the persisted shape still validates as the read."""
     read, base = _read_and_base(read_name)
     assert issubclass(read, base)
-    assert set(read.model_fields) == set(base.model_fields) | {"provenance"}
+    extra = {"provenance"} | (_READ_SIDE_EXTRAS.get(read_name, set()))
+    assert set(read.model_fields) == set(base.model_fields) | extra
+    for name in _READ_SIDE_EXTRAS.get(read_name, set()):
+        assert not read.model_fields[name].is_required(), name
     for name, field in base.model_fields.items():
         assert read.model_fields[name].annotation == field.annotation, name
         assert read.model_fields[name].is_required() == field.is_required(), name
