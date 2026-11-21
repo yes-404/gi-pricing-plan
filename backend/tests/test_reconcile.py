@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from dataclasses import replace
 from datetime import UTC, datetime, timedelta
+from typing import Any
 from uuid import UUID, uuid4
 
 import pytest
@@ -356,6 +357,29 @@ def test_r5_a_deployment_of_a_version_that_is_not_approved_is_reported(status: s
     assert "not approved" in found[0].detail
 
 
+def test_r1_a_built_in_validation_rule_needs_no_request() -> None:
+    """FR-68: the shipped catalogue is seeded `approved` with no request, by design."""
+    rule = ArtifactState("validation_rules", "validation_rule:r@1", "validation_rule", "approved")
+    assert [m.rule for m in reconcile_data(WorkspaceData(artifacts=(rule,)))] == ["R1"]
+    shipped = replace(rule, builtin=True)
+    assert reconcile_data(WorkspaceData(artifacts=(shipped,))) == []
+
+
+def test_r1_a_validation_rule_set_needs_no_request() -> None:
+    """PL-1303 Acceptance 7: a rule set is written `approved` with no request."""
+    plain = ArtifactState(
+        "validation_rule_sets", "validation_rule_set:s@1", "validation_rule_set", "approved"
+    )
+    assert reconcile_data(WorkspaceData(artifacts=(plain,))) == []
+
+
+@pytest.mark.parametrize("action", ["deployment.created", "deployment.rolled_back"])
+def test_r5_a_deployment_is_recorded_by_its_creation_or_its_rollback_event(action: str) -> None:
+    data = _with_deployment(_reconciled())
+    event = replace(data.events[-1], action=action)
+    assert reconcile_data(replace(data, events=(*data.events[:-1], event))) == []
+
+
 # -- legacy marking (D2) ----------------------------------------------------------------------
 
 
@@ -408,6 +432,39 @@ def test_a_workspace_with_no_id_carrying_event_marks_nothing_legacy() -> None:
     )
     found = reconcile_data(invented)
     assert found, "the invented approval must be reported"
+    assert [m.legacy for m in found] == [False] * len(found), found
+
+
+def test_an_r5_mismatch_is_never_legacy_even_with_chain_evidence_before_the_cut_over() -> None:
+    """A deployment created before the cut-over. The shape of today's reference keeps R5 out of
+    the chain's entity refs; this plants an event that does name it, so only the explicit skip
+    in `_mark_legacy` keeps the mismatch from being marked."""
+    version = ArtifactState("rating_versions", REF, "rating_version", "draft")
+    data = _with_deployment(
+        replace(_reconciled(), artifacts=(version,), requests=(), decisions=(), events=())
+    )
+    decision = EventState(
+        9,
+        _t(9),
+        "approval_request.approve",
+        "model:m@1",
+        APPROVER,
+        {"approval_request_id": str(uuid4()), "decision_id": str(uuid4())},
+    )
+    early = EventState(
+        0,
+        _t(-5),
+        "deployment.created",
+        f"deployment:{DEPLOYMENT_ID}",
+        SUBMITTER,
+        {"id": str(DEPLOYMENT_ID)},
+    )
+    found = [
+        m
+        for m in reconcile_data(replace(data, events=(early, *data.events, decision)))
+        if m.rule == "R5"
+    ]
+    assert found, "the draft version's deployment must be reported"
     assert [m.legacy for m in found] == [False] * len(found), found
 
 
@@ -746,6 +803,137 @@ async def test_reconcile_db_a_planted_deployment_of_a_draft_version_is_reported(
     async with database.session() as session:
         report = await rc.reconcile(session, workspace_id)
     assert any("not approved or later" in m.detail for m in report.mismatches), report.mismatches
+
+
+async def _skip_revalidation(session: AsyncSession, *, ref: ArtifactRef) -> None:
+    """The stored-bundle guard is `test_stored_bundle_revalidation.py`'s; this test is about
+    what the decision and deployment writers leave in the chain."""
+
+
+async def _decided_rating_version(database: Database, workspace_id: UUID, slug: str) -> str:
+    """A compiled Rating Version in `review`, then approved as the platform does: the request
+    through `approvals.submit`, each decision through `approvals.decide`, the version moved by
+    `rating_versions.apply_approval_decision`. The artifact row is present throughout and no
+    approval event is written by hand."""
+    from backend.tests.test_approvals import _no_evidence_authors, _submit, _user, _with_role
+    from backend.tests.test_deployments import _compiled_metadata
+
+    from app.db.models import ApprovalRequestRow, RatingVersionRow
+    from app.platform import approvals
+    from app.platform import rating_versions as rating_versions_service
+    from model_schema import DecisionKind
+
+    async with database.unit_of_work() as session:
+        session.add(
+            RatingVersionRow(
+                workspace_id=workspace_id,
+                slug=slug,
+                version=1,
+                status="review",
+                dataset_version_id=uuid4(),
+                model_ref="model:motor-ad-frequency@7",
+                created_by=uuid4(),
+                bundle=await _compiled_metadata(session),
+            )
+        )
+    ref = ArtifactRef.parse(f"rating_version:{slug}@1")
+    request_id = await _submit(database, workspace_id, _user("s"), ref=ref)
+    async with database.session() as session:
+        required = (await session.get(ApprovalRequestRow, request_id)).approvers_required  # type: ignore[union-attr]
+    for n in range(required):
+        approver = _user(f"{slug}-a{n}")
+        await _with_role(database, workspace_id, approver, "approver")
+        async with database.unit_of_work() as session:
+            decided = await approvals.decide(
+                session,
+                evidence_authors=_no_evidence_authors,
+                workspace_id=workspace_id,
+                request_id=request_id,
+                approver=approver,
+                decision=DecisionKind.APPROVE,
+                comment="clean",
+            )
+            async with approvals.approval_decision(session):
+                await rating_versions_service.apply_approval_decision(
+                    session, workspace_id=workspace_id, actor=approver, request=decided
+                )
+    return str(ref)
+
+
+async def test_reconcile_db_the_real_paths_with_artifact_rows_reconcile_clean(
+    database: Database, workspace_id: UUID, grant: Any
+) -> None:
+    """The clean case through every real writer, artifact rows present: the seeded built-in
+    rules (FR-68), a rule set written by `replace_rule_set`, two Rating Versions approved through
+    `approvals.decide`, a deploy and a rollback. Nothing is written by hand."""
+    from backend.tests.test_approvals import _user, _with_role
+    from sqlalchemy import select
+
+    from app.db.models import ValidationRuleRow
+    from app.platform import datasets, deployments
+    from app.platform import validation_rules as rule_service
+    from model_schema import DeploymentCreate, RollbackCreate
+
+    await grant("analyst")  # seeds the built-in catalogue, as every workspace has it (FR-68)
+    actor = _user("analyst")
+    await _with_role(database, workspace_id, actor, "analyst")
+    async with database.unit_of_work() as session:
+        dataset = await datasets.create_dataset(
+            session, workspace_id=workspace_id, actor=actor, slug="reconcile-clean"
+        )
+        rule_id = (
+            (
+                await session.execute(
+                    select(ValidationRuleRow.id).where(
+                        ValidationRuleRow.workspace_id == workspace_id,
+                        ValidationRuleRow.builtin.is_(True),
+                    )
+                )
+            )
+            .scalars()
+            .first()
+        )
+        assert rule_id is not None, "the built-in rules are seeded"
+        await rule_service.replace_rule_set(
+            session,
+            workspace_id=workspace_id,
+            actor=actor,
+            dataset_id=dataset.id,
+            slug="reconcile-clean",
+            members=[rule_service.RuleSetMember(rule_id=rule_id)],
+        )
+
+    first = await _decided_rating_version(database, workspace_id, "rv-first")
+    second = await _decided_rating_version(database, workspace_id, "rv-second")
+    deployer = _user("deployer")
+    await _with_role(database, workspace_id, deployer, "deployer")
+    for ref in (first, second):
+        async with database.unit_of_work() as session:
+            await deployments.deploy(
+                session,
+                workspace_id=workspace_id,
+                actor=deployer,
+                environment="dev",
+                body=DeploymentCreate(rating_version_ref=ArtifactRef.parse(ref), reason="release"),
+                revalidate=_skip_revalidation,
+                switch=None,
+            )
+    async with database.unit_of_work() as session:
+        await deployments.rollback(
+            session,
+            workspace_id=workspace_id,
+            actor=deployer,
+            environment="dev",
+            body=RollbackCreate(rating_version_ref=ArtifactRef.parse(first), reason="back"),
+            revalidate=_skip_revalidation,
+            switch=None,
+        )
+
+    async with database.session() as session:
+        report = await rc.reconcile(session, workspace_id)
+    assert report.chain == "intact"
+    assert report.artifacts_checked > 38, "built-in rules, the rule set and both versions are rows"
+    assert report.mismatches == (), report.mismatches
 
 
 pytestmark = pytest.mark.req("FR-2163")

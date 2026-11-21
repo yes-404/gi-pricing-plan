@@ -17,6 +17,10 @@ Rules (rule ids are this module's vocabulary, not requirement ids):
 * **R1** — every artifact in an approved state, or in a state reachable only through
   `approved`, has an approved approval request; a row in a status no lifecycle edge leads to
   (today a rating version that is `live` or `retired`) is reported whatever requests exist.
+  Two kinds of row are outside R1: a built-in validation rule (FR-68, `builtin IS TRUE`: seeded
+  `approved` with no request, by design) and a validation rule set (the PL-1303 Acceptance 7
+  allowance: its writer records no request). The rule-set table stays in `COVERED_TABLES`: the
+  census needs it.
   A model archived after it was superseded is not claimed by R1: `archived` is reachable from
   `draft`, so R2 to R4 cover its approval through the chain.
 * **R2** — every approved request has enough approving decisions, from distinct approvers,
@@ -28,12 +32,14 @@ Rules (rule ids are this module's vocabulary, not requirement ids):
 * **R4** — the chain order is the process order: submitted, then the decisions, then the
   artifact's approval event, once.
 * **R5** — every deployment rests on an approved-or-later version that passes R1 to R4 and has
-  its creation event (FR-238: a draft or review version does not deploy); where it names a
+  its creation or rollback event (`deployment.created`, `deployment.rolled_back`; FR-269,
+  FR-238: a draft or review version does not deploy); where it names a
   deployment request, that request is `executed` and passes R1 to R4.
 
 A mismatch whose chain evidence all lies before the workspace's first id-carrying decision
 event (by sequence, never by timestamp) is marked `legacy`; it is reported and counted like any
-other (nothing is silenced). A workspace with no id-carrying decision event has no cut-over:
+other (nothing is silenced). An R5 mismatch is never legacy: a deployment is not an event a
+cut-over can place it before. A workspace with no id-carrying decision event has no cut-over:
 nothing in it is legacy. Rule 6 of the issue (anchors, FR-373) is deferred to #1919.
 """
 
@@ -46,7 +52,7 @@ from datetime import datetime
 from typing import Any, Final
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import false, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models import (
@@ -99,7 +105,12 @@ DECISION_ACTIONS: Final[Mapping[str, str]] = {
 #: What a malformed stored row raises while it is read or its rules run.
 _UNREADABLE: Final = (ValueError, TypeError, AttributeError, KeyError)
 SUBMITTED_ACTION: Final = "approval_request.submitted"
-DEPLOYMENT_CREATED_ACTION: Final = "deployment.created"
+#: The events that record a deployment: a deploy writes `deployment.created`, a rollback
+#: (FR-269) `deployment.rolled_back`; the new deployment's id is `after["id"]` in both.
+DEPLOYMENT_ACTIONS: Final = frozenset({"deployment.created", "deployment.rolled_back"})
+#: A validation rule set is written `approved` under the PL-1303 Acceptance 7 allowance with no
+#: approval request (`validation_rules.replace_rule_set`); R1 has nothing to require for it.
+_NO_REQUEST_TABLE: Final = "validation_rule_sets"
 
 #: The action of the event that records an artifact's approval, per approval-request artifact
 #: type; `<type>.approved` unless named here. A validation rule set carries no approval event
@@ -119,10 +130,10 @@ def _graph(transitions: Mapping[Any, Collection[Any]]) -> dict[str, frozenset[st
 
 
 #: Per approval-request artifact type: the initial status and the lifecycle as data. The
-#: first five are the `model-schema` tables, read, never copied. A deployment request and a
-#: validation rule have no transition table: their graphs are written here from their only
-#: writers (`platform/deployments.py`, `platform/validation_rules.py`), and a graph that
-#: reached a later status without `approved` would be a change to those writers.
+#: first five are the `model-schema` tables, read, never copied. A validation rule, a validation
+#: rule set and a deployment request have no transition table: their graphs are written here from
+#: their only writers (`platform/validation_rules.py`, `platform/deployments.py`), and a graph
+#: that reached a later status without `approved` would be a change to those writers.
 STATE_GRAPHS: Final[Mapping[str, tuple[str, dict[str, frozenset[str]]]]] = {
     "model": ("draft", _graph(VALID_MODEL_TRANSITIONS)),
     "peril_structure": ("draft", _graph(VALID_PERIL_STRUCTURE_TRANSITIONS)),
@@ -158,8 +169,9 @@ STATE_GRAPHS: Final[Mapping[str, tuple[str, dict[str, frozenset[str]]]]] = {
     ),
 }
 
-#: governed table -> (approval-request artifact type, row class, the slug attribute). The
-#: census test derives this key set from the installed `approval_guard` triggers.
+#: governed table -> (approval-request artifact type, row class, the slug attribute). A literal
+#: dict: the census test checks its key set against the installed `approval_guard` triggers, and
+#: nothing else about it.
 COVERED_TABLES: Final[Mapping[str, tuple[str, Any, str]]] = {
     "models": ("model", ModelRow, "model_family_slug"),
     "custom_metrics": ("custom_metric", CustomMetricRow, "slug"),
@@ -176,7 +188,7 @@ def approved_or_later(initial: str, graph: Mapping[str, Collection[str]]) -> fro
     """The statuses that are `approved` or reachable only through it, derived from the graph.
 
     Every status that cannot be reached from `initial` along edges that avoid `approved`.
-    Derived, never listed: a status added to a lifecycle changes the answer by itself.
+    Computed from the graph it is given: a status added to that graph changes the answer.
     """
     free = {initial}
     stack = [initial]
@@ -216,6 +228,8 @@ class ArtifactState:
     ref: str  # `<type>:<slug>@<version>`
     type: str
     status: str
+    #: A shipped catalogue row (FR-68), seeded `approved` with no request. Only validation rules.
+    builtin: bool = False
 
 
 @dataclass(frozen=True)
@@ -295,6 +309,8 @@ def _r1(data: WorkspaceData) -> list[Mismatch]:
     approved_refs = {r.ref for r in data.requests if r.status == APPROVED}
     found: list[Mismatch] = []
     for a in data.artifacts:
+        if a.builtin or a.table == _NO_REQUEST_TABLE:
+            continue
         if a.status in unwritten_states(a.type):
             # Whatever requests exist: no writer of this product produces a row in this status.
             found.append(
@@ -482,7 +498,7 @@ def _r5(data: WorkspaceData, upstream: Collection[Mismatch]) -> list[Mismatch]:
     versions = {a.ref: a.status for a in data.artifacts if a.type == "rating_version"}
     deployable = approved_states("rating_version")
     created = {
-        str((e.after or {}).get("id")) for e in data.events if e.action == DEPLOYMENT_CREATED_ACTION
+        str((e.after or {}).get("id")) for e in data.events if e.action in DEPLOYMENT_ACTIONS
     }
     for deployment in data.deployments:
         ref = deployment.rating_version_ref
@@ -500,7 +516,11 @@ def _r5(data: WorkspaceData, upstream: Collection[Mismatch]) -> list[Mismatch]:
         elif ref in unreconciled:
             found.append(Mismatch("R5", subject, f"its version {ref} does not reconcile"))
         if str(deployment.id) not in created:
-            found.append(Mismatch("R5", subject, "no deployment.created event names it"))
+            found.append(
+                Mismatch(
+                    "R5", subject, "no deployment.created or deployment.rolled_back event names it"
+                )
+            )
         if deployment.request_ref is not None:
             if deployment.request_status != "executed":
                 found.append(
@@ -530,7 +550,8 @@ def _mark_legacy(data: WorkspaceData, mismatches: list[Mismatch]) -> list[Mismat
     at a sequence before the workspace's first decision event that carries its ids. A mismatch
     with no event naming its reference has nothing to place and is not legacy, and a workspace
     with no id-carrying decision event has no cut-over to place anything before: nothing in it
-    is legacy.
+    is legacy. An R5 mismatch is never legacy: its subject is a deployment, which no cut-over of
+    decision events places it before, and its reference is not what the chain's events name.
     """
     first_new = min(
         (
@@ -546,7 +567,7 @@ def _mark_legacy(data: WorkspaceData, mismatches: list[Mismatch]) -> list[Mismat
     out: list[Mismatch] = []
     for m in mismatches:
         last = latest.get(m.ref)
-        legacy = first_new is not None and last is not None and last < first_new
+        legacy = m.rule != "R5" and first_new is not None and last is not None and last < first_new
         out.append(Mismatch(m.rule, m.ref, m.detail, legacy))
     return out
 
@@ -565,16 +586,19 @@ async def load_workspace_data(session: AsyncSession, workspace_id: UUID) -> Work
     """Read one workspace's rows. Read-only; the caller owns the transaction."""
     artifacts: list[ArtifactState] = []
     for table, (artifact_type, row_class, slug_attr) in COVERED_TABLES.items():
+        builtin = row_class.builtin if row_class is ValidationRuleRow else false()
         rows = (
             await session.execute(
-                select(getattr(row_class, slug_attr), row_class.version, row_class.status).where(
-                    row_class.workspace_id == workspace_id
-                )
+                select(
+                    getattr(row_class, slug_attr), row_class.version, row_class.status, builtin
+                ).where(row_class.workspace_id == workspace_id)
             )
         ).all()
         artifacts.extend(
-            ArtifactState(table, f"{artifact_type}:{slug}@{version}", artifact_type, status)
-            for slug, version, status in rows
+            ArtifactState(
+                table, f"{artifact_type}:{slug}@{version}", artifact_type, status, bool(is_builtin)
+            )
+            for slug, version, status, is_builtin in rows
         )
     requests = tuple(
         RequestState(
