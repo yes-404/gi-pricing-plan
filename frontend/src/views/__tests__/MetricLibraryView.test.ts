@@ -125,6 +125,42 @@ describe("MetricLibraryView", () => {
     expect(container.textContent ?? "").not.toMatch(/could not be read|not been certified|not found/i);
   });
 
+  it("keeps every other badge when one certificate read fails for another reason", async () => {
+    // Two certified metrics: one certificate read answers 500, the other answers. The failure is
+    // said once, and the badge that could be read is still shown (the cross-review of #1961).
+    const BROKEN: CustomMetric = {
+      ...CERTIFIED,
+      id: "0b9a6c1e-3333-4222-8333-444455556666",
+      slug: "broken-metric",
+      certificate_id: "c3c3c3c3-8888-4888-8999-aaaabbbbcccc",
+    };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: unknown) => {
+        const path = new URL(String(input), "http://localhost").pathname;
+        const json = (body: unknown, status = 200) =>
+          new Response(JSON.stringify(body), {
+            status,
+            headers: { "Content-Type": "application/json" },
+          });
+        if (path.endsWith(`/custom-metrics/${BROKEN.id}/certificate`)) {
+          return json(
+            { type: "about:blank", title: "Internal error", status: 500, code: "INTERNAL", detail: "boom", errors: [] },
+            500,
+          );
+        }
+        if (path.endsWith(`/custom-metrics/${CERTIFIED.id}/certificate`)) return json(CERTIFICATE);
+        return json({ items: [CERTIFIED, BROKEN], next_cursor: null });
+      }),
+    );
+    render(MetricLibraryView, mounted);
+
+    expect(await screen.findByText(/certificates could not be read/i)).toBeInTheDocument();
+    const badge = await screen.findByRole("group", { name: "Provenance" });
+    expect(badge).toHaveTextContent("custom_metric:gini-weighted@3");
+    expect(screen.getAllByRole("group", { name: "Provenance" })).toHaveLength(1);
+  });
+
   it("keeps the library on screen when a certificate read fails for another reason", async () => {
     vi.stubGlobal(
       "fetch",

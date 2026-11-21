@@ -129,8 +129,19 @@ class FinerLevelAe(BaseModel):
     cells: tuple[AeCell, ...] = ()
     unavailable_rows: int = Field(ge=0)
     unavailable_exposure: DecimalStr
-    unavailable_actual: float
-    unavailable_expected: float
+    unavailable_actual: float = Field(
+        description=(
+            "The not-available rows' weighted actual, the same quantity as AeCell.actual. A "
+            "diagnostic figure, not a rating amount, so it is a float as AeCell's are; the money "
+            "rule (integer minor units, or Decimal in the rating path) does not apply."
+        )
+    )
+    unavailable_expected: float = Field(
+        description=(
+            "The not-available rows' weighted expected (the model's fitted mean), the same "
+            "quantity as AeCell.expected. A diagnostic figure, not a rating amount, so a float."
+        )
+    )
 
 
 class FactorFinerLevels(BaseModel):

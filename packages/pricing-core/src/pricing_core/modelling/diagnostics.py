@@ -405,7 +405,10 @@ def _ae_cells(
     levels = values.cast(pl.String)
     cells: list[AeCell] = []
     for level in sorted({v for v in levels.unique().to_list() if v is not None}):
-        # A null row (a finer level that could not be rebuilt) is in no level's mask.
+        # A null row (a finer level that could not be rebuilt) is in no level's mask. Without
+        # `fill_null`, a series holding a null compares to an object array (True/None/False),
+        # and numpy refuses it as an index (IndexError). With no null, the mask is unchanged,
+        # so a factor's own A/E reads exactly as before; only the finer levels hold nulls.
         mask = (levels == level).fill_null(False).to_numpy()
         actual = float(np.sum(ae_w[mask] * y[mask]))
         expected = float(np.sum(ae_w[mask] * mu[mask]))

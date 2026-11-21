@@ -366,10 +366,12 @@
           "type": "string"
         },
         "unavailable_actual": {
+          "description": "The not-available rows' weighted actual, the same quantity as AeCell.actual. A diagnostic figure, not a rating amount, so it is a float as AeCell's are; the money rule (integer minor units, or Decimal in the rating path) does not apply.",
           "title": "Unavailable Actual",
           "type": "number"
         },
         "unavailable_expected": {
+          "description": "The not-available rows' weighted expected (the model's fitted mean), the same quantity as AeCell.expected. A diagnostic figure, not a rating amount, so a float.",
           "title": "Unavailable Expected",
           "type": "number"
         },

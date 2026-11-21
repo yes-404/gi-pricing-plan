@@ -82,12 +82,16 @@ onMounted(async () => {
     failure.value = error instanceof Error ? error.message : String(error);
     return;
   }
-  // A failed certificate read does not take the library down with it.
-  try {
-    const found = await Promise.all(metrics.map(certificateOf));
-    certificates.value = found.filter((c): c is MetricCertificate => c !== null);
-  } catch (error) {
-    certificateFailure.value = error instanceof Error ? error.message : String(error);
+  // A failed certificate read takes down neither the library nor the other certificates'
+  // badges: each read settles on its own, and a failure is said once beside what could be read.
+  const settled = await Promise.allSettled(metrics.map(certificateOf));
+  certificates.value = settled.flatMap((result) =>
+    result.status === "fulfilled" && result.value !== null ? [result.value] : [],
+  );
+  const failed = settled.find((result) => result.status === "rejected");
+  if (failed) {
+    const reason = (failed as PromiseRejectedResult).reason;
+    certificateFailure.value = reason instanceof Error ? reason.message : String(reason);
   }
 });
 </script>
