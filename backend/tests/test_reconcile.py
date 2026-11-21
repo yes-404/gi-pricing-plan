@@ -1217,7 +1217,7 @@ async def test_reconcile_db_a_planted_approved_request_with_only_review_decision
         )
     before = await _reported(database, workspace_id)
     assert not any("decision events record only" in m.detail for m in before), before
-    await _owner_update_requests(workspace_id, "status = 'approved'")
+    await _owner_update_requests(workspace_id, "status = 'approved', decided_at = now()")
     found = await _reported(database, workspace_id)
     assert any("final decision event records 'review'" in m.detail for m in found), found
 
