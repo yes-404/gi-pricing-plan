@@ -110,6 +110,11 @@ def _identifier_keyword(value: ast.expr) -> bool:
     )
 
 
+def _located_keyword(keyword: ast.keyword) -> bool:
+    """`located={...}`: where the refusal applies, an attribute never rendered (#1712 S7c)."""
+    return keyword.arg == "located" and isinstance(keyword.value, ast.Dict)
+
+
 def _census(
     source: str, namespace: dict[str, object], filename: str
 ) -> tuple[list[_Site], list[_Site]]:
@@ -151,7 +156,10 @@ def _census(
                         elif call is None or not (
                             len(call.args) == 1
                             and _input_free(call.args[0])
-                            and all(_identifier_keyword(k.value) for k in call.keywords)
+                            and all(
+                                _located_keyword(k) or _identifier_keyword(k.value)
+                                for k in call.keywords
+                            )
                         ):
                             interpolating.append(where)
             visit(child, inner)
@@ -209,12 +217,15 @@ def test_the_census_reports_planted_violations() -> None:
         "    raise InputFreeError('step {step}', step=identifier(value, '^x$'))\n"
         "    raise InputFreeError('step {step}', step=value)\n"
         "    raise ValueError\n"
+        "    raise InputFreeError('where', located={'output': value})\n"
+        "    raise InputFreeError('where', located=value)\n"
+        "    raise InputFreeError('where', other={'output': value})\n"
     )
     plain, interpolating = _census(
         planted, {"InputFreeError": InputFreeError, "identifier": identifier}, "planted.py"
     )
     assert [line for *_, line in plain] == [2, 5, 9]
-    assert [line for *_, line in interpolating] == [3, 7, 8]
+    assert [line for *_, line in interpolating] == [3, 7, 8, 11, 12]
 
 
 @pytest.mark.req("NFR-499")

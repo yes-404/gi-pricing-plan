@@ -27,7 +27,7 @@ from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query, Request, Response, status
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, StrictFloat, StrictInt
 
 from app.api.authz import requires
 from app.api.deps import Caller, job_identity
@@ -93,11 +93,17 @@ class CreateCustomMetric(BaseModel):
     kind: ObjectiveKind = ObjectiveKind.TEMPLATE
     template: ObjectiveTemplate | None = None
     #: `int | float`, `CustomMetric.params`'s own type — a money-kind template parameter
-    #: (`capped_gamma.cap`) must arrive as an integer minor-unit amount (`CLAUDE.md` §7), and
+    #: (`capped_gamma.cap`) must arrive as an integer minor-unit amount (`CLAUDE.md` §5), and
     #: a narrower `dict[str, float]` here would coerce it to a float before the contract's own
     #: `TemplateParameter.check` ever saw it, turning a valid request into a 422 the caller
-    #: cannot fix by re-reading §4.5.
-    params: dict[str, int | float] = Field(default_factory=dict)
+    #: cannot fix by re-reading §4.5. Strict, so a
+    #: JSON `true` (a `bool` is an `int`) or a numeric string is a 422 here and never a coerced
+    #: `1` or `5` (#1904). This request model is the hold for a boolean and a numeric
+    #: string. `TemplateParameter.check` does refuse a boolean (`check(True)` raises
+    #: `InputFreeError`); the gap is `model-schema`'s `CustomMetric.params`, which is
+    #: `dict[str, int | float]` and turns `true` into `1` before `check` sees it, on any
+    #: path that builds the contract without this request model (#1957 owns that gap).
+    params: dict[str, StrictInt | StrictFloat] = Field(default_factory=dict)
     #: Omitted means the template's own (§4.5). An author may narrow it and never widen it.
     applicability: Applicability | None = None
     #: FR-156: no default. A metric with no declared direction is not a metric an

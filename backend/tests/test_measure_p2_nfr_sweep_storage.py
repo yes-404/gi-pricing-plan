@@ -15,6 +15,7 @@ No `@pytest.mark.req` marker: the correctness of a measurement tool, not require
 from __future__ import annotations
 
 import importlib.util
+import sys
 from pathlib import Path
 from types import ModuleType
 
@@ -27,6 +28,8 @@ SCRIPT = Path(__file__).resolve().parents[2] / "scripts" / "measure-p2-nfr-sweep
 
 
 def _load() -> ModuleType:
+    if str(SCRIPT.parent) not in sys.path:  # the script does `from _gitenv import clean_env`
+        sys.path.insert(0, str(SCRIPT.parent))
     spec = importlib.util.spec_from_file_location("measure_p2_nfr_sweep_storage", SCRIPT)
     assert spec is not None
     assert spec.loader is not None

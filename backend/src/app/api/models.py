@@ -45,6 +45,7 @@ from uuid import UUID, uuid4
 from fastapi import APIRouter, Depends, Header, Query, Request, Response, status
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api import score as score_api
 from app.api.authz import requires
@@ -63,6 +64,7 @@ from app.db.models import BlobRow, ModelRow, RatingVersionRow, RegressionRunRow
 from app.db.session import Database
 from app.errors import PlatformError
 from app.platform import backtests as backtest_service
+from app.platform import blobs
 from app.platform import comparison as comparison_service
 from app.platform import diagnostics as diagnostics_service
 from app.platform import jobs as job_service
@@ -515,6 +517,16 @@ async def list_groupings(
         return [transform_service.to_grouping(row) for row in rows]
 
 
+async def _require_evidence(session: AsyncSession, spec: ModelSpec, workspace_id: UUID) -> None:
+    """FR-127: a cited `evidence_blob` must be readable by the caller's workspace. In the
+    routes, not `reserve_model`: the worker calls that with specs from stored rows."""
+    evidence = spec.loss_treatment.evidence_blob
+    if evidence is not None:
+        await blobs.require_evidence_readable(
+            session, sha256=evidence.sha256, workspace_id=workspace_id
+        )
+
+
 @router.post(
     "/models",
     summary="Fit a model",
@@ -534,6 +546,7 @@ async def fit_model(
     failed job twenty seconds later is a worse answer to the same question.
     """
     async with database.unit_of_work() as session:
+        await _require_evidence(session, body.spec, caller.workspace_id)
         # FR-185's gate, before a Job exists. `reserve_model` answers R1 and the
         # prohibited-factor rule with their own codes; this adds the complexity limits and
         # nothing else, so a caller's existing refusals do not change shape.
@@ -729,6 +742,7 @@ async def validate_model_spec(
     reference rather than an invalid spec — and is a 404.
     """
     async with database.unit_of_work() as session:
+        await _require_evidence(session, body.spec, caller.workspace_id)
         return await spec_service.validate_spec(
             session,
             settings,
