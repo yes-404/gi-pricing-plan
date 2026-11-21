@@ -12,6 +12,7 @@ from __future__ import annotations
 import hashlib
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from typing import Any
 from uuid import UUID
 
 import pytest
@@ -421,3 +422,38 @@ def test_only_conftest_db_disables_the_two_guards() -> None:
     assert hits == [], hits
     conftest = (tests / "conftest_db.py").read_text()
     assert conftest.count(needle + " {trigger}") == 1
+
+
+#: The test files that name `session_replication_role`, read with `grep -l` on 2026-11-21: each
+#: either sets it to tamper below the audit triggers or says why a test must not. This file names
+#: it to state the census. A new file is added here by a reviewed edit, never by default.
+_SESSION_REPLICATION_ROLE_FILES = frozenset(
+    {
+        "conftest_db.py",
+        "test_api_audit.py",
+        "test_application_role.py",
+        "test_approval_guard_static.py",
+        "test_approval_guard_trigger.py",
+        "test_audit.py",
+        "test_rating_version_content_guard.py",
+    }
+)
+
+
+def _files_naming_session_replication_role(tests: Any) -> set[str]:
+    needle = "session_replication_" + "role"
+    return {path.name for path in tests.glob("*.py") if needle in path.read_text()}
+
+
+@pytest.mark.req("FR-44")
+def test_session_replication_role_is_named_only_in_the_listed_test_files(tmp_path: Any) -> None:
+    """`session_replication_role = replica` suspends every user trigger, the content guards
+    included, so a test that reaches for it instead of `edit_held_row_as_owner` is a defect.
+    The census fails on any file outside the list. Planted: a new file naming it is found."""
+    import pathlib
+
+    tests = pathlib.Path(__file__).parent
+    assert _files_naming_session_replication_role(tests) <= _SESSION_REPLICATION_ROLE_FILES
+    (tmp_path / "test_planted.py").write_text("SET LOCAL session_replication_role = replica\n")
+    planted = _files_naming_session_replication_role(tmp_path) - _SESSION_REPLICATION_ROLE_FILES
+    assert planted == {"test_planted.py"}

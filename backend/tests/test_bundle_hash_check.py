@@ -27,7 +27,7 @@ from uuid import UUID, uuid4
 
 import pytest
 from backend.tests.approved_rows import add_approved
-from backend.tests.conftest_db import seed_as_owner
+from backend.tests.conftest_db import edit_held_row_as_owner
 from backend.tests.test_rating_version_compile import (
     _insert_version,
     _minimal_algorithm,
@@ -322,13 +322,9 @@ async def _replacement_refused(database: Database, digest: str, version_id: UUID
 
 
 async def _replace_as_owner(sql: str, **params: Any) -> None:
-    """A committed edit that bypasses the triggers: a restored or hand-edited database."""
-
-    async def edit(session: Any) -> None:
-        await session.execute(text("SET LOCAL session_replication_role = replica"))
-        await session.execute(text(sql), params)
-
-    await seed_as_owner(edit)
+    """A committed edit of a held `rating_versions` row that bypasses its content guard only: a
+    restored or hand-edited database (the one seam, `edit_held_row_as_owner`)."""
+    await edit_held_row_as_owner("rating_versions", "rating_versions_content_guard", sql, **params)
 
 
 def _quote_through(api_settings: Any, headers: dict[str, str]) -> tuple[int, Any]:
@@ -801,8 +797,6 @@ async def test_the_dislocation_run_refuses_a_bundle_its_row_does_not_record(
 def test_the_regression_run_refuses_a_bundle_its_row_does_not_record(run_world: Any) -> None:  # noqa: F811
     """The job's own entry (`rating.regression`): a version whose row records another hash than
     its stored bundle's is refused, and the Job ends `failed` with the integrity code."""
-    from backend.tests.conftest_db import edit_held_row_as_owner
-
     w = run_world
     w.make_suite(properties=[{"name": "no-null", "check": {"kind": "no_null_output"}}])
     run(
