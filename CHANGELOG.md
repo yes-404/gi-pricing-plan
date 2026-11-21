@@ -51,6 +51,11 @@ about. The format follows [Keep a Changelog 1.1.0](https://keepachangelog.com/en
   point, with a magnitude below 2^96 (`7.9e28` is accepted), or zero.
   A value that meets this prices as before; `0` and `-0` are accepted and equal.
 
+- **The contract drift guard now fails on a property below the top level (reached through `properties`, `items`, unions and `allOf`; map values under `additionalProperties`/`patternProperties` are not walked yet, a later slice of #1918) that exists in the generated
+  schema or the published contract only, unless it is declared with a reason** (Part of #1918; no
+  contract file changes). It lists the 85 such paths that exist today, each with the side it is on, which a test recomputes. A change that adds a nested
+  property to one side only now fails the guard.
+
 ### Security
 
 - Two advisories are published for the GLM change above (#1882), both fixed on `main` at
