@@ -785,3 +785,70 @@ async def test_an_offset_ref_that_is_not_a_model_is_refused_by_the_resolver_not_
             )
     assert caught.value.status_code == 409
     assert caught.value.code == "MODEL_OFFSET_REF_INVALID"
+
+
+@pytest.mark.req("FR-243")
+@pytest.mark.asyncio
+@pytest.mark.parametrize("act", ["submit", "deploy", "rollback"])
+async def test_a_refusal_with_no_detail_is_recorded_with_its_title_never_as_none(
+    act: str,
+    client: TestClient,
+    database: Database,
+    blob_store: Any,
+    workspace_id: UUID,
+    seat: Any,
+) -> None:
+    """The event's `refusal` text is the refusal's detail, and its title when the refusal has none.
+
+    A pinned rate table whose key is bound to a Factor that does not resolve is refused by the
+    resolver as `NOT_FOUND` "Factor not found" (404) with no detail. The event recorded for it
+    reads `NOT_FOUND: Factor not found`, never `NOT_FOUND: None`. The Factor is a reference that
+    names nothing, which is what the resolver sees when the Factor has gone."""
+    from types import SimpleNamespace
+
+    from backend.tests.test_fr240_governance import _table_keyed_on
+    from backend.tests.test_rating_version_compile import _empty_pins, _minimal_algorithm
+    from backend.tests.test_score import plant_deployment
+
+    deployer = await seat("deployer", "analyst")
+    made = client.post(
+        "/api/v1/rating-algorithms", json=_minimal_algorithm(), headers=deployer.headers
+    )
+    assert made.status_code == 201, made.text
+    async with database.unit_of_work() as session:
+        pin = await _table_keyed_on(
+            session,
+            workspace_id,
+            SimpleNamespace(id=new_uuid7()),
+            "factor:gone-factor@1",
+            "gone_factor",
+        )
+    ref, _ = await stored_version_bytes(
+        database,
+        blob_store,
+        workspace_id,
+        (FIXTURES / "clean.bundle.json").read_bytes(),
+        algorithm_ref="rating_algorithm:minimal@1",
+        pins={**_empty_pins(), "rate_tables": [pin]},
+    )
+    if act == "rollback":
+        await plant_deployment(database, workspace_id, "dev", ref)
+        second, _ = await stored_version(database, blob_store, workspace_id, "clean.bundle.json")
+        assert deploy(client, deployer, "dev", second).status_code == 201
+    written = await deployments_written(database, workspace_id)
+    if act == "submit":
+        refused = request_into(client, deployer, "prod", ref)
+    elif act == "deploy":
+        refused = deploy(client, deployer, "dev", ref)
+    else:
+        refused = client.post(
+            "/api/v1/environments/dev/deployments/rollback",
+            json={"rating_version_ref": ref, "reason": "regression"},
+            headers=deployer.headers,
+        )
+    assert refused.status_code == 404, refused.text
+    assert refused.json()["code"] == "NOT_FOUND", refused.text
+    assert await deployments_written(database, workspace_id) == written
+    events = await refusal_events(database, workspace_id)
+    assert [e.entity_ref for e in events] == [ref]
+    assert (events[0].after or {}).get("refusal") == "NOT_FOUND: Factor not found"
