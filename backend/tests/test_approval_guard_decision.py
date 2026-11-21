@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from datetime import UTC, datetime
 from typing import Any
 
 import pytest
@@ -58,17 +59,23 @@ async def _flag_reads(session: AsyncSession) -> str | None:
     return (await session.execute(text(_FLAG))).scalar_one_or_none()
 
 
-async def _refused(session: AsyncSession) -> bool:
-    """Whether the session's next flush is refused by the guard, in a savepoint."""
-    sqlstate = None
+async def _refusal(session: AsyncSession) -> str | None:
+    """The message of the approval guard's refusal of the session's next flush (in a
+    savepoint), or `None` when the flush succeeds. Any other error is raised: a refusal by
+    the decision guard (`42501`) is not this guard's."""
     try:
         async with session.begin_nested():
             await session.flush()
     except DBAPIError as exc:
-        sqlstate = getattr(exc.orig, "sqlstate", None)
-        if sqlstate != GUARD_SQLSTATE:
+        if getattr(exc.orig, "sqlstate", None) != GUARD_SQLSTATE:
             raise
-    return sqlstate == GUARD_SQLSTATE
+        return str(exc.orig)
+    return None
+
+
+async def _refused(session: AsyncSession) -> bool:
+    """Whether the session's next flush is refused by the approval guard, in a savepoint."""
+    return await _refusal(session) is not None
 
 
 @pytest.mark.req("FR-351")
@@ -136,11 +143,15 @@ async def test_an_orm_attribute_left_unflushed_at_exit_is_refused_later(
 
         async with approval_decision(session):
             row.status = "approved"
+            # The decision guard's edge needs `decided_at`: the flag alone is what is tested.
+            row.decided_at = datetime.now(UTC)
             monkeypatch.setattr(session, "flush", no_flush)
         monkeypatch.setattr(session, "flush", real_flush)
 
         assert await _flag_reads(session) == "off"
-        assert await _refused(session)
+        refusal = await _refusal(session)
+        assert refusal is not None, "the reset is what refuses this write"
+        assert "only the approval decision path may write approved" in refusal
         await session.rollback()
 
 
@@ -161,6 +172,8 @@ async def test_without_the_reset_the_unflushed_attribute_is_flushed_under_the_fl
 
         async with _flag_without_reset(session):
             row.status = "approved"
+            # The decision guard's edge needs `decided_at`: the flag alone is what is tested.
+            row.decided_at = datetime.now(UTC)
             monkeypatch.setattr(session, "flush", no_flush)
         monkeypatch.setattr(session, "flush", real_flush)
 

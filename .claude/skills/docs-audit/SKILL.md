@@ -365,16 +365,18 @@ that docstring:
   why `nt0019_stamp_set` reuses `file-census.py`'s helper instead of growing a third
   copy. **Reaching for the walk is the reversal to resist**, and it will look like a
   simplification when someone does.
-- **Adding a file that cannot carry a header means adding it to the register**
-  (`UNSTAMPABLE_EXEMPTIONS` in `scripts/audit-docs.py`) with its reason and its ruling —
-  a new `.json` or `.yaml` under `docs/` reds check 35 by name until you do. That is
-  F83 condition 2 working as designed, not an obstacle: the register is enumerated as
-  literal paths rather than matched by a directory-and-extension rule precisely so the
-  population cannot grow without someone deciding that it should.
-  A new **generated** contract schema is registered through `_CONTRACT_ARTIFACT_PATHS`
-  (which feeds the register) and moves the count in
-  `tests/test_audit_docs_ids.py` — the step is written in `contract-schema`'s
-  "Generation" section.
+- **Adding a file that cannot carry a header needs no register edit.** `unstampable_reason`
+  in `scripts/audit-docs.py` decides by predicate: any tracked file that does not end `.md`
+  is unstampable, and check 35 does not red on it. Measured on a scratch copy of tree
+  `3aed71d9`: a new `docs/scratchprobe/x.json` left every audit line unchanged except check
+  32's file count. The per-file register `UNSTAMPABLE_EXEMPTIONS` that earlier text of this
+  bullet described is not defined in `scripts/` at that tree, and `scripts/` cites it only in comments.
+  `tests/test_audit_docs_ids.py` still names it as code, but only inside three helpers
+  (`_run_all_ten`, `_register_without`, `_post_migration_roots`) that nothing in `tests/`
+  calls; that file ran 73 passed, 0 skipped at `3aed71d9`.
+  A new **generated** contract schema is covered the same way, plus checks 7 and 8's parse
+  and `$ref` pass; it needs no edit to the audit or to `tests/test_audit_docs_ids.py` — see
+  `contract-schema`'s "A new generated schema needs no registration with the audit".
 
 **The two the bullets above never name, so that all ten carry a describing clause here:**
 
@@ -558,6 +560,13 @@ real defects; fix the document.
 
 ## Verified
 
+2026-11-17 — #1920: the "Adding a file that cannot carry a header" bullet and the history
+entry naming the register-count test were corrected. Both described a register and a count
+that tree `3aed71d9` does not have. Verified on a scratch copy of that tree: a generated
+schema and a non-generated `.json` each left `scripts/audit-docs.py` green with one count line
+changed; a `grep -rn` of `scripts` and `tests` found no definition of the old tuple or of
+`UNSTAMPABLE_EXEMPTIONS`.
+
 2026-09-28 — **both decision-gate snippets rewritten for the post-migration id form (`OQ-<n>`).**
 The old `OQ-[A-Z]+-\d+` pattern matched **0** ids in `docs/open-questions.md` at `df8e5811`, so
 the coverage snippet printed `none` three times on any tree: a silent pass. The coverage snippet
@@ -621,7 +630,8 @@ non-`.md` files included, and check 30 consults `UNSTAMPABLE_EXEMPTIONS` and pas
 rather than redding on every one. **`_ID_SCOPE_ROOTS` itself is unchanged** — still S1's
 two paths — so both changes are inert until the roots widen, which is the point: the
 mechanism is proven before the irreversible commit, not inside it. Pinned by
-`test_widening_the_scope_roots_reaches_every_non_markdown_file_the_register_exempts`,
+a test that asserted the count of register paths (not in `tests/test_audit_docs_ids.py` at
+3aed71d9; #1920),
 `test_check_30_passes_a_registered_unstampable_file_that_is_now_in_scope` and
 `test_the_two_stamp_set_consumers_read_one_definition` (set equality over the real corpus,
 with its own broken-input proof), which replace

@@ -541,7 +541,11 @@ async def withdraw(
     before = row.status
     row.status = ApprovalStatus.WITHDRAWN.value
     row.withdrawn_reason = reason
-    row.decided_at = datetime.now(UTC)
+    if before == ApprovalStatus.REVIEW.value:
+        # The moment of a decision is written once, on leaving review (the database holds it:
+        # `approval_requests_decision_guard`); the withdrawal of an approved request leaves it,
+        # and its own time is the audit event's.
+        row.decided_at = datetime.now(UTC)
     await session.flush()
 
     await audit.record(
