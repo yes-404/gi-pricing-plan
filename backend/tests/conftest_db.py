@@ -1505,8 +1505,10 @@ async def blob_store() -> AsyncIterator[BlobStore]:
 
 #: The only (table, trigger) pairs a test may disable (ADR-2157): the two guards whose
 #: refusals the controls prove are their own, and the one an out-of-application edit needs.
-#: `DISABLE TRIGGER` is written here and nowhere else in `backend/tests`
-#: (`test_only_conftest_db_disables_a_trigger`).
+#: `DISABLE TRIGGER` on these two guards is written here and nowhere else in `backend/tests`
+#: (`test_only_conftest_db_disables_the_two_guards`, test_rating_version_content_guard.py). It is
+#: written elsewhere for other triggers: `factors_no_modify` (test_application_role.py, which also
+#: proves the application role cannot) and `audit_events` (test_deployments.py).
 _DISABLABLE: frozenset[tuple[str, str]] = frozenset(
     {
         ("rating_versions", "rating_versions_content_guard"),
