@@ -56,10 +56,15 @@ from app.errors import PlatformError
 from app.platform import jobs as job_service
 from app.platform import modelling as model_service
 from app.platform import prediction as service
+from app.platform import transformations as transform_service
 from app.worker.tasks import execute_job
 from model_schema import (
     EbmSpec,
+    Factor,
+    FactorType,
     GlmSpec,
+    Grouping,
+    GroupingMethod,
     JobKind,
     JobStatus,
     ModelStatus,
@@ -68,6 +73,7 @@ from model_schema import (
     UnavailableReason,
     UncertaintyBasis,
     UncertaintyKind,
+    UnseenLevelBehaviour,
     new_uuid7,
 )
 from pricing_core.modelling import linear_predictor
@@ -407,6 +413,78 @@ async def test_an_unseen_level_is_a_409_with_the_code_and_a_seen_one_scores(
     assert refused.value.code == "UNSEEN_LEVEL_BEHAVIOUR_REQUIRED"
     assert refused.value.status_code == 409
     assert len(scored.rows) == 2
+
+
+@pytest.mark.req("FR-109")
+async def test_a_value_at_an_ancestors_level_is_a_409_with_the_code_and_never_the_value(
+    database, blob_store, workspace_id
+) -> None:
+    """A GLM fitted on a chained Grouping under `map_to_default`: a request row carrying a value
+    at the PARENT's source level (`u1`, finer than the book's `urban`) is refused as the request
+    is well formed and the value conflicts with the stored chain, `PlatformError` 409
+    `GROUPING_VALUE_AT_ANCESTOR_LEVEL`, with no submitted value in the detail (NFR-499)."""
+    actor = await _actuary(database, workspace_id)
+    dataset_id = await _dataset(database, blob_store, workspace_id, actor)
+    version_id = await _validated_version(
+        database, blob_store, workspace_id, actor, dataset_id
+    )
+    async with database.unit_of_work() as session:
+        parent = await transform_service.create_grouping(
+            session, workspace_id=workspace_id, actor=actor,
+            grouping=Grouping(
+                id=new_uuid7(), slug=f"fine-{uuid4().hex[-6:]}", dataset_id=dataset_id,
+                version=1, column="area", method=GroupingMethod.MANUAL,
+                mapping={"u1": "urban", "r1": "rural"},
+                unseen_level_behaviour=UnseenLevelBehaviour.ERROR,
+            ),
+        )
+        child = await transform_service.create_grouping(
+            session, workspace_id=workspace_id, actor=actor,
+            grouping=Grouping(
+                id=new_uuid7(), slug=f"coarse-{uuid4().hex[-6:]}", dataset_id=dataset_id,
+                version=1, column="area", method=GroupingMethod.MANUAL,
+                mapping={"urban": "U", "rural": "R"},
+                unseen_level_behaviour=UnseenLevelBehaviour.MAP_TO_DEFAULT,
+                default_target_level="U", parent_grouping_id=parent.id,
+            ),
+        )
+        factor = await model_service.create_factor(
+            session, workspace_id=workspace_id, actor=actor,
+            factor=Factor(
+                id=new_uuid7(), slug=f"coarse-f-{uuid4().hex[-6:]}", dataset_id=dataset_id,
+                version=1, type=FactorType.GROUPING, source_columns=("area",),
+                grouping_id=child.id,
+            ),
+        )
+    split = await _split(database, blob_store, workspace_id, actor, version_id)
+    async with database.unit_of_work() as session:
+        row, _ = await model_service.reserve_model(
+            session, workspace_id=workspace_id, actor=actor,
+            spec=_spec(version_id, (factor.id,), split_ref=split),
+        )
+        model_id = row.id
+        job = await job_service.submit(
+            session, JobKind.MODEL_FIT,
+            {"workspace_id": str(workspace_id), "actor": actor.model_dump(mode="json"),
+             "model_id": str(model_id)},
+            actor, workspace_id=workspace_id,
+        )
+    assert await execute_job(database, job.id, blob_store) is JobStatus.SUCCEEDED
+
+    async with database.session() as session:
+        with pytest.raises(PlatformError) as refused:
+            await service.predict_rows(
+                session, workspace_id=workspace_id, actor=actor, model_id=model_id,
+                rows=[{"exposure_years": 1.0, "area": "u1"}], blob_store=blob_store,
+            )
+        scored = await service.predict_rows(
+            session, workspace_id=workspace_id, actor=actor, model_id=model_id,
+            rows=ROWS, blob_store=blob_store,
+        )
+    assert refused.value.code == "GROUPING_VALUE_AT_ANCESTOR_LEVEL"
+    assert refused.value.status_code == 409
+    assert "u1" not in f"{refused.value.title} {refused.value.detail}"
+    assert len(scored.rows) == 2  # a value the Grouping maps still scores
 
 
 @pytest.mark.req("FR-198")
