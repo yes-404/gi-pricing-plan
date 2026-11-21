@@ -553,3 +553,235 @@ async def test_a_version_pinning_a_two_level_offset_model_is_refused_with_one_ev
     events = await refusal_events(database, workspace_id)
     assert [e.entity_ref for e in events] == [ref]
     assert "MODEL_OFFSET_REF_INVALID" in str((events[0].after or {}).get("refusal"))
+
+
+# -- #1943 review: every refusal the pin re-resolution raises is audited ----------------------
+
+#: The refusals the pin re-resolution can answer for a version that pins a model offset from
+#: another model (FR-116) or whose pin no longer resolves, as (status, code). Each cause is
+#: written in its final state, never edited afterwards: a fitted Model is immutable in the
+#: database (02 R2) and an approved Rating Version is held, so no test updates either. "The
+#: reference names something that is not a model" is not here: a stored spec cannot hold it
+#: (the last test of this file).
+PIN_REFUSALS: dict[str, tuple[int, str]] = {
+    "unfitted_source": (409, "MODEL_OFFSET_REF_INVALID"),
+    "not_a_glm": (409, "MODEL_OFFSET_REF_INVALID"),
+    "link_differs": (409, "MODEL_OFFSET_REF_INVALID"),
+    "two_level": (409, "MODEL_OFFSET_REF_INVALID"),
+    "source_missing": (404, "NOT_FOUND"),
+    "source_factors_missing": (404, "NOT_FOUND"),
+    "pinned_algorithm_gone": (404, "NOT_FOUND"),
+}
+
+
+async def _a_version_pinning_a_model_offset(
+    client: TestClient,
+    database: Database,
+    blob_store: Any,
+    workspace_id: UUID,
+    deployer: Any,
+    cause: str | None,
+) -> tuple[str, dict[str, Any]]:
+    """A stored version that pins a model C, offset from a one-level source X, in the state
+    `cause` names (`None`: nothing wrong, the version is accepted).
+
+    C and X are hand-written rows (the fit refuses a chain, and a test plants past it, as
+    `_pin_a_model_whose_source_has_an_offset` does), X a fitted copy of the base model of
+    `_fitted_residual_pair`. Every row is written in its final state: X gets its spec, fit and
+    status in one write while it is a draft, and the version is written with its algorithm and
+    pins. Returns the version's ref and the references a test asserts on.
+    """
+    from backend.tests.approved_rows import mark_approved
+    from backend.tests.test_model_offset_jobs import _residual_spec
+    from backend.tests.test_prediction import _fitted_residual_pair
+    from backend.tests.test_rating_version_compile import _empty_pins, _minimal_algorithm
+
+    from app.db.models import ModelRow
+    from app.platform import modelling as model_service
+    from model_schema import GlmSpec
+
+    ebm_fit: Any = None
+    if cause == "not_a_glm":
+        from backend.tests.test_ebm_model_jobs import _fitted_ebm
+
+        from model_schema import JobStatus
+
+        ebm_id, status = await _fitted_ebm(database, blob_store, workspace_id)
+        assert status is JobStatus.SUCCEEDED
+        async with database.session() as other:
+            ebm = await other.get(ModelRow, ebm_id)
+        assert ebm is not None
+        assert ebm.fit_result is not None
+        ebm_fit = ebm.fit_result
+    algorithm_ref = "rating_algorithm:minimal@1"
+    if cause == "pinned_algorithm_gone":
+        algorithm_ref = "rating_algorithm:gone@1"  # never written
+    else:
+        made = client.post(
+            "/api/v1/rating-algorithms", json=_minimal_algorithm(), headers=deployer.headers
+        )
+        assert made.status_code == 201, made.text
+    pair = await _fitted_residual_pair(database, blob_store, workspace_id)
+    async with database.unit_of_work() as session:
+        base_row = await session.get(ModelRow, pair.base_id)
+        residual_row = await session.get(ModelRow, pair.residual_id)
+        assert base_row is not None
+        assert residual_row is not None
+        if cause == "source_missing":
+            source_ref = f"model:gone-{uuid4().hex[:6]}@1"  # never written
+        else:
+            source_spec = GlmSpec.model_validate(base_row.spec).model_copy(
+                update={"model_family_slug": f"src-{uuid4().hex[:6]}"}
+            )
+            source_row, _ = await model_service.reserve_model(
+                session, workspace_id=workspace_id, actor=pair.actor, spec=source_spec
+            )
+            if cause != "unfitted_source":
+                source_row.diagnostics_id = base_row.diagnostics_id
+                source_row.fit_result = ebm_fit if cause == "not_a_glm" else base_row.fit_result
+                if cause == "source_factors_missing":
+                    source_row.spec = {**source_row.spec, "factors": [str(uuid4())]}
+                if cause == "two_level":
+                    two_level_ref = f"model:{residual_row.model_family_slug}@{residual_row.version}"
+                    source_row.spec = {
+                        **source_row.spec,
+                        "offset": {
+                            **source_row.spec["offset"],
+                            "kind": "model",
+                            "offset_model_ref": two_level_ref,
+                        },
+                    }
+                source_row.status = "fitted"
+                await session.flush()
+            source_ref = f"model:{source_row.model_family_slug}@{source_row.version}"
+        pinned_row, _ = await model_service.reserve_model(
+            session,
+            workspace_id=workspace_id,
+            actor=pair.actor,
+            spec=_residual_spec(
+                pair.v2_id,
+                pair.resid_flag_id,
+                pair.split2,
+                ref=source_ref,
+                link="identity" if cause == "link_differs" else "log",
+            ),
+        )
+        pinned_row.fit_result = residual_row.fit_result
+        pinned_row.diagnostics_id = residual_row.diagnostics_id
+        pinned_row.status = "fitted"
+        await session.flush()
+        await mark_approved(session, pinned_row)
+        pinned_ref = f"model:{pinned_row.model_family_slug}@{pinned_row.version}"
+    ref, _ = await stored_version_bytes(
+        database,
+        blob_store,
+        workspace_id,
+        (FIXTURES / "clean.bundle.json").read_bytes(),
+        algorithm_ref=algorithm_ref,
+        pins={**_empty_pins(), "models": [pinned_ref]},
+    )
+    return ref, {"source_ref": source_ref, "algorithm_ref": algorithm_ref}
+
+
+@pytest.mark.req("FR-116")
+@pytest.mark.req("FR-243")
+@pytest.mark.asyncio
+@pytest.mark.parametrize("cause", sorted(PIN_REFUSALS))
+@pytest.mark.parametrize("act", ["submit", "deploy", "rollback"])
+async def test_every_refusal_of_a_pin_re_resolution_is_audited_with_one_event(
+    act: str,
+    cause: str,
+    client: TestClient,
+    database: Database,
+    blob_store: Any,
+    workspace_id: UUID,
+    seat: Any,
+) -> None:
+    """#1943 review: submit, deploy and rollback refuse a version whose pin no longer resolves, or
+    whose pinned model's offset source is refused by the resolver, with the resolver's own status
+    and code, no Deployment, and exactly one `rating_version.load_refused` event naming the code
+    (FR-243: a refused submit, deploy or rollback writes its own event, every time).
+
+    Each cause is written in its final state; the rollback case plants the version's earlier
+    Deployment (a rollback needs one) and deploys a second, valid version after it."""
+    from backend.tests.test_score import plant_deployment
+
+    status, code = PIN_REFUSALS[cause]
+    deployer = await seat("deployer", "analyst")
+    ref, handles = await _a_version_pinning_a_model_offset(
+        client, database, blob_store, workspace_id, deployer, cause
+    )
+    if act == "rollback":
+        await plant_deployment(database, workspace_id, "dev", ref)
+        second, _ = await stored_version(database, blob_store, workspace_id, "clean.bundle.json")
+        assert deploy(client, deployer, "dev", second).status_code == 201
+    written = await deployments_written(database, workspace_id)
+    if act == "submit":
+        refused = request_into(client, deployer, "prod", ref)
+    elif act == "deploy":
+        refused = deploy(client, deployer, "dev", ref)
+    else:
+        refused = client.post(
+            "/api/v1/environments/dev/deployments/rollback",
+            json={"rating_version_ref": ref, "reason": "regression"},
+            headers=deployer.headers,
+        )
+    assert refused.status_code == status, refused.text
+    assert refused.json()["code"] == code, refused.text
+    if cause == "source_missing":
+        assert handles["source_ref"] in refused.json()["detail"]
+    if cause == "pinned_algorithm_gone":
+        assert handles["algorithm_ref"] in refused.json()["detail"]
+    assert await deployments_written(database, workspace_id) == written
+    events = await refusal_events(database, workspace_id)
+    assert [e.entity_ref for e in events] == [ref]
+    assert code in str((events[0].after or {}).get("refusal"))
+
+
+@pytest.mark.req("FR-116")
+@pytest.mark.req("FR-243")
+@pytest.mark.asyncio
+async def test_the_version_of_the_pin_refusal_tests_is_accepted_when_nothing_is_planted(
+    client: TestClient,
+    database: Database,
+    blob_store: Any,
+    workspace_id: UUID,
+    seat: Any,
+) -> None:
+    """The control of the test above: the same version, with a one-level offset source and no
+    planted cause, deploys (201) and writes no refusal event. A refusal there is therefore the
+    planted cause's."""
+    deployer = await seat("deployer", "analyst")
+    ref, _ = await _a_version_pinning_a_model_offset(
+        client, database, blob_store, workspace_id, deployer, None
+    )
+    accepted = deploy(client, deployer, "dev", ref)
+    assert accepted.status_code == 201, accepted.text
+    assert await refusal_events(database, workspace_id) == []
+
+
+@pytest.mark.req("FR-116")
+@pytest.mark.asyncio
+async def test_an_offset_ref_that_is_not_a_model_is_refused_by_the_resolver_not_held_by_a_spec(
+    database: Database, workspace_id: UUID
+) -> None:
+    """The first of `resolve_offset_model`'s five refusals, "the reference names something that
+    is not a model", cannot be planted on a stored version: `offset_model_ref` is a `ModelRef`
+    (`model:<slug>@<n>`, model_schema/refs.py:78), so a spec naming another type fails
+    validation when the model row is read (`to_model`), before the resolver is called, and not as
+    a `PlatformError`. The branch is reached by a direct call, as spec validation makes it
+    (`model_specs.py`), and that is what this test does."""
+    from pydantic import ValidationError
+
+    from app.platform.modelling import resolve_offset_model
+    from model_schema import OffsetSpec
+
+    with pytest.raises(ValidationError):
+        OffsetSpec(kind="model", offset_model_ref="rate_table:ncd@1")
+    async with database.unit_of_work() as session:
+        with pytest.raises(PlatformError) as caught:
+            await resolve_offset_model(
+                session, workspace_id=workspace_id, ref="rate_table:ncd@1", caller_link="log"
+            )
+    assert caught.value.status_code == 409
+    assert caught.value.code == "MODEL_OFFSET_REF_INVALID"
