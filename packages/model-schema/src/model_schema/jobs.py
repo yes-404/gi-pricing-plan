@@ -11,6 +11,8 @@ the job sits `queued` forever with nothing to explain why.
 from __future__ import annotations
 
 import enum
+import logging
+import re
 from collections.abc import Mapping
 from datetime import datetime
 from typing import Annotated, Any
@@ -22,7 +24,11 @@ from model_schema.input_free import InputFreeError
 from model_schema.perils import PerilCode
 from model_schema.refs import REF_PATTERN
 
+_log = logging.getLogger(__name__)
+
 __all__ = [
+    "LOCATION_TEXT_MAX",
+    "LOCATION_TEXT_PATTERN",
     "TERMINAL_STATUSES",
     "VALID_TRANSITIONS",
     "ActorKind",
@@ -180,6 +186,35 @@ class JobResult(BaseModel):
 LOCATION_DETAIL_KEY = "_location"
 
 
+#: The most characters a free-text location key holds. The longest value any code, test or document
+#: gives a step id is under 30; a step id and a column name have no bound at their source, so a
+#: longer one loses its location (dropped, with a warning) and keeps its error's code.
+LOCATION_TEXT_MAX = 256
+#: What a free-text location key may not hold: a control character (C0, DEL, C1) or a line or
+#: paragraph separator, none of which an identifier carries and each of which breaks a log line or
+#: a stored row's rendering. Everything else is admitted: a step id, a field path, a column name
+#: and an objective name hold spaces, `&`, `:` and non-ASCII letters. It is a rule about
+#: characters, **not** a proof that a value is not submitted text: the raise sites guarantee that.
+#: The same string is the JSON Schema `pattern`: written to match the same strings under Python's
+#: `re` (via `fullmatch`) and ECMA 262, whose `$` matches only at the very end.
+LOCATION_TEXT_PATTERN = r"^[^\x00-\x1f\x7f-\x9f\u2028\u2029]+$"
+_LOCATION_TEXT = re.compile(LOCATION_TEXT_PATTERN)
+#: A free-text location key's value as the published schema states it. A validator on the model
+#: enforces the bound and the rule (so a refusal is an `InputFreeError` with a literal text and not
+#: pydantic's), and `json_schema_extra` puts both in the generated contract, inside the `string`
+#: branch, where a client reads them.
+_LocationText = Annotated[
+    str,
+    Field(
+        min_length=1,
+        json_schema_extra={"maxLength": LOCATION_TEXT_MAX, "pattern": LOCATION_TEXT_PATTERN},
+    ),
+]
+_FREE_TEXT_KEYS = (
+    "step_id", "field", "objective", "factor", "key", "feature", "interaction", "operand",
+)
+
+
 class JobErrorLocation(BaseModel):
     """Where in the caller's own artifact a deterministic refusal points (#1917, `07` §4.1).
 
@@ -187,30 +222,55 @@ class JobErrorLocation(BaseModel):
     itself declares. **Never a submitted value** is what the raise sites guarantee, by filling
     this only from the caller's own artifact; no pattern can prove it. The model gives `ref` and
     `structure` the wire form of an artifact reference (`REF_PATTERN`), `peril` a `PerilCode`
-    and every other key a non-empty `str`; it refuses any other key, a JSON number and a location
-    with no key set. A digit string such as `"42"` is a valid value and is NOT refused. The key
-    set is the one #1911 accepted.
+    and every other key a non-empty `str` of at most `LOCATION_TEXT_MAX` characters that holds no
+    control character; it refuses any other key, a JSON number and a location with no key set. A
+    digit string such as `"42"` is a valid value and is NOT refused. The key set is the one #1911
+    accepted.
     """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
-    step_id: str | None = Field(default=None, min_length=1)
-    field: str | None = Field(default=None, min_length=1)
+    step_id: _LocationText | None = None
+    field: _LocationText | None = None
     ref: str | None = Field(default=None, pattern=REF_PATTERN)
-    objective: str | None = Field(default=None, min_length=1)
+    objective: _LocationText | None = None
     structure: str | None = Field(default=None, pattern=REF_PATTERN)
-    factor: str | None = Field(default=None, min_length=1)
-    key: str | None = Field(default=None, min_length=1)
-    feature: str | None = Field(default=None, min_length=1)
-    interaction: str | None = Field(default=None, min_length=1)
-    operand: str | None = Field(default=None, min_length=1)
+    factor: _LocationText | None = None
+    key: _LocationText | None = None
+    feature: _LocationText | None = None
+    interaction: _LocationText | None = None
+    operand: _LocationText | None = None
     peril: PerilCode | None = None
+
+    @field_validator(*_FREE_TEXT_KEYS)
+    @classmethod
+    def _free_text_is_short_and_has_no_control_character(cls, value: str | None) -> str | None:
+        # Two literals, no value: a refused key's text may be submitted text (NFR-499).
+        if value is None:
+            return value
+        if len(value) > LOCATION_TEXT_MAX:
+            raise InputFreeError("a location key is longer than 256 characters")
+        if _LOCATION_TEXT.fullmatch(value) is None:
+            raise InputFreeError("a location key holds a control character")
+        return value
 
     @model_validator(mode="after")
     def _points_somewhere(self) -> JobErrorLocation:
         if all(value is None for value in self.model_dump().values()):
             raise InputFreeError("a location must name at least one identifier")
         return self
+
+    @classmethod
+    def refused_keys(cls, refusal: ValidationError) -> list[str]:
+        """The DECLARED keys a refused location did not fit, for a log line: sorted, with an
+        undeclared key counted as `undeclared:N` and never named (a key is the raise site's own
+        text). Reads only each error's `loc`: never a value, never a message."""
+        errors = refusal.errors(include_input=False, include_url=False)
+        refused = {str(error["loc"][0]) for error in errors if error["loc"]}
+        declared = sorted(refused & set(cls.model_fields))
+        if undeclared := len(refused) - len(declared):
+            declared.append(f"undeclared:{undeclared}")
+        return declared
 
 
 class JobError(BaseModel):
@@ -260,12 +320,14 @@ class JobError(BaseModel):
         return stored
 
     @classmethod
-    def from_stored(cls, stored: Mapping[str, Any]) -> JobError:
+    def from_stored(cls, stored: Mapping[str, Any], *, job_id: UUID | None = None) -> JobError:
         """Build the error from a stored row, lifting the folded location into `location`.
 
         Never raises on the location: a stored `_location` that is not a valid
-        `JobErrorLocation` is dropped and the error carries none. A row stored before
-        `location` existed has no such key and reads back with none.
+        `JobErrorLocation` is dropped and the error carries none, so a stored row is never made
+        unreadable by a bad location. The drop is not silent: one warning names the Job (`job_id`,
+        the caller's) and the declared keys that did not fit, never a value (`07` §4.1). A row
+        stored before `location` existed has no such key and reads back with none.
         """
         fields = dict(stored)
         detail = fields.get("detail")
@@ -274,8 +336,13 @@ class JobError(BaseModel):
             fields["detail"] = rest
             try:
                 fields["location"] = JobErrorLocation.model_validate(detail[LOCATION_DETAIL_KEY])
-            except ValidationError:
+            except ValidationError as refusal:
                 fields.pop("location", None)
+                _log.warning(
+                    "a Job's stored error location was not read: job_id=%s keys=%s",
+                    job_id,
+                    ",".join(JobErrorLocation.refused_keys(refusal)) or "(none)",
+                )
         return cls.model_validate(fields)
 
 

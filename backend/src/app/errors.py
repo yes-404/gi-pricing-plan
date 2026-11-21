@@ -494,14 +494,10 @@ def _build_location(
         # A dropped location is not silent. The line names the code and the DECLARED keys that
         # did not fit; an undeclared key is counted, never named (a key is the raise site's
         # own text, and no value or message is read: only each error's `loc`).
-        refused = {str(error["loc"][0]) for error in exc.errors() if error["loc"]}
-        declared = sorted(refused & set(JobErrorLocation.model_fields))
-        if undeclared := len(refused) - len(declared):
-            declared.append(f"undeclared:{undeclared}")
         _log.warning(
             "a refusal's location was dropped: code=%s keys=%s",
             code,
-            ",".join(declared) or "(none)",
+            ",".join(JobErrorLocation.refused_keys(exc)) or "(none)",
         )
         return None
 

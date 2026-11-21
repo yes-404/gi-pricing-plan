@@ -332,7 +332,7 @@ def to_schema(row: JobRow, *, stall_seconds: int | None = None) -> Job:
         parameters=row.parameters,
         progress=Progress.model_validate(row.progress) if row.progress else None,
         result=JobResult.model_validate(row.result) if row.result else None,
-        error=JobError.from_stored(row.error) if row.error else None,
+        error=JobError.from_stored(row.error, job_id=row.id) if row.error else None,
         trace_id=row.trace_id,
         platform_build=row.platform_build,
         progress_at=row.progress_at,

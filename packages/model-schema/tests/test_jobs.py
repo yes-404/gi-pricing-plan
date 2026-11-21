@@ -1,15 +1,17 @@
 """The `Job` shape (`07` §4.1)."""
 
 import json
+import logging
 import re
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import Annotated, Any
 from uuid import uuid4
 
 import pytest
-from pydantic import BaseModel, ConfigDict, Field, ValidationError
+from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, ValidationError
 
+from model_schema.input_free import InputFreeError
 from model_schema.jobs import Job, JobError, JobErrorLocation
 
 
@@ -318,3 +320,197 @@ def test_both_real_job_schemas_refuse_a_located_error_with_a_bad_value(
     wire["location"][key] = bad
     refused = _wire_refusals(schema, wire)
     assert refused, (schema, key, bad)
+
+
+# -- the free-text keys: a bound, a character rule, and the same answer in every consumer -------
+
+_FREE_TEXT_KEYS = (
+    "step_id", "field", "objective", "factor", "key", "feature", "interaction", "operand",
+)
+_TOO_LONG = "a location key is longer than 256 characters"
+_CONTROL = "a location key holds a control character"
+
+
+def _the_literal_refusal(key: str, value: str) -> str:
+    """The `InputFreeError` text a refused value gives: read from the error's own context, never
+    from `str()` of the `ValidationError`, which also prints the input."""
+    with pytest.raises(ValidationError) as refused:
+        JobErrorLocation(**{key: value})
+    (error,) = refused.value.errors()
+    assert error["loc"] == (key,)
+    assert error["type"] == "value_error"
+    assert isinstance(error["ctx"]["error"], InputFreeError)
+    return str(error["ctx"]["error"])
+
+
+@pytest.mark.req("NFR-499")
+@pytest.mark.parametrize("key", _FREE_TEXT_KEYS)
+def test_a_free_text_location_key_is_bounded_and_the_refusal_is_a_literal(key: str) -> None:
+    longest = "x" * 256
+    assert getattr(JobErrorLocation(**{key: longest}), key) == longest
+    sentinel = "SENTINEL-" + "x" * 300  # a 5,000-character value was stored before the bound
+    text = _the_literal_refusal(key, sentinel)
+    assert text == _TOO_LONG
+    assert "SENTINEL" not in text
+
+
+@pytest.mark.req("NFR-499")
+@pytest.mark.parametrize("key", _FREE_TEXT_KEYS)
+@pytest.mark.parametrize("bad", ["a\nb", "a\tb", "a\x00b", "a\x7fb", "a\x85b", "a\u2028b"])
+def test_a_free_text_location_key_refuses_a_control_character_with_a_literal(
+    key: str, bad: str
+) -> None:
+    assert _the_literal_refusal(key, "SENTINEL" + bad) == _CONTROL
+
+
+def test_the_refusal_text_names_the_modules_bound() -> None:
+    from model_schema import jobs
+
+    assert str(jobs.LOCATION_TEXT_MAX) in _TOO_LONG
+
+
+#: ONE table of strings and whether a free-text location key admits each, fed to every consumer of
+#: the rule: the model, the hand-authored schema, the generated schema and a second regex engine
+#: (the Rust one pydantic uses for `pattern`). `"a\n"` is the trap: Python's `$` matches before a
+#: final newline and ECMA 262's does not, so the check translates a trailing `$` (see
+#: `_ecma_search`). Length is in code points on every side: a 256-character astral string is
+#: admitted, a 257-character one is not.
+_ADMITTED = [
+    ("s", True),
+    ("base premium", True),
+    ("VehAge & DrivAge", True),
+    ("reg:tweedie", True),
+    ("feature_map.age", True),
+    ("café", True),
+    ("\u00a0x", True),
+    ("x" * 256, True),
+    ("\U0001f600" * 256, True),
+    ("x" * 257, False),
+    ("\U0001f600" * 257, False),
+    ("", False),
+    ("a\n", False),
+    ("a\nb", False),
+    ("a\tb", False),
+    ("a\x00b", False),
+    ("a\x1fb", False),
+    ("a\x7fb", False),
+    ("a\x9fb", False),
+    ("a\u2028b", False),
+    ("a\u2029b", False),
+]
+
+
+def _text_rules(schema_file: str, key: str) -> dict[str, Any]:
+    schema = json.loads((_CONTRACTS / schema_file).read_text())
+    if schema_file.startswith("generated/"):  # pydantic's shape: `$defs`, and `anyOf` for `| None`
+        rules = schema["$defs"]["JobErrorLocation"]["properties"][key]["anyOf"][0]
+    else:
+        rules = schema["properties"]["error"]["properties"]["location"]["properties"][key]
+    assert {"minLength", "maxLength", "pattern"} <= rules.keys(), (
+        f"{schema_file} states no bound or no character rule for {key}: {rules}"
+    )
+    return rules
+
+
+def _ecma_search(pattern: str, value: str) -> bool:
+    """`re.search` with ECMA 262's end anchor: its `$` (no `m` flag) matches only at the end."""
+    if pattern.endswith("$") and not pattern.endswith("\\$"):
+        pattern = pattern[:-1] + r"\Z"
+    return re.search(pattern, value) is not None
+
+
+@pytest.mark.req("NFR-499")
+@pytest.mark.parametrize("key", _FREE_TEXT_KEYS)
+@pytest.mark.parametrize("schema", ["job.schema.json", "generated/job.schema.json"])
+def test_the_schemas_and_the_model_admit_the_same_free_text(schema: str, key: str) -> None:
+    rules = _text_rules(schema, key)
+    engine = TypeAdapter(Annotated[str, Field(pattern=rules["pattern"])])
+    for value, admitted in _ADMITTED:
+        try:
+            JobErrorLocation(**{key: value})
+            by_the_model = True
+        except ValidationError:
+            by_the_model = False
+        in_bounds = rules["minLength"] <= len(value) <= rules["maxLength"]
+        by_the_schema = in_bounds and _ecma_search(rules["pattern"], value)
+        try:
+            engine.validate_python(value)
+            by_the_engine = in_bounds
+        except ValidationError:
+            by_the_engine = False
+        assert (by_the_model, by_the_schema, by_the_engine) == (admitted,) * 3, (
+            schema, key, ascii(value[:8]), len(value),
+        )
+
+
+@pytest.mark.req("NFR-499")
+def test_the_two_schemas_state_one_bound_and_one_pattern_for_every_free_text_key() -> None:
+    stated = {
+        (schema, key): tuple(
+            _text_rules(schema, key)[word] for word in ("minLength", "maxLength", "pattern")
+        )
+        for schema in ("job.schema.json", "generated/job.schema.json")
+        for key in _FREE_TEXT_KEYS
+    }
+    assert len(set(stated.values())) == 1, stated
+    from model_schema import jobs
+
+    assert next(iter(stated.values())) == (1, jobs.LOCATION_TEXT_MAX, jobs.LOCATION_TEXT_PATTERN)
+
+
+# -- a stored location that cannot be read: dropped, with one warning -----------------------------
+
+_SENTINEL = "SENTINEL-location-value-5c1e"
+
+
+def _stored_with(location: Any) -> dict[str, Any]:
+    return {
+        "code": "X_Y", "message": "m", "retryable": False, "detail": {"_location": location},
+    }
+
+
+@pytest.mark.req("FR-403")
+def test_an_invalid_stored_location_is_dropped_with_one_warning_naming_the_job_and_no_value(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    job_id = uuid4()
+    bad = {"step_id": _SENTINEL + "\n", "ref": "not-a-ref", "undeclared_key": _SENTINEL}
+    with caplog.at_level(logging.WARNING, logger="model_schema.jobs"):
+        lifted = JobError.from_stored(_stored_with(bad), job_id=job_id)
+    assert lifted.location is None
+    assert "_location" not in lifted.detail
+    records = [r for r in caplog.records if r.name == "model_schema.jobs"]
+    assert len(records) == 1, [r.getMessage() for r in records]
+    text = records[0].getMessage()
+    assert records[0].levelno == logging.WARNING
+    assert str(job_id) in text
+    assert "step_id" in text
+    assert "ref" in text
+    assert "undeclared:1" in text
+    assert "undeclared_key" not in text
+    assert _SENTINEL not in text
+
+
+@pytest.mark.req("FR-403")
+@pytest.mark.parametrize("bad", ["a string", 7, {}])
+def test_a_stored_location_that_is_no_mapping_or_names_no_key_warns_with_no_keys(
+    bad: Any, caplog: pytest.LogCaptureFixture
+) -> None:
+    with caplog.at_level(logging.WARNING, logger="model_schema.jobs"):
+        assert JobError.from_stored(_stored_with(bad), job_id=uuid4()).location is None
+    records = [r for r in caplog.records if r.name == "model_schema.jobs"]
+    assert len(records) == 1
+    assert "keys=(none)" in records[0].getMessage()
+
+
+@pytest.mark.req("FR-403")
+@pytest.mark.parametrize(
+    "stored",
+    [_stored_with({"step_id": "s"}), {"code": "X_Y", "message": "m", "retryable": False}],
+)
+def test_a_readable_or_absent_stored_location_logs_nothing(
+    stored: dict[str, Any], caplog: pytest.LogCaptureFixture
+) -> None:
+    with caplog.at_level(logging.DEBUG, logger="model_schema.jobs"):
+        JobError.from_stored(stored, job_id=uuid4())
+    assert [r for r in caplog.records if r.name == "model_schema.jobs"] == []

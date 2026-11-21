@@ -165,49 +165,63 @@
                 "string",
                 "null"
               ],
-              "minLength": 1
+              "minLength": 1,
+              "maxLength": 256,
+              "pattern": "^[^\\x00-\\x1f\\x7f-\\x9f\\u2028\\u2029]+$"
             },
             "feature": {
               "type": [
                 "string",
                 "null"
               ],
-              "minLength": 1
+              "minLength": 1,
+              "maxLength": 256,
+              "pattern": "^[^\\x00-\\x1f\\x7f-\\x9f\\u2028\\u2029]+$"
             },
             "field": {
               "type": [
                 "string",
                 "null"
               ],
-              "minLength": 1
+              "minLength": 1,
+              "maxLength": 256,
+              "pattern": "^[^\\x00-\\x1f\\x7f-\\x9f\\u2028\\u2029]+$"
             },
             "interaction": {
               "type": [
                 "string",
                 "null"
               ],
-              "minLength": 1
+              "minLength": 1,
+              "maxLength": 256,
+              "pattern": "^[^\\x00-\\x1f\\x7f-\\x9f\\u2028\\u2029]+$"
             },
             "key": {
               "type": [
                 "string",
                 "null"
               ],
-              "minLength": 1
+              "minLength": 1,
+              "maxLength": 256,
+              "pattern": "^[^\\x00-\\x1f\\x7f-\\x9f\\u2028\\u2029]+$"
             },
             "objective": {
               "type": [
                 "string",
                 "null"
               ],
-              "minLength": 1
+              "minLength": 1,
+              "maxLength": 256,
+              "pattern": "^[^\\x00-\\x1f\\x7f-\\x9f\\u2028\\u2029]+$"
             },
             "operand": {
               "type": [
                 "string",
                 "null"
               ],
-              "minLength": 1
+              "minLength": 1,
+              "maxLength": 256,
+              "pattern": "^[^\\x00-\\x1f\\x7f-\\x9f\\u2028\\u2029]+$"
             },
             "peril": {
               "type": [
@@ -228,7 +242,9 @@
                 "string",
                 "null"
               ],
-              "minLength": 1
+              "minLength": 1,
+              "maxLength": 256,
+              "pattern": "^[^\\x00-\\x1f\\x7f-\\x9f\\u2028\\u2029]+$"
             },
             "structure": {
               "type": [

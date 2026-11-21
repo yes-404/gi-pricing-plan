@@ -66,12 +66,14 @@
     },
     "JobErrorLocation": {
       "additionalProperties": false,
-      "description": "Where in the caller's own artifact a deterministic refusal points (#1917, `07` §4.1).\n\nIdentifiers only: a step id, a path inside that step, a reference, a name the artifact\nitself declares. **Never a submitted value** is what the raise sites guarantee, by filling\nthis only from the caller's own artifact; no pattern can prove it. The model gives `ref` and\n`structure` the wire form of an artifact reference (`REF_PATTERN`), `peril` a `PerilCode`\nand every other key a non-empty `str`; it refuses any other key, a JSON number and a location\nwith no key set. A digit string such as `\"42\"` is a valid value and is NOT refused. The key\nset is the one #1911 accepted.",
+      "description": "Where in the caller's own artifact a deterministic refusal points (#1917, `07` §4.1).\n\nIdentifiers only: a step id, a path inside that step, a reference, a name the artifact\nitself declares. **Never a submitted value** is what the raise sites guarantee, by filling\nthis only from the caller's own artifact; no pattern can prove it. The model gives `ref` and\n`structure` the wire form of an artifact reference (`REF_PATTERN`), `peril` a `PerilCode`\nand every other key a non-empty `str` of at most `LOCATION_TEXT_MAX` characters that holds no\ncontrol character; it refuses any other key, a JSON number and a location with no key set. A\ndigit string such as `\"42\"` is a valid value and is NOT refused. The key set is the one #1911\naccepted.",
       "properties": {
         "factor": {
           "anyOf": [
             {
+              "maxLength": 256,
               "minLength": 1,
+              "pattern": "^[^\\x00-\\x1f\\x7f-\\x9f\\u2028\\u2029]+$",
               "type": "string"
             },
             {
@@ -84,7 +86,9 @@
         "feature": {
           "anyOf": [
             {
+              "maxLength": 256,
               "minLength": 1,
+              "pattern": "^[^\\x00-\\x1f\\x7f-\\x9f\\u2028\\u2029]+$",
               "type": "string"
             },
             {
@@ -97,7 +101,9 @@
         "field": {
           "anyOf": [
             {
+              "maxLength": 256,
               "minLength": 1,
+              "pattern": "^[^\\x00-\\x1f\\x7f-\\x9f\\u2028\\u2029]+$",
               "type": "string"
             },
             {
@@ -110,7 +116,9 @@
         "interaction": {
           "anyOf": [
             {
+              "maxLength": 256,
               "minLength": 1,
+              "pattern": "^[^\\x00-\\x1f\\x7f-\\x9f\\u2028\\u2029]+$",
               "type": "string"
             },
             {
@@ -123,7 +131,9 @@
         "key": {
           "anyOf": [
             {
+              "maxLength": 256,
               "minLength": 1,
+              "pattern": "^[^\\x00-\\x1f\\x7f-\\x9f\\u2028\\u2029]+$",
               "type": "string"
             },
             {
@@ -136,7 +146,9 @@
         "objective": {
           "anyOf": [
             {
+              "maxLength": 256,
               "minLength": 1,
+              "pattern": "^[^\\x00-\\x1f\\x7f-\\x9f\\u2028\\u2029]+$",
               "type": "string"
             },
             {
@@ -149,7 +161,9 @@
         "operand": {
           "anyOf": [
             {
+              "maxLength": 256,
               "minLength": 1,
+              "pattern": "^[^\\x00-\\x1f\\x7f-\\x9f\\u2028\\u2029]+$",
               "type": "string"
             },
             {
@@ -188,7 +202,9 @@
         "step_id": {
           "anyOf": [
             {
+              "maxLength": 256,
               "minLength": 1,
+              "pattern": "^[^\\x00-\\x1f\\x7f-\\x9f\\u2028\\u2029]+$",
               "type": "string"
             },
             {
