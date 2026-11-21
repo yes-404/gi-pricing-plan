@@ -254,7 +254,7 @@ async def revalidate(
             workspace_id=workspace_id,
             ref=ref,
             content_hash=bundle.content_hash,
-            refusal=f"{exc.code}: {exc.detail}",
+            refusal=f"{exc.code}: {exc.detail or exc.title}",
             acting=actor,
             requester=None,
         )
