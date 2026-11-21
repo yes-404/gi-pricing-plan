@@ -155,7 +155,7 @@ describe("MetricLibraryView", () => {
     );
     render(MetricLibraryView, mounted);
 
-    expect(await screen.findByText(/certificates could not be read/i)).toBeInTheDocument();
+    expect(await screen.findByText(/1 of 2 certificates could not be read/i)).toBeInTheDocument();
     const badge = await screen.findByRole("group", { name: "Provenance" });
     expect(badge).toHaveTextContent("custom_metric:gini-weighted@3");
     expect(screen.getAllByRole("group", { name: "Provenance" })).toHaveLength(1);
@@ -177,7 +177,7 @@ describe("MetricLibraryView", () => {
     );
     render(MetricLibraryView, mounted);
 
-    expect(await screen.findByText(/certificates could not be read/i)).toBeInTheDocument();
+    expect(await screen.findByText(/1 of 1 certificates could not be read/i)).toBeInTheDocument();
     expect(screen.getByText("gini-weighted")).toBeInTheDocument();
     expect(screen.queryByRole("group", { name: "Provenance" })).toBeNull();
   });

@@ -400,9 +400,7 @@ onMounted(async () => {
             v-if="finerNotAvailable"
             class="mt-1"
           >
-            Finer level<template v-if="chainedSlugs?.length">
-              for {{ chainedSlugs.join(", ") }}
-            </template>: not available. This model was fitted before the finer-level actual
+            Finer level for {{ chainedSlugs.join(", ") }}: not available. This model was fitted before the finer-level actual
             versus expected was stored, and a refit records it.
           </p>
           <template v-else>

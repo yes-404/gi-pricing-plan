@@ -5,7 +5,7 @@ title: A governed parent the reference form cannot name is reported in the prove
 status: active               # draft → active → superseded | retired (§1.2a)
 created: 2026-11-21
 owner: decision-maker          # creates via adr-write; maintainer accepts draft → active
-tree: 89b215ea
+tree: 89b215ea47e83c5d5e37d18caba5d60b381a40ce
 supersedes: [ADR-2160]        # for one point only: #1868's "subject_refs is never empty", for a parent the reference form cannot name
 superseded_by: ~
 corrected_by: []

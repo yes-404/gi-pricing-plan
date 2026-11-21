@@ -123,7 +123,9 @@ def _read[R: BaseModel](read_cls: type[R], stored: Mapping[str, Any], provenance
     """The read class, validated from the stored shape's JSON plus `provenance`.
 
     `stored` is the JSON form, by alias (`RegressionRun`'s `BlobRef` serialises `bytes`), so
-    the read validates exactly what the persisted class would and adds one key.
+    the read validates exactly what the persisted class would and adds `provenance`. A
+    caller may merge read-side keys into `stored` first, as `diagnostics_read` does with
+    `chained_factors`.
     """
     return read_cls.model_validate({**stored, "provenance": provenance})
 

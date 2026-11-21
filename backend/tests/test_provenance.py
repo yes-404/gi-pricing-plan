@@ -908,8 +908,8 @@ def test_a_parent_the_refs_form_cannot_name_is_counted_and_the_read_never_fails(
 ) -> None:
     """A model whose family slug is outside the refs grammar: the read answers 200, as it does
     without provenance, and its provenance counts the parent it could not name rather than
-    failing or leaving it out silently (`00` FR-2159's note of 2026-11-19, pending the
-    maintainer's answer). The parents it can name are still listed, in their order."""
+    failing or leaving it out silently (`00` FR-2159's amendment of 2026-11-21; ADR-2170). The
+    parents it can name are still listed, in their order."""
     url, named = OFF_GRAMMAR_SEEDS[shape](_Context(workspace_id, principal, client, reader))
     response = client.get(url, headers=reader)
     assert response.status_code == 200, response.text

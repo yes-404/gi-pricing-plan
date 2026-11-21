@@ -406,9 +406,11 @@ def _ae_cells(
     cells: list[AeCell] = []
     for level in sorted({v for v in levels.unique().to_list() if v is not None}):
         # A null row (a finer level that could not be rebuilt) is in no level's mask. Without
-        # `fill_null`, a series holding a null compares to an object array (True/None/False),
-        # and numpy refuses it as an index (IndexError). With no null, the mask is unchanged,
-        # so a factor's own A/E reads exactly as before; only the finer levels hold nulls.
+        # `fill_null`, comparing a series that holds a null gives a Boolean series with a null,
+        # which converts to an object array (True/None/False) that numpy refuses as an index
+        # (IndexError). With no null, the mask is unchanged, so a factor's own A/E reads exactly
+        # as before. In practice only the finer levels hold nulls here: a fit fails on a null in
+        # a Factor's own column before diagnostics run.
         mask = (levels == level).fill_null(False).to_numpy()
         actual = float(np.sum(ae_w[mask] * y[mask]))
         expected = float(np.sum(ae_w[mask] * mu[mask]))

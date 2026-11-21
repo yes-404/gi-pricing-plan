@@ -525,6 +525,108 @@ def test_a_payload_stored_before_the_change_still_reads_and_is_not_available() -
 
 @pytest.mark.req("FR-109")
 @pytest.mark.req("FR-170")
+def test_a_model_fitted_before_the_change_with_a_chained_factor_names_it(
+    api_client: TestClient, workspace_id
+) -> None:
+    """The case `chained_factors` exists for (#1961, comment 7060609084, point 1): a model
+    with a Factor on a chained grouping whose diagnostics were stored before the finer level
+    reads `finer_level_ae: null` AND names that Factor, so the view says "not available" for
+    it rather than showing no section."""
+    from uuid import uuid4
+
+    async def recorded_before(database, store):
+        from backend.tests.test_model_jobs import (
+            _actuary,
+            _dataset,
+            _spec,
+            _split,
+            _validated_version,
+        )
+
+        from app.platform import modelling as model_service
+        from app.platform import transformations as transform_service
+        from model_schema import (
+            Diagnostics,
+            Factor,
+            FactorType,
+            GlmFitResult,
+            Grouping,
+            GroupingMethod,
+            UnseenLevelBehaviour,
+        )
+
+        actor = await _actuary(database, workspace_id)
+        dataset_id = await _dataset(database, store, workspace_id, actor)
+        version_id = await _validated_version(
+            database, store, workspace_id, actor, dataset_id, book=CHAIN_BOOK
+        )
+        split = await _split(database, store, workspace_id, actor, version_id)
+        suffix = uuid4().hex[-6:]
+        common = {
+            "dataset_id": dataset_id, "version": 1, "method": GroupingMethod.MANUAL,
+            "unseen_level_behaviour": UnseenLevelBehaviour.ERROR,
+        }
+        async with database.unit_of_work() as session:
+            area_id = (
+                await transform_service.create_grouping(
+                    session, workspace_id=workspace_id, actor=actor,
+                    grouping=Grouping(
+                        id=uuid4(), slug=f"area-{suffix}", column="postcode",
+                        mapping={"AB1": "AB", "AB2": "AB", "CD1": "CD"}, **common,
+                    ),
+                )
+            ).id
+        async with database.unit_of_work() as session:
+            region_id = (
+                await transform_service.create_grouping(
+                    session, workspace_id=workspace_id, actor=actor,
+                    grouping=Grouping(
+                        id=uuid4(), slug=f"region-{suffix}", column="area",
+                        mapping={"AB": "NORTH", "CD": "SOUTH"}, parent_grouping_id=area_id,
+                        **common,
+                    ),
+                )
+            ).id
+        async with database.unit_of_work() as session:
+            factor_id = (
+                await model_service.create_factor(
+                    session, workspace_id=workspace_id, actor=actor,
+                    factor=Factor(
+                        id=uuid4(), slug="region", dataset_id=dataset_id, version=1,
+                        type=FactorType.GROUPING, source_columns=("area",),
+                        grouping_id=region_id,
+                    ),
+                )
+            ).id
+        spec = _spec(version_id, (factor_id,), split_ref=split)
+        async with database.unit_of_work() as session:
+            row, _ = await model_service.reserve_model(
+                session, workspace_id=workspace_id, actor=actor, spec=spec
+            )
+            await model_service.record_fit(
+                session, workspace_id=workspace_id, actor=actor, model_id=row.id,
+                fit_result=GlmFitResult(
+                    converged=True, iterations=3, fit_seconds=0.1, dispersion=1.0
+                ),
+                diagnostics=Diagnostics.model_validate(
+                    {**_PAYLOAD_BEFORE, "id": str(new_uuid7()), "model_id": str(row.id),
+                     "computed_at": "2026-11-01T00:00:00+00:00"}
+                ),
+            )
+        return actor, spec.model_family_slug
+
+    actor, slug = _on_own_loop(recorded_before)
+    read = api_client.get(
+        f"/api/v1/models/{slug}/diagnostics", headers=_headers(actor.id, workspace_id)
+    )
+    assert read.status_code == 200, read.text
+    body = read.json()
+    assert body["finer_level_ae"] is None
+    assert body["chained_factors"] == ["region"]
+
+
+@pytest.mark.req("FR-109")
+@pytest.mark.req("FR-170")
 def test_a_model_fitted_before_the_change_reads_as_not_available(
     api_client: TestClient, workspace_id
 ) -> None:

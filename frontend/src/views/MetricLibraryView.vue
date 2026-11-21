@@ -88,10 +88,13 @@ onMounted(async () => {
   certificates.value = settled.flatMap((result) =>
     result.status === "fulfilled" && result.value !== null ? [result.value] : [],
   );
-  const failed = settled.find((result) => result.status === "rejected");
-  if (failed) {
-    const reason = (failed as PromiseRejectedResult).reason;
-    certificateFailure.value = reason instanceof Error ? reason.message : String(reason);
+  const failed = settled.filter((result) => result.status === "rejected");
+  if (failed.length > 0) {
+    // Only a metric with a `certificate_id` is asked, so that is the count read against.
+    const asked = metrics.filter((metric) => metric.certificate_id).length;
+    const reason = (failed[0] as PromiseRejectedResult).reason;
+    const text = reason instanceof Error ? reason.message : String(reason);
+    certificateFailure.value = `${failed.length} of ${asked} certificates could not be read: ${text}`;
   }
 });
 </script>
@@ -132,7 +135,7 @@ onMounted(async () => {
       v-if="certificateFailure"
       class="mt-4 text-sm text-rose-800"
     >
-      The certificates could not be read: {{ certificateFailure }}
+      {{ certificateFailure }}
     </p>
   </section>
 </template>
