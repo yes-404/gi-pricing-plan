@@ -74,9 +74,25 @@ async def stored_version(
     Returns (`rating_version:<slug>@1`, `content_hash`). `row.bundle` carries exactly the two
     keys `_fetch_bundle` reads: `content_hash` and `blob_sha256`.
     """
+    return await stored_version_bytes(
+        database, blob_store, workspace_id, (FIXTURES / fixture).read_bytes(), author=author
+    )
+
+
+async def stored_version_bytes(
+    database: Database,
+    blob_store: Any,
+    workspace_id: UUID,
+    payload: bytes,
+    *,
+    author: UUID | None = None,
+    algorithm_ref: str | None = None,
+    pins: dict[str, Any] | None = None,
+) -> tuple[str, str]:
+    """`stored_version` for a bundle's bytes built in the test (#1943). `algorithm_ref` and
+    `pins` are the row's, for a test that needs `revalidate` to read them."""
     import json
 
-    payload = (FIXTURES / fixture).read_bytes()
     content_hash = json.loads(payload)["content_hash"]
     async with database.unit_of_work() as session:
         ref = await blob_store.put(session, payload, "application/json")
@@ -90,6 +106,8 @@ async def stored_version(
                 status="approved",
                 dataset_version_id=uuid4(),
                 model_ref="model:motor-ad-frequency@7",
+                algorithm_ref=algorithm_ref,
+                pins=pins,
                 created_by=author or new_uuid7(),
                 bundle={
                     "content_hash": content_hash,
@@ -316,3 +334,222 @@ async def test_a_governance_refusal_is_audited_every_time_as_the_acting_principa
     scored = [e for e in events if e.actor.get("kind") == "system"]
     assert len(scored) == 1
     assert (scored[0].after or {}).get("requested_by") == str(requester.id)
+
+
+def _offset_source_absent_bytes() -> bytes:
+    """The clean bundle, its GLM's model offset naming a source the bundle does not carry."""
+    import json
+
+    raw = json.loads((FIXTURES / "clean.bundle.json").read_text())
+    spec = raw["resolved_payloads"]["model:motor-freq-glm@1"]["spec"]
+    spec["offset"] = {"kind": "model", "offset_model_ref": "model:motor-source@1"}
+    return json.dumps(raw).encode()
+
+
+def _assert_unpinned_problem(response: Any, ref: str, content_hash: str) -> None:
+    assert response.status_code == REFUSAL_STATUS, response.text
+    body = response.json()
+    assert body["code"] == "RATING_VERSION_UNPINNED"
+    assert ref in body["detail"]
+    assert "model:motor-source@1" in body["detail"]
+    assert content_hash.removeprefix("sha256:") in body["detail"]
+
+
+@pytest.mark.req("FR-116")
+@pytest.mark.req("FR-240")
+@pytest.mark.asyncio
+@pytest.mark.parametrize("act", ["submit", "deploy", "rollback"])
+async def test_submit_deploy_and_rollback_refuse_a_bundle_missing_its_offset_source_by_name(
+    act: str,
+    client: TestClient,
+    database: Database,
+    blob_store: Any,
+    workspace_id: UUID,
+    seat: Any,
+) -> None:
+    """#1943 D3: a stored Bundle whose model offset names a source it does not carry is refused
+    at submit, deploy and rollback with `RATING_VERSION_UNPINNED` (409, audited once, no
+    Deployment written); it was an unnamed 500. Rollback reuses an earlier Deployment, so its
+    version is deployed while clean and its stored bundle is then swapped, as in
+    `test_a_rollback_to_a_stored_control_operand_bundle_is_refused`."""
+    deployer = await seat("deployer")
+    ref, content_hash = await stored_version_bytes(
+        database, blob_store, workspace_id, _offset_source_absent_bytes()
+    )
+    written = 0
+    if act == "rollback":
+        first, _ = await stored_version(database, blob_store, workspace_id, "clean.bundle.json")
+        second, _ = await stored_version(database, blob_store, workspace_id, "clean.bundle.json")
+        assert deploy(client, deployer, "dev", first).status_code == 201
+        assert deploy(client, deployer, "dev", second).status_code == 201
+        written = await deployments_written(database, workspace_id)
+        async with database.unit_of_work() as session:
+            stored = (
+                await session.execute(
+                    select(RatingVersionRow.bundle).where(
+                        RatingVersionRow.workspace_id == workspace_id,
+                        RatingVersionRow.slug == ref.split(":")[1].split("@")[0],
+                    )
+                )
+            ).scalar_one()
+            await session.execute(
+                update(RatingVersionRow)
+                .where(
+                    RatingVersionRow.workspace_id == workspace_id,
+                    RatingVersionRow.slug == first.split(":")[1].split("@")[0],
+                )
+                .values(bundle=stored)
+            )
+        ref = first
+    if act == "submit":
+        refused = request_into(client, deployer, "prod", ref)
+    elif act == "deploy":
+        refused = deploy(client, deployer, "dev", ref)
+    else:
+        refused = client.post(
+            "/api/v1/environments/dev/deployments/rollback",
+            json={"rating_version_ref": ref, "reason": "regression"},
+            headers=deployer.headers,
+        )
+    _assert_unpinned_problem(refused, ref, content_hash)
+    assert await deployments_written(database, workspace_id) == written
+    events = await refusal_events(database, workspace_id)
+    assert [e.entity_ref for e in events] == [ref]
+
+
+@pytest.mark.req("FR-217")
+@pytest.mark.req("FR-237")
+@pytest.mark.req("FR-240")
+@pytest.mark.asyncio
+async def test_deploy_refuses_a_version_mounting_a_sub_graph_its_pins_do_not_carry_by_name(
+    client: TestClient, database: Database, blob_store: Any, workspace_id: UUID, seat: Any
+) -> None:
+    """#1943: `revalidate`'s second half (`check_rateable_intent`) refuses a version, with pins,
+    whose algorithm mounts a sub-graph those pins do not carry at that version
+    (`RATING_VERSION_UNPINNED`). It answered 500 (the code was not a load-guard code); it is now a
+    409 with one `rating_version.load_refused` event and no Deployment. The stored Bundle is the
+    clean fixture, so the first half passes and the refusal is the second half's."""
+    from backend.tests.test_rating_version_compile import (
+        _empty_pins,
+        _mounting_algorithm,
+        _ncd_sub_graph,
+    )
+
+    deployer = await seat("deployer", "analyst")
+    made = client.post("/api/v1/sub-graphs", json=_ncd_sub_graph(), headers=deployer.headers)
+    assert made.status_code == 201, made.text
+    algorithm = client.post(
+        "/api/v1/rating-algorithms", json=_mounting_algorithm(), headers=deployer.headers
+    )
+    assert algorithm.status_code == 201, algorithm.text
+    ref, content_hash = await stored_version_bytes(
+        database,
+        blob_store,
+        workspace_id,
+        (FIXTURES / "clean.bundle.json").read_bytes(),
+        algorithm_ref="rating_algorithm:mounting@1",
+        pins=_empty_pins(),
+    )
+    refused = deploy(client, deployer, "dev", ref)
+    assert refused.status_code == REFUSAL_STATUS, refused.text
+    body = refused.json()
+    assert body["code"] == "RATING_VERSION_UNPINNED"
+    assert ref in body["detail"]
+    assert "sub_graph:ncd-ladder@1" in body["detail"]
+    assert content_hash.removeprefix("sha256:") in body["detail"]
+    assert await deployments_written(database, workspace_id) == 0
+    events = await refusal_events(database, workspace_id)
+    assert [e.entity_ref for e in events] == [ref]
+
+
+async def _pin_a_model_whose_source_has_an_offset(
+    client: TestClient,
+    database: Database,
+    blob_store: Any,
+    workspace_id: UUID,
+    deployer: Any,
+    slug: str,
+) -> None:
+    """Give the stored version `slug` an algorithm and a pin for a model C that is offset from B,
+    which is offset from A. The fit refuses C (#1943 D4), so C is the hand-written row of
+    `test_rating_version_compile.py`: written past the fit. The Bundle the version stores is
+    untouched (the clean fixture), so it loads and prices: the pinned model is never called."""
+    from backend.tests.approved_rows import mark_approved
+    from backend.tests.test_model_offset_jobs import _residual_spec
+    from backend.tests.test_prediction import _fitted_residual_pair
+    from backend.tests.test_rating_version_compile import _empty_pins, _minimal_algorithm
+
+    from app.db.models import ModelRow
+    from app.platform import modelling as model_service
+
+    made = client.post(
+        "/api/v1/rating-algorithms", json=_minimal_algorithm(), headers=deployer.headers
+    )
+    assert made.status_code == 201, made.text
+    pair = await _fitted_residual_pair(database, blob_store, workspace_id)
+    async with database.unit_of_work() as session:
+        b_row = await session.get(ModelRow, pair.residual_id)
+        assert b_row is not None
+        b_ref = f"model:{b_row.model_family_slug}@{b_row.version}"
+        c_row, _ = await model_service.reserve_model(
+            session,
+            workspace_id=workspace_id,
+            actor=pair.actor,
+            spec=_residual_spec(pair.v2_id, pair.resid_flag_id, pair.split2, ref=b_ref),
+        )
+        c_row.fit_result = b_row.fit_result
+        c_row.diagnostics_id = b_row.diagnostics_id
+        c_row.status = "fitted"
+        await session.flush()
+        await mark_approved(session, c_row)
+        c_ref = f"model:{c_row.model_family_slug}@{c_row.version}"
+        pins = {**_empty_pins(), "models": [c_ref]}
+        await session.execute(
+            update(RatingVersionRow)
+            .where(RatingVersionRow.workspace_id == workspace_id, RatingVersionRow.slug == slug)
+            .values(algorithm_ref="rating_algorithm:minimal@1", pins=pins)
+        )
+
+
+@pytest.mark.req("FR-116")
+@pytest.mark.req("FR-243")
+@pytest.mark.asyncio
+@pytest.mark.parametrize("act", ["submit", "deploy", "rollback"])
+async def test_a_version_pinning_a_two_level_offset_model_is_refused_with_one_event(
+    act: str,
+    client: TestClient,
+    database: Database,
+    blob_store: Any,
+    workspace_id: UUID,
+    seat: Any,
+) -> None:
+    """#1943 point 1: a stored version that pins, and never calls, a model whose offset source has
+    an offset of its own still prices (its Bundle is the clean fixture), but submit, deploy and
+    rollback refuse it, `MODEL_OFFSET_REF_INVALID` (409) with exactly one
+    `rating_version.load_refused` event and no Deployment, like every other revalidation refusal."""
+    deployer = await seat("deployer", "analyst")
+    ref, _ = await stored_version(database, blob_store, workspace_id, "clean.bundle.json")
+    if act == "rollback":
+        second, _ = await stored_version(database, blob_store, workspace_id, "clean.bundle.json")
+        assert deploy(client, deployer, "dev", ref).status_code == 201
+        assert deploy(client, deployer, "dev", second).status_code == 201
+    await _pin_a_model_whose_source_has_an_offset(
+        client, database, blob_store, workspace_id, deployer, ref.split(":")[1].split("@")[0]
+    )
+    before = await deployments_written(database, workspace_id)
+    if act == "submit":
+        refused = request_into(client, deployer, "prod", ref)
+    elif act == "deploy":
+        refused = deploy(client, deployer, "dev", ref)
+    else:
+        refused = client.post(
+            "/api/v1/environments/dev/deployments/rollback",
+            json={"rating_version_ref": ref, "reason": "regression"},
+            headers=deployer.headers,
+        )
+    assert refused.status_code == REFUSAL_STATUS, refused.text
+    assert refused.json()["code"] == "MODEL_OFFSET_REF_INVALID"
+    assert await deployments_written(database, workspace_id) == before
+    events = await refusal_events(database, workspace_id)
+    assert [e.entity_ref for e in events] == [ref]
+    assert "MODEL_OFFSET_REF_INVALID" in str((events[0].after or {}).get("refusal"))

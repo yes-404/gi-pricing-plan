@@ -1128,3 +1128,66 @@ def test_a_validation_error_in_compile_never_reaches_the_job_error(
     served = api_client.get(f"/api/v1/jobs/{job_row.id}", headers=headers)
     assert served.status_code == 200, served.text
     assert _LEAK_SENTINEL not in served.text
+
+
+@pytest.mark.req("FR-116")
+def test_compile_refuses_a_model_whose_offset_source_has_a_model_offset(
+    workspace_id, principal, grant, database, blob_store, api_client
+) -> None:
+    """#1943 D4: the fit refuses model C (offset from B, which is offset from A), so no API path
+    makes one. A row for C written by hand past the fit used to compile into a Bundle carrying C
+    and B but not A, which the loader cannot read. Compile now refuses it by name, through the
+    same check as validation, fit and `/predict`."""
+    from backend.tests.test_model_offset_jobs import _residual_spec
+    from backend.tests.test_prediction import _fitted_residual_pair
+
+    from app.errors import PlatformError
+    from app.platform import modelling as model_service
+
+    asyncio.get_event_loop().run_until_complete(grant("analyst"))
+    headers = _headers(principal, workspace_id)
+    created = api_client.post(
+        "/api/v1/rating-algorithms", json=_minimal_algorithm(), headers=headers
+    )
+    assert created.status_code == 201, created.text
+
+    async def _seed_chain() -> str:
+        pair = await _fitted_residual_pair(database, blob_store, workspace_id)
+        async with database.unit_of_work() as session:
+            b_row = await session.get(ModelRow, pair.residual_id)
+            assert b_row is not None
+            b_ref = f"model:{b_row.model_family_slug}@{b_row.version}"
+            c_row, _ = await model_service.reserve_model(
+                session, workspace_id=workspace_id, actor=pair.actor,
+                spec=_residual_spec(pair.v2_id, pair.resid_flag_id, pair.split2, ref=b_ref),
+            )
+            c_row.fit_result = b_row.fit_result  # past the fit: a hand-written row
+            c_row.diagnostics_id = b_row.diagnostics_id  # a fitted row must carry diagnostics
+            c_row.status = "fitted"
+            await session.flush()
+            await mark_approved(session, c_row)
+            return f"model:{c_row.model_family_slug}@{c_row.version}"
+
+    c_ref = asyncio.get_event_loop().run_until_complete(_seed_chain())
+    row = asyncio.get_event_loop().run_until_complete(
+        _insert_version(
+            database, workspace_id, principal.id,
+            algorithm_ref="rating_algorithm:minimal@1",
+            pins={
+                "rate_tables": [], "models": [c_ref],
+                "reference_tables": [], "custom_objectives": [],
+            },
+        )
+    )
+
+    async def _compile() -> None:
+        async with database.unit_of_work() as session:
+            await compile_rating_version(
+                session, workspace_id=workspace_id, rating_version_id=row.id,
+                blob_store=blob_store,
+            )
+
+    with pytest.raises(PlatformError) as refused:
+        asyncio.get_event_loop().run_until_complete(_compile())
+    assert refused.value.code == "MODEL_OFFSET_REF_INVALID"
+    assert refused.value.status_code == 409

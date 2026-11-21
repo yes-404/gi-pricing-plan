@@ -40,6 +40,7 @@ from backend.tests.test_model_jobs import (
 from backend.tests.test_model_offset_jobs import (
     _RESIDUAL_CAST_RECIPE,
     _residual_book,
+    _residual_spec,
 )
 from backend.tests.test_prediction import _fitted_residual_pair
 from sqlalchemy import select, text
@@ -524,6 +525,75 @@ async def test_a_refusal_from_the_offset_model_fails_the_backtest_job_with_its_c
     assert job_row.error["code"] == "UNSEEN_LEVEL_BEHAVIOUR_REQUIRED"
     assert "declare “map to base” on that factor, or re-split the data" in job_row.error["message"]
     assert "SENTINEL-4e8b" not in str(job_row.error)  # the stored error never carries a level
+    assert stored is None
+
+
+@pytest.mark.req("FR-116")
+async def test_a_backtest_of_a_two_level_offset_model_fails_the_job_with_the_refusals_code(
+    database: Database, blob_store, workspace_id
+) -> None:
+    """#1943 point 2: model C is offset from B, which is offset from A. The fit refuses C, so C is
+    a row written by hand past the fit (as `test_rating_version_compile.py` does). Its backtest
+    Job fails with `MODEL_OFFSET_REF_INVALID` (the base answered `MODEL_OFFSET_MISSING`) and
+    stores no backtest."""
+    from app.db.models import JobRow
+
+    pair = await _fitted_residual_pair(database, blob_store, workspace_id)
+    async with database.session() as session:
+        v2 = await session.get(DatasetVersionRow, pair.v2_id)
+    assert v2 is not None
+    later = await _later_residual_period(
+        database, blob_store, workspace_id, pair.actor, v2.dataset_id
+    )
+    async with database.unit_of_work() as session:
+        b_row = await session.get(ModelRow, pair.residual_id)
+        assert b_row is not None
+        c_row, _ = await model_service.reserve_model(
+            session,
+            workspace_id=workspace_id,
+            actor=pair.actor,
+            spec=_residual_spec(
+                pair.v2_id,
+                pair.resid_flag_id,
+                pair.split2,
+                ref=f"model:{b_row.model_family_slug}@{b_row.version}",
+            ),
+        )
+        c_row.fit_result = b_row.fit_result
+        c_row.diagnostics_id = b_row.diagnostics_id
+        c_row.status = "fitted"
+        c_id = c_row.id
+
+    async with database.unit_of_work() as session:
+        model, version = await service.request_backtest(
+            session,
+            workspace_id=workspace_id,
+            actor=pair.actor,
+            model_id=c_id,
+            dataset_version_id=later,
+        )
+        job = await job_service.submit(
+            session,
+            JobKind.MODEL_BACKTEST,
+            {
+                "workspace_id": str(workspace_id),
+                "actor": pair.actor.model_dump(mode="json"),
+                **service.backtest_payload(model, version),
+            },
+            pair.actor,
+            workspace_id=workspace_id,
+        )
+        job_id = job.id
+
+    assert await execute_job(database, job_id, blob_store) is JobStatus.FAILED
+    async with database.session() as session:
+        job_row = await session.get(JobRow, job_id)
+        stored = (
+            await session.execute(select(BacktestRow.id).where(BacktestRow.job_id == job_id))
+        ).scalar_one_or_none()
+    assert job_row is not None
+    assert job_row.error is not None
+    assert job_row.error["code"] == "MODEL_OFFSET_REF_INVALID"
     assert stored is None
 
 

@@ -410,3 +410,30 @@ async def test_a_link_mismatch_fails_the_job(
 
     code = await _refusal_code(database, blob_store, workspace_id, actor, model_id, job.id)
     assert code == "MODEL_OFFSET_REF_INVALID"
+
+
+@pytest.mark.req("FR-116")
+async def test_a_fit_whose_offset_source_has_a_model_offset_fails_with_a_named_code(
+    database: Database, blob_store: BlobStore, workspace_id
+) -> None:
+    """#1943: version 1 supports one level of model offset. The residual model B (offset from
+    the base A) is fitted; a fit of C, offset from B, is refused by name
+    (`MODEL_OFFSET_REF_INVALID`; it was `MODEL_OFFSET_MISSING` from the worker)."""
+    from backend.tests.test_prediction import _fitted_residual_pair
+
+    pair = await _fitted_residual_pair(database, blob_store, workspace_id)
+    async with database.session() as session:
+        b_row = await session.get(ModelRow, pair.residual_id)
+    assert b_row is not None
+    chained_ref = f"model:{b_row.model_family_slug}@{b_row.version}"
+
+    model_id, job = await _residual_row(
+        database, blob_store, workspace_id, pair.actor,
+        _residual_spec(pair.v2_id, pair.resid_flag_id, pair.split2, ref=chained_ref),
+    )
+    assert await execute_job(database, job.id, blob_store) is JobStatus.FAILED
+
+    code = await _refusal_code(
+        database, blob_store, workspace_id, pair.actor, model_id, job.id
+    )
+    assert code == "MODEL_OFFSET_REF_INVALID"

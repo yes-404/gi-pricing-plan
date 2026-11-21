@@ -113,8 +113,16 @@ _INPUT_FREE = {
     # slug, never a quote value (`test_a_level_an_identity_factor_over_a_number_cannot_produce_is_
     # refused_on_both_paths` drives the per-call twin with a sentinel row value and asserts it is
     # absent; `test_a_bundle_whose_glm_term_its_banding_cannot_produce_is_refused_at_load` pins
-    # the load text's parts).
-    ("rating/runtime.py", "_glm_scorer"): 1,
+    # the load text's parts). #1943 adds four more sites, the `RATING_VERSION_UNPINNED` refusals of
+    # a Bundle that does not carry what it pins. `_glm_scorer(ref, payloads)` takes no quote
+    # context and runs at load, so each text is built from the stored Bundle only: (1) the
+    # Bundle ref and the ids of the Factors the spec names but the Bundle lacks; (2) the Bundle
+    # ref and the slug of a Factor whose Banding the Bundle lacks; (3) the same for a Grouping;
+    # (4) the Bundle ref and the offset model's ref. None carries a quote's value
+    # (`test_a_glm_bundle_missing_a_carried_input_is_a_coded_refusal_at_load` and
+    # `test_a_bundle_missing_its_offset_sources_payload_is_a_coded_refusal_at_load` pin the
+    # texts' parts).
+    ("rating/runtime.py", "_glm_scorer"): 5,
     # `_model_call_failure`: step id and the pinned model_type; and, for a Peril Structure pin
     # (PL-1461 Task 4), step id and ref string, no quote; the refusal text of `_ModelCallRefusal`;
     # and, for a GLM or peril component scorer failure (PL-1464, the 2026-10-10 03:20:34 BST

@@ -15,6 +15,8 @@ import copy
 from typing import Any
 
 import pytest
+from test_rating_glm_model_call import MODEL_REF, _offset_world, _OffsetResolver
+from test_rating_glm_model_call import version as _glm_version
 from test_rating_runtime import _rate_table_payload
 from test_rating_score import _algorithm_payload, _ctx, _FakeResolver, _version
 
@@ -381,3 +383,46 @@ def test_a_pre_fix_bundle_with_an_unpinned_table_is_refused_at_load(pinned: list
             **bundle.resolved_payloads, "rate_table:motor-expense@2": _rate_table_v2()}})
     with pytest.raises(CodedError, match=r"^RATING_VERSION_UNPINNED:"):
         load_bundle(bundle)
+
+
+# --- #1943 D3: the four `RATING_VERSION_UNPINNED` raises in `_glm_scorer` are coded ---
+
+async def _offset_bundle() -> Bundle:
+    """A compiled depth-one model-offset Bundle: the residual GLM and its source, each carried."""
+    base, residual = _offset_world()
+    return await compile_bundle(
+        _glm_version("model:motor-resid@1"), _OffsetResolver(base, residual)
+    )
+
+
+def _without(bundle: Bundle, *, prefix: str) -> Bundle:
+    kept = {k: v for k, v in bundle.resolved_payloads.items() if not k.startswith(prefix)}
+    assert len(kept) < len(bundle.resolved_payloads), f"the Bundle carries nothing under {prefix}"
+    return bundle.model_copy(update={"resolved_payloads": kept})
+
+
+@pytest.mark.req("FR-116")
+@pytest.mark.req("FR-239")
+async def test_a_bundle_missing_its_offset_sources_payload_is_a_coded_refusal_at_load() -> None:
+    bundle = await _offset_bundle()
+    assert MODEL_REF in bundle.resolved_payloads  # the control: the source is carried
+    absent = bundle.model_copy(update={"resolved_payloads": {
+        k: v for k, v in bundle.resolved_payloads.items() if k != MODEL_REF}})
+    with pytest.raises(CodedError, match=r"^RATING_VERSION_UNPINNED:") as raised:
+        load_bundle(absent)
+    assert MODEL_REF in str(raised.value)
+    assert "offset model" in str(raised.value)
+
+
+@pytest.mark.req("FR-239")
+@pytest.mark.parametrize(("prefix", "wording"), [
+    pytest.param("factor:", "Factor(s)", id="factor"),
+    pytest.param("banding:", "pins a Banding", id="banding"),
+    pytest.param("grouping:", "pins a Grouping", id="grouping"),
+])
+async def test_a_glm_bundle_missing_a_carried_input_is_a_coded_refusal_at_load(
+    prefix: str, wording: str
+) -> None:
+    with pytest.raises(CodedError, match=r"^RATING_VERSION_UNPINNED:") as raised:
+        load_bundle(_without(await _offset_bundle(), prefix=prefix))
+    assert wording in str(raised.value)
