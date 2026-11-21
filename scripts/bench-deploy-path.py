@@ -32,6 +32,10 @@ import time
 from pathlib import Path
 from typing import Any
 
+if str(Path(__file__).resolve().parent) not in sys.path:  # _gitenv: any loader (#1913)
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+from _gitenv import clean_env
+
 ROOT = Path(__file__).resolve().parent.parent
 COMPOSE = ROOT / "deploy" / "docker-compose.yml"
 TOPOLOGY = "nginx lb (deploy/lb.conf), round-robin over the api replicas via Docker DNS"
@@ -59,10 +63,18 @@ def running_api_replicas() -> int:
     return sum(1 for line in out.splitlines() if line.strip() == "api")
 
 
+def tree_of() -> str:
+    """The checkout this script lives in, by its `HEAD` (the provenance every record carries)."""
+    return subprocess.run(
+        ["git", "-C", str(ROOT), "rev-parse", "HEAD"],
+        capture_output=True, text=True, env=clean_env(),
+    ).stdout.strip()
+
+
 def host() -> dict[str, str]:
     """Acceptance 5's host fields: nproc, free -g, and the machine type if one answers."""
     def run(*cmd: str) -> str:
-        return subprocess.run(cmd, capture_output=True, text=True).stdout.strip()
+        return subprocess.run(cmd, capture_output=True, text=True, env=clean_env()).stdout.strip()
 
     machine_type = run(
         "curl", "-s", "-m", "2", "-H", "Metadata-Flavor: Google",
@@ -180,9 +192,7 @@ def main() -> int:
     parser.add_argument("--dry-run", action="store_true", help="print the record shape; no load")
     args = parser.parse_args()
 
-    tree = subprocess.run(
-        ["git", "-C", str(ROOT), "rev-parse", "HEAD"], capture_output=True, text=True
-    ).stdout.strip()
+    tree = tree_of()
 
     bench = _bench_rating()
     observed: dict[str, int] | None = None

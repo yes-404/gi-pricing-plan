@@ -29,7 +29,10 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Final
 
+if str(Path(__file__).resolve().parent) not in sys.path:  # _gitenv: any loader (#1913)
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
 import _docid
+from _gitenv import clean_env
 
 REPO_ROOT: Final = Path(__file__).resolve().parent.parent
 
@@ -72,6 +75,7 @@ def ref_exists(ref: str, repo_root: Path) -> bool:
         ["git", "-C", str(repo_root), "rev-parse", "--verify", "--quiet", f"{ref}^{{commit}}"],
         capture_output=True,
         check=False,
+        env=clean_env(),
     )
     return proc.returncode == 0
 
@@ -92,6 +96,7 @@ def materialize_ref(ref: str, dest: Path, *, repo_root: Path) -> None:
         ["git", "-C", str(repo_root), "archive", "--format=zip", "-o", str(zip_path), ref],
         capture_output=True,
         check=False,
+        env=clean_env(),
     )
     if proc.returncode != 0:
         stderr = proc.stderr.decode("utf-8", errors="replace").strip()
@@ -144,11 +149,13 @@ def materialize_ref_with_history(ref: str, dest: Path, *, repo_root: Path) -> No
         )
     sha = subprocess.run(
         ["git", "-C", str(repo_root), "rev-parse", f"{ref}^{{commit}}"],
-        capture_output=True, text=True, check=False,
+        capture_output=True, text=True, check=False, env=clean_env(),
     ).stdout.strip()
 
     def _run(args: list[str], *, cwd: Path | None = None) -> None:
-        proc = subprocess.run(args, capture_output=True, text=True, check=False, cwd=cwd)
+        proc = subprocess.run(
+            args, capture_output=True, text=True, check=False, cwd=cwd, env=clean_env()
+        )
         if proc.returncode != 0:
             raise GitArchiveError(
                 f"`{' '.join(args)}` exited {proc.returncode}: "
@@ -175,7 +182,7 @@ def is_shallow_repository(root: Path) -> bool:
     """
     proc = subprocess.run(
         ["git", "-C", str(root), "rev-parse", "--is-shallow-repository"],
-        capture_output=True, text=True, check=False,
+        capture_output=True, text=True, check=False, env=clean_env(),
     )
     return proc.returncode == 0 and proc.stdout.strip() == "true"
 
@@ -184,7 +191,7 @@ def history_commit_count(root: Path) -> int:
     """`git rev-list --count HEAD` for `root`, or 0 when there is no resolvable HEAD."""
     proc = subprocess.run(
         ["git", "-C", str(root), "rev-list", "--count", "HEAD"],
-        capture_output=True, text=True, check=False,
+        capture_output=True, text=True, check=False, env=clean_env(),
     )
     if proc.returncode != 0 or not proc.stdout.strip().isdigit():
         return 0
@@ -515,6 +522,7 @@ def git_ls_files(repo_root: Path, pathspec: str) -> list[str]:
             ["git", "-C", str(repo_root), "ls-files", "-z", "--", pathspec],
             capture_output=True,
             check=False,
+            env=clean_env(),
         )
     except OSError as exc:
         raise GitLsFilesError(f"could not invoke git: {exc}") from exc
