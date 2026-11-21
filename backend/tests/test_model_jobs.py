@@ -857,6 +857,152 @@ async def test_a_holdout_value_at_an_ancestor_level_fails_the_fit_with_its_code(
     assert model.fit_result is None  # nothing was stored past the refusal
 
 
+async def _fit_through_the_job(
+    database: Database, blob_store: BlobStore, workspace_id, actor, spec: GlmSpec
+) -> tuple[UUID, UUID, JobStatus]:
+    """Reserve `spec`, run its fit through the real Job: (model id, job id, status)."""
+    async with database.unit_of_work() as session:
+        row, _ = await model_service.reserve_model(
+            session, workspace_id=workspace_id, actor=actor, spec=spec
+        )
+        model_id = row.id
+        job = await job_service.submit(
+            session, JobKind.MODEL_FIT,
+            {"workspace_id": str(workspace_id), "actor": actor.model_dump(mode="json"),
+             "model_id": str(model_id)},
+            actor, workspace_id=workspace_id,
+        )
+    return model_id, job.id, await execute_job(database, job.id, blob_store)
+
+
+@pytest.mark.req("FR-109")
+async def test_a_value_at_an_ancestor_level_fails_an_offset_fit_with_its_code(
+    database: Database, blob_store: BlobStore, workspace_id
+) -> None:
+    """FR-109 at the offset model, with no patch: model A is fitted on a chained Grouping, and
+    model B is offset from A, with a holdout part that carries a value at the parent's source
+    level (`u1`). B's offset is A's linear predictor on that holdout, which raises
+    `GroupingAncestorLevelError`; the Job fails under its own code with the fixed sentence about
+    the offset model, never `JOB_HANDLER_FAILED`, and no value is in the stored error."""
+    from app.db.models import JobRow
+
+    actor = await _actuary(database, workspace_id)
+    dataset_id = await _dataset(database, blob_store, workspace_id, actor)
+    version_id = await _validated_version(
+        database, blob_store, workspace_id, actor, dataset_id
+    )
+    train_id = await _validated_version(
+        database, blob_store, workspace_id, actor, dataset_id, TRAIN_BOOK
+    )
+    holdout_id = await _validated_version(
+        database, blob_store, workspace_id, actor, dataset_id, FINE_BOOK
+    )
+    chained = await _chained_grouping_factor(database, workspace_id, actor, dataset_id)
+    area = await _factor(database, workspace_id, actor, dataset_id, "area", "area")
+    clean_split = await _split(database, blob_store, workspace_id, actor, version_id)
+
+    a_id, _, a_status = await _fit_through_the_job(
+        database, blob_store, workspace_id, actor,
+        _spec(version_id, (chained,), split_ref=clean_split),
+    )
+    assert a_status is JobStatus.SUCCEEDED
+    async with database.session() as session:
+        a_row = await session.get(ModelRow, a_id)
+    assert a_row is not None
+    async with database.unit_of_work() as session:
+        split_row = await dataset_service.record_split(
+            session, workspace_id=workspace_id, actor=actor, parent_version_id=version_id,
+            name=f"holdout-{new_uuid7().hex[-6:]}", method="random", seed=20260816,
+            parts={"train": train_id, "test": holdout_id},
+        )
+    dirty_split = SplitRef(
+        split_artifact_id=split_row.id, train_part="train", holdout_part="test"
+    )
+
+    b_id, b_job, b_status = await _fit_through_the_job(
+        database, blob_store, workspace_id, actor,
+        _spec(
+            version_id, (area,), split_ref=dirty_split,
+            offset=OffsetSpec(
+                kind="model",
+                offset_model_ref=f"model:{a_row.model_family_slug}@{a_row.version}",
+            ),
+        ),
+    )
+
+    assert b_status is JobStatus.FAILED
+    async with database.session() as session:
+        job_row = await session.get(JobRow, b_job)
+        model = model_service.to_model(await session.get(ModelRow, b_id))
+    assert job_row is not None
+    assert job_row.error is not None
+    assert job_row.error["code"] == "GROUPING_VALUE_AT_ANCESTOR_LEVEL"
+    assert "The offset model could not be scored" in job_row.error["message"]
+    assert "u1" not in str(job_row.error)
+    assert model.fit_result is None
+
+
+@pytest.mark.req("FR-109")
+async def test_a_value_at_an_ancestor_level_escaping_the_quantile_crossing_keeps_its_code(
+    database: Database, blob_store: BlobStore, workspace_id, monkeypatch
+) -> None:
+    """FR-109 at the quantile-crossing step of a fit: the second bound of a pair scores the
+    counterpart bound on its own frame, with the counterpart's own Factors and Groupings. The
+    counterpart's scoring refuses with the ancestor-level error (patched: the pair's fixture has
+    no chained Grouping), and the Job fails under its own code with the fixed sentence, never
+    `JOB_HANDLER_FAILED`."""
+    from backend.tests.test_paired_quantile_models import (
+        _approved_quantile,
+        _bound_spec,
+        _central_model,
+        _fit_bound,
+    )
+
+    import pricing_core.modelling.predict as predict_module
+    from app.db.models import JobRow
+    from pricing_core.modelling.errors import GroupingAncestorLevelError
+
+    central = await _central_model(database, blob_store, workspace_id)
+    upper_ref = await _approved_quantile(
+        database, blob_store, workspace_id, central.actor, 0.95
+    )
+    await _fit_bound(database, blob_store, workspace_id, central, alpha=0.05)
+
+    real = predict_module.score_fitted
+
+    def refuse_the_counterpart(fit, spec, *args, **kwargs):  # type: ignore[no-untyped-def]
+        interval = getattr(spec, "interval_for", None)
+        if interval is not None and interval.alpha == 0.05:
+            raise GroupingAncestorLevelError(
+                "GROUPING_VALUE_AT_ANCESTOR_LEVEL",
+                "grouping 'region'@2 has the parent chain 'region'@1, and a value in 'area' is a "
+                "source level of an ancestor grouping, not of this one (FR-109).",
+            )
+        return real(fit, spec, *args, **kwargs)
+
+    monkeypatch.setattr(predict_module, "score_fitted", refuse_the_counterpart)
+
+    async with database.unit_of_work() as session:
+        row, _ = await model_service.reserve_model(
+            session, workspace_id=workspace_id, actor=central.actor,
+            spec=_bound_spec(central, alpha=0.95, ref=upper_ref),
+        )
+        job = await job_service.submit(
+            session, JobKind.MODEL_FIT,
+            {"workspace_id": str(workspace_id), "actor": central.actor.model_dump(mode="json"),
+             "model_id": str(row.id)},
+            central.actor, workspace_id=workspace_id,
+        )
+    assert await execute_job(database, job.id, blob_store) is JobStatus.FAILED
+    async with database.session() as session:
+        job_row = await session.get(JobRow, job.id)
+    assert job_row is not None
+    assert job_row.error is not None
+    assert job_row.error["code"] == "GROUPING_VALUE_AT_ANCESTOR_LEVEL"
+    assert "The fit's diagnostics could not be computed" in job_row.error["message"]
+    assert "'area'" not in job_row.error["message"]
+
+
 @pytest.mark.req("FR-204")
 async def test_a_reservation_whose_fit_failed_can_be_retried(
     database: Database, blob_store, workspace_id

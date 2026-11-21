@@ -35,6 +35,7 @@ from backend.tests.test_model_jobs import (
     _chained_grouping_factor,
     _dataset,
     _factor,
+    _fit_through_the_job,
     _spec,
     _split,
     _validated_version,
@@ -57,6 +58,7 @@ from model_schema import (
     MODEL_SPEC_ADAPTER,
     JobKind,
     JobStatus,
+    OffsetSpec,
     Principal,
     SplitRef,
 )
@@ -699,6 +701,78 @@ async def test_a_real_chain_value_at_an_ancestor_level_fails_the_backtest_with_i
     assert job_row.error is not None
     assert job_row.error["code"] == "GROUPING_VALUE_AT_ANCESTOR_LEVEL"
     assert "The backtest could not be computed" in job_row.error["message"]
+    assert "u1" not in str(job_row.error)
+
+
+@pytest.mark.req("FR-109")
+async def test_a_real_chain_value_at_an_ancestor_level_fails_an_offset_backtest_with_its_code(
+    database: Database, blob_store, workspace_id
+) -> None:
+    """FR-109 at the offset model of a backtest, with no patch: model A is fitted on a chained
+    Grouping, model B is offset from A and fits on a clean book, and B is backtested on a later
+    period whose rows carry a value at the parent's source level (`u1`). B's offset is A's linear
+    predictor on that period, which raises `GroupingAncestorLevelError`: the Job fails under its
+    own code with the fixed sentence about the offset model, never `JOB_HANDLER_FAILED`, and no
+    submitted value is in the stored error."""
+    from app.db.models import JobRow
+
+    actor = await _actuary(database, workspace_id)
+    dataset_id = await _dataset(database, blob_store, workspace_id, actor)
+    version_id = await _validated_version(
+        database, blob_store, workspace_id, actor, dataset_id
+    )
+    chained = await _chained_grouping_factor(database, workspace_id, actor, dataset_id)
+    area = await _factor(database, workspace_id, actor, dataset_id, "area", "area")
+    split = await _split(database, blob_store, workspace_id, actor, version_id)
+
+    a_id, _, a_status = await _fit_through_the_job(
+        database, blob_store, workspace_id, actor,
+        _spec(version_id, (chained,), split_ref=split),
+    )
+    assert a_status is JobStatus.SUCCEEDED
+    async with database.session() as session:
+        a_row = await session.get(ModelRow, a_id)
+    assert a_row is not None
+    b_id, _, b_status = await _fit_through_the_job(
+        database, blob_store, workspace_id, actor,
+        _spec(
+            version_id, (area,), split_ref=split,
+            offset=OffsetSpec(
+                kind="model",
+                offset_model_ref=f"model:{a_row.model_family_slug}@{a_row.version}",
+            ),
+        ),
+    )
+    assert b_status is JobStatus.SUCCEEDED
+
+    later = await _validated_version(
+        database, blob_store, workspace_id, actor, dataset_id, FINE_BOOK
+    )
+    async with database.unit_of_work() as session:
+        model, version = await service.request_backtest(
+            session, workspace_id=workspace_id, actor=actor,
+            model_id=b_id, dataset_version_id=later,
+        )
+        job = await job_service.submit(
+            session,
+            JobKind.MODEL_BACKTEST,
+            {
+                "workspace_id": str(workspace_id),
+                "actor": actor.model_dump(mode="json"),
+                **service.backtest_payload(model, version),
+            },
+            actor,
+            workspace_id=workspace_id,
+        )
+        job_id = job.id
+
+    assert await execute_job(database, job_id, blob_store) is JobStatus.FAILED
+    async with database.session() as session:
+        job_row = await session.get(JobRow, job_id)
+    assert job_row is not None
+    assert job_row.error is not None
+    assert job_row.error["code"] == "GROUPING_VALUE_AT_ANCESTOR_LEVEL"
+    assert "The offset model could not be scored" in job_row.error["message"]
     assert "u1" not in str(job_row.error)
 
 

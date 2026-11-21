@@ -428,10 +428,12 @@ def _fit(parameters: dict[str, Any], callback: ProgressCallback) -> JobResult:
                 offset_source.fit, holdout, offset_source.factors, offset_source.spec,
                 bandings=offset_source.bandings, groupings=offset_source.groupings,
             )
-        except PredictionError as exc:
+        except (PredictionError, GroupingAncestorLevelError) as exc:
             # FR-2143: the offset model refuses a level it never saw. Its rows cannot be dropped
             # here (the offset is the fit's own input), so the refusal keeps its code and says what
-            # to do next, in a fixed sentence (never the exception's text: it is stored).
+            # to do next, in a fixed sentence (never the exception's text: it is stored). FR-109: a
+            # value at an ancestor's level of the offset model's Grouping chain is refused the same
+            # way (a `ModellingError`, not a `PredictionError`).
             raise _offset_refusal(exc) from exc
 
     # The fit owns the middle of the bar and reports its own `0..1` inside it. Before this
@@ -630,20 +632,26 @@ def _fit(parameters: dict[str, Any], callback: ProgressCallback) -> JobResult:
     if isinstance(spec, GbmSpec) and spec.interval_for is not None and booster is not None:
         assert isinstance(result, GbmFitResult)
         assert gbm_diagnostics is not None
-        crossing = progress.run_on_loop(
-            _quantile_crossing(
-                progress,
-                blob_store,
-                workspace_id=workspace_id,
-                model_id=model_id,
-                spec=spec,
-                result=result,
-                booster=booster,
-                factors=factors,
-                transformations=transformations,
-                frame=frame,
+        try:
+            crossing = progress.run_on_loop(
+                _quantile_crossing(
+                    progress,
+                    blob_store,
+                    workspace_id=workspace_id,
+                    model_id=model_id,
+                    spec=spec,
+                    result=result,
+                    booster=booster,
+                    factors=factors,
+                    transformations=transformations,
+                    frame=frame,
+                )
             )
-        )
+        except (PredictionError, GroupingAncestorLevelError) as exc:
+            # FR-109, FR-2143: the counterpart bound is scored on this frame with its own Factors
+            # and Groupings, so a refusal can arrive here that the fit's own resolution did not
+            # raise. It keeps its code, with the fixed sentence (never the exception's text).
+            raise _diagnostics_refusal(exc) from exc
         if crossing is not None:
             gbm_diagnostics = gbm_diagnostics.model_copy(
                 update={"quantile_crossing": crossing}
@@ -1436,10 +1444,11 @@ def _backtest(parameters: dict[str, Any], callback: ProgressCallback) -> JobResu
                 offset_source.fit, frame, offset_source.factors, offset_source.spec,
                 bandings=offset_source.bandings, groupings=offset_source.groupings,
             )
-        except PredictionError as exc:
+        except (PredictionError, GroupingAncestorLevelError) as exc:
             # FR-2143: the offset model refuses a level it never saw. Its rows cannot be dropped
             # here (the offset is the backtest's own input), so the refusal keeps its code and says
             # what to do next, in a fixed sentence (never the exception's text: it is stored).
+            # FR-109: a value at an ancestor's level of its Grouping chain is refused the same way.
             raise _offset_refusal(exc, where="the backtest data") from exc
 
     progress.update(0.2, "scoring the period")
