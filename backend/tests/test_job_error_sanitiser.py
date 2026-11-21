@@ -435,6 +435,52 @@ async def test_a_location_that_cannot_be_built_leaves_the_job_under_its_own_code
     assert JobError.from_stored(row.error).location is None
 
 
+@pytest.mark.req("NFR-499")
+@pytest.mark.parametrize(
+    "bad",
+    [_SENTINEL + "x" * 300, _SENTINEL + "\nx"],
+    ids=["300 characters", "a control character"],
+)
+async def test_a_location_assigned_after_construction_is_checked_where_the_error_is_stored(
+    database: Database,
+    workspace_id,
+    principal,
+    caplog: pytest.LogCaptureFixture,
+    bad: str,
+) -> None:
+    """The bound and the character rule are checked where the error is STORED on the Job, not
+    only where `PlatformError` builds a location: a raise site that sets `error.location` by plain
+    assignment never ran `_build_location`. The Job fails under its own code, with no location,
+    and one warning names the key and never the value."""
+
+    def handler(params: dict[str, Any], progress: ProgressCallback) -> JobResult:
+        error = PlatformError("VALIDATION_FAILED", "The step is invalid", 422)
+        error.location = {"step_id": bad}  # type: ignore[assignment]  # plain assignment
+        raise error
+
+    with caplog.at_level(logging.WARNING):
+        row = await _run(database, workspace_id, principal, handler)
+
+    assert row.error is not None
+    assert row.error["code"] == "VALIDATION_FAILED"
+    assert row.error["detail"] == {}, "no `_location` was stored"
+    assert JobError.from_stored(row.error).location is None
+    assert _SENTINEL not in repr(row.error)
+    dropped = [r.getMessage() for r in caplog.records if "location" in r.getMessage()]
+    assert len(dropped) == 1, dropped
+    assert "step_id" in dropped[0]
+    assert _SENTINEL not in dropped[0]
+
+    # The worker is not left in a bad state: the NEXT Job runs normally.
+    # `register_handler` refuses a second handler for a kind; the autouse fixture restores this.
+    handlers.HANDLERS[JobKind.MODEL_FIT] = lambda params, progress: JobResult(kind="none")
+    async with database.unit_of_work() as session:
+        following = await jobs.submit(
+            session, JobKind.MODEL_FIT, {}, principal, workspace_id=workspace_id
+        )
+    assert await execute_job(database, following.id) is JobStatus.SUCCEEDED
+
+
 @pytest.mark.req("FR-403")
 async def test_a_refusal_without_a_location_stores_no_location_key_at_all(
     database: Database, workspace_id, principal
