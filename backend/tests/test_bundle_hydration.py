@@ -469,3 +469,48 @@ async def test_a_governance_act_on_a_bundle_missing_its_offset_source_is_refused
     assert (refused.value.code, refused.value.status_code) == ("RATING_VERSION_UNPINNED", 409)
     assert "model:motor-source@1" in str(refused.value)
     assert events[0]["actor"] is actor
+
+
+@pytest.mark.req("FR-116")
+@pytest.mark.asyncio
+async def test_a_bundle_carrying_a_whole_offset_chain_loads_and_each_quote_is_refused() -> None:
+    """#1943 note (a): a stored Bundle that carries the whole chain (C offset from B, B offset
+    from A) loads, as it did before #1943, and every quote is refused `MODEL_CALL_FAILED`
+    (`MODEL_OFFSET_MISSING`): the chain is refused per quote there, not at load, and nothing
+    prices. FR-116 says so."""
+    import copy
+
+    from model_schema import QuoteContext
+    from pricing_core.rating.score import score_one
+
+    raw = _clean_raw()
+    payloads = raw["resolved_payloads"]
+    for source, offset in (
+        ("model:motor-source-a@1", payloads[_MODEL]["spec"]["offset"]),
+        ("model:motor-source-b@1", {"kind": "model", "offset_model_ref": "model:motor-source-a@1"}),
+    ):
+        payloads[source] = copy.deepcopy(payloads[_MODEL])
+        payloads[source]["spec"]["offset"] = offset
+    payloads[_MODEL]["spec"]["offset"] = {
+        "kind": "model",
+        "offset_model_ref": "model:motor-source-b@1",
+    }
+    compiled = load_bundle(Bundle.model_validate(raw))
+    context = QuoteContext.model_validate(
+        {
+            "purpose": "new_business",
+            "quoted_at": "2026-09-28T09:00:00",
+            "effective_date": "2026-10-01",
+            "inputs": {
+                "region": "A",
+                "yoa": "2010",
+                "region_x_yoa": "A:2010",
+                "exposure_years": 1.0,
+            },
+            "options": {"rating_version_ref": str(REF)},
+        }
+    )
+    with pytest.raises(CodedError) as refused:
+        await score_one(compiled, context)
+    assert str(refused.value).startswith("MODEL_CALL_FAILED")
+    assert "MODEL_OFFSET_MISSING" in str(refused.value)
