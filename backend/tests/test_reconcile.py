@@ -335,6 +335,27 @@ async def test_an_unreadable_workspace_report_is_the_type_name_only(
     assert SENTINEL not in _line(report)
 
 
+async def test_a_recorded_approvers_required_int_cannot_represent_is_reported_unreadable(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A JSON number read as float infinity: `int()` raises OverflowError, not ValueError."""
+
+    async def intact(session: Any, workspace_id: UUID) -> int:
+        return 0
+
+    async def infinite(session: Any, workspace_id: UUID) -> rc.WorkspaceData:
+        return _with_submitted_after(
+            _reconciled(), {"status": "review", "approvers_required": float("inf")}
+        )
+
+    monkeypatch.setattr(audit, "verify_chain", intact)
+    monkeypatch.setattr(rc, "load_workspace_data", infinite)
+    report = await rc.reconcile(None, uuid4())  # type: ignore[arg-type]
+    assert report.chain == "unreadable"
+    assert report.chain_detail == "OverflowError"
+    assert report.mismatches == ()
+
+
 # -- a request against its own events ---------------------------------------------------------
 
 

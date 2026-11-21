@@ -110,7 +110,7 @@ DECISION_ACTIONS: Final[Mapping[str, str]] = {
     kind.value: f"approval_request.{kind.value}" for kind in DecisionKind
 }
 #: What a malformed stored row raises while it is read or its rules run.
-_UNREADABLE: Final = (ValueError, TypeError, AttributeError, KeyError)
+_UNREADABLE: Final = (ValueError, TypeError, AttributeError, KeyError, OverflowError)
 SUBMITTED_ACTION: Final = "approval_request.submitted"
 #: The events that record a deployment: a deploy writes `deployment.created`, a rollback
 #: (FR-269) `deployment.rolled_back`; the new deployment's id is `after["id"]` in both.
