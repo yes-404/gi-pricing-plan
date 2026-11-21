@@ -1582,11 +1582,39 @@ OTHER_SLUG_REF = "rating_version:another-rv@3"
 _LIVE_APPS: list[Any] = []
 
 
+async def recorded_bundle_hash(database: Any, workspace_id: Any, ref: str) -> str:
+    """The `content_hash` the compile recorded on `ref`'s own row: what the deploy route
+    copies into a Deployment, and what a bundle load compares the bytes against."""
+    from app.db.models import RatingVersionRow
+
+    parsed = ArtifactRef.parse(ref)
+    async with database.session() as session:
+        row = (
+            await session.execute(
+                select(RatingVersionRow).where(
+                    RatingVersionRow.workspace_id == workspace_id,
+                    RatingVersionRow.slug == parsed.slug,
+                    RatingVersionRow.version == parsed.version,
+                )
+            )
+        ).scalar_one()
+    assert row.bundle is not None, f"{ref} has not compiled"
+    return str(row.bundle["content_hash"])
+
+
 async def plant_deployment(
-    database: Any, workspace_id: Any, environment: str, ref: str, *, deployed_by: Any = None
+    database: Any,
+    workspace_id: Any,
+    environment: str,
+    ref: str,
+    *,
+    deployed_by: Any = None,
+    bundle_hash: str | None = None,
 ) -> UUID:
     """One Deployment row of `ref` in `environment`, written the way the deploy route writes
-    it (never updated, never deleted). Returns its id."""
+    it (never updated, never deleted). Returns its id. A test whose `ref` is a compiled
+    version passes `bundle_hash=await recorded_bundle_hash(...)`; the stub-only tests leave
+    it and get a placeholder no bundle load ever compares."""
     from app.db.models import DeploymentRow, EnvironmentRow
     from model_schema import new_uuid7
 
@@ -1600,7 +1628,7 @@ async def plant_deployment(
             workspace_id=workspace_id,
             environment_id=env_id,
             rating_version_ref=ref,
-            bundle_hash="sha256:" + "a" * 64,
+            bundle_hash=bundle_hash or "sha256:" + "a" * 64,
             deployed_by=deployed_by or new_uuid7(),
             reason="test",
         )
@@ -1944,7 +1972,12 @@ def test_a_default_live_quote_is_scored_by_the_real_evaluator_against_the_live_v
 ) -> None:
     """No ref in the body, a live Deployment, nothing stubbed: 200, and the result reports the
     deployed version. On the base source this is 422 INPUT_CONTRACT_VIOLATION."""
-    _run(plant_deployment(database, workspace_id, "uat", SCORED_REF))
+    _run(
+        plant_deployment(
+            database, workspace_id, "uat", SCORED_REF,
+            bundle_hash=_run(recorded_bundle_hash(database, workspace_id, SCORED_REF)),
+        )
+    )
 
     response = client.post(
         SCORE_URL, json=_quote({"rating_version_ref": None}), headers=scoring_headers
@@ -1965,7 +1998,12 @@ def test_a_default_live_quote_with_no_options_object_is_scored_by_the_real_evalu
     database: Any,
     workspace_id: Any,
 ) -> None:
-    _run(plant_deployment(database, workspace_id, "uat", SCORED_REF))
+    _run(
+        plant_deployment(
+            database, workspace_id, "uat", SCORED_REF,
+            bundle_hash=_run(recorded_bundle_hash(database, workspace_id, SCORED_REF)),
+        )
+    )
 
     response = client.post(
         SCORE_URL, json=_quote(omit_options=True), headers=scoring_headers
@@ -1987,7 +2025,12 @@ def test_a_sampled_default_live_trace_records_and_reproduces_the_resolved_versio
     """The stored Quote Context carries the resolved ref, so the off-path re-score is not
     refused for the same gap."""
     register_trace_handlers()
-    _run(plant_deployment(database, workspace_id, "uat", SCORED_REF))
+    _run(
+        plant_deployment(
+            database, workspace_id, "uat", SCORED_REF,
+            bundle_hash=_run(recorded_bundle_hash(database, workspace_id, SCORED_REF)),
+        )
+    )
     _run(_set_trace_sample_rate(database, workspace_id, 1.0))
 
     served = client.post(
