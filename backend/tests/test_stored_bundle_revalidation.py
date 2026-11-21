@@ -358,8 +358,8 @@ def _assert_unpinned_problem(response: Any, ref: str, content_hash: str) -> None
 @pytest.mark.req("FR-116")
 @pytest.mark.req("FR-240")
 @pytest.mark.asyncio
-@pytest.mark.parametrize("act", ["submit", "deploy"])
-async def test_submit_and_deploy_refuse_a_bundle_missing_its_offset_source_by_name(
+@pytest.mark.parametrize("act", ["submit", "deploy", "rollback"])
+async def test_submit_deploy_and_rollback_refuse_a_bundle_missing_its_offset_source_by_name(
     act: str,
     client: TestClient,
     database: Database,
@@ -368,19 +368,51 @@ async def test_submit_and_deploy_refuse_a_bundle_missing_its_offset_source_by_na
     seat: Any,
 ) -> None:
     """#1943 D3: a stored Bundle whose model offset names a source it does not carry is refused
-    at submit and at deploy with `RATING_VERSION_UNPINNED` (409, audited once, no Deployment
-    written); it was an unnamed 500."""
+    at submit, deploy and rollback with `RATING_VERSION_UNPINNED` (409, audited once, no
+    Deployment written); it was an unnamed 500. Rollback reuses an earlier Deployment, so its
+    version is deployed while clean and its stored bundle is then swapped, as in
+    `test_a_rollback_to_a_stored_control_operand_bundle_is_refused`."""
     deployer = await seat("deployer")
     ref, content_hash = await stored_version_bytes(
         database, blob_store, workspace_id, _offset_source_absent_bytes()
     )
-    refused = (
-        request_into(client, deployer, "prod", ref)
-        if act == "submit"
-        else deploy(client, deployer, "dev", ref)
-    )
+    written = 0
+    if act == "rollback":
+        first, _ = await stored_version(database, blob_store, workspace_id, "clean.bundle.json")
+        second, _ = await stored_version(database, blob_store, workspace_id, "clean.bundle.json")
+        assert deploy(client, deployer, "dev", first).status_code == 201
+        assert deploy(client, deployer, "dev", second).status_code == 201
+        written = await deployments_written(database, workspace_id)
+        async with database.unit_of_work() as session:
+            stored = (
+                await session.execute(
+                    select(RatingVersionRow.bundle).where(
+                        RatingVersionRow.workspace_id == workspace_id,
+                        RatingVersionRow.slug == ref.split(":")[1].split("@")[0],
+                    )
+                )
+            ).scalar_one()
+            await session.execute(
+                update(RatingVersionRow)
+                .where(
+                    RatingVersionRow.workspace_id == workspace_id,
+                    RatingVersionRow.slug == first.split(":")[1].split("@")[0],
+                )
+                .values(bundle=stored)
+            )
+        ref = first
+    if act == "submit":
+        refused = request_into(client, deployer, "prod", ref)
+    elif act == "deploy":
+        refused = deploy(client, deployer, "dev", ref)
+    else:
+        refused = client.post(
+            "/api/v1/environments/dev/deployments/rollback",
+            json={"rating_version_ref": ref, "reason": "regression"},
+            headers=deployer.headers,
+        )
     _assert_unpinned_problem(refused, ref, content_hash)
-    assert await deployments_written(database, workspace_id) == 0
+    assert await deployments_written(database, workspace_id) == written
     events = await refusal_events(database, workspace_id)
     assert [e.entity_ref for e in events] == [ref]
 
