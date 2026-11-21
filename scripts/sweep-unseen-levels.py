@@ -82,7 +82,13 @@ Classes (each counts versions; a version can carry several):
                             cross (no main effect in that GLM) is judged on the levels the
                             cross's cells show for it: the closed input's domain must lie
                             within them, in every cross that takes it, or the version is
-                            PLAIN.
+                            PLAIN. An operand of a cross that the sweep cannot examine
+                            (an `expression` with no Banding, a spline, a polynomial, an
+                            offset: the levels `glm._operand_levels`, the scorer's own
+                            rule, calls open) leaves the version PLAIN; a Banding, a
+                            banded `expression` and a Grouping are examined on their own
+                            levels. A cross that itself declares `map_to_base` gives its
+                            operands no entry: the scorer refuses none there.
     NULLLEVEL               a Banding Factor whose Banding names a `null_level` the fit has no
                             relativity for: a missing or out-of-range quote reaches it.
     GROUPING                a Grouping Factor with a target level the fit has no relativity for.
@@ -112,9 +118,10 @@ Exit code (a distinct non-zero for each condition; the first that applies wins):
 
     0   every version with a bundle was read, there is at least one, and none is reachable in
         the shapes the sweep examines. It says nothing of a shape the sweep does not examine (an
-        `expression` operand of a cross with no Banding, an operand's `map_to_base` under an
-        undeclared cross, a nested-interaction operand; #1944): a NOTEXAMINED-* line is not a
-        pass, and a shape may print no line at all.
+        operand's `map_to_base` under an undeclared cross, a nested-interaction operand; #1944): a
+        NOTEXAMINED-* line is not a pass, and a shape may print no line at all. Every NOTREACHABLE
+        line says what it does not cover: an offset chain of three models, which the scorer
+        refuses with MODEL_OFFSET_MISSING (#1943, fixed by #1949).
     1   at least one version is reachable (any class above except NOTREACHABLE and NOTEXAMINED-*)
     2   a version's bundle could not be read: an unchecked version is not a clean one
     3   the corpus is empty (no version with a bundle): a zero over nothing is not a clean result
@@ -151,7 +158,7 @@ from model_schema import (
     UnseenLevelBehaviour,
 )
 from pricing_core.modelling.factors import CROSS_SEPARATOR
-from pricing_core.modelling.glm import _unseen_cell_reports, _unseen_level_gaps
+from pricing_core.modelling.glm import _operand_levels, _unseen_cell_reports, _unseen_level_gaps
 from pricing_core.rating.compile import Bundle, JdmGraph
 from pricing_core.rating.runtime import (
     inlined_algorithms,
@@ -170,6 +177,9 @@ _REACHABLE = (
 #: does not change the exit code.
 NOTREACHABLE = "NOTREACHABLE"
 NOTREACHABLE_REASONS = ("closed-input", "not-scored")
+#: Printed on every NOTREACHABLE line: what the verdict does not cover. FR-2143 gives the gap to
+#: #1943 (the scorer refuses an offset chain of three models; #1949 is its fix).
+NOTREACHABLE_CAVEAT = "not checked: an offset chain of three models, #1943"
 _NOT_EXAMINED = (
     "NOTEXAMINED-INTERACTION", "NOTEXAMINED-GROUPING-SOURCE", "NOTEXAMINED-NUMERIC-TERMS"
 )
@@ -302,6 +312,8 @@ def _levels_a_cross_shows(
     for cross in factors:
         if cross.type is not FactorType.INTERACTION:
             continue
+        if cross.unseen_level_behaviour is UnseenLevelBehaviour.MAP_TO_BASE:
+            continue  # the scorer reads the cross's own declaration: it maps, and refuses nothing
         cells = [e.level.split(CROSS_SEPARATOR) for e in relativities.get(cross.slug, ())]
         width = len(cross.operand_factor_ids)
         readable = all(len(parts) == width for parts in cells)
@@ -409,7 +421,16 @@ def _findings(bundle: Bundle) -> tuple[int, set[str], set[str], set[str]]:
         # Factor with a main effect in this GLM is the first branch above, and is never closed
         # when a cross takes it.
         for factor in undeclared:
-            if factor.slug in fitted or factor.type is not FactorType.IDENTITY or not scoring:
+            if factor.slug in fitted or not scoring:
+                continue
+            if factor.type is not FactorType.IDENTITY:
+                # Not an IDENTITY operand: the cell report (`_operand_levels`, the scorer's own
+                # reading) computes the levels of a Banding, a banded `expression` and a Grouping
+                # exactly, and they are examined there. Any other kind (an `expression` with no
+                # Banding, a spline, a polynomial, an offset) is "open": its levels are the
+                # data's, so the sweep has not examined it and the version is PLAIN.
+                if factor.id in operands and _operand_levels(factor, bandings, groupings) == "open":
+                    open_factor = True
                 continue
             for shown in _levels_a_cross_shows(factors, fit.relativities).get(factor.id, ()):
                 if shown is None or not all(
@@ -503,7 +524,7 @@ def sweep(versions: list[dict[str, Any]], out: TextIO) -> int:
         for kind in sorted(kinds):
             counts[kind] += 1
             if kind == NOTREACHABLE:
-                lines.append(f"{kind} {ref} ({','.join(sorted(reasons))})")
+                lines.append(f"{kind} {ref} ({','.join(sorted(reasons))}; {NOTREACHABLE_CAVEAT})")
             elif kind != "NOTEXAMINED-GROUPING-SOURCE":  # counted, not listed: it is a reason
                 lines.append(f"{kind} {ref}")
     print(f"versions: {len(versions)}", file=out)

@@ -37,6 +37,9 @@ _spec.loader.exec_module(sweep_module)
 _MODEL = "model:motor-freq-glm@1"
 _CROSS = "factor:region_x_yoa@1"
 _HASH = "sha256:" + "d" * 64
+#: What every NOTREACHABLE line says it does not cover (#1943: the scorer refuses a chain of
+#: three models; #1949 fixes it).
+_CAVEAT = "; not checked: an offset chain of three models, #1943"
 
 
 def _clean() -> dict[str, Any]:
@@ -379,7 +382,7 @@ def test_a_factor_fed_only_by_a_closed_enum_over_its_levels_is_not_reachable() -
     rc, lines = _run([_row(_closed(), "closed", 1)])
 
     assert rc == 0
-    assert "NOTREACHABLE closed@1 status=approved (closed-input)" in lines
+    assert f"NOTREACHABLE closed@1 status=approved (closed-input{_CAVEAT})" in lines
     assert "not-reachable: 1" in lines
     assert "plain: 0" in lines
     assert any(line.startswith("NOTEXAMINED-CONTRACT 0 (") for line in lines)
@@ -415,7 +418,7 @@ def test_two_fits_each_over_the_whole_domain_are_not_reachable() -> None:
     rc, lines = _run([_row(bundle, "both", 1)])
 
     assert rc == 0
-    assert "NOTREACHABLE both@1 status=approved (closed-input)" in lines
+    assert f"NOTREACHABLE both@1 status=approved (closed-input{_CAVEAT})" in lines
 
 
 def _structured(second_levels: list[str]) -> dict[str, Any]:
@@ -460,7 +463,7 @@ def _structured(second_levels: list[str]) -> dict[str, Any]:
 def test_a_factor_scored_through_a_peril_structure_is_judged_on_every_component() -> None:
     rc, lines = _run([_row(_structured(["A", "B"]), "perils", 1)])
     assert rc == 0
-    assert "NOTREACHABLE perils@1 status=approved (closed-input)" in lines
+    assert f"NOTREACHABLE perils@1 status=approved (closed-input{_CAVEAT})" in lines
 
     rc, lines = _run([_row(_structured(["A"]), "perils", 2)])
     assert rc == 1
@@ -512,7 +515,7 @@ def test_a_glm_no_model_call_scores_is_not_reachable_whatever_the_input_admits()
     rc, lines = _run([_row(bundle, "unscored", 1)])
 
     assert rc == 0
-    assert "NOTREACHABLE unscored@1 status=approved (closed-input,not-scored)" in lines
+    assert f"NOTREACHABLE unscored@1 status=approved (closed-input,not-scored{_CAVEAT})" in lines
 
 
 @pytest.mark.req("FR-2143")
@@ -575,7 +578,7 @@ def test_a_model_call_in_a_purpose_graph_is_judged_with_the_base_graphs() -> Non
     rc, lines = _run([_row(closed_everywhere, "purposed", 2)])
 
     assert rc == 0
-    assert "NOTREACHABLE purposed@2 status=approved (closed-input)" in lines, lines
+    assert f"NOTREACHABLE purposed@2 status=approved (closed-input{_CAVEAT})" in lines, lines
 
 
 # --- #1906: the two bundles a review found listed NOTREACHABLE while a quote was refused --------
@@ -618,7 +621,7 @@ def test_an_offset_glm_fitted_on_fewer_levels_keeps_the_version_plain() -> None:
 def test_an_offset_glm_over_the_whole_domain_is_scored_not_unscored() -> None:
     rc, lines = _run([_row(_her_offset(["A", "B", "C"]), "offset", 1)])
 
-    assert "NOTREACHABLE offset@1 status=approved (closed-input)" in lines, lines
+    assert f"NOTREACHABLE offset@1 status=approved (closed-input{_CAVEAT})" in lines, lines
     assert rc == 0
 
 
@@ -654,7 +657,7 @@ def test_an_interaction_outside_the_glms_factors_leaves_the_operand_closed() -> 
     bundle = _an_interaction_outside_the_factors()
     rc, lines = _run([_row(bundle, "ix", 2)])
 
-    assert "NOTREACHABLE ix@2 status=approved (closed-input)" in lines, lines
+    assert f"NOTREACHABLE ix@2 status=approved (closed-input{_CAVEAT})" in lines, lines
     assert rc == 0
 
 
@@ -1208,7 +1211,7 @@ def test_a_cross_showing_every_level_the_input_admits_leaves_the_factor_closed()
     bundle = _cross_showing_every_level_as_the_offset_model()
     rc, lines = _run([_row(bundle, "covered", 1)])
 
-    assert "NOTREACHABLE covered@1 status=approved (closed-input)" in lines, lines
+    assert f"NOTREACHABLE covered@1 status=approved (closed-input{_CAVEAT})" in lines, lines
     assert rc == 0
     assert _refusals(bundle) == []
 
@@ -1240,6 +1243,15 @@ def _agree(bundle: dict[str, Any], lines: list[str]) -> None:
     )
 
 
+def _expression_operand_open() -> dict[str, Any]:
+    """The 2026-11-21 review's fixture: the cross-only offset model with `yoa` an `expression`
+    Factor with no Banding and the input's domain 2010 to 2012 (8 of 24 refused)."""
+    bundle = _cross_showing_every_level_as_the_offset_model()
+    bundle["resolved_payloads"]["factor:yoa@1"].update(type="expression", expression="yoa")
+    _set_input(bundle, "yoa", domain=["2010", "2011", "2012"])
+    return bundle
+
+
 def _decides_the_outcome() -> dict[str, dict[str, Any]]:
     """Fixtures where a wrong classification changes the outcome: the scorer refuses a quote that
     NOTREACHABLE would call impossible. The older fixtures list C in a Factor's relativities with
@@ -1248,6 +1260,7 @@ def _decides_the_outcome() -> dict[str, dict[str, Any]]:
     return {
         **{name: build() for name, build in _HER_SHAPES.items()},
         "operand-only-open": _operand_only_open(),
+        "expression-operand-open": _expression_operand_open(),
     }
 
 
@@ -1268,7 +1281,7 @@ def test_the_sweep_does_not_list_notreachable_a_version_whose_quotes_the_scorer_
 def test_the_agreement_check_fails_for_a_wrong_classification(name: str) -> None:
     """The check bites: given the line a wrong classification would print, it raises."""
     bundle = _decides_the_outcome()[name]
-    wrong = ["NOTREACHABLE fixture@1 status=approved (closed-input)"]
+    wrong = [f"NOTREACHABLE fixture@1 status=approved (closed-input{_CAVEAT})"]
 
     with pytest.raises(AssertionError, match="the scorer refuses 8 of 24"):
         _agree(bundle, wrong)
@@ -1290,3 +1303,164 @@ def test_a_chain_two_deep_is_refused_by_the_scorer() -> None:
 
     assert len(refusals) == len(_quote_combinations(bundle)) == 24
     assert all("MODEL_OFFSET_MISSING" in line for line in refusals), refusals
+
+
+# --- the 2026-11-21 review: a cross operand that is not an IDENTITY Factor ----------------------
+
+_YOA = "factor:yoa@1"
+
+
+def _cross_only_offset_with_yoa_widened() -> dict[str, Any]:
+    """The cross-only offset model (the fixture above) with the input's yoa domain widened to
+    2010, 2011, 2012: the cross has no cell for 2012, so 2 x 3 x 4 = 24 combinations are scored and
+    the real scorer refuses the 8 with yoa=2012 (`UNSEEN_LEVEL_BEHAVIOUR_REQUIRED`)."""
+    bundle = _cross_showing_every_level_as_the_offset_model()
+    _set_input(bundle, "yoa", domain=["2010", "2011", "2012"])
+    return bundle
+
+
+def _yoa_is(kind: str) -> dict[str, Any]:
+    bundle = _cross_only_offset_with_yoa_widened()
+    yoa = bundle["resolved_payloads"][_YOA]
+    if kind == "expression":
+        yoa.update(type="expression", expression="yoa")
+    else:
+        yoa.update(type=kind)
+    return bundle
+
+
+#: The operand kinds whose levels the cell report cannot compute (`glm._operand_levels` returns
+#: "open" for each), so the sweep has not examined them and reads the version PLAIN.
+_OPEN_OPERAND_KINDS = ["expression", "spline", "polynomial", "offset"]
+
+
+@pytest.mark.req("FR-2143")
+@pytest.mark.parametrize("kind", _OPEN_OPERAND_KINDS)
+def test_a_cross_operand_the_sweep_did_not_examine_leaves_the_version_plain(kind: str) -> None:
+    """The reviewer's case (an `expression` operand with no Banding, the input's domain 2010 to
+    2012) printed NOTREACHABLE and exited 0 while the scorer refuses 8 of 24 quotes. A spline, a
+    polynomial and an offset operand reach the same skip."""
+    bundle = _yoa_is(kind)
+    rc, lines = _run([_row(bundle, "open-operand", 1)])
+
+    assert "PLAIN open-operand@1 status=approved" in lines, lines
+    assert not any(line.startswith("NOTREACHABLE ") for line in lines), lines
+    assert rc == 1
+
+
+@pytest.mark.req("FR-2143")
+def test_the_reviewers_expression_operand_is_refused_8_of_24_by_the_scorer() -> None:
+    refusals = _refusals(_yoa_is("expression"))
+
+    assert len(_quote_combinations(_yoa_is("expression"))) == 24
+    assert len(refusals) == 8, refusals
+    assert all("UNSEEN_LEVEL_BEHAVIOUR_REQUIRED" in line for line in refusals), refusals
+
+
+def _yoa_banded(labels: list[str]) -> dict[str, Any]:
+    """`yoa` a Banding over `labels` (or an `expression` Factor banded over them), the cross's cells
+    showing 2010 and 2011 for it."""
+    bundle = _cross_showing_every_level_as_the_offset_model()
+    payloads = bundle["resolved_payloads"]
+    payloads["banding:yb@1"] = _banding("yb", _BANDING_YOA, labels, None)
+    return bundle
+
+
+@pytest.mark.req("FR-2143")
+@pytest.mark.parametrize("kind", ["banding", "expression"])
+def test_a_banded_operand_is_examined_on_its_labels_so_a_covering_cross_stays_closed(
+    kind: str,
+) -> None:
+    """The cell report computes a Banding's labels exactly (the same for an `expression` Factor
+    banded), so these are examined and a cross that shows every label is not PLAIN."""
+    bundle = _yoa_banded(["2010", "2011"])
+    bundle["resolved_payloads"][_YOA].update(type=kind, banding_id=_BANDING_YOA)
+    if kind == "expression":
+        bundle["resolved_payloads"][_YOA]["expression"] = "yoa"
+    rc, lines = _run([_row(bundle, "banded-operand", 1)])
+
+    assert f"NOTREACHABLE banded-operand@1 status=approved (closed-input{_CAVEAT})" in lines, lines
+    assert rc == 0
+
+
+@pytest.mark.req("FR-2143")
+def test_a_grouped_operand_is_never_listed_notreachable() -> None:
+    """A Grouping operand: its target levels are exact in the cell report, and how an unseen SOURCE
+    level (yoa=2012, no mapping) is treated is the Grouping's own declared behaviour, which the
+    sweep counts (`NOTEXAMINED-GROUPING-SOURCE`) and does not classify. The scorer refuses those
+    quotes with `FACTOR_RESOLUTION_FAILED`, not an unseen-level code: the sweep is not claiming
+    NOTREACHABLE for a version the scorer refuses."""
+    bundle = _cross_only_offset_with_yoa_widened()
+    payloads = bundle["resolved_payloads"]
+    payloads["grouping:yg@1"] = {
+        "id": _GROUPING_REGION, "slug": "yg", "dataset_id": _DATASET, "version": 1,
+        "column": "yoa", "method": "manual", "mapping": {"2010": "2010", "2011": "2011"},
+        "unseen_level_behaviour": "error",
+    }
+    payloads[_YOA].update(type="grouping", grouping_id=_GROUPING_REGION)
+    rc, lines = _run([_row(bundle, "grouped-operand", 1)])
+    refusals = _refusals(bundle)
+
+    assert len(refusals) == 8, refusals
+    assert all("FACTOR_RESOLUTION_FAILED" in line for line in refusals), refusals
+    assert not any(line.startswith("NOTREACHABLE ") for line in lines), lines
+    assert any(line.startswith("NOTEXAMINED-GROUPING-SOURCE 1 ") for line in lines), lines
+    assert rc == 0
+
+
+# --- a cross that declares `map_to_base` (the 2026-11-21 review, point 3) ----------------------
+
+
+def _operand_only_open_under_a_declaring_cross() -> dict[str, Any]:
+    """`_operand_only_open()` (region feeds only the cross; the input admits C, the cross has no
+    cell for it) with the cross declaring `map_to_base`: the scorer maps the unseen cell to the
+    base level and refuses nothing."""
+    bundle = _operand_only_open()
+    bundle["resolved_payloads"]["factor:region_x_yoa@1"]["unseen_level_behaviour"] = "map_to_base"
+    return bundle
+
+
+@pytest.mark.req("FR-2143")
+def test_a_cross_that_declares_map_to_base_does_not_make_its_operand_plain() -> None:
+    """The scorer reads the cross's own declaration for an operand with no main effect, so a
+    declaring cross refuses no quote and the version is not reachable."""
+    bundle = _operand_only_open_under_a_declaring_cross()
+    rc, lines = _run([_row(bundle, "declaring-cross", 1)])
+
+    assert _refusals(bundle) == []
+    assert not any(line.startswith("PLAIN ") for line in lines), lines
+    assert rc == 0
+
+
+@pytest.mark.req("FR-2143")
+def test_the_same_cross_declaring_nothing_is_plain() -> None:
+    """The twin that makes the test above bite: undeclared, the cross refuses and reads PLAIN."""
+    bundle = _operand_only_open()
+    rc, lines = _run([_row(bundle, "undeclared-cross", 1)])
+
+    assert _refusals(bundle)
+    assert "PLAIN undeclared-cross@1 status=approved" in lines, lines
+    assert rc == 1
+
+
+@pytest.mark.req("FR-2143")
+@pytest.mark.parametrize(
+    ("declared", "refused"), [("error", 8), ("map_to_base", 0)], ids=["undeclared", "declaring"]
+)
+def test_an_operand_with_a_main_effect_stays_plain_whatever_its_cross_declares(
+    declared: str, refused: int
+) -> None:
+    """What the probe showed (2026-11-21): region has a main effect fitted A, B and the input admits
+    C, and the cross takes region as an operand. Undeclared, the scorer refuses the 8 quotes with
+    region=C; with the cross declaring `map_to_base` it refuses none. The sweep reads PLAIN in both
+    (the first loop does not read the cross's declaration): in the second it is the safe direction,
+    and the reason, a cell the fit may lack, is not the scorer's there."""
+    bundle = _her_interaction()
+    _region_fitted(bundle, _MODEL, ["A", "B"])
+    bundle["resolved_payloads"][_CROSS]["unseen_level_behaviour"] = declared
+    rc, lines = _run([_row(bundle, "main-effect-operand", 1)])
+    refusals = _refusals(bundle)
+
+    assert len(refusals) == refused, refusals
+    assert "PLAIN main-effect-operand@1 status=approved" in lines, lines
+    assert rc == 1
