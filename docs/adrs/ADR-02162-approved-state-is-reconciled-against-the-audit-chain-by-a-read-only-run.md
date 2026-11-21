@@ -60,9 +60,10 @@ Options considered:
    the chain shows", never "benign".
 4. The decision event's `after` gains `approval_request_id` and `decision_id`, for new events only,
    so rule 3 matches exactly; earlier events are matched by `(entity_ref, actor, decision)`.
-5. The set of governed tables and "approved or later" states the run covers is derived from the
-   installed approval guards and the status lifecycles, never listed by hand; a census test
-   fails when a guarded table has no coverage.
+5. The "approved or later" states the run covers are computed from the status lifecycle graphs:
+   five graphs are read from `model-schema`, three are written from their only writer. The
+   governed tables are `COVERED_TABLES`, a literal dict whose census test checks the key set
+   against the installed approval guards and fails when a guarded table has no coverage.
 6. A row in a status no lifecycle edge leads to (today a rating version that is `live` or
    `retired`) is reported by rule 1 as a status the product does not write, whatever requests
    exist; the rule reads the lifecycle, so the day a writer of such a status lands it is the
