@@ -103,11 +103,12 @@ class _Peer:
         self._thread.join(5)
 
 
-async def _join_roster(settings: Settings, process: str) -> str:
+async def _join_roster(settings: Settings, process: str, *, leave: bool = False) -> str:
     client = build_switch_client(settings.redis_url.get_secret_value())
     try:
         stack = switch_stack(settings.environment.value, settings.tenant_id)
-        await RedisSwitch(client, stack).for_environment("dev").join(process)
+        transport = RedisSwitch(client, stack).for_environment("dev")
+        await (transport.leave(process) if leave else transport.join(process))
     finally:
         await client.aclose()
     return process
@@ -179,6 +180,7 @@ async def test_a_partial_commit_names_the_unacknowledged_process_possibly_stale(
         done = deploy(client, deployer, "dev", ref)
     finally:
         peer.stop()
+        await _join_roster(api_settings, ghost, leave=True)
     assert done.status_code == 201, done.text
     switch = done.json()["switch"]
     assert switch["receivers"] == 2
