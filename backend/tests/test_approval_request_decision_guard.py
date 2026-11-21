@@ -234,8 +234,10 @@ async def test_withdrawing_the_request_of_an_approved_rating_version_moves_nothi
     grant,
     submitter_headers,  # noqa: F811
 ) -> None:
-    """The decision hook never reopens an approved version: the withdrawal is refused 409 and
-    the request and the version both stay `approved` (the guard's table has no such edge)."""
+    """The application refuses to reopen an approved version: the withdrawal is 409
+    (`require_in_review` in the rating-version decision hook), and the request and the version
+    both stay `approved`. The request guard's table does allow `approved` to `withdrawn` for
+    every artifact type; the version itself stays held by its content guard."""
     await _require_two_approvals(client, workspace_id, grant, database, "rating_version")
     slug = "withdraw-approved"
     ref = await _create_authored(database, workspace_id, "rating_version", slug, 1, new_uuid7())
