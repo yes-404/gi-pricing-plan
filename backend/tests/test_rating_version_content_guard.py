@@ -9,17 +9,22 @@ sweep does not know fails the test, asking for a hold decision.
 
 from __future__ import annotations
 
+import asyncio
 import hashlib
+import pathlib
+import secrets
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from typing import Any
 from uuid import UUID
 
 import pytest
+from alembic import command
+from alembic.config import Config
 from backend.tests.conftest_db import disable_trigger
 from sqlalchemy import text
 from sqlalchemy.exc import DBAPIError
-from sqlalchemy.ext.asyncio import AsyncConnection
+from sqlalchemy.ext.asyncio import AsyncConnection, create_async_engine
 
 from app.db.session import Database
 from model_schema import new_uuid7
@@ -553,3 +558,96 @@ def test_session_replication_role_is_named_only_in_the_listed_test_files(tmp_pat
     (tmp_path / "test_planted.py").write_text("SET LOCAL session_replication_role = replica\n")
     planted = _files_naming_session_replication_role(tmp_path) - _SESSION_REPLICATION_ROLE_FILES
     assert planted == {"test_planted.py"}
+
+
+_PREVIOUS_REVISION = "c3a8e51f7d20"  # e5b2a7d94c13's down_revision
+_THIS_REVISION = "e5b2a7d94c13"
+
+
+@pytest.mark.req("FR-44")
+async def test_the_upgrade_reports_a_held_draft_and_does_not_stop(
+    owner_database: Database, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """The migration's pre-check names each draft row whose reference has an approved request,
+    as a warning on logger `alembic.runtime.migration` (workspace and reference), and the
+    upgrade goes on: the row stays, still a draft. Runs Alembic in-process on a scratch database
+    upgraded to the revision below this one, with the row planted there (the shape of
+    `test_migration_deployments.py`)."""
+    admin_url = owner_database.engine.url
+    name = f"gip_scratch_{secrets.token_hex(6)}"
+    admin = create_async_engine(admin_url, isolation_level="AUTOCOMMIT")
+    try:
+        async with admin.connect() as conn:
+            await conn.execute(text(f'CREATE DATABASE "{name}"'))
+    except Exception as exc:
+        await admin.dispose()
+        pytest.fail(f"the migration test needs PostgreSQL at {admin_url.database}: {exc!r}")
+    url = admin_url.set(database=name).render_as_string(hide_password=False)
+    monkeypatch.setenv("GIP_MIGRATION_DATABASE_URL", url)
+    root = pathlib.Path(__file__).resolve().parents[2]
+    cfg = Config(str(root / "alembic.ini"))
+    cfg.set_main_option("script_location", str(root / "backend" / "migrations"))
+    cfg.set_main_option("prepend_sys_path", str(root / "backend" / "src"))
+    ws, row_id = new_uuid7(), new_uuid7()
+    ref = "rating_version:held@1"
+    try:
+        await asyncio.to_thread(command.upgrade, cfg, _PREVIOUS_REVISION)
+        engine = create_async_engine(url)
+        try:
+            async with engine.begin() as conn:
+                await conn.execute(text("SET LOCAL app.approval_decision = 'on'"))
+                await conn.execute(
+                    text(
+                        "INSERT INTO approval_requests (id, workspace_id, artifact_ref, "
+                        "artifact_type, submitted_by, change_summary, status, "
+                        "approvers_required, decided_at) VALUES (gen_random_uuid(), :ws, :ref, "
+                        "'rating_version', gen_random_uuid(), 'c', 'approved', 1, now())"
+                    ),
+                    {"ws": ws, "ref": ref},
+                )
+                await conn.execute(
+                    text(
+                        "INSERT INTO rating_versions (id, workspace_id, slug, version, status, "
+                        "dataset_version_id, model_ref, created_by, approval_request_id, "
+                        "algorithm_ref, pins, model_reference_mode, bundle, change_summary, "
+                        "evidence) VALUES (:id, :ws, 'held', 1, 'draft', gen_random_uuid(), "
+                        "'model:m@1', gen_random_uuid(), gen_random_uuid(), "
+                        "'rating_algorithm:a@1', '{\"p\": 1}', 'exact', "
+                        '\'{"blob_sha256": "b", "content_hash": "h"}\', \'seed\', '
+                        "'{\"e\": 1}')"
+                    ),
+                    {"id": row_id, "ws": ws},
+                )
+            # Read from stderr, not `caplog`: on every upgrade `env.py`'s `fileConfig` strips the
+            # handlers of the root logger (caplog's included) and of the `alembic` logger's
+            # children, and installs the `alembic.ini` console handler, which writes to stderr.
+            capsys.readouterr()
+            await asyncio.to_thread(command.upgrade, cfg, _THIS_REVISION)
+            warned = [
+                line for line in capsys.readouterr().err.splitlines() if line.startswith("WARNI")
+            ]
+            async with engine.connect() as conn:
+                revision = (
+                    await conn.execute(text("SELECT version_num FROM alembic_version"))
+                ).scalar_one()
+                status = (
+                    await conn.execute(
+                        text("SELECT status FROM rating_versions WHERE id = :id"), {"id": row_id}
+                    )
+                ).scalar_one_or_none()
+        finally:
+            await engine.dispose()
+    finally:
+        async with admin.connect() as conn:
+            await conn.execute(
+                text(
+                    "SELECT pg_terminate_backend(pid) FROM pg_stat_activity "
+                    "WHERE datname = :name AND pid <> pg_backend_pid()"
+                ),
+                {"name": name},
+            )
+            await conn.execute(text(f'DROP DATABASE IF EXISTS "{name}"'))
+        await admin.dispose()
+    assert revision == _THIS_REVISION, "the upgrade must complete"
+    assert any(str(ws) in m and ref in m for m in warned), warned
+    assert status == "draft", "the held draft must still be there, still a draft"

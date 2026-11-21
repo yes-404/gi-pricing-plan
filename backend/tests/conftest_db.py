@@ -277,6 +277,12 @@ OWNER_FIXTURE_USERS: tuple[tuple[str, str, str], ...] = (
         "runs the collector's DELETE on blobs, which the application role cannot (OQ-1943)",
     ),
     (
+        "backend/tests/test_rating_version_content_guard.py::"
+        "test_the_upgrade_reports_a_held_draft_and_does_not_stop",
+        "migration",
+        "creates and migrates a scratch database (CREATE DATABASE, DDL)",
+    ),
+    (
         "backend/tests/test_migration_deployments.py::"
         "test_the_upgrade_seeds_the_three_environments_and_leaves_existing_traces_alone",
         "migration",
