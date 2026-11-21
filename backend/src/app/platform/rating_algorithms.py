@@ -24,6 +24,7 @@ from app.platform.perils import load_structure_by_ref
 from model_schema import (
     MODEL_SPEC_ADAPTER,
     ArtifactRef,
+    FieldError,
     GbmSpec,
     GraphCycleError,
     GraphUnresolvedRefError,
@@ -112,11 +113,19 @@ def raise_first_issue(issues: list[ValidationIssue]) -> None:
     if not issues:
         return
     issue = issues[0]
+    # The step is the caller's own artifact: it is returned in `errors[]` and is in no text a Job,
+    # a log or an audit row keeps (NFR-499, #1712 S7c); `issue.message` is a literal.
+    where = ".".join(
+        part
+        for part in (f"steps.{issue.step_id}" if issue.step_id else None, issue.field)
+        if part
+    )
     raise PlatformError(
         issue.code,
         issue.code.replace("_", " ").title(),
         422,
         issue.message,
+        errors=(FieldError(field=where or "algorithm", code=issue.code, message=issue.message),),
     )
 
 

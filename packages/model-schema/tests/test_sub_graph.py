@@ -66,7 +66,10 @@ def test_a_step_consuming_an_unproduced_name_is_unresolved() -> None:
     payload["steps"][0]["consumes"] = ["ncd_years", "nothing_makes_this"]
     err = refusal(payload)
     assert isinstance(err["ctx"]["error"], GraphUnresolvedRefError)
-    assert "consumes undefined value" in str(err["ctx"]["error"])
+    # #1712 S7c: the text is a literal, naming neither the step nor the value.
+    assert "consumes an undefined value" in str(err["ctx"]["error"])
+    assert "nothing_makes_this" not in str(err["ctx"]["error"])
+    assert "s_ncd" not in str(err["ctx"]["error"])
 
 
 def test_an_output_port_no_step_produces_is_unresolved() -> None:
@@ -75,6 +78,7 @@ def test_an_output_port_no_step_produces_is_unresolved() -> None:
     err = refusal(payload)
     assert isinstance(err["ctx"]["error"], GraphUnresolvedRefError)
     assert "undefined value" in str(err["ctx"]["error"])
+    assert "ghost" not in str(err["ctx"]["error"])
 
 
 def test_a_cycle_is_refused_with_the_cycle_class() -> None:

@@ -67,8 +67,16 @@ def _fr246(issues: list[Any]) -> list[Any]:
 @pytest.mark.req("FR-246")
 def test_a_constraint_reading_an_undeclared_name_is_refused() -> None:
     issues = _fr246(validate_algorithm(RatingAlgorithm.model_validate(_undeclared_clamp_payload())))
-    assert [(i.step_id, i.code) for i in issues] == [("s_clamp", UNDECLARED_READ_CODE)], issues
-    assert "min_premium_minor" in issues[0].message
+    # #1712 S7c: one issue per READING LOCATION, in step order then field order, each field the
+    # authored location (`authored_expression_fields`), never a name the author submitted.
+    assert [(i.step_id, i.code, i.field) for i in issues] == [
+        ("s_clamp", UNDECLARED_READ_CODE, "condition"),
+        ("s_clamp", UNDECLARED_READ_CODE, "clamp_bounds.min"),
+    ], issues
+    # #1712 S7c: the text names no step and no name; the step is located by `step_id`/`field`.
+    assert all("min_premium_minor" not in i.message for i in issues)
+    assert all("s_clamp" not in i.message for i in issues)
+    assert all("min_premium_minor" not in i.field for i in issues)
 
 
 @pytest.mark.req("FR-246")
@@ -78,7 +86,84 @@ def test_an_expression_reading_an_undeclared_name_is_refused() -> None:
         if step["step_id"] == "s_office":
             step["expr"] = "risk_premium_minor * expense_factor * sanity_cap_minor"
     issues = _fr246(validate_algorithm(RatingAlgorithm.model_validate(payload)))
-    assert [(i.step_id, i.code) for i in issues] == [("s_office", UNDECLARED_READ_CODE)], issues
+    assert [(i.step_id, i.code, i.field) for i in issues] == [
+        ("s_office", UNDECLARED_READ_CODE, "expr")
+    ], issues
+
+
+@pytest.mark.req("FR-246")
+def test_the_location_is_the_position_of_the_read_and_the_order_is_fixed() -> None:
+    """#1712 S7c: three steps each read a stray name at a NON-first location (a list position,
+    a model_call feature_map position, an expression). Equality on (step_id, code, field), in
+    step order; the submitted name is in no field."""
+    payload = copy.deepcopy(_algorithm_payload())
+    for step in payload["steps"]:
+        if step["step_id"] == "s_expense":
+            step["key_expr"] = ["channel", "stray_key"]
+        elif step["step_id"] == "s_risk":
+            step["feature_map"] = {"driver_age": "age_years", "stray_feature": "x"}
+        elif step["step_id"] == "s_office":
+            step["expr"] = "risk_premium_minor * expense_factor * stray_expr"
+    expected = [
+        ("s_expense", UNDECLARED_READ_CODE, "key_expr[1]"),
+        ("s_risk", UNDECLARED_READ_CODE, "feature_map.stray_feature"),
+        ("s_office", UNDECLARED_READ_CODE, "expr"),
+    ]
+    for _ in range(2):  # the same order on a second call
+        issues = _fr246(validate_algorithm(RatingAlgorithm.model_validate(payload)))
+        assert [(i.step_id, i.code, i.field) for i in issues] == expected, issues
+    # the field of a list or an expression location holds no name; a keyed-map entry's holds the
+    # key (it goes back to the caller), and no message holds any
+    assert not any(n in i.message for i in issues
+                   for n in ("stray_key", "stray_feature", "stray_expr"))
+    assert not any(n in i.field for i in issues for n in ("stray_key", "stray_expr"))
+
+
+@pytest.mark.req("FR-246")
+def test_a_keyed_maps_entries_are_visited_in_sorted_key_order() -> None:
+    """#1712 S7c second audit (S2): stored JSONB does not keep key order, so a save (request
+    order) and a compile (stored order) must list a keyed map's entries the same way. The same
+    algorithm with `feature_map` and `clamp_bounds` keys inserted in two orders gives the same
+    issue list, in sorted key order."""
+
+    def fields(reverse: bool) -> list[tuple[str, str, str]]:
+        payload = copy.deepcopy(_algorithm_payload())
+        for step in payload["steps"]:
+            if step["step_id"] == "s_risk":
+                items = [("driver_age", "age_years"), ("stray_a", "x"), ("stray_b", "y")]
+                step["feature_map"] = dict(reversed(items) if reverse else items)
+            elif step["step_id"] == "s_clamp":
+                step["consumes"] = ["office_premium_minor"]
+                items = [("max", "stray_c"), ("min", "stray_d")]
+                step["clamp_bounds"] = dict(reversed(items) if reverse else items)
+        issues = _fr246(validate_algorithm(RatingAlgorithm.model_validate(payload)))
+        return [(i.step_id, i.code, i.field) for i in issues]
+
+    forward, backward = fields(False), fields(True)
+    assert forward == backward, (forward, backward)
+    assert [f for s, _, f in forward if s == "s_risk"] == [
+        "feature_map.stray_a",
+        "feature_map.stray_b",
+    ]
+    assert [f for s, _, f in forward if s == "s_clamp"] == [
+        "condition",
+        "clamp_bounds.max",
+        "clamp_bounds.min",
+    ]
+
+
+@pytest.mark.req("FR-246")
+async def test_the_compile_refusal_for_an_undeclared_feature_map_key_carries_no_key() -> None:
+    """#1712 S7c: what a Job stores is the `CodedError` text. It is the code and the literal
+    message, no field and no key. (DB-free: the text is raised here, before any Job row.)"""
+    example = _one_name_example()
+    step = next(s for s in example["steps"] if s["type"] == "model_call")
+    step["feature_map"] = {**step.get("feature_map", {}), "stray_feature": "x"}
+    with pytest.raises(CodedError) as caught:
+        await _compile(example)
+    text = str(caught.value)
+    assert text.startswith("RATING_STEP_UNDECLARED_READ:"), text
+    assert "stray_feature" not in text, text
 
 
 @pytest.mark.req("FR-246")

@@ -726,6 +726,10 @@ async def test_an_unplaceable_clamp_is_refused_at_save_and_at_compile(
     payload = _clamped_chain(clamp_on=clamp_on, produces=produces)
     issues = validate_algorithm(RatingAlgorithm.model_validate(payload))
     assert [i.code for i in issues if i.code == "LADDER_CLAMP_UNPLACEABLE"], issues
+    # #1712 S7c: the clamp's produced entry, by position, not the whole list.
+    # (one issue per rung the produced name sources, so the count is not asserted)
+    located = {(i.step_id, i.field) for i in issues if i.code == "LADDER_CLAMP_UNPLACEABLE"}
+    assert located == {("s_clamp", "produces[0]")}
     with pytest.raises(ValueError, match="LADDER_CLAMP_UNPLACEABLE"):
         await _compile_payload(payload)
 
