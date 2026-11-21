@@ -239,11 +239,14 @@ async def revalidate(
             requester=None,
         ) from None
     except PlatformError as exc:
-        # A pinned model whose offset source has an offset of its own (version 1 supports one
-        # level, FR-116): the resolver refuses it as a `PlatformError`, which is already the
-        # 409, but a governance refusal also writes its own event (FR-243). Only this code is a
-        # decided answer here; it is not a load-guard code, so `hydrate` never sees it.
-        if exc.code != "MODEL_OFFSET_REF_INVALID":
+        # A pin the resolver refuses (a pinned model whose offset source has an offset of its own,
+        # FR-116, a pin that no longer resolves): the resolver refuses it as a `PlatformError`,
+        # which is already the answer's status, but a governance refusal also writes its own
+        # event every time (FR-243). Every 4xx the resolver raises is a decided refusal and is
+        # recorded, then re-raised unchanged. A 5xx is an outage, not a decision, and an outage is
+        # never recorded as a refusal. None of these is a load-guard code, so `hydrate` never
+        # sees them.
+        if not 400 <= exc.status_code < 500:
             raise
         await _record_refusal(
             slot,

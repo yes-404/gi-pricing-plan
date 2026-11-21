@@ -1098,16 +1098,22 @@ async def resolve_offset_model(
             409,
             f"{ref} names a {parsed.type}, and an offset must be another model (FR-116).",
         )
-    row = await load_model(
-        session, workspace_id=workspace_id, slug=parsed.slug, version=parsed.version
-    )
-    if row is None:
+    try:
+        row = await load_model(
+            session, workspace_id=workspace_id, slug=parsed.slug, version=parsed.version
+        )
+    except PlatformError as exc:
+        # `load_model` raises, it does not return `None`, and its text names a model without
+        # saying it is the one the offset names: at submit that reads as the pinned model, or the
+        # Rating Version, being missing.
+        if exc.code != "NOT_FOUND":
+            raise
         raise PlatformError(
             "NOT_FOUND",
             "The model the offset names does not exist",
             404,
             f"{ref} resolves to no model in this workspace.",
-        )
+        ) from exc
     if row.fit_result is None:
         raise PlatformError(
             "MODEL_OFFSET_REF_INVALID",

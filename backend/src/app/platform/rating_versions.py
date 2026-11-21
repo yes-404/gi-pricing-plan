@@ -654,7 +654,12 @@ class WorkspaceResolver:
                 )
             )
             if algo is None:
-                raise PlatformError("NOT_FOUND", "Rating algorithm not found", 404)
+                raise PlatformError(
+                    "NOT_FOUND",
+                    "Rating algorithm not found",
+                    404,
+                    f"{ref} resolves to no rating algorithm in this workspace.",
+                )
             # RL-859
             # (docs/rulings/RL-00859-the-remainder-splits-and-the-split-is-the-answer.md):
             # `RatingAlgorithmRow` has no `status` column, so `"approved"` was an invented
@@ -673,7 +678,12 @@ class WorkspaceResolver:
                 )
             )
             if model is None:
-                raise PlatformError("NOT_FOUND", "Model not found", 404)
+                raise PlatformError(
+                    "NOT_FOUND",
+                    "Model not found",
+                    404,
+                    f"{ref} resolves to no model in this workspace.",
+                )
             model_obj = to_model(model)
             payload = model_obj.model_dump(mode="json")
             if isinstance(model_obj.fit_result, GbmFitResult):
