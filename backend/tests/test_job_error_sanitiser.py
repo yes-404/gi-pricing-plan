@@ -437,9 +437,19 @@ async def test_a_location_that_cannot_be_built_leaves_the_job_under_its_own_code
 
 @pytest.mark.req("NFR-499")
 @pytest.mark.parametrize(
-    "bad",
-    [_SENTINEL + "x" * 300, _SENTINEL + "\nx"],
-    ids=["300 characters", "a control character"],
+    ("bad", "as_instance"),
+    [
+        (_SENTINEL + "x" * 300, False),
+        (_SENTINEL + "\nx", False),
+        (_SENTINEL + "x" * 300, True),
+        (_SENTINEL + "\nx", True),
+    ],
+    ids=[
+        "300 characters",
+        "a control character",
+        "an unvalidated instance, 300 characters",
+        "an unvalidated instance, a control character",
+    ],
 )
 async def test_a_location_assigned_after_construction_is_checked_where_the_error_is_stored(
     database: Database,
@@ -447,15 +457,19 @@ async def test_a_location_assigned_after_construction_is_checked_where_the_error
     principal,
     caplog: pytest.LogCaptureFixture,
     bad: str,
+    as_instance: bool,
 ) -> None:
     """The bound and the character rule are checked where the error is STORED on the Job, not
     only where `PlatformError` builds a location: a raise site that sets `error.location` by plain
-    assignment never ran `_build_location`. The Job fails under its own code, with no location,
-    and one warning names the key and never the value."""
+    assignment never ran `build_location`, whether it assigns a mapping or a `JobErrorLocation`
+    that was never validated (`model_construct`). The Job fails under its own code, with no
+    location, and one warning names the key and never the value."""
 
     def handler(params: dict[str, Any], progress: ProgressCallback) -> JobResult:
         error = PlatformError("VALIDATION_FAILED", "The step is invalid", 422)
-        error.location = {"step_id": bad}  # type: ignore[assignment]  # plain assignment
+        error.location = (  # type: ignore[assignment]  # plain assignment
+            JobErrorLocation.model_construct(step_id=bad) if as_instance else {"step_id": bad}
+        )
         raise error
 
     with caplog.at_level(logging.WARNING):

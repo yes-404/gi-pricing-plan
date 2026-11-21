@@ -13,12 +13,13 @@ from app.errors import (
     PLATFORM_ERROR_CODES,
     RATING_ERROR_CODES,
     PlatformError,
+    build_location,
     install_error_handlers,
 )
 from app.main import create_app
 from app.observability.middleware import TraceMiddleware
 from app.observability.trace import TRACE_ID_PATTERN
-from model_schema import GlmSpec, new_uuid7
+from model_schema import GlmSpec, JobErrorLocation, new_uuid7
 from model_schema.input_free import InputFreeError
 
 PROBLEM = "application/problem+json"
@@ -363,4 +364,50 @@ def test_a_dropped_location_is_logged_with_the_code_and_the_key_and_never_the_va
 def test_a_location_that_builds_is_not_logged(caplog: pytest.LogCaptureFixture) -> None:
     with caplog.at_level(logging.WARNING, logger="app.errors"):
         PlatformError("VALIDATION_FAILED", "Nope", 422, location={"step_id": "base premium"})
+    assert [r for r in caplog.records if r.name == "app.errors"] == []
+
+
+#: Instances that were never validated: `model_construct` skips every validator, and
+#: `model_copy(update=...)` does not re-run them, so each can hold what the model refuses.
+_UNVALIDATED_INSTANCES = {
+    "model_construct, 300 characters": lambda: JobErrorLocation.model_construct(
+        step_id=_LOCATION_SENTINEL + "x" * 300
+    ),
+    "model_construct, a control character": lambda: JobErrorLocation.model_construct(
+        step_id=_LOCATION_SENTINEL + "\nx"
+    ),
+    "model_copy(update=), 300 characters": lambda: JobErrorLocation(step_id="s").model_copy(
+        update={"step_id": _LOCATION_SENTINEL + "x" * 300}
+    ),
+}
+
+
+@pytest.mark.req("NFR-499")
+@pytest.mark.parametrize("shape", sorted(_UNVALIDATED_INSTANCES))
+def test_build_location_checks_an_instance_like_a_mapping(
+    shape: str, caplog: pytest.LogCaptureFixture
+) -> None:
+    """An instance that was never validated is held to the same bound and rule: it is dropped
+    with the one warning naming the key and never the value, and the caller gets None."""
+    instance = _UNVALIDATED_INSTANCES[shape]()
+    with caplog.at_level(logging.WARNING, logger="app.errors"):
+        built = build_location("VALIDATION_FAILED", instance)
+
+    assert built is None
+    lines = [r.getMessage() for r in caplog.records if r.name == "app.errors"]
+    assert len(lines) == 1, lines
+    assert "VALIDATION_FAILED" in lines[0]
+    assert "keys=step_id" in lines[0]
+    assert _LOCATION_SENTINEL not in caplog.text
+
+
+@pytest.mark.req("NFR-499")
+def test_build_location_keeps_a_valid_instance_even_when_it_was_never_validated(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    with caplog.at_level(logging.WARNING, logger="app.errors"):
+        built = build_location(
+            "VALIDATION_FAILED", JobErrorLocation.model_construct(step_id="base premium")
+        )
+    assert built == JobErrorLocation(step_id="base premium")
     assert [r for r in caplog.records if r.name == "app.errors"] == []

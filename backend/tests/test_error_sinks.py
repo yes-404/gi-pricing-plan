@@ -415,7 +415,12 @@ def test_every_failure_sink_on_a_quote_input_path_is_accounted_for() -> None:
 #: OUTSIDE the scan, by name: a `JobErrorLocation.model_validate(...)` build with nothing else. It
 #: is weak alone, because it fills nothing until its result is passed as `location=` or assigned,
 #: and that call or assignment IS seen; a build whose result goes anywhere else is not a location
-#: on any error, so it cannot be stored.
+#: on any error, so it cannot be stored. Also outside it: a `setattr(error, "location", ...)`, an
+#: update of the error's `__dict__`, a `model_construct` or `model_copy(update=...)` used as a
+#: build, and a `**` into a SUBCLASS of `PlatformError` (the scan reads a `**` into `PlatformError`
+#: or `JobError` by name). The scan does not carry the guarantee alone: every error that reaches
+#: the Job's stored error passes through `build_location` in `execute_job`, which holds all of
+#: these forms to the same bound and rule (`test_job_error_sanitiser.py`).
 _LOCATION_SITES: dict[tuple[str, str], str] = {
     ("backend/src/app/errors.py", "__init__"): (
         "`PlatformError.__init__` stores the location its raise site passed, after "
@@ -504,7 +509,9 @@ def test_every_raise_site_that_fills_a_location_is_accounted_for() -> None:
     cannot prove that: it makes every site that fills one visible and reasoned, as `_SINKS` does,
     and refuses a value built by composing text (which is where submitted text would get in). The
     shapes it sees are those under `_LOCATION_SITES`; a `JobErrorLocation.model_validate(...)`
-    build on its own is outside the scan (weak alone: the call that passes it on is seen)."""
+    build on its own is outside the scan (weak alone: the call that passes it on is seen), and so
+    are `setattr`, a `__dict__` update, `model_construct` / `model_copy` as a build and a `**` into
+    a `PlatformError` subclass: the sink check in `execute_job` holds those the same."""
     sites: set[tuple[str, str]] = set()
     composed: list[str] = []
     for path in _files():

@@ -489,11 +489,14 @@ def build_location(
     """A refusal's location as a `JobErrorLocation`, or None with one warning when it cannot be
     built (the bound, the character rule, a bad reference). Applied where a `PlatformError` is
     built and again where the worker stores it on the Job (`worker.tasks.execute_job`), so a
-    location set on an error by plain assignment is held to the same rules."""
-    if location is None or isinstance(location, JobErrorLocation):
-        return location
+    location set on an error by plain assignment is held to the same rules. An existing
+    `JobErrorLocation` is checked like a mapping, by its dump: an instance made with
+    `model_construct`, or copied with `model_copy(update=...)`, was never validated."""
+    if location is None:
+        return None
+    candidate = location.model_dump() if isinstance(location, JobErrorLocation) else location
     try:
-        return JobErrorLocation.model_validate(location)
+        return JobErrorLocation.model_validate(candidate)
     except ValidationError as exc:
         # A dropped location is not silent. The line names the code and the DECLARED keys that
         # did not fit; an undeclared key is counted, never named (a key is the raise site's
