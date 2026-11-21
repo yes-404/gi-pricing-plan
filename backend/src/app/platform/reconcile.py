@@ -24,13 +24,17 @@ Rules (rule ids are this module's vocabulary, not requirement ids):
   A model archived after it was superseded is not claimed by R1: `archived` is reachable from
   `draft`, so R2 to R4 cover its approval through the chain.
 * **R2** — every approved request has enough approving decisions, from distinct approvers,
-  none of them its submitter (FR-353).
+  none of them its submitter (FR-353). The reconciliation compares a request with its own
+  events: a request's stored `approvers_required` equals the `approvers_required` recorded in
+  its submitted event.
 * **R3** — every decision row has exactly one matching chain event (its actor, action and
   entity reference those of the row), and every such event has its decision row. Events
   written since the decision event carries its ids match by id; earlier events match by
   `(entity_ref, actor, decision)` in order.
 * **R4** — the chain order is the process order: submitted, then the decisions, then the
-  artifact's approval event, once.
+  artifact's approval event, once. A request whose status is `approved` has a final decision
+  event recording status `approved`: one approved with only decision events recording another
+  status is a mismatch.
 * **R5** — every deployment rests on an approved-or-later version that passes R1 to R4 and has
   its creation or rollback event (`deployment.created`, `deployment.rolled_back`; FR-269,
   FR-238: a draft or review version does not deploy); where it names a
@@ -333,9 +337,46 @@ def _r1(data: WorkspaceData) -> list[Mismatch]:
     return found
 
 
+def _recorded_approvers(data: WorkspaceData) -> dict[UUID, int]:
+    """Per request, the `approvers_required` its submitted event records.
+
+    A request is paired with the submitted event of the same position among the requests and
+    the submitted events that name its reference, in order; a ref with a different number of
+    each cannot be paired and is left out (a missing or surplus submitted event is not this
+    check's to name).
+    """
+    requests: dict[str, list[RequestState]] = defaultdict(list)
+    for request in sorted(data.requests, key=lambda r: (r.submitted_at, str(r.id))):
+        requests[request.ref].append(request)
+    submitted: dict[str, list[EventState]] = defaultdict(list)
+    for event in sorted(data.events, key=lambda e: e.sequence):
+        if event.action == SUBMITTED_ACTION:
+            submitted[event.entity_ref].append(event)
+    recorded: dict[UUID, int] = {}
+    for ref, its_requests in requests.items():
+        events = submitted.get(ref, [])
+        if len(events) != len(its_requests):
+            continue
+        for request, event in zip(its_requests, events, strict=True):
+            value = (event.after or {}).get("approvers_required")
+            if value is not None:
+                recorded[request.id] = int(value)
+    return recorded
+
+
 def _r2(data: WorkspaceData) -> list[Mismatch]:
     found: list[Mismatch] = []
+    recorded = _recorded_approvers(data)
     for request in data.requests:
+        if recorded.get(request.id, request.approvers_required) != request.approvers_required:
+            found.append(
+                Mismatch(
+                    "R2",
+                    request.ref,
+                    f"stores approvers_required {request.approvers_required}; its submitted "
+                    f"event records {recorded[request.id]}",
+                )
+            )
         if request.status != APPROVED:
             continue
         approves = [
@@ -466,6 +507,19 @@ def _r4(data: WorkspaceData, matched: Mapping[UUID, EventState]) -> list[Mismatc
                 )
         if request.status != APPROVED:
             continue
+        statuses = {
+            status
+            for _, event in events
+            if (status := (event.after or {}).get("status")) is not None
+        }
+        if statuses and APPROVED not in statuses:
+            found.append(
+                Mismatch(
+                    "R4",
+                    request.ref,
+                    f"approved, but its decision events record only {sorted(statuses)}",
+                )
+            )
         action = _APPROVAL_EVENT_OVERRIDES.get(request.type, f"{request.type}.approved")
         if action is None:
             continue

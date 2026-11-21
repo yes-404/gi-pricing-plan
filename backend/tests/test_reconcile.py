@@ -335,6 +335,50 @@ async def test_an_unreadable_workspace_report_is_the_type_name_only(
     assert SENTINEL not in _line(report)
 
 
+# -- a request against its own events ---------------------------------------------------------
+
+
+def _with_submitted_after(data: WorkspaceData, after: dict[str, Any]) -> WorkspaceData:
+    events = tuple(
+        replace(e, after=after) if e.action == "approval_request.submitted" else e
+        for e in data.events
+    )
+    return replace(data, events=events)
+
+
+def test_r2_a_stored_approvers_required_equal_to_the_submitted_event_is_clean() -> None:
+    data = _with_submitted_after(_reconciled(), {"status": "review", "approvers_required": 1})
+    assert reconcile_data(data) == []
+
+
+def test_r2_a_stored_approvers_required_that_differs_from_the_submitted_event() -> None:
+    data = _with_submitted_after(_reconciled(), {"status": "review", "approvers_required": 2})
+    found = reconcile_data(data)
+    assert _rules(found) == ["R2"], found
+    assert "approvers_required 1" in found[0].detail
+    assert "records 2" in found[0].detail
+
+
+def _with_decision_status(data: WorkspaceData, status: str) -> WorkspaceData:
+    events = tuple(
+        replace(e, after={**(e.after or {}), "status": status})
+        if e.action == "approval_request.approve"
+        else e
+        for e in data.events
+    )
+    return replace(data, events=events)
+
+
+def test_r4_an_approved_request_whose_decision_events_record_approved_is_clean() -> None:
+    assert reconcile_data(_with_decision_status(_reconciled(), "approved")) == []
+
+
+def test_r4_an_approved_request_with_only_decision_events_recording_another_status() -> None:
+    found = reconcile_data(_with_decision_status(_reconciled(), "review"))
+    assert _rules(found) == ["R4"], found
+    assert "only ['review']" in found[0].detail
+
+
 # -- R4 ---------------------------------------------------------------------------------------
 
 
@@ -1050,6 +1094,72 @@ async def test_reconcile_db_a_workspace_whose_row_was_deleted_after_its_events_i
     assert workspace_id in ids
     assert workspace_id in without_row
     assert report.chain == "intact"
+
+
+async def _owner_update_requests(workspace_id: UUID, assignment: str) -> None:
+    """Write `assignment` into the workspace's approval request rows, as the owner, under the
+    decision flag: a direct row write, as the tamper tests above do."""
+    from backend.tests.conftest_db import seed_as_owner
+    from sqlalchemy import text
+
+    from app.platform.approvals import approval_decision
+
+    async def _write(session: AsyncSession) -> None:
+        async with approval_decision(session):
+            await session.execute(
+                text(f"UPDATE approval_requests SET {assignment} WHERE workspace_id = :w"),
+                {"w": workspace_id},
+            )
+
+    await seed_as_owner(_write)
+
+
+async def _reported(database: Database, workspace_id: UUID) -> list[rc.Mismatch]:
+    async with database.session() as session:
+        report = await rc.reconcile(session, workspace_id)
+    assert report.chain == "intact"
+    return list(report.mismatches)
+
+
+async def test_reconcile_db_a_planted_approvers_required_that_differs_from_the_submitted_event(
+    database: Database, workspace_id: UUID
+) -> None:
+    await _decide_to_approval(database, workspace_id)
+    assert await _reported(database, workspace_id) == []
+    await _owner_update_requests(workspace_id, "approvers_required = 2")
+    found = await _reported(database, workspace_id)
+    assert any("records 1" in m.detail for m in found), found
+
+
+async def test_reconcile_db_a_planted_approved_request_with_only_review_decision_events(
+    database: Database, workspace_id: UUID
+) -> None:
+    """A rating version needs two approvals; one is decided (its event records `review`), then
+    the request row is set `approved` directly."""
+    from backend.tests.test_approvals import _no_evidence_authors, _submit, _user, _with_role
+
+    from app.platform import approvals
+    from model_schema import DecisionKind
+
+    ref = ArtifactRef.parse("rating_version:planted-review@1")
+    request_id = await _submit(database, workspace_id, _user("s"), ref=ref)
+    approver = _user("a0")
+    await _with_role(database, workspace_id, approver, "approver")
+    async with database.unit_of_work() as session:
+        await approvals.decide(
+            session,
+            evidence_authors=_no_evidence_authors,
+            workspace_id=workspace_id,
+            request_id=request_id,
+            approver=approver,
+            decision=DecisionKind.APPROVE,
+            comment="first of two",
+        )
+    before = await _reported(database, workspace_id)
+    assert not any("decision events record only" in m.detail for m in before), before
+    await _owner_update_requests(workspace_id, "status = 'approved'")
+    found = await _reported(database, workspace_id)
+    assert any("decision events record only ['review']" in m.detail for m in found), found
 
 
 pytestmark = pytest.mark.req("FR-2163")
