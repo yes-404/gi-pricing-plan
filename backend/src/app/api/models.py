@@ -64,14 +64,13 @@ from app.db.models import BlobRow, ModelRow, RatingVersionRow, RegressionRunRow
 from app.db.session import Database
 from app.errors import PlatformError
 from app.platform import backtests as backtest_service
-from app.platform import blobs
+from app.platform import blobs, provenance
 from app.platform import comparison as comparison_service
 from app.platform import diagnostics as diagnostics_service
 from app.platform import jobs as job_service
 from app.platform import model_specs as spec_service
 from app.platform import modelling as service
 from app.platform import prediction as prediction_service
-from app.platform import provenance
 from app.platform import rating_versions as rating_versions_service
 from app.platform import regression_runs as regression_runs_service
 from app.platform import transformations as transform_service
