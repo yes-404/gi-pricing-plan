@@ -376,7 +376,46 @@ def test_r4_an_approved_request_whose_decision_events_record_approved_is_clean()
 def test_r4_an_approved_request_with_only_decision_events_recording_another_status() -> None:
     found = reconcile_data(_with_decision_status(_reconciled(), "review"))
     assert _rules(found) == ["R4"], found
-    assert "only ['review']" in found[0].detail
+    assert "final decision event records 'review'" in found[0].detail
+
+
+def _with_later_review_decision(data: WorkspaceData, status: str) -> WorkspaceData:
+    """The approving decision event records `approved` (sequence 2); a later decision row by
+    another approver (a request for changes) has its event at sequence 4 recording `status`."""
+    later = DecisionState(uuid4(), REQUEST_ID, OTHER, "request_changes", _t(4))
+    event = EventState(
+        4,
+        _t(4),
+        "approval_request.request_changes",
+        REF,
+        OTHER,
+        {"decision_id": str(later.id), "status": status},
+    )
+    data = _with_decision_status(data, "approved")
+    return replace(data, decisions=(*data.decisions, later), events=(*data.events, event))
+
+
+def test_r4_an_approved_request_is_judged_by_its_final_decision_event_not_any_of_them() -> None:
+    found = reconcile_data(_with_later_review_decision(_reconciled(), "review"))
+    assert _rules(found) == ["R4"], found
+    assert "final decision event records 'review'" in found[0].detail
+
+
+def test_r4_a_final_decision_event_that_records_no_status_is_not_another_status() -> None:
+    data = _with_later_review_decision(_reconciled(), "review")
+    events = tuple(
+        replace(e, after={"decision_id": (e.after or {})["decision_id"]}) if e.sequence == 4 else e
+        for e in data.events
+    )
+    # The status-less final event is skipped: the highest sequence that carries one is 2.
+    assert reconcile_data(replace(data, events=events)) == []
+
+
+def test_r4_the_detail_prints_only_a_status_the_product_defines() -> None:
+    found = reconcile_data(_with_decision_status(_reconciled(), "tampered-secret-value"))
+    assert _rules(found) == ["R4"], found
+    assert "tampered-secret-value" not in found[0].detail
+    assert "not an approval status" in found[0].detail
 
 
 # -- R4 ---------------------------------------------------------------------------------------
@@ -1159,7 +1198,86 @@ async def test_reconcile_db_a_planted_approved_request_with_only_review_decision
     assert not any("decision events record only" in m.detail for m in before), before
     await _owner_update_requests(workspace_id, "status = 'approved'")
     found = await _reported(database, workspace_id)
-    assert any("decision events record only ['review']" in m.detail for m in found), found
+    assert any("final decision event records 'review'" in m.detail for m in found), found
+
+
+async def test_reconcile_db_a_planted_request_that_rows_satisfy_is_reported_by_limb_two_alone(
+    database: Database, workspace_id: UUID
+) -> None:
+    """R4 limb (ii) by itself: every row satisfies R1 to R3 and limb (i), and the chain's only
+    decision event for the approving decision records `review`. A request approved by a row
+    write that the chain does not show as approved is reported by this limb and by no other."""
+    from backend.tests.conftest_db import seed_as_owner
+    from backend.tests.test_approvals import _user
+
+    from app.db.models import ApprovalDecisionRow, ApprovalRequestRow
+    from app.platform import audit
+    from app.platform.approvals import approval_decision
+    from model_schema import JobSource
+
+    ref = ArtifactRef.parse("model:limb-two-only@1")
+    submitter, approver = _user("s"), _user("a")
+    request_id, decision_id = uuid4(), uuid4()
+
+    async def _plant(session: AsyncSession) -> None:
+        async with approval_decision(session):
+            session.add(
+                ApprovalRequestRow(
+                    id=request_id,
+                    workspace_id=workspace_id,
+                    artifact_ref=str(ref),
+                    artifact_type="model",
+                    submitted_by=submitter.id,
+                    change_summary="planted: approved by a row write",
+                    status="approved",
+                    approvers_required=1,
+                    decided_at=datetime.now(UTC),
+                )
+            )
+            await session.flush()
+            session.add(
+                ApprovalDecisionRow(
+                    id=decision_id,
+                    request_id=request_id,
+                    approver_id=approver.id,
+                    decision="approve",
+                )
+            )
+            await session.flush()
+
+    await seed_as_owner(_plant)
+    async with database.unit_of_work() as session:
+        for actor, action, after in (
+            (
+                submitter,
+                "approval_request.submitted",
+                {"status": "review", "approvers_required": 1},
+            ),
+            (
+                approver,
+                "approval_request.approve",
+                {
+                    "status": "review",
+                    "approvers_recorded": 1,
+                    "approval_request_id": str(request_id),
+                    "decision_id": str(decision_id),
+                },
+            ),
+            (approver, "model.approved", None),
+        ):
+            await audit.record(
+                session,
+                workspace_id=workspace_id,
+                actor=actor,
+                source=JobSource.API,
+                action=action,
+                entity_ref=str(ref),
+                after=after,
+            )
+    found = await _reported(database, workspace_id)
+    assert [(m.rule, m.ref, m.detail) for m in found] == [
+        ("R4", str(ref), "approved, but its final decision event records 'review'")
+    ], found
 
 
 async def _script_lines(workspace_id: UUID) -> tuple[int, dict[str, Any], dict[str, Any]]:

@@ -81,6 +81,7 @@ from model_schema import (
     VALID_MODEL_TRANSITIONS,
     VALID_OBJECTIVE_TRANSITIONS,
     VALID_PERIL_STRUCTURE_TRANSITIONS,
+    ApprovalStatus,
     DecisionKind,
 )
 from model_schema.rating import VALID_RATING_VERSION_TRANSITIONS
@@ -507,19 +508,28 @@ def _r4(data: WorkspaceData, matched: Mapping[UUID, EventState]) -> list[Mismatc
                 )
         if request.status != APPROVED:
             continue
-        statuses = {
-            status
+        with_status = [
+            (event.sequence, status)
             for _, event in events
             if (status := (event.after or {}).get("status")) is not None
-        }
-        if statuses and APPROVED not in statuses:
-            found.append(
-                Mismatch(
-                    "R4",
-                    request.ref,
-                    f"approved, but its decision events record only {sorted(statuses)}",
+        ]
+        if with_status:
+            # The FINAL decision event that records a status; one with none is not read as
+            # another status. A stored value outside ApprovalStatus is never printed.
+            final = max(with_status)[1]
+            if final != APPROVED:
+                shown = (
+                    repr(final)
+                    if isinstance(final, str) and final in {s.value for s in ApprovalStatus}
+                    else "a status that is not an approval status"
                 )
-            )
+                found.append(
+                    Mismatch(
+                        "R4",
+                        request.ref,
+                        f"approved, but its final decision event records {shown}",
+                    )
+                )
         action = _APPROVAL_EVENT_OVERRIDES.get(request.type, f"{request.type}.approved")
         if action is None:
             continue
