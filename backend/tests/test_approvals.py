@@ -6,7 +6,16 @@ from uuid import UUID
 
 import pytest
 from backend.tests.conftest_db import seed_as_owner
-from sqlalchemy import select
+from backend.tests.test_api_approvals import (  # noqa: F401
+    _allow_the_type,
+    _create_authored,
+    _headers,
+    api_settings,
+    client,
+    submitter_headers,
+)
+from fastapi.testclient import TestClient
+from sqlalchemy import select, text
 
 from app.db.models import ApprovalDecisionRow, AuditEventRow, RoleAssignmentRow, RoleRow
 from app.db.session import Database
@@ -765,3 +774,57 @@ async def test_a_validation_rules_authored_by_is_its_creation_events_actor(
         ref, authored_by = f"validation_rule:{row.slug}@{row.version}", row.authored_by
     assert authored_by == analyst.id
     assert await _creation_actor(database, workspace_id, "validation_rule", ref) == authored_by
+
+
+@pytest.mark.req("FR-357")
+async def test_withdrawing_an_approved_request_leaves_its_decision_time_unchanged(
+    client: TestClient,  # noqa: F811
+    database: Database,
+    workspace_id,
+    grant,
+    submitter_headers,  # noqa: F811
+) -> None:
+    """The moment of a decision is written once, on leaving review. A `dataset_version` has no
+    decision hook, so approve-then-withdraw is the one pair of API calls that succeeds
+    (a rating version's withdrawal of an approved request is refused 409). `decided_at` after
+    the withdrawal is the value the approval wrote; the withdrawal keeps its own time in its
+    audit event."""
+    await _allow_the_type(client, workspace_id, grant, database, "dataset_version")
+    await _create_authored(database, workspace_id, "dataset_version", "ds-withdraw", 1, new_uuid7())
+    created = client.post(
+        "/api/v1/approval-requests",
+        json={"artifact_ref": "dataset_version:ds-withdraw@1", "change_summary": "Ship."},
+        headers=submitter_headers,
+    )
+    assert created.status_code == 201, created.text
+    request_id = created.json()["id"]
+    approver = new_uuid7()
+    await grant("approver", principal_id=approver)
+    headers = _headers(approver, workspace_id)
+    decided = client.post(
+        f"/api/v1/approval-requests/{request_id}/decide",
+        json={"decision": "approve", "comment": "Reviewed."},
+        headers=headers,
+    )
+    assert decided.status_code == 200, decided.text
+    assert decided.json()["status"] == "approved"
+
+    async def decision_time() -> object:
+        async with database.session() as session:
+            return (
+                await session.execute(
+                    text("SELECT decided_at FROM approval_requests WHERE id = :id"),
+                    {"id": request_id},
+                )
+            ).scalar_one()
+
+    approved_at = await decision_time()
+    assert approved_at is not None
+    withdrawn = client.post(
+        f"/api/v1/approval-requests/{request_id}/withdraw",
+        json={"reason": "second thoughts"},
+        headers=headers,
+    )
+    assert withdrawn.status_code == 200, withdrawn.text
+    assert withdrawn.json()["status"] == "withdrawn"
+    assert await decision_time() == approved_at
