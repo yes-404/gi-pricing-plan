@@ -1189,6 +1189,11 @@ OWNER_FIXTURE_USERS: tuple[tuple[str, str, str], ...] = (
         "plants a grant drift as the owner (rolled back)",
     ),
     (
+        "backend/tests/test_application_role.py::test_the_membership_query_follows_a_chain",
+        "owner-subject",
+        "creates roles and memberships as the owner to chain them (rolled back)",
+    ),
+    (
         "backend/tests/test_provision_app_role.py::"
         "test_the_login_role_sql_converges_a_planted_state[b1_gip_app_attributes]",
         "owner-subject",
