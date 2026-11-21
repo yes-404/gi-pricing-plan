@@ -48,5 +48,6 @@ has already been made and needs recording. Otherwise use
 | [ADR-2153](ADR-02153-a-factors-unseen-level-behaviour-is-declared-and-the-undeclared-case-refuses.md) | A Factor's unseen-level behaviour is declared, and the undeclared case refuses | active |
 | [ADR-2154](ADR-02154-the-audit-trail-is-the-seventh-high-risk-area.md) | The audit trail is the seventh high-risk area | active |
 | [ADR-2155](ADR-02155-the-audit-anchor-is-signed-with-ed25519-through-cryptography-and-refuses-a-broken-chain.md) | The audit anchor is signed with Ed25519 through cryptography, and refuses a chain that does not verify | active |
+| [ADR-2157](ADR-02157-the-database-holds-an-approved-rating-versions-content-and-the-loader-checks-the-bundle-it-loads.md) | The database holds an approved rating version's content, and the loader checks the bundle it loads | active |
 | [ADR-2160](ADR-02160-the-1506-works-decided-items-the-provenance-object-and-finer-level-diagnostics.md) | The decided items of Work #1506, the read-side Provenance object and the finer-level actual-versus-expected | active; superseded in part by ADR-2170 |
 | [ADR-2170](ADR-02170-a-parent-the-reference-form-cannot-name-is-reported-and-never-fails-a-read.md) | A governed parent the reference form cannot name is reported in the provenance, and never fails a read | active |
