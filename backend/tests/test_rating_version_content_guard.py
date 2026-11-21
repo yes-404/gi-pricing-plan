@@ -524,10 +524,13 @@ def test_the_migrations_status_tuple_is_the_enums_values() -> None:
     assert all(f"'{s.value}'" in str(check.sqltext) for s in RatingVersionStatus)
 
 
-#: The test files that name `session_replication_role`, found with `grep -l session_replication_role
-#: backend/tests/*.py` at 0a1c9aac and written here as a fixed list, never computed: each
-#: either sets it to tamper below the audit triggers or says why a test must not. This file names
-#: it to state the census. A new file is added here by a reviewed edit, never by default.
+#: The test files that name `session_replication_role`, written here as a fixed list, never
+#: computed: each either sets it to tamper below the audit triggers or says why a test must not.
+#: The list is the output of `git grep -l session_replication_role 0a1c9aac -- backend/tests`
+#: (seven files), with two differences: minus `test_bundle_hash_check.py`, which named the string
+#: at 0a1c9aac and was cleared of it by 3189e058; plus this file, which names it to state the
+#: census. The same command at the head of this branch lists exactly this set. A new file is
+#: added here by a reviewed edit, never by default.
 _SESSION_REPLICATION_ROLE_FILES = frozenset(
     {
         "conftest_db.py",
