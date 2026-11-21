@@ -11,7 +11,7 @@
     },
     "JobError": {
       "additionalProperties": false,
-      "description": "A typed failure (FR-403).\n\n`code` is the contract and `retryable` decides whether the platform will try again;\n`detail` carries the field-level cause where the failure is deterministic, which is\nwhat lets the UI point at the offending input instead of showing a stack trace.",
+      "description": "A typed failure (FR-403).\n\n`code` is the contract and `retryable` decides whether the platform will try again;\n`detail` carries the field-level cause where the failure is deterministic, which is\nwhat lets the UI point at the offending input instead of showing a stack trace.\n`location` is the typed form of that pointer (#1917): identifiers of the caller's own\nartifact, never a submitted value.",
       "properties": {
         "code": {
           "pattern": "^[A-Z][A-Z0-9_]*$",
@@ -22,6 +22,17 @@
           "additionalProperties": true,
           "title": "Detail",
           "type": "object"
+        },
+        "location": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/JobErrorLocation"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         },
         "message": {
           "title": "Message",
@@ -51,6 +62,157 @@
         "retryable"
       ],
       "title": "JobError",
+      "type": "object"
+    },
+    "JobErrorLocation": {
+      "additionalProperties": false,
+      "description": "Where in the caller's own artifact a deterministic refusal points (#1917, `07` §4.1).\n\nIdentifiers only: a step id, a path inside that step, a reference, a name the artifact\nitself declares. **Never a submitted value** is what the raise sites guarantee, by filling\nthis only from the caller's own artifact; no pattern can prove it. The model gives `ref` and\n`structure` the wire form of an artifact reference (`REF_PATTERN`), `peril` a `PerilCode`\nand every other key a non-empty `str`; it refuses any other key, a JSON number and a location\nwith no key set. A digit string such as `\"42\"` is a valid value and is NOT refused. The key\nset is the one #1911 accepted.",
+      "properties": {
+        "factor": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Factor"
+        },
+        "feature": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Feature"
+        },
+        "field": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Field"
+        },
+        "interaction": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Interaction"
+        },
+        "key": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Key"
+        },
+        "objective": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Objective"
+        },
+        "operand": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Operand"
+        },
+        "peril": {
+          "anyOf": [
+            {
+              "pattern": "^[A-Z][A-Z0-9_]{0,31}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Peril"
+        },
+        "ref": {
+          "anyOf": [
+            {
+              "pattern": "^((banding|custom_metric|custom_objective|dataset|dataset_version|deployment|dossier|gipp_check|grouping|model|monitor|optimisation_run|peril_structure|rate_table|rating_algorithm|rating_version|reference_table|regression_suite|sub_graph|validation_rule|validation_rule_set):[a-z0-9][a-z0-9-]{1,62}|factor:[a-z0-9][a-z0-9_-]{1,62})@[1-9][0-9]*$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ref"
+        },
+        "step_id": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Step Id"
+        },
+        "structure": {
+          "anyOf": [
+            {
+              "pattern": "^((banding|custom_metric|custom_objective|dataset|dataset_version|deployment|dossier|gipp_check|grouping|model|monitor|optimisation_run|peril_structure|rate_table|rating_algorithm|rating_version|reference_table|regression_suite|sub_graph|validation_rule|validation_rule_set):[a-z0-9][a-z0-9-]{1,62}|factor:[a-z0-9][a-z0-9_-]{1,62})@[1-9][0-9]*$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Structure"
+        }
+      },
+      "title": "JobErrorLocation",
       "type": "object"
     },
     "JobKind": {

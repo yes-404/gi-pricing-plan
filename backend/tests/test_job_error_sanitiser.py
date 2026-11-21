@@ -30,7 +30,7 @@ from app.platform import jobs
 from app.platform.safe_exception import safe_job_error_text, safe_job_exc_info
 from app.worker import handlers
 from app.worker.tasks import execute_job
-from model_schema import JobKind, JobResult, JobStatus
+from model_schema import JobError, JobErrorLocation, JobKind, JobResult, JobStatus
 from pricing_core.progress import ProgressCallback
 
 _SENTINEL = "SENTINEL-quote-input-7f3a91c2"
@@ -50,11 +50,13 @@ def _isolate_handlers():
     handlers.HANDLERS.update(original)
 
 
-async def _run(database: Database, workspace_id, principal, handler) -> JobRow:
+async def _run(
+    database: Database, workspace_id, principal, handler, params: dict[str, Any] | None = None
+) -> JobRow:
     handlers.register_handler(JobKind.MODEL_FIT, handler)
     async with database.unit_of_work() as session:
         job = await jobs.submit(
-            session, JobKind.MODEL_FIT, {}, principal, workspace_id=workspace_id
+            session, JobKind.MODEL_FIT, params or {}, principal, workspace_id=workspace_id
         )
     assert await execute_job(database, job.id) is JobStatus.FAILED
     async with database.session() as session:
@@ -363,3 +365,86 @@ async def test_a_plain_value_error_in_the_shape_of_a_coded_one_stays_job_handler
     assert row.error["code"] == "JOB_HANDLER_FAILED"
     assert row.error["message"] == "ValueError"
 
+
+@pytest.mark.req("FR-403")
+async def test_a_refusal_carrying_a_location_stores_it_and_never_a_submitted_value(
+    database: Database, workspace_id, principal
+) -> None:
+    """#1917: `PlatformError.location` reaches `JobError.location`, by equality, and a
+    submitted value in the message does not become part of it."""
+
+    def handler(params: dict[str, Any], progress: ProgressCallback) -> JobResult:
+        raise PlatformError(
+            "VALIDATION_FAILED",
+            "The step is invalid",
+            422,
+            "The step is invalid.",
+            location=JobErrorLocation(step_id="s_rp", field="inputs.age"),
+        )
+
+    # The sentinel is a submitted value (it passes the `step_id` grammar, so a location built
+    # from it would validate): it must be absent from the stored row.
+    row = await _run(database, workspace_id, principal, handler, params={"step_id": _SENTINEL})
+
+    assert row.error is not None
+    located = JobError.from_stored(row.error).location
+    assert located == JobErrorLocation(step_id="s_rp", field="inputs.age")
+    assert _SENTINEL not in str(row.error)
+    assert row.parameters == {"step_id": _SENTINEL}  # the one place the request's value lives
+
+
+#: The keys of `JobError` as it stood at origin/main 5564a6d1: a stored row holds these and no
+#: other, so the previous version (`extra="forbid"`) reads it (`07` NFR-531). The frozen copy of
+#: that model itself is held in `packages/model-schema/tests/test_jobs.py`.
+_PREVIOUS_JOB_ERROR_KEYS = {"code", "message", "retryable", "detail", "trace_id"}
+
+
+@pytest.mark.req("NFR-531")
+async def test_a_stored_located_row_keeps_the_location_in_detail_for_the_previous_reader(
+    database: Database, workspace_id, principal
+) -> None:
+    def handler(params: dict[str, Any], progress: ProgressCallback) -> JobResult:
+        raise PlatformError(
+            "VALIDATION_FAILED", "The step is invalid", 422, location={"step_id": "base premium"}
+        )
+
+    row = await _run(database, workspace_id, principal, handler)
+
+    assert row.error is not None
+    assert set(row.error) <= _PREVIOUS_JOB_ERROR_KEYS, row.error
+    assert row.error["detail"] == {"_location": {"step_id": "base premium"}}
+    assert JobError.from_stored(row.error).location == JobErrorLocation(step_id="base premium")
+
+
+@pytest.mark.req("FR-403")
+@pytest.mark.parametrize("bad", [{}, {"nope": "x"}, {"step_id": 42}, {"ref": "not-a-reference"}])
+async def test_a_location_that_cannot_be_built_leaves_the_job_under_its_own_code(
+    database: Database, workspace_id, principal, bad: dict[str, Any]
+) -> None:
+    """Review of #1930, point 3: a refusal never loses its code to its own location."""
+
+    def handler(params: dict[str, Any], progress: ProgressCallback) -> JobResult:
+        raise PlatformError("VALIDATION_FAILED", "The step is invalid", 422, location=bad)
+
+    row = await _run(database, workspace_id, principal, handler)
+
+    assert row.error is not None
+    assert row.error["code"] == "VALIDATION_FAILED"
+    assert set(row.error) <= _PREVIOUS_JOB_ERROR_KEYS
+    assert row.error["detail"] == {}
+    assert JobError.from_stored(row.error).location is None
+
+
+@pytest.mark.req("FR-403")
+async def test_a_refusal_without_a_location_stores_no_location_key_at_all(
+    database: Database, workspace_id, principal
+) -> None:
+    def handler(params: dict[str, Any], progress: ProgressCallback) -> JobResult:
+        raise PlatformError("VALIDATION_FAILED", "The quote is invalid", 422)
+
+    row = await _run(database, workspace_id, principal, handler)
+
+    assert row.error is not None
+    assert set(row.error) <= _PREVIOUS_JOB_ERROR_KEYS
+    assert row.error["detail"] == {}
+    assert JobError.from_stored(row.error).location is None

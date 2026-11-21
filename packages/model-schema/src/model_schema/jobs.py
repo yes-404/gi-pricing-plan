@@ -11,13 +11,16 @@ the job sits `queued` forever with nothing to explain why.
 from __future__ import annotations
 
 import enum
+from collections.abc import Mapping
 from datetime import datetime
 from typing import Annotated, Any
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator, model_validator
 
 from model_schema.input_free import InputFreeError
+from model_schema.perils import PerilCode
+from model_schema.refs import REF_PATTERN
 
 __all__ = [
     "TERMINAL_STATUSES",
@@ -25,6 +28,7 @@ __all__ = [
     "ActorKind",
     "Job",
     "JobError",
+    "JobErrorLocation",
     "JobKind",
     "JobQueue",
     "JobResult",
@@ -171,12 +175,52 @@ class JobResult(BaseModel):
         return self
 
 
+#: Where a location is stored inside a Job error's `detail`: the one place the previous version's
+#: reader (`extra="forbid"`, `detail: dict[str, Any]`) already accepts free content (`07` NFR-531).
+LOCATION_DETAIL_KEY = "_location"
+
+
+class JobErrorLocation(BaseModel):
+    """Where in the caller's own artifact a deterministic refusal points (#1917, `07` §4.1).
+
+    Identifiers only: a step id, a path inside that step, a reference, a name the artifact
+    itself declares. **Never a submitted value** is what the raise sites guarantee, by filling
+    this only from the caller's own artifact; no pattern can prove it. The model gives `ref` and
+    `structure` the wire form of an artifact reference (`REF_PATTERN`), `peril` a `PerilCode`
+    and every other key a non-empty `str`; it refuses any other key, a JSON number and a location
+    with no key set. A digit string such as `"42"` is a valid value and is NOT refused. The key
+    set is the one #1911 accepted.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    step_id: str | None = Field(default=None, min_length=1)
+    field: str | None = Field(default=None, min_length=1)
+    ref: str | None = Field(default=None, pattern=REF_PATTERN)
+    objective: str | None = Field(default=None, min_length=1)
+    structure: str | None = Field(default=None, pattern=REF_PATTERN)
+    factor: str | None = Field(default=None, min_length=1)
+    key: str | None = Field(default=None, min_length=1)
+    feature: str | None = Field(default=None, min_length=1)
+    interaction: str | None = Field(default=None, min_length=1)
+    operand: str | None = Field(default=None, min_length=1)
+    peril: PerilCode | None = None
+
+    @model_validator(mode="after")
+    def _points_somewhere(self) -> JobErrorLocation:
+        if all(value is None for value in self.model_dump().values()):
+            raise InputFreeError("a location must name at least one identifier")
+        return self
+
+
 class JobError(BaseModel):
     """A typed failure (FR-403).
 
     `code` is the contract and `retryable` decides whether the platform will try again;
     `detail` carries the field-level cause where the failure is deterministic, which is
     what lets the UI point at the offending input instead of showing a stack trace.
+    `location` is the typed form of that pointer (#1917): identifiers of the caller's own
+    artifact, never a submitted value.
     """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
@@ -185,7 +229,54 @@ class JobError(BaseModel):
     message: str
     retryable: bool
     detail: dict[str, Any] = Field(default_factory=dict)
+    location: JobErrorLocation | None = None
     trace_id: str | None = Field(default=None, pattern="^[0-9a-f]{32}$")
+
+    @field_validator("detail")
+    @classmethod
+    def _detail_does_not_carry_the_reserved_key(cls, detail: dict[str, Any]) -> dict[str, Any]:
+        if LOCATION_DETAIL_KEY in detail:
+            raise InputFreeError(f"detail may not carry the reserved key {LOCATION_DETAIL_KEY!r}")
+        return detail
+
+    # Two forms. The wire form (`model_dump`) carries `location` and is what the API returns. The
+    # stored form (`stored_form`) keeps the location inside `detail` under `LOCATION_DETAIL_KEY`,
+    # so the previous version can read every row this one writes (`07` NFR-531); `from_stored` is
+    # its one reader. The constructor refuses that key in `detail`, so only `from_stored` can
+    # consume it.
+    def stored_form(self) -> dict[str, Any]:
+        """The mapping to store: no `location` key, the location folded into `detail`.
+
+        A location is an aid and never costs the error its code: if folding fails, the mapping
+        is returned without a location.
+        """
+        stored = self.model_dump(mode="json", exclude={"location"})
+        if self.location is not None:
+            try:
+                folded = self.location.model_dump(mode="json", exclude_none=True)
+            except Exception:  # a location is an aid: nothing about it may lose the error
+                return stored
+            stored["detail"] = {**stored["detail"], LOCATION_DETAIL_KEY: folded}
+        return stored
+
+    @classmethod
+    def from_stored(cls, stored: Mapping[str, Any]) -> JobError:
+        """Build the error from a stored row, lifting the folded location into `location`.
+
+        Never raises on the location: a stored `_location` that is not a valid
+        `JobErrorLocation` is dropped and the error carries none. A row stored before
+        `location` existed has no such key and reads back with none.
+        """
+        fields = dict(stored)
+        detail = fields.get("detail")
+        if isinstance(detail, Mapping) and LOCATION_DETAIL_KEY in detail:
+            rest = {k: v for k, v in detail.items() if k != LOCATION_DETAIL_KEY}
+            fields["detail"] = rest
+            try:
+                fields["location"] = JobErrorLocation.model_validate(detail[LOCATION_DETAIL_KEY])
+            except ValidationError:
+                fields.pop("location", None)
+        return cls.model_validate(fields)
 
 
 class ResourceBudget(BaseModel):

@@ -231,6 +231,7 @@ async def execute_job(
                     code=exc.code,
                     message=exc.detail or exc.title,
                     retryable=False,
+                    location=exc.location,
                     trace_id=current_trace_id(),
                 ),
             )
