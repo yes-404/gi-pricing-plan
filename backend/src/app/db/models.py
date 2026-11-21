@@ -2334,7 +2334,7 @@ class RatingVersionRow(Base):
         UniqueConstraint("workspace_id", "slug", "version", name="uq_rating_versions_slug_version"),
         Index("ix_rating_versions_workspace", "workspace_id", "slug"),
         CheckConstraint(
-            "status IN ('draft', 'review', 'approved', 'live', 'retired')",
+            "status IN (" + ", ".join(f"'{s.value}'" for s in RatingVersionStatus) + ")",
             name="rating_version_status_is_in_the_lifecycle",
         ),
         {

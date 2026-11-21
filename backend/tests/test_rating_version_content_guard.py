@@ -424,6 +424,34 @@ def test_only_conftest_db_disables_the_two_guards() -> None:
     assert conftest.count(needle + " {trigger}") == 1
 
 
+@pytest.mark.req("FR-238")
+def test_the_migrations_status_tuple_is_the_enums_values() -> None:
+    """The migration keeps its own frozen literal (a migration never imports a live enum), and
+    the model's CHECK is built from `RatingVersionStatus`. A status added to the enum fails here
+    until a migration widens the CHECK and this literal is judged."""
+    import importlib.util
+    import pathlib
+
+    from app.db.models import RatingVersionRow
+    from model_schema import RatingVersionStatus
+
+    path = next(
+        (pathlib.Path(__file__).parents[1] / "migrations" / "versions").glob("e5b2a7d94c13_*.py")
+    )
+    spec = importlib.util.spec_from_file_location("e5b2a7d94c13", path)
+    assert spec is not None
+    assert spec.loader is not None
+    migration = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(migration)
+    assert tuple(s.value for s in RatingVersionStatus) == migration.STATUSES
+    check = next(
+        c
+        for c in RatingVersionRow.__table__.constraints
+        if str(c.name).endswith("rating_version_status_is_in_the_lifecycle")
+    )
+    assert all(f"'{s.value}'" in str(check.sqltext) for s in RatingVersionStatus)
+
+
 #: The test files that name `session_replication_role`, read with `grep -l` on 2026-11-21: each
 #: either sets it to tamper below the audit triggers or says why a test must not. This file names
 #: it to state the census. A new file is added here by a reviewed edit, never by default.
