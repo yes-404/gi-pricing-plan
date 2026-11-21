@@ -638,7 +638,13 @@ async def test_a_value_at_an_ancestor_level_in_the_backtest_data_fails_the_job_w
     assert job_row is not None
     assert job_row.error is not None
     assert job_row.error["code"] == "GROUPING_VALUE_AT_ANCESTOR_LEVEL"
-    assert "The backtest could not be computed" in job_row.error["message"]
+    # The fixed sentence, whole: a narrowed catch lets the error reach `execute_job`'s generic
+    # clause, which keeps the code and loses this sentence (and the 409).
+    from app.worker import model_handlers
+
+    assert job_row.error["message"] == model_handlers._backtest_refusal(
+        GroupingAncestorLevelError("GROUPING_VALUE_AT_ANCESTOR_LEVEL", "x")
+    ).detail
     assert "'area'" not in job_row.error["message"]
 
 
@@ -700,7 +706,14 @@ async def test_a_real_chain_value_at_an_ancestor_level_fails_the_backtest_with_i
     assert job_row is not None
     assert job_row.error is not None
     assert job_row.error["code"] == "GROUPING_VALUE_AT_ANCESTOR_LEVEL"
-    assert "The backtest could not be computed" in job_row.error["message"]
+    # The fixed sentence, whole: a narrowed catch lets the error reach `execute_job`'s generic
+    # clause, which keeps the code and loses this sentence (and the 409).
+    from app.worker import model_handlers
+    from pricing_core.modelling.errors import GroupingAncestorLevelError
+
+    assert job_row.error["message"] == model_handlers._backtest_refusal(
+        GroupingAncestorLevelError("GROUPING_VALUE_AT_ANCESTOR_LEVEL", "x")
+    ).detail
     assert "u1" not in str(job_row.error)
 
 
@@ -772,7 +785,15 @@ async def test_a_real_chain_value_at_an_ancestor_level_fails_an_offset_backtest_
     assert job_row is not None
     assert job_row.error is not None
     assert job_row.error["code"] == "GROUPING_VALUE_AT_ANCESTOR_LEVEL"
-    assert "The offset model could not be scored" in job_row.error["message"]
+    # The fixed sentence, whole: a narrowed catch lets the error reach `execute_job`'s generic
+    # clause, which keeps the code and loses this sentence (and the 409).
+    from app.worker import model_handlers
+    from pricing_core.modelling.errors import GroupingAncestorLevelError
+
+    assert job_row.error["message"] == model_handlers._offset_refusal(
+        GroupingAncestorLevelError("GROUPING_VALUE_AT_ANCESTOR_LEVEL", "x"),
+        where="the backtest data",
+    ).detail
     assert "u1" not in str(job_row.error)
 
 

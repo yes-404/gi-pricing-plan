@@ -799,6 +799,13 @@ async def test_a_value_at_an_ancestor_level_escaping_the_diagnostics_fails_the_j
     assert job_row.error is not None
     assert job_row.error["code"] == "GROUPING_VALUE_AT_ANCESTOR_LEVEL"
     assert job_row.error["code"] != "JOB_HANDLER_FAILED"
+    # The fixed sentence, whole: a narrowed catch lets the error reach `execute_job`'s generic
+    # clause, which keeps the code and loses this sentence (and the 409).
+    from app.worker import model_handlers
+
+    assert job_row.error["message"] == model_handlers._diagnostics_refusal(
+        GroupingAncestorLevelError("GROUPING_VALUE_AT_ANCESTOR_LEVEL", "x")
+    ).detail
     assert model.fit_result is None  # nothing was stored past the refusal
 
 
@@ -853,6 +860,14 @@ async def test_a_holdout_value_at_an_ancestor_level_fails_the_fit_with_its_code(
     assert job_row is not None
     assert job_row.error is not None
     assert job_row.error["code"] == "GROUPING_VALUE_AT_ANCESTOR_LEVEL"
+    # The fixed sentence, whole: a narrowed catch lets the error reach `execute_job`'s generic
+    # clause, which keeps the code and loses this sentence (and the 409).
+    from app.worker import model_handlers
+    from pricing_core.modelling.errors import GroupingAncestorLevelError
+
+    assert job_row.error["message"] == model_handlers._diagnostics_refusal(
+        GroupingAncestorLevelError("GROUPING_VALUE_AT_ANCESTOR_LEVEL", "x")
+    ).detail
     assert "u1" not in str(job_row.error)
     assert model.fit_result is None  # nothing was stored past the refusal
 
@@ -937,7 +952,14 @@ async def test_a_value_at_an_ancestor_level_fails_an_offset_fit_with_its_code(
     assert job_row is not None
     assert job_row.error is not None
     assert job_row.error["code"] == "GROUPING_VALUE_AT_ANCESTOR_LEVEL"
-    assert "The offset model could not be scored" in job_row.error["message"]
+    # The fixed sentence, whole: a narrowed catch lets the error reach `execute_job`'s generic
+    # clause, which keeps the code and loses this sentence (and the 409).
+    from app.worker import model_handlers
+    from pricing_core.modelling.errors import GroupingAncestorLevelError
+
+    assert job_row.error["message"] == model_handlers._offset_refusal(
+        GroupingAncestorLevelError("GROUPING_VALUE_AT_ANCESTOR_LEVEL", "x")
+    ).detail
     assert "u1" not in str(job_row.error)
     assert model.fit_result is None
 
@@ -999,7 +1021,13 @@ async def test_a_value_at_an_ancestor_level_escaping_the_quantile_crossing_keeps
     assert job_row is not None
     assert job_row.error is not None
     assert job_row.error["code"] == "GROUPING_VALUE_AT_ANCESTOR_LEVEL"
-    assert "The fit's diagnostics could not be computed" in job_row.error["message"]
+    # The fixed sentence, whole: a narrowed catch lets the error reach `execute_job`'s generic
+    # clause, which keeps the code and loses this sentence (and the 409).
+    from app.worker import model_handlers
+
+    assert job_row.error["message"] == model_handlers._diagnostics_refusal(
+        GroupingAncestorLevelError("GROUPING_VALUE_AT_ANCESTOR_LEVEL", "x")
+    ).detail
     assert "'area'" not in job_row.error["message"]
 
 
