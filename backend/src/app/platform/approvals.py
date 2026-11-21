@@ -450,14 +450,13 @@ async def decide(
             "leaves the submitter guessing.",
         )
 
-    session.add(
-        ApprovalDecisionRow(
-            request_id=row.id,
-            approver_id=approver.id,
-            decision=decision.value,
-            comment=comment,
-        )
+    decision_row = ApprovalDecisionRow(
+        request_id=row.id,
+        approver_id=approver.id,
+        decision=decision.value,
+        comment=comment,
     )
+    session.add(decision_row)
     try:
         await session.flush()
     except IntegrityError:
@@ -486,7 +485,15 @@ async def decide(
         action=f"approval_request.{decision.value}",
         entity_ref=row.artifact_ref,
         before={"status": ApprovalStatus.REVIEW.value, "approvers_recorded": approvals - 1},
-        after={"status": new_status.value, "approvers_recorded": approvals},
+        # The ids let a reconciliation match this event to its request and its decision row
+        # exactly (FR-2163); events written before they were added are matched by
+        # (entity_ref, actor, decision).
+        after={
+            "status": new_status.value,
+            "approvers_recorded": approvals,
+            "approval_request_id": str(row.id),
+            "decision_id": str(decision_row.id),
+        },
         justification=comment,
     )
     return row
@@ -534,7 +541,11 @@ async def withdraw(
     before = row.status
     row.status = ApprovalStatus.WITHDRAWN.value
     row.withdrawn_reason = reason
-    row.decided_at = datetime.now(UTC)
+    if before == ApprovalStatus.REVIEW.value:
+        # The moment of a decision is written once, on leaving review (the database holds it:
+        # `approval_requests_decision_guard`); the withdrawal of an approved request leaves it,
+        # and its own time is the audit event's.
+        row.decided_at = datetime.now(UTC)
     await session.flush()
 
     await audit.record(

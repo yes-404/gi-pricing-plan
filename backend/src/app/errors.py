@@ -470,6 +470,10 @@ _GENERIC_ERROR_CODES: Final[frozenset[str]] = frozenset(
         # reference. Deliberately not in a spec's error block (the maintainer's ruling,
         # 2026-11-14): no client can act on it.
         "BLOB_REFERENCE_INVARIANT_BREACHED",
+        # `03` FR-240's bundle comparison at load (#1907): the bundle a Rating Version names does
+        # not match the hash recorded for it. An internal integrity error (500), recorded in
+        # prose in `03` FR-267, never in a spec's client-facing error block.
+        "BUNDLE_HASH_MISMATCH",
     }
 )
 
