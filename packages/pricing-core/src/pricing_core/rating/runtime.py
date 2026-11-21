@@ -38,7 +38,7 @@ from __future__ import annotations
 
 import heapq
 import json
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Callable, Iterator, Mapping, Sequence
 from dataclasses import dataclass, field
 from datetime import date
 from decimal import Decimal
@@ -664,7 +664,7 @@ class _ModelCallRefusal(Exception):  # noqa: N818 — a control-flow carrier, ne
     """A `model_call` that cannot be scored; the handler turns it into `_model_call_failure`."""
 
 
-def _step_model_refs(step: RatingModelCallStep, payloads: Mapping[str, Any]) -> list[str]:
+def step_model_refs(step: RatingModelCallStep, payloads: Mapping[str, Any]) -> list[str]:
     """The model refs a step scores through: its one model, or a Peril Structure's components.
 
     A structure's components are read from the structure's own payload, which the Bundle
@@ -693,7 +693,7 @@ def _required_slugs(
     if ref_of_step is None or str(ref_of_step) not in payloads:
         return frozenset()
     required: set[str] = set()
-    for ref in _step_model_refs(step, payloads):
+    for ref in step_model_refs(step, payloads):
         if ref not in payloads:
             continue
         scorer = glm_scorers.get(ref)
@@ -847,7 +847,7 @@ def _model_call_handler(
     step is compiled with an explicit `result_type`, so its unrounded behaviour is in its
     bytes and hash; a GLM step without one rounds like any other.
     """
-    glm_scorers = scorers if scorers is not None else _load_glm_scorers([algorithm], payloads)
+    glm_scorers = scorers if scorers is not None else load_glm_scorers([algorithm], payloads)
     steps_by_id = {
         step.step_id: step
         for step in algorithm.steps
@@ -1047,7 +1047,7 @@ def _glm_scorer(ref: str, payloads: Mapping[str, Any]) -> _GlmScorer:
     )
 
 
-def _load_glm_scorers(
+def load_glm_scorers(
     algorithms: Sequence[RatingAlgorithm], payloads: Mapping[str, Any]
 ) -> dict[str, _GlmScorer]:
     """Rebuild every pinned GLM once per loaded bundle (the `_load_boosters` of the GLM arm),
@@ -1059,12 +1059,20 @@ def _load_glm_scorers(
         ref_of_step = step.model_ref or step.peril_structure_ref
         if ref_of_step is None or str(ref_of_step) not in payloads:
             continue
-        for ref in _step_model_refs(step, payloads):
+        for ref in step_model_refs(step, payloads):
             if ref in scorers or ref not in payloads:
                 continue
             if (payloads[ref].get("fit_result") or {}).get("model_type") == "glm":
                 scorers[ref] = _glm_scorer(ref, payloads)
     return scorers
+
+
+def scorer_chain(ref: str, scorer: _GlmScorer) -> Iterator[tuple[str, _GlmScorer]]:
+    """A GLM scorer and then, in order, each scorer its offset reads: the model's ref and its
+    scorer, then its offset model's, recursively (`_glm_scorer` builds the chain)."""
+    yield ref, scorer
+    if scorer.offset_source is not None:
+        yield from scorer_chain(str(scorer.spec.offset.offset_model_ref), scorer.offset_source)
 
 
 def refuse_control_in_bundle(
@@ -1080,14 +1088,11 @@ def refuse_control_in_bundle(
     and deploy, and the stored-bundle sweep, cover those).
     """
     pool = list(_carried(payloads, "factor", Factor).values())
-
-    def check(ref: str, scorer: _GlmScorer) -> None:
-        refuse_control_in_features(ref, payloads[ref].get("fit_result"), scorer.factors, pool)
-        if scorer.offset_source is not None:
-            check(str(scorer.spec.offset.offset_model_ref), scorer.offset_source)
-
     for ref, scorer in scorers.items():
-        check(ref, scorer)
+        for chained_ref, chained in scorer_chain(ref, scorer):
+            refuse_control_in_features(
+                chained_ref, payloads[chained_ref].get("fit_result"), chained.factors, pool
+            )
 
 
 def _load_boosters(
@@ -1118,7 +1123,7 @@ def _load_boosters(
                 f"RATING_VERSION_UNPINNED: model_call step {step.step_id!r} names {step_ref}, "
                 "which the bundle does not carry (FR-237)"
             )
-        for ref_str in _step_model_refs(step, payloads):
+        for ref_str in step_model_refs(step, payloads):
             if ref_str in boosters:
                 continue
             fit_result = payloads[ref_str].get("fit_result", {})
@@ -1193,6 +1198,18 @@ def _check_graph_matches_inlined_algorithm(graph: JdmGraph, algorithm: RatingAlg
         ) from None
 
 
+def inlined_algorithms(bundle: Bundle) -> tuple[RatingAlgorithm, dict[str, RatingAlgorithm]]:
+    """The base algorithm a `Bundle` is scored by and one per purpose its mounts select, each
+    re-inlined from the payloads the Bundle already carries (`load_bundle`'s own first step)."""
+    stored = RatingAlgorithm.model_validate(bundle.resolved_payloads[bundle.algorithm_ref])
+    fragments = mounted_fragments(stored, bundle.pins, bundle.resolved_payloads)
+    algorithm = inline_mounts(stored, fragments)
+    purpose_algorithms = {
+        purpose: inline_mounts(stored, fragments, purpose) for purpose in bundle.purpose_graphs
+    }
+    return algorithm, purpose_algorithms
+
+
 def load_bundle(bundle: Bundle) -> CompiledBundle:
     """Hydrate a `Bundle` into a `CompiledBundle` (FR-243, RL-873).
 
@@ -1228,12 +1245,7 @@ def load_bundle(bundle: Bundle) -> CompiledBundle:
     `bundle.purpose_graphs`, re-inlined with that purpose and checked by the same C1. Each has its
     own decision and `model_call` handler; boosters and GLM scorers are built once and shared.
     """
-    stored = RatingAlgorithm.model_validate(bundle.resolved_payloads[bundle.algorithm_ref])
-    fragments = mounted_fragments(stored, bundle.pins, bundle.resolved_payloads)
-    algorithm = inline_mounts(stored, fragments)
-    purpose_algorithms = {
-        purpose: inline_mounts(stored, fragments, purpose) for purpose in bundle.purpose_graphs
-    }
+    algorithm, purpose_algorithms = inlined_algorithms(bundle)
     _check_graph_matches_inlined_algorithm(bundle.graph, algorithm)
     for purpose, purpose_graph in bundle.purpose_graphs.items():
         _check_graph_matches_inlined_algorithm(purpose_graph, purpose_algorithms[purpose])
@@ -1241,7 +1253,7 @@ def load_bundle(bundle: Bundle) -> CompiledBundle:
     for each in every:
         check_step_refs_pinned(each, bundle.pins)
     boosters = _load_boosters(every, bundle.resolved_payloads)
-    scorers = _load_glm_scorers(every, bundle.resolved_payloads)
+    scorers = load_glm_scorers(every, bundle.resolved_payloads)
     refuse_control_in_bundle(bundle.resolved_payloads, scorers)
 
     def evaluation(graph: JdmGraph, inlined: RatingAlgorithm) -> PurposeEvaluation:

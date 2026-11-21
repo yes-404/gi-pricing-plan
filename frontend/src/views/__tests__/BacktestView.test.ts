@@ -2,7 +2,7 @@ import { render, screen, within } from "@testing-library/vue";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import BacktestView from "../BacktestView.vue";
-import { BACKTEST, GBM_MODEL } from "./fixtures";
+import { BACKTEST, GBM_MODEL, GLM_MODEL } from "./fixtures";
 
 // Same reason as `DiagnosticsView.test.ts:14-24`: ECharts paints to a canvas happy-dom does
 // not provide, and the unhandled `clearRect` on null exits vitest 1 while printing every test
@@ -128,5 +128,63 @@ describe("BacktestView", () => {
     render(BacktestView, { props, ...mounted });
     expect(await screen.findByRole("table", { name: /residual summary/i }))
       .toBeInTheDocument();
+  });
+});
+
+describe("BacktestView, the rows left out on an unseen level (FR-2143)", () => {
+  const withExcluded = (rows: number | undefined, exposure: string | undefined): unknown => {
+    const partition = { ...BACKTEST.summary.partition };
+    delete (partition as Record<string, unknown>).rows_excluded_unseen_level;
+    delete (partition as Record<string, unknown>).exposure_excluded_unseen_level;
+    return {
+      ...BACKTEST,
+      summary: {
+        ...BACKTEST.summary,
+        partition: {
+          ...partition,
+          ...(rows === undefined ? {} : { rows_excluded_unseen_level: rows }),
+          ...(exposure === undefined ? {} : { exposure_excluded_unseen_level: exposure }),
+        },
+      },
+    };
+  };
+  const glm = (backtest: unknown): ReturnType<typeof vi.fn> =>
+    stubByUrl({
+      "/models/backtests/": { body: backtest },
+      "/models/motor-frequency": { body: GLM_MODEL },
+    });
+
+  it("states the count and exposure left out of a GLM's backtest", async () => {
+    glm(withExcluded(50, "50.0"));
+    render(BacktestView, { props, ...mounted });
+    const section = await screen.findByLabelText("Rows on a level this fit never saw");
+
+    expect(section).toHaveTextContent("Backtest: 50 rows (exposure 50.0) are left out of every figure");
+  });
+
+  it("says none were left out when the count is 0", async () => {
+    glm(withExcluded(0, "0"));
+    render(BacktestView, { props, ...mounted });
+    const section = await screen.findByLabelText("Rows on a level this fit never saw");
+
+    expect(section).toHaveTextContent("Backtest: none left out");
+  });
+
+  it("says not recorded for a backtest stored ahead of the rule, never none", async () => {
+    glm(withExcluded(undefined, undefined));
+    render(BacktestView, { props, ...mounted });
+    const section = await screen.findByLabelText("Rows on a level this fit never saw");
+
+    expect(section).toHaveTextContent("Backtest: not recorded");
+    expect(section).not.toHaveTextContent("none left out");
+  });
+
+  it("shows no section for a GBM, which refuses such a level whatever is declared", async () => {
+    stubBoth(withExcluded(undefined, undefined));
+    render(BacktestView, { props, ...mounted });
+    await screen.findByRole("table", { name: /headline metrics/i });
+
+    expect(screen.queryByLabelText("Rows on a level this fit never saw")).not.toBeInTheDocument();
+    expect(screen.queryByText(/not recorded/i)).not.toBeInTheDocument();
   });
 });
