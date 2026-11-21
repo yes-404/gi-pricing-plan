@@ -494,7 +494,11 @@ def build_location(
     `model_construct`, or copied with `model_copy(update=...)`, was never validated."""
     if location is None:
         return None
-    candidate = location.model_dump() if isinstance(location, JobErrorLocation) else location
+    # `warnings=False`: this is a sink and must never raise; pydantic warns when it dumps a field of
+    # the wrong type, and under warnings-as-errors that warning would be the very escape it closes.
+    candidate = (
+        location.model_dump(warnings=False) if isinstance(location, JobErrorLocation) else location
+    )
     try:
         return JobErrorLocation.model_validate(candidate)
     except ValidationError as exc:

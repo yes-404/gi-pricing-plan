@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import warnings
 
 import pytest
 from fastapi import FastAPI
@@ -399,6 +400,27 @@ def test_build_location_checks_an_instance_like_a_mapping(
     assert "VALIDATION_FAILED" in lines[0]
     assert "keys=step_id" in lines[0]
     assert _LOCATION_SENTINEL not in caplog.text
+
+
+@pytest.mark.req("NFR-499")
+def test_build_location_never_raises_on_an_instance_with_a_badly_typed_field(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """The sink must never raise: dumping an unvalidated instance whose field has the wrong type
+    makes pydantic warn, and under warnings-as-errors that warning would be exactly the escape
+    this check exists to close. The instance is dropped with the one warning, and None returned."""
+    instance = JobErrorLocation.model_construct(step_id=42)
+    with (
+        caplog.at_level(logging.WARNING, logger="app.errors"),
+        warnings.catch_warnings(),  # scoped to the call: a fixture's own warnings stay warnings
+    ):
+        warnings.simplefilter("error")
+        built = build_location("VALIDATION_FAILED", instance)
+
+    assert built is None
+    lines = [r.getMessage() for r in caplog.records if r.name == "app.errors"]
+    assert len(lines) == 1, lines
+    assert "keys=step_id" in lines[0]
 
 
 @pytest.mark.req("NFR-499")
