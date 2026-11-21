@@ -861,3 +861,40 @@ async def test_a_value_at_an_ancestor_level_escaping_the_surrogates_diagnostics_
         GroupingAncestorLevelError("GROUPING_VALUE_AT_ANCESTOR_LEVEL", "x")
     ).detail
     assert "'area'" not in f"{refusal.title} {refusal.detail}"
+
+
+@pytest.mark.req("FR-109")
+async def test_a_value_at_an_ancestor_level_escaping_the_shap_summary_keeps_its_code(
+    database: Database, blob_store: BlobStore, workspace_id: UUID,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """FR-109 at the SHAP summary of a GBM's transparency artifact: the summary resolves the
+    factors on the sample (`build_shap_summary`), and a refusal that escapes it keeps its code and
+    the fixed sentence, never `JOB_HANDLER_FAILED` and never the exception's text.
+
+    Patched, because the one case that reaches it is a GBM fitted before the ancestor rule whose
+    data holds an ancestor-level value (the fit itself now refuses such data), and that legacy
+    model cannot be built cheaply."""
+    from app.worker import model_handlers
+    from pricing_core.modelling.errors import GroupingAncestorLevelError
+
+    model_id, _ = await _fitted_gbm(database, blob_store, workspace_id)
+    actor = await _actuary(database, workspace_id)
+
+    def _refuse(*_args: object, **_kwargs: object) -> object:
+        raise GroupingAncestorLevelError(
+            "GROUPING_VALUE_AT_ANCESTOR_LEVEL",
+            "grouping 'region'@2 has the parent chain 'region'@1, and a value in 'area' is a "
+            "source level of an ancestor grouping, not of this one (FR-109).",
+        )
+
+    monkeypatch.setattr(pricing_modelling, "build_shap_summary", _refuse)
+
+    refusal = await _transparency_refusal(database, blob_store, workspace_id, model_id, actor)
+
+    assert refusal.code == "GROUPING_VALUE_AT_ANCESTOR_LEVEL"
+    assert refusal.status_code == 409
+    assert refusal.detail == model_handlers._diagnostics_refusal(
+        GroupingAncestorLevelError("GROUPING_VALUE_AT_ANCESTOR_LEVEL", "x")
+    ).detail
+    assert "'area'" not in f"{refusal.title} {refusal.detail}"

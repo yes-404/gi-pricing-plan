@@ -1226,14 +1226,19 @@ def _transparency(parameters: dict[str, Any], callback: ProgressCallback) -> Job
             # the fixed value-free sentence (never the exception's text).
             raise _diagnostics_refusal(exc) from exc
     progress.update(0.62, "tree shap")
-    summary = build_shap_summary(
-        result, booster, spec, factors, frame,
-        holdout=holdout,
-        sample=sample,
-        bandings=transformations.bandings,
-        groupings=transformations.groupings,
-        progress=ScaledProgress(progress, start=0.62, end=0.90),
-    )
+    try:
+        summary = build_shap_summary(
+            result, booster, spec, factors, frame,
+            holdout=holdout,
+            sample=sample,
+            bandings=transformations.bandings,
+            groupings=transformations.groupings,
+            progress=ScaledProgress(progress, start=0.62, end=0.90),
+        )
+    except (PredictionError, GroupingAncestorLevelError) as exc:
+        # FR-109, FR-2143: the summary resolves the factors on the sample, so a refusal can escape
+        # it. It keeps its code, with the fixed sentence (never the exception's text).
+        raise _diagnostics_refusal(exc) from exc
 
     async def store() -> UUID:
         # **One transaction, and never a second inside it.** A failed compute leaves
