@@ -92,6 +92,11 @@ async def add_approved(session: AsyncSession, row: Any) -> Any:
 async def mark_approved(session: AsyncSession, row: Any) -> Any:
     """Move an existing row to `approved`, with its evidence written and flushed first."""
     if type(row) in _EVIDENCE:
+        if isinstance(row, RatingVersionRow) and row.status == "draft":
+            # A rating version in draft never moves to approved: it goes through review first,
+            # as the application's own path does.
+            row.status = "review"
+            await session.flush()
         await _write_evidence(session, row)
         row.status = "approved"
         await session.flush()

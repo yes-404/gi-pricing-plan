@@ -111,21 +111,25 @@ async def _refusal(conn: AsyncConnection, sql: str) -> tuple[str | None, str]:
     return None, ""
 
 
-async def plant(conn: AsyncConnection, status: str, *, slug: str = "held") -> UUID:
+async def plant(
+    conn: AsyncConnection, status: str, *, slug: str = "held", request: bool = True
+) -> UUID:
     """A rating version at `status` with content in every content column, and the decided
-    approval request its approved, live or retired status needs. In the caller's transaction."""
+    approval request its approved, live or retired status needs (`request=False`: none; a draft
+    planted with one is a held draft). In the caller's transaction."""
     ws, row_id = new_uuid7(), new_uuid7()
     ref = f"rating_version:{slug}@1"
     await conn.execute(text("SET LOCAL app.approval_decision = 'on'"))
-    await conn.execute(
-        text(
-            "INSERT INTO approval_requests (id, workspace_id, artifact_ref, artifact_type, "
-            "submitted_by, change_summary, status, approvers_required, decided_at) "
-            "VALUES (gen_random_uuid(), :ws, :ref, 'rating_version', gen_random_uuid(), 'c', "
-            "'approved', 1, now())"
-        ),
-        {"ws": ws, "ref": ref},
-    )
+    if request:
+        await conn.execute(
+            text(
+                "INSERT INTO approval_requests (id, workspace_id, artifact_ref, artifact_type, "
+                "submitted_by, change_summary, status, approvers_required, decided_at) "
+                "VALUES (gen_random_uuid(), :ws, :ref, 'rating_version', gen_random_uuid(), 'c', "
+                "'approved', 1, now())"
+            ),
+            {"ws": ws, "ref": ref},
+        )
     await conn.execute(
         text(
             "INSERT INTO rating_versions (id, workspace_id, slug, version, status, "
@@ -206,7 +210,7 @@ async def test_a_status_outside_the_lifecycle_is_refused_by_the_check(database: 
     """On a `draft` row (free for the content guard, and a status the approval guard does not
     hold) only the CHECK can refuse: 23514, naming `rating_version_status_is_in_the_lifecycle`."""
     async with rolled_back(database) as conn:
-        row_id = await plant(conn, "draft")
+        row_id = await plant(conn, "draft", request=False)
         state, message = await _refusal(
             conn, f"UPDATE rating_versions SET status = 'approvedx' WHERE id = '{row_id}'"
         )
@@ -277,7 +281,7 @@ async def test_the_status_check_names_the_five_statuses(database: Database) -> N
 @pytest.mark.req("FR-44")
 async def test_a_draft_version_is_free(database: Database) -> None:
     async with rolled_back(database) as conn:
-        row_id = await plant(conn, "draft")
+        row_id = await plant(conn, "draft", request=False)
         refused = {}
         for column in await _columns(conn):
             if column in {"status", "workspace_id", "slug", "version", "id"}:
@@ -289,6 +293,69 @@ async def test_a_draft_version_is_free(database: Database) -> None:
             if state is not None:
                 refused[column] = state
     assert refused == {}
+
+
+HELD_DRAFT = ("42501", "a draft whose reference has an approved request is held")
+NEVER_FROM_DRAFT = ("42501", "a rating version does not move from draft to approved or live")
+
+
+@pytest.mark.req("FR-44")
+async def test_a_draft_with_an_approved_request_refuses_a_bundle_change(
+    database: Database,
+) -> None:
+    async with rolled_back(database) as conn:
+        row_id = await plant(conn, "draft")
+        state, message = await _refusal(
+            conn,
+            "UPDATE rating_versions SET bundle = jsonb_set(bundle, '{blob_sha256}', "
+            f"'\"changed\"') WHERE id = '{row_id}'",
+        )
+    assert state == HELD_DRAFT[0], (state, message)
+    assert HELD_DRAFT[1] in message, message
+
+
+@pytest.mark.req("FR-44")
+async def test_a_draft_with_an_approved_request_refuses_review(database: Database) -> None:
+    async with rolled_back(database) as conn:
+        row_id = await plant(conn, "draft")
+        state, message = await _refusal(
+            conn, f"UPDATE rating_versions SET status = 'review' WHERE id = '{row_id}'"
+        )
+    assert state == HELD_DRAFT[0], (state, message)
+    assert HELD_DRAFT[1] in message, message
+
+
+@pytest.mark.req("FR-44")
+@pytest.mark.parametrize("target", ["approved", "live"])
+async def test_a_draft_never_moves_to_approved_or_live(database: Database, target: str) -> None:
+    """With the decided request present, so the approval guard passes and the content guard is
+    the refuser."""
+    async with rolled_back(database) as conn:
+        row_id = await plant(conn, "draft")
+        state, message = await _refusal(
+            conn, f"UPDATE rating_versions SET status = '{target}' WHERE id = '{row_id}'"
+        )
+    assert state == NEVER_FROM_DRAFT[0], (state, message)
+    assert NEVER_FROM_DRAFT[1] in message, message
+
+
+@pytest.mark.req("FR-44")
+async def test_a_version_returned_to_draft_with_an_approved_request_is_held(
+    database: Database,
+) -> None:
+    """`review` to `draft` is permitted; the change that follows is refused."""
+    async with rolled_back(database) as conn:
+        row_id = await plant(conn, "review")
+        await conn.execute(
+            text(f"UPDATE rating_versions SET status = 'draft' WHERE id = '{row_id}'")
+        )
+        state, message = await _refusal(
+            conn,
+            "UPDATE rating_versions SET bundle = jsonb_set(bundle, '{blob_sha256}', "
+            f"'\"changed\"') WHERE id = '{row_id}'",
+        )
+    assert state == HELD_DRAFT[0], (state, message)
+    assert HELD_DRAFT[1] in message, message
 
 
 @pytest.mark.req("FR-44")

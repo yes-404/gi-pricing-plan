@@ -3,7 +3,9 @@
 `01` FR-44, `06` FR-351 (clauses of 2026-11-16); ADR-2157. Four changes, one revision:
 
 * `rating_versions_content_guard()`, a `BEFORE UPDATE ... FOR EACH ROW` trigger. A row whose
-  status is `draft` is free. A row in `review` may change only along the two transitions the
+  status is `draft` is free unless an approved approval request exists for its reference
+  (`rating_version:<slug>@<version>`, same workspace): then no column and no status of it
+  changes. A row in `draft` never moves to `approved` or `live`. A row in `review` may change only along the two transitions the
   application's own writers make (`review` to `approved`, `review` to `draft`), which touch
   `status` and `updated_at` and nothing else. Every other change, in every other status
   (`approved`, `live`, `retired`, or one the platform does not define), is refused with
@@ -31,6 +33,7 @@ Create Date: 2026-11-16 12:00:00.000000+00:00
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Sequence
 
 import sqlalchemy as sa
@@ -50,7 +53,24 @@ CONTENT_GUARD_FUNCTION = """
 CREATE OR REPLACE FUNCTION rating_versions_content_guard() RETURNS trigger AS $fn$
 BEGIN
   IF OLD.status = 'draft' THEN
-    RETURN NEW;
+    IF NEW.status IN ('approved', 'live') THEN
+      RAISE EXCEPTION
+        'a rating version does not move from draft to approved or live (01 FR-44)'
+        USING ERRCODE = '42501',
+              DETAIL = 'table=rating_versions id=' || OLD.id || ' status=' || OLD.status;
+    END IF;
+    IF NOT EXISTS (
+      SELECT 1 FROM approval_requests r
+      WHERE r.workspace_id = OLD.workspace_id
+        AND r.status = 'approved'
+        AND r.artifact_ref = 'rating_version:' || OLD.slug || '@' || OLD.version
+    ) OR to_jsonb(NEW) = to_jsonb(OLD) THEN
+      RETURN NEW;
+    END IF;
+    RAISE EXCEPTION
+      'a draft whose reference has an approved request is held: it does not change (01 FR-44)'
+      USING ERRCODE = '42501',
+            DETAIL = 'table=rating_versions id=' || OLD.id || ' status=' || OLD.status;
   END IF;
   IF OLD.status = 'review' AND NEW.status IN ('approved', 'draft')
      AND (to_jsonb(NEW) - 'status' - 'updated_at') = (to_jsonb(OLD) - 'status' - 'updated_at') THEN
@@ -199,6 +219,27 @@ def upgrade() -> None:
         .execute(sa.text(f"SELECT count(*) FROM rating_versions WHERE status NOT IN ({known})"))
         .scalar_one()
     )
+    held_drafts = (
+        op.get_bind()
+        .execute(
+            sa.text(
+                "SELECT v.workspace_id, 'rating_version:' || v.slug || '@' || v.version "
+                "FROM rating_versions v WHERE v.status = 'draft' AND EXISTS ("
+                "SELECT 1 FROM approval_requests r WHERE r.workspace_id = v.workspace_id "
+                "AND r.status = 'approved' "
+                "AND r.artifact_ref = 'rating_version:' || v.slug || '@' || v.version) "
+                "ORDER BY 1, 2"
+            )
+        )
+        .all()
+    )
+    for workspace_id, reference in held_drafts:
+        logging.getLogger("alembic.runtime.migration").warning(
+            "held draft: workspace %s, %s is a draft with an approved request; "
+            "it is held and the upgrade does not stop",
+            workspace_id,
+            reference,
+        )
     if outside:
         raise RuntimeError(
             f"{outside} rating_versions row(s) hold a status outside the lifecycle; "

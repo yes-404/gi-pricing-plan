@@ -60,7 +60,7 @@ PINNED_GUARD_FUNCTION_MD5: dict[str, str] = {
     "peril_structures_composition_immutable": "53d6958a1db9583f458168c72da2e8f8",
     "peril_structures_reconciled_undeletable": "1e1dfaf61c4cb9240da81c7015b2c842",
     "rate_tables_pointer_only": "cd911971d3cf0d2e98a5e26397cb7843",
-    "rating_versions_content_guard": "07c7682b0da0fc628e080b05d782123d",
+    "rating_versions_content_guard": "3fe3e58a617a2ca25125a3921c31db2e",
     "reference_table_versions_publish_only": "be3b2a9ff80fcc600e098725b7ff23c9",
 }
 

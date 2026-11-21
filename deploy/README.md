@@ -221,6 +221,25 @@ docker compose -f deploy/docker-compose.yml --profile app up -d --wait --scale a
               AND r.artifact_ref = 'rating_version:' || rv.slug || '@' || rv.version);
   ROLLBACK;
   ```
+
+  Held drafts: a rating version in `draft` whose reference has an approved approval request is
+  held: no column of it and no status of it changes, and it never moves to `approved` or `live`.
+  The upgrade reports each such row by workspace and reference, as a warning in the `migrate`
+  step's log, and does not stop on them. The row stays held; make a new version from it. To list
+  them in advance:
+
+  ```sql
+  BEGIN READ ONLY;
+  SELECT rv.id, rv.workspace_id, rv.slug, rv.version
+    FROM rating_versions rv
+   WHERE rv.status = 'draft'
+     AND EXISTS (
+           SELECT 1 FROM approval_requests r
+            WHERE r.workspace_id = rv.workspace_id
+              AND r.status = 'approved'
+              AND r.artifact_ref = 'rating_version:' || rv.slug || '@' || rv.version);
+  ROLLBACK;
+  ```
 - **Rolling `api` to a new image is health-gated** (NFR-531). A plain `up --scale api=2`
   recreates every replica at once, so none is healthy until the new ones pass their healthcheck.
   Run `GIP_BUILD=<new> deploy/roll-api.sh [-t <seconds>] <project> <compose-file>...`. `lb`
