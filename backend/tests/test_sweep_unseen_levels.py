@@ -38,7 +38,7 @@ _MODEL = "model:motor-freq-glm@1"
 _CROSS = "factor:region_x_yoa@1"
 _HASH = "sha256:" + "d" * 64
 #: What every NOTREACHABLE line says it does not cover (#1943: the scorer refuses a chain of
-#: three models; #1949 fixes it).
+#: three models; #1949 is to fix it).
 _CAVEAT = "; not checked: an offset chain of three models, #1943"
 
 
