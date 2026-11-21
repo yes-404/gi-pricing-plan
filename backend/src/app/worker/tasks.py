@@ -34,6 +34,7 @@ from app.platform import jobs, outbox
 from app.platform.blobs import BlobStore
 from app.platform.safe_exception import (
     coded_job_error,
+    is_retryable_job_code,
     safe_job_error_text,
     safe_job_exc_info,
 )
@@ -268,7 +269,9 @@ async def execute_job(
                 JobError(
                     code=code,
                     message=message,
-                    retryable=False,
+                    # Information for the caller, never a retry: only a deadlock victim
+                    # (`CONCURRENT_WRITE_RETRY`, #1888 option (d)) is marked retryable.
+                    retryable=is_retryable_job_code(code),
                     trace_id=current_trace_id(),
                 ),
             )

@@ -35,9 +35,9 @@ import boto3
 from botocore.client import Config as BotoConfig
 from botocore.exceptions import BotoCoreError, ClientError
 from pydantic import BaseModel, ConfigDict, Field
-from sqlalchemy import CursorResult, String, any_, delete, literal, select, text, update
-from sqlalchemy.dialects.postgresql import ARRAY
+from sqlalchemy import CursorResult, select, text, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
+from sqlalchemy.exc import DBAPIError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import Settings
@@ -62,19 +62,24 @@ if TYPE_CHECKING:  # pragma: no cover
 
 __all__ = [
     "BLOB_OWNERS",
+    "GC_FUNCTION_STATEMENTS",
+    "GC_LOCK_TIMEOUT_S",
     "INSIDE_BLOB_OWNERS",
+    "OWNER_WRITERS",
     "QUOTE_INPUT_BLOB_COLUMNS",
     "STAGING_EXPIRY_DAYS",
     "UPLOAD_COMPLETE_WITHIN",
     "BlobOwner",
     "BlobStore",
     "GarbageCollectionReport",
+    "OwnerWriter",
     "PresignedUpload",
     "blob_key",
     "blob_not_found",
     "blob_probe",
     "blob_readable_by",
     "owner_count",
+    "render_gc_function_statements",
     "to_ref",
 ]
 
@@ -679,11 +684,11 @@ class BlobStore:
         **The collector owns its transactions** (it takes the `Database`, not a session), because
         the order is the safety property:
 
-        1. one unit of work deletes the rows with `_delete_unreferenced` — two statements: lock
-           the count-0 rows `FOR UPDATE`, then delete those no owner row names, with a snapshot
-           taken after the locks (its docstring says what that does and does not cover: the count
-           is re-checked under the row lock, the owners only as of the second statement's
-           snapshot) — and writes the audit event, then commits;
+        1. one unit of work deletes the rows by calling the owner-owned `SECURITY DEFINER`
+           function `blob_gc_delete_unreferenced` (#1550 (c); `_delete_unreferenced` says what it
+           does: lock the count-0 rows, delete those no owner row names with a snapshot taken
+           after the locks, look again before the commit for an owner row that appeared) — and
+           writes the audit event, then commits;
         2. only after that commit are the objects deleted, each under the digest's advisory lock
            and only if no row has appeared for it since (a concurrent `put` of the same bytes).
 
@@ -691,14 +696,63 @@ class BlobStore:
         row with no object, which is what a delete-then-rollback did. The audit event names the
         rows the statement actually deleted, not the ones a prior read expected to.
 
+        **The caller holds no open transaction when it calls this** (#1855 (v)). The audit event
+        takes the workspace's advisory lock, which a caller that holds an open transaction with an
+        audit event for the same workspace already holds idle on the client side; PostgreSQL does
+        not report that as a deadlock, so without a bound the call would never end. The first
+        statement of the unit of work is therefore `SET LOCAL lock_timeout` (`GC_LOCK_TIMEOUT_S`
+        seconds): on a timeout the run rolls back, nothing is deleted, and the call raises
+        `BLOB_GC_LOCK_TIMEOUT`. The Job runner holds no transaction while a handler runs
+        (`worker/tasks.py`, each status change is its own unit of work).
+
         `dry_run` defaults to **True**. A destructive sweep whose default is to destroy is
         a sweep someone runs by accident.
         """
         grace = grace_days if grace_days is not None else self._settings.blob_gc_grace_days
         cutoff = datetime.now(UTC) - timedelta(days=grace)
 
+        try:
+            report = await self._run_collection(
+                database,
+                actor=actor,
+                workspace_id=workspace_id,
+                dry_run=dry_run,
+                grace=grace,
+                cutoff=cutoff,
+            )
+        except DBAPIError as exc:
+            coded = _coded_gc_error(exc)
+            if coded is None:
+                raise
+            raise coded from exc
+
+        re_put = [
+            digest
+            for digest in report.deleted
+            if not await self._delete_object_if_unreferenced(database, digest)
+        ]
+        # `re_put` is known only after the audit event committed, so it is on the returned report
+        # and in the log, not in the event: the event records the rows deleted.
+        return report.model_copy(update={"re_put": tuple(re_put)}) if re_put else report
+
+    async def _run_collection(
+        self,
+        database: Database,
+        *,
+        actor: Principal,
+        workspace_id: UUID,
+        dry_run: bool,
+        grace: int,
+        cutoff: datetime,
+    ) -> GarbageCollectionReport:
+        """The collector's first unit of work: delete the rows (or count them) and audit the run."""
         found: list[tuple[str, int]]
         async with database.unit_of_work() as session:
+            # The FIRST statement: every lock this unit of work takes from here on, the row locks
+            # of the delete and the workspace's audit lock, is bounded. A caller that breaks the
+            # contract (it holds an open transaction that already holds that audit lock) gets a
+            # coded error and a rolled-back run, not a hung job (#1855 (v)).
+            await session.execute(text(f"SET LOCAL lock_timeout = {_GC_LOCK_TIMEOUT_MS}"))
             if dry_run:
                 # The count-and-age selector only, deliberately without the owner re-check: a
                 # dry run reports what the counts say, so a blob an owner names at count 0 (a
@@ -720,25 +774,21 @@ class BlobStore:
                 bytes_reclaimed=0 if dry_run else sum(size for _, size in found),
             )
             # Audited either way (FR-420): a dry run is evidence about what the platform
-            # believes is unreferenced, which is worth as much as the deletion itself.
+            # believes is unreferenced, which is worth as much as the deletion itself. **Under
+            # its own action** (#1895): a reader counting `blob.garbage_collected` counts
+            # deletions, and a preview that deleted nothing must not be one of them.
             await audit.record(
                 session,
                 workspace_id=workspace_id,
                 actor=actor,
                 source=JobSource.SYSTEM,
-                action="blob.garbage_collected",
+                action=(
+                    "blob.garbage_collection_previewed" if dry_run else "blob.garbage_collected"
+                ),
                 entity_ref="blob:gc@1",
                 after=report.model_dump(mode="json"),
             )
-
-        re_put = [
-            digest
-            for digest in report.deleted
-            if not await self._delete_object_if_unreferenced(database, digest)
-        ]
-        # `re_put` is known only after the audit event committed, so it is on the returned report
-        # and in the log, not in the event: the event records the rows deleted.
-        return report.model_copy(update={"re_put": tuple(re_put)}) if re_put else report
+        return report
 
     async def _delete_object_if_unreferenced(self, database: Database, digest: str) -> bool:
         """Delete one object whose row was just deleted; return False when the digest was re-put.
@@ -987,6 +1037,128 @@ INSIDE_BLOB_OWNERS: dict[str, str] = {
     ),
 }
 
+@dataclass(frozen=True)
+class OwnerWriter:
+    """One function that writes an owner place, and how it takes its reference (#1855 (iv)).
+
+    `file::function` names it; `takes` is `put`, `retain` or `promote_upload` (its own body calls
+    it, in the same transaction as the write), or another stated way: `via` names a helper in the
+    same file whose body calls one, or `reason` says why no reference is taken here. The census
+    test `test_blob_owner_writers.py` holds every entry against the code.
+    """
+
+    file: str
+    function: str
+    takes: str
+    via: str = ""
+    reason: str = ""
+
+
+#: For each place in `BLOB_OWNERS`, the functions that write it. The rule the collector's safety
+#: rests on: every writer takes a reference to the digest it names, in the same transaction as the
+#: owner row, so the reference count protects the blob and a writer that follows the rule waits on
+#: the row lock the collector holds (#1855 (iv)). Keyed by `BlobOwner.name`.
+OWNER_WRITERS: dict[str, tuple[OwnerWriter, ...]] = {
+    "dataset_versions.tables[*].blob": (
+        OwnerWriter(
+            "backend/src/app/data/ingestion.py", "ingest_upload", "via", via="_store_table"
+        ),
+        OwnerWriter("backend/src/app/data/ingestion.py", "correct_schema", "put"),
+        OwnerWriter("backend/src/app/platform/datasets.py", "derive_version", "retain"),
+        OwnerWriter(
+            "backend/src/app/worker/data_handlers.py",
+            "_derive.work",
+            "via",
+            via="_materialise_split",
+        ),
+        OwnerWriter("scripts/bench-score-batch.py", "_dataset_version", "put"),
+    ),
+    "jobs.result (kind = blob)": (
+        OwnerWriter(
+            "backend/src/app/platform/jobs.py",
+            "transition",
+            "earlier unit of work",
+            reason=(
+                "the result's digest was put, or promoted, with its reference in an earlier "
+                "committed unit of work of the handler; this write names it and takes none of its "
+                "own, and relies on that reference (the condition slice 3c carries forward: a Job "
+                "result's blob keeps a reference while the Job row names it)"
+            ),
+        ),
+    ),
+    "blob_uploads.sha256": (
+        OwnerWriter("backend/src/app/platform/blobs.py", "BlobStore.promote_upload", "retain"),
+    ),
+    "models.fit_result.booster_blob": (
+        OwnerWriter(
+            "backend/src/app/platform/modelling.py",
+            "record_fit",
+            "via",
+            via="backend/src/app/worker/model_handlers.py::_fit.store",
+        ),
+    ),
+    "models.fit_result.covariance_blob": (
+        OwnerWriter(
+            "backend/src/app/platform/modelling.py",
+            "record_fit",
+            "via",
+            via="backend/src/app/worker/model_handlers.py::_fit.store",
+        ),
+    ),
+    "rate_table_versions.cells": (
+        OwnerWriter("backend/src/app/platform/rate_tables.py", "_persist_new_version", "put"),
+    ),
+    "rating_versions.bundle.blob_sha256": (
+        OwnerWriter(
+            "backend/src/app/platform/rating_versions.py",
+            "record_bundle_blob",
+            "via",
+            via="backend/src/app/worker/rating_handlers.py::_rating_compile.work",
+        ),
+        OwnerWriter(
+            "backend/src/app/platform/rating_versions.py",
+            "compile_rating_version",
+            "names nothing",
+            reason="rewrites `bundle` without a `blob_sha256` key: it names no digest",
+        ),
+        OwnerWriter("scripts/bench-rating.py", "_seed", "put"),
+    ),
+    "rating_versions.evidence.structural_diff_blob": (
+        OwnerWriter(
+            "backend/src/app/platform/rating_versions.py",
+            "submit_for_review",
+            "via",
+            via="_structural_diff_gate",
+        ),
+    ),
+    "regression_runs.cases_blob_sha256": (
+        OwnerWriter(
+            "backend/src/app/platform/regression_runs.py",
+            "persist_run",
+            "via",
+            via="backend/src/app/worker/rating_handlers.py::_rating_regression.persist",
+        ),
+    ),
+    "dislocation_runs.movers_blob_sha256": (
+        OwnerWriter(
+            "backend/src/app/platform/dislocation_runs.py",
+            "persist_run",
+            "via",
+            via="backend/src/app/worker/dislocation_handlers.py::_dislocation_run.persist",
+        ),
+    ),
+    "scoring_traces.blob_sha256": (
+        OwnerWriter("backend/src/app/platform/traces.py", "write_trace", "put"),
+        OwnerWriter(
+            "backend/src/app/platform/traces.py",
+            "write_pending_trace",
+            "names nothing",
+            reason="writes `blob_sha256=None`: a pending row has no body yet",
+        ),
+        OwnerWriter("backend/src/app/platform/traces.py", "complete_pending_trace", "put"),
+    ),
+}
+
 #: One row per reference, in a column named `sha256`, over every owner place.
 _OWNER_ROWS_SQL = " UNION ALL ".join(f"({owner.digests})" for owner in BLOB_OWNERS)
 
@@ -996,63 +1168,117 @@ _OWNER_COUNTS_SQL = (
 )
 
 
-#: "No owner row names this blob", correlated to `blobs`. `NOT EXISTS`, not `NOT IN`: a NULL
-#: digest from an owner place (a model with no covariance blob) would make `NOT IN` match nothing.
-def _not_owned() -> Any:
-    return text(
-        f"NOT EXISTS (SELECT 1 FROM ({_OWNER_ROWS_SQL}) AS owned WHERE owned.sha256 = blobs.sha256)"
+#: The seconds every lock the collector's first unit of work takes may wait (#1855 (v)): its row
+#: locks and the workspace's audit lock. A constant, stated in FR-420; a setting is added when a
+#: deployment is shown to need another value.
+GC_LOCK_TIMEOUT_S: Final = 10
+_GC_LOCK_TIMEOUT_MS: Final = GC_LOCK_TIMEOUT_S * 1000
+
+
+def render_gc_function_statements(
+    owners: tuple[BlobOwner, ...] | None = None,
+) -> tuple[str, str, str]:
+    """The three statements of `blob_gc_delete_unreferenced`, as SQL text.
+
+    `(lock, delete, recheck)`. This is the specification of the function body: the migration
+    freezes the same text as a literal, a drift test holds the function's `prosrc` equal to it, and
+    a later change to `BLOB_OWNERS` without a migration that replaces the function fails that test.
+    `NOT EXISTS`, not `NOT IN`: a NULL digest from an owner place (an unpromoted upload, a model
+    with no covariance blob) would make `NOT IN` match nothing, and collection would halt silently.
+    """
+    rows = " UNION ALL ".join(f"({owner.digests})" for owner in (owners or BLOB_OWNERS))
+    lock = (
+        "SELECT coalesce(array_agg(l.sha256), ARRAY[]::text[]) INTO v_locked FROM "
+        "(SELECT blobs.sha256::text AS sha256 FROM blobs "
+        "WHERE blobs.ref_count = 0 AND blobs.created_at < p_cutoff FOR UPDATE) AS l"
     )
+    delete = (
+        "WITH d AS (DELETE FROM blobs WHERE blobs.sha256 = ANY(v_locked) "
+        "AND blobs.ref_count = 0 AND blobs.created_at < p_cutoff "
+        f"AND NOT EXISTS (SELECT 1 FROM ({rows}) AS owned WHERE owned.sha256 = blobs.sha256) "
+        "RETURNING blobs.sha256, blobs.bytes) "
+        "SELECT coalesce(array_agg(d.sha256::text), ARRAY[]::text[]), "
+        "coalesce(array_agg(d.bytes::bigint), ARRAY[]::bigint[]) INTO v_deleted, v_bytes FROM d"
+    )
+    recheck = (
+        f"SELECT EXISTS (SELECT 1 FROM ({rows}) AS owned WHERE owned.sha256 = ANY(v_deleted)) "
+        "INTO v_appeared"
+    )
+    return lock, delete, recheck
 
 
-def _unreferenced(cutoff: datetime) -> tuple[Any, ...]:
-    """The collector's predicate, written once: count 0, no owner row, older than `cutoff`."""
-    return (BlobRow.ref_count == 0, BlobRow.created_at < cutoff, _not_owned())
+GC_FUNCTION_STATEMENTS: Final = render_gc_function_statements()
+
+_GC_CALL = text("SELECT deleted_sha256, deleted_bytes FROM blob_gc_delete_unreferenced(:cutoff)")
 
 
 async def _delete_unreferenced(session: AsyncSession, cutoff: datetime) -> list[tuple[str, int]]:
-    """Delete every unreferenced blob row, in **two statements of one transaction**; return
+    """Delete every unreferenced blob row by calling the definer function; return
     `(sha256, bytes)` deleted.
+
+    The decision lives in `blob_gc_delete_unreferenced` (#1550 (c)), owned by the owner role, so
+    the application role needs no `DELETE` on `blobs` and no caller can skip a check. In one
+    transaction it runs three statements (`render_gc_function_statements`):
 
     1. `SELECT … FOR UPDATE` the rows with count 0 created before `cutoff`. It waits for any
        transaction that holds one of those rows (a `retain` in flight) and, after the wait,
        re-evaluates the row's own `ref_count`: a row that was retained is not returned.
-    2. A NEW `DELETE` of those rows that no owner row names. It is a new statement, so READ
-       COMMITTED gives it a fresh snapshot, taken **after** the row locks are held: an owner row
-       that committed while statement 1 waited is seen.
+    2. A NEW `DELETE` of those rows that no owner row names, with a snapshot taken **after** the
+       row locks are held: an owner row that committed while statement 1 waited is seen.
+    3. With a fresh snapshot, still holding the locks, a look for an owner row that names a digest
+       statement 2 deleted. If one exists the function raises and the run rolls back, so nothing
+       is deleted (`BLOB_GC_OWNER_APPEARED`).
 
-    What this does and does not cover (#1893 review). Covered: a `ref_count` change, and an owner
-    row committed before statement 2 started. **Not covered:** an owner row that commits, without
-    taking a reference, after statement 2's snapshot and before its `DELETE` finishes; no row lock
-    on `blobs` stops that, because an owner writer touches the owner table, not `blobs`. Probed on
-    a copy database, with a 3 s delay planted inside the statement to widen the window (the real
-    window is narrow): the row and its object were deleted while an owner row named the digest.
-    That is the undercount case `BLOB_OWNERS` and the release guard exist for (FR-420); the
-    collector has no caller until slice 3b. A single statement did not close it either: its
-    `NOT EXISTS` used
-    the statement's starting snapshot, so it missed an owner row committed *during* the lock wait.
-
-    A statement-pair, not a lock the owner writers take, because the writers are many and
-    elsewhere. Both statements are plain SQL so a `SECURITY DEFINER` function can hold them in one
-    body (#1550): `FOR UPDATE` needs `UPDATE` on `blobs`, which the owner role has.
+    What this covers and what it does not (#1893 review, #1855 (iv)). The safety rests on the
+    reference count: every owner writer takes a reference with `put`, `retain` or `promote_upload`
+    in its own transaction (a census test holds that), and such a writer's `retain` waits on the
+    row lock of statement 1. Statement 3 is a second line for a writer that breaks the rule: an
+    owner row that commits without a reference while statement 2 runs is seen by statement 3 and
+    refused. **Not covered:** an owner row that commits without a reference after statement 3's
+    snapshot and before the commit; no row lock on `blobs` stops that, because such a writer
+    touches only the owner table. Probed on a copy database with a delay planted inside the
+    `DELETE`, against the one-statement form: the row and its object were deleted while an owner
+    row named the digest. A function that deletes nothing and reports nothing (a cutoff younger
+    than one day) is refused as `BLOB_GC_CUTOFF_TOO_RECENT`.
     """
-    locked = list(
-        (
-            await session.execute(
-                select(BlobRow.sha256)
-                .where(BlobRow.ref_count == 0, BlobRow.created_at < cutoff)
-                .with_for_update()
-            )
-        ).scalars()
-    )
-    if not locked:
-        return []
-    result = await session.execute(
-        delete(BlobRow)
-        .where(BlobRow.sha256 == any_(literal(locked, ARRAY(String(64)))), *_unreferenced(cutoff))
-        .returning(BlobRow.sha256, BlobRow.bytes_)
-        .execution_options(synchronize_session=False)
-    )
+    result = await session.execute(_GC_CALL, {"cutoff": cutoff})
     return [(row[0], int(row[1])) for row in result.all()]
+
+
+def _coded_gc_error(exc: DBAPIError) -> PlatformError | None:
+    """Map a database error from the collector's first unit of work to its registered code.
+
+    `55P03` (`lock_not_available`) is the lock timeout: `BLOB_GC_LOCK_TIMEOUT`, 503. The function's
+    own refusals carry their code as the first word of the message. Anything else is not the
+    collector's to name and is returned as `None`.
+    """
+    orig = exc.orig
+    sqlstate = getattr(orig, "sqlstate", None)
+    message = str(orig)
+    if sqlstate == "55P03":
+        return PlatformError(
+            "BLOB_GC_LOCK_TIMEOUT",
+            "Blob collection timed out waiting for a lock",
+            503,
+            f"A lock was not available within {GC_LOCK_TIMEOUT_S} s; nothing was deleted. "
+            "The caller must hold no open transaction when it calls the collector.",
+        )
+    if "BLOB_GC_OWNER_APPEARED" in message:
+        return PlatformError(
+            "BLOB_GC_OWNER_APPEARED",
+            "An owner row appeared for a blob the collector was deleting",
+            409,
+            "An owner row naming a deleted digest was committed during the run; the run was "
+            "rolled back and nothing was deleted.",
+        )
+    if "BLOB_GC_CUTOFF_TOO_RECENT" in message:
+        return PlatformError(
+            "BLOB_GC_CUTOFF_TOO_RECENT",
+            "The collection cutoff is too recent",
+            422,
+            "The cutoff is inside the one-day floor the database enforces.",
+        )
+    return None
 
 
 async def backfill_ref_counts(session: AsyncSession) -> int:

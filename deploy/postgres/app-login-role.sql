@@ -84,6 +84,30 @@ $do$;
 -- when a superuser grants, so no grantor-based exemption can be relied on.
 -- SET FALSE: the login role never needs SET ROLE gip_app; it inherits gip_app's grants.
 GRANT gip_app TO gip_app_login WITH INHERIT TRUE, SET FALSE;
+-- A SECURITY DEFINER function runs with its OWNER's rights, so one owned by any role other than the
+-- owner of `blobs` (the migrating role, which owns every table) is an elevation path the migrations
+-- never made (#1550 (c), slice 3b). Refused here, naming the function and its owner. Skipped on a
+-- fresh volume, where the migrations have not run: no table, no function. It sits BEFORE the end-state
+-- assertion below, which stays the file's last block.
+DO $do$
+DECLARE
+  f record;
+BEGIN
+  IF to_regclass('public.blobs') IS NOT NULL THEN
+    FOR f IN
+      SELECT p.proname AS function_name, o.rolname AS owner_name
+      FROM pg_proc p
+      JOIN pg_roles o ON o.oid = p.proowner
+      WHERE p.pronamespace = 'public'::regnamespace
+        AND p.prosecdef
+        AND p.proowner <> (SELECT relowner FROM pg_class WHERE oid = 'public.blobs'::regclass)
+    LOOP
+      RAISE EXCEPTION 'SECURITY DEFINER function % is owned by %, not by the owner of blobs',
+        f.function_name, f.owner_name;
+    END LOOP;
+  END IF;
+END
+$do$;
 -- The end state is asserted, not assumed: exactly one row for the pair, INHERIT only.
 DO $do$
 BEGIN

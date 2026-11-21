@@ -325,7 +325,7 @@ async def test_deleting_a_trace_outside_the_retention_floor_is_permitted(
 
 @pytest.mark.req("NFR-500")
 async def test_a_referenced_trace_blob_survives_garbage_collection(
-    database: Database, owner_database: Database, blob_store: BlobStore, workspace_id, principal
+    database: Database, blob_store: BlobStore, workspace_id, principal
 ) -> None:
     """RL-888's claim, verified rather than assumed: `write_trace`'s `retain` keeps a
     trace's blob invisible to GC's `ref_count == 0` selector even once it is old."""
@@ -342,7 +342,7 @@ async def test_a_referenced_trace_blob_survives_garbage_collection(
     await _backdate(BlobRow, BlobRow.sha256 == row.blob_sha256, days=60)
 
     report = await blob_store.collect_garbage(
-        owner_database, actor=principal, workspace_id=workspace_id, dry_run=False
+        database, actor=principal, workspace_id=workspace_id, dry_run=False
     )
 
     assert row.blob_sha256 not in report.deleted

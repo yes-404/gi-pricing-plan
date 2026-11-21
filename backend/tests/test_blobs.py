@@ -215,7 +215,7 @@ async def test_gc_defaults_to_dry_run_and_deletes_nothing(
 
 @pytest.mark.req("FR-420")
 async def test_gc_spares_a_referenced_blob(
-    database: Database, owner_database: Database, blob_store: BlobStore, workspace_id, principal
+    database: Database, blob_store: BlobStore, workspace_id, principal
 ) -> None:
     """Negative: collecting a referenced blob deletes a dataset someone still points at."""
     async with database.unit_of_work() as session:
@@ -223,7 +223,7 @@ async def test_gc_spares_a_referenced_blob(
     await _age_blob(database, ref.sha256, days=60)
 
     report = await blob_store.collect_garbage(
-        owner_database, actor=principal, workspace_id=workspace_id, dry_run=False
+        database, actor=principal, workspace_id=workspace_id, dry_run=False
     )
 
     assert ref.sha256 not in report.deleted
@@ -233,7 +233,7 @@ async def test_gc_spares_a_referenced_blob(
 
 @pytest.mark.req("FR-420")
 async def test_gc_spares_a_young_unreferenced_blob(
-    database: Database, owner_database: Database, blob_store: BlobStore, workspace_id, principal
+    database: Database, blob_store: BlobStore, workspace_id, principal
 ) -> None:
     """A blob exists before the artifact that references it — the grace period is that gap."""
     async with database.unit_of_work() as session:
@@ -241,7 +241,7 @@ async def test_gc_spares_a_young_unreferenced_blob(
         await blobs.release(session, ref.sha256)
 
     report = await blob_store.collect_garbage(
-        owner_database, actor=principal, workspace_id=workspace_id, dry_run=False
+        database, actor=principal, workspace_id=workspace_id, dry_run=False
     )
 
     assert ref.sha256 not in report.deleted
@@ -251,17 +251,17 @@ async def test_gc_spares_a_young_unreferenced_blob(
 
 @pytest.mark.req("FR-420")
 async def test_gc_deletes_an_old_unreferenced_blob_and_audits_it(
-    database: Database, owner_database: Database, blob_store: BlobStore, workspace_id, principal
+    database: Database, blob_store: BlobStore, workspace_id, principal
 ) -> None:
-    """The sweep deletes, and the census grants the application role no DELETE on `blobs`
-    (OQ-1943: which role runs FR-420 garbage collection), so it runs on the owner."""
+    """The sweep deletes, as the application's login role: the row delete goes through the
+    owner-owned definer function (#1550 (c)), since the role has no DELETE on `blobs`."""
     async with database.unit_of_work() as session:
         ref = await blob_store.put(session, unique(b"collect me"), "text/plain")
         await blobs.release(session, ref.sha256)
     await _age_blob(database, ref.sha256, days=60)
 
     report = await blob_store.collect_garbage(
-        owner_database, actor=principal, workspace_id=workspace_id, dry_run=False
+        database, actor=principal, workspace_id=workspace_id, dry_run=False
     )
 
     assert ref.sha256 in report.deleted
