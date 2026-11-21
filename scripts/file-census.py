@@ -66,6 +66,12 @@ from collections import Counter
 from collections.abc import Sequence
 from typing import TextIO
 
+if str(pathlib.Path(__file__).resolve().parent) not in sys.path:  # _gitenv: any loader (#1913)
+    sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+from _gitenv import clean_env
+
+REPO = pathlib.Path(__file__).resolve().parent.parent
+
 CSV_HEADER = ["path", "area", "name_pattern", "size_bytes", "mutability", "referenced_by"]
 
 _DATE = re.compile(r"\d{4}-\d{2}-\d{2}")
@@ -155,6 +161,7 @@ def git_ls_files(root: pathlib.Path) -> list[str]:
             ["git", "-C", str(root), "ls-files", "-z"],
             capture_output=True,
             check=False,
+            env=clean_env(),
         )
     except OSError as exc:
         raise GitLsFilesError(f"could not invoke git: {exc}") from exc
@@ -227,8 +234,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument(
         "--root",
         type=pathlib.Path,
-        default=pathlib.Path.cwd(),
-        help="repository root to census (default: current directory)",
+        default=REPO,
+        help="repository root to census (default: the checkout this script lives in)",
     )
     parser.add_argument(
         "--out",
@@ -244,6 +251,11 @@ def main(argv: Sequence[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     root = args.root.resolve()
+    head = subprocess.run(
+        ["git", "-C", str(root), "rev-parse", "--short=12", "HEAD"],
+        capture_output=True, text=True, check=False, env=clean_env(),
+    ).stdout.strip()
+    print(f"file-census: root={root} head={head}", file=sys.stderr)
     try:
         tracked = git_ls_files(root)
     except GitLsFilesError as exc:

@@ -67,7 +67,7 @@ from pricing_core.modelling.factors import (
 from pricing_core.rating.authored import authored_expression_fields
 from pricing_core.rating.inline import inline_mounts, mounted_fragments, selected_purposes
 from pricing_core.rating.ladder import RUNG_ORDER, output_steps_by_name, rung_output_name
-from pricing_core.rating.references import STAMPED_DATE, referenced_names
+from pricing_core.rating.references import STAMPED_DATE, string_reads
 from pricing_core.rating.vocabulary import check_allow_list
 from pricing_core.safe_error import CodedError, safe_error_detail
 
@@ -172,7 +172,7 @@ def output_type_issues(
     `at_output_step` is True for an algorithm's `output` step and False for a Sub-graph port.
     """
     issues: list[ValidationIssue] = []
-    for step_id, output_name, declared_type, fed_by in outputs:
+    for step_id, _output_name, declared_type, fed_by in outputs:
         producer_type = types.get(fed_by)
         if producer_type is not None and not _compatible(
             producer_type, declared_type, at_output_step=at_output_step
@@ -181,8 +181,8 @@ def output_type_issues(
                 ValidationIssue(
                     code="RATING_TYPE_MISMATCH",
                     message=(
-                        f"output {output_name!r} is declared {declared_type!r} but "
-                        f"its producing step yields {producer_type!r} (FR-227)"
+                        f"an output is declared {declared_type!r} but its producing step "
+                        f"yields {producer_type!r} (FR-227)"
                     ),
                     step_id=step_id,
                     field="outputs",
@@ -272,22 +272,23 @@ def _check_clamp_placement(algo: RatingAlgorithm) -> list[ValidationIssue]:
             if source != produced[0]:
                 continue
             if rung_name != placeable:
-                reason = (
-                    f"rung {rung_name!r} is not the last rung before constraints ({placeable!r})"
-                )
+                reason = "its rung is not the last rung before constraints"
+                located = "produces[0]"
             elif not consumed_names or consumed_names[0] != produced[0]:
-                reason = f"it produces {produced[0]!r} but consumes {consumed_names[:1]!r}"
+                reason = "it does not consume the value it produces"
+                # the entry compared with `produces[0]`; an empty `consumes` has no entry to name
+                located = "consumes[0]" if consumed_names else "consumes"
             else:
                 continue
             issues.append(
                 ValidationIssue(
                     code="LADDER_CLAMP_UNPLACEABLE",
                     message=(
-                        f"clamp step {step.step_id!r} cannot be placed on the premium "
-                        f"ladder: {reason} (FR-240, FR-247)"
+                        f"a clamp step cannot be placed on the premium ladder: {reason} "
+                        "(FR-240, FR-247)"
                     ),
                     step_id=step.step_id,
-                    field="produces",
+                    field=located,
                 )
             )
     return issues
@@ -331,8 +332,8 @@ def _check_scale_cap(text: str) -> tuple[str, str] | None:
         if len(fraction) > _SCALE_CAP:
             return (
                 "EXPRESSION_SCALE_OVERFLOW",
-                f"literal {match.group(0)!r} needs {len(fraction)} decimal "
-                f"places, beyond rust_decimal's cap of {_SCALE_CAP} (FR-275)",
+                f"a literal needs more decimal places than rust_decimal's cap of {_SCALE_CAP} "
+                "(FR-275)",
             )
     return None
 
@@ -342,7 +343,10 @@ def _check_allow_list(text: str) -> tuple[str, str] | None:
     refused = check_allow_list(text)
     if refused is None:
         return None
-    return "EXPRESSION_INVALID_VOCABULARY", f"{refused} (FR-244)"
+    return (
+        "EXPRESSION_INVALID_VOCABULARY",
+        "expression uses a construct FR-244 does not name (the allow-list)",
+    )
 
 
 def _check_vocabulary(text: str) -> tuple[str, str] | None:
@@ -354,10 +358,10 @@ def _check_vocabulary(text: str) -> tuple[str, str] | None:
     """
     try:
         zen.compile_expression(text)
-    except Exception as exc:
+    except Exception:
         return (
             "EXPRESSION_INVALID_VOCABULARY",
-            f"expression does not compile against the engine: {exc} (FR-276)",
+            "expression does not compile against the engine (FR-276)",
         )
     return None
 
@@ -365,7 +369,7 @@ def _check_vocabulary(text: str) -> tuple[str, str] | None:
 def _check_input_bound_scale(algo: RatingAlgorithm) -> list[ValidationIssue]:
     """FR-275: no input bound needs a decimal scale beyond 28."""
     issues: list[ValidationIssue] = []
-    for field in algo.input_contract:
+    for index, field in enumerate(algo.input_contract):
         for bound_name, bound in (("min", field.min), ("max", field.max)):
             exponent = bound.as_tuple().exponent if isinstance(bound, Decimal) else None
             if isinstance(exponent, int) and -exponent > _SCALE_CAP:
@@ -373,10 +377,10 @@ def _check_input_bound_scale(algo: RatingAlgorithm) -> list[ValidationIssue]:
                     ValidationIssue(
                         code="EXPRESSION_SCALE_OVERFLOW",
                         message=(
-                            f"input {field.name!r} {bound_name} needs more than "
-                            f"{_SCALE_CAP} decimal places (FR-275)"
+                            f"an input {bound_name} needs more than {_SCALE_CAP} decimal places "
+                            "(FR-275)"
                         ),
-                        field=f"input_contract.{bound_name}",
+                        field=f"input_contract[{index}].{bound_name}",
                     )
                 )
     return issues
@@ -403,14 +407,11 @@ def _check_lookup_as_at(algo: RatingAlgorithm) -> list[ValidationIssue]:
             continue
         else:
             code = "RATING_TYPE_MISMATCH"
-            why = f"is a declared {declared[name].value!s} input, not a date"
+            why = "is a declared input of a type other than date"
         issues.append(
             ValidationIssue(
                 code=code,
-                message=(
-                    f"as_at of lookup step {authored.step_id!r} names {name!r}, "
-                    f"which {why} (FR-221)"
-                ),
+                message=f"as_at of a lookup step names a value that {why} (FR-221)",
                 step_id=authored.step_id,
                 field="as_at",
             )
@@ -429,22 +430,40 @@ def _check_declared_reads(algo: RatingAlgorithm) -> list[ValidationIssue]:
     this check is not re-checked at load (`load_bundle` runs no validation), only at its next
     compile (RL-1519 (iii-b))."""
     issues: list[ValidationIssue] = []
+    authored_by_step: dict[str, list[Any]] = {}
+    for authored in authored_expression_fields(algo):
+        authored_by_step.setdefault(authored.step_id, []).append(authored)
     for step in algo.steps:
         if step.type not in _DECLARED_READ_STEP_TYPES:
             continue
-        undeclared = sorted(referenced_names(step.model_dump()) - set(_as_list(step.consumes)))
-        if undeclared:
-            issues.append(
-                ValidationIssue(
-                    code="RATING_STEP_UNDECLARED_READ",
-                    message=(
-                        f"step {step.step_id!r} reads {undeclared} without declaring them in "
-                        "consumes (FR-246)"
-                    ),
-                    step_id=step.step_id,
-                    field="consumes",
-                )
+        declared = set(_as_list(step.consumes))
+        # One issue per READING LOCATION (#1712 S7c; the maintainer's ruling, 2026-11-17): the
+        # field is where the step reads, never a name the author submitted. Fixed order: step
+        # order, then `authored_expression_fields`' field order, then a model_call's
+        # `feature_map` keys. A keyed map is visited in SORTED key order (`feature_map` here,
+        # `clamp_bounds` in `authored_expression_fields`): stored JSONB keeps no key order, and
+        # a save and a compile must list the same issues the same way. A keyed-map entry is
+        # located by the map name and key (`feature_map.<key>`, the form `clamp_bounds.min`
+        # has): the field goes back to the caller, it is not the message, which names no name
+        # (NFR-499).
+        locations = [
+            authored.field
+            for authored in authored_by_step.get(step.step_id, [])
+            if string_reads(authored.field.split("[")[0].split(".")[0], authored.text) - declared
+        ]
+        if isinstance(step, RatingModelCallStep):
+            locations.extend(
+                f"feature_map.{key}" for key in sorted(step.feature_map) if key not in declared
             )
+        issues.extend(
+            ValidationIssue(
+                code="RATING_STEP_UNDECLARED_READ",
+                message="a step reads names it does not declare in consumes (FR-246)",
+                step_id=step.step_id,
+                field=location,
+            )
+            for location in locations
+        )
     return issues
 
 
@@ -486,7 +505,7 @@ def validate_algorithm(algo: RatingAlgorithm) -> list[ValidationIssue]:
                 issues.append(
                     ValidationIssue(
                         code=code,
-                        message=f"{authored.field} of step {authored.step_id!r}: {message}",
+                        message=message,
                         step_id=authored.step_id,
                         field=authored.field,
                     )

@@ -35,6 +35,18 @@ combinators on 2026-08-22 — before that, every field in every conditional arm 
 and `model-spec` produced its 12 flat properties and nothing from either arm: no `family`, no
 `link`, no `objective`, no `early_stopping`.
 
+**What the walkers do not see, declared.** No walker follows `dependentSchemas`, `not`,
+`contains` or `unevaluatedProperties`; none reads a sibling of a `$ref` other than
+`description` or `default`; and `prefixItems` positions merge into one `[]` path (17 uses in the
+corpus). The corpus uses none of the first four and no other `$ref` sibling, measured over
+`docs/contracts/schemas/` (43 `$ref` nodes with a sibling, all `description` or `default`);
+`test_the_contract_corpus_uses_no_keyword_the_walkers_do_not_follow` keeps that true. The
+`prefixItems` merge is declared, not asserted.
+`propertyNames` is not followed either: the corpus uses it once
+(`dislocation-run.schema.json:141`, an `enum` of the quantile keys), declared and not asserted, as
+`prefixItems` is. `unevaluatedItems`, `dependencies` and `$dynamicRef` have no use today and are
+not in the test.
+
 New map walkers take `(document, node, base, path="", *, arm=frozenset())` and return a dict
 keyed by `(arm, dotted.path)`, matching `_type_map` **exactly**, so a key in one map is a key in
 another and two maps can be read against each other. Carry `*, _depth=0` only if the walker
@@ -74,6 +86,12 @@ the reverse of what it was asked.
    both sides**. Nothing reports those. `OQ-649` owns the general question — every layer of
    the guard is scoped to the intersection of its two sides — so a new comparison should state
    which half of its axis it can and cannot see rather than inherit this sentence's old promise.
+   **Since #1918 a path on one side only below the top level is not silent:**
+   `test_one_sided_path_census_has_no_undeclared_path` fails on any nested path in
+   `_field_paths`' symmetric difference that is not in `ONE_SIDED_PATHS` (exact path, with a
+   `<gen|auth>: <O|S|D|U>: why; owner #n` reason, the side tested against the walker), the stale test keeps each entry honest, and
+   `test_one_sided_path_census_count_equals_its_ceiling` holds the count (it cannot grow or leave a free
+   slot without an edit to the ceiling; a like-for-like swap is refused by no test and shows in review). A new comparison still intersects; the census is what says what it dropped.
 4. **Resolve every disagreement it finds** before the slice ends. A red guard at the end of a
    slice is the same artifact as no guard.
 5. **Prove it fails on deliberately broken input** (`CLAUDE.md` §13 rule 4) — break the
@@ -273,6 +291,17 @@ now drift. `test_two_arms_declaring_different_bounds_are_both_kept`,
 `test_a_bound_moved_between_arms_is_drift` and `test_a_closed_map_moved_between_arms_is_drift`
 hold the cases.
 
+**One-sidedness below the top level is declared (#1918, 2026-11-17).** `ONE_SIDED_PATHS` lists
+every nested path that is on one side only (85 at main `3aed71d9`, over 12 of the 21 compared
+slugs), each exact, each with its class and owner, under `ONE_SIDED_PATHS_CEILING`. The census
+tests are named `test_one_sided_path_census_*` so the census selection (`-k census`) runs them.
+It does **not** see: a path below an object-valued `additionalProperties` or `patternProperties` (a map's value shape, e.g. `fit_result.relativities`; a later slice of #1918), a top-level name (`ONE_SIDED_SLUGS` and the two name tests own that; eight compared slugs
+are in neither, so a top-level property added on one side of one of them is not caught today:
+`artifact-envelope`, `artifact-ref`, `blob-ref`, `dataset-version`, `dislocation-run`,
+`regression-run`, `regression-suite`, `validation-rule`), arm-level existence below, or type and bound
+disagreement on a shared path (the comparisons above own that). Fixing an entry removes it and
+lowers the ceiling in the same commit.
+
 **What arm attribution did *not* close is arm-level *existence*.** W32-1b delivers type and bound
 disagreement on paths shared by both sides *within an arm*; a field that leaves the shared set
 entirely — moved between arms so that no arm holds it on both sides — is still reported by
@@ -360,3 +389,9 @@ carry: **an allow-list of known exceptions is only as honest as its stale check.
 twelve pending response entries and two of its five request entries had been typed by other slices
 before this one started, and it was the stale check, not a reading, that said which.
 
+2026-11-17 — #1918 slice 1, on the tree `origin/main` `3aed71d9` plus that slice. Step 3 and "What the guard
+does not reach" gained the path-level census. Built red first: with `ONE_SIDED_PATHS` empty, the
+parametrized test failed on exactly 12 slugs naming 85 paths; the #1917 shape planted on a scratch copy
+of `generated/job.schema.json` failed naming `error.location`; a stale entry (a contract edit making a listed path two-sided, the entry left) failed the stale test alone, and an entry whose side was flipped failed the side test alone; a walker that stopped at `items` failed the reach control naming
+`columns.[].top_levels.[].level`. The lesson to carry: a scoped guard's silence is found by asking what
+its intersection drops, and then counting that with the guard's own walker.

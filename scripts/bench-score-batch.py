@@ -40,11 +40,17 @@ import argparse
 import asyncio
 import io
 import os
+import sys
 import time
 from datetime import date
+from pathlib import Path
 from uuid import UUID
 
 import polars as pl
+
+if str(Path(__file__).resolve().parent) not in sys.path:  # _gitenv: any loader (#1913)
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+from _gitenv import clean_env
 
 from app.config import Settings
 from app.db.models import DatasetVersionRow, RatingVersionRow
@@ -200,12 +206,19 @@ async def _time_handler(
     return elapsed, result
 
 
+REPO = Path(__file__).resolve().parent.parent
+
+
 def _git_head() -> str:
     import subprocess
 
     try:
         return subprocess.run(
-            ["git", "rev-parse", "HEAD"], capture_output=True, text=True, check=True
+            ["git", "-C", str(REPO), "rev-parse", "HEAD"],
+            capture_output=True,
+            text=True,
+            check=True,
+            env=clean_env(),
         ).stdout.strip()
     except Exception as exc:  # pragma: no cover - diagnostic path only
         return f"(unavailable: {exc})"
@@ -222,14 +235,19 @@ def _host_summary() -> str:
     return f"{platform.processor() or platform.machine()}, {os.cpu_count()} cores"
 
 
+def _provenance_lines() -> list[str]:
+    return [f"repo: {REPO}", f"tree: {_git_head()}"]
+
+
 async def main(n_rows: int, chunk_rows: int, warmup_rows: int) -> None:
+    for line in _provenance_lines():
+        print(line)
     database = Database(Settings(database_url=DEFAULT_DSN))
     blob_store = BlobStore(Settings(database_url=DEFAULT_DSN, blob_bucket=BUCKET))
     await blob_store.ensure_bucket()
 
     workspace_id = await _setup(database, blob_store)
 
-    print(f"tree: {_git_head()}")
     print(f"host: {_host_summary()}")
     print("pass count: 1 (one run of this script; warmup below is excluded from the figure)")
     print("row width: 1 input column (premium_in), no model_call -- see module docstring")
