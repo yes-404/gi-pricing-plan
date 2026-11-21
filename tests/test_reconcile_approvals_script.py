@@ -222,6 +222,8 @@ def test_script_db_the_exit_code_follows_what_the_run_printed() -> None:
 def test_script_db_writes_nothing_the_audit_chain_head_is_unchanged() -> None:
     before = _chain_heads()
     code, _lines, stderr = _run_script_against_the_test_database()
+    # Exit 2 is allowed: a broken chain left in the shared test database by an earlier test is
+    # now covered by the run (FR-2163). The test's point is the unchanged heads below.
     assert code in (0, 1, 2), stderr
     assert stderr == ""
     assert _chain_heads() == before

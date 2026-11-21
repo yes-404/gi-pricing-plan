@@ -1162,4 +1162,106 @@ async def test_reconcile_db_a_planted_approved_request_with_only_review_decision
     assert any("decision events record only ['review']" in m.detail for m in found), found
 
 
+async def _script_lines(workspace_id: UUID) -> tuple[int, dict[str, Any], dict[str, Any]]:
+    """Run `scripts/reconcile-approvals.py` against the test database and return its exit code,
+    the printed line of exactly `workspace_id`, and the summary line. Every other workspace the
+    test database holds (earlier tests leave some, one planted broken) is read past by id."""
+    import asyncio
+    import os
+    import subprocess
+    import sys
+    from pathlib import Path
+
+    from backend.tests.conftest_db import test_database_url
+
+    root = Path(__file__).resolve().parents[2]
+    done = await asyncio.to_thread(
+        subprocess.run,
+        [sys.executable, str(root / "scripts" / "reconcile-approvals.py")],
+        cwd=root,
+        env={**os.environ, "GIP_DATABASE_URL": str(test_database_url())},
+        capture_output=True,
+        text=True,
+        timeout=300,
+        check=False,
+    )
+    assert done.stderr == "", done.stderr
+    lines = [json.loads(line) for line in done.stdout.splitlines()]
+    *printed, summary = lines
+    assert summary["summary"] is True
+    own = [x for x in printed if x["workspace_id"] == str(workspace_id) and "chain" in x]
+    assert len(own) == 1, own
+    return done.returncode, own[0], summary
+
+
+async def test_reconcile_db_the_script_prints_exactly_the_planted_mismatch_of_its_own_workspace(
+    database: Database, workspace_id: UUID
+) -> None:
+    """One workspace is seeded through the decision path and one mismatch is planted in it (a
+    second approval event). The script's line for that workspace carries exactly that mismatch:
+    without the plant the list is empty, with another plant it has a second entry."""
+    from app.platform import audit
+    from model_schema import JobSource
+
+    _request_id, approver, ref = await _decide_to_approval(database, workspace_id)
+    async with database.unit_of_work() as session:
+        await audit.record(
+            session,
+            workspace_id=workspace_id,
+            actor=approver,
+            source=JobSource.API,
+            action="model.approved",
+            entity_ref=str(ref),
+        )
+    code, own, summary = await _script_lines(workspace_id)
+    assert own["chain"] == "intact"
+    assert own["mismatches"] == [
+        {
+            "rule": "R4",
+            "ref": str(ref),
+            "detail": "2 model.approved event(s); exactly one is required",
+            "legacy": False,
+        }
+    ]
+    assert code in (1, 2), "a mismatch is never exit 0"
+    assert summary["workspaces"] >= 1
+
+
+async def test_reconcile_db_the_script_prints_no_mismatch_for_a_clean_workspace_of_its_own(
+    database: Database, workspace_id: UUID
+) -> None:
+    await _decide_to_approval(database, workspace_id)
+    _code, own, _summary = await _script_lines(workspace_id)
+    assert own["chain"] == "intact"
+    assert own["requests_checked"] == 1
+    assert own["mismatches"] == []
+
+
+async def test_reconcile_db_the_script_leaves_the_chain_head_of_its_own_workspace_unchanged(
+    database: Database, workspace_id: UUID
+) -> None:
+    """Read-only, shown on a workspace this test seeded: run alone, the test database holds
+    nothing else, so a head comparison over "every workspace" would compare nothing."""
+    from sqlalchemy import select
+
+    from app.db.models import AuditEventRow
+
+    async def _head() -> tuple[int, str]:
+        async with database.session() as session:
+            row = (
+                await session.execute(
+                    select(AuditEventRow.sequence, AuditEventRow.event_hash)
+                    .where(AuditEventRow.workspace_id == workspace_id)
+                    .order_by(AuditEventRow.sequence.desc())
+                    .limit(1)
+                )
+            ).one()
+        return row[0], row[1]
+
+    await _decide_to_approval(database, workspace_id)
+    before = await _head()
+    await _script_lines(workspace_id)
+    assert await _head() == before
+
+
 pytestmark = pytest.mark.req("FR-2163")
