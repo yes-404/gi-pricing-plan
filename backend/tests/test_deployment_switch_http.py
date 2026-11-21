@@ -103,6 +103,16 @@ class _Peer:
         self._thread.join(5)
 
 
+async def _join_roster(settings: Settings, process: str) -> str:
+    client = build_switch_client(settings.redis_url.get_secret_value())
+    try:
+        stack = switch_stack(settings.environment.value, settings.tenant_id)
+        await RedisSwitch(client, stack).for_environment("dev").join(process)
+    finally:
+        await client.aclose()
+    return process
+
+
 async def _hydrates(_: SwitchMessage) -> None:
     return None
 
@@ -162,6 +172,9 @@ async def test_a_partial_commit_names_the_unacknowledged_process_possibly_stale(
     deployer = await seat("deployer")
     ref = await approved_version(database, workspace_id, deployer.id)
     peer = _Peer(api_settings, "deaf-host:8:1", _hydrates, deaf_to_commit=True)
+    # A roster name that never subscribed: what another process leaves on the shared Redis
+    # (#1963). The deploy prunes it and reports it `pruned_stale`; it was never prepared.
+    ghost = await _join_roster(api_settings, "ghost-host:7:1")
     try:
         done = deploy(client, deployer, "dev", ref)
     finally:
@@ -169,11 +182,14 @@ async def test_a_partial_commit_names_the_unacknowledged_process_possibly_stale(
     assert done.status_code == 201, done.text
     switch = done.json()["switch"]
     assert switch["receivers"] == 2
+    assert switch["processes"][ghost] == "pruned_stale"
     assert switch["processes"]["deaf-host:8:1"] == "possibly_stale"
     committed = [p for p, s in switch["processes"].items() if s == "committed"]
     assert len(committed) == 1
     created = await _events(database, workspace_id, "deployment.created")
-    assert sorted(created[0].after["prepared"]) == sorted(switch["processes"])
+    # `prepared` is who acknowledged PREPARE; a pruned roster name is reported, never prepared.
+    reported = [p for p, s in switch["processes"].items() if s != "pruned_stale"]
+    assert sorted(created[0].after["prepared"]) == sorted(reported)
     switched = await _events(database, workspace_id, "deployment.switched")
     assert [e.after["processes"] for e in switched] == [switch["processes"]]
     assert switched[0].after["deployment_ref"] == done.json()["id"]
