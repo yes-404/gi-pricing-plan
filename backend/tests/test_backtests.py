@@ -30,7 +30,9 @@ import pytest
 from backend.tests.test_contracts import OPENAPI, _load
 from backend.tests.test_data_jobs import _ingest, _validate
 from backend.tests.test_model_jobs import (
+    FINE_BOOK,
     _actuary,
+    _chained_grouping_factor,
     _dataset,
     _factor,
     _spec,
@@ -636,6 +638,68 @@ async def test_a_value_at_an_ancestor_level_in_the_backtest_data_fails_the_job_w
     assert job_row.error["code"] == "GROUPING_VALUE_AT_ANCESTOR_LEVEL"
     assert "The backtest could not be computed" in job_row.error["message"]
     assert "'area'" not in job_row.error["message"]
+
+
+@pytest.mark.req("FR-109")
+async def test_a_real_chain_value_at_an_ancestor_level_fails_the_backtest_with_its_code(
+    database: Database, blob_store, workspace_id
+) -> None:
+    """FR-109, with no patch: a GLM fitted on a chained Grouping under `map_to_default`, and a
+    later period whose rows carry a value at the parent's source level (`u1`). The real
+    `backtest_model` raises `GroupingAncestorLevelError`; the Job fails under its own code,
+    never `JOB_HANDLER_FAILED`, with the fixed sentence and no submitted value."""
+    from app.db.models import JobRow
+
+    actor = await _actuary(database, workspace_id)
+    dataset_id = await _dataset(database, blob_store, workspace_id, actor)
+    version_id = await _validated_version(
+        database, blob_store, workspace_id, actor, dataset_id
+    )
+    factor = await _chained_grouping_factor(database, workspace_id, actor, dataset_id)
+    split = await _split(database, blob_store, workspace_id, actor, version_id)
+    async with database.unit_of_work() as session:
+        row, _ = await model_service.reserve_model(
+            session, workspace_id=workspace_id, actor=actor,
+            spec=_spec(version_id, (factor,), split_ref=split),
+        )
+        model_id = row.id
+        fit = await job_service.submit(
+            session, JobKind.MODEL_FIT,
+            {"workspace_id": str(workspace_id), "actor": actor.model_dump(mode="json"),
+             "model_id": str(model_id)},
+            actor, workspace_id=workspace_id,
+        )
+    assert await execute_job(database, fit.id, blob_store) is JobStatus.SUCCEEDED
+
+    later = await _validated_version(
+        database, blob_store, workspace_id, actor, dataset_id, FINE_BOOK
+    )
+    async with database.unit_of_work() as session:
+        model, version = await service.request_backtest(
+            session, workspace_id=workspace_id, actor=actor,
+            model_id=model_id, dataset_version_id=later,
+        )
+        job = await job_service.submit(
+            session,
+            JobKind.MODEL_BACKTEST,
+            {
+                "workspace_id": str(workspace_id),
+                "actor": actor.model_dump(mode="json"),
+                **service.backtest_payload(model, version),
+            },
+            actor,
+            workspace_id=workspace_id,
+        )
+        job_id = job.id
+
+    assert await execute_job(database, job_id, blob_store) is JobStatus.FAILED
+    async with database.session() as session:
+        job_row = await session.get(JobRow, job_id)
+    assert job_row is not None
+    assert job_row.error is not None
+    assert job_row.error["code"] == "GROUPING_VALUE_AT_ANCESTOR_LEVEL"
+    assert "The backtest could not be computed" in job_row.error["message"]
+    assert "u1" not in str(job_row.error)
 
 
 # -- The whole path -------------------------------------------------------------------------
