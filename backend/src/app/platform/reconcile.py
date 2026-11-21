@@ -68,6 +68,7 @@ from app.db.models import (
     RatingVersionRow,
     ValidationRuleRow,
     ValidationRuleSetRow,
+    WorkspaceRow,
 )
 from app.platform import audit
 from app.platform.safe_exception import safe_job_error_text
@@ -96,6 +97,7 @@ __all__ = [
     "reconcile",
     "reconcile_data",
     "unwritten_states",
+    "workspace_ids",
 ]
 
 APPROVED: Final = "approved"
@@ -670,6 +672,26 @@ async def load_workspace_data(session: AsyncSession, workspace_id: UUID) -> Work
             )
         )
     return WorkspaceData(tuple(artifacts), requests, decisions, events, tuple(deployments))
+
+
+async def workspace_ids(session: AsyncSession) -> tuple[list[UUID], frozenset[UUID]]:
+    """Every workspace id the run covers, and which of them have no `workspaces` row.
+
+    The union of `workspaces`, `audit_events.workspace_id` and the `workspace_id` of every
+    `COVERED_TABLES` row class. No foreign key holds a governed row or an event to a
+    `workspaces` row (only `workspace_members` and `workspace_settings` carry one), so an id can
+    be in the chain or on a governed row with no workspace row: one that never had a row, or one
+    whose row was deleted after its events were written. Such an id is reconciled like any
+    other and returned in the second value, so the run reports it (FR-2163).
+    """
+    listed = set((await session.execute(select(WorkspaceRow.id))).scalars())
+    seen = set(listed)
+    for column in (
+        AuditEventRow.workspace_id,
+        *(row_class.workspace_id for _type, row_class, _slug in COVERED_TABLES.values()),
+    ):
+        seen.update((await session.execute(select(column).distinct())).scalars())
+    return sorted(seen, key=str), frozenset(seen - listed)
 
 
 async def reconcile(session: AsyncSession, workspace_id: UUID) -> WorkspaceReport:

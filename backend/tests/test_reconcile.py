@@ -936,4 +936,72 @@ async def test_reconcile_db_the_real_paths_with_artifact_rows_reconcile_clean(
     assert report.mismatches == (), report.mismatches
 
 
+async def test_reconcile_db_no_foreign_key_ties_a_governed_row_or_an_event_to_a_workspace(
+    database: Database,
+) -> None:
+    """Why `workspace_ids` takes a union: nothing makes an id without a `workspaces` row
+    impossible. Only `workspace_members` and `workspace_settings` hold a key to it."""
+    from sqlalchemy import text
+
+    async with database.session() as session:
+        holders = {
+            row[0]
+            for row in await session.execute(
+                text(
+                    "SELECT conrelid::regclass::text FROM pg_constraint "
+                    "WHERE contype = 'f' AND confrelid = 'workspaces'::regclass"
+                )
+            )
+        }
+    assert holders == {"workspace_members", "workspace_settings"}
+    assert holders.isdisjoint({"audit_events", *rc.COVERED_TABLES})
+
+
+async def test_reconcile_db_an_id_that_never_had_a_workspaces_row_is_listed_and_flagged(
+    database: Database,
+) -> None:
+    """(i) A governed row under an id with no `workspaces` row and no event: only the governed
+    tables name it."""
+    ghost = uuid4()
+    async with database.unit_of_work() as session:
+        session.add(_draft_rating_version(ghost, "draft"))
+    async with database.session() as session:
+        ids, without_row = await rc.workspace_ids(session)
+    assert ghost in ids
+    assert ghost in without_row
+
+
+async def test_reconcile_db_a_workspace_whose_row_was_deleted_after_its_events_is_flagged(
+    database: Database, workspace_id: UUID
+) -> None:
+    """(ii) The workspace had a row, wrote its events through the decision path, and the row was
+    deleted afterwards (its membership and settings rows first: their keys hold it). It holds no
+    governed row (the built-in rules are not seeded), so only the chain names it."""
+    from backend.tests.conftest_db import grant_roles_as_owner, seed_as_owner
+    from sqlalchemy import text
+
+    await grant_roles_as_owner(workspace_id, uuid4(), "analyst", workspace=True)
+    await _decide_to_approval(database, workspace_id)
+    async with database.session() as session:
+        ids, without_row = await rc.workspace_ids(session)
+    assert workspace_id in ids
+    assert workspace_id not in without_row, "the workspace still has its row"
+
+    async def _delete(session: AsyncSession) -> None:
+        for table in ("workspace_members", "workspace_settings", "workspaces"):
+            column = "id" if table == "workspaces" else "workspace_id"
+            await session.execute(
+                text(f"DELETE FROM {table} WHERE {column} = :w"),
+                {"w": workspace_id},
+            )
+
+    await seed_as_owner(_delete)
+    async with database.session() as session:
+        ids, without_row = await rc.workspace_ids(session)
+        report = await rc.reconcile(session, workspace_id)
+    assert workspace_id in ids
+    assert workspace_id in without_row
+    assert report.chain == "intact"
+
+
 pytestmark = pytest.mark.req("FR-2163")

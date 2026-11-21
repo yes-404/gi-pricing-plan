@@ -253,8 +253,13 @@ fact, writes nothing (not even an Audit Event) and prevents no write.
   Use a read-only login where one exists. The application login is acceptable, because the run only
   reads.
 - **Output:** one JSON line per workspace (`chain`, counts, and each mismatch with its `rule`,
-  `ref`, `detail` and `legacy` mark), then a summary line.
-- **Exit code:** `0` every chain verifies and nothing mismatches; `1` at least one mismatch;
+  `ref`, `detail` and `legacy` mark), then a summary line. The workspaces are every id in the
+  `workspaces` table, in `audit_events` or on a governed row: no foreign key ties an event or a
+  governed row to a `workspaces` row. An id with no `workspaces` row prints its own line
+  (`"workspace_row": false`), is counted in the summary as `workspaces_without_row`, and makes
+  the exit code `1`.
+- **Exit code:** `0` every chain verifies and nothing mismatches; `1` at least one mismatch or one
+  workspace id with no `workspaces` row;
   `2` a chain is broken or unreadable (a stored row the models refuse) or the run could not
   complete. Such a workspace prints no rule output; every other workspace still prints. Its `chain_detail` is
   the verifier's reason and the sequence it broke at, or the exception's type name, never an
