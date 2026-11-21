@@ -835,7 +835,8 @@ def _touched_paths() -> set[str] | None:
 def _text_at_base(rel: str) -> str | None:
     """`rel` as it was at the merge-base of `<base>...HEAD`, or `None` if it did not exist."""
     out = subprocess.run(
-        ["git", "-C", str(REPO), "show", f"{_merge_base()}:{rel}"], capture_output=True, text=True
+        ["git", "-C", str(REPO), "show", f"{_merge_base()}:{rel}"],
+        capture_output=True, text=True, env=_gitenv().clean_env(),
     )
     return out.stdout if out.returncode == 0 else None
 
@@ -843,8 +844,16 @@ def _text_at_base(rel: str) -> str | None:
 def _merge_base() -> str:
     return subprocess.run(
         ["git", "-C", str(REPO), "merge-base", _BASE_REF, "HEAD"],
-        capture_output=True, text=True, check=True,
+        capture_output=True, text=True, check=True, env=_gitenv().clean_env(),
     ).stdout.strip()
+
+
+@functools.cache
+def _gitenv() -> types.ModuleType:
+    """`scripts/_gitenv.py`, loaded by path: this file imports no sibling at top level (`REPO`
+    is pointed at tmp trees, and `doc-id.py migrate --verify` loads it by path). Its
+    `clean_env()` is what every git call here runs with (#1913)."""
+    return _load_module("_gitenv", pathlib.Path(__file__).resolve().parent / "_gitenv.py")
 
 
 def _residue_gate(

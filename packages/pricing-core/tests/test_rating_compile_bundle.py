@@ -617,3 +617,30 @@ def test_a_non_decimal_unserialisable_value_in_the_graph_is_refused_by_type() ->
     pins = _version().pins
     with pytest.raises(TypeError, match="date"):
         bundle_hash(_Graph(), pins)  # type: ignore[arg-type]
+
+
+# --- #1712 S7c: compile_bundle raises the first issue as its code and a literal ---------------
+# The text of a CodedError raised here is stored in a Job's error (NFR-499). Each check that can
+# be first is planted on its own, with the sentinel in the step id and in the authored text, so
+# the guard does not depend on which issue sorts first.
+_SENT = "sentinels7c91"
+
+
+@pytest.mark.req("NFR-499")
+@pytest.mark.parametrize(("expr", "code"), [
+    (f"ncd_years * 10 + now() + fn_{_SENT}", "EXPRESSION_NON_DETERMINISTIC"),
+    (f"ncd_years / ncd_{_SENT}", "EXPRESSION_UNGUARDED_DIVISION"),
+    (f"ncd_years * 0.12345678901234567890123456789012 + x_{_SENT}", "EXPRESSION_SCALE_OVERFLOW"),
+    (f"ncd_years % 2 + x_{_SENT}", "EXPRESSION_INVALID_VOCABULARY"),
+    (f"fn_{_SENT}(ncd_years)", "EXPRESSION_INVALID_VOCABULARY"),
+])
+async def test_compile_bundle_raises_the_first_issue_as_its_code_and_a_literal(
+    expr: str, code: str
+) -> None:
+    step = {"step_id": f"s_ladder_{_SENT}", "type": "expression", "label": "Ladder",
+            "expr": expr, "result_type": "decimal", "consumes": ["ncd_years"],
+            "produces": "ncd_factor"}
+    fragment = _fragment_payload(steps=[step])
+    with pytest.raises(CodedError, match=rf"^{code}") as caught:
+        await compile_bundle(_mounted_version(), _mounted_resolver(fragments={NCD: fragment}))
+    assert _SENT not in str(caught.value)

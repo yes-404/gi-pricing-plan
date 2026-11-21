@@ -264,3 +264,44 @@ def test_a_mount_with_no_fragment_is_refused_as_unpinned() -> None:
 def test_rename_tokens_returns_a_refused_text_unchanged_for_the_save_time_checks_to_name() -> None:
     assert rename_tokens("a + now()", {"a": "z"}) == "a + now()"
     assert rename_tokens("a % 2", {"a": "z"}) == "a % 2"
+
+
+# --- #1712 S7c: the compile path's text carries no caller-controlled string --------------------
+# `inline_mounts` raises a CodedError that `compile_rating_version` keeps as `CODE: message` in a
+# stored Job error (NFR-499), so neither the clash text nor the inlined graph's refusal may carry
+# the mount point, a step id or a value name the request chose.
+
+SENT = "sentinels7c91"
+
+
+def _sentinel_fragment() -> SubGraph:
+    return _fragment(steps=[
+        {"step_id": f"s_ladder_{SENT}", "type": "expression", "label": "Ladder",
+         "expr": "ncd_years * 10", "result_type": "decimal",
+         "consumes": ["ncd_years"], "produces": f"raw_{SENT}"},
+        {"step_id": "s_cap", "type": "expression", "label": "Cap",
+         "expr": f"min([raw_{SENT}, 50])", "result_type": "decimal",
+         "consumes": [f"raw_{SENT}"], "produces": "ncd_factor"},
+    ])
+
+
+@pytest.mark.req("FR-217")
+def test_a_namespace_clash_names_no_clashing_name() -> None:
+    mount = {"ref": REF, "mount_point": f"m_{SENT}", "inputs": {"ncd_years": "years_clean"},
+             "outputs": {"ncd_factor": "ncd_factor"}}
+    parent = _parent(mount=mount, extra_inputs=[f"m_{SENT}__raw_{SENT}"])
+    with pytest.raises(CodedError, match=r"^VALIDATION_FAILED") as caught:
+        inline_mounts(parent, {REF: _sentinel_fragment()})
+    assert SENT not in str(caught.value)
+
+
+@pytest.mark.req("FR-212")
+def test_an_unresolved_ref_found_on_inlining_is_a_coded_error_naming_no_step_or_value() -> None:
+    fragment = _sentinel_fragment()
+    ghost = fragment.steps[1].model_copy(update={"consumes": [f"ghost_{SENT}"]})
+    broken = fragment.model_copy(update={"steps": [fragment.steps[0], ghost]})
+    mount = {"ref": REF, "mount_point": f"m_{SENT}", "inputs": {"ncd_years": "years_clean"},
+             "outputs": {"ncd_factor": "ncd_factor"}}
+    with pytest.raises(CodedError, match=r"^RATING_GRAPH_UNRESOLVED_REF") as caught:
+        inline_mounts(_parent(mount=mount), {REF: broken})
+    assert SENT not in str(caught.value)
