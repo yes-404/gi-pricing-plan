@@ -27,7 +27,7 @@ from celery import Celery
 from app.config import Settings, load_settings
 from app.db.models import JobRow
 from app.db.session import Database
-from app.errors import PlatformError
+from app.errors import PlatformError, build_location
 from app.observability.logging import get_logger
 from app.observability.trace import bind_trace_id, current_trace_id, reset_trace_id
 from app.platform import jobs, outbox
@@ -231,7 +231,7 @@ async def execute_job(
                     code=exc.code,
                     message=exc.detail or exc.title,
                     retryable=False,
-                    location=exc.location,
+                    location=build_location(exc.code, exc.location),
                     trace_id=current_trace_id(),
                 ),
             )

@@ -419,12 +419,13 @@ def test_every_failure_sink_on_a_quote_input_path_is_accounted_for() -> None:
 _LOCATION_SITES: dict[tuple[str, str], str] = {
     ("backend/src/app/errors.py", "__init__"): (
         "`PlatformError.__init__` stores the location its raise site passed, after "
-        "`_build_location` has validated it (the bound, the character rule, a warning on a drop): "
+        "`build_location` has validated it (the bound, the character rule, a warning on a drop): "
         "nothing is composed here"
     ),
     ("backend/src/app/worker/tasks.py", "execute_job"): (
-        "copies `exc.location`, the location `PlatformError` built from its own mapping and "
-        "checked (`app.errors._build_location`): nothing is composed here"
+        "passes `exc.location` through `app.errors.build_location`, the check `PlatformError` "
+        "applies when it is built, so a location set by plain assignment is held to the same "
+        "bound and rule where the error is stored: nothing is composed here"
     ),
 }
 

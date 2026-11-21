@@ -483,9 +483,13 @@ def _type_uri(code: str) -> str:
     return _DOC_BASE + code.lower().replace("_", "-")
 
 
-def _build_location(
+def build_location(
     code: str, location: JobErrorLocation | Mapping[str, str] | None
 ) -> JobErrorLocation | None:
+    """A refusal's location as a `JobErrorLocation`, or None with one warning when it cannot be
+    built (the bound, the character rule, a bad reference). Applied where a `PlatformError` is
+    built and again where the worker stores it on the Job (`worker.tasks.execute_job`), so a
+    location set on an error by plain assignment is held to the same rules."""
     if location is None or isinstance(location, JobErrorLocation):
         return location
     try:
@@ -539,7 +543,7 @@ class PlatformError(Exception):
         #: happens here: a location is an aid, so one that cannot be built is dropped (with a
         #: warning naming the code and the declared keys) and the refusal keeps its code (a
         #: `ValidationError` from the raise site would turn it into `JOB_HANDLER_FAILED`).
-        self.location = _build_location(code, location)
+        self.location = build_location(code, location)
 
     def to_problem(self, instance: str | None = None) -> ProblemDetail:
         return ProblemDetail(
