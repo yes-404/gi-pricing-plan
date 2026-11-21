@@ -131,6 +131,9 @@ MODELLING_ERROR_CODES: Final[frozenset[str]] = frozenset(
         "BAND_EMPTY",
         "BAND_BELOW_MIN_EXPOSURE",
         "GROUPING_NOT_EXHAUSTIVE",
+        # FR-127 / FR-189 `evidence_blob`, 2026-11-17 (#1902): absent and not-readable are one
+        # code so a caller cannot probe for a digest in another workspace.
+        "EVIDENCE_BLOB_UNREADABLE",
         # FR-109, 2026-11: a chain is checked when it is made, not when it is used.
         "GROUPING_PARENT_NOT_FOUND",
         "GROUPING_CHAIN_LEVELS_MISMATCH",
