@@ -1,7 +1,7 @@
 import { request } from "./client";
 import type { components } from "./generated/schema";
 
-export type DislocationRun = components["schemas"]["DislocationRun"];
+export type DislocationRun = components["schemas"]["DislocationRunRead"];
 export type DislocationBand = components["schemas"]["DislocationBand"];
 export type SegmentSlice = components["schemas"]["SegmentSlice"];
 export type RungContribution = components["schemas"]["RungContribution"];

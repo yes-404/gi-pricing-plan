@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from "@testing-library/vue";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/vue";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   createRouter,
@@ -6,11 +6,12 @@ import {
   type RouteLocationNormalizedLoaded,
 } from "vue-router";
 
-import type { Diagnostics } from "@/api/diagnostics";
+import type { Diagnostics, FactorFinerLevels } from "@/api/diagnostics";
+import type { Model } from "@/api/models";
 import { routes } from "@/router";
 
 import DiagnosticsView from "../DiagnosticsView.vue";
-import { DIAGNOSTICS, GBM_MODEL } from "./fixtures";
+import { DIAGNOSTICS, GBM_MODEL, GLM_MODEL } from "./fixtures";
 
 /**
  * The three charts this view mounts are ECharts, and ECharts paints to a canvas jsdom does
@@ -114,6 +115,13 @@ describe("DiagnosticsView", () => {
     stubByUrl({});
     render(DiagnosticsView, { props: { slug: "nope" }, ...mounted });
     expect(await screen.findByText(/no such model/i)).toBeInTheDocument();
+  });
+
+  it("shows the provenance badge, naming the Job that produced the diagnostics (FR-2159)", async () => {
+    stubBoth();
+    render(DiagnosticsView, { props: { slug: "motor-frequency" }, ...mounted });
+    const badge = await screen.findByRole("group", { name: "Provenance" });
+    expect(within(badge).getByText(DIAGNOSTICS.provenance.produced_by_job_id!)).toBeInTheDocument();
   });
 
   it("puts train and holdout side by side, each with its rows and overall A/E", async () => {
@@ -305,6 +313,222 @@ describe("DiagnosticsView", () => {
     expect(screen.queryByRole("table", { name: /regularisation path/i })).not.toBeInTheDocument();
     expect(screen.queryByRole("table", { name: /fold dispersion/i })).not.toBeInTheDocument();
     expect(screen.queryByText(/selected alpha/i)).not.toBeInTheDocument();
+  });
+});
+
+/**
+ * FR-109's finer level (`02` §5.3, "Diagnostics, finer level"; decision #1870 (b)). Read from
+ * the stored `Diagnostics`, never computed here. The three cases of the maintainer's (c) on
+ * #1506, each tested below: a model with no Factor on a chained grouping has no finer-level
+ * section at all; one with such a Factor, fitted before the change (`finer_level_ae` null), says
+ * "not available", never an empty table; one fitted after shows the tables. Which case a null
+ * field is comes from the model's definition, read through the dataset version, its Factors and
+ * its Groupings, which `serve` stubs.
+ */
+describe("DiagnosticsView, finer level", () => {
+  const REGION: FactorFinerLevels = {
+    factor: "region",
+    grouping: "region",
+    levels: [
+      {
+        name: "postcode",
+        cells: [
+          { factor: "region", level: "AB1", actual: 30, expected: 20, ae: 1.5, exposure_years: "20" },
+          { factor: "region", level: "AB2", actual: 10, expected: 20, ae: 0.5, exposure_years: "20" },
+        ],
+        unavailable_rows: 0,
+        unavailable_exposure: "0",
+        unavailable_actual: 0,
+        unavailable_expected: 0,
+      },
+      {
+        name: "area",
+        cells: [
+          { factor: "region", level: "AB", actual: 40, expected: 40, ae: 1, exposure_years: "40" },
+        ],
+        unavailable_rows: 3,
+        unavailable_exposure: "2.5",
+        unavailable_actual: 1,
+        unavailable_expected: 2,
+      },
+    ],
+  };
+
+  /** `region`'s own A/E at the level it was fitted on, as the fit stores it for a term. */
+  const REGION_FITTED = [
+    { factor: "region", level: "NORTH", actual: 40, expected: 40, ae: 1, exposure_years: "40" },
+  ];
+
+  /**
+   * The one top-level field, train and holdout alike (the maintainer's (B) on #1506). With
+   * `fitted`, `region` is a term of the model and has its own A/E; without it, `region` is an
+   * interaction's operand: finer levels, but no "as fitted" table.
+   */
+  function withFiner(finer: FactorFinerLevels[] | null, fitted = true): Diagnostics {
+    const own = fitted ? REGION_FITTED : [];
+    return {
+      ...DIAGNOSTICS,
+      universal: {
+        train: {
+          ...DIAGNOSTICS.universal.train,
+          ae_by_factor: [...(DIAGNOSTICS.universal.train.ae_by_factor ?? []), ...own],
+        },
+        holdout: {
+          ...DIAGNOSTICS.universal.holdout,
+          ae_by_factor: [...(DIAGNOSTICS.universal.holdout.ae_by_factor ?? []), ...own],
+        },
+      },
+      finer_level_ae: finer === null ? null : { train: finer, holdout: finer },
+    };
+  }
+
+  /**
+   * The artifact, and the model's definition: one Factor, `region`, on a grouping that has a
+   * parent when `chained`. `definition: false` leaves those reads unanswered (404).
+   */
+  function serve(
+    body: Diagnostics,
+    { chained = false, model = GBM_MODEL, definition = true }:
+      { chained?: boolean; model?: Model; definition?: boolean } = {},
+  ): void {
+    const pinned = { ...model, spec: { ...model.spec, factors: ["f-region"] } } as unknown as Model;
+    stubByUrl({
+      "/diagnostics": { body },
+      "/models/motor-frequency": { body: pinned },
+      ...(definition
+        ? {
+            "/dataset-versions/": { body: { id: model.dataset_version_id, dataset_id: "d-motor" } },
+            "/factors": {
+              body: [
+                {
+                  id: "f-region",
+                  slug: "region",
+                  type: "grouping",
+                  grouping_id: "g-region",
+                  operand_factor_ids: [],
+                },
+              ],
+            },
+            "/groupings": { body: [{ id: "g-region", parent_grouping_id: chained ? "g-area" : null }] },
+          }
+        : {}),
+    });
+  }
+
+  it("offers a level selector for a factor on a chained grouping, and none for one that is not", async () => {
+    serve(withFiner([REGION]), { chained: true });
+    render(DiagnosticsView, { props: { slug: "motor-frequency" }, ...mounted });
+
+    const selector = await screen.findByRole("combobox", { name: /level for region/i });
+    expect(within(selector).getAllByRole("option").map((o) => o.textContent?.trim())).toEqual([
+      "region (as fitted)",
+      "postcode",
+      "area",
+    ]);
+    // `vehicle_age` has an A/E of its own but no chain: it gets no selector.
+    expect(screen.queryByRole("combobox", { name: /vehicle_age/i })).not.toBeInTheDocument();
+  });
+
+  it("offers no as-fitted level for an interaction's operand and opens on its finest level", async () => {
+    serve(withFiner([REGION], false), { chained: true });
+    render(DiagnosticsView, { props: { slug: "motor-frequency" }, ...mounted });
+
+    const selector = await screen.findByRole("combobox", { name: /level for region/i });
+    expect(within(selector).getAllByRole("option").map((o) => o.textContent?.trim())).toEqual([
+      "postcode",
+      "area",
+    ]);
+    const table = screen.getByRole("table", { name: /region at postcode, holdout/i });
+    expect(within(table).getByRole("row", { name: /^AB1\b/ })).toBeInTheDocument();
+  });
+
+  it("shows a finer level's table with its named not-available row, count and exposure", async () => {
+    serve(withFiner([REGION]), { chained: true });
+    render(DiagnosticsView, { props: { slug: "motor-frequency" }, ...mounted });
+
+    const selector = await screen.findByRole("combobox", { name: /level for region/i });
+    await fireEvent.update(selector, "area");
+
+    const table = await screen.findByRole("table", { name: /region at area, holdout/i });
+    expect(within(table).getByRole("row", { name: /^AB\b/ })).toHaveTextContent("1");
+    const missing = within(table).getByRole("row", { name: /not available/i });
+    expect(missing).toHaveTextContent("3 rows");
+    expect(missing).toHaveTextContent("2.5");
+    expect(screen.getByRole("table", { name: /region at area, train/i })).toBeInTheDocument();
+  });
+
+  it.each([
+    ["fitted after the change", withFiner([])],
+    ["fitted before the change", withFiner(null)],
+    ["stored before the change, no field at all", DIAGNOSTICS],
+  ])("shows no finer-level section for a model with no factor on a chained grouping (%s)", async (_, body) => {
+    serve(body);
+    render(DiagnosticsView, { props: { slug: "motor-frequency" }, ...mounted });
+    await screen.findByRole("table", { name: /headline metrics/i });
+
+    expect(screen.queryByLabelText("Actual versus expected at a finer level")).not.toBeInTheDocument();
+    expect(screen.queryByRole("combobox", { name: /level for/i })).not.toBeInTheDocument();
+    expect(screen.queryByText(/not available/i)).not.toBeInTheDocument();
+  });
+
+  it("says not available, never an empty table, for a chained factor fitted before the change", async () => {
+    serve(withFiner(null), { chained: true });
+    render(DiagnosticsView, { props: { slug: "motor-frequency" }, ...mounted });
+
+    const section = await screen.findByLabelText("Actual versus expected at a finer level");
+    expect(section).toHaveTextContent("not available");
+    expect(section).toHaveTextContent("region");
+    expect(within(section).queryByRole("table")).not.toBeInTheDocument();
+    expect(screen.queryByRole("combobox", { name: /level for/i })).not.toBeInTheDocument();
+  });
+
+  it("keeps a plain not available when the model's definition cannot be read", async () => {
+    serve(withFiner(null), { definition: false });
+    render(DiagnosticsView, { props: { slug: "motor-frequency" }, ...mounted });
+
+    const section = await screen.findByLabelText("Actual versus expected at a finer level");
+    expect(section).toHaveTextContent("Finer level: not available");
+    expect(within(section).queryByRole("table")).not.toBeInTheDocument();
+  });
+
+  it("shows the tables for a chained factor fitted after the change", async () => {
+    serve(withFiner([REGION]), { chained: true });
+    render(DiagnosticsView, { props: { slug: "motor-frequency" }, ...mounted });
+
+    const section = await screen.findByLabelText("Actual versus expected at a finer level");
+    expect(
+      within(section).getByRole("table", { name: /region at region \(as fitted\), holdout/i }),
+    ).toBeInTheDocument();
+    expect(
+      within(section).getByRole("table", { name: /region at region \(as fitted\), train/i }),
+    ).toBeInTheDocument();
+    expect(section).not.toHaveTextContent(/Finer level for .*: not available/);
+  });
+
+  /**
+   * FR-141, under the maintainer's (c) on #1506: in a surrogate's finer-level table the "actual"
+   * is the source model's prediction and the "expected" the surrogate's fitted mean. The view
+   * labels it with the same notice as the surrogate's other actual-against-expected tables:
+   * `SurrogateNotice`, rendered once in the page header for the whole page, which covers the
+   * finer-level section with the rest. This holds the notice and the section on one page.
+   */
+  it("shows a surrogate's finer level under the page's FR-141 surrogate notice", async () => {
+    const surrogate = {
+      ...GLM_MODEL,
+      spec: {
+        ...GLM_MODEL.spec,
+        response_column: "__gbm_prediction__",
+        approximates_model_id: GBM_MODEL.id,
+      },
+    } as unknown as Model;
+    serve({ ...withFiner([REGION]), glm: GLM_ARM }, { chained: true, model: surrogate });
+    render(DiagnosticsView, { props: { slug: "motor-frequency" }, ...mounted });
+
+    const section = await screen.findByLabelText("Actual versus expected at a finer level");
+    expect(within(section).getAllByRole("table").length).toBeGreaterThan(0);
+    const notice = screen.getByRole("note");
+    expect(notice).toHaveTextContent("Its diagnostics are measured against that model's predictions");
+    expect(notice).toHaveTextContent("not against observed claims");
   });
 });
 

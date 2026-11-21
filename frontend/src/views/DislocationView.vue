@@ -22,6 +22,7 @@ import ChangeHistogram from "@/components/dislocation/ChangeHistogram.vue";
 import { formatMinor, formatPct } from "@/components/dislocation/format";
 import LargestMovers from "@/components/dislocation/LargestMovers.vue";
 import SegmentGrid from "@/components/dislocation/SegmentGrid.vue";
+import ProvenanceBadge from "@/components/ProvenanceBadge.vue";
 
 const props = defineProps<{ slug: string; version: string; run?: string }>();
 const router = useRouter();
@@ -150,6 +151,8 @@ async function cite(): Promise<void> {
     </div>
 
     <template v-if="!loading && !problem && result">
+      <ProvenanceBadge :provenance="result.provenance" />
+
       <dl class="mt-6 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
         <dt class="text-slate-500">
           Baseline

@@ -213,7 +213,9 @@ def _seed_backtest(workspace_id: UUID) -> tuple[UUID, BacktestSummary]:
     """One stored backtest under `workspace_id`, and the summary it carries."""
     model_id, version_id = _seed_model_and_version(workspace_id)
     summary = _summary(
-        model_ref=f"model:seeded@{version_id.hex[-4:]}",
+        # A version is an integer (`{type}:{slug}@{version}`): the read composes the Backtest's
+        # provenance from this ref (FR-2159), so a hex suffix would be refused there.
+        model_ref=f"model:seeded@{int(version_id.hex[-4:], 16) + 1}",
         version_ref=f"dataset_version:later@{version_id.hex[-4:]}",
         fitted_on_ref=f"dataset_version:earlier@{version_id.hex[-4:]}",
     )

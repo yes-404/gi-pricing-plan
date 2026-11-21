@@ -2,7 +2,7 @@ import { request } from "./client";
 import type { components } from "./generated/schema";
 import type { Job } from "./jobs";
 
-export type ModelComparison = components["schemas"]["ModelComparison"];
+export type ModelComparison = components["schemas"]["ModelComparisonRead"];
 export type ComparisonSummary = components["schemas"]["ComparisonSummary"];
 export type ComparisonMetric = components["schemas"]["ComparisonMetric"];
 export type ComparisonValue = components["schemas"]["ComparisonValue"];

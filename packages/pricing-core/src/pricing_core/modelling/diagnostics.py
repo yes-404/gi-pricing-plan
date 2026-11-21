@@ -47,8 +47,11 @@ from model_schema import (
     EbmFitResult,
     EbmSpec,
     Factor,
+    FactorFinerLevels,
     FactorType,
     FeatureImportance,
+    FinerLevelAe,
+    FinerLevelDiagnostics,
     FitResult,
     GbmDiagnostics,
     GbmEvalPoint,
@@ -81,6 +84,9 @@ from model_schema import (
     Weighting,
 )
 from pricing_core.modelling.factors import resolve_factors
+
+# Aliased: `finer_levels` is also the keyword by which a fit asks for the finer-level A/E.
+from pricing_core.modelling.groupings import finer_levels as _chain_levels
 from pricing_core.modelling.predict import (
     AllRowsUnseenError,
     UnseenLevelExclusion,
@@ -95,10 +101,12 @@ from pricing_core.progress import NullProgress, ProgressCallback
 __all__ = [
     "DiagnosticsResult",
     "backtest_model",
+    "chained_factors",
     "compute_diagnostics",
     "compute_ebm_diagnostics",
     "compute_gbm_diagnostics",
     "deviance",
+    "finer_level_ae",
     "unit_deviance",
 ]
 
@@ -123,6 +131,8 @@ class DiagnosticsResult:
     complexity: ComplexityDiagnostic
     glm: GlmDiagnostics | None = None
     gbm: GbmDiagnostics | None = None
+    #: FR-109's finer level, when the caller asked (`finer_levels=True`); `None` otherwise.
+    finer_level_ae: FinerLevelDiagnostics | None = None
 
 
 def _weighting(spec: ModelSpecCommon) -> Weighting:
@@ -377,6 +387,183 @@ def _bin_index(values: npt.NDArray[np.float64], bins: int) -> npt.NDArray[np.int
     return np.minimum(ranks * bins // n, bins - 1) + 1
 
 
+def _ae_cells(
+    factor: str,
+    values: pl.Series,
+    *,
+    y: npt.NDArray[np.float64],
+    mu: npt.NDArray[np.float64],
+    ae_w: npt.NDArray[np.float64],
+    exposure: npt.NDArray[np.float64],
+    weighted: bool,
+) -> list[AeCell]:
+    """FR-171's actual versus expected for every level of `values`, one `AeCell` each.
+
+    The one statement of the A/E arithmetic: a factor's own levels and the finer levels of a
+    grouping chain (FR-109) are read through it, so the two can never be computed apart.
+    """
+    levels = values.cast(pl.String)
+    cells: list[AeCell] = []
+    for level in sorted({v for v in levels.unique().to_list() if v is not None}):
+        # A null row (a finer level that could not be rebuilt) is in no level's mask.
+        mask = (levels == level).fill_null(False).to_numpy()
+        actual = float(np.sum(ae_w[mask] * y[mask]))
+        expected = float(np.sum(ae_w[mask] * mu[mask]))
+        if expected <= 0:
+            continue
+        ratio = actual / expected
+        # Without a weight column the interval is on the ratio, treating the claim count
+        # as the only random quantity — the standard actuarial A/E interval — and
+        # `actual` is that count. Under a declared weight column `actual` is a weighted
+        # total, so its root is no standard error (DP-M1): the half-width is
+        # `ratio·z/√Σw`, Σw being the claim count for severity. Where the weight is
+        # exposure that is an approximation. With no claims (or no weight) in the cell
+        # there is nothing to build one from, and a zero-width interval would read as
+        # certainty rather than absence.
+        sum_w = float(np.sum(ae_w[mask]))
+        half: float | None
+        if weighted:
+            half = ratio * _NORMAL_975 / math.sqrt(sum_w) if actual > 0 and sum_w > 0 else None
+        else:
+            half = _NORMAL_975 * math.sqrt(actual) / expected if actual > 0 else None
+        cells.append(
+            AeCell(
+                factor=factor,
+                level=level,
+                actual=actual,
+                expected=expected,
+                ae=ratio,
+                ci_95=(ratio - half, ratio + half) if half is not None else None,
+                exposure_years=Decimal(str(round(float(np.sum(exposure[mask])), 6))),
+            )
+        )
+    return cells
+
+
+def finer_level_ae(
+    factor: str,
+    grouping: Grouping,
+    groupings: Mapping[UUID, Grouping],
+    data: pl.DataFrame,
+    *,
+    y: npt.NDArray[np.float64],
+    mu: npt.NDArray[np.float64],
+    ae_weights: npt.NDArray[np.float64],
+    exposure: npt.NDArray[np.float64],
+    weighted: bool,
+) -> tuple[FinerLevelAe, ...]:
+    """Actual versus expected at each level finer than `factor`'s grouping (FR-109).
+
+    The rows are the ones the partition's A/E reads, and `mu` is the model's own fitted mean
+    for each: only the grouping of the rows changes, never what they are compared against, so
+    no figure here moves a price. The finer levels come from `finer_levels` (decision #1908,
+    option (B)); an unchained grouping gives `()`. The rows a level could not rebuild are
+    reported as its "not available" row, never dropped and never an empty table.
+    """
+    result: list[FinerLevelAe] = []
+    for name, values in _chain_levels(data, grouping, groupings):
+        missing = values.is_null().to_numpy()
+        result.append(
+            FinerLevelAe(
+                name=name,
+                cells=tuple(
+                    _ae_cells(
+                        factor,
+                        values,
+                        y=y,
+                        mu=mu,
+                        ae_w=ae_weights,
+                        exposure=exposure,
+                        weighted=weighted,
+                    )
+                ),
+                unavailable_rows=int(np.count_nonzero(missing)),
+                unavailable_exposure=Decimal(str(round(float(np.sum(exposure[missing])), 6))),
+                unavailable_actual=float(np.sum(ae_weights[missing] * y[missing])),
+                unavailable_expected=float(np.sum(ae_weights[missing] * mu[missing])),
+            )
+        )
+    return tuple(result)
+
+
+def chained_factors(
+    factors: Sequence[Factor], groupings: Mapping[UUID, Grouping] | None
+) -> tuple[tuple[Factor, Grouping], ...]:
+    """The Factors with a finer level (FR-109): each `grouping` Factor whose grouping has a
+    parent, with that grouping, in `factors`' order.
+
+    One rule, read by the fit (which levels it computes) and by the diagnostics read (which
+    Factors the view names when no finer level was stored, #1506 slice 5), so the two cannot
+    disagree. Definitions only: nothing here reads data (FR-170).
+    """
+    found: list[tuple[Factor, Grouping]] = []
+    for factor in factors:
+        if factor.type is not FactorType.GROUPING or factor.grouping_id is None:
+            continue
+        grouping = (groupings or {}).get(factor.grouping_id)
+        if grouping is None or grouping.parent_grouping_id is None:
+            continue
+        found.append((factor, grouping))
+    return tuple(found)
+
+
+def _chained_factors_ae(
+    data: pl.DataFrame,
+    spec: ModelSpecCommon,
+    factors: Sequence[Factor],
+    groupings: Mapping[UUID, Grouping] | None,
+    *,
+    mu: npt.NDArray[np.float64],
+) -> tuple[FactorFinerLevels, ...]:
+    """`finer_level_ae` for every `grouping` Factor whose grouping has a parent (FR-109).
+
+    `data` and `mu` are what `_partition` was given for the same partition, and `y` and the
+    weights are read from them as `_partition` reads them, so each level's A/E is over the rows,
+    means and weighting of that partition's `ae_by_factor` (FR-171, FR-184).
+
+    The caller supplies every grouping of each chain in `groupings` (`grouping_chain` raises by
+    name on a parent it was not given). A Factor on a grouping with no parent, and every other
+    Factor type, has no finer level and no entry.
+    """
+    y = data[spec.response_column].cast(pl.Float64).to_numpy()
+    exposure = _weights(spec, data)
+    ae_w = ae_weights(spec, data)
+    weighted = spec.weight.kind == "column"
+    entries: list[FactorFinerLevels] = []
+    for factor, grouping in chained_factors(factors, groupings):
+        assert groupings is not None
+        entries.append(
+            FactorFinerLevels(
+                factor=factor.slug,
+                grouping=grouping.slug,
+                levels=finer_level_ae(
+                    factor.slug, grouping, groupings, data,
+                    y=y, mu=mu, ae_weights=ae_w, exposure=exposure, weighted=weighted,
+                ),
+            )
+        )
+    return tuple(entries)
+
+
+def _finer_level_diagnostics(
+    spec: ModelSpecCommon,
+    factors: Sequence[Factor],
+    groupings: Mapping[UUID, Grouping] | None,
+    *,
+    train: pl.DataFrame,
+    mu_train: npt.NDArray[np.float64],
+    holdout: pl.DataFrame,
+    mu_holdout: npt.NDArray[np.float64],
+) -> FinerLevelDiagnostics:
+    """FR-109's finer level for both partitions (FR-183), each over the frame and fitted means
+    its `_partition` call read. A fit asks for it with every grouping of each chain loaded
+    (#1506 slice 5); without it `Diagnostics.finer_level_ae` is `None`, "not available"."""
+    return FinerLevelDiagnostics(
+        train=_chained_factors_ae(train, spec, factors, groupings, mu=mu_train),
+        holdout=_chained_factors_ae(holdout, spec, factors, groupings, mu=mu_holdout),
+    )
+
+
 def _partition(
     data: pl.DataFrame,
     spec: ModelSpecCommon,
@@ -420,39 +607,17 @@ def _partition(
     for slug, column in matrix.terms.items():
         if column not in matrix.categorical:
             continue
-        levels = matrix.frame[column].cast(pl.String)
-        for level in sorted({v for v in levels.unique().to_list() if v is not None}):
-            mask = (levels == level).to_numpy()
-            actual = float(np.sum(ae_w[mask] * y[mask]))
-            expected = float(np.sum(ae_w[mask] * mu[mask]))
-            if expected <= 0:
-                continue
-            ratio = actual / expected
-            # Without a weight column the interval is on the ratio, treating the claim count
-            # as the only random quantity — the standard actuarial A/E interval — and
-            # `actual` is that count. Under a declared weight column `actual` is a weighted
-            # total, so its root is no standard error (DP-M1): the half-width is
-            # `ratio·z/√Σw`, Σw being the claim count for severity. Where the weight is
-            # exposure that is an approximation. With no claims (or no weight) in the cell
-            # there is nothing to build one from, and a zero-width interval would read as
-            # certainty rather than absence.
-            sum_w = float(np.sum(ae_w[mask]))
-            half: float | None
-            if weighted:
-                half = ratio * _NORMAL_975 / math.sqrt(sum_w) if actual > 0 and sum_w > 0 else None
-            else:
-                half = _NORMAL_975 * math.sqrt(actual) / expected if actual > 0 else None
-            cells.append(
-                AeCell(
-                    factor=slug,
-                    level=level,
-                    actual=actual,
-                    expected=expected,
-                    ae=ratio,
-                    ci_95=(ratio - half, ratio + half) if half is not None else None,
-                    exposure_years=Decimal(str(round(float(np.sum(exposure[mask])), 6))),
-                )
+        cells.extend(
+            _ae_cells(
+                slug,
+                matrix.frame[column],
+                y=y,
+                mu=mu,
+                ae_w=ae_w,
+                exposure=exposure,
+                weighted=weighted,
             )
+        )
 
     with np.errstate(divide="ignore", invalid="ignore"):
         rate = np.where(exposure > 0, mu / exposure, 0.0)
@@ -774,6 +939,7 @@ def compute_diagnostics(
     max_factor_count: int | None = None,
     min_exposure_per_parameter: float | None = None,
     type_iii: bool = True,
+    finer_levels: bool = False,
     progress: ProgressCallback | None = None,
 ) -> DiagnosticsResult:
     """Everything `02` §3.8 asks of a GLM fit, for both partitions (FR-MODEL-49..55, 81).
@@ -785,6 +951,10 @@ def compute_diagnostics(
     `model_offset_train`/`model_offset_holdout` are the offset-from-another-model arrays
     (FR-116), required when `spec.offset.kind == "model"` — each frame is scored with
     its own, because the referenced model's linear predictor is a per-frame quantity.
+
+    `finer_levels` also records FR-109's finer-level A/E for both partitions
+    (`_finer_level_diagnostics`). The fit asks for it, on all three arms, with every grouping of
+    each chain in `groupings`.
     """
     report = progress or NullProgress()
     report.check_cancelled()
@@ -815,12 +985,13 @@ def compute_diagnostics(
     model_offset_holdout = holdout_unseen.take(model_offset_holdout)
     power = _power_of(fit, spec)
     theta = _theta_of(spec)
+    mu_train = predict_glm(
+        fit, train, factors, spec,
+        model_offset=model_offset_train, bandings=bandings, groupings=groupings,
+    )
     train_part = _partition(
         train, spec, factors,
-        mu=predict_glm(
-            fit, train, factors, spec,
-            model_offset=model_offset_train, bandings=bandings, groupings=groupings,
-        ),
+        mu=mu_train,
         family=spec.family, power=power, theta=theta,
         excluded_zero_weight=train_rows.excluded,
         excluded_unknown_response=train_rows.excluded_unknown,
@@ -830,18 +1001,27 @@ def compute_diagnostics(
     )
     report.check_cancelled()
     report.update(0.35, "diagnostics: holdout")
+    mu_holdout = predict_glm(
+        fit, holdout, factors, spec,
+        model_offset=model_offset_holdout, bandings=bandings, groupings=groupings,
+    )
     holdout_part = _partition(
         holdout, spec, factors,
-        mu=predict_glm(
-            fit, holdout, factors, spec,
-            model_offset=model_offset_holdout, bandings=bandings, groupings=groupings,
-        ),
+        mu=mu_holdout,
         family=spec.family, power=power, theta=theta,
         excluded_zero_weight=holdout_rows.excluded,
         excluded_unknown_response=holdout_rows.excluded_unknown,
         excluded_unseen_level=holdout_unseen.excluded,
         excluded_unseen_exposure=holdout_unseen_exposure,
         bandings=bandings, groupings=groupings,
+    )
+    finer = (
+        _finer_level_diagnostics(
+            spec, factors, groupings,
+            train=train, mu_train=mu_train, holdout=holdout, mu_holdout=mu_holdout,
+        )
+        if finer_levels
+        else None
     )
 
     report.update(0.55, "diagnostics: deviance and information criteria")
@@ -913,6 +1093,7 @@ def compute_diagnostics(
             monotonicity=monotonicity,
             monotonicity_omitted=monotonicity_omitted,
         ),
+        finer_level_ae=finer,
     )
 
 
@@ -1509,6 +1690,7 @@ def compute_gbm_diagnostics(
     min_exposure_per_parameter: float | None = None,
     permutation_repeats: int = 1,
     max_partial_dependence_levels: int = DEFAULT_PARTIAL_DEPENDENCE_LEVELS,
+    finer_levels: bool = False,
     progress: ProgressCallback | None = None,
 ) -> DiagnosticsResult:
     """Everything `02` §3.8 asks of a GBM fit (FR-MODEL-50, 52, 54, 55, 81).
@@ -1532,23 +1714,33 @@ def compute_gbm_diagnostics(
     train_rows = drop_zero_weight_rows(train, spec)
     holdout_rows = drop_zero_weight_rows(holdout, spec)
     train, holdout = train_rows.data, holdout_rows.data
+    mu_train = predict_gbm(result, booster, train, factors,
+                           bandings=bandings, groupings=groupings).to_numpy()
     train_part = _partition(
         train, spec, factors,
-        mu=predict_gbm(result, booster, train, factors,
-                       bandings=bandings, groupings=groupings).to_numpy(),
+        mu=mu_train,
         family=family, power=power, excluded_zero_weight=train_rows.excluded,
         excluded_unknown_response=train_rows.excluded_unknown,
         bandings=bandings, groupings=groupings,
     )
     report.check_cancelled()
     report.update(0.30, "diagnostics: holdout")
+    mu_holdout = predict_gbm(result, booster, holdout, factors,
+                             bandings=bandings, groupings=groupings).to_numpy()
     holdout_part = _partition(
         holdout, spec, factors,
-        mu=predict_gbm(result, booster, holdout, factors,
-                       bandings=bandings, groupings=groupings).to_numpy(),
+        mu=mu_holdout,
         family=family, power=power, excluded_zero_weight=holdout_rows.excluded,
         excluded_unknown_response=holdout_rows.excluded_unknown,
         bandings=bandings, groupings=groupings,
+    )
+    finer = (
+        _finer_level_diagnostics(
+            spec, factors, groupings,
+            train=train, mu_train=mu_train, holdout=holdout, mu_holdout=mu_holdout,
+        )
+        if finer_levels
+        else None
     )
 
     report.update(0.45, "diagnostics: importances")
@@ -1659,6 +1851,7 @@ def compute_gbm_diagnostics(
             max_depth=max_depth,
             mean_depth=mean_depth,
         ),
+        finer_level_ae=finer,
     )
 
 
@@ -1673,6 +1866,7 @@ def compute_ebm_diagnostics(
     groupings: Mapping[UUID, Grouping] | None = None,
     max_factor_count: int | None = None,
     min_exposure_per_parameter: float | None = None,
+    finer_levels: bool = False,
     progress: ProgressCallback | None = None,
 ) -> DiagnosticsResult:
     """Everything `02` §3.8 asks of an EBM fit (FR-MODEL-49, 50, 54, 55, 81).
@@ -1692,23 +1886,31 @@ def compute_ebm_diagnostics(
     train_rows = drop_zero_weight_rows(train, spec)  # FR-111, as for the other arms
     holdout_rows = drop_zero_weight_rows(holdout, spec)
     train, holdout = train_rows.data, holdout_rows.data
+    mu_train = predict_ebm(result, train, factors, bandings=bandings, groupings=groupings)
     train_part = _partition(
         train, spec, factors,
-        mu=predict_ebm(result, train, factors,
-                       bandings=bandings, groupings=groupings),
+        mu=mu_train,
         family=family, power=power, excluded_zero_weight=train_rows.excluded,
         excluded_unknown_response=train_rows.excluded_unknown,
         bandings=bandings, groupings=groupings,
     )
     report.check_cancelled()
     report.update(0.30, "diagnostics: holdout")
+    mu_holdout = predict_ebm(result, holdout, factors, bandings=bandings, groupings=groupings)
     holdout_part = _partition(
         holdout, spec, factors,
-        mu=predict_ebm(result, holdout, factors,
-                       bandings=bandings, groupings=groupings),
+        mu=mu_holdout,
         family=family, power=power, excluded_zero_weight=holdout_rows.excluded,
         excluded_unknown_response=holdout_rows.excluded_unknown,
         bandings=bandings, groupings=groupings,
+    )
+    finer = (
+        _finer_level_diagnostics(
+            spec, factors, groupings,
+            train=train, mu_train=mu_train, holdout=holdout, mu_holdout=mu_holdout,
+        )
+        if finer_levels
+        else None
     )
 
     report.update(0.95, "diagnostics: complexity")
@@ -1737,4 +1939,5 @@ def compute_ebm_diagnostics(
         complexity=complexity,
         glm=None,
         gbm=None,
+        finer_level_ae=finer,
     )

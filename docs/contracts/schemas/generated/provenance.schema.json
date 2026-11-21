@@ -1,0 +1,79 @@
+{
+  "$defs": {
+    "ArtifactRef": {
+      "description": "Canonical artifact reference {type}:{slug}@{version} (ID-3).",
+      "examples": [
+        "model:motor-ad-frequency@7",
+        "rating_version:motor-gb@27"
+      ],
+      "pattern": "^((banding|custom_metric|custom_objective|dataset|dataset_version|deployment|dossier|gipp_check|grouping|model|monitor|optimisation_run|peril_structure|rate_table|rating_algorithm|rating_version|reference_table|regression_suite|sub_graph|validation_rule|validation_rule_set):[a-z0-9][a-z0-9-]{1,62}|factor:[a-z0-9][a-z0-9_-]{1,62})@[1-9][0-9]*$",
+      "title": "ArtifactRef",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Where a governed artifact came from: itself, the Job that produced it, and its subjects.\n\nRead-side (`00` FR-2159): composed by the API on every read of the ten shapes, and never\npersisted. `produced_by_job_id` is the artifact's stored `job_id`; null means none was\nrecorded, which a view shows as \"not recorded\". It is required and has no default, so a\ncomposer that forgets it fails rather than silently stating \"not recorded\".\n`subject_refs` is never empty for a shape with a governed parent, and its order is\nFR-2159's: `ModelComparison` in `summary.model_refs` order, `DislocationRun` baseline then\ncandidate, `RegressionRun` suite then rating version.\n\n`unnamed_subjects` counts the governed parents whose stored reference cannot be read, for\nexample a model whose family slug is outside the `refs` grammar (nothing holds family\nslugs to it). Such a parent is left out of `subject_refs` and counted here, so a read that\nworked before provenance never fails on it and never drops it silently. It is null when\nevery parent is named. This is #1506's proposal, pending the maintainer's answer on #1506\n(comment 7016302144). Whether #1868's \"never empty\" is amended for this case is theirs to\ndecide.",
+  "properties": {
+    "entity_id": {
+      "format": "uuid",
+      "title": "Entity Id",
+      "type": "string"
+    },
+    "entity_type": {
+      "enum": [
+        "validation_report",
+        "profile",
+        "diagnostics",
+        "model_comparison",
+        "backtest",
+        "regression_run",
+        "objective_certificate",
+        "dislocation_run",
+        "metric_certificate",
+        "transparency_artifact"
+      ],
+      "title": "Entity Type",
+      "type": "string"
+    },
+    "produced_by_job_id": {
+      "anyOf": [
+        {
+          "format": "uuid",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Produced By Job Id"
+    },
+    "subject_refs": {
+      "items": {
+        "$ref": "#/$defs/ArtifactRef"
+      },
+      "title": "Subject Refs",
+      "type": "array"
+    },
+    "unnamed_subjects": {
+      "anyOf": [
+        {
+          "minimum": 1,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Unnamed Subjects"
+    }
+  },
+  "required": [
+    "entity_type",
+    "entity_id",
+    "produced_by_job_id",
+    "subject_refs"
+  ],
+  "title": "Provenance",
+  "type": "object"
+}

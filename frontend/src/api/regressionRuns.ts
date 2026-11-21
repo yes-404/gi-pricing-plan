@@ -2,7 +2,7 @@ import { request } from "./client";
 import type { components } from "./generated/schema";
 import { pageThrough, type Paged } from "./paging";
 
-export type RegressionRun = components["schemas"]["RegressionRun"];
+export type RegressionRun = components["schemas"]["RegressionRunRead"];
 export type RegressionRunSummary = components["schemas"]["RegressionRunSummary"];
 export type GoldenQuoteResult = components["schemas"]["GoldenQuoteResult"];
 export type PropertyResult = components["schemas"]["PropertyResult"];

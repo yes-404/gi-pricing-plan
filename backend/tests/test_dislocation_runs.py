@@ -57,6 +57,7 @@ from app.worker.rating_handlers import register_rating_handlers
 from app.worker.tasks import execute_job
 from model_schema import ArtifactRef, JobKind, JobStatus, ScopeType, new_uuid7
 from model_schema.dislocation import DislocationRun
+from model_schema.provenance import DislocationRunRead
 from pricing_core.rating.analysis import AttributionError
 from pricing_core.rating.compile import ResolvedArtifact
 
@@ -591,7 +592,9 @@ async def test_post_answers_202_with_a_job_and_the_job_persists_the_run(
     (row,) = await _runs(database, world.workspace_id)
     fetched = api_client.get(f"/api/v1/dislocation-runs/{row.id}", headers=world.headers)
     assert fetched.status_code == 200, fetched.text
-    assert DislocationRun.model_validate(fetched.json()) == DislocationRun.model_validate(row.run)
+    read = DislocationRunRead.model_validate(fetched.json())
+    served = read.model_dump(exclude={"provenance"})
+    assert DislocationRun.model_validate(served) == DislocationRun.model_validate(row.run)
 
 
 @pytest.mark.req("FR-1399")
