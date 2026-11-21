@@ -141,8 +141,8 @@ Terms from `00-overview.md` §2.2 are used unchanged. Additional terms owned her
 > sentence "no behaviour may be built on the stored chain" is **narrowed**: the platform reads
 > the stored chain to refuse at resolution, and to rebuild the finer levels for the
 > diagnostics of #1506 (decision #1908 option (B)), and for nothing else; following it to resolve
-> a value is not built. **(1) At creation**, a Grouping that names a parent is refused with a 422 unless the
-> parent exists in the same workspace (`GROUPING_PARENT_NOT_FOUND`; a parent in another
+> a value is not built. **(1) At creation**, a Grouping that names a parent is refused with a 422
+> unless the parent exists in the same workspace (`GROUPING_PARENT_NOT_FOUND`; a parent in another
 > workspace reads the same) and the chain's levels chain: every source level of the child is a
 > target level of its parent, and none is also a source level of an ancestor
 > (`GROUPING_CHAIN_LEVELS_MISMATCH`). The refusal names the Grouping and a count, never a
@@ -175,10 +175,7 @@ Terms from `00-overview.md` §2.2 are used unchanged. Additional terms owned her
 > behaviour (`03` FR-239). Following the chain to resolve a value is **not built**. The `error`
 > message counts the unmapped levels and no longer lists them.
 >
-> *2026-11-21 (the review of #1947):* the clause above, "and for nothing else", is widened to name the
-> second read the decision of #1908 (option (B)) and the accepted plan of Work #1506 already
-> carry: the chain is read at fit time to rebuild the finer levels for the actual-versus-expected
-> diagnostics. Whichever of #1947 and #1506 merges second keeps both readings.
+> *2026-11-21 (the review of #1947):* "and for nothing else" now names the second read that #1908 (B) and #1506 carry.
 >
 > **FR-109 (3), dated amendment 2026-11-18 (the maintainer's ruling).** The
 > predict route (`POST /models/{id}/predict`) answers this refusal **409**
