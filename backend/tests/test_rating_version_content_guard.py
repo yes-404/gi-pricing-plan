@@ -452,7 +452,8 @@ def test_the_migrations_status_tuple_is_the_enums_values() -> None:
     assert all(f"'{s.value}'" in str(check.sqltext) for s in RatingVersionStatus)
 
 
-#: The test files that name `session_replication_role`, read with `grep -l` on 2026-11-21: each
+#: The test files that name `session_replication_role`, found with `grep -l session_replication_role
+#: backend/tests/*.py` at 0a1c9aac and written here as a fixed list, never computed: each
 #: either sets it to tamper below the audit triggers or says why a test must not. This file names
 #: it to state the census. A new file is added here by a reviewed edit, never by default.
 _SESSION_REPLICATION_ROLE_FILES = frozenset(
