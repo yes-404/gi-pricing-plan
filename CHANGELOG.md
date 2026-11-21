@@ -31,7 +31,7 @@ about. The format follows [Keep a Changelog 1.1.0](https://keepachangelog.com/en
   the version `PLAIN` (exit 1), as the scorer refuses that level; an operand the sweep cannot
   examine (an `expression` with no Banding, a spline, a polynomial or an offset) also leaves it
   `PLAIN`, and every `NOTREACHABLE` line says that an offset chain of three models is not checked
-  (#1943, fixed by #1949). The sweep also adds a
+  (#1943, to be fixed by #1949). The sweep also adds a
   `glm models examined: N` line and one `not-examined-other-family <version>` line per version
   pinning another family. The sweep also changes what it prints for a version with an
   `expression` Factor that has no Banding and has relativities: it now lists it `PLAIN` (exit 1),

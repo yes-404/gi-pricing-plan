@@ -121,7 +121,7 @@ Exit code (a distinct non-zero for each condition; the first that applies wins):
         operand's `map_to_base` under an undeclared cross, a nested-interaction operand; #1944): a
         NOTEXAMINED-* line is not a pass, and a shape may print no line at all. Every NOTREACHABLE
         line says what it does not cover: an offset chain of three models, which the scorer
-        refuses with MODEL_OFFSET_MISSING (#1943, fixed by #1949).
+        refuses with MODEL_OFFSET_MISSING (#1943, to be fixed by #1949).
     1   at least one version is reachable (any class above except NOTREACHABLE and NOTEXAMINED-*)
     2   a version's bundle could not be read: an unchecked version is not a clean one
     3   the corpus is empty (no version with a bundle): a zero over nothing is not a clean result
@@ -178,7 +178,7 @@ _REACHABLE = (
 NOTREACHABLE = "NOTREACHABLE"
 NOTREACHABLE_REASONS = ("closed-input", "not-scored")
 #: Printed on every NOTREACHABLE line: what the verdict does not cover. FR-2143 gives the gap to
-#: #1943 (the scorer refuses an offset chain of three models; #1949 is its fix).
+#: #1943 (the scorer refuses an offset chain of three models; #1949 is to fix it).
 NOTREACHABLE_CAVEAT = "not checked: an offset chain of three models, #1943"
 _NOT_EXAMINED = (
     "NOTEXAMINED-INTERACTION", "NOTEXAMINED-GROUPING-SOURCE", "NOTEXAMINED-NUMERIC-TERMS"
