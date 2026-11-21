@@ -800,7 +800,8 @@ async def test_a_value_at_an_ancestor_level_escaping_the_diagnostics_fails_the_j
     assert job_row.error["code"] == "GROUPING_VALUE_AT_ANCESTOR_LEVEL"
     assert job_row.error["code"] != "JOB_HANDLER_FAILED"
     # The fixed sentence, whole: a narrowed catch lets the error reach `execute_job`'s generic
-    # clause, which keeps the code and loses this sentence (and the 409).
+    # clause and the Job fails as `JOB_HANDLER_FAILED`; the whole-sentence assertion is the
+    # stronger form.
     from app.worker import model_handlers
 
     assert job_row.error["message"] == model_handlers._diagnostics_refusal(
@@ -861,7 +862,8 @@ async def test_a_holdout_value_at_an_ancestor_level_fails_the_fit_with_its_code(
     assert job_row.error is not None
     assert job_row.error["code"] == "GROUPING_VALUE_AT_ANCESTOR_LEVEL"
     # The fixed sentence, whole: a narrowed catch lets the error reach `execute_job`'s generic
-    # clause, which keeps the code and loses this sentence (and the 409).
+    # clause and the Job fails as `JOB_HANDLER_FAILED`; the whole-sentence assertion is the
+    # stronger form.
     from app.worker import model_handlers
     from pricing_core.modelling.errors import GroupingAncestorLevelError
 
@@ -953,7 +955,8 @@ async def test_a_value_at_an_ancestor_level_fails_an_offset_fit_with_its_code(
     assert job_row.error is not None
     assert job_row.error["code"] == "GROUPING_VALUE_AT_ANCESTOR_LEVEL"
     # The fixed sentence, whole: a narrowed catch lets the error reach `execute_job`'s generic
-    # clause, which keeps the code and loses this sentence (and the 409).
+    # clause and the Job fails as `JOB_HANDLER_FAILED`; the whole-sentence assertion is the
+    # stronger form.
     from app.worker import model_handlers
     from pricing_core.modelling.errors import GroupingAncestorLevelError
 
@@ -1022,7 +1025,8 @@ async def test_a_value_at_an_ancestor_level_escaping_the_quantile_crossing_keeps
     assert job_row.error is not None
     assert job_row.error["code"] == "GROUPING_VALUE_AT_ANCESTOR_LEVEL"
     # The fixed sentence, whole: a narrowed catch lets the error reach `execute_job`'s generic
-    # clause, which keeps the code and loses this sentence (and the 409).
+    # clause and the Job fails as `JOB_HANDLER_FAILED`; the whole-sentence assertion is the
+    # stronger form.
     from app.worker import model_handlers
 
     assert job_row.error["message"] == model_handlers._diagnostics_refusal(
