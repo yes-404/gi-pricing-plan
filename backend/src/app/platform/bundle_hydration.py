@@ -67,19 +67,18 @@ def unreadable_bundle(ref: ArtifactRef | str, why: str) -> PlatformError:
     )
 
 
-async def _refuse(
+async def _record_refusal(
     slot: BundleSlot,
     database: Database,
     *,
     workspace_id: UUID,
     ref: ArtifactRef,
     content_hash: str,
-    code: str,
     refusal: str,
     acting: Principal | None,
     requester: Principal | None,
-) -> PlatformError:
-    """The refusal as a decided answer: evict the hash, audit it, return the 409.
+) -> None:
+    """Evict the hash and write the refusal's Audit Event (`_refuse`'s first two acts).
 
     **A governance act** (`acting` set: submit, deploy, rollback) writes its OWN event with the
     acting principal as actor, every time, never de-duplicated and never touching the memo.
@@ -113,6 +112,31 @@ async def _refuse(
             if acting is None:
                 slot.unrecord_refusal(content_hash)
             raise
+
+
+async def _refuse(
+    slot: BundleSlot,
+    database: Database,
+    *,
+    workspace_id: UUID,
+    ref: ArtifactRef,
+    content_hash: str,
+    code: str,
+    refusal: str,
+    acting: Principal | None,
+    requester: Principal | None,
+) -> PlatformError:
+    """The refusal as a decided answer: evict the hash, audit it, return the 409."""
+    await _record_refusal(
+        slot,
+        database,
+        workspace_id=workspace_id,
+        ref=ref,
+        content_hash=content_hash,
+        refusal=refusal,
+        acting=acting,
+        requester=requester,
+    )
     return PlatformError(
         code,
         LOAD_GUARD_CODES[code],
@@ -214,6 +238,24 @@ async def revalidate(
             acting=actor,
             requester=None,
         ) from None
+    except PlatformError as exc:
+        # A pinned model whose offset source has an offset of its own (version 1 supports one
+        # level, FR-116): the resolver refuses it as a `PlatformError`, which is already the
+        # 409, but a governance refusal also writes its own event (FR-243). Only this code is a
+        # decided answer here; it is not a load-guard code, so `hydrate` never sees it.
+        if exc.code != "MODEL_OFFSET_REF_INVALID":
+            raise
+        await _record_refusal(
+            slot,
+            database,
+            workspace_id=workspace_id,
+            ref=ref,
+            content_hash=bundle.content_hash,
+            refusal=f"{exc.code}: {exc.detail}",
+            acting=actor,
+            requester=None,
+        )
+        raise
 
 
 class Revalidate(Protocol):

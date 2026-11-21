@@ -428,3 +428,96 @@ async def test_deploy_refuses_a_version_mounting_a_sub_graph_its_pins_do_not_car
     assert await deployments_written(database, workspace_id) == 0
     events = await refusal_events(database, workspace_id)
     assert [e.entity_ref for e in events] == [ref]
+
+
+async def _pin_a_model_whose_source_has_an_offset(
+    client: TestClient,
+    database: Database,
+    blob_store: Any,
+    workspace_id: UUID,
+    deployer: Any,
+    slug: str,
+) -> None:
+    """Give the stored version `slug` an algorithm and a pin for a model C that is offset from B,
+    which is offset from A. The fit refuses C (#1943 D4), so C is the hand-written row of
+    `test_rating_version_compile.py`: written past the fit. The Bundle the version stores is
+    untouched (the clean fixture), so it loads and prices: the pinned model is never called."""
+    from backend.tests.approved_rows import mark_approved
+    from backend.tests.test_model_offset_jobs import _residual_spec
+    from backend.tests.test_prediction import _fitted_residual_pair
+    from backend.tests.test_rating_version_compile import _empty_pins, _minimal_algorithm
+
+    from app.db.models import ModelRow
+    from app.platform import modelling as model_service
+
+    made = client.post(
+        "/api/v1/rating-algorithms", json=_minimal_algorithm(), headers=deployer.headers
+    )
+    assert made.status_code == 201, made.text
+    pair = await _fitted_residual_pair(database, blob_store, workspace_id)
+    async with database.unit_of_work() as session:
+        b_row = await session.get(ModelRow, pair.residual_id)
+        assert b_row is not None
+        b_ref = f"model:{b_row.model_family_slug}@{b_row.version}"
+        c_row, _ = await model_service.reserve_model(
+            session,
+            workspace_id=workspace_id,
+            actor=pair.actor,
+            spec=_residual_spec(pair.v2_id, pair.resid_flag_id, pair.split2, ref=b_ref),
+        )
+        c_row.fit_result = b_row.fit_result
+        c_row.diagnostics_id = b_row.diagnostics_id
+        c_row.status = "fitted"
+        await session.flush()
+        await mark_approved(session, c_row)
+        c_ref = f"model:{c_row.model_family_slug}@{c_row.version}"
+        pins = {**_empty_pins(), "models": [c_ref]}
+        await session.execute(
+            update(RatingVersionRow)
+            .where(RatingVersionRow.workspace_id == workspace_id, RatingVersionRow.slug == slug)
+            .values(algorithm_ref="rating_algorithm:minimal@1", pins=pins)
+        )
+
+
+@pytest.mark.req("FR-116")
+@pytest.mark.req("FR-243")
+@pytest.mark.asyncio
+@pytest.mark.parametrize("act", ["submit", "deploy", "rollback"])
+async def test_a_version_pinning_a_two_level_offset_model_is_refused_with_one_event(
+    act: str,
+    client: TestClient,
+    database: Database,
+    blob_store: Any,
+    workspace_id: UUID,
+    seat: Any,
+) -> None:
+    """#1943 point 1: a stored version that pins, and never calls, a model whose offset source has
+    an offset of its own still prices (its Bundle is the clean fixture), but submit, deploy and
+    rollback refuse it, `MODEL_OFFSET_REF_INVALID` (409) with exactly one
+    `rating_version.load_refused` event and no Deployment, like every other revalidation refusal."""
+    deployer = await seat("deployer", "analyst")
+    ref, _ = await stored_version(database, blob_store, workspace_id, "clean.bundle.json")
+    if act == "rollback":
+        second, _ = await stored_version(database, blob_store, workspace_id, "clean.bundle.json")
+        assert deploy(client, deployer, "dev", ref).status_code == 201
+        assert deploy(client, deployer, "dev", second).status_code == 201
+    await _pin_a_model_whose_source_has_an_offset(
+        client, database, blob_store, workspace_id, deployer, ref.split(":")[1].split("@")[0]
+    )
+    before = await deployments_written(database, workspace_id)
+    if act == "submit":
+        refused = request_into(client, deployer, "prod", ref)
+    elif act == "deploy":
+        refused = deploy(client, deployer, "dev", ref)
+    else:
+        refused = client.post(
+            "/api/v1/environments/dev/deployments/rollback",
+            json={"rating_version_ref": ref, "reason": "regression"},
+            headers=deployer.headers,
+        )
+    assert refused.status_code == REFUSAL_STATUS, refused.text
+    assert refused.json()["code"] == "MODEL_OFFSET_REF_INVALID"
+    assert await deployments_written(database, workspace_id) == before
+    events = await refusal_events(database, workspace_id)
+    assert [e.entity_ref for e in events] == [ref]
+    assert "MODEL_OFFSET_REF_INVALID" in str((events[0].after or {}).get("refusal"))
