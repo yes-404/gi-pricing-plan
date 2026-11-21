@@ -697,6 +697,57 @@ async def test_a_refusal_that_escapes_the_diagnostics_fails_the_job_with_its_cod
     assert model.fit_result is None  # nothing was stored past the refusal
 
 
+@pytest.mark.req("FR-2143")
+async def test_a_value_at_an_ancestor_level_escaping_the_diagnostics_fails_the_job_with_its_code(
+    database: Database, blob_store, workspace_id, monkeypatch
+) -> None:
+    """FR-109: a value at an ancestor's level of a Grouping's chain is a `ModellingError`, not a
+    `PredictionError`. If it escapes the diagnostics the Job fails under its own code, never
+    `JOB_HANDLER_FAILED`, and does not continue past it."""
+    import pricing_core.modelling as modelling
+    from app.db.models import JobRow
+    from pricing_core.modelling.errors import GroupingAncestorLevelError
+
+    def refuse(*args, **kwargs):
+        raise GroupingAncestorLevelError(
+            "GROUPING_VALUE_AT_ANCESTOR_LEVEL",
+            "grouping 'region'@2 has the parent chain 'region'@1, and a value in 'area' is a "
+            "source level of an ancestor grouping, not of this one (FR-109).",
+        )
+
+    monkeypatch.setattr(modelling, "compute_diagnostics", refuse)
+
+    actor = await _actuary(database, workspace_id)
+    dataset_id = await _dataset(database, blob_store, workspace_id, actor)
+    version_id = await _validated_version(
+        database, blob_store, workspace_id, actor, dataset_id
+    )
+    area = await _factor(database, workspace_id, actor, dataset_id, "area", "area")
+    split = await _split(database, blob_store, workspace_id, actor, version_id)
+    async with database.unit_of_work() as session:
+        row, _ = await model_service.reserve_model(
+            session, workspace_id=workspace_id, actor=actor,
+            spec=_spec(version_id, (area,), split_ref=split),
+        )
+        model_id = row.id
+        job = await job_service.submit(
+            session, JobKind.MODEL_FIT,
+            {"workspace_id": str(workspace_id), "actor": actor.model_dump(mode="json"),
+             "model_id": str(model_id)},
+            actor, workspace_id=workspace_id,
+        )
+
+    assert await execute_job(database, job.id, blob_store) is JobStatus.FAILED
+    async with database.session() as session:
+        job_row = await session.get(JobRow, job.id)
+        model = model_service.to_model(await session.get(ModelRow, model_id))
+    assert job_row is not None
+    assert job_row.error is not None
+    assert job_row.error["code"] == "GROUPING_VALUE_AT_ANCESTOR_LEVEL"
+    assert job_row.error["code"] != "JOB_HANDLER_FAILED"
+    assert model.fit_result is None  # nothing was stored past the refusal
+
+
 @pytest.mark.req("FR-204")
 async def test_a_reservation_whose_fit_failed_can_be_retried(
     database: Database, blob_store, workspace_id

@@ -829,3 +829,35 @@ async def test_a_refusal_escaping_the_surrogates_diagnostics_keeps_its_code_and_
     ).detail
     assert sentinel not in f"{refusal.title} {refusal.detail}"
 
+
+@pytest.mark.req("FR-2143")
+async def test_a_value_at_an_ancestor_level_escaping_the_surrogates_diagnostics_keeps_its_code(
+    database: Database, blob_store: BlobStore, workspace_id: UUID,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """FR-109: a value at an ancestor's level is a `ModellingError`, not a `PredictionError`;
+    escaping the surrogate's diagnostics it is still a 409 under its own code, never
+    `JOB_HANDLER_FAILED`, and its text carries no value."""
+    from app.worker import model_handlers
+    from pricing_core.modelling.errors import GroupingAncestorLevelError
+
+    model_id, _ = await _fitted_gbm(database, blob_store, workspace_id)
+    actor = await _actuary(database, workspace_id)
+
+    def _refuse(*_args: object, **_kwargs: object) -> object:
+        raise GroupingAncestorLevelError(
+            "GROUPING_VALUE_AT_ANCESTOR_LEVEL",
+            "grouping 'region'@2 has the parent chain 'region'@1, and a value in 'area' is a "
+            "source level of an ancestor grouping, not of this one (FR-109).",
+        )
+
+    monkeypatch.setattr(pricing_modelling, "compute_diagnostics", _refuse)
+
+    refusal = await _transparency_refusal(database, blob_store, workspace_id, model_id, actor)
+
+    assert refusal.code == "GROUPING_VALUE_AT_ANCESTOR_LEVEL"
+    assert refusal.status_code == 409
+    assert refusal.detail == model_handlers._diagnostics_refusal(
+        GroupingAncestorLevelError("GROUPING_VALUE_AT_ANCESTOR_LEVEL", "x")
+    ).detail
+    assert "'area'" not in f"{refusal.title} {refusal.detail}"

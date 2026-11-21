@@ -583,8 +583,10 @@ def _fit(parameters: dict[str, Any], callback: ProgressCallback) -> JobResult:
         # FR-2143: every holdout row is excluded: the Job fails coded with the count and the next
         # step (the text is built from counts only), never with a zero-row partition.
         raise _all_rows_refusal(exc) from exc
-    except PredictionError as exc:
-        # FR-2143: a refusal that still escapes the diagnostics keeps its name. Without this the
+    except (PredictionError, GroupingAncestorLevelError) as exc:
+        # FR-109, FR-2143: a refusal that still escapes the diagnostics keeps its name (a value
+        # at an ancestor's level of a Grouping's chain is a `ModellingError`, not a
+        # `PredictionError`). Without this the
         # Job stores `JOB_HANDLER_FAILED` and the code is gone (OQ-646); nothing here continues
         # past it: the Job fails, coded, with a fixed sentence (never the exception's text).
         raise _diagnostics_refusal(exc) from exc
@@ -1102,6 +1104,7 @@ def _transparency(parameters: dict[str, Any], callback: ProgressCallback) -> Job
         compute_diagnostics,
         fidelity_statement,
     )
+    from pricing_core.modelling.errors import GroupingAncestorLevelError
     from pricing_core.modelling.predict import AllRowsUnseenError, PredictionError
 
     # `models.model_family_slug` is a `String(64)` and this Job generates a slug seven
@@ -1210,8 +1213,9 @@ def _transparency(parameters: dict[str, Any], callback: ProgressCallback) -> Job
             # FR-2143, as the fit's diagnostics: every holdout row is excluded, so the Job fails
             # coded with the count and the next step.
             raise _all_rows_refusal(exc) from exc
-        except PredictionError as exc:
-            # FR-2143: a refusal escaping the surrogate's diagnostics keeps its name, with the
+        except (PredictionError, GroupingAncestorLevelError) as exc:
+            # FR-109, FR-2143: a refusal escaping the surrogate's diagnostics keeps its name, with
+            # the
             # fixed value-free sentence (never the exception's text).
             raise _diagnostics_refusal(exc) from exc
     progress.update(0.62, "tree shap")
@@ -1420,6 +1424,7 @@ def _backtest(parameters: dict[str, Any], callback: ProgressCallback) -> JobResu
     ) = progress.run_on_loop(load())
 
     from pricing_core.modelling import backtest_model, linear_predictor
+    from pricing_core.modelling.errors import GroupingAncestorLevelError
     from pricing_core.modelling.predict import AllRowsUnseenError, PredictionError
 
     # The offset-from-another-model array (FR-116): the referenced fit's linear
@@ -1456,8 +1461,9 @@ def _backtest(parameters: dict[str, Any], callback: ProgressCallback) -> JobResu
     except AllRowsUnseenError as exc:
         # FR-2143: every backtest row is excluded: coded, with the count and the next step.
         raise _all_rows_refusal(exc) from exc
-    except PredictionError as exc:
-        # FR-2143, as a fit's diagnostics: any other refusal keeps its code, with the fixed
+    except (PredictionError, GroupingAncestorLevelError) as exc:
+        # FR-109, FR-2143, as a fit's diagnostics: any other refusal keeps its code, with the
+        # fixed
         # value-free sentence chosen by that code (never the exception's text).
         raise _backtest_refusal(exc) from exc
 

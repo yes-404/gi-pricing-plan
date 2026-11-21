@@ -582,6 +582,62 @@ async def test_a_refusal_scoring_the_period_fails_the_backtest_job_with_its_code
     assert "SENTINEL-6a2f" not in str(job_row.error)
 
 
+@pytest.mark.req("FR-2143")
+async def test_a_value_at_an_ancestor_level_in_the_backtest_data_fails_the_job_with_its_code(
+    database: Database, blob_store, workspace_id, monkeypatch
+) -> None:
+    """FR-109: a value at an ancestor's level of a Grouping's chain in the backtest data is a
+    `ModellingError`, not a `PredictionError`; the job fails under its own code, never
+    `JOB_HANDLER_FAILED`, with a fixed sentence that carries no value."""
+    import pricing_core.modelling as modelling
+    from app.db.models import JobRow
+    from pricing_core.modelling.errors import GroupingAncestorLevelError
+
+    pair = await _fitted_residual_pair(database, blob_store, workspace_id)
+    async with database.session() as session:
+        v2 = await session.get(DatasetVersionRow, pair.v2_id)
+    assert v2 is not None
+    later = await _later_residual_period(
+        database, blob_store, workspace_id, pair.actor, v2.dataset_id
+    )
+
+    def refuse(*args, **kwargs):
+        raise GroupingAncestorLevelError(
+            "GROUPING_VALUE_AT_ANCESTOR_LEVEL",
+            "grouping 'region'@2 has the parent chain 'region'@1, and a value in 'area' is a "
+            "source level of an ancestor grouping, not of this one (FR-109).",
+        )
+
+    monkeypatch.setattr(modelling, "backtest_model", refuse)
+
+    async with database.unit_of_work() as session:
+        model, version = await service.request_backtest(
+            session, workspace_id=workspace_id, actor=pair.actor,
+            model_id=pair.residual_id, dataset_version_id=later,
+        )
+        job = await job_service.submit(
+            session,
+            JobKind.MODEL_BACKTEST,
+            {
+                "workspace_id": str(workspace_id),
+                "actor": pair.actor.model_dump(mode="json"),
+                **service.backtest_payload(model, version),
+            },
+            pair.actor,
+            workspace_id=workspace_id,
+        )
+        job_id = job.id
+
+    assert await execute_job(database, job_id, blob_store) is JobStatus.FAILED
+    async with database.session() as session:
+        job_row = await session.get(JobRow, job_id)
+    assert job_row is not None
+    assert job_row.error is not None
+    assert job_row.error["code"] == "GROUPING_VALUE_AT_ANCESTOR_LEVEL"
+    assert "The backtest could not be computed" in job_row.error["message"]
+    assert "'area'" not in job_row.error["message"]
+
+
 # -- The whole path -------------------------------------------------------------------------
 
 
