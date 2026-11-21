@@ -9,6 +9,16 @@ about. The format follows [Keep a Changelog 1.1.0](https://keepachangelog.com/en
 
 - **`POST /api/v1/custom-objectives` and `POST /api/v1/custom-metrics` now refuse a JSON boolean or a numeric string as a template parameter in `params` with `422`; they coerced `true` to `1` and `"5"` to `5` before.** Send a JSON number: an integer for a money-kind parameter (integer minor units, so `{"cap": 1000}` stays an integer), a number for any other (#1904).
 - **`POST /api/v1/models`, `POST /api/v1/model-specs/validate` and `POST /api/v1/peril-structures` now refuse an `evidence_blob` that is absent or that the workspace cannot read, with `422 EVIDENCE_BLOB_UNREADABLE`;** they accepted any digest before. Upload the evidence first. Stored models and structures are not re-checked (FR-127, FR-189).
+- **A Grouping with a parent now refuses a value that is a source level of one of its
+  ancestors (`GROUPING_VALUE_AT_ANCESTOR_LEVEL`).** A fit refuses a grouping Factor that maps none of its column's values
+  (`GROUPING_MAPS_NO_VALUE`) and reports the rows and exposure it does not map
+  (`grouping_unmapped` on the fit result). Creating a Grouping with a parent requires the
+  parent to exist and the levels to chain (`GROUPING_PARENT_NOT_FOUND`,
+  `GROUPING_CHAIN_LEVELS_MISMATCH`, 422). The `error` message counts
+  the levels it did not map and no longer lists them. A Rating Version compiled after this
+  release carries its Groupings' chain; a draft recompiled after it keeps its hash and can
+  refuse a quote it priced (FR-239, ADR-2161). A Bundle stored before it keeps pricing as it
+  did until its version is reissued. A way to list those that do not follows in a later change.
 - **A GLM now refuses a level of a categorical Factor that its fit never saw, unless the Factor
   declares `map_to_base`; it scored such a level as the base level before.** A Factor gains `unseen_level_behaviour` (`error` or `map_to_base`;
   unset refuses), on `POST /api/v1/factors` and in the factor form. The refusal is

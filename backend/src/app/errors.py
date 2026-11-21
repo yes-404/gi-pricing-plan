@@ -134,6 +134,13 @@ MODELLING_ERROR_CODES: Final[frozenset[str]] = frozenset(
         # FR-127 / FR-189 `evidence_blob`, 2026-11-17 (#1902): absent and not-readable are one
         # code so a caller cannot probe for a digest in another workspace.
         "EVIDENCE_BLOB_UNREADABLE",
+        # FR-109, 2026-11: a chain is checked when it is made, not when it is used.
+        "GROUPING_PARENT_NOT_FOUND",
+        "GROUPING_CHAIN_LEVELS_MISMATCH",
+        # FR-109: a fit whose grouping Factor maps none of its column's values.
+        "GROUPING_MAPS_NO_VALUE",
+        # FR-109: a value at an ancestor's level of the chain.
+        "GROUPING_VALUE_AT_ANCESTOR_LEVEL",
         # FR-106's Bühlmann-Straub arm, 2026-08-22. `GROUPING_NOT_EXHAUSTIVE` is about
         # a mapping that misses an observed level and says nothing a caller of
         # `/groupings/propose` could act on here: the mapping is fine, the *book* cannot

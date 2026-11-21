@@ -158,3 +158,23 @@ def test_the_backtests_unseen_level_advice_names_the_backtest_data_not_a_holdout
         assert "backtest data" in stored
         assert "holdout" not in stored
         assert "map to base" in stored
+
+
+@pytest.mark.req("FR-109")
+def test_a_grouping_that_maps_none_is_a_409_naming_the_factor_and_never_a_value() -> None:
+    """A fit refusal against the data is 409 like the rest of this module; 422 is the request's
+    own shape. The creation-time refusals of a chain stay 422."""
+    from pricing_core.modelling import GroupingCoverageError
+
+    exc = GroupingCoverageError(
+        "GROUPING_MAPS_NO_VALUE",
+        "factor 'region_f' pins grouping 'region'@1 over column 'area', and none of the "
+        "column's 200 row(s) is a source level that grouping maps (FR-109).",
+    )
+    mapped = model_handlers._grouping_refusal(exc, "glm")
+
+    assert mapped.code == "GROUPING_MAPS_NO_VALUE"
+    assert mapped.status_code == 409
+    assert mapped.detail is not None
+    assert "'region_f'" in mapped.detail
+    assert SENTINEL not in f"{mapped.title} {mapped.detail} {mapped}"

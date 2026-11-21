@@ -839,3 +839,68 @@ async def test_a_bundle_whose_factor_lacks_the_field_refuses_an_unseen_level() -
     refused = result[MODEL_CALL_ERROR_KEY]
     assert "UNSEEN_LEVEL_BEHAVIOUR_REQUIRED" in refused
     assert "UNSEEN-7f2a" not in refused
+
+
+def _chained_world(base: GlmWorld, *, carry_ancestor: bool) -> GlmWorld:
+    """`glm_world` with its region Grouping given a parent (`fine`) and `map_to_default`."""
+    fine = Grouping(
+        id=uuid4(), slug="fine", dataset_id=DATASET, version=1, column="region",
+        method=GroupingMethod.MANUAL,
+        mapping={"N1x": "N1", "N2x": "N2", "S1x": "S1", "S2x": "S2"},
+        unseen_level_behaviour=UnseenLevelBehaviour.ERROR,
+    )
+    region = base.groupings[0].model_copy(
+        update={
+            "unseen_level_behaviour": UnseenLevelBehaviour.MAP_TO_DEFAULT,
+            "default_target_level": base.groupings[0].target_levels[0],
+            "parent_grouping_id": fine.id,
+        }
+    )
+    return GlmWorld(
+        base.spec, base.fit, base.factors, base.bandings,
+        (region, fine) if carry_ancestor else (region,),
+    )
+
+
+def _string_region_algorithm() -> dict[str, Any]:
+    payload = algorithm_payload()
+    payload["input_contract"][1] = {"name": "region", "type": "string", "nullable": False}
+    return payload
+
+
+FINE_QUOTE = {"driver_age": 45, "region": "N1x", "exposure_years": 1.0}
+
+
+@pytest.mark.req("FR-109", "FR-239")
+async def test_a_compile_carries_the_ancestor_and_the_quote_at_its_level_is_refused() -> None:
+    world = _chained_world(glm_world(), carry_ancestor=True)
+    bundle = await compiled_bundle(world, _string_region_algorithm())
+    assert "grouping:fine@1" in bundle.resolved_payloads
+    compiled = load_bundle(bundle)
+    priced = await _value(compiled, **{**FINE_QUOTE, "region": "N1"})
+    assert MODEL_CALL_ERROR_KEY not in priced
+    refused = (await _value(compiled, **FINE_QUOTE))[MODEL_CALL_ERROR_KEY]
+    assert "GROUPING_VALUE_AT_ANCESTOR_LEVEL" in refused
+    assert "N1x" not in refused
+
+
+@pytest.mark.req("FR-109", "FR-239")
+async def test_a_bundle_without_its_ancestors_prices_as_it_did_and_mapped_levels_agree() -> None:
+    """A Bundle stored before the ancestors were carried: nothing it priced changes."""
+    fitted = glm_world()  # one fit: two fits differ in the last digit
+    stored = load_bundle(
+        await compiled_bundle(
+            _chained_world(fitted, carry_ancestor=False), _string_region_algorithm()
+        )
+    )
+    fresh = load_bundle(
+        await compiled_bundle(
+            _chained_world(fitted, carry_ancestor=True), _string_region_algorithm()
+        )
+    )
+    default_level = await _value(stored, **{**FINE_QUOTE, "region": "N2"})
+    assert MODEL_CALL_ERROR_KEY not in await _value(stored, **FINE_QUOTE)
+    for region in ("N1", "S1", "S2"):
+        quote = {**FINE_QUOTE, "region": region}
+        assert await _value(stored, **quote) == await _value(fresh, **quote)
+    assert default_level == await _value(fresh, **{**FINE_QUOTE, "region": "N2"})

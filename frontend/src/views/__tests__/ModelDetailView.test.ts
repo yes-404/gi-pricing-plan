@@ -171,6 +171,31 @@ describe("the model detail view", () => {
     expect(section).not.toHaveTextContent("saw every level its factors can produce");
   });
 
+  it("says an older model has not recorded the rows a grouping did not map, never that there are none", async () => {
+    render(ModelDetailView, { props, ...mounted });
+    const section = await screen.findByLabelText("Rows a grouping did not map");
+
+    expect(section).toHaveTextContent("Not recorded");
+    expect(section).not.toHaveTextContent("Every row");
+  });
+
+  it("states the rows and exposure a grouping did not map", async () => {
+    stub({
+      ...MODEL,
+      fit_result: {
+        ...MODEL.fit_result,
+        grouping_unmapped: [
+          { factor: "region", grouping: "region@2", rows: 10, exposure: "7.5" },
+        ],
+      },
+    });
+    render(ModelDetailView, { props, ...mounted });
+    const section = await screen.findByLabelText("Rows a grouping did not map");
+
+    expect(section).toHaveTextContent("region (region@2): 10 rows, exposure 7.5");
+    expect(section).toHaveTextContent("does not map");
+  });
+
   it("says an older model has not recorded its interaction cells, never that there are none", async () => {
     render(ModelDetailView, { props, ...mounted });
     const section = await screen.findByLabelText("Interaction cells this fit never saw");

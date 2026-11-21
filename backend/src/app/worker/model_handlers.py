@@ -120,6 +120,19 @@ def _offset_refusal(exc: Any, *, where: str = "the holdout") -> PlatformError:
     return PlatformError(exc.code, "The offset model could not be scored", 409, detail)
 
 
+def _grouping_refusal(exc: Any, model_type: str) -> PlatformError:
+    """The coded failure for a fit whose grouping Factor maps none of its column, or meets a value
+    at an ancestor's level of its Grouping's chain (FR-109).
+
+    409, like every refusal of a job against the data in this module (422 is the request's own
+    shape). The text goes through the allow-list: it names the Factor and Grouping and a row
+    count, never a value (NFR-499).
+    """
+    return PlatformError(
+        exc.code, f"The {model_type} model could not be fitted", 409, safe_error_detail(exc)
+    )
+
+
 def _all_rows_refusal(exc: Any) -> PlatformError:
     """The coded failure when every row of a partition is excluded (`AllRowsUnseenError`): its code
     and a detail BUILT from its `partition` and `count` attributes (never `str(exc)`: no exception
@@ -392,6 +405,8 @@ def _fit(parameters: dict[str, Any], callback: ProgressCallback) -> JobResult:
     )
     from pricing_core.modelling.errors import (
         BandingError,
+        GroupingAncestorLevelError,
+        GroupingCoverageError,
         NonFiniteDerivativeError,
         RoundBudgetExceededError,
     )
@@ -413,10 +428,12 @@ def _fit(parameters: dict[str, Any], callback: ProgressCallback) -> JobResult:
                 offset_source.fit, holdout, offset_source.factors, offset_source.spec,
                 bandings=offset_source.bandings, groupings=offset_source.groupings,
             )
-        except PredictionError as exc:
+        except (PredictionError, GroupingAncestorLevelError) as exc:
             # FR-2143: the offset model refuses a level it never saw. Its rows cannot be dropped
             # here (the offset is the fit's own input), so the refusal keeps its code and says what
-            # to do next, in a fixed sentence (never the exception's text: it is stored).
+            # to do next, in a fixed sentence (never the exception's text: it is stored). FR-109: a
+            # value at an ancestor's level of the offset model's Grouping chain is refused the same
+            # way (a `ModellingError`, not a `PredictionError`).
             raise _offset_refusal(exc) from exc
 
     # The fit owns the middle of the bar and reports its own `0..1` inside it. Before this
@@ -506,6 +523,10 @@ def _fit(parameters: dict[str, Any], callback: ProgressCallback) -> JobResult:
             409,
             safe_error_detail(exc),
         ) from exc
+    except (GroupingAncestorLevelError, GroupingCoverageError) as exc:
+        # FR-109: a grouping Factor that maps none of its column, or a value at an ancestor's
+        # level. Named before the `FactorResolutionError` arm.
+        raise _grouping_refusal(exc, spec.model_type) from exc
     except FactorResolutionError as exc:
         raise PlatformError(
             "FACTOR_RESOLUTION_FAILED",
@@ -564,10 +585,12 @@ def _fit(parameters: dict[str, Any], callback: ProgressCallback) -> JobResult:
         # FR-2143: every holdout row is excluded: the Job fails coded with the count and the next
         # step (the text is built from counts only), never with a zero-row partition.
         raise _all_rows_refusal(exc) from exc
-    except PredictionError as exc:
-        # FR-2143: a refusal that still escapes the diagnostics keeps its name. Without this the
-        # Job stores `JOB_HANDLER_FAILED` and the code is gone (OQ-646); nothing here continues
-        # past it: the Job fails, coded, with a fixed sentence (never the exception's text).
+    except (PredictionError, GroupingAncestorLevelError) as exc:
+        # FR-109, FR-2143: a refusal that still escapes the diagnostics keeps its name (a value
+        # at an ancestor's level of a Grouping's chain is a `ModellingError`, not a
+        # `PredictionError`). Without this the Job stores `JOB_HANDLER_FAILED` and the code is
+        # gone (OQ-646); nothing here continues past it: the Job fails, coded, with a fixed
+        # sentence (never the exception's text).
         raise _diagnostics_refusal(exc) from exc
     diagnostics_seconds = time.perf_counter() - diagnostics_started
     _log.info(
@@ -609,20 +632,26 @@ def _fit(parameters: dict[str, Any], callback: ProgressCallback) -> JobResult:
     if isinstance(spec, GbmSpec) and spec.interval_for is not None and booster is not None:
         assert isinstance(result, GbmFitResult)
         assert gbm_diagnostics is not None
-        crossing = progress.run_on_loop(
-            _quantile_crossing(
-                progress,
-                blob_store,
-                workspace_id=workspace_id,
-                model_id=model_id,
-                spec=spec,
-                result=result,
-                booster=booster,
-                factors=factors,
-                transformations=transformations,
-                frame=frame,
+        try:
+            crossing = progress.run_on_loop(
+                _quantile_crossing(
+                    progress,
+                    blob_store,
+                    workspace_id=workspace_id,
+                    model_id=model_id,
+                    spec=spec,
+                    result=result,
+                    booster=booster,
+                    factors=factors,
+                    transformations=transformations,
+                    frame=frame,
+                )
             )
-        )
+        except (PredictionError, GroupingAncestorLevelError) as exc:
+            # FR-109, FR-2143: the counterpart bound is scored on this frame with its own Factors
+            # and Groupings, so a refusal can arrive here that the fit's own resolution did not
+            # raise. It keeps its code, with the fixed sentence (never the exception's text).
+            raise _diagnostics_refusal(exc) from exc
         if crossing is not None:
             gbm_diagnostics = gbm_diagnostics.model_copy(
                 update={"quantile_crossing": crossing}
@@ -1083,6 +1112,7 @@ def _transparency(parameters: dict[str, Any], callback: ProgressCallback) -> Job
         compute_diagnostics,
         fidelity_statement,
     )
+    from pricing_core.modelling.errors import GroupingAncestorLevelError
     from pricing_core.modelling.predict import AllRowsUnseenError, PredictionError
 
     # `models.model_family_slug` is a `String(64)` and this Job generates a slug seven
@@ -1191,19 +1221,24 @@ def _transparency(parameters: dict[str, Any], callback: ProgressCallback) -> Job
             # FR-2143, as the fit's diagnostics: every holdout row is excluded, so the Job fails
             # coded with the count and the next step.
             raise _all_rows_refusal(exc) from exc
-        except PredictionError as exc:
-            # FR-2143: a refusal escaping the surrogate's diagnostics keeps its name, with the
-            # fixed value-free sentence (never the exception's text).
+        except (PredictionError, GroupingAncestorLevelError) as exc:
+            # FR-109, FR-2143: a refusal escaping the surrogate's diagnostics keeps its name, with
+            # the fixed value-free sentence (never the exception's text).
             raise _diagnostics_refusal(exc) from exc
     progress.update(0.62, "tree shap")
-    summary = build_shap_summary(
-        result, booster, spec, factors, frame,
-        holdout=holdout,
-        sample=sample,
-        bandings=transformations.bandings,
-        groupings=transformations.groupings,
-        progress=ScaledProgress(progress, start=0.62, end=0.90),
-    )
+    try:
+        summary = build_shap_summary(
+            result, booster, spec, factors, frame,
+            holdout=holdout,
+            sample=sample,
+            bandings=transformations.bandings,
+            groupings=transformations.groupings,
+            progress=ScaledProgress(progress, start=0.62, end=0.90),
+        )
+    except (PredictionError, GroupingAncestorLevelError) as exc:
+        # FR-109, FR-2143: the summary resolves the factors on the sample, so a refusal can escape
+        # it. It keeps its code, with the fixed sentence (never the exception's text).
+        raise _diagnostics_refusal(exc) from exc
 
     async def store() -> UUID:
         # **One transaction, and never a second inside it.** A failed compute leaves
@@ -1401,6 +1436,7 @@ def _backtest(parameters: dict[str, Any], callback: ProgressCallback) -> JobResu
     ) = progress.run_on_loop(load())
 
     from pricing_core.modelling import backtest_model, linear_predictor
+    from pricing_core.modelling.errors import GroupingAncestorLevelError
     from pricing_core.modelling.predict import AllRowsUnseenError, PredictionError
 
     # The offset-from-another-model array (FR-116): the referenced fit's linear
@@ -1413,10 +1449,11 @@ def _backtest(parameters: dict[str, Any], callback: ProgressCallback) -> JobResu
                 offset_source.fit, frame, offset_source.factors, offset_source.spec,
                 bandings=offset_source.bandings, groupings=offset_source.groupings,
             )
-        except PredictionError as exc:
+        except (PredictionError, GroupingAncestorLevelError) as exc:
             # FR-2143: the offset model refuses a level it never saw. Its rows cannot be dropped
             # here (the offset is the backtest's own input), so the refusal keeps its code and says
             # what to do next, in a fixed sentence (never the exception's text: it is stored).
+            # FR-109: a value at an ancestor's level of its Grouping chain is refused the same way.
             raise _offset_refusal(exc, where="the backtest data") from exc
 
     progress.update(0.2, "scoring the period")
@@ -1437,9 +1474,9 @@ def _backtest(parameters: dict[str, Any], callback: ProgressCallback) -> JobResu
     except AllRowsUnseenError as exc:
         # FR-2143: every backtest row is excluded: coded, with the count and the next step.
         raise _all_rows_refusal(exc) from exc
-    except PredictionError as exc:
-        # FR-2143, as a fit's diagnostics: any other refusal keeps its code, with the fixed
-        # value-free sentence chosen by that code (never the exception's text).
+    except (PredictionError, GroupingAncestorLevelError) as exc:
+        # FR-109, FR-2143, as a fit's diagnostics: any other refusal keeps its code, with the
+        # fixed value-free sentence chosen by that code (never the exception's text).
         raise _backtest_refusal(exc) from exc
 
     async def store() -> UUID:

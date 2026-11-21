@@ -32,6 +32,7 @@ from pricing_core.modelling import (
     FactorResolutionError,
     GroupingError,
     apply_grouping,
+    check_grouping_chain,
     grouping_evidence,
     propose_grouping,
 )
@@ -585,9 +586,12 @@ def test_a_proposal_defaults_unseen_levels_to_the_largest_group() -> None:
 
 
 @pytest.mark.req("FR-104")
-def test_an_unseen_level_is_named_when_the_behaviour_is_error() -> None:
-    with pytest.raises(FactorResolutionError, match="L99"):
-        apply_grouping(pl.Series("vehicle_group", ["L00", "L99"]), _manual())
+def test_an_unseen_level_is_counted_not_named_when_the_behaviour_is_error() -> None:
+    """The refusal says how many levels, never which: a level is a value from the caller's data
+    (NFR-499). It was listed (up to ten) until the 2026-11-17 ruling."""
+    with pytest.raises(FactorResolutionError, match=r"met 1 level\(s\) in 'vehicle_group'") as r:
+        apply_grouping(pl.Series("vehicle_group", ["L00", "ZZ-SENTINEL-9"]), _manual())
+    assert "ZZ-SENTINEL-9" not in str(r.value)
 
 
 @pytest.mark.req("FR-104")
@@ -624,3 +628,113 @@ def test_a_grouping_can_name_its_parent_in_a_chain() -> None:
     assert region.parent_grouping_id == area.id
     rolled = apply_grouping(apply_grouping(pl.Series("vehicle_group", ["AB2"]), area), region)
     assert rolled.to_list() == ["NORTH"]
+
+
+# --- a chain must chain (FR-109) ---------------------------------------------------------
+
+
+def _area_and_region(**region_over: object) -> tuple[Grouping, Grouping]:
+    area = _manual(slug="area", mapping={"AB1": "AB", "AB2": "AB", "CD1": "CD"})
+    region = _manual(
+        slug="region",
+        column="area",
+        mapping={"AB": "R1", "CD": "R2"},
+        parent_grouping_id=area.id,
+        **region_over,
+    )
+    return area, region
+
+
+@pytest.mark.req("FR-109")
+def test_a_chain_whose_levels_chain_is_accepted() -> None:
+    area, region = _area_and_region()
+    check_grouping_chain(region, [area])
+
+
+@pytest.mark.req("FR-109")
+def test_a_child_source_level_the_parent_does_not_produce_is_refused_without_naming_it() -> None:
+    area = _manual(slug="area", mapping={"AB1": "AB", "CD1": "CD"})
+    region = _manual(
+        slug="region",
+        mapping={"AB": "R1", "ZZ-SENTINEL-9": "R2"},
+        parent_grouping_id=area.id,
+    )
+    with pytest.raises(GroupingError) as refused:
+        check_grouping_chain(region, [area])
+    assert refused.value.code == "GROUPING_CHAIN_LEVELS_MISMATCH"
+    assert "ZZ-SENTINEL-9" not in str(refused.value)
+    assert "region" in str(refused.value)
+    assert "1 " in str(refused.value)  # the count of unproduced levels
+
+
+@pytest.mark.req("FR-109")
+def test_a_level_that_is_a_source_level_of_two_links_is_refused_without_naming_it() -> None:
+    """One label at two levels of a chain cannot be told apart at resolution."""
+    area = _manual(slug="area", mapping={"AB1": "AB", "AB": "AB"})
+    region = _manual(
+        slug="region", mapping={"AB": "R1"}, parent_grouping_id=area.id
+    )
+    with pytest.raises(GroupingError) as refused:
+        check_grouping_chain(region, [area])
+    assert refused.value.code == "GROUPING_CHAIN_LEVELS_MISMATCH"
+    assert "'AB'" not in str(refused.value)
+
+
+@pytest.mark.req("FR-109")
+def test_the_overlap_is_checked_against_every_ancestor_not_only_the_parent() -> None:
+    fine = _manual(slug="fine", mapping={"AB1": "AB", "CD1": "CD"})
+    area = _manual(slug="area", mapping={"AB": "N", "CD": "S"}, parent_grouping_id=fine.id)
+    zone = _manual(slug="zone", mapping={"N": "ALL", "S": "ALL", "AB1": "ALL"},
+                   parent_grouping_id=area.id)
+    with pytest.raises(GroupingError) as refused:
+        check_grouping_chain(zone, [area, fine])
+    assert refused.value.code == "GROUPING_CHAIN_LEVELS_MISMATCH"
+
+
+@pytest.mark.req("FR-109")
+def test_a_grouping_that_names_a_parent_nobody_supplied_is_refused() -> None:
+    _, region = _area_and_region()
+    with pytest.raises(GroupingError) as refused:
+        check_grouping_chain(region, [])
+    assert refused.value.code == "GROUPING_PARENT_NOT_FOUND"
+
+
+@pytest.mark.req("FR-109")
+def test_a_grouping_without_a_parent_needs_no_chain() -> None:
+    check_grouping_chain(_manual(), [])
+
+
+@pytest.mark.req("NFR-499", "FR-109")
+def test_every_text_of_the_chain_refusal_names_the_groupings_and_a_count_never_a_level() -> None:
+    """The raise site of the creation-time chain refusal: `test_error_sinks.py` registers
+    `_require_chain`'s `str(exc)` of it (a 422 detail) on the strength of this test.
+
+    The sentinel is a level in the data (a source level the caller's mapping carries) in each of
+    the three shapes `check_grouping_chain` refuses; none of the three texts names it, each names
+    the Grouping (the control: the text is there to be searched), and two carry a count.
+    """
+    sentinel = "ZZ-SENTINEL-1909-CHAIN"
+    # a parent that nobody supplied; the sentinel is one of the child's own source levels
+    orphan = _manual(slug="orphan", mapping={sentinel: "R1"}, parent_grouping_id=uuid4())
+    # a child source level the parent does not produce
+    parent = _manual(slug="parent", mapping={"AB1": "AB"})
+    unproduced = _manual(
+        slug="unproduced", mapping={"AB": "R1", sentinel: "R2"}, parent_grouping_id=parent.id
+    )
+    # one label at two levels: the sentinel is a source level of the parent and of the child
+    both = _manual(slug="both", mapping={sentinel: sentinel})
+    shared = _manual(slug="shared", mapping={sentinel: "R1"}, parent_grouping_id=both.id)
+    cases = (
+        (orphan, [], "GROUPING_PARENT_NOT_FOUND", "orphan", None),
+        (unproduced, [parent], "GROUPING_CHAIN_LEVELS_MISMATCH", "unproduced", "1 of its 2"),
+        (shared, [both], "GROUPING_CHAIN_LEVELS_MISMATCH", "shared", "1 source level"),
+    )
+    for child, ancestors, code, slug, count in cases:
+        with pytest.raises(GroupingError) as refused:
+            check_grouping_chain(child, ancestors)
+        text = str(refused.value)
+        assert refused.value.code == code
+        assert f"'{slug}'" in text, "control: the refusal names the Grouping"
+        if count is not None:
+            assert count in text, "control: the refusal carries its count"
+        assert sentinel not in text

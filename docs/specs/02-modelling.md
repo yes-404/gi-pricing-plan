@@ -121,7 +121,7 @@ Terms from `00-overview.md` §2.2 are used unchanged. Additional terms owned her
 
 | ID | Requirement |
 |---|---|
-| **FR-104** | A **Grouping** maps source Levels to target Levels, is exhaustive over observed Levels, and declares behaviour for unseen Levels at scoring time (`error`, `map_to_default`, `map_to_base`). Unseen-level behaviour is mandatory — there is no implicit default.  *(2026-11-15: a Factor's own declaration for a fitted GLM is FR-2143.)* |
+| **FR-104** | A **Grouping** maps source Levels to target Levels, is exhaustive over observed Levels, and declares behaviour for unseen Levels at scoring time (`error`, `map_to_default`, `map_to_base`). Unseen-level behaviour is mandatory — there is no implicit default.  *(2026-11-15: a Factor's own declaration for a fitted GLM is FR-2143. 2026-11-17: a value at an ancestor's level of the Grouping's chain is refused, not mapped to the declared level: FR-109, ADR-2161.)* |
 | **FR-2143** | A Factor declares `unseen_level_behaviour` (`error` or `map_to_base`; `map_to_default` is refused). A GLM scoring a level its fit never saw — of any Factor type, including a Factor fitted on one level and an interaction cell — refuses with `UNSEEN_LEVEL_BEHAVIOUR_REQUIRED` unless the Factor declares `map_to_base`, which scores the level as the base level. A Factor that declares nothing refuses. The fitted level set is the fit's `relativities`; a null is not a level. The refusal text names the Factor and never the value (NFR-499). A GBM or an EBM keeps FR-131's refusal whatever is declared. Before #1882 (`91ff121d`), a GLM priced such a level at the base level, so the same Bundle can now refuse a quote (FR-239); the step for a user who needs the earlier result is a new Factor version declaring `map_to_base`, a refit, and a new rating version. A Factor's `unseen_level_behaviour` changes only by a **new Factor version**: Factors are append-only (the create and list routes only; `UPDATE` and `DELETE` are revoked from the application role). A new declaration is therefore a new `factor:<slug>@<version>` reference, which a refit pins in a new model, and a new rating version carries that model ref in a new bundle hash (FR-239: the hash covers the graph and the pinned refs). A GLM fit records `unseen_level_gaps`: each level a Banding's `null_level` or a Grouping's target levels can produce that the fit has no relativity for, and how a quote reaches it. It is optional: a fit stored before the field existed reads as *not recorded*, never as *none* (an empty list is *none among those levels*: it says nothing of a plain categorical Factor's levels, which are the data's and are not listed, so a quote carrying one that the fit never saw is refused unless the Factor declares `map_to_base`). The model detail view lists the gaps in words and says that a quote reaching one is refused unless the Factor declares `map_to_base`. For each `interaction` Factor the fit also records `unseen_cell_reports`: the count of cells its operands can produce that have no relativity, and up to five of them named. A term whose cells are too many to name carries the count only (*not enumerated*), a term with an operand whose levels are the data's (an IDENTITY operand) is a *lower bound*: its levels are taken from the cross's own fitted cells, so the count is "at least N pairings of levels the fit saw separately and never together", and levels the fit never saw at all are not counted; and a term that cannot be computed (a nested interaction, an artifact not supplied, a level holding the cell separator) is *not examined* and carries no count. The view says each in words, so that silence never reads as "none". **Evidence is not pricing:** a fit's diagnostics, a comparison and a backtest never fail on, and never score as another level, a row carrying a level or cell the fit has no relativity for on a Factor that does not declare `map_to_base`. Such rows are excluded from every figure and counted with their exposure (`rows_excluded_unseen_level`, `exposure_excluded_unseen_level` on a partition and on a comparison: optional, so an artifact stored before reads *not recorded*, never *none*); a comparison excludes one shared row set across its GLM candidates. Where the Factor declares `map_to_base` the rows are scored at the base level, as a quote is. When that exclusion leaves no row in a holdout or backtest partition, the fit's diagnostics, or the backtest, refuse with `UNSEEN_LEVEL_BEHAVIOUR_REQUIRED`, naming the partition, the count of rows and the next step (declare `map_to_base` on the Factor, or re-split the data). A comparison whose shared row set is left with no row refuses with `MODELS_NOT_COMPARABLE`. A refusal that still escapes a fit Job's offset or diagnostics step fails the Job with its own code. The diagnostics view says that a quote with such a level is refused unless the Factor declares `map_to_base`. `scripts/sweep-unseen-levels.py` lists the stored versions that can refuse a quote, read-only, version references and counts only. |
 | **FR-105** | The platform can propose groupings by `credibility_weighted` (merge Levels whose credibility-adjusted relativities are within a tolerance), `hierarchical_clustering` (on relativity with exposure weights), `tree`, or `reference_hierarchy` (roll up via a Reference Table, e.g. outcode → rating area → region). Manual override is always available. |
 | **FR-106** | A `credibility_weighted` Grouping declares `credibility_model` ∈ `limited_fluctuation` (**default**) \| `buhlmann_straub` (OQ-579, decided 2026-08-15). Limited fluctuation is the default because it is what a UK reviewer expects to see in a grouping justification: a full-credibility standard expressed in claim counts, stored with the `(p, k)` pair it was derived from (1 082 claims for ±5 % at 90 % confidence), and partial credibility `Z = sqrt(n / n_full)`. Bühlmann–Straub is selectable and persists its variance components — EVPV, VHM and the resulting `k` — in the grouping evidence, so a reviewer can re-derive `Z` rather than take it. The choice is recorded **per grouping** in `method_params` and stated in the model document: it is a modelling judgement, not a platform constant. |
@@ -136,6 +136,53 @@ Terms from `00-overview.md` §2.2 are used unchanged. Additional terms owned her
 > gap costs convenience, not correctness. The finer-level diagnostics view is **carried to the §14
 > review** for an owner (the maintainer's entry "2026-10-14 11:28:56 BST": "Owners at §14: …
 > FR-109"). Until it is owned, no behaviour may be built on the stored chain.
+
+> **FR-109, dated amendment 2026-11-17 (the maintainer's decision of that date).** The
+> sentence "no behaviour may be built on the stored chain" is **narrowed**: the platform reads
+> the stored chain to refuse at resolution, and to rebuild the finer levels for the
+> diagnostics of #1506 (decision #1908 option (B)), and for nothing else; following it to resolve
+> a value is not built. **(1) At creation**, a Grouping that names a parent is refused with a 422
+> unless the parent exists in the same workspace (`GROUPING_PARENT_NOT_FOUND`; a parent in another
+> workspace reads the same) and the chain's levels chain: every source level of the child is a
+> target level of its parent, and none is also a source level of an ancestor
+> (`GROUPING_CHAIN_LEVELS_MISMATCH`). The refusal names the Grouping and a count, never a
+> level (NFR-499). A Grouping stored before this clause is not re-checked.
+>
+> **(2) At fit**, a grouping Factor whose Grouping declares `map_to_default` or `map_to_base` and maps **none** of its column's rows is refused
+> (`GROUPING_MAPS_NO_VALUE`, 409 on a fit job, like every refusal of a job against the data; the creation-time refusals above are 422, the request's own shape): a Factor none of whose rows is a level the Grouping maps carries no information about its column. The
+> text names the Factor, the Grouping and a row count, never a value (NFR-499). A Grouping declaring `error` keeps the refusal it has (`FACTOR_RESOLUTION_FAILED`): the code is published, and `error` already refuses every unseen value. Where **some**
+> rows are unmapped the fit is not refused: each of a GLM, a GBM and an EBM fit result records
+> `grouping_unmapped`, one entry per such Factor with its `rows` and `exposure` (`None` for a fit with no exposure column), and a GBM
+> fit records the same count over its holdout as `holdout_grouping_unmapped`, which is counted
+> and never refused by this none-mapped rule (a holdout value at an ancestor's level is refused like any
+> other value, by the rule of (3)). Both fields are optional: `None` is *not recorded* (a Model fitted before
+> this clause), `()` is *every row mapped*, never one for the other. The model detail view
+> states the rows and exposure in words. A rate-table weights join (`03` FR-231) refuses a
+> Grouping Factor key whose portfolio column maps none of its rows by the same rule, as a
+> `WeightJoinError`.
+>
+> **(3) At resolution** (ADR-2161), a Grouping that has a parent and declares `map_to_default` or
+> `map_to_base` refuses a value that is a source level of one of its ancestors
+> (`GROUPING_VALUE_AT_ANCESTOR_LEVEL`). The text names
+> the Factor and Grouping refs and never the value (NFR-499); a value the Grouping maps is
+> untouched, a value no ancestor knows keeps the declared behaviour, and `error` is unchanged.
+> The ancestors are read from the Groupings the caller supplies. What must hold: every path that
+> resolves a Grouping Factor on stored data is given the Grouping's chain as far as the workspace
+> holds it. `load_groupings` (`backend/src/app/platform/transformations.py`) owns that, and a path
+> that reads a stored Grouping for resolution any other way is a defect against this clause. A
+> Rating Version compiled
+> after this clause carries them in its Bundle. A Bundle stored before carries none and keeps its
+> behaviour (`03` FR-239). Following the chain to resolve a value is **not built**. The `error`
+> message counts the unmapped levels and no longer lists them.
+>
+> *2026-11-21 (the review of #1947):* "and for nothing else" now names the second read that #1908 (B) and #1506 carry.
+>
+> **FR-109 (3), dated amendment 2026-11-18 (the maintainer's ruling).** The
+> predict route (`POST /models/{id}/predict`) answers this refusal **409**
+> `GROUPING_VALUE_AT_ANCESTOR_LEVEL`, as it answers every refusal of a row value against stored
+> model data: the request is well formed and the value conflicts with the stored chain; the 422s
+> of that route refuse the request body's shape. The scoring route reports the same refusal per
+> quote as 422 `MODEL_CALL_FAILED` carrying the code.
 
 ### 3.4 GLM fitting
 
@@ -2271,7 +2318,7 @@ Dataset.
 **Error codes owned by this module:** `DATASET_NOT_VALIDATED` (re-raised from `01`),
 `PROXY_REFERENCE_INVALID` (a Reference Population that FR-2138 refuses: a missing column, a repeated key, a null or out-of-range share, or shares that do not sum to 1; *added 2026-11-15 for #1501 (WK-691), on the maintainer's ruling*), `PROXY_INPUT_INVALID` (a Proxy Assessment call that cannot be assessed: the classes, the frame's columns or the exposure; same date). Both messages name the column and, for rows, their key in the reference — never a share or a value from the caller's frame (NFR-499),
 `FACTOR_PROHIBITED`, `FACTOR_RESOLUTION_FAILED`, `BAND_EMPTY`, `BAND_BELOW_MIN_EXPOSURE`,
-`GROUPING_NOT_EXHAUSTIVE`, `CREDIBILITY_VARIANCE_NOT_ESTIMABLE`,
+`GROUPING_NOT_EXHAUSTIVE`, `GROUPING_PARENT_NOT_FOUND` and `GROUPING_CHAIN_LEVELS_MISMATCH` (FR-109's creation check; names a Grouping and a count, never a level; *added 2026-11-17*), `GROUPING_MAPS_NO_VALUE` (a fit whose grouping Factor maps none of its column's rows; names a Factor, a Grouping and a row count, never a value; same date), `GROUPING_VALUE_AT_ANCESTOR_LEVEL` (a value at an ancestor's level of a Grouping's chain, naming a Factor and refs and never the value; same date), `CREDIBILITY_VARIANCE_NOT_ESTIMABLE`,
 `EVIDENCE_BLOB_UNREADABLE` (an `evidence_blob` that is absent or that the caller's workspace may not read, FR-127 and FR-189; *added 2026-11-17 for #1902*),
 `UNSEEN_LEVEL_BEHAVIOUR_REQUIRED`, `GLM_CV_FOLD_EMPTY`,
 `GLM_TWEEDIE_POWER_GRID_EDGE`, `GLM_DID_NOT_CONVERGE`, `GLM_RANK_DEFICIENT`,

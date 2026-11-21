@@ -49,4 +49,5 @@ has already been made and needs recording. Otherwise use
 | [ADR-2154](ADR-02154-the-audit-trail-is-the-seventh-high-risk-area.md) | The audit trail is the seventh high-risk area | active |
 | [ADR-2155](ADR-02155-the-audit-anchor-is-signed-with-ed25519-through-cryptography-and-refuses-a-broken-chain.md) | The audit anchor is signed with Ed25519 through cryptography, and refuses a chain that does not verify | active |
 | [ADR-2157](ADR-02157-the-database-holds-an-approved-rating-versions-content-and-the-loader-checks-the-bundle-it-loads.md) | The database holds an approved rating version's content, and the loader checks the bundle it loads | active |
+| [ADR-2161](ADR-02161-a-value-at-another-level-of-a-groupings-chain-is-refused-never-mapped.md) | A value at an ancestor's level of a Grouping's chain is refused, never mapped | draft |
 | [ADR-2162](ADR-02162-approved-state-is-reconciled-against-the-audit-chain-by-a-read-only-run.md) | Approved state is reconciled against the audit chain by a read-only run, and the check is detective | active |

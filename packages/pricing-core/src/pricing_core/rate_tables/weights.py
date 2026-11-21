@@ -25,7 +25,12 @@ import polars as pl
 
 from model_schema import Banding, Factor, Grouping
 from model_schema.rating import RateTableKey, RateTableKeyType
-from pricing_core.modelling import FactorResolutionError, resolve_factors
+from pricing_core.modelling import (
+    FactorResolutionError,
+    GroupingError,
+    check_fit_groupings,
+    resolve_factors,
+)
 from pricing_core.modelling.bandings import apply_banding
 from pricing_core.rate_tables.operations import Cells, KeyTuple
 
@@ -119,6 +124,7 @@ def _resolved_series(
                 raise WeightJoinError(
                     f"key {key.name!r}: factor {key.factor_ref} was not supplied"
                 )
+            check_fit_groupings(frame, chain, groupings)
             matrix = resolve_factors(frame, chain, bandings=bandings, groupings=groupings)
             return matrix.frame[matrix.terms[chain[0].slug]].cast(pl.String)
         if key.banding_ref is not None:
@@ -132,7 +138,7 @@ def _resolved_series(
             if not column.dtype.is_numeric():
                 raise WeightJoinError(f"key {key.name!r}: banded column {name!r} is not numeric")
             return apply_banding(column, banding)
-    except FactorResolutionError as exc:
+    except (FactorResolutionError, GroupingError) as exc:
         raise WeightJoinError(str(exc)) from exc
     if key.name not in frame.columns:
         raise WeightJoinError(f"key {key.name!r}: portfolio column {key.name!r} is absent")

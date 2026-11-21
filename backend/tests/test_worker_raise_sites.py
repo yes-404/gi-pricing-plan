@@ -215,6 +215,15 @@ _SITES: dict[_Key, tuple[frozenset[str], str]] = {
         "a dataset transformation's named refusal (test_error_sinks.py `_SINKS`);"
         " Dataset Version path",
     ),
+    ("backend/src/app/platform/transformations.py", "_require_chain", _DYNAMIC): (
+        frozenset({"str(refused)"}),
+        "a Grouping's chain refusal at creation (FR-109): `str(refused)` is one of the three texts"
+        " of `check_grouping_chain`, which name the Grouping's slug, its parent's slug and version"
+        " and a count, never a level (test_error_sinks.py `_SINKS`; sentinel test"
+        " packages/pricing-core/tests/test_groupings.py::"
+        "test_every_text_of_the_chain_refusal_names_the_groupings_and_a_count_never_a_level);"
+        " the 422 of POST /groupings, an author path, no Quote Context",
+    ),
     ("backend/src/app/worker/model_handlers.py", "_compare", _DYNAMIC): (
         frozenset({"str(exc)"}),
         "`ModellingError` on the model path (test_error_sinks.py `_SINKS`); no Quote Context",
@@ -224,6 +233,19 @@ _SITES: dict[_Key, tuple[frozenset[str], str]] = {
         # pricing_core/safe_error.py:180-186; the maintainer's 2026-10-17 ~18:57 ruling (SL-1734).
         frozenset({"safe_error_detail(exc)", "spec.model_type", "str(exc)"}),
         "a named fit refusal on the model path (test_error_sinks.py `_SINKS`); no Quote Context",
+    ),
+    ("backend/src/app/worker/model_handlers.py", "_grouping_refusal", _DYNAMIC): (
+        frozenset({"model_type", "safe_error_detail(exc)"}),
+        "a fit whose Grouping Factor maps none of its column, or meets a value at an ancestor's"
+        " level (FR-109), as a 409: `model_type` is in the title, not the detail, and is one of"
+        " four fixed strings, `Literal[\"glm\", \"xgboost\", \"lightgbm\", \"ebm\"]` on the"
+        " discriminated `ModelSpec` arms (model_schema/modelling.py:1150, 1493, 1595), never an"
+        " author's text; `safe_error_detail` keeps only a `CodedError`'s own input-free text,"
+        " which names the Factor, the Grouping refs and a count or the column, never a level"
+        " (sentinel test"
+        " packages/pricing-core/tests/test_grouping_chain_resolution.py::"
+        "test_the_refusal_resolve_factor_columns_raises_names_no_level); the worker's fit path"
+        ", no Quote Context",
     ),
     ("backend/src/app/worker/model_handlers.py", "_offset_refusal", _DYNAMIC): (
         frozenset({"detail"}),
