@@ -94,7 +94,7 @@ def test_provenance_carries_the_identity_the_job_and_the_subject_refs_and_nothin
     (the version a reader needs is inside each subject ref). No `computed_at`: slice 1's
     accepted text.
 
-    Plus `unnamed_subjects` (#1506's proposal of 2026-11-19, pending the maintainer's answer):
+    Plus `unnamed_subjects` (ADR-2170, decided on #1961, comment 7060609084, point 2):
     the count of governed parents the `refs` form cannot name, null when there are none. It is
     optional, so a provenance that names every parent is exactly #1868's.
     """

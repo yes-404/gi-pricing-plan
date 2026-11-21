@@ -82,7 +82,7 @@ function unnamedText(count: number): string {
         >
           {{ provenance.subject_refs.join(", ") }}
         </dd>
-        <!-- FR-2159's note of 2026-11-19 (#1506's proposal, pending): a parent whose stored
+        <!-- FR-2159's amendment of 2026-11-21 (ADR-2170): a parent whose stored
              reference cannot be read is said in words, never left blank. -->
         <dd
           v-if="provenance.unnamed_subjects"

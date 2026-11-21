@@ -90,9 +90,8 @@ class Provenance(BaseModel):
     example a model whose family slug is outside the `refs` grammar (nothing holds family
     slugs to it). Such a parent is left out of `subject_refs` and counted here, so a read that
     worked before provenance never fails on it and never drops it silently. It is null when
-    every parent is named. This is #1506's proposal, pending the maintainer's answer on #1506
-    (comment 7016302144). Whether #1868's "never empty" is amended for this case is theirs to
-    decide.
+    every parent is named. Decided on #1961 (comment 7060609084, point 2) and recorded as
+    ADR-2170: #1868's "never empty" stands for every parent the reference form can name.
     """
 
     model_config = ConfigDict(frozen=True, extra="forbid")

@@ -638,8 +638,8 @@ def finer_levels(
     is, named by the column; each grouping below `grouping` then adds the level it produces,
     named by its slug. A grouping with no parent has no finer level. So that no two levels share
     a name, a slug repeated in the chain names each of its levels "<slug>@<version>", and a slug
-    equal to the deepest column names the raw level "<column> (column)". This naming is #1506's
-    proposal, pending the maintainer's answer on #1506 (comment 7016067421).
+    equal to the deepest column names the raw level "<column> (column)". Decided on #1961
+    (comment 7060609084, point 3).
 
     A row the chain cannot rebuild is null at that level and at every coarser one, and stays in
     the column, so it is counted as not available rather than dropped: a null raw value; a

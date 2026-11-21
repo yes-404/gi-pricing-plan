@@ -7,14 +7,14 @@ created: 2026-11-17
 owner: decision-maker          # creates via adr-write; maintainer accepts draft → active
 tree: 089d83857046e2aef4a7b6b3574387b5b728b72a
 supersedes: []
-superseded_by: ~
+superseded_by: [ADR-2170]   # in part: one point, see the status line
 corrected_by: []
 relates: [FR-6, FR-104, FR-109, FR-170, FR-2159]   # ids only — the FR-/NFR-/ADR- this decision touches
 ---
 
 # ADR-2160 — The decided items of Work #1506, the read-side Provenance object and the finer-level actual-versus-expected
 
-- **Status:** Accepted (front matter `active`). Supersedes nothing. It lands `active` because its six decision issues, and the in-Work rulings it lists, are already decided and this record states them ([#1506, comment of 2026-11-17](https://github.com/yes-404/gi-pricing-plan/issues/1506#issuecomment-6945539154)).
+- **Status:** Accepted (front matter `active`). Superseded in part by [ADR-2170](ADR-02170-a-parent-the-reference-form-cannot-name-is-reported-and-never-fails-a-read.md) (2026-11-21), for one point only: #1868's "`subject_refs` is never empty" does not apply to a parent the reference form cannot name. Supersedes nothing. It lands `active` because its six decision issues, and the in-Work rulings it lists, are already decided and this record states them ([#1506, comment of 2026-11-17](https://github.com/yes-404/gi-pricing-plan/issues/1506#issuecomment-6945539154)).
 - **Deciders:** the maintainer, for #1519 and #1810 ("Decided by the maintainer, 2026-11-14"). On the maintainer's behalf, by delegation: #1868, #1869 and #1870 on 2026-11-15, and #1908, the ruling on slice 4 and decisions (B) and (c) on slice 5 on 2026-11-17.
 - **Decision issues:** [#1519](https://github.com/yes-404/gi-pricing-plan/issues/1519) (OQ-1910), [#1810](https://github.com/yes-404/gi-pricing-plan/issues/1810), [#1868](https://github.com/yes-404/gi-pricing-plan/issues/1868), [#1869](https://github.com/yes-404/gi-pricing-plan/issues/1869), [#1870](https://github.com/yes-404/gi-pricing-plan/issues/1870) and [#1908](https://github.com/yes-404/gi-pricing-plan/issues/1908). Each decision comment is linked in the table below.
 - **Work:** [#1506](https://github.com/yes-404/gi-pricing-plan/issues/1506) (WK-1914). Plan accepted in the [comment of 2026-11-17](https://github.com/yes-404/gi-pricing-plan/issues/1506#issuecomment-6945235881); its new requirement is `00` FR-2159 ([comment](https://github.com/yes-404/gi-pricing-plan/issues/1506#issuecomment-6945244701)).

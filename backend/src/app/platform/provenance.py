@@ -94,8 +94,8 @@ def compose(
 
     A string is parsed. A parent that cannot be written as a reference (`None` from a builder,
     or a stored string outside the `refs` grammar) is left out of `subject_refs` and counted in
-    `unnamed_subjects` (`00` FR-2159's note of 2026-11-19, #1506's proposal pending the
-    maintainer's answer). A read that worked before provenance existed never fails on it, and
+    `unnamed_subjects` (`00` FR-2159's amendment of 2026-11-21; ADR-2170). A read that worked
+    before provenance existed never fails on it, and
     never drops the parent silently.
     """
     named: list[ArtifactRef] = []

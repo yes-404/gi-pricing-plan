@@ -49,7 +49,7 @@ describe("ProvenanceBadge (FR-2159)", () => {
   });
 
   it("says in words that a governed parent could not be written as a reference, never a blank", () => {
-    // FR-2159's note of 2026-11-19 (#1506's proposal, pending): a parent whose stored ref cannot be read.
+    // FR-2159's amendment of 2026-11-21 (ADR-2170): a parent whose stored ref cannot be read.
     const provenance = { ...DIAGNOSTICS.provenance, subject_refs: [], unnamed_subjects: 1 };
     render(ProvenanceBadge, { props: { provenance }, global });
     expect(badge()).toHaveTextContent(
