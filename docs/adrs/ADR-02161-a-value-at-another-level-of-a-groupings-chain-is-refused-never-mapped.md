@@ -1,7 +1,7 @@
 ---
 id: ADR-2161
 family: decision
-title: A value at another level of a Grouping's chain is refused, never mapped
+title: A value at an ancestor's level of a Grouping's chain is refused, never mapped
 status: draft                 # draft → active → superseded | retired (§1.2a)
 created: 2026-11-17
 owner: decision-maker          # creates via adr-write; maintainer accepts draft → active
@@ -12,10 +12,10 @@ corrected_by: []
 relates: [FR-104, FR-109, FR-222, FR-239, FR-2143]   # ids only — the FR-/NFR-/ADR- this decision touches
 ---
 
-# ADR-2161 — A value at another level of a Grouping's chain is refused, never mapped
+# ADR-2161 — A value at an ancestor's level of a Grouping's chain is refused, never mapped
 
 - **Status:** draft (the maintainer accepts it to `active`).
-- **Deciders:** the maintainer, 2026-11-17.
+- **Deciders:** the maintainer; the detail of the rule was decided on the maintainer's behalf by delegation, 17 Nov 2026.
 
 ## Context
 
