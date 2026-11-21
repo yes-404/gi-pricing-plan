@@ -179,7 +179,8 @@ docker compose -f deploy/docker-compose.yml --profile app up -d --wait --scale a
   `review`, `approved`, `live`, `retired`). **This upgrade is not a rolling upgrade: stop the
   `api` and the `worker`, run `migrate`, then start them. There is no rolling order, and
   `roll-api.sh` is not used for it.** Each build's start-up check compares the database's guards
-  with its own, so a process of one release does not start against the other's schema. The wrong
+  with its own, so, for this upgrade, a process of one release does not start against the other's
+  schema. The wrong
   order fails closed: a process refuses to start, and a running process of the previous release
   answers one action (withdrawing an approved approval request) with a server error that is
   rolled back.
