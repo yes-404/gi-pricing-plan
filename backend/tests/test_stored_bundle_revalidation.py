@@ -389,7 +389,7 @@ async def test_submit_deploy_and_rollback_refuse_a_bundle_missing_its_offset_sou
         assert deploy(client, deployer, "dev", first).status_code == 201
         assert deploy(client, deployer, "dev", second).status_code == 201
         written = await deployments_written(database, workspace_id)
-        async with database.unit_of_work() as session:
+        async with database.session() as session:
             stored = (
                 await session.execute(
                     select(RatingVersionRow.bundle).where(
@@ -398,14 +398,16 @@ async def test_submit_deploy_and_rollback_refuse_a_bundle_missing_its_offset_sou
                     )
                 )
             ).scalar_one()
-            await session.execute(
-                update(RatingVersionRow)
-                .where(
-                    RatingVersionRow.workspace_id == workspace_id,
-                    RatingVersionRow.slug == first.split(":")[1].split("@")[0],
-                )
-                .values(bundle=stored)
-            )
+        # The database holds a deployed version's bundle (ADR-2157): the swap is an owner's edit.
+        await edit_held_row_as_owner(
+            "rating_versions",
+            "rating_versions_content_guard",
+            "UPDATE rating_versions SET bundle = CAST(:bundle AS jsonb) "
+            "WHERE workspace_id = :workspace_id AND slug = :slug",
+            bundle=json.dumps(stored),
+            workspace_id=workspace_id,
+            slug=first.split(":")[1].split("@")[0],
+        )
         ref = first
     if act == "submit":
         refused = request_into(client, deployer, "prod", ref)
@@ -510,11 +512,18 @@ async def _pin_a_model_whose_source_has_an_offset(
         await mark_approved(session, c_row)
         c_ref = f"model:{c_row.model_family_slug}@{c_row.version}"
         pins = {**_empty_pins(), "models": [c_ref]}
-        await session.execute(
-            update(RatingVersionRow)
-            .where(RatingVersionRow.workspace_id == workspace_id, RatingVersionRow.slug == slug)
-            .values(algorithm_ref="rating_algorithm:minimal@1", pins=pins)
-        )
+    # The version is approved, so the database holds its algorithm and pins (ADR-2157): giving it
+    # a pin after the fact is an owner's edit.
+    await edit_held_row_as_owner(
+        "rating_versions",
+        "rating_versions_content_guard",
+        "UPDATE rating_versions SET algorithm_ref = :algorithm_ref, pins = CAST(:pins AS jsonb) "
+        "WHERE workspace_id = :workspace_id AND slug = :slug",
+        algorithm_ref="rating_algorithm:minimal@1",
+        pins=json.dumps(pins),
+        workspace_id=workspace_id,
+        slug=slug,
+    )
 
 
 @pytest.mark.req("FR-116")
