@@ -135,10 +135,19 @@ describe("SystemStatusView, who may open it (decision 7060618416, answer 1)", ()
   });
 
   it("a 403 from the platform is shown as an alert, not an empty page", async () => {
+    // The platform's own refusal for a caller holding no role (`PermissionDeniedError` in
+    // `backend/src/app/platform/rbac.py`): code `PERMISSION_DENIED`, this title and detail.
     serve(403, {
-      type: "about:blank", title: "Forbidden", status: 403, code: "FORBIDDEN", errors: [],
+      type: "about:blank",
+      title: "Not permitted",
+      status: 403,
+      code: "PERMISSION_DENIED",
+      detail: "This action requires settings:read.",
+      errors: [],
     });
     render(SystemStatusView);
-    expect(await screen.findByRole("alert")).toBeTruthy();
+    const alert = await screen.findByRole("alert");
+    expect(within(alert).getByText("Not permitted")).toBeTruthy();
+    expect(within(alert).getByText("This action requires settings:read.")).toBeTruthy();
   });
 });
