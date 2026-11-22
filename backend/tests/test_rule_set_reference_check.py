@@ -251,12 +251,15 @@ async def test_a_validation_job_uses_another_datasets_version_whoever_submitted_
     register_data_handlers()
     dataset_id = await _seed_dataset_and_rules(database, blob_store, workspace_id, principal)
     version_id = await _ingest(database, blob_store, workspace_id, principal, dataset_id, CLEAN)
-    async with database.unit_of_work() as session:
+    async def set_reference(session: AsyncSession) -> None:
         await session.execute(
             update(ValidationRuleSetRow)
             .where(ValidationRuleSetRow.dataset_id == dataset_id)
             .values(reference_dataset_version_id=world.version["y"])
         )
+
+    # The application role holds no UPDATE on `validation_rule_sets`: set-up goes through the owner.
+    await seed_as_owner(set_reference)
 
     seen: list[Profile | None] = []
     real_run_validation = data_handlers.run_validation
