@@ -328,7 +328,7 @@ named by the maintainer's ruling (2026-10-16 09:46:32). `s3_upload_id` is the `u
 
 ### 4.6 `System status` *(appended 2026-11-21, #1505, FR-443, FR-444)*
 
-The response of `GET /api/v1/admin/status` (§5.1), the data behind the System status view (§5.3). It is read-only and **deployment-wide**: the queue depths, the blob store usage and the cache counts are not filtered by the caller's workspace, as the queue and blob figures `/metrics` already publishes without authentication are not. The schema version is published by neither `/readyz` nor `/metrics`, and `/metrics` publishes the cache counts as the cache hit-rate counter family (§5.1). Its field names are fixed here; the class that carries them in `model-schema` and a validated `schema=` example are added with the route, not in this commit.
+The response of `GET /api/v1/admin/status` (§5.1), the data behind the System status view (§5.3). It is read-only and **deployment-wide**: the queue depths, the blob store usage and the cache counts are not filtered by the caller's workspace, as the queue and blob figures `/metrics` already publishes without authentication are not. The schema version is published by neither `/readyz` nor `/metrics`, and `/metrics` publishes the cache counts as the cache hit-rate counter family (§5.1). Its field names are fixed here; the class that carries them is `SystemStatus` in `model-schema` (`system_status.py`), and the example below is validated against it.
 
 | Field | Type | Meaning |
 |---|---|---|
@@ -343,6 +343,23 @@ The response of `GET /api/v1/admin/status` (§5.1), the data behind the System s
 | `caches` | list | One entry per cache that reports: `bundle_slot` (the per-process in-memory holder of hydrated compiled bundles), then `diff_cache` (the Redis-held cache of rate table diffs) once it reports; both are defined below. Each entry has `name` (text), `hits` and `misses` (integers, at least 0). A lookup that ends in an `error` (the Redis-backed cache) is counted as neither a hit nor a miss; the `error` result label on `/metrics` carries it (§5.1). |
 
 **When the database cannot be read** (decision, #1505 issue comment 7070124577). The route still answers 200 with the body; the `database` component is `down`, `status` is `down` (it follows the readiness verdict, so a `down` database gives a `down` status), and each of `schema_version`, `queues` and `blob_store` is `null` when the read that supplies it fails, and keeps its value when that read succeeds. **A partial failure** is applied per field. The route makes two database reads: the platform figures (the queue depths and the blob store usage) and the migration revision. The figures read failing makes `queues` and `blob_store` `null`; the migration-revision query failing makes `schema_version` `null`; a field whose own read succeeded keeps its value. Either failure marks the `database` component `down`, so `status` is `down`, as the decision says: with the database read failing, the field is `null` and the component is `down`. The component's `detail` for a failed read names the exception type only and does not say the database was unreachable, because it may have answered (a missing or repeated `alembic_version` row is a failed read too). Because the route's own reads count, the `database` component can be `down` with `status` `down` while the readiness probe, and so `/readyz` at the same moment, reports `up`. A status view that fails when the thing it reports on fails would be no use at the moment it is opened. Any other field read from the database follows the same rule: `null` when the database cannot be read, never a value that reads as "none". A field read from another source (the process, Redis) is `null` only when its own source cannot be read. With Redis `down` and every component that gates readiness `up`, `status` is `up` and the `redis` component reads `down`. *(Added 2026-11-22, #1505, as built and not a decision: a database outage that also fails authentication is answered before this route runs, at authentication, and `/readyz` reports it; whether that is intended was asked on #1505, issue comment 7071383680, and is unanswered, and the route's behaviour is unchanged.)*
+
+```json schema=SystemStatus
+{
+  "status": "up",
+  "components": [
+    {"name": "blobs", "status": "up", "detail": null},
+    {"name": "database", "status": "up", "detail": null},
+    {"name": "redis", "status": "down", "detail": "unreachable: ConnectionError"}
+  ],
+  "schema_version": "e5b2a7d94c13",
+  "queues": [{"kind": "dataset.ingest", "status": "queued", "depth": 2}],
+  "blob_store": {"objects": 41, "bytes": 1048576},
+  "caches": [{"name": "bundle_slot", "hits": 120, "misses": 3}]
+}
+```
+
+Here `redis` is `down` while the whole is `up`: Redis is reported and does not gate readiness (FR-444). The example shows a successful read, so `schema_version`, `queues` and `blob_store` carry a string, a list and an object; with the database unreadable they are `null`, as stated above.
 
 **What a cache count is.** The counts are two integers per cache, `hits` and `misses`, since the API process started; no rate is stored. The view derives a rate as `hits / (hits + misses)` and, when both are zero, shows "no reads yet", never 0 %, for the reason the `/metrics` scope note in §5.1 gives. The counts are **per API process**: `deploy/docker-compose.yml` runs replicas of the API service and several uvicorn processes per container (`WEB_CONCURRENCY`), so a request lands on one process and the counts the route returns are that process's, as the request counters on `/metrics` are. The unit is a **lookup, not a request**. Two caches report:
 

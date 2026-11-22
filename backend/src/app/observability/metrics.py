@@ -37,6 +37,7 @@ __all__ = [
     "auth_failures",
     "blob_bytes",
     "blob_objects",
+    "cache_counts",
     "job_duration_seconds",
     "job_queue_depth",
     "ladder_reconciliation_failed",
@@ -174,6 +175,21 @@ class _CacheLookups(Collector):
         with self._lock:
             self._tallies[cache] = tally
 
+    def counts(self) -> dict[str, tuple[int, int]]:
+        """`(hits, misses)` per cache that reports, as `collect` reads them. A tracked cache
+        is listed even at 0/0; a counted one only once it has a hit or a miss. An `error`
+        is neither."""
+        with self._lock:
+            counted = dict(self._counted)
+            tallies = dict(self._tallies)
+        found: dict[str, list[int]] = {}
+        for cache, tally in tallies.items():
+            found[cache] = list(tally())
+        for (cache, result), count in counted.items():
+            if result in _SLOT_RESULTS and count > 0:
+                found.setdefault(cache, [0, 0])[_SLOT_RESULTS.index(result)] += count
+        return {cache: (hits, misses) for cache, (hits, misses) in sorted(found.items())}
+
     def reset(self) -> None:
         with self._lock:
             self._counted.clear()
@@ -217,6 +233,12 @@ def track_cache(cache: str, tally: Callable[[], tuple[int, int]]) -> None:
     `bundle_slot` per API process. A tally of `(0, 0)` gives the cache no sample.
     """
     _cache_lookups.track(cache, tally)
+
+
+def cache_counts() -> dict[str, tuple[int, int]]:
+    """`(hits, misses)` per reporting cache since this process started, for the System status
+    route (`07` §4.6). The same source `/metrics` reads; errors are neither."""
+    return _cache_lookups.counts()
 
 
 def reset_cache_lookups() -> None:

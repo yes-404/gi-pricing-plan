@@ -15,6 +15,7 @@ from app.config import Environment, Settings
 from app.main import create_app
 from app.observability.metrics import (
     REGISTRY,
+    cache_counts,
     observe_cache_lookup,
     render,
     reset_cache_lookups,
@@ -301,3 +302,36 @@ def test_the_apps_own_bundle_slot_is_on_the_scrape(clean_cache_family: None) -> 
 
     assert 'gip_cache_lookups_total{cache="bundle_slot",result="hit"} 1.0' in body
     assert 'gip_cache_lookups_total{cache="bundle_slot",result="miss"} 1.0' in body
+
+
+@pytest.mark.req("FR-443")
+def test_the_counts_are_hits_and_misses_and_an_error_is_neither(clean_cache_family: None) -> None:
+    """`cache_counts()` is what the System status route reads (`07` §4.6): `(hits, misses)`
+    per cache, from the counted source and the tracked one, with an `error` in neither."""
+    for result in ("hit", "hit", "miss", "error", "error", "error"):
+        observe_cache_lookup("diff_cache", result)
+
+    assert cache_counts() == {"diff_cache": (2, 1)}
+
+
+@pytest.mark.req("FR-443")
+def test_a_cache_with_only_errors_is_not_listed(clean_cache_family: None) -> None:
+    """A counted cache is listed once it has a hit or a miss; an outage alone is neither."""
+    observe_cache_lookup("diff_cache", "error")
+
+    assert cache_counts() == {}
+
+
+@pytest.mark.req("FR-443")
+def test_a_tracked_cache_is_listed_at_zero_and_both_sources_add(clean_cache_family: None) -> None:
+    """A tracked cache shows 0/0 (the route's row, unlike `/metrics`, which has no sample);
+    counts and tallies for one cache name are summed, and the result is sorted by name."""
+    track_cache("bundle_slot", lambda: (0, 0))
+    assert cache_counts() == {"bundle_slot": (0, 0)}
+
+    track_cache("diff_cache", lambda: (3, 4))
+    observe_cache_lookup("diff_cache", "hit")
+    observe_cache_lookup("diff_cache", "error")
+
+    assert cache_counts() == {"bundle_slot": (0, 0), "diff_cache": (4, 4)}
+    assert list(cache_counts()) == ["bundle_slot", "diff_cache"]

@@ -44,6 +44,7 @@ from app.api import (
     score,
     service_accounts,
     sub_graphs,
+    system_status,
     traces,
     validation,
 )
@@ -129,6 +130,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         # built here and closed below — never per request. Building it opens no connection,
         # so an unavailable Redis does not stop startup; the limiter fails open.
         redis_client = build_redis_client(settings.redis_url.get_secret_value())
+        # FR-444 as amended 2026-11-21 (#1505 answer 4 (i)): reported in `/readyz`, not a gate.
+        health.register_probe("redis", health.redis_probe(redis_client))
         running.state.rate_limiter = RateLimiter(redis_client)
         # FR-268 (PL-1766 D5.8, the maintainer's 2026-10-18 23:03:15 BST ruling (A)): this
         # process answers the deployment switch and holds its own `live` reference. Subscribe
@@ -239,6 +242,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     counted(environment_settings.router)
     counted(deployments.router)
     counted(settings_api.router)
+    counted(system_status.router)
     counted(me.router)
     counted(audit.router)
     counted(artifacts.router)

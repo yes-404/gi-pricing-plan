@@ -430,6 +430,7 @@ from model_schema.settings import (
     SettingType,
 )
 from model_schema.sub_graphs import SubGraph, SubGraphBody, SubGraphCreate, SubGraphInputPort
+from model_schema.system_status import SystemStatus
 from model_schema.transparency import (
     EbmShapeFunctions,
     GlmApproximation,
@@ -832,6 +833,7 @@ __all__ = [
     "SubGraphInputPort",
     "SubGraphRef",
     "SwitchReport",
+    "SystemStatus",
     "TemplateParameter",
     "Trace",
     "TraceDiff",

@@ -1856,6 +1856,29 @@
         "title": "BlobRef",
         "type": "object"
       },
+      "BlobStoreUsage": {
+        "additionalProperties": false,
+        "properties": {
+          "bytes": {
+            "description": "Their total size in bytes.",
+            "minimum": 0.0,
+            "title": "Bytes",
+            "type": "integer"
+          },
+          "objects": {
+            "description": "The number of blobs.",
+            "minimum": 0.0,
+            "title": "Objects",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "objects",
+          "bytes"
+        ],
+        "title": "BlobStoreUsage",
+        "type": "object"
+      },
       "Body_import_rate_table_api_v1_rate_tables__slug___version__import_post": {
         "properties": {
           "confirm": {
@@ -2029,6 +2052,33 @@
           "compiled_at"
         ],
         "title": "BundleMetadata",
+        "type": "object"
+      },
+      "CacheCount": {
+        "additionalProperties": false,
+        "description": "Lookups of one cache since this API process started (`07` §4.6).\n\nA lookup that ended in an error is counted as neither a hit nor a miss.",
+        "properties": {
+          "hits": {
+            "minimum": 0.0,
+            "title": "Hits",
+            "type": "integer"
+          },
+          "misses": {
+            "minimum": 0.0,
+            "title": "Misses",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "hits",
+          "misses"
+        ],
+        "title": "CacheCount",
         "type": "object"
       },
       "CalibrationBin": {
@@ -13536,6 +13586,32 @@
         "title": "QuantileCrossing",
         "type": "object"
       },
+      "QueueDepth": {
+        "additionalProperties": false,
+        "description": "Jobs of one kind in one non-terminal status. A kind with none has no entry.",
+        "properties": {
+          "depth": {
+            "minimum": 1.0,
+            "title": "Depth",
+            "type": "integer"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "status",
+          "depth"
+        ],
+        "title": "QueueDepth",
+        "type": "object"
+      },
       "QuoteContext": {
         "additionalProperties": false,
         "description": "`QuoteContext` (`scoring.schema.json:7-24`, `03` §4.4).",
@@ -18529,6 +18605,79 @@
         "title": "SwitchWorkspaceRequest",
         "type": "object"
       },
+      "SystemStatus": {
+        "additionalProperties": false,
+        "description": "The response of `GET /api/v1/admin/status` (`07` §4.6).",
+        "properties": {
+          "blob_store": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BlobStoreUsage"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Blob count and size. `null` means the database could not be read, never an object of zeros: zeros mean the read succeeded and there are no blobs."
+          },
+          "caches": {
+            "items": {
+              "$ref": "#/components/schemas/CacheCount"
+            },
+            "title": "Caches",
+            "type": "array"
+          },
+          "components": {
+            "description": "One entry per registered readiness probe.",
+            "items": {
+              "$ref": "#/components/schemas/ComponentHealth"
+            },
+            "title": "Components",
+            "type": "array"
+          },
+          "queues": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/QueueDepth"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Jobs per kind and non-terminal status. `null` means the database could not be read, never an empty list: an empty list means the read succeeded and nothing is queued.",
+            "title": "Queues"
+          },
+          "schema_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The database's migration revision (its `alembic_version` table). `null` means the database could not be read; it is never shown as empty (decision of 2026-11-21 on #1505, comment 7070124577).",
+            "title": "Schema Version"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ComponentStatus",
+            "description": "The readiness verdict over the components as this route reports them, a failed database read included, so it can be `down` while `/readyz`, read at the same moment, is `up`. It is decided by the components that gate readiness, so `redis` can be down while this is up."
+          }
+        },
+        "required": [
+          "status",
+          "components",
+          "schema_version",
+          "queues",
+          "blob_store",
+          "caches"
+        ],
+        "title": "SystemStatus",
+        "type": "object"
+      },
       "TableCreate": {
         "additionalProperties": false,
         "properties": {
@@ -19985,6 +20134,10 @@
       "VersionInfo": {
         "additionalProperties": false,
         "properties": {
+          "commit": {
+            "title": "Commit",
+            "type": "string"
+          },
           "environment": {
             "title": "Environment",
             "type": "string"
@@ -20001,6 +20154,7 @@
         "required": [
           "service",
           "version",
+          "commit",
           "environment"
         ],
         "title": "VersionInfo",
@@ -20216,6 +20370,92 @@
   },
   "openapi": "3.1.0",
   "paths": {
+    "/api/v1/admin/status": {
+      "get": {
+        "operationId": "get_system_status_api_v1_admin_status_get",
+        "parameters": [
+          {
+            "description": "The workspace to act in, as a UUID. Required when the principal is a member of more than one (`07` FR-397); a principal with exactly one, and a Service Account, send nothing. Checked against the principal's own memberships: a workspace it does not belong to yields `403 WORKSPACE_SCOPE_DENIED`, and an absent selection with several memberships yields `403 WORKSPACE_SELECTION_REQUIRED`.",
+            "in": "header",
+            "name": "Workspace-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The workspace to act in, as a UUID. Required when the principal is a member of more than one (`07` FR-397); a principal with exactly one, and a Service Account, send nothing. Checked against the principal's own memberships: a workspace it does not belong to yields `403 WORKSPACE_SCOPE_DENIED`, and an absent selection with several memberships yields `403 WORKSPACE_SELECTION_REQUIRED`.",
+              "title": "Workspace-Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SystemStatus"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
+          }
+        },
+        "summary": "System status",
+        "tags": [
+          "platform"
+        ]
+      }
+    },
     "/api/v1/approval-policy": {
       "get": {
         "operationId": "get_policy_api_v1_approval_policy_get",
