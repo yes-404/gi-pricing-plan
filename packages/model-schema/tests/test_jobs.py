@@ -327,21 +327,28 @@ def test_both_real_job_schemas_refuse_a_located_error_with_a_bad_value(
 
 @pytest.mark.req("FR-403")
 @pytest.mark.parametrize("schema", ["job.schema.json", "generated/job.schema.json"])
-def test_both_job_schemas_refuse_the_reserved_key_in_detail_as_the_model_does(
-    schema: str,
-) -> None:
-    """`JobError` refuses `detail["_location"]` (it is the stored form's, `from_stored` lifts it):
-    a schema that admits it says a client may send what the model will not take (review of #1930,
-    note 4). The control: an ordinary detail key is still admitted."""
-    wire = _failed_error(location=_LOCATED).model_dump(mode="json")
-    assert _wire_refusals(schema, {**wire, "detail": {"step": "s"}}) == []
-    assert _wire_refusals(schema, {**wire, "detail": {"_location": {"step_id": "s"}}})
+def test_both_job_schemas_state_that_detail_never_carries_the_reserved_key(schema: str) -> None:
+    """The rule is enforced by the model (`test_the_constructor_refuses_the_reserved_key_so_only_
+    from_stored_consumes_it`) and stated in the field's description, not as a schema keyword the
+    contract guard does not follow."""
+    doc = json.loads((_CONTRACTS / schema).read_text())
+    error = doc["$defs"]["JobError"] if "$defs" in doc else doc["properties"]["error"]
+    description = error["properties"]["detail"]["description"]
+    assert "never carries the key `_location`" in description
+    assert "not" not in error["properties"]["detail"]
 
 
 # -- the free-text keys: a bound, a character rule, and the same answer in every consumer -------
 
 _FREE_TEXT_KEYS = (
-    "step_id", "field", "objective", "factor", "key", "feature", "interaction", "operand",
+    "step_id",
+    "field",
+    "objective",
+    "factor",
+    "key",
+    "feature",
+    "interaction",
+    "operand",
 )
 _TOO_LONG = "a location key is longer than 256 characters"
 _CONTROL = "a location key holds a control character"
@@ -464,7 +471,10 @@ def test_the_schemas_and_the_model_admit_the_same_free_text(schema: str, key: st
         assert (by_the_model, by_the_schema, by_a_search_validator, by_the_engine) == (
             admitted,
         ) * 4, (
-            schema, key, ascii(value[:8]), len(value),
+            schema,
+            key,
+            ascii(value[:8]),
+            len(value),
         )
 
 
@@ -490,7 +500,10 @@ _SENTINEL = "SENTINEL-location-value-5c1e"
 
 def _stored_with(location: Any) -> dict[str, Any]:
     return {
-        "code": "X_Y", "message": "m", "retryable": False, "detail": {"_location": location},
+        "code": "X_Y",
+        "message": "m",
+        "retryable": False,
+        "detail": {"_location": location},
     }
 
 

@@ -151,11 +151,7 @@
         },
         "detail": {
           "type": "object",
-          "not": {
-            "required": [
-              "_location"
-            ]
-          }
+          "description": "`detail` never carries the key `_location`; the location is its own field."
         },
         "location": {
           "type": [

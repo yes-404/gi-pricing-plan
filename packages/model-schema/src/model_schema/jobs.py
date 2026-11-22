@@ -127,9 +127,7 @@ TERMINAL_STATUSES: frozenset[JobStatus] = frozenset(
 #: common case, and it needs no cooperation from `pricing-core`.
 VALID_TRANSITIONS: dict[JobStatus, frozenset[JobStatus]] = {
     JobStatus.QUEUED: frozenset({JobStatus.RUNNING, JobStatus.CANCELLED, JobStatus.FAILED}),
-    JobStatus.RUNNING: frozenset(
-        {JobStatus.SUCCEEDED, JobStatus.FAILED, JobStatus.CANCELLED}
-    ),
+    JobStatus.RUNNING: frozenset({JobStatus.SUCCEEDED, JobStatus.FAILED, JobStatus.CANCELLED}),
     JobStatus.SUCCEEDED: frozenset(),
     JobStatus.FAILED: frozenset(),
     JobStatus.CANCELLED: frozenset(),
@@ -213,7 +211,14 @@ _LocationText = Annotated[
     ),
 ]
 _FREE_TEXT_KEYS = (
-    "step_id", "field", "objective", "factor", "key", "feature", "interaction", "operand",
+    "step_id",
+    "field",
+    "objective",
+    "factor",
+    "key",
+    "feature",
+    "interaction",
+    "operand",
 )
 
 
@@ -290,10 +295,11 @@ class JobError(BaseModel):
     code: str = Field(pattern="^[A-Z][A-Z0-9_]*$")
     message: str
     retryable: bool
-    # `not required _location`: the schema says what the validator below refuses (the key is the
-    # stored form's, not the wire's).
+    # The schema says what the validator below refuses, in the description: the contract guard
+    # does not follow `not`, so the rule is stated in words and enforced by the model.
     detail: dict[str, Any] = Field(
-        default_factory=dict, json_schema_extra={"not": {"required": [LOCATION_DETAIL_KEY]}}
+        default_factory=dict,
+        description="`detail` never carries the key `_location`; the location is its own field.",
     )
     location: JobErrorLocation | None = None
     trace_id: str | None = Field(default=None, pattern="^[0-9a-f]{32}$")
