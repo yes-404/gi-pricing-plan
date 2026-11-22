@@ -107,6 +107,12 @@ export const ARTIFACT: TransparencyArtifact = {
     ],
     top_interactions: [{ pair: ["driver_age_banded", "vehicle_group_rated"], strength: 0.031 }],
   },
+  provenance: {
+    entity_type: "transparency_artifact",
+    entity_id: "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee",
+    produced_by_job_id: null,
+    subject_refs: ["model:motor-ad-frequency@7"],
+  },
 };
 
 /**
@@ -266,6 +272,12 @@ export const COMPARISON: ModelComparison = {
       },
     ],
   },
+  provenance: {
+    entity_type: "model_comparison",
+    entity_id: "5c1b0e6a-7777-4888-8999-aaaabbbbcccc",
+    produced_by_job_id: "1a2b3c4d-5555-4666-8777-888899990000",
+    subject_refs: ["model:motor-ad-frequency@7", "model:motor-ad-frequency-gbm@2"],
+  },
 };
 
 /**
@@ -415,6 +427,12 @@ export const DIAGNOSTICS: Diagnostics = {
       { fold: 4, rows: 81_506, score: 0.498 },
     ],
   },
+  provenance: {
+    entity_type: "diagnostics",
+    entity_id: "33333333-3333-4333-8333-333333333333",
+    produced_by_job_id: "44444444-4444-4444-8444-444444444444",
+    subject_refs: ["model:motor-ad-frequency@7"],
+  },
 };
 
 /**
@@ -439,6 +457,12 @@ export const BACKTEST: Backtest = {
     period_from: "2025-01-01",
     period_to: "2025-12-31",
     partition: DIAGNOSTICS.universal.train,
+  },
+  provenance: {
+    entity_type: "backtest",
+    entity_id: "0e3f7a1c-1111-4222-8333-444455556666",
+    produced_by_job_id: null,
+    subject_refs: ["model:motor-frequency@3"],
   },
 };
 

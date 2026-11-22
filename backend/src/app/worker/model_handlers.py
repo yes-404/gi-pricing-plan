@@ -15,7 +15,7 @@ from __future__ import annotations
 import io
 import time
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from decimal import Decimal
 from typing import Any
@@ -159,10 +159,61 @@ def _backtest_refusal(exc: Any) -> PlatformError:
 
 @dataclass(frozen=True, slots=True)
 class _Transformations:
-    """The banding and grouping artifacts a spec's factors pin, keyed by id."""
+    """The banding and grouping artifacts a spec's factors pin, keyed by id.
+
+    `chain_parents` are the groupings a pinned grouping's chain runs through
+    (`parent_grouping_id`, followed to the grouping with no parent), loaded only where the fit's
+    diagnostics read FR-109's finer levels. They are kept apart from `groupings`, which is what
+    the factors pin and what the fit and scoring resolve against.
+    """
 
     bandings: dict[UUID, Banding]
     groupings: dict[UUID, Grouping]
+    chain_parents: dict[UUID, Grouping] = field(default_factory=dict)
+
+    def with_chains(self) -> dict[UUID, Grouping]:
+        """`groupings` and every grouping of each chain under them: the map the fit-time
+        finer-level A/E needs (`pricing_core.modelling.groupings.grouping_chain`)."""
+        return {**self.chain_parents, **self.groupings}
+
+
+async def _chain_parents(
+    session: Any, *, workspace_id: UUID, groupings: Mapping[UUID, Grouping]
+) -> dict[UUID, Grouping]:
+    """Every grouping the chains under `groupings` run through, not already in `groupings`
+    (FR-109, #1506 slice 5).
+
+    Followed one generation at a time until a grouping has no parent, so a chain of any length
+    is loaded. A parent that no longer exists is skipped, not refused: the chain ends there,
+    and `finer_levels` reports the levels it would have given as "not available" (FR-109's
+    amendment of 2026-11-17), so a diagnostic never fails a fit that scoring completes. Each id
+    is loaded on its own for that reason, since `load_groupings` refuses a batch with any
+    missing id. A chain that comes back on itself stops here, because every id is loaded once,
+    and `grouping_chain` refuses it by name.
+    """
+    loaded: dict[UUID, Grouping] = {}
+    gone: set[UUID] = set()
+    wanted = {
+        g.parent_grouping_id for g in groupings.values() if g.parent_grouping_id is not None
+    }
+    while wanted := wanted - groupings.keys() - loaded.keys() - gone:
+        found: dict[UUID, Grouping] = {}
+        for parent_id in sorted(wanted):
+            try:
+                found.update(
+                    await transform_service.load_groupings(
+                        session, workspace_id=workspace_id, ids=[parent_id]
+                    )
+                )
+            except PlatformError as error:
+                if error.code != "NOT_FOUND":
+                    raise
+                gone.add(parent_id)
+        loaded.update(found)
+        wanted = {
+            g.parent_grouping_id for g in found.values() if g.parent_grouping_id is not None
+        }
+    return loaded
 
 
 async def _frame_of(session: Any, blob_store: Any, version: Any) -> pl.DataFrame:
@@ -295,6 +346,16 @@ def _fit(parameters: dict[str, Any], callback: ProgressCallback) -> JobResult:
                     session,
                     workspace_id=workspace_id,
                     ids=[f.grouping_id for f in factors if f.grouping_id],
+                ),
+            )
+            # FR-109, decision #1870 (b): the diagnostics below compute the finer-level A/E
+            # at fit time, so every grouping of each pinned grouping's chain is loaded now.
+            # Never on read (FR-170): the stored `Diagnostics` is all the read route returns.
+            transformations = _Transformations(
+                bandings=transformations.bandings,
+                groupings=transformations.groupings,
+                chain_parents=await _chain_parents(
+                    session, workspace_id=workspace_id, groupings=transformations.groupings
                 ),
             )
 
@@ -526,13 +587,19 @@ def _fit(parameters: dict[str, Any], callback: ProgressCallback) -> JobResult:
     from pricing_core.modelling.diagnostics import compute_ebm_diagnostics
 
     diagnostic_progress = ScaledProgress(progress, start=0.85, end=0.97)
+    # FR-109's finer-level A/E, on all three arms: FR-171's A/E is model-agnostic (it reads only
+    # the rows and the fitted means), so it is the same request for each, stored once as the
+    # top-level `Diagnostics.finer_level_ae`. The map carries each chain's parents, which only
+    # the finer level reads.
+    with_chains = transformations.with_chains()
     try:
         if isinstance(spec, GbmSpec) and isinstance(result, GbmFitResult) and booster:
             computed = compute_gbm_diagnostics(
                 result, booster, spec, factors,
                 train=frame, holdout=holdout, eval_curve=eval_curve,
                 bandings=transformations.bandings,
-                groupings=transformations.groupings,
+                groupings=with_chains,
+                finer_levels=True,
                 progress=diagnostic_progress,
             )
         elif isinstance(spec, EbmSpec) and isinstance(result, EbmFitResult):
@@ -540,7 +607,8 @@ def _fit(parameters: dict[str, Any], callback: ProgressCallback) -> JobResult:
                 result, spec, factors,
                 train=frame, holdout=holdout,
                 bandings=transformations.bandings,
-                groupings=transformations.groupings,
+                groupings=with_chains,
+                finer_levels=True,
                 progress=diagnostic_progress,
             )
         elif isinstance(spec, GlmSpec) and isinstance(result, GlmFitResult):
@@ -550,7 +618,8 @@ def _fit(parameters: dict[str, Any], callback: ProgressCallback) -> JobResult:
                 model_offset_train=model_offset,
                 model_offset_holdout=model_offset_holdout,
                 bandings=transformations.bandings,
-                groupings=transformations.groupings,
+                groupings=with_chains,
+                finer_levels=True,
                 progress=diagnostic_progress,
             )
         else:  # pragma: no cover - the unions are checked together at the type
@@ -638,6 +707,7 @@ def _fit(parameters: dict[str, Any], callback: ProgressCallback) -> JobResult:
         glm=computed.glm,
         gbm=gbm_diagnostics,
         cross_validation=glm_cv,
+        finer_level_ae=computed.finer_level_ae,
     )
     progress.update(0.97, "storing the fit and its diagnostics")
 
@@ -981,14 +1051,21 @@ def _transparency(parameters: dict[str, Any], callback: ProgressCallback) -> Job
                 factors = await model_service.load_factors(
                     session, workspace_id=workspace_id, factor_ids=list(spec.factors)
                 )
+                pinned = await transform_service.load_groupings(
+                    session, workspace_id=workspace_id,
+                    ids=[f.grouping_id for f in factors if f.grouping_id],
+                )
+                # FR-109, the maintainer's (c) on #1506: the surrogate's diagnostics compute the
+                # finer level through the same call as any other GLM's, so the chains' parents
+                # are loaded here as the fit loads them.
                 transformations = _Transformations(
                     bandings=await transform_service.load_bandings(
                         session, workspace_id=workspace_id,
                         ids=[f.banding_id for f in factors if f.banding_id],
                     ),
-                    groupings=await transform_service.load_groupings(
-                        session, workspace_id=workspace_id,
-                        ids=[f.grouping_id for f in factors if f.grouping_id],
+                    groupings=pinned,
+                    chain_parents=await _chain_parents(
+                        session, workspace_id=workspace_id, groupings=pinned
                     ),
                 )
                 version = await dataset_service.fittable_or_refuse(
@@ -1178,13 +1255,17 @@ def _transparency(parameters: dict[str, Any], callback: ProgressCallback) -> Job
         # the source model's predictions — FR-136's quantity, on both partitions. The
         # frames carry the booster's predictions in `SURROGATE_RESPONSE_COLUMN`, so this is
         # the ordinary GLM diagnostics path measuring an extraordinary target, and
-        # FR-141's spec invariant is what says so to every later reader.
+        # FR-141's spec invariant is what says so to every later reader. That includes
+        # FR-109's finer level, computed here as for any GLM (the maintainer's (c) on #1506):
+        # its "actual" is the source model's prediction and its "expected" the surrogate's
+        # fitted mean, and the view shows it under the same FR-141 notice.
         try:
             surrogate_diagnostics = compute_diagnostics(
                 approximation.result, approximation.spec, factors,
                 train=approximation.train, holdout=approximation.holdout,
                 bandings=transformations.bandings,
-                groupings=transformations.groupings,
+                groupings=transformations.with_chains(),
+                finer_levels=True,
                 progress=ScaledProgress(progress, start=0.50, end=0.62),
             )
         except AllRowsUnseenError as exc:
@@ -1258,6 +1339,7 @@ def _transparency(parameters: dict[str, Any], callback: ProgressCallback) -> Job
                         universal=surrogate_diagnostics.universal,
                         complexity=surrogate_diagnostics.complexity,
                         glm=surrogate_diagnostics.glm,
+                        finer_level_ae=surrogate_diagnostics.finer_level_ae,
                     ),
                     job_id=job_id,
                 )

@@ -1,7 +1,16 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
 
-import { getDiagnostics, partitions, weightingLabel, type Diagnostics } from "@/api/diagnostics";
+import {
+  getDiagnostics,
+  partitions,
+  weightingLabel,
+  type AeCell,
+  type Diagnostics,
+  type FactorFinerLevels,
+  type FinerLevelAe,
+  type PartitionLabel,
+} from "@/api/diagnostics";
 import { getModel, type Model } from "@/api/models";
 import { ProblemError } from "@/api/problem";
 import AeByFactorChart from "@/components/AeByFactorChart.vue";
@@ -14,6 +23,7 @@ import GlmDiagnosticsPanel from "@/components/GlmDiagnosticsPanel.vue";
 import LiftChart from "@/components/LiftChart.vue";
 import PartialDependencePanel from "@/components/PartialDependencePanel.vue";
 import PartitionTable from "@/components/PartitionTable.vue";
+import ProvenanceBadge from "@/components/ProvenanceBadge.vue";
 import SurrogateNotice from "@/components/SurrogateNotice.vue";
 
 const props = defineProps<{ slug: string; version?: string }>();
@@ -49,6 +59,131 @@ const unseenRows = computed(() =>
     return { label, rows, exposure };
   }),
 );
+
+/**
+ * FR-109's finer level (`02` §5.3, "Diagnostics, finer level"; decision #1870 (b)). The fit
+ * stored it once, as `Diagnostics.finer_level_ae` with train and holdout, and this view only
+ * selects among what was stored; nothing is computed here (FR-170). Three states, the
+ * maintainer's (c) on #1506:
+ *
+ * - no Factor on a chained grouping: no finer-level section at all, whenever the model was
+ *   fitted. A `null` field cannot say this by itself, so the read carries `chained_factors`,
+ *   which the API composes from the model's definition by the fit's own rule (`02` §5.1;
+ *   decided on #1961, comment 7060609084, point 1). The view applies no rule of its own.
+ * - such a Factor, and `finer_level_ae` `null` or absent: fitted before the finer level was
+ *   stored. The view says "not available", in those words, names the Factors, and shows no
+ *   table.
+ * - such a Factor, fitted after: a level selector and the tables for that Factor.
+ *
+ * A surrogate's finer level is read under the page's `SurrogateNotice` (FR-141), as its other
+ * actual-versus-expected tables are: its "actual" is the source model's prediction.
+ *
+ * The artifact holds train and holdout to the same Factors and levels (FR-183), so the Factors
+ * are read off the holdout and each table is drawn for both partitions side by side.
+ */
+const finer = computed(() => diagnostics.value?.finer_level_ae ?? null);
+
+const finerAvailable = computed(() => finer.value !== null);
+
+/** The model's Factors on a chained grouping, as the read names them (`chained_factors`). */
+const chainedSlugs = computed<string[]>(() => [...(diagnostics.value?.chained_factors ?? [])]);
+
+/** "Not available": a Factor that has a finer level, and none stored for it. */
+const finerNotAvailable = computed(() => !finerAvailable.value && chainedSlugs.value.length > 0);
+
+const chainedFactors = computed<FactorFinerLevels[]>(() => finer.value?.holdout ?? []);
+
+function finerOf(label: PartitionLabel): FactorFinerLevels[] {
+  return (label === "Train" ? finer.value?.train : finer.value?.holdout) ?? [];
+}
+
+/** The selected level per Factor; `""` is the level the model was fitted on. */
+const selectedLevel = ref<Record<string, string>>({});
+
+/**
+ * Whether the fit stored the Factor's own A/E. An interaction's operand is not a term of the
+ * model (`resolve_factors`), so it has finer levels but no "as fitted" table; for it the view
+ * offers only the finer levels and opens on the finest, never an empty table.
+ */
+function hasFitted(entry: FactorFinerLevels): boolean {
+  return universal.value.some(([, partition]) =>
+    (partition.ae_by_factor ?? []).some((cell) => cell.factor === entry.factor),
+  );
+}
+
+/** The level shown for `entry`: the one chosen, else as fitted, else the finest stored. */
+function selectedOf(entry: FactorFinerLevels): string {
+  return (
+    selectedLevel.value[entry.factor] ??
+    (hasFitted(entry) ? "" : (entry.levels[0]?.name ?? ""))
+  );
+}
+
+function choose(factor: string, event: Event): void {
+  selectedLevel.value = {
+    ...selectedLevel.value,
+    [factor]: (event.target as HTMLSelectElement).value,
+  };
+}
+
+interface FinerRow {
+  level: string;
+  ae: number | null;
+  actual: number;
+  expected: number;
+  exposure: string | null;
+}
+
+interface FinerTable {
+  label: PartitionLabel;
+  rows: FinerRow[];
+  /** The named "not available" row of a finer level; `null` for the fitted level. */
+  unavailable: { rows: number; exposure: string; actual: number; expected: number } | null;
+}
+
+function cellRow(cell: AeCell): FinerRow {
+  return {
+    level: cell.level,
+    ae: cell.ae,
+    actual: cell.actual,
+    expected: cell.expected,
+    exposure: cell.exposure_years ?? null,
+  };
+}
+
+function finerTables(entry: FactorFinerLevels): FinerTable[] {
+  const name = selectedOf(entry);
+  return universal.value.map(([label, partition]) => {
+    if (name === "") {
+      // The fitted level: the Factor's own A/E, as `ae_by_factor` stored it.
+      const cells = partition.ae_by_factor?.filter((cell) => cell.factor === entry.factor) ?? [];
+      return { label, rows: cells.map(cellRow), unavailable: null };
+    }
+    const own = finerOf(label).find((item) => item.factor === entry.factor);
+    const level: FinerLevelAe | undefined = own?.levels.find((item) => item.name === name);
+    return {
+      label,
+      rows: (level?.cells ?? []).map(cellRow),
+      unavailable: level
+        ? {
+            rows: level.unavailable_rows,
+            exposure: level.unavailable_exposure,
+            actual: level.unavailable_actual,
+            expected: level.unavailable_expected,
+          }
+        : null,
+    };
+  });
+}
+
+function levelCaption(entry: FactorFinerLevels): string {
+  const name = selectedOf(entry);
+  return name === "" ? `${entry.grouping} (as fitted)` : name;
+}
+
+function figure(value: number | null): string {
+  return value === null ? "—" : String(Number(value.toPrecision(4)));
+}
 
 const headline = computed(() => {
   const pair = universal.value;
@@ -169,6 +304,8 @@ onMounted(async () => {
     </p>
 
     <template v-else-if="diagnostics">
+      <ProvenanceBadge :provenance="diagnostics.provenance" />
+
       <section class="mt-8">
         <h2 class="text-sm font-semibold uppercase tracking-wide text-slate-500">
           Universal
@@ -248,6 +385,150 @@ onMounted(async () => {
         </section>
 
         <AeByFactorChart :partitions="universal" />
+
+        <!-- FR-109's finer level (`02` §5.3). Absent when the fit computed it and no Factor is
+             on a chained grouping; "not available" when the fit predates it, never a table. -->
+        <section
+          v-if="finerNotAvailable || chainedFactors.length"
+          aria-label="Actual versus expected at a finer level"
+          class="mt-6 text-sm text-slate-700"
+        >
+          <h3 class="font-medium">
+            Actual versus expected at a finer level
+          </h3>
+          <p
+            v-if="finerNotAvailable"
+            class="mt-1"
+          >
+            Finer level for {{ chainedSlugs.join(", ") }}: not available. This model was fitted before the finer-level actual
+            versus expected was stored, and a refit records it.
+          </p>
+          <template v-else>
+            <div
+              v-for="entry in chainedFactors"
+              :key="entry.factor"
+              class="mt-3"
+            >
+              <label class="flex items-center gap-2">
+                <span>Level for {{ entry.factor }}</span>
+                <select
+                  :value="selectedOf(entry)"
+                  :aria-label="`Level for ${entry.factor}`"
+                  class="rounded border border-slate-300 px-2 py-1"
+                  @change="choose(entry.factor, $event)"
+                >
+                  <option
+                    v-if="hasFitted(entry)"
+                    value=""
+                  >
+                    {{ entry.grouping }} (as fitted)
+                  </option>
+                  <option
+                    v-for="level in entry.levels"
+                    :key="level.name"
+                    :value="level.name"
+                  >
+                    {{ level.name }}
+                  </option>
+                </select>
+              </label>
+              <table
+                v-for="table in finerTables(entry)"
+                :key="table.label"
+                :aria-label="`${entry.factor} at ${levelCaption(entry)}, ${table.label}`"
+                class="mt-2 w-full text-left text-sm"
+              >
+                <caption class="text-left text-xs uppercase tracking-wide text-slate-500">
+                  {{ table.label }}
+                </caption>
+                <thead class="border-b border-slate-200 text-xs uppercase tracking-wide text-slate-500">
+                  <tr>
+                    <th
+                      scope="col"
+                      class="py-2 font-medium"
+                    >
+                      Level
+                    </th>
+                    <th
+                      scope="col"
+                      class="py-2 font-medium"
+                    >
+                      A/E
+                    </th>
+                    <th
+                      scope="col"
+                      class="py-2 font-medium"
+                    >
+                      Actual
+                    </th>
+                    <th
+                      scope="col"
+                      class="py-2 font-medium"
+                    >
+                      Expected
+                    </th>
+                    <th
+                      scope="col"
+                      class="py-2 font-medium"
+                    >
+                      Exposure
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr
+                    v-for="row in table.rows"
+                    :key="row.level"
+                    class="border-b border-slate-100"
+                  >
+                    <th
+                      scope="row"
+                      class="py-1 font-normal"
+                    >
+                      {{ row.level }}
+                    </th>
+                    <td class="py-1 tabular-nums">
+                      {{ figure(row.ae) }}
+                    </td>
+                    <td class="py-1 tabular-nums">
+                      {{ figure(row.actual) }}
+                    </td>
+                    <td class="py-1 tabular-nums">
+                      {{ figure(row.expected) }}
+                    </td>
+                    <td class="py-1 tabular-nums">
+                      {{ row.exposure ?? "—" }}
+                    </td>
+                  </tr>
+                  <tr
+                    v-if="table.unavailable"
+                    class="border-b border-slate-100 text-slate-500"
+                  >
+                    <th
+                      scope="row"
+                      class="py-1 font-normal"
+                    >
+                      not available ({{ table.unavailable.rows }} rows)
+                    </th>
+                    <td class="py-1 tabular-nums">
+                      —
+                    </td>
+                    <td class="py-1 tabular-nums">
+                      {{ figure(table.unavailable.actual) }}
+                    </td>
+                    <td class="py-1 tabular-nums">
+                      {{ figure(table.unavailable.expected) }}
+                    </td>
+                    <td class="py-1 tabular-nums">
+                      {{ table.unavailable.exposure }}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </template>
+        </section>
+
         <LiftChart :partitions="universal" />
         <CalibrationChart :partitions="universal" />
 

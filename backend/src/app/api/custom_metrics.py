@@ -44,6 +44,7 @@ from app.db.session import Database
 from app.errors import PlatformError
 from app.platform import jobs as job_service
 from app.platform import metrics as service
+from app.platform import provenance
 from app.platform.metrics import MetricUsage
 from model_schema import (
     Applicability,
@@ -51,7 +52,7 @@ from model_schema import (
     Job,
     JobKind,
     JobQueue,
-    MetricCertificate,
+    MetricCertificateRead,
     MetricDirection,
     MetricStatus,
     ObjectiveKind,
@@ -331,10 +332,14 @@ async def certify_custom_metric(
 )
 async def get_metric_certificate(
     metric_id: UUID, caller: ReadModels, database: DatabaseDep
-) -> MetricCertificate:
+) -> MetricCertificateRead:
+    """The latest certificate (FR-157), with its `provenance` (FR-2159)."""
     async with database.session() as session:
-        return await service.load_certificate(
+        certificate = await service.load_certificate(
             session, workspace_id=caller.workspace_id, metric_id=metric_id
+        )
+        return await provenance.metric_certificate_read(
+            session, workspace_id=caller.workspace_id, certificate=certificate
         )
 
 

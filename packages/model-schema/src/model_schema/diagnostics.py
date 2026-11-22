@@ -38,7 +38,10 @@ __all__ = [
     "CvFoldMetric",
     "CvPathPoint",
     "Diagnostics",
+    "FactorFinerLevels",
     "FeatureImportance",
+    "FinerLevelAe",
+    "FinerLevelDiagnostics",
     "GbmDiagnostics",
     "GbmEvalPoint",
     "GlmDiagnostics",
@@ -101,6 +104,99 @@ class AeCell(BaseModel):
             raise ValueError(
                 f"A/E interval for {self.factor}[{self.level}] is inverted: "
                 f"{self.ci_95[0]} > {self.ci_95[1]}."
+            )
+        return self
+
+
+class FinerLevelAe(BaseModel):
+    """FR-171's actual versus expected at one level finer than a Factor's own grouping (FR-109).
+
+    `name` is the level: the deepest grouping's `column` for the finest, then the slug of each
+    grouping of the chain that produces a coarser one (decision #1908, option (B)). `cells` are
+    the values the chain rebuilt, each an `AeCell` computed by the same arithmetic as
+    `PartitionDiagnostics.ae_by_factor`.
+
+    The rows the chain could not rebuild (the column absent, a null, or a value a grouping
+    refuses under `error`) are one named row of their own, "not available", with their count,
+    exposure, actual and expected, so the level's totals equal the partition's (the
+    maintainer's ruling of 2026-11-17 on #1506). They are never dropped, and a level whose
+    column is absent is that row and no cells, never an empty table.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    name: str
+    cells: tuple[AeCell, ...] = ()
+    unavailable_rows: int = Field(ge=0)
+    unavailable_exposure: DecimalStr
+    unavailable_actual: float = Field(
+        description=(
+            "The not-available rows' weighted actual, the same quantity as AeCell.actual. A "
+            "diagnostic figure, not a rating amount, so it is a float as AeCell's are; the money "
+            "rule (integer minor units, or Decimal in the rating path) does not apply."
+        )
+    )
+    unavailable_expected: float = Field(
+        description=(
+            "The not-available rows' weighted expected (the model's fitted mean), the same "
+            "quantity as AeCell.expected. A diagnostic figure, not a rating amount, so a float."
+        )
+    )
+
+
+class FactorFinerLevels(BaseModel):
+    """The finer levels of one Factor on a chained grouping, finest first (FR-109).
+
+    `factor` is the Factor's slug, as `AeCell.factor` names it; `grouping` is the slug of the
+    grouping the Factor is fitted on, the level each of `levels` is finer than. Only a Factor
+    whose grouping has a parent has an entry: a grouping with no parent has no finer level.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    factor: str
+    grouping: str
+    levels: tuple[FinerLevelAe, ...] = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def _every_cell_is_this_factors(self) -> FactorFinerLevels:
+        names = [level.name for level in self.levels]
+        if len(set(names)) != len(names):
+            raise InputFreeError("the finer levels of a Factor name a level more than once")
+        strays = {cell.factor for level in self.levels for cell in level.cells} - {self.factor}
+        if strays:
+            raise InputFreeError(
+                "the finer levels of a Factor carry another Factor's cells; each entry is one "
+                "Factor's (FR-109)"
+            )
+        return self
+
+
+class FinerLevelDiagnostics(BaseModel):
+    """FR-109's finer-level A/E for train and holdout, side by side (FR-183).
+
+    Each partition is over the rows and fitted means its `UniversalDiagnostics` partition's
+    `ae_by_factor` reads, so it carries that partition's weighting (FR-184). One entry per
+    Factor whose grouping has a parent; `()` on both means computed, and no Factor is chained.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    train: tuple[FactorFinerLevels, ...] = ()
+    holdout: tuple[FactorFinerLevels, ...] = ()
+
+    @model_validator(mode="after")
+    def _both_partitions_report_the_same_levels(self) -> FinerLevelDiagnostics:
+        """FR-183 for FR-109's finer level: the same Factors and the same levels on both
+        partitions, so the two read side by side."""
+
+        def shape(entries: tuple[FactorFinerLevels, ...]) -> list[tuple[str, list[str]]]:
+            return [(entry.factor, [level.name for level in entry.levels]) for entry in entries]
+
+        if shape(self.train) != shape(self.holdout):
+            raise InputFreeError(
+                "train and holdout must carry the finer-level actual versus expected for the "
+                "same factors and levels (FR-109, FR-183)."
             )
         return self
 
@@ -752,3 +848,10 @@ class Diagnostics(BaseModel):
     glm: GlmDiagnostics | None = None
     gbm: GbmDiagnostics | None = None
     cross_validation: CrossValidationDiagnostics | None = None
+    #: FR-109, decision #1870 option (b) (#1506 slice 5; placed here by the maintainer's (B) on
+    #: #1506, so `BacktestSummary`'s published shape is untouched). The A/E at each level finer
+    #: than a chained grouping's own, for train and holdout, computed at fit time and never on
+    #: read (FR-170). `None` means not available: the artifact predates the field, and the view
+    #: says "not available" in those words. Optional so a stored `Diagnostics` still validates;
+    #: no stored hash covers this payload.
+    finer_level_ae: FinerLevelDiagnostics | None = None

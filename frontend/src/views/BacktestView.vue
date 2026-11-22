@@ -13,6 +13,7 @@ import AeByFactorChart from "@/components/AeByFactorChart.vue";
 import CalibrationChart from "@/components/CalibrationChart.vue";
 import LiftChart from "@/components/LiftChart.vue";
 import PartitionTable from "@/components/PartitionTable.vue";
+import ProvenanceBadge from "@/components/ProvenanceBadge.vue";
 
 const props = defineProps<{ slug: string; backtestId: string }>();
 
@@ -149,6 +150,8 @@ onMounted(async () => {
     </p>
 
     <template v-else-if="backtest">
+      <ProvenanceBadge :provenance="backtest.provenance" />
+
       <section class="mt-8">
         <h2 class="text-sm font-semibold uppercase tracking-wide text-slate-500">
           What was measured

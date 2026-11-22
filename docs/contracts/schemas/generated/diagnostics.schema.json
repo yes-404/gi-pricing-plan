@@ -280,6 +280,35 @@
       "title": "CvPathPoint",
       "type": "object"
     },
+    "FactorFinerLevels": {
+      "additionalProperties": false,
+      "description": "The finer levels of one Factor on a chained grouping, finest first (FR-109).\n\n`factor` is the Factor's slug, as `AeCell.factor` names it; `grouping` is the slug of the\ngrouping the Factor is fitted on, the level each of `levels` is finer than. Only a Factor\nwhose grouping has a parent has an entry: a grouping with no parent has no finer level.",
+      "properties": {
+        "factor": {
+          "title": "Factor",
+          "type": "string"
+        },
+        "grouping": {
+          "title": "Grouping",
+          "type": "string"
+        },
+        "levels": {
+          "items": {
+            "$ref": "#/$defs/FinerLevelAe"
+          },
+          "minItems": 1,
+          "title": "Levels",
+          "type": "array"
+        }
+      },
+      "required": [
+        "factor",
+        "grouping",
+        "levels"
+      ],
+      "title": "FactorFinerLevels",
+      "type": "object"
+    },
     "FeatureImportance": {
       "additionalProperties": false,
       "description": "One feature's importance under the three measures a booster already knows.\n\nAll three, because they disagree and the disagreement is the information: `gain` says\nhow much a split improved the objective, `cover` how much data it improved it over, and\n`frequency` merely how often the feature was chosen. A feature that is frequent and\nlow-gain is one the model reaches for and learns little from — invisible if only one\nmeasure is stored.",
@@ -318,6 +347,78 @@
         "frequency"
       ],
       "title": "FeatureImportance",
+      "type": "object"
+    },
+    "FinerLevelAe": {
+      "additionalProperties": false,
+      "description": "FR-171's actual versus expected at one level finer than a Factor's own grouping (FR-109).\n\n`name` is the level: the deepest grouping's `column` for the finest, then the slug of each\ngrouping of the chain that produces a coarser one (decision #1908, option (B)). `cells` are\nthe values the chain rebuilt, each an `AeCell` computed by the same arithmetic as\n`PartitionDiagnostics.ae_by_factor`.\n\nThe rows the chain could not rebuild (the column absent, a null, or a value a grouping\nrefuses under `error`) are one named row of their own, \"not available\", with their count,\nexposure, actual and expected, so the level's totals equal the partition's (the\nmaintainer's ruling of 2026-11-17 on #1506). They are never dropped, and a level whose\ncolumn is absent is that row and no cells, never an empty table.",
+      "properties": {
+        "cells": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/AeCell"
+          },
+          "title": "Cells",
+          "type": "array"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "unavailable_actual": {
+          "description": "The not-available rows' weighted actual, the same quantity as AeCell.actual. A diagnostic figure, not a rating amount, so it is a float as AeCell's are; the money rule (integer minor units, or Decimal in the rating path) does not apply.",
+          "title": "Unavailable Actual",
+          "type": "number"
+        },
+        "unavailable_expected": {
+          "description": "The not-available rows' weighted expected (the model's fitted mean), the same quantity as AeCell.expected. A diagnostic figure, not a rating amount, so a float.",
+          "title": "Unavailable Expected",
+          "type": "number"
+        },
+        "unavailable_exposure": {
+          "description": "Exact decimal as a string; never a binary float (FR-10).",
+          "pattern": "^-?[0-9]+(\\.[0-9]+)?$",
+          "title": "Unavailable Exposure",
+          "type": "string"
+        },
+        "unavailable_rows": {
+          "minimum": 0,
+          "title": "Unavailable Rows",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "name",
+        "unavailable_rows",
+        "unavailable_exposure",
+        "unavailable_actual",
+        "unavailable_expected"
+      ],
+      "title": "FinerLevelAe",
+      "type": "object"
+    },
+    "FinerLevelDiagnostics": {
+      "additionalProperties": false,
+      "description": "FR-109's finer-level A/E for train and holdout, side by side (FR-183).\n\nEach partition is over the rows and fitted means its `UniversalDiagnostics` partition's\n`ae_by_factor` reads, so it carries that partition's weighting (FR-184). One entry per\nFactor whose grouping has a parent; `()` on both means computed, and no Factor is chained.",
+      "properties": {
+        "holdout": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/FactorFinerLevels"
+          },
+          "title": "Holdout",
+          "type": "array"
+        },
+        "train": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/FactorFinerLevels"
+          },
+          "title": "Train",
+          "type": "array"
+        }
+      },
+      "title": "FinerLevelDiagnostics",
       "type": "object"
     },
     "GbmDiagnostics": {
@@ -1176,6 +1277,17 @@
       "anyOf": [
         {
           "$ref": "#/$defs/CrossValidationDiagnostics"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "finer_level_ae": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/FinerLevelDiagnostics"
         },
         {
           "type": "null"

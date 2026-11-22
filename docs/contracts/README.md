@@ -109,11 +109,11 @@ See [`research/track-a-findings.md`](../research/track-a-findings.md) F6–F7.
 
 ## Coverage
 
-**31 schemas, covering every persisted artifact the specs define.**
+**30 schemas, covering every persisted artifact the specs define.**
 
 | Area | Schemas |
 |---|---|
-| Common | artifact envelope, artifact ref, blob ref, money primitives, provenance |
+| Common | artifact envelope, artifact ref, blob ref, money primitives; provenance is generated (`schemas/generated/provenance.schema.json`, FR-2159, #1810 B) |
 | Data (01) | dataset version, validation rule, validation report, profile |
 | Modelling (02) | banding, grouping, model spec, model, diagnostics, custom objective, objective certificate, transparency artifact, peril structure |
 | Rating (03) | rating algorithm, rate table, rating version, scoring (quote context / result / ladder / trace), dislocation run, regression suite + run |
