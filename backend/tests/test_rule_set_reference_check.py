@@ -3,7 +3,8 @@
 At write (`PUT /datasets/{slug}/rule-set`): the reference Dataset Version must be in the caller's
 workspace and the caller must hold `dataset:read` on the Dataset it belongs to; any other id is
 one `404` with the same code, title and detail. At use (the validation worker): a reference that
-fails the same check is treated as absent, with one warning that carries identifiers only.
+no longer exists, or is in another workspace, is treated as absent, with one warning that
+carries identifiers only; another Dataset's version in the same workspace is used.
 `scripts/list-cross-dataset-references.py` lists, read-only, the stored rule sets whose reference
 is another Dataset's version.
 """
@@ -187,33 +188,59 @@ def test_a_readable_reference_is_accepted(client: TestClient, world: World) -> N
     assert _put(client, world, "x", "scoped", None).status_code == 200
 
 
+async def _worker_reference(database: Database, workspace_id: UUID, reference_id: UUID) -> Any:
+    async with database.session() as session:
+        return await data_handlers._reference_profile(
+            session, workspace_id=workspace_id, reference_id=reference_id
+        )
+
+
 @pytest.mark.req("FR-57")
 @pytest.mark.asyncio
-async def test_the_worker_treats_a_failing_reference_as_absent_with_one_warning(
+async def test_the_worker_treats_a_reference_that_no_longer_exists_as_absent(
     database: Database, world: World, caplog: pytest.LogCaptureFixture, workspace_id: UUID
 ) -> None:
-    actor = world.scoped_actor
+    gone = uuid4()
     with caplog.at_level(logging.WARNING, logger="app.worker.data"):
-        async with database.session() as session:
-            failing = await data_handlers._reference_profile(
-                session, workspace_id=workspace_id, actor=actor, reference_id=world.version["y"]
-            )
-    assert failing is None
+        assert await _worker_reference(database, workspace_id, gone) is None
     warnings = [r for r in caplog.records if r.levelno == logging.WARNING]
     assert len(warnings) == 1
     text = warnings[0].getMessage()
-    assert str(world.version["y"]) in text
-    assert "4321" not in text  # the profile's row count: no value is logged
+    assert str(gone) in text
+    assert str(workspace_id) in text
+    assert "4321" not in text  # a profile's row count: no value is logged
     assert "row_count" not in text
 
-    caplog.clear()
+
+@pytest.mark.req("FR-57")
+@pytest.mark.asyncio
+async def test_the_worker_treats_a_reference_in_another_workspace_as_absent(
+    database: Database, world: World, caplog: pytest.LogCaptureFixture, workspace_id: UUID
+) -> None:
     with caplog.at_level(logging.WARNING, logger="app.worker.data"):
-        async with database.session() as session:
-            readable = await data_handlers._reference_profile(
-                session, workspace_id=workspace_id, actor=actor, reference_id=world.version["x"]
-            )
-        assert readable is not None
-        assert readable.row_count == 4321
+        assert await _worker_reference(database, workspace_id, world.version["z"]) is None
+    warnings = [r for r in caplog.records if r.levelno == logging.WARNING]
+    assert len(warnings) == 1
+    text = warnings[0].getMessage()
+    assert str(world.version["z"]) in text
+    assert "4321" not in text
+    assert "row_count" not in text
+
+
+@pytest.mark.req("FR-57")
+@pytest.mark.asyncio
+async def test_the_worker_uses_another_datasets_version_in_the_same_workspace(
+    database: Database,
+    world: World,
+    caplog: pytest.LogCaptureFixture,
+    workspace_id: UUID,
+) -> None:
+    # The lookup takes no actor: the write decided the permission, so a Service Account's run
+    # and a person's run reach the same reference.
+    with caplog.at_level(logging.WARNING, logger="app.worker.data"):
+        used = await _worker_reference(database, workspace_id, world.version["y"])
+    assert used is not None
+    assert used.row_count == 4321
     assert [r for r in caplog.records if r.levelno == logging.WARNING] == []
 
 

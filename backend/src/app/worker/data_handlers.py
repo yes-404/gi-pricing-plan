@@ -133,8 +133,7 @@ def _ingest(parameters: dict[str, Any], callback: ProgressCallback) -> JobResult
                     "NOT_FOUND",
                     "The uploaded file is not in the blob store",
                     404,
-                    f"No blob {parameters['blob']}. Upload it before starting an "
-                    "ingestion run.",
+                    f"No blob {parameters['blob']}. Upload it before starting an ingestion run.",
                 )
             payload = await blob_store.read(to_ref(row))
 
@@ -237,20 +236,18 @@ def _profile(parameters: dict[str, Any], callback: ProgressCallback) -> JobResul
 
 
 async def _reference_profile(
-    session: AsyncSession, *, workspace_id: UUID, actor: Principal, reference_id: UUID | None
+    session: AsyncSession, *, workspace_id: UUID, reference_id: UUID | None
 ) -> Profile | None:
     """The profile of a rule set's reference version, or `None` (`01` FR-57, FR-54).
 
-    The reference is checked again here, against the run's actor; one that fails is absent."""
+    The reference must still exist and be in the rule set's workspace; one that is not is
+    absent."""
     if reference_id is None:
         return None
-    if not await rule_service.reference_version_readable(
-        session, workspace_id=workspace_id, principal=actor, version_id=reference_id
-    ):
+    version = await session.get(DatasetVersionRow, reference_id)
+    if version is None or version.workspace_id != workspace_id:
         _log.warning(
-            "reference version %s is not available to the run's actor in workspace %s",
-            reference_id,
-            workspace_id,
+            "reference version %s is not available in workspace %s", reference_id, workspace_id
         )
         return None
     try:
@@ -315,7 +312,6 @@ def _validate(parameters: dict[str, Any], callback: ProgressCallback) -> JobResu
             reference_profile = await _reference_profile(
                 session,
                 workspace_id=workspace_id,
-                actor=actor,
                 reference_id=rule_set.reference_dataset_version_id,
             )
             return tables, rule_set, reference_profile
@@ -376,9 +372,10 @@ def _validate(parameters: dict[str, Any], callback: ProgressCallback) -> JobResu
     progress.update(1.0, "done")
     _log.info(
         "validation complete",
-        extra={"report_id": str(report_id), "overall": validation_service.overall_outcome(
-            report
-        ).value},
+        extra={
+            "report_id": str(report_id),
+            "overall": validation_service.overall_outcome(report).value,
+        },
     )
     return JobResult(kind="artifact", ref=f"validation_report:{report_id}")
 
@@ -454,7 +451,9 @@ async def _materialise_split(
         blob_row = await session.get(BlobRow, entry["blob"]["sha256"])
         if blob_row is None:
             raise PlatformError(
-                "NOT_FOUND", "A table's blob is missing", 404,
+                "NOT_FOUND",
+                "A table's blob is missing",
+                404,
                 f"The parent names blob {entry['blob']['sha256']}, which is not in the store.",
             )
         frame = pl.read_parquet(io.BytesIO(await blob_store.read(to_ref(blob_row))))
