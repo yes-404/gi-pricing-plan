@@ -747,6 +747,69 @@ async def test_every_refusal_of_a_pin_re_resolution_is_audited_with_one_event(
 @pytest.mark.req("FR-116")
 @pytest.mark.req("FR-243")
 @pytest.mark.asyncio
+@pytest.mark.parametrize("act", ["submit", "deploy", "rollback"])
+async def test_a_5xx_raised_while_a_pin_is_re_resolved_is_not_recorded_as_a_refusal(
+    act: str,
+    monkeypatch: pytest.MonkeyPatch,
+    client: TestClient,
+    database: Database,
+    blob_store: Any,
+    workspace_id: UUID,
+    seat: Any,
+) -> None:
+    """FR-243 (scoped 2026-11-22): a 5xx raised by the pin re-resolution is an outage, not a
+    decision. It passes through with its own status and code, and no
+    `rating_version.load_refused` event is written. The 5xx is planted in the resolver's seat
+    (`check_rateable_intent`, the call `revalidate` makes over the version's pins), at submit,
+    deploy and rollback; a 4xx planted the same way is recorded (the control, in the test above).
+    """
+    from backend.tests.test_rating_version_compile import _empty_pins, _minimal_algorithm
+    from backend.tests.test_score import plant_deployment
+
+    from app.platform import bundle_hydration
+
+    deployer = await seat("deployer", "analyst")
+    made = client.post(
+        "/api/v1/rating-algorithms", json=_minimal_algorithm(), headers=deployer.headers
+    )
+    assert made.status_code == 201, made.text
+    ref, _ = await stored_version_bytes(
+        database,
+        blob_store,
+        workspace_id,
+        (FIXTURES / "clean.bundle.json").read_bytes(),
+        algorithm_ref="rating_algorithm:minimal@1",
+        pins=_empty_pins(),
+    )
+    if act == "rollback":
+        await plant_deployment(database, workspace_id, "dev", ref)
+        second, _ = await stored_version(database, blob_store, workspace_id, "clean.bundle.json")
+        assert deploy(client, deployer, "dev", second).status_code == 201
+
+    async def outage(*_: Any, **__: Any) -> None:
+        raise PlatformError("STORE_UNAVAILABLE", "Store unavailable", 503, "the store is down")
+
+    monkeypatch.setattr(bundle_hydration, "check_rateable_intent", outage)
+    written = await deployments_written(database, workspace_id)
+    if act == "submit":
+        refused = request_into(client, deployer, "prod", ref)
+    elif act == "deploy":
+        refused = deploy(client, deployer, "dev", ref)
+    else:
+        refused = client.post(
+            "/api/v1/environments/dev/deployments/rollback",
+            json={"rating_version_ref": ref, "reason": "regression"},
+            headers=deployer.headers,
+        )
+    assert refused.status_code == 503, refused.text
+    assert refused.json()["code"] == "STORE_UNAVAILABLE", refused.text
+    assert await deployments_written(database, workspace_id) == written
+    assert await refusal_events(database, workspace_id) == []
+
+
+@pytest.mark.req("FR-116")
+@pytest.mark.req("FR-243")
+@pytest.mark.asyncio
 async def test_the_version_of_the_pin_refusal_tests_is_accepted_when_nothing_is_planted(
     client: TestClient,
     database: Database,
