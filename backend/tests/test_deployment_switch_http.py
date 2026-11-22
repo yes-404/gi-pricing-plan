@@ -21,7 +21,7 @@ import time
 from collections.abc import Awaitable, Callable, Iterator
 from contextlib import contextmanager
 from typing import Any
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import pytest
 from backend.tests import test_deployments as _deployments
@@ -47,6 +47,30 @@ api_settings = _deployments.api_settings
 seat = _deployments.seat
 approved_version = _deployments.approved_version
 deploy = _deployments.deploy
+
+
+@pytest.fixture(autouse=True)
+def _own_switch_namespace(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Each test runs on a switch namespace of its own (#1963).
+
+    A process joins the roster (`gip:switch:<stack>:<environment>:roster`) when it subscribes and
+    leaves it only at a clean shutdown, and an entry has no expiry (`deployment_switch.py`, "no
+    heartbeat and no lease"). A run that was stopped part way leaves its name in the test Redis
+    database, and the next run's deploy reports that name, correctly, among the processes that did
+    not acknowledge: a test that assumes the roster holds only its own processes then fails for a
+    reason that is not in the product. `switch_stack` appends the slot's name to the stack
+    (FD-1872), so a slot named for this test gives the app, every `_Peer` and every roster read
+    here one stack that nothing else has written to; it also holds when two runs share a Redis
+    database. The name is never a real slot (`/tmp/slots/gate-1`), whose channel a paired gate
+    would share.
+
+    Reach: every test of this file that reads the roster (the deploys, the partial commit, the
+    reconcile tests and `test_r2`), because the fixture is module-wide. Not here:
+    `test_deploy_switch_runtime.py` reads the roster of a running compose stack, whose namespace
+    is the stack's own, so only an empty test Redis database before the run (the gate procedure)
+    protects it; `test_deployment_switch.py` uses an in-memory roster and needs nothing.
+    """
+    monkeypatch.setenv("GIP_GATE_SLOT", f"/tmp/slots/switch-test-{uuid4().hex[:8]}")
 
 
 @pytest.fixture(autouse=True)
@@ -101,6 +125,17 @@ class _Peer:
         asyncio.run_coroutine_threadsafe(self._client.aclose(), self._loop).result(10)
         self._loop.call_soon_threadsafe(self._loop.stop)
         self._thread.join(5)
+
+
+async def _join_roster(settings: Settings, process: str, *, leave: bool = False) -> str:
+    client = build_switch_client(settings.redis_url.get_secret_value())
+    try:
+        stack = switch_stack(settings.environment.value, settings.tenant_id)
+        transport = RedisSwitch(client, stack).for_environment("dev")
+        await (transport.leave(process) if leave else transport.join(process))
+    finally:
+        await client.aclose()
+    return process
 
 
 async def _hydrates(_: SwitchMessage) -> None:
@@ -179,6 +214,39 @@ async def test_a_partial_commit_names_the_unacknowledged_process_possibly_stale(
     assert switched[0].after["deployment_ref"] == done.json()["id"]
     assert switched[0].entity_ref == "environment:dev"
     assert not switched[0].before
+
+
+@pytest.mark.req("FR-268")
+@pytest.mark.asyncio
+async def test_a_stale_roster_name_is_pruned_and_never_reported_as_prepared(
+    client: TestClient, api_settings: Settings, database: Any, workspace_id: UUID, seat: Any
+) -> None:
+    """#1963: a name an earlier run left in the roster (it joined, never subscribed here and never
+    left) is pruned by a deploy that every receiver acknowledged and is reported `pruned_stale`;
+    it is not among the processes that acknowledged PREPARE. The test plants the name in its own
+    namespace before it deploys (`_own_switch_namespace`) and takes it out again, so the exact
+    comparison below is about the planted name and nothing else."""
+    deployer = await seat("deployer")
+    ref = await approved_version(database, workspace_id, deployer.id)
+    peer = _Peer(api_settings, "acking-host:5:1", _hydrates)
+    stale = await _join_roster(api_settings, "stale-host:7:1")
+    try:
+        done = deploy(client, deployer, "dev", ref)
+    finally:
+        peer.stop()
+        await _join_roster(api_settings, stale, leave=True)
+    assert done.status_code == 201, done.text
+    switch = done.json()["switch"]
+    assert switch["receivers"] == 2
+    assert switch["processes"][stale] == "pruned_stale"
+    assert {p: s for p, s in switch["processes"].items() if p != stale} == {
+        p: "committed" for p in switch["processes"] if p != stale
+    }
+    created = await _events(database, workspace_id, "deployment.created")
+    acknowledged = sorted(p for p in switch["processes"] if p != stale)
+    assert sorted(created[0].after["prepared"]) == acknowledged
+    assert "acking-host:5:1" in acknowledged
+    assert len(acknowledged) == 2
 
 
 @pytest.mark.req("FR-268")
@@ -410,8 +478,6 @@ async def test_r1c_a_resubscribe_runs_a_pass_at_once_not_at_the_next_tick(
 async def test_r2_an_environment_created_after_start_is_discovered(
     api_settings: Settings, database: Any, workspace_id: UUID, seat: Any
 ) -> None:
-    from uuid import uuid4
-
     from app.platform.deployment_switch import process_id
 
     admin = await seat("admin")
