@@ -24,15 +24,14 @@ from app.api.responses import problems
 from app.errors import PlatformError
 from app.platform import dislocation_runs as service
 from app.platform import jobs as job_service
+from app.platform import provenance, rbac
 from app.platform import rating_versions as rating_versions_service
-from app.platform import rbac
 from app.platform.blobs import BlobStore
 from app.platform.datasets import read_version
-from model_schema import JobKind, Permission
+from model_schema import DislocationRunRead, JobKind, Permission
 from model_schema.dislocation import (
     DislocationEstimate,
     DislocationMover,
-    DislocationRun,
     DislocationSpec,
     JsonScalar,
 )
@@ -143,12 +142,12 @@ async def start_dislocation_run(
 )
 async def get_dislocation_run(
     run_id: UUID, caller: ReadDep, database: DatabaseDep
-) -> DislocationRun:
-    """**200** with the persisted artifact (FR-265); **404** `NOT_FOUND` for an unknown id or
-    another workspace's."""
+) -> DislocationRunRead:
+    """**200** with the persisted artifact (FR-265) and its `provenance` (FR-2159); **404**
+    `NOT_FOUND` for an unknown id or another workspace's."""
     async with database.session() as session:
         row = await service.fetch_run(session, workspace_id=caller.workspace_id, run_id=run_id)
-    return DislocationRun.model_validate(row.run)
+    return provenance.dislocation_run_read(row)
 
 
 def _json_value(value: Any) -> JsonScalar:

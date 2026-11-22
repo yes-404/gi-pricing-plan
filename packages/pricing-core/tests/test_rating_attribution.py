@@ -968,6 +968,8 @@ def _harness() -> Any:
     import importlib.util
 
     path = Path(__file__).resolve().parents[3] / "scripts" / "measure-attribution-cost.py"
+    if str(path.parent) not in sys.path:  # the script does `from _gitenv import clean_env`
+        sys.path.insert(0, str(path.parent))
     spec = importlib.util.spec_from_file_location("measure_attribution_cost", path)
     assert spec is not None
     assert spec.loader is not None

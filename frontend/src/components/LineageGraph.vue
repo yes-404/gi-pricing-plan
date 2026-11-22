@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, onBeforeUnmount, onMounted, ref, useTemplateRef } from "vue";
 import { use } from "echarts/core";
 import { GraphChart } from "echarts/charts";
 import { TooltipComponent } from "echarts/components";
@@ -102,6 +102,42 @@ const option = computed(() => ({
 }));
 
 /**
+ * The chart mounts only once its box has a size (#1796).
+ *
+ * A `graph` series with `layout: "none"` maps its node coordinates into the chart's view rect
+ * through ECharts' `View` coordinate system. In a box with no width or no height the view rect
+ * is 0 wide or 0 high, the transform scales by 0, and its inverse does not exist:
+ * `matrix.invert` returns null, and `View.js` (echarts 6.1.0, `:368`, `:382`) copies that null
+ * as a matrix and throws `TypeError: Cannot read properties of null (reading '0')`.
+ * `vue-echarts` applies the option in a `nextTick`, so the throw surfaced as an unhandled
+ * rejection. ECharts does not guard the zero-size case, so this component never hands it one:
+ * the box carries the size, a `ResizeObserver` reports it, and the chart is created on the
+ * first report with both dimensions non-zero. After that, `autoresize` keeps it sized, and it
+ * ignores a box that later collapses to zero.
+ */
+const box = useTemplateRef<HTMLDivElement>("box");
+const boxHasSize = ref(false);
+let boxObserver: ResizeObserver | null = null;
+
+function stopObservingBox() {
+  boxObserver?.disconnect();
+  boxObserver = null;
+}
+
+onMounted(() => {
+  if (!box.value) return;
+  boxObserver = new ResizeObserver(([entry]) => {
+    if (entry && entry.contentRect.width > 0 && entry.contentRect.height > 0) {
+      boxHasSize.value = true;
+      stopObservingBox();
+    }
+  });
+  boxObserver.observe(box.value);
+});
+
+onBeforeUnmount(stopObservingBox);
+
+/**
  * One row of the lineage table. Component-local: no backend shape describes it, since the
  * table flattens the parent, this version, its derived versions and its models into one list.
  */
@@ -147,10 +183,16 @@ const rows = computed<readonly LineageRow[]>(() => {
     :columns="columns"
     :rows="rows"
   >
-    <VChart
+    <div
+      ref="box"
       class="h-80 w-full"
-      :option="option"
-      autoresize
-    />
+    >
+      <VChart
+        v-if="boxHasSize"
+        class="h-full w-full"
+        :option="option"
+        autoresize
+      />
+    </div>
   </ChartFigure>
 </template>

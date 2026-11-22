@@ -5,8 +5,11 @@ planted violation, plus the allowance pinned as a literal. `backend/tests/` is e
 nothing else. The scans take `{path: source}` so a test can plant a violation in a copy
 without touching the tree.
 
-A literal assembled at run time (concatenated, or in an f-string) evades the literal scan;
-that residual is named in RL-1301 A.4.4 and PL-1303 Acceptance 11, not hidden.
+A reader migration may only read the flag: its strings are joined and matched
+case-insensitively, so a name assembled from literal pieces, an f-string's pieces or a
+`%`-format's template are read too. What the scan still cannot see (a name that is not in any
+literal) is listed in `_flag_beyond_a_read`'s docstring, and for the other files the literal
+scan's residual is named in RL-1301 A.4.4 and PL-1303 Acceptance 11, not hidden.
 """
 
 from __future__ import annotations
@@ -22,6 +25,17 @@ _SCANNED = ("backend/src", "backend/migrations", "examples")
 
 DECISION_MODULE = "backend/src/app/platform/approvals.py"
 GUARD_MIGRATION = "backend/migrations/versions/a9f3c6d21b87_approval_guard.py"
+
+#: **Reader migrations, pinned as a literal.** A file named here may carry the flag literal
+#: only inside a `current_setting('<flag>', …)` read; any form that sets it is refused, as
+#: it is for every other file. A read in a file not named here is refused like any other
+#: mention of the flag. Adding a reader is a change to this list, by file name.
+READER_MIGRATIONS = frozenset(
+    {
+        GUARD_MIGRATION,
+        "backend/migrations/versions/e5b2a7d94c13_rating_version_content_guard.py",
+    }
+)
 
 #: The two sanctioned sites of the decision path.
 SANCTIONED_SITES = frozenset(
@@ -98,12 +112,126 @@ def _unsanctioned_entries(sources: dict[str, str]) -> list[str]:
     return stray + [f"{p}::{fn}" for p, fn in sorted(entered - allowed)]
 
 
+def _docstring_ids(tree: ast.AST) -> set[int]:
+    return {
+        id(node.body[0].value)
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Module | ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef)
+        and node.body
+        and isinstance(node.body[0], ast.Expr)
+        and isinstance(node.body[0].value, ast.Constant)
+    }
+
+
+_FLAG_READ = re.compile(r"current_setting\(\s*'" + re.escape(FLAG) + r"'", re.IGNORECASE)
+_FLAG_NAME = FLAG.partition(".")[2]
+#: A message that names the Python context manager, `approval_decision()`, is not the setting.
+_CONTEXT_MANAGER_NAME = re.compile(r"(?<!app\.)(?<!app\.\n)" + _FLAG_NAME + r"\(\)", re.IGNORECASE)
+#: **A reader migration contains no data-changing statement and no session setting at all: it
+#: only reads.** Refused, whatever the name or the spelling: `set_config`; a `SET` statement (the
+#: word followed by `LOCAL`/`SESSION`, a parenthesis, a `ROLE`/`SCHEMA`/`TIME ZONE`-style keyword,
+#: or a name and `=`/`TO`; so `UPDATE ... SET column = ...` is one, and prose such as "set by" is
+#: not); `ALTER ROLE`/`USER`/`DATABASE ... SET`; `INSERT INTO`, `DELETE FROM`, `TRUNCATE`,
+#: `MERGE INTO`, `COPY ... FROM/TO`, `SELECT ... INTO`, `CREATE TABLE ... AS`, `CALL name(`; and
+#: a plpgsql or SQL `EXECUTE` of anything but `FUNCTION`/`PROCEDURE` (the trigger DDL's own).
+_NO_WRITE_NO_SETTING = re.compile(
+    r"\bset_config\b"
+    r"|\bSET\s*\("
+    r"|\bSET\s+(?:LOCAL|SESSION|ROLE|SCHEMA|TIME\s+ZONE|CONSTRAINTS|TRANSACTION|NAMES)\b"
+    r"|\bSET\b\s*[^\s=;]+\s*(?:=|\bTO\b)"
+    r"|\bALTER\s+(?:ROLE|USER|DATABASE)\b[^;]*?\bSET\b"
+    r"|\bINSERT\s+INTO\b|\bDELETE\s+FROM\b|\bTRUNCATE\b|\bMERGE\s+INTO\b"
+    r"|\bCOPY\b[^;]*?\b(?:FROM|TO)\b"
+    r"|\bSELECT\b[^;]*?\bINTO\b"
+    r"|\bCREATE\s+(?:(?:GLOBAL|LOCAL|TEMP|TEMPORARY|UNLOGGED)\s+)*TABLE\b[^;]*?\bAS\b"
+    r"|\bCALL\s+[\w.\"]+\s*\("
+    r"|\bEXECUTE\b(?!\s+(?:FUNCTION|PROCEDURE)\b)",
+    re.IGNORECASE,
+)
+_SQL_BLOCK_COMMENT = re.compile(r"/\*.*?\*/", re.DOTALL)
+_SQL_LINE_COMMENT = re.compile(r"--[^\n]*")
+
+
+def _sql_views(text: str) -> tuple[str, str]:
+    """The text twice, whitespace collapsed: as it stands, and with its SQL comments replaced by
+    a space (Postgres reads a comment as whitespace, so `SET/**/LOCAL` is `SET LOCAL`). Both are
+    read and a hit in either refuses: stripping alone would let `'--'; DELETE FROM t` hide the
+    `DELETE` in a "comment" that is really inside a quoted literal."""
+    stripped = _SQL_LINE_COMMENT.sub(" ", _SQL_BLOCK_COMMENT.sub(" ", text))
+    return re.sub(r"\s+", " ", text), re.sub(r"\s+", " ", stripped)
+
+
+def _flag_beyond_a_read(source: str) -> bool:
+    """True when a reader migration breaks the rule: a reader migration contains no data-changing
+    statement and no session setting at all: it only reads (`_NO_WRITE_NO_SETTING`), and it names
+    the flag only in a `current_setting` read.
+
+    **This is a tripwire behind the database guards, not the control**: the guards refuse a write
+    at run time; this rule makes a reader that writes fail in review's sight first.
+
+    The strings that are not docstrings (every `Constant`, so the pieces of an f-string and of a
+    concatenation too, in source order) are joined, once with a newline between them and once with
+    nothing, and each is read case-insensitively, as Postgres reads a setting name, twice (see
+    `_sql_views`): whitespace collapsed, and with SQL comments (`/* ... */`, `-- ...`) stripped,
+    so a comment or a missing space cannot split a keyword pair. Three refusals: a statement
+    `_NO_WRITE_NO_SETTING` names; **any** occurrence of the flag's name once the plain
+    `current_setting('<flag>', …)` reads and a message's `approval_decision()` (the context
+    manager, never preceded by `app.`) are removed; and, together, that makes a split or escaped
+    spelling of the name refused by the statement around it, whatever the name.
+
+    **What this still cannot see** (it reads literals, not values; each is what review of the
+    reader list, which is pinned by file name, exists for):
+
+    1. a keyword or name assembled so that its pieces are not adjacent string literals (a
+       `chr()` or `bytes` assembly, or pieces separated by another literal);
+    2. a name or a statement read from a column, an environment variable or a function argument;
+    3. a statement composed by a helper in another file;
+    4. a **Python** comment (it is not a literal, so it is not read; a SQL comment inside a
+       literal is, and is stripped);
+    5. the flag name built at run time from a variable defined in another module (an imported
+       constant or a value computed there), which no literal of the reader file contains;
+    6. **`op.execute(...)` of a string built from parts in Python** (an f-string, `.format`, a
+       helper's return value): the literals are read, the substituted values are not. Both real
+       readers do this today, for DDL only: `a9f3c6d21b87_approval_guard.py`
+       (`op.execute(create_trigger_sql(table))`, ``op.execute(f"DROP TRIGGER ... {table}")``) and
+       `e5b2a7d94c13_rating_version_content_guard.py` (`_RV_TRIGGER.format(...)`, f-strings over
+       `CHECK_NAME` and `known`), so the rule cannot refuse it. A plpgsql `EXECUTE` is refused;
+    7. **`PERFORM some_function()` or `SELECT some_function()` where the function writes**: a
+       volatile function is unseeable by any pattern over the text of the call;
+    8. a nested block comment (Postgres nests `/* /* */ */`; the strip ends at the first `*/`).
+    """
+    tree = ast.parse(source)
+    docstrings = _docstring_ids(tree)
+    pieces = sorted(
+        (
+            node
+            for node in ast.walk(tree)
+            if isinstance(node, ast.Constant)
+            and isinstance(node.value, str)
+            and id(node) not in docstrings
+        ),
+        key=lambda node: (node.lineno, node.col_offset),
+    )
+    return any(
+        _NO_WRITE_NO_SETTING.search(view) is not None
+        or _FLAG_NAME in _CONTEXT_MANAGER_NAME.sub("", _FLAG_READ.sub("", view)).lower()
+        for text in (
+            "\n".join(str(node.value) for node in pieces),
+            "".join(str(node.value) for node in pieces),
+        )
+        for view in _sql_views(text)
+    )
+
+
 def _flag_literal_outside_its_owners(sources: dict[str, str]) -> list[str]:
-    return [
-        path
-        for path, source in sources.items()
-        if FLAG in source and path not in (DECISION_MODULE, GUARD_MIGRATION)
-    ]
+    bad = []
+    for path, source in sources.items():
+        if path in READER_MIGRATIONS:
+            if _flag_beyond_a_read(source):
+                bad.append(path)
+        elif FLAG in source.lower() and path != DECISION_MODULE:
+            bad.append(path)
+    return bad
 
 
 def _session_level_flag_sets(sources: dict[str, str]) -> list[str]:
@@ -111,7 +239,7 @@ def _session_level_flag_sets(sources: dict[str, str]) -> list[str]:
     leak across the pool. Checked in the two files that may name the flag at all."""
     bad = []
     for path, source in sources.items():
-        if FLAG not in source:
+        if FLAG not in source.lower():
             continue
         for match in re.finditer(r"\bSET\s+(?!LOCAL\b)" + re.escape(FLAG), source, re.IGNORECASE):
             bad.append(f"{path}: session-level SET at offset {match.start()}")
@@ -142,14 +270,7 @@ def _replication_role_sql(sources: dict[str, str]) -> list[str]:
     bad = []
     for path, source in sources.items():
         tree = ast.parse(source)
-        docstrings = {
-            id(node.body[0].value)
-            for node in ast.walk(tree)
-            if isinstance(node, ast.Module | ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef)
-            and node.body
-            and isinstance(node.body[0], ast.Expr)
-            and isinstance(node.body[0].value, ast.Constant)
-        }
+        docstrings = _docstring_ids(tree)
         for node in ast.walk(tree):
             if (
                 isinstance(node, ast.Constant)
@@ -203,7 +324,7 @@ def test_every_pinned_site_really_enters_the_context() -> None:
 
 
 @pytest.mark.req("FR-351")
-def test_the_flag_literal_lives_only_in_the_decision_module_and_the_guard_migration() -> None:
+def test_the_flag_literal_lives_only_in_the_decision_module_and_the_reader_migrations() -> None:
     assert _flag_literal_outside_its_owners(_sources()) == []
 
 
@@ -261,6 +382,155 @@ def test_a_planted_second_function_in_an_allowed_file_is_refused() -> None:
 def test_a_planted_flag_literal_is_refused() -> None:
     planted = _plant("backend/src/app/x.py", f"SQL = \"SELECT set_config('{FLAG}', 'on', true)\"\n")
     assert _flag_literal_outside_its_owners(planted) == ["backend/src/app/x.py"]
+
+
+_READER = "backend/migrations/versions/e5b2a7d94c13_rating_version_content_guard.py"
+
+
+@pytest.mark.req("FR-351")
+def test_the_reader_migrations_are_pinned_by_file_name() -> None:
+    assert GUARD_MIGRATION in READER_MIGRATIONS
+    assert _READER in READER_MIGRATIONS
+    assert len(READER_MIGRATIONS) == 2
+    assert _sources().keys() >= READER_MIGRATIONS
+
+
+@pytest.mark.req("FR-351")
+@pytest.mark.parametrize(
+    "sql",
+    [
+        f"SELECT set_config('{FLAG}', 'on', true)",
+        f"SET LOCAL {FLAG} = 'on'",
+        f"SET {FLAG} = 'on'",
+    ],
+    ids=["set_config_local", "set_local", "set"],
+)
+def test_a_planted_set_of_the_flag_in_a_reader_migration_is_refused(sql: str) -> None:
+    planted = _plant(_READER, _sources()[_READER] + f'\nBAD = "{sql}"\n')
+    assert _flag_literal_outside_its_owners(planted) == [_READER]
+
+
+@pytest.mark.req("FR-351")
+@pytest.mark.parametrize(
+    "statement",
+    [
+        "BAD = \"SET LOCAL APP.APPROVAL_DECISION = 'on'\"",
+        "BAD = \"SELECT set_config('App.Approval_Decision', 'on', true)\"",
+        'BAD = "SET LOCAL app." + "approval_decision" + " = \'on\'"',
+        'BAD = "SET LOCAL app.approval_%s = \'on\'" % "decision"',
+        'N = "approval_decision"\nBAD = f"SET LOCAL app.{N} = \'on\'"',
+    ],
+    ids=[
+        "upper_case_set_local",
+        "mixed_case_set_config",
+        "split_literal",
+        "percent_format",
+        "fstring",
+    ],
+)
+def test_a_reader_migration_that_sets_the_flag_by_any_spelling_is_refused(statement: str) -> None:
+    planted = _plant(_READER, _sources()[_READER] + f"\n{statement}\n")
+    assert _flag_literal_outside_its_owners(planted) == [_READER]
+
+
+_SPLIT_FORMS = {
+    "split_set_local": 'BAD = "SET LOCAL " + "app" + "." + "approval_" + "decision"',
+    "split_inside_set_config": (
+        'BAD = "SELECT set_config(\'" + "app" + "." + "approval_" + "decision" '
+        "+ \"', 'on', true)\""
+    ),
+    "spaced_name": 'BAD = "SET LOCAL app . approval_ " + "decision"',
+    "escaped_name": "BAD = " + repr("SELECT set_config(E'app.approval\\x5fdecision', 'on', true)"),
+    "unicode_escaped_name": "BAD = "
+    + repr('SET LOCAL U&"app".U&"approval\\005fdecision" = \'on\''),
+}
+
+
+@pytest.mark.req("FR-351")
+@pytest.mark.parametrize("statement", list(_SPLIT_FORMS.values()), ids=list(_SPLIT_FORMS))
+def test_a_reader_migration_with_a_split_or_escaped_flag_name_is_refused(statement: str) -> None:
+    """The rule is not a spelling of the flag: a reader contains no `SET` statement and no
+    `set_config` at all, so a name split across literals or escaped in SQL is refused by the
+    statement around it."""
+    planted = _plant(_READER, _sources()[_READER] + f"\n{statement}\n")
+    assert _flag_literal_outside_its_owners(planted) == [_READER]
+
+
+_NOT_A_READER = {
+    "update_set_column": "UPDATE rating_versions SET change_summary = 'x' WHERE false",
+    "insert": "INSERT INTO rating_versions (id) VALUES (gen_random_uuid())",
+    "delete": "DELETE FROM rating_versions WHERE false",
+    "truncate": "TRUNCATE rating_versions",
+    "set_config_other_name": "SELECT set_config('app.something_else', 'x', true)",
+    "set_role": "SET LOCAL ROLE gip_owner",
+    "plpgsql_execute": "DO $$ BEGIN EXECUTE format('SELECT %s', 1); END $$",
+    "plpgsql_execute_literal": "DO $$ BEGIN EXECUTE 'SELECT 1'; END $$",
+    # The fresh-reader addendum's forms (S-1): a SQL comment or a missing space split a keyword
+    # pair, and statement forms the first rule did not name.
+    "set_local_comment": "SET/**/LOCAL app.x = 'on'",
+    "insert_comment_into": "INSERT /**/ INTO rating_versions VALUES (1)",
+    "delete_comment_from": "DELETE/**/FROM rating_versions",
+    "update_set_quoted_column_no_space": 'UPDATE rating_versions SET"change_summary"=1',
+    "update_set_comment_column": "UPDATE rating_versions SET/**/change_summary=1",
+    "alter_role_set": "ALTER ROLE r SET app.x FROM CURRENT",
+    "alter_database_set": "ALTER DATABASE d SET app.x FROM CURRENT",
+    "copy_subquery_to": "COPY (SELECT 1) TO '/tmp/x'",
+    "select_into_table": "SELECT 1 INTO newtab",
+    "create_table_as": "CREATE TABLE z AS SELECT 1",
+    "call_procedure": "CALL some_writer()",
+    "line_comment_then_newline_split": "DELETE -- a comment\nFROM rating_versions",
+    # A "comment" that is really inside a quoted literal hides nothing: the unstripped view sees it.
+    "write_after_dashes_inside_a_literal": "SELECT '--'; DELETE FROM rating_versions",
+}
+
+
+@pytest.mark.req("FR-351")
+@pytest.mark.parametrize("sql", list(_NOT_A_READER.values()), ids=list(_NOT_A_READER))
+def test_a_reader_migration_contains_no_data_changing_statement_and_no_session_setting(
+    sql: str,
+) -> None:
+    """A reader migration contains no data-changing statement and no session setting at all: it
+    only reads. `UPDATE ... SET column = ...` is refused in a reader too: a migration that
+    writes is not a reader. Nor does a reader run a built string (`EXECUTE`)."""
+    planted = _plant(_READER, _sources()[_READER] + f"\nBAD = {sql!r}\n")
+    assert _flag_literal_outside_its_owners(planted) == [_READER]
+
+
+@pytest.mark.req("FR-351")
+@pytest.mark.parametrize(
+    "sql",
+    [
+        "CREATE TRIGGER t BEFORE INSERT OR UPDATE OF status ON x FOR EACH ROW "
+        "EXECUTE FUNCTION f('a')",
+        "RAISE EXCEPTION 'the decision flag set by approval_decision()'",
+        "SELECT current_setting('app.approval_decision', true)",
+        "SELECT 1 /* a block comment */ -- and a line comment\nFROM rating_versions",
+    ],
+    ids=["trigger_ddl", "prose_set_by", "plain_read", "sql_comments_alone"],
+)
+def test_what_a_reader_may_contain_is_not_refused(sql: str) -> None:
+    assert _flag_literal_outside_its_owners({_READER: f"BAD = {sql!r}\n"}) == []
+
+
+@pytest.mark.req("FR-351")
+def test_an_upper_case_flag_in_a_file_that_is_not_a_reader_is_refused() -> None:
+    other = "backend/src/app/x.py"
+    sql = f"Q = \"SET LOCAL {FLAG.upper()} = 'on'\"\n"
+    assert _flag_literal_outside_its_owners(_plant(other, sql)) == [other]
+    assert _session_level_flag_sets({other: f"Q = \"SET {FLAG.upper()} = 'on'\"\n"}) != []
+
+
+@pytest.mark.req("FR-351")
+def test_a_planted_read_in_a_migration_not_on_the_list_is_refused() -> None:
+    other = "backend/migrations/versions/zzzzzzzzzzzz_other.py"
+    source = f"Q = \"SELECT current_setting('{FLAG}', true)\"\n"
+    assert _flag_literal_outside_its_owners(_plant(other, source)) == [other]
+
+
+@pytest.mark.req("FR-351")
+def test_a_read_in_a_listed_reader_migration_is_not_refused() -> None:
+    source = f"Q = \"SELECT current_setting('{FLAG}', true) IS DISTINCT FROM 'on'\"\n"
+    assert _flag_literal_outside_its_owners({_READER: source}) == []
 
 
 @pytest.mark.req("FR-351")

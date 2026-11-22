@@ -45,6 +45,7 @@ from uuid import UUID, uuid4
 from fastapi import APIRouter, Depends, Header, Query, Request, Response, status
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api import score as score_api
 from app.api.authz import requires
@@ -63,6 +64,7 @@ from app.db.models import BlobRow, ModelRow, RatingVersionRow, RegressionRunRow
 from app.db.session import Database
 from app.errors import PlatformError
 from app.platform import backtests as backtest_service
+from app.platform import blobs, provenance
 from app.platform import comparison as comparison_service
 from app.platform import diagnostics as diagnostics_service
 from app.platform import jobs as job_service
@@ -77,12 +79,12 @@ from app.platform.blobs import BlobStore, to_ref
 from model_schema import (
     MODEL_SPEC_ADAPTER,
     ArtifactRef,
-    Backtest,
+    BacktestRead,
     Banding,
     BandingEvaluation,
     BandingProposal,
     CasesLog,
-    Diagnostics,
+    DiagnosticsRead,
     Factor,
     FactorIntent,
     FactorType,
@@ -94,18 +96,18 @@ from model_schema import (
     JobKind,
     JobQueue,
     Model,
-    ModelComparison,
+    ModelComparisonRead,
     ModelSpec,
     ModelStatus,
     MonotonicDirection,
     Prediction,
     RatingVersion,
     RatingVersionCreate,
-    RegressionRun,
+    RegressionRunRead,
     RegressionRunSummary,
     Slug,
     SpecValidation,
-    TransparencyArtifact,
+    TransparencyArtifactRead,
 )
 from model_schema import Permission as Perm
 from model_schema.rating import ChangeSummaryDraft
@@ -514,6 +516,16 @@ async def list_groupings(
         return [transform_service.to_grouping(row) for row in rows]
 
 
+async def _require_evidence(session: AsyncSession, spec: ModelSpec, workspace_id: UUID) -> None:
+    """FR-127: a cited `evidence_blob` must be readable by the caller's workspace. In the
+    routes, not `reserve_model`: the worker calls that with specs from stored rows."""
+    evidence = spec.loss_treatment.evidence_blob
+    if evidence is not None:
+        await blobs.require_evidence_readable(
+            session, sha256=evidence.sha256, workspace_id=workspace_id
+        )
+
+
 @router.post(
     "/models",
     summary="Fit a model",
@@ -533,6 +545,7 @@ async def fit_model(
     failed job twenty seconds later is a worse answer to the same question.
     """
     async with database.unit_of_work() as session:
+        await _require_evidence(session, body.spec, caller.workspace_id)
         # FR-185's gate, before a Job exists. `reserve_model` answers R1 and the
         # prohibited-factor rule with their own codes; this adds the complexity limits and
         # nothing else, so a caller's existing refusals do not change shape.
@@ -673,22 +686,37 @@ async def get_model_diagnostics(
     caller: ReadModels,
     database: DatabaseDep,
     version: Annotated[int | None, Query(ge=1)] = None,
-) -> Diagnostics:
-    """The evidence behind a fitted model (FR-170, `02` §5.1).
+    level: Annotated[str | None, Query(min_length=1)] = None,
+) -> DiagnosticsRead:
+    """The evidence behind a fitted model (FR-170, `02` §5.1), with its `provenance` (FR-2159).
 
     Read, never recomputed. FR-170 makes diagnostics a product of the fit, so this
     endpoint returns what that fit recorded — a screen that recalculated them would be
     showing numbers no approval could cite.
 
     `?version=` selects a model version, like `GET /models/{slug}`; the latest without it.
+
+    FR-109's finer-level A/E is part of what is returned (`finer_level_ae`, train and holdout):
+    every level of every chained Factor without `?level=`, and with it that level only, for
+    each chained Factor that has it. A `level` that is not a level of a chain on the model's
+    groupings is `422 VALIDATION_FAILED`. The valid levels are the stored ones, so the
+    parameter is a string checked against the artifact, not an enum. It filters what the fit
+    stored and computes nothing (FR-170). `null` is a model fitted before the field was
+    stored, with or without `level`, and only a refit gives it one (#1870 (b)).
     """
     async with database.session() as session:
         model = await service.load_model(
             session, workspace_id=caller.workspace_id, slug=slug, version=version
         )
-        return await diagnostics_service.load_diagnostics(
+        diagnostics = await diagnostics_service.load_diagnostics(
             session, workspace_id=caller.workspace_id, model_id=model.id
         )
+        chained = await diagnostics_service.chained_factor_slugs(
+            session, workspace_id=caller.workspace_id, model=model
+        )
+    if level is not None:
+        diagnostics = diagnostics_service.select_finer_level(diagnostics, level)
+    return provenance.diagnostics_read(diagnostics, model=model, chained_factors=chained)
 
 
 @router.post(
@@ -713,6 +741,7 @@ async def validate_model_spec(
     reference rather than an invalid spec — and is a 404.
     """
     async with database.unit_of_work() as session:
+        await _require_evidence(session, body.spec, caller.workspace_id)
         return await spec_service.validate_spec(
             session,
             settings,
@@ -879,7 +908,7 @@ async def compare_models_route(
 )
 async def get_comparison(
     comparison_id: UUID, caller: ReadModels, database: DatabaseDep
-) -> ModelComparison:
+) -> ModelComparisonRead:
     """**Added to `02` §5.1 with this slice.** The table declared the `POST` and no `GET`,
     which is a 202 whose artifact nothing can read — complete to the endpoint audit and
     unusable to a caller, the omission `01`'s reference publish lifecycle made in the same
@@ -889,9 +918,10 @@ async def get_comparison(
     else produced does not.
     """
     async with database.session() as session:
-        return await comparison_service.load_comparison(
+        comparison = await comparison_service.load_comparison(
             session, workspace_id=caller.workspace_id, comparison_id=comparison_id
         )
+    return provenance.model_comparison_read(comparison)
 
 
 class RunBacktest(BaseModel):
@@ -963,7 +993,7 @@ async def run_backtest(
 )
 async def get_backtest(
     backtest_id: UUID, caller: ReadModels, database: DatabaseDep
-) -> Backtest:
+) -> BacktestRead:
     """**Added to `02` §5.1 with this slice** (FR-94).
 
     The table declared the `POST` and no `GET`, which is a 202 whose artifact nothing can
@@ -980,9 +1010,10 @@ async def get_backtest(
     else produced does not.
     """
     async with database.session() as session:
-        return await backtest_service.load_backtest(
+        backtest = await backtest_service.load_backtest(
             session, workspace_id=caller.workspace_id, backtest_id=backtest_id
         )
+    return provenance.backtest_read(backtest)
 
 class BuildTransparency(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
@@ -1041,7 +1072,7 @@ async def build_transparency(
 )
 async def get_transparency(
     model_id: UUID, caller: ReadModels, database: DatabaseDep
-) -> TransparencyArtifact:
+) -> TransparencyArtifactRead:
     """**Added to `02` §5.1 with this slice** (FR-139).
 
     The table declared the `POST` and no `GET` — a 202 whose artifact nothing can read,
@@ -1057,8 +1088,11 @@ async def get_transparency(
     not.
     """
     async with database.session() as session:
-        return await transparency_service.load_transparency(
+        artifact = await transparency_service.load_transparency(
             session, workspace_id=caller.workspace_id, model_id=model_id
+        )
+        return await provenance.transparency_artifact_read(
+            session, workspace_id=caller.workspace_id, artifact=artifact
         )
 
 
@@ -1413,11 +1447,12 @@ async def get_regression_run(
     run_id: UUID,
     caller: Annotated[Caller, Depends(requires(Perm.RATING_READ))],
     database: DatabaseDep,
-) -> RegressionRun:
-    """The run record. A failing property's `counterexample` is a quote-input fragment, so
-    the read is `rating:read` and workspace-scoped (NFR-499, FR-1221)."""
+) -> RegressionRunRead:
+    """The run record, with its `provenance` (FR-2159). A failing property's `counterexample`
+    is a quote-input fragment, so the read is `rating:read` and workspace-scoped (NFR-499,
+    FR-1221)."""
     row = await _load_run(database, caller, rating_version_id, run_id)
-    return RegressionRun.model_validate(row.run)
+    return provenance.regression_run_read(row)
 
 
 @router.get(

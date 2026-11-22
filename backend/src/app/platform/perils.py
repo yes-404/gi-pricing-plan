@@ -31,7 +31,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models import ApprovalRequestRow, ModelRow, PerilStructureRow
 from app.errors import PlatformError
-from app.platform import approvals, audit, rbac
+from app.platform import approvals, audit, blobs, rbac
 from model_schema import (
     SCOREABLE_MODEL_STATUSES,
     VALID_PERIL_STRUCTURE_TRANSITIONS,
@@ -114,6 +114,11 @@ async def create_structure(
         permission=Permission.MODEL_FIT,
     )
     await _resolve_models(session, workspace_id=workspace_id, perils=perils)
+    for peril in perils:
+        if peril.large_loss.evidence_blob is not None:
+            await blobs.require_evidence_readable(
+                session, sha256=peril.large_loss.evidence_blob.sha256, workspace_id=workspace_id
+            )
 
     latest = await session.scalar(
         select(PerilStructureRow.version)

@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/vue";
+import { render, screen, waitFor, within } from "@testing-library/vue";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { router } from "@/router";
@@ -118,6 +118,18 @@ describe("ModelComparisonView", () => {
     // FR-76 makes the shared holdout stored rather than promised, and §4.11 keeps the
     // SplitRef "so the claim is checkable by a reader". The reader has to be shown it.
     expect(screen.getByText(/169503/)).toBeInTheDocument();
+  });
+
+  it("shows the provenance badge, naming the Job that produced the comparison (FR-2159)", async () => {
+    routeQuery.ids = IDS;
+    stubByUrl({
+      "/models/compare": { status: 202, body: job("queued") },
+      "/jobs/": { status: 200, body: job("succeeded", COMPARISON_REF) },
+      [`/models/comparisons/${COMPARISON.id}`]: { status: 200, body: COMPARISON },
+    });
+    render(ModelComparisonView, { props: { pollIntervalMs: 0 }, global });
+    const badge = await screen.findByRole("group", { name: "Provenance" });
+    expect(within(badge).getByText(COMPARISON.provenance.produced_by_job_id!)).toBeInTheDocument();
   });
 
   // `waitForJob` returns the job in whatever state it is in, so a failed job arrives through

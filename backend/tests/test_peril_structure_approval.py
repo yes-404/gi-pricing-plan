@@ -27,6 +27,7 @@ from backend.tests.test_api_approvals import _headers as _approver_headers
 from backend.tests.test_peril_structures import (
     _book,
     _burning_cost_peril,
+    evidence_in,
 )
 from backend.tests.test_rating_version_compile import (
     _empty_pins,
@@ -365,11 +366,7 @@ async def test_a_separate_model_excess_model_is_checked_at_approve(
                     "kind": "separate_model",
                     "excess_model": excess_ref,
                     "attachment_minor": 100_000_000,
-                    "evidence_blob": {
-                        "sha256": "c" * 64,
-                        "bytes": 1_024,
-                        "media_type": "application/json",
-                    },
+                    "evidence_blob": await evidence_in(database, workspace_id),
                 }
             )
         }

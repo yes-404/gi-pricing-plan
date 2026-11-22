@@ -44,13 +44,26 @@ const MODEL = {
   parent_model_id: null, change_reason: null, flags: [],
 };
 
+/**
+ * One body for every call, except a booster's transparency read, which 404s as `stubByUrl`
+ * does. Answered with the Model, that read handed the page an "artifact" with no `provenance`
+ * (FR-2159), a shape the contract never sends, and the badge beside the panel cannot render it.
+ */
 function stub(body: unknown = MODEL, status = 200): void {
   vi.stubGlobal(
     "fetch",
-    vi.fn(async () =>
-      new Response(JSON.stringify(body), {
-        status, headers: { "Content-Type": "application/json" },
-      }),
+    vi.fn(async (input: unknown) =>
+      String(input).endsWith("/transparency")
+        ? new Response(
+          JSON.stringify({
+            type: "about:blank", title: "Not found", status: 404, code: "NOT_FOUND",
+            detail: "No transparency artifact stubbed", errors: [],
+          }),
+          { status: 404, headers: { "Content-Type": "application/json" } },
+        )
+        : new Response(JSON.stringify(body), {
+          status, headers: { "Content-Type": "application/json" },
+        }),
     ),
   );
 }
@@ -444,6 +457,17 @@ describe("the model detail view, on a model that is not a GLM", () => {
     render(ModelDetailView, { props: { slug: "motor-frequency" }, ...mounted });
     await screen.findByRole("table", { name: "Coefficients" });
     expect(fetchMock.mock.calls.map(String).join(" ")).not.toContain("transparency");
+  });
+
+  it("shows the transparency artifact's provenance badge beside its panel (FR-2159)", async () => {
+    stubByUrl({
+      "/api/v1/models/motor-ad-frequency": GBM_MODEL,
+      [`/api/v1/models/${GBM_MODEL.id}/transparency`]: ARTIFACT,
+    });
+    render(ModelDetailView, { props: gbmProps, ...mounted });
+    const badge = await screen.findByRole("group", { name: "Provenance" });
+    expect(within(badge).getByText("not recorded")).toBeInTheDocument();
+    expect(badge).toHaveTextContent(ARTIFACT.provenance.entity_id);
   });
 
   it("reads a model with no artifact built as a state, not as the error banner", async () => {

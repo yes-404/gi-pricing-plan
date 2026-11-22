@@ -49,7 +49,7 @@ reproducibility, auditability and transparency of the maths.
 - **Money is integer minor units, or Decimal in the rating path. Never float.**
 - A `control` Factor never moves a price (FR-88, FR-240).
 - The actuarial defaults are numbered requirements, not conventions: `02-modelling.md`
-  FR-MODEL-19, 21, 26, 27, 28 and 33.
+  FR-111, FR-113, FR-120, FR-121, FR-122 and FR-132.
 - Only public data (freMTPL2). No real policy, claims or exposure data anywhere, including
   in a prompt to an external tool.
 

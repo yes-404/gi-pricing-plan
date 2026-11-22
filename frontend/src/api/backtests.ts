@@ -1,7 +1,7 @@
 import { request } from "./client";
 import type { components } from "./generated/schema";
 
-export type Backtest = components["schemas"]["Backtest"];
+export type Backtest = components["schemas"]["BacktestRead"];
 export type BacktestSummary = components["schemas"]["BacktestSummary"];
 
 /**

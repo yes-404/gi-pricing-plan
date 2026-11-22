@@ -19,6 +19,7 @@ import { formatDecimalString, getVersion, type DatasetVersion } from "@/api/vers
 import ColumnDrift from "@/components/ColumnDrift.vue";
 import HistogramChart from "@/components/HistogramChart.vue";
 import OneWayChart from "@/components/OneWayChart.vue";
+import ProvenanceBadge from "@/components/ProvenanceBadge.vue";
 
 const props = defineProps<{ slug: string; version: string }>();
 
@@ -264,6 +265,7 @@ onMounted(() => void load());
         {{ (profile.columns ?? []).length }} columns ·
         {{ rateable.length }} candidate rating factors
       </p>
+      <ProvenanceBadge :provenance="profile.provenance" />
 
       <section class="mt-6">
         <div class="flex items-center gap-3">

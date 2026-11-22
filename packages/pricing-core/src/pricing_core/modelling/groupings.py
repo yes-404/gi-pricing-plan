@@ -30,7 +30,7 @@ this factor alone, not the deviance the eventual multi-factor model will report.
 from __future__ import annotations
 
 import math
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from uuid import UUID
 
 import numpy as np
@@ -51,7 +51,13 @@ from model_schema import (
 from pricing_core.data.profile import one_way
 from pricing_core.modelling.errors import FactorResolutionError, GroupingError
 
-__all__ = ["apply_grouping", "grouping_evidence", "propose_grouping"]
+__all__ = [
+    "apply_grouping",
+    "finer_levels",
+    "grouping_chain",
+    "grouping_evidence",
+    "propose_grouping",
+]
 
 def _full_credibility_claims(p: float, k: float) -> float:
     """The claim count at which a Poisson estimate is within ±`k` with probability `p`.
@@ -574,6 +580,103 @@ def _targets(levels: Sequence[str], grouping: Grouping) -> dict[str, str | None]
             else grouping.target_levels[0]
         )
     return {value: grouping.mapping.get(value, fallback) for value in levels}
+
+
+def grouping_chain(grouping: Grouping, groupings: Mapping[UUID, Grouping]) -> tuple[Grouping, ...]:
+    """The chain `grouping` closes, from its deepest ancestor to `grouping` itself (FR-109).
+
+    `parent_grouping_id` names the finer grouping that is applied first, so the deepest one
+    is the grouping with no parent and the chain reads in the order it is applied.
+
+    A parent missing from `groupings` ends the chain there: stored Groupings can name a parent
+    that is gone, so a dangling link is data, not a caller's error. The returned chain then
+    starts with a Grouping that still names a parent, which is how a caller tells a broken
+    chain from a whole one. A chain that comes back on itself is a caller's error that no
+    request can reach, raised by name as a `ValueError` with no error code.
+    """
+    chain = [grouping]
+    seen = {grouping.id}
+    while chain[-1].parent_grouping_id is not None:
+        parent = groupings.get(chain[-1].parent_grouping_id)
+        if parent is None:
+            break
+        # A caller's error that no request can reach, so it carries no `02` §5.1 error code.
+        if parent.id in seen:
+            raise ValueError(
+                f"the chain under grouping {grouping.slug!r} comes back to "
+                f"{parent.slug!r}; a chain of groupings runs one way (FR-109)."
+            )
+        seen.add(parent.id)
+        chain.append(parent)
+    return tuple(reversed(chain))
+
+
+def _rebuild_step(values: pl.Series, grouping: Grouping) -> pl.Series:
+    """`grouping` applied to `values` for a finer-level diagnostic: a value it refuses (a null,
+    or an unseen level under `error`, FR-104) becomes null, where `apply_grouping` would raise.
+
+    The mapping and every other unseen-level behaviour are `_targets`', unchanged; only the
+    refusal is turned into a row that is not available.
+    """
+    text = values.cast(pl.String)
+    levels = [v for v in text.unique().to_list() if v is not None]
+    if grouping.unseen_level_behaviour is UnseenLevelBehaviour.ERROR:
+        levels = [v for v in levels if v in grouping.mapping]
+    targets = _targets(levels, grouping)
+    return text.replace_strict(targets, default=None, return_dtype=pl.String).rename(
+        values.name
+    )
+
+
+def finer_levels(
+    frame: pl.DataFrame, grouping: Grouping, groupings: Mapping[UUID, Grouping]
+) -> tuple[tuple[str, pl.Series], ...]:
+    """Each level finer than `grouping`'s own, finest first, with each row's value (FR-109).
+
+    Decision #1908 (B): every finer level is rebuilt from the **deepest** grouping's
+    `column` by applying the chain in order up to that level. The finest is that column as it
+    is, named by the column; each grouping below `grouping` then adds the level it produces,
+    named by its slug. A grouping with no parent has no finer level. So that no two levels share
+    a name, a slug repeated in the chain names each of its levels "<slug>@<version>", and a slug
+    equal to the deepest column names the raw level "<column> (column)". Decided on #1961
+    (comment 7060609084, point 3).
+
+    A row the chain cannot rebuild is null at that level and at every coarser one, and stays in
+    the column, so it is counted as not available rather than dropped: a null raw value; a
+    value a grouping refuses (an unseen level under `error`, FR-104); and every row, when the
+    deepest column is not in the frame (the maintainer's ruling of 2026-11-17 on #1506).
+
+    A parent that is not supplied, or no longer exists, breaks the chain: nothing below the
+    break can be read, so the level the missing parent produces (named by the `column` of the
+    Grouping that reads it) and every coarser one are not available for every row. Nothing
+    is raised for it, so the diagnostics never fail a fit that scoring completes; only a chain
+    that comes back on itself is a caller's error (`grouping_chain`).
+
+    Only this diagnostic chain is lenient: the model's own grouping is not applied here, and
+    `resolve_factors` is untouched, so a value that grouping refuses still refuses the fit.
+    """
+    chain = grouping_chain(grouping, groupings)
+    deepest = chain[0]
+    broken = deepest.parent_grouping_id is not None
+    if len(chain) == 1 and not broken:
+        return ()
+    # The raw level is named by its column, and each rebuilt level by its grouping's slug. Two
+    # collisions are possible, and each is resolved so that no two levels share a name: a slug
+    # repeated in the chain (two versions of one grouping) names each of its levels
+    # "<slug>@<version>"; a slug equal to the column names the raw level "<column> (column)".
+    # Nothing else is renamed.
+    steps = chain[:-1]
+    repeated = {g.slug for g in steps if sum(1 for o in steps if o.slug == g.slug) > 1}
+    slugs = [f"{g.slug}@{g.version}" if g.slug in repeated else g.slug for g in steps]
+    raw_name = f"{deepest.column} (column)" if deepest.column in slugs else deepest.column
+    names = [raw_name, *slugs]
+    if broken or deepest.column not in frame.columns:
+        missing = pl.Series(deepest.column, [None] * frame.height, dtype=pl.String)
+        return tuple((name, missing) for name in names)
+    values: list[pl.Series] = [frame[deepest.column].cast(pl.String)]
+    for step in chain[:-1]:
+        values.append(_rebuild_step(values[-1], step))
+    return tuple(zip(names, values, strict=True))
 
 
 def grouping_evidence(

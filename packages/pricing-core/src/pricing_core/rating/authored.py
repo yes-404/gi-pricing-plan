@@ -90,6 +90,6 @@ def authored_expression_fields(algorithm: RatingAlgorithm) -> list[AuthoredStrin
             elif isinstance(value, dict):
                 found.extend(
                     AuthoredString(step.step_id, f"{name}.{key}", text)
-                    for key, text in value.items()
+                    for key, text in sorted(value.items())
                 )
     return found

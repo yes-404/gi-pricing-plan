@@ -27,6 +27,7 @@ payloads, so **a hash cannot tell a re-validated bundle from an unchecked one**.
 
 from __future__ import annotations
 
+import json
 import pathlib
 from typing import Any
 from uuid import UUID, uuid4
@@ -34,8 +35,9 @@ from uuid import UUID, uuid4
 import pytest
 from backend.tests import test_deployments as _deployments
 from backend.tests.approved_rows import add_approved
+from backend.tests.conftest_db import edit_held_row_as_owner
 from fastapi.testclient import TestClient
-from sqlalchemy import select, update
+from sqlalchemy import select
 
 from app.db.models import AuditEventRow, DeploymentRow, RatingVersionRow
 from app.db.session import Database
@@ -209,7 +211,7 @@ async def test_a_rollback_to_a_stored_control_operand_bundle_is_refused(
     offender_ref, content_hash = await stored_version(
         database, blob_store, workspace_id, "offender.bundle.json"
     )
-    async with database.unit_of_work() as session:
+    async with database.session() as session:
         stored = (
             await session.execute(
                 select(RatingVersionRow.bundle).where(
@@ -218,14 +220,18 @@ async def test_a_rollback_to_a_stored_control_operand_bundle_is_refused(
                 )
             )
         ).scalar_one()
-        await session.execute(
-            update(RatingVersionRow)
-            .where(
-                RatingVersionRow.workspace_id == workspace_id,
-                RatingVersionRow.slug == first.split(":")[1].split("@")[0],
-            )
-            .values(bundle=stored)
-        )
+    # This test is ABOUT a database edited outside the application: the database holds an
+    # approved version's bundle (ADR-2157), so the edit is an owner's, with the one content
+    # guard disabled for it (`edit_held_row_as_owner`), never a login-role UPDATE.
+    await edit_held_row_as_owner(
+        "rating_versions",
+        "rating_versions_content_guard",
+        "UPDATE rating_versions SET bundle = CAST(:bundle AS jsonb) "
+        "WHERE workspace_id = :workspace_id AND slug = :slug",
+        bundle=json.dumps(stored),
+        workspace_id=workspace_id,
+        slug=first.split(":")[1].split("@")[0],
+    )
     before = await deployments_written(database, workspace_id)
     back = client.post(
         "/api/v1/environments/dev/deployments/rollback",

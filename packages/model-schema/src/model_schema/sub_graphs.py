@@ -81,7 +81,7 @@ class SubGraphBody(BaseModel):
         for out in self.outputs:
             if out.name not in produced:
                 raise GraphUnresolvedRefError(
-                    f"output port {out.name!r} is an undefined value: no step produces it (FR-212)"
+                    "an output port is an undefined value: no step produces it (FR-212)"
                 )
 
         dependencies: dict[str, set[str]] = {s.step_id: set() for s in steps}
@@ -90,7 +90,8 @@ class SubGraphBody(BaseModel):
                 producers = produced.get(name)
                 if not producers and name not in port_names:
                     raise GraphUnresolvedRefError(
-                        f"step {step.step_id!r} consumes undefined value {name!r} (FR-212)"
+                        "a step consumes an undefined value: no step or input port produces it "
+                        "(FR-212)"
                     )
                 dependencies[step.step_id].update(
                     pid for pid in producers or [] if pid != step.step_id

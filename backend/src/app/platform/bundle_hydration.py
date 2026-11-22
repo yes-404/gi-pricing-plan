@@ -16,6 +16,8 @@ because the guard runs on every hydrate (a hash covers the pins, not the carried
 
 from __future__ import annotations
 
+import hashlib
+import logging
 from collections.abc import Awaitable, Mapping
 from typing import Protocol
 from uuid import UUID
@@ -30,7 +32,7 @@ from app.platform import rating_versions as rating_versions_service
 from app.platform.blobs import BlobStore, to_ref
 from app.platform.bundle_slot import BundleSlot
 from model_schema import ActorKind, ArtifactRef, JobSource, Principal
-from pricing_core.rating.compile import Bundle, check_rateable_intent
+from pricing_core.rating.compile import Bundle, bundle_hash, check_rateable_intent
 from pricing_core.rating.runtime import CompiledBundle, load_bundle
 from pricing_core.safe_error import CodedError
 
@@ -39,8 +41,10 @@ __all__ = [
     "REFUSAL_ACTION",
     "Revalidate",
     "hydrate",
+    "load_stored_bundle",
     "revalidate",
     "revalidator",
+    "verify_bundle",
 ]
 
 #: The load-guard codes `load_bundle` refuses a stored Bundle with, each mapped to the 409's title.
@@ -53,6 +57,9 @@ LOAD_GUARD_CODES: Mapping[str, str] = {
 }
 #: The Audit Event action for a refused load (`03` §4.3, NFR-498).
 REFUSAL_ACTION = "rating_version.load_refused"
+#: The internal code for a bundle that does not match its recorded hash (`03` FR-240).
+MISMATCH_CODE = "BUNDLE_HASH_MISMATCH"
+_log = logging.getLogger(__name__)
 _ACTOR = Principal(kind=ActorKind.SYSTEM, display="bundle-guard")
 
 
@@ -112,6 +119,10 @@ async def _refuse(
             if acting is None:
                 slot.unrecord_refusal(content_hash)
             raise
+    if code == MISMATCH_CODE:
+        return PlatformError(
+            code, "Internal error", 500, f"{ref}: the stored bundle does not match its hash."
+        )
     return PlatformError(
         code,
         LOAD_GUARD_CODES[code],
@@ -119,6 +130,116 @@ async def _refuse(
         f"{ref} (bundle {content_hash}) is refused: {refusal}. Compile a new Rating Version; "
         "a compiled version is never mutated.",
     )
+
+
+async def verify_bundle(
+    bundle: Bundle,
+    *,
+    recorded: str | None,
+    deployment: str | None = None,
+    slot: BundleSlot,
+    database: Database,
+    workspace_id: UUID,
+    ref: ArtifactRef,
+    requester: Principal | None = None,
+    acting: Principal | None = None,
+) -> None:
+    """The one comparison made wherever a stored bundle is loaded (`03` FR-240, FR-267).
+
+    Three hashes must agree: the one recorded for the version (`recorded`), the bundle's own
+    stored `content_hash`, and the one recomputed from its graph and pins (`bundle_hash`); and,
+    for a version a Deployment serves, the hash that Deployment recorded (`deployment`). A
+    mismatch is an internal integrity error (`BUNDLE_HASH_MISMATCH`, 500): audited, logged with
+    the reference and no content, and the bundle is never served. `recorded` of `None` is a
+    mismatch, not a skip: a stored bundle with no recorded hash cannot be shown to be the one
+    that was approved.
+    """
+
+    def bare(value: str | None) -> str | None:
+        return None if value is None else value.removeprefix("sha256:")
+
+    recomputed = bundle_hash(bundle.graph, bundle.pins, bundle.purpose_graphs)
+    pairs = {
+        "recorded": recorded,
+        "bundle": bundle.content_hash,
+        "recomputed": recomputed,
+        **({"deployment": deployment} if deployment is not None else {}),
+    }
+    if recorded is not None and len({bare(v) for v in pairs.values()}) == 1:
+        return
+    disagreeing = ", ".join(n for n, v in pairs.items() if bare(v) != bare(recomputed))
+    _log.error(
+        "a stored bundle does not match its recorded hash",
+        extra={"rating_version_ref": str(ref), "disagreeing": disagreeing or "recorded"},
+    )
+    raise await _refuse(
+        slot,
+        database,
+        workspace_id=workspace_id,
+        ref=ref,
+        content_hash=bundle.content_hash,
+        code=MISMATCH_CODE,
+        refusal=f"hash mismatch ({disagreeing or 'recorded hash absent'})",
+        acting=acting,
+        requester=requester,
+    )
+
+
+async def load_stored_bundle(
+    payload: bytes,
+    *,
+    payload_sha256: str | None,
+    recorded: str | None,
+    deployment: str | None = None,
+    slot: BundleSlot,
+    database: Database,
+    workspace_id: UUID,
+    ref: ArtifactRef,
+    requester: Principal | None = None,
+    acting: Principal | None = None,
+) -> Bundle:
+    """The one place a stored bundle's bytes are parsed (`03` FR-240): verify the bytes, parse,
+    then compare.
+
+    The sha256 of the payload bytes read must equal the digest the version's row records
+    (`payload_sha256`) before the bytes are used: the content hash covers the graph and pins
+    only, and the payloads (rate table cells, coefficients, boosters) are covered by this digest.
+    A digest of `None` is a mismatch, as `recorded` of `None` is.
+
+    Every load site goes through here, so no site can parse a stored bundle and skip the
+    comparison; `test_a_stored_bundle_is_parsed_in_one_place_only` fails on any other parse in
+    `backend/src`."""
+    if payload_sha256 is None or hashlib.sha256(payload).hexdigest() != payload_sha256.removeprefix(
+        "sha256:"
+    ):
+        _log.error(
+            "a stored bundle's payload does not match its recorded digest",
+            extra={"rating_version_ref": str(ref)},
+        )
+        raise await _refuse(
+            slot,
+            database,
+            workspace_id=workspace_id,
+            ref=ref,
+            content_hash=recorded or "",
+            code=MISMATCH_CODE,
+            refusal="hash mismatch (payload digest)",
+            acting=acting,
+            requester=requester,
+        )
+    bundle = Bundle.model_validate_json(payload)
+    await verify_bundle(
+        bundle,
+        recorded=recorded,
+        deployment=deployment,
+        slot=slot,
+        database=database,
+        workspace_id=workspace_id,
+        ref=ref,
+        requester=requester,
+        acting=acting,
+    )
+    return bundle
 
 
 def _load_guard_refusal(exc: CodedError) -> tuple[str, str] | None:
@@ -185,7 +306,16 @@ async def revalidate(
     blob_row = await session.get(BlobRow, blob_sha256) if blob_sha256 else None
     if blob_row is None:
         raise unreadable_bundle(ref, "it has no readable stored bundle")
-    bundle = Bundle.model_validate_json(await blob_store.read(to_ref(blob_row)))
+    bundle = await load_stored_bundle(
+        await blob_store.read(to_ref(blob_row)),
+        payload_sha256=blob_sha256,
+        recorded=(row.bundle or {}).get("content_hash"),
+        slot=slot,
+        database=database,
+        workspace_id=workspace_id,
+        ref=ref,
+        acting=actor,
+    )
     await hydrate(
         bundle, slot=slot, database=database, workspace_id=workspace_id, ref=ref, acting=actor
     )

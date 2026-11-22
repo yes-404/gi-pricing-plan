@@ -144,6 +144,45 @@
         },
         "min_exposure_per_parameter": {"type": ["number", "null"]}
       }
+    },
+    "finer_level_ae": {
+      "type": ["object", "null"],
+      "default": null,
+      "additionalProperties": false,
+      "description": "FR-171's actual versus expected at each level finer than a chained grouping's own (FR-109; decision #1870 (b), #1506 slice 5), for train and holdout side by side (FR-183). Computed at fit time over the rows and fitted means each partition's ae_by_factor reads, so it carries that partition's weighting (FR-184), and never on read (FR-170). One entry per Factor whose grouping has a parent, its levels finest first; [] on both means computed, and no Factor is chained. null = not available: the artifact predates the field, and the view says so in those words. Optional: a stored Diagnostics written before this field must still validate.",
+      "properties": {
+        "train": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["factor", "grouping", "levels"],
+            "properties": {
+              "factor": {"type": "string"},
+              "grouping": {"type": "string", "description": "The slug of the grouping the Factor is fitted on; each level is finer than it."},
+              "levels": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["name", "unavailable_rows", "unavailable_exposure", "unavailable_actual", "unavailable_expected"],
+                  "description": "One finer level: the deepest grouping's column for the finest, then the slug of each grouping of the chain that produces a coarser one (decision #1908 (B)). The rows the chain could not rebuild are one named 'not available' row, never dropped, so the level's totals equal the partition's.",
+                  "properties": {
+                    "name": {"type": "string"},
+                    "cells": {"type": "array", "items": {"$ref": "#/$defs/AeCell"}},
+                    "unavailable_rows": {"type": "integer", "minimum": 0},
+                    "unavailable_exposure": {"$ref": "common/money.schema.json#/$defs/Decimal"},
+                    "unavailable_actual": {"type": "number"},
+                    "unavailable_expected": {"type": "number"}
+                  }
+                }
+              }
+            }
+          }
+        },
+        "holdout": {"$ref": "#/properties/finer_level_ae/properties/train"}
+      }
     }
   },
   "invariants": [
@@ -151,7 +190,8 @@
     "every eval_curve point reports at least one of train and holdout",
     "cross_validation.selected_alpha is one of cross_validation.path[].alpha — the selection must be a point the path actually scored",
     "cross_validation.fold_metrics covers folds 0..folds-1 exactly once: a fold's dispersion cannot include a fold that was never scored, nor double-count one",
-    "quantile_crossing.rows_crossing <= rows_checked"
+    "quantile_crossing.rows_crossing <= rows_checked",
+    "finer_level_ae.train and finer_level_ae.holdout name the same factors, each with the same levels in the same order — side by side, or the two do not read together (FR-109, FR-183; decision #1870 (b))"
   ],
   "$defs": {
     "PartitionDiagnostics": {

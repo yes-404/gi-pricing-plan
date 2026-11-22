@@ -211,6 +211,19 @@ def owner_subject_settings(**overrides: Any) -> Settings:
 #: `grant_demo_principals`). The `DP-22` count is `grep -c '"DP-22"' backend/tests/conftest_db.py`.
 OWNER_FIXTURE_USERS: tuple[tuple[str, str, str], ...] = (
     (
+        "backend/tests/test_rating_version_content_guard.py::test_each_refusal_is_the_guards_own",
+        "owner-subject",
+        "disables the content guard in a rolled-back owner transaction, to show that each "
+        "refusal in the sweep is that guard's own (ADR-2157)",
+    ),
+    (
+        "backend/tests/test_approval_request_decision_guard.py::"
+        "test_each_edge_refusal_is_the_guards_own",
+        "owner-subject",
+        "disables the decision guard in a rolled-back owner transaction, to show that each "
+        "refusal in the sweep is that guard's own (ADR-2157)",
+    ),
+    (
         "backend/tests/test_traces.py::test_a_referenced_trace_blob_survives_garbage_collection",
         "DP-22",
         "runs the collector's DELETE on blobs, which the application role cannot (OQ-1943)",
@@ -262,6 +275,12 @@ OWNER_FIXTURE_USERS: tuple[tuple[str, str, str], ...] = (
         "test_a_null_owner_digest_does_not_stop_the_collector_taking_an_unowned_blob",
         "DP-22",
         "runs the collector's DELETE on blobs, which the application role cannot (OQ-1943)",
+    ),
+    (
+        "backend/tests/test_rating_version_content_guard.py::"
+        "test_the_upgrade_reports_a_held_draft_and_does_not_stop",
+        "migration",
+        "creates and migrates a scratch database (CREATE DATABASE, DDL)",
     ),
     (
         "backend/tests/test_migration_deployments.py::"
@@ -1488,6 +1507,49 @@ async def blob_store() -> AsyncIterator[BlobStore]:
             f"{settings.blob_bucket!r}: {type(exc).__name__}",
         )
     yield store
+
+
+#: The only (table, trigger) pairs a test may disable (ADR-2157): the two guards whose
+#: refusals the controls prove are their own, and the one an out-of-application edit needs.
+#: `DISABLE TRIGGER` on these two guards is written here and nowhere else in `backend/tests`
+#: (`test_only_conftest_db_disables_the_two_guards`, test_rating_version_content_guard.py). It is
+#: written elsewhere for other triggers: `factors_no_modify` (test_application_role.py, which also
+#: proves the application role cannot) and `audit_events` (test_deployments.py).
+_DISABLABLE: frozenset[tuple[str, str]] = frozenset(
+    {
+        ("rating_versions", "rating_versions_content_guard"),
+        ("approval_requests", "approval_requests_decision_guard"),
+    }
+)
+
+
+async def disable_trigger(executor: Any, table: str, trigger: str) -> None:
+    """`ALTER TABLE <table> DISABLE TRIGGER <trigger>` for an allow-listed pair, on an owner
+    connection or session; refuses a database named by `GIP_TEST_PROTECTED_DATABASE` (for a
+    machine that keeps a template under a known name). Unset, nothing is refused: CI sets
+    nothing. The caller rolls back or re-enables."""
+    assert (table, trigger) in _DISABLABLE, (table, trigger)
+    name = (await executor.execute(text("SELECT current_database()"))).scalar_one()
+    assert name != os.environ.get("GIP_TEST_PROTECTED_DATABASE"), "never edit the template database"
+    await executor.execute(text(f"ALTER TABLE {table} DISABLE TRIGGER {trigger}"))
+
+
+async def edit_held_row_as_owner(table: str, trigger: str, sql: str, **params: Any) -> None:
+    """A committed edit of a row the database holds, simulating a database restored or edited by
+    its owner (ADR-2157): one owner transaction that disables the ONE named trigger, runs `sql`,
+    and enables the trigger again before it commits, so the guard is in force afterwards; a
+    failing `sql` rolls the transaction back, trigger and all. Never `session_replication_role`.
+
+    For the few tests ABOUT such a database (a version that left `draft` before a guard
+    existed); any other test creates the content up front, through the application's paths. The
+    pair must be in `_DISABLABLE`; the template database is refused."""
+
+    async def edit(session: AsyncSession) -> None:
+        await disable_trigger(session, table, trigger)
+        await session.execute(text(sql), params)
+        await session.execute(text(f"ALTER TABLE {table} ENABLE TRIGGER {trigger}"))
+
+    await seed_as_owner(edit)
 
 
 async def seed_as_owner[T](seed: Callable[[AsyncSession], Awaitable[T]]) -> T:

@@ -319,8 +319,15 @@ def _validate(parameters: dict[str, Any], callback: ProgressCallback) -> JobResu
                     actor=actor,
                     version_id=UUID(str(report.dataset_version_id)),
                 )
+            # The Job that produced the report, on the row only (#1506 item 4, FR-2159): the
+            # body stays without it, so two runs on one version give equal bodies (NFR-469),
+            # and the read takes it from `validation_reports.job_id`.
             row = await validation_service.store_report(
-                session, workspace_id=workspace_id, actor=actor, report=report
+                session,
+                workspace_id=workspace_id,
+                actor=actor,
+                report=report,
+                job_id=progress.job_id,
             )
             if dry_run_rule_id is not None:
                 await rule_service.attach_dry_run(

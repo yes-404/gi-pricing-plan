@@ -76,7 +76,7 @@ from app.platform import settings as settings_service
 from app.platform import shadow as shadow_service
 from app.platform import traces as traces_service
 from app.platform.blobs import BlobStore, to_ref
-from app.platform.bundle_hydration import hydrate
+from app.platform.bundle_hydration import hydrate, load_stored_bundle
 from app.platform.bundle_slot import BundleSlot
 from app.platform.deployment_switch import LiveRefs, SwitchMessage
 from app.platform.safe_exception import safe_job_exc_info
@@ -93,7 +93,6 @@ from model_schema import (
     ScoreComparison,
     ScoringResult,
 )
-from pricing_core.rating.compile import Bundle
 from pricing_core.rating.runtime import CompiledBundle
 from pricing_core.rating.score import decimals_as_floats, score_one
 from pricing_core.rating.trace_diff import diff_traces
@@ -261,7 +260,7 @@ def _required_ref(ctx: QuoteContext, live_ref: ArtifactRef | None = None) -> Art
 
 def _serving_ref(
     live_refs: LiveRefs, caller: Caller, ctx: QuoteContext
-) -> tuple[ArtifactRef, UUID | None]:
+) -> tuple[ArtifactRef, UUID | None, str | None]:
     """The ref to score and the Deployment that serves it, resolved together and once.
 
     `live` is this process's own reference (`platform.deployment_switch.LiveRefs`), read once
@@ -287,10 +286,9 @@ def _serving_ref(
         else None
     )
     ref = _required_ref(ctx, ArtifactRef.parse(entry.rating_version_ref) if entry else None)
-    served_by = (
-        entry.deployment_id if entry is not None and entry.rating_version_ref == str(ref) else None
-    )
-    return ref, served_by
+    if entry is None or entry.rating_version_ref != str(ref):
+        return ref, None, None
+    return ref, entry.deployment_id, entry.bundle_hash
 
 
 def _names_no_version(ctx: QuoteContext) -> bool:
@@ -444,6 +442,7 @@ async def _fetch_bundle(
     workspace_id: UUID,
     ref: ArtifactRef,
     requester: Principal | None = None,
+    deployment_hash: str | None = None,
 ) -> CompiledBundle:
     """Resolve a ref to its hydrated `CompiledBundle`: one metadata read, then either a
     slot hit or the blob store (RL-921,
@@ -502,7 +501,17 @@ async def _fetch_bundle(
             )
         payload = await blob_store.read(to_ref(blob_row))
 
-    bundle = Bundle.model_validate_json(payload)
+    bundle = await load_stored_bundle(
+        payload,
+        payload_sha256=blob_sha256,
+        recorded=content_hash,
+        deployment=deployment_hash,
+        slot=slot,
+        database=database,
+        workspace_id=workspace_id,
+        ref=ref,
+        requester=requester,
+    )
     compiled = slot.get(bundle.content_hash)
     if compiled is None:
         compiled = await hydrate(
@@ -530,6 +539,7 @@ async def hydrate_for_switch(
         database=database,
         workspace_id=message.workspace_id,
         ref=ArtifactRef.parse(message.rating_version_ref),
+        deployment_hash=message.bundle_hash,
     )
     if f"sha256:{compiled.content_hash.removeprefix('sha256:')}" != message.bundle_hash:
         raise PlatformError(
@@ -550,6 +560,7 @@ async def _compiled_for(
     workspace_id: UUID,
     ref: ArtifactRef,
     requester: Principal | None = None,
+    deployment_hash: str | None = None,
 ) -> CompiledBundle:
     """The hydrated bundle for `ref`, degrading to the slot when metadata storage is down.
 
@@ -573,6 +584,7 @@ async def _compiled_for(
             workspace_id=workspace_id,
             ref=ref,
             requester=requester,
+            deployment_hash=deployment_hash,
         )
     except PlatformError:
         raise
@@ -645,10 +657,11 @@ async def score(
     A decline is **not** an error: `build_scoring_result` sets `outcome = "declined"` with a
     populated ladder, and FR-256 makes that a 200.
     """
-    ref, deployment_id = _serving_ref(live_refs, caller, ctx)
+    ref, deployment_id, deployment_hash = _serving_ref(live_refs, caller, ctx)
     routed = await _routed(session, settings, caller, ctx)
     if routed is not None:
         ref, deployment_id = routed
+        deployment_hash = None
     compiled = await _compiled_for(
         session,
         blob_store,
@@ -657,6 +670,7 @@ async def score(
         workspace_id=caller.workspace_id,
         ref=ref,
         requester=caller.principal,
+        deployment_hash=deployment_hash,
     )
     trace = ctx.options.trace if ctx.options is not None else False
     # `score_one` refuses a context without `options.rating_version_ref` and reads the ref it

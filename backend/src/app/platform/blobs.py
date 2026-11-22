@@ -1101,3 +1101,23 @@ async def blob_readable_by(session: AsyncSession, *, sha256: str, workspace_id: 
         if (await session.execute(owner.limit(1))).first():
             return True
     return False
+
+
+async def require_evidence_readable(
+    session: AsyncSession, *, sha256: str, workspace_id: UUID
+) -> None:
+    """Refuse, at write, a spec whose `evidence_blob` the caller's workspace cannot read
+    (`02` FR-127, FR-189; #1902).
+
+    One code for "absent" and "not readable": an absent blob has no owner row, so
+    `blob_readable_by` answers both, and two codes would tell a caller that a digest exists
+    in another workspace (the dataset ingest route gives one answer for the same reason).
+    """
+    if not await blob_readable_by(session, sha256=sha256, workspace_id=workspace_id):
+        raise PlatformError(
+            "EVIDENCE_BLOB_UNREADABLE",
+            "Evidence blob unreadable",
+            422,
+            f"evidence_blob {sha256} is absent or not readable by this workspace; "
+            "upload it, or cite a blob this workspace owns.",
+        )

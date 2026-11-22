@@ -45,6 +45,7 @@ from app.db.session import Database
 from app.errors import PlatformError
 from app.platform import datasets as dataset_service
 from app.platform import jobs as job_service
+from app.platform import provenance
 from app.platform import validation as service
 from app.platform import validation_rules as rule_service
 from model_schema import (
@@ -53,7 +54,7 @@ from model_schema import (
     JobKind,
     Severity,
     ValidationLayer,
-    ValidationReportView,
+    ValidationReportRead,
     ValidationRule,
     ValidationRuleSet,
 )
@@ -145,12 +146,16 @@ class RuleSetReplace(BaseModel):
 )
 async def get_report(
     report_id: UUID, caller: ReadDatasets, database: DatabaseDep
-) -> ValidationReportView:
+) -> ValidationReportRead:
     async with database.session() as session:
         # The report *as presented*: its acknowledgements merged in, so a client can tell
-        # which warnings still need one. The stored artifact is untouched.
-        return await service.load_report_view(
+        # which warnings still need one, and its `provenance` composed (FR-2159). The
+        # stored artifact is untouched.
+        view = await service.load_report_view(
             session, workspace_id=caller.workspace_id, report_id=report_id
+        )
+        return await provenance.validation_report_read(
+            session, workspace_id=caller.workspace_id, view=view
         )
 
 

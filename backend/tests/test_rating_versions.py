@@ -17,7 +17,11 @@ from typing import Any
 from uuid import UUID
 
 import pytest
-from backend.tests.conftest_db import grant_roles_as_owner, seed_as_owner
+from backend.tests.conftest_db import (
+    edit_held_row_as_owner,
+    grant_roles_as_owner,
+    seed_as_owner,
+)
 from backend.tests.test_rating_version_compile import _empty_pins, _minimal_algorithm
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -1696,11 +1700,19 @@ async def test_golden_evidence_author_set_is_empty_without_golden_quotes(
     gate = await _gate(database, workspace_id)
     rv = await gate.version()
     request = await gate.submit(rv)
-    async with database.unit_of_work() as session:
+    # ABOUT a database edited outside the application (a version that was in review before the
+    # gate shipped): the database holds a version in review (ADR-2157), so the owner clears the
+    # evidence with the one content guard disabled for the edit (`edit_held_row_as_owner`).
+    await edit_held_row_as_owner(
+        "rating_versions",
+        "rating_versions_content_guard",
+        "UPDATE rating_versions SET evidence = NULL WHERE id = :id",
+        id=rv,
+    )
+    async with database.session() as session:
         row = await rating_service.load_rating_version(
             session, workspace_id=workspace_id, rating_version_id=rv
         )
-        row.evidence = None
         ref = ArtifactRef(type="rating_version", slug=row.slug, version=row.version)
     async with database.session() as session:
         assert await rating_service.golden_quote_delta_authors(

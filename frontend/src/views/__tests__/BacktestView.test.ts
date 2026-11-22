@@ -65,6 +65,13 @@ describe("BacktestView", () => {
     expect(paths).toContain(`/api/v1/models/backtests/${BACKTEST.id}`);
   });
 
+  it("shows the provenance badge, with a Job that was not recorded (FR-2159)", async () => {
+    stubBoth();
+    render(BacktestView, { props, ...mounted });
+    const badge = await screen.findByRole("group", { name: "Provenance" });
+    expect(within(badge).getByText("not recorded")).toBeInTheDocument();
+  });
+
   // FR-187's caption limb. This assertion is the only evidence that limb can have:
   // `req-coverage.py` scans backend tests and cannot see a frontend caption at all.
   it("captions the single partition Backtest, and shows no fit partition", async () => {

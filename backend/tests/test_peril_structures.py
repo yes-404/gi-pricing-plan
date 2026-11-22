@@ -26,6 +26,7 @@ from decimal import Decimal
 from uuid import UUID, uuid4
 
 import pytest
+from backend.tests.blob_fixtures import digest, job_blob
 from backend.tests.test_api_datasets import _headers
 from backend.tests.test_contracts import OPENAPI, _load
 from backend.tests.test_model_jobs import (
@@ -59,7 +60,13 @@ from model_schema import (
     Principal,
 )
 
-EVIDENCE = {"sha256": "c" * 64, "bytes": 1_024, "media_type": "application/json"}
+
+async def evidence_in(database: Database, workspace_id) -> dict[str, object]:
+    """An `evidence_blob` ref the workspace can read (#1902): a real blob row owned by a job
+    in `workspace_id`, since `create_structure` refuses a digest nothing owns."""
+    sha256 = digest()
+    await job_blob(database, workspace_id, sha256)
+    return {"sha256": sha256, "bytes": 1_024, "media_type": "application/json"}
 
 
 @pytest.fixture
@@ -208,7 +215,7 @@ async def test_separate_model_is_refused_before_a_job_exists(
                 kind=LargeLossKind.SEPARATE_MODEL,
                 excess_model=peril.burning_cost_model,
                 attachment_minor=100_000_000,
-                evidence_blob=EVIDENCE,
+                evidence_blob=await evidence_in(database, workspace_id),
             )
         }
     )
@@ -501,7 +508,7 @@ async def test_a_failing_reconciliation_is_recorded_and_blocks_review(
                 kind=LargeLossKind.CAPPED,
                 cap_minor=2_500_000,
                 restoration_loading=Decimal("2.0"),
-                evidence_blob=EVIDENCE,
+                evidence_blob=await evidence_in(database, workspace_id),
             )
         }
     )

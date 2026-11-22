@@ -217,8 +217,6 @@ _SINKS: dict[tuple[str, str, str], tuple[int, str]] = {
         "(test_every_expression_error_is_raised_where_no_row_value_is_in_scope)"),
     ("packages/pricing-core/src/pricing_core/safe_error.py", "_expression_detail", "{exc}"): (
         1, "the allow-list itself: the same text with its position (as above)"),
-    ("packages/pricing-core/src/pricing_core/rating/compile.py", "_check_vocabulary", "{exc}"): (
-        1, "compile time, artifact-level: no quote is involved"),
     ("packages/pricing-core/src/pricing_core/rating/score.py", "_failing_node", "str(exc)"): (
         1, "reads only the engine error's JSON `nodeId`; the text is neither stored nor logged, "
         "and only a matched step's own id reaches the raised message: "

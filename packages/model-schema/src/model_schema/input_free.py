@@ -13,6 +13,7 @@ never the value it was given. Raised inside a pydantic validator, it is reported
 from __future__ import annotations
 
 import re
+from collections.abc import Mapping
 from dataclasses import dataclass
 
 
@@ -36,9 +37,22 @@ class InputFreeError(ValueError):
     `identifier(value, PATTERN)` with the field's own schema pattern. The constructor checks it:
     a value that does not match is refused, and a plain `ValueError` with a literal message is
     raised in its place, so the value is never echoed. Quote and policy values are never passed.
+
+    `located` names where the refusal applies (an output, a step), for the caller of a request:
+    it is an attribute of the exception, never rendered into the message, never stored or logged
+    (#1712 S7c, Q1 and Q6). Reading it is the caller's code; no sink reads it.
     """
 
-    def __init__(self, message: str, /, **identifiers: Identifier) -> None:
+    located: Mapping[str, str]
+
+    def __init__(
+        self,
+        message: str,
+        /,
+        *,
+        located: Mapping[str, str] | None = None,
+        **identifiers: Identifier,
+    ) -> None:
         for named in identifiers.values():
             if not (isinstance(named.value, str) and re.fullmatch(named.pattern, named.value)):
                 raise ValueError("an identifier in a validator message did not match its pattern")
@@ -48,3 +62,4 @@ class InputFreeError(ValueError):
             else message
         )
         super().__init__(text)
+        self.located = dict(located or {})

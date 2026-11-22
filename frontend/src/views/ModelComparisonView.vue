@@ -14,6 +14,7 @@ import { getModel } from "@/api/models";
 import { ProblemError } from "@/api/problem";
 import ComparisonMetricTable from "@/components/ComparisonMetricTable.vue";
 import DoubleLiftChart from "@/components/DoubleLiftChart.vue";
+import ProvenanceBadge from "@/components/ProvenanceBadge.vue";
 import RelativityDiffTable from "@/components/RelativityDiffTable.vue";
 import UnseenLevelRows from "@/components/UnseenLevelRows.vue";
 
@@ -197,6 +198,8 @@ onMounted(async () => {
     </div>
 
     <template v-else-if="comparison">
+      <ProvenanceBadge :provenance="comparison.provenance" />
+
       <h2 class="mt-6 text-sm font-semibold uppercase tracking-wide text-slate-500">
         Aligned metrics
       </h2>

@@ -37,6 +37,7 @@ from app.platform import datasets as dataset_service
 from app.platform import jobs as job_service
 from app.platform import modelling as modelling_service
 from app.platform import profiles as profile_service
+from app.platform import provenance
 from app.platform import validation as validation_service
 from model_schema import (
     DatasetLineage,
@@ -48,8 +49,8 @@ from model_schema import (
     LineageDependsOn,
     OneWaySummary,
     OverallOutcome,
-    Profile,
     ProfileComparison,
+    ProfileRead,
 )
 from model_schema import Permission as Perm
 
@@ -265,12 +266,15 @@ def _version_schema(row: DatasetVersionRow) -> DatasetVersion:
 )
 async def get_profile(
     version_id: UUID, caller: ReadDatasets, database: DatabaseDep
-) -> Profile:
-    """FR-60. Read, never recomputed (FR-62)."""
+) -> ProfileRead:
+    """FR-60. Read, never recomputed (FR-62), with its `provenance` (FR-2159)."""
     async with database.session() as session:
         await _scoped(session, version_id, caller)
-        return await profile_service.latest_profile(
+        profile = await profile_service.latest_profile(
             session, workspace_id=caller.workspace_id, version_id=version_id
+        )
+        return await provenance.profile_read(
+            session, workspace_id=caller.workspace_id, profile=profile
         )
 
 

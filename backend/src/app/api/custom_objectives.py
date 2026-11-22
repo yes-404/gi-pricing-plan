@@ -31,7 +31,7 @@ from typing import Annotated, Literal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query, Request, Response, status
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, StrictFloat, StrictInt
 
 from app.api.authz import requires
 from app.api.deps import Caller, SettingsDep, job_identity
@@ -47,7 +47,7 @@ from app.api.responses import problems
 from app.db.session import Database
 from app.errors import PlatformError
 from app.platform import jobs as job_service
-from app.platform import objective_preview, rbac
+from app.platform import objective_preview, provenance, rbac
 from app.platform import objectives as service
 from model_schema import (
     Applicability,
@@ -56,7 +56,7 @@ from model_schema import (
     Job,
     JobKind,
     JobQueue,
-    ObjectiveCertificate,
+    ObjectiveCertificateRead,
     ObjectiveKind,
     ObjectiveParameter,
     ObjectivePreview,
@@ -107,10 +107,16 @@ class CreateCustomObjective(BaseModel):
     loss: str | None = None
     #: `int | float`, `CustomObjective.params`'s own type — a money-kind template parameter
     #: (`capped_gamma.cap`, `spliced_severity`'s threshold) must arrive as an integer
-    #: minor-unit amount (`CLAUDE.md` §7), and a narrower `dict[str, float]` here would
+    #: minor-unit amount (`CLAUDE.md` §5), and a narrower `dict[str, float]` here would
     #: coerce it to a float before the contract's own `TemplateParameter.check` ever saw
-    #: it, turning a valid request into a 422 the caller cannot fix by re-reading §4.5.
-    params: dict[str, int | float] = Field(default_factory=dict)
+    #: it, turning a valid request into a 422 the caller cannot fix by re-reading §4.5. Strict, so a
+    #: JSON `true` (a `bool` is an `int`) or a numeric string is a 422 here and never a coerced
+    #: `1` or `5` (#1904). This request model is the hold for a boolean and a numeric
+    #: string. `TemplateParameter.check` does refuse a boolean (`check(True)` raises
+    #: `InputFreeError`); the gap is `model-schema`'s `CustomObjective.params`, which is
+    #: `dict[str, int | float]` and turns `true` into `1` before `check` sees it, on any
+    #: path that builds the contract without this request model (#1957 owns that gap).
+    params: dict[str, StrictInt | StrictFloat] = Field(default_factory=dict)
     #: Omitted means the template's own (§4.5). An author may narrow it and never widen it.
     applicability: Applicability | None = None
     hessian_strategy: HessianStrategy = HessianStrategy.CLIP_TO_MIN
@@ -424,15 +430,19 @@ async def certify_custom_objective(
 )
 async def get_certificate(
     objective_id: UUID, caller: ReadModels, database: DatabaseDep
-) -> ObjectiveCertificate:
+) -> ObjectiveCertificateRead:
     """**Added to `02` §5.1 with this slice** (FR-166).
 
     Without it the certificate is produced by a Job and readable nowhere — and it is what
     an approver is asked to read (`06` §4.2 names `objective_certificate` as the evidence).
+    It carries its `provenance` (FR-2159).
     """
     async with database.session() as session:
-        return await service.load_certificate(
+        certificate = await service.load_certificate(
             session, workspace_id=caller.workspace_id, objective_id=objective_id
+        )
+        return await provenance.objective_certificate_read(
+            session, workspace_id=caller.workspace_id, certificate=certificate
         )
 
 
