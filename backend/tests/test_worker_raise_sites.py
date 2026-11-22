@@ -194,8 +194,16 @@ _SITES: dict[_Key, tuple[frozenset[str], str]] = {
         "an artifact slug; not a per-quote miss",
     ),
     ("backend/src/app/platform/rating_algorithms.py", "raise_first_issue", _DYNAMIC): (
-        frozenset({"issue.code.replace('_', ' ').title()", "issue.message"}),
-        "save-time graph-validation issues about an algorithm's own nodes; no quote is involved",
+        frozenset(
+            {
+                "issue.code.replace('_', ' ').title()",
+                "issue.message",
+                "(FieldError(field=where or 'algorithm', code=issue.code, message=issue.message),)",
+            }
+        ),
+        "save-time graph-validation issues about an algorithm's own nodes; errors[] carries the"
+        " step and field (the caller's own artifact; a keyed map's key may appear);"
+        " no quote is involved",
     ),
     ("backend/src/app/platform/rating_versions.py", "compile_rating_version", _DYNAMIC): (
         frozenset({"code.replace('_', ' ').title()", "detail"}),

@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/vue";
+import { render, screen, within } from "@testing-library/vue";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import * as api from "@/api/objectives";
@@ -31,6 +31,13 @@ const CERTIFICATE = {
     sampling: { n_points: 1000, seed: 7, y_range: [0, 10], f_range: [-5, 5], w_range: [1, 1] },
     overall: "certified_with_findings",
     library_versions: { xgboost: "2.1.0" },
+  },
+  // FR-2159: composed by the API from `job_id` on every read, never stored.
+  provenance: {
+    entity_type: "objective_certificate",
+    entity_id: "c1",
+    produced_by_job_id: "j1",
+    subject_refs: ["custom_objective:tweedie-cap@2"],
   },
 } as unknown as api.ObjectiveCertificate;
 
@@ -73,6 +80,14 @@ describe("ObjectiveCertificateView", () => {
     const badges = Array.from(container.querySelectorAll("td span"));
     const violated = badges.find((b) => (b.textContent ?? "").includes("finding"));
     expect(violated?.className).not.toContain("rose");
+  });
+
+  it("shows the provenance badge, naming the Job that produced the certificate (FR-2159)", async () => {
+    vi.spyOn(api, "getObjectiveCertificate").mockResolvedValue(CERTIFICATE);
+    vi.spyOn(api, "getObjective").mockResolvedValue(OBJECTIVE);
+    mountView();
+    const badge = await screen.findByRole("group", { name: "Provenance" });
+    expect(within(badge).getByText("j1")).toBeInTheDocument();
   });
 
   it("shows each check's detail, which FR-148 makes a reported finding", async () => {

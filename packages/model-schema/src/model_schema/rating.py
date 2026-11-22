@@ -608,19 +608,16 @@ class RatingAlgorithm(RatingAlgorithmDraft):
         tagged = _graph_issues(self)
         if not tagged:
             return self
-        rule, first = tagged[0]
-        # Every rule but two raises its own literal: the step id, value name or port the validate
+        rule, _ = tagged[0]
+        # Every rule raises its own literal: the step id, value name, port or output the validate
         # route reports (RL-1474) is not put in a message that also renders when a stored
-        # algorithm fails re-validation (NFR-499). The two typed signals are NOT input-free:
-        # `GraphUnresolvedRefError` carries the step id and the value name in its own text. The
-        # request routes map them by class to fixed text, but `pricing_core/rating/inline.py`
-        # puts `str(cause)` into a `CodedError` on the compile path, where it can reach a stored
-        # Job error. That is not changed here (#1712 S7c); the cycle message is a literal.
+        # algorithm fails re-validation, or is inlined on the compile path (NFR-499; #1712 S7c).
+        # The one place a caller needs is `InputFreeError.located`, which is never rendered.
         match rule:
             case _GraphRule.CYCLE:
                 raise GraphCycleError("the rating DAG contains a cycle (FR-212)")
             case _GraphRule.MOUNT_INPUT_BLANK | _GraphRule.VALUE_UNDEFINED:
-                raise GraphUnresolvedRefError(first.message)
+                raise GraphUnresolvedRefError(_UNRESOLVED_REF_TEXT[rule])
             case _GraphRule.STEP_ID_UNIQUE:
                 raise InputFreeError("every step_id is unique (FR-215)")
             case _GraphRule.MOUNT_POINT_UNIQUE:
@@ -634,7 +631,10 @@ class RatingAlgorithm(RatingAlgorithmDraft):
                     "unmapped (FR-217)"
                 )
             case _GraphRule.OUTPUT_HAS_NO_STEP:
-                raise InputFreeError("a declared output has no output step (FR-214)")
+                raise InputFreeError(
+                    "a declared output has no output step (FR-214)",
+                    located={"output": self._first_output_without_step()},
+                )
             case _GraphRule.PRODUCERS_NOT_A_CHAIN:
                 raise InputFreeError(
                     "a value is produced by steps that do not form a single re-production "
@@ -649,6 +649,10 @@ class RatingAlgorithm(RatingAlgorithmDraft):
                     "a purpose mount reaches the risk_premium_minor output: one risk price "
                     "(FR-218)"
                 )
+
+    def _first_output_without_step(self) -> str:
+        with_step = {s.output_name for s in self.steps if isinstance(s, RatingOutputStep)}
+        return next(out.name for out in self.outputs if out.name not in with_step)
 
     @staticmethod
     def _reachable(
@@ -712,6 +716,17 @@ class _GraphRule(StrEnum):
 
 
 _TaggedIssue = tuple[_GraphRule, ValidationIssue]
+
+#: The literal each unresolved-reference rule raises with (#1712 S7c): no step id, value name or
+#: port, which `graph_invariant_issues` reports on the issue's `step_id` instead.
+_UNRESOLVED_REF_TEXT = {
+    _GraphRule.MOUNT_INPUT_BLANK: (
+        "a mount leaves an input port unmapped: its parent name is blank (FR-217)"
+    ),
+    _GraphRule.VALUE_UNDEFINED: (
+        "a step consumes an undefined value: no step or mount produces it (FR-212)"
+    ),
+}
 
 
 def graph_invariant_issues(draft: RatingAlgorithmDraft) -> list[ValidationIssue]:

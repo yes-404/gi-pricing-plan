@@ -18,6 +18,7 @@ import {
 } from "@/api/regressionRuns";
 import { getRatingVersionByRef, type RatingVersion } from "@/api/ratingVersions";
 import { formatMinor } from "@/components/dislocation/format";
+import ProvenanceBadge from "@/components/ProvenanceBadge.vue";
 
 const props = defineProps<{ slug: string; version: string; run?: string }>();
 const router = useRouter();
@@ -150,6 +151,7 @@ async function choose(event: Event): Promise<void> {
           Overall: <strong>{{ result.overall }}</strong>
           <span class="ml-3 text-slate-500">suite {{ result.suite_ref }}</span>
         </p>
+        <ProvenanceBadge :provenance="result.provenance" />
 
         <h2 class="mt-6 text-lg font-semibold">
           Golden quotes

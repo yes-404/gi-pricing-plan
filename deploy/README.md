@@ -173,6 +173,74 @@ docker compose -f deploy/docker-compose.yml --profile app up -d --wait --scale a
   a running process holds the bundles it already hydrated and re-validates nothing it holds
   (`roll-api.sh` keeps the old replicas serving until the new ones pass their healthcheck, so an
   old process serves until it is removed).
+- **Upgrading to the build that holds a Rating Version's content in the database** (`01` FR-44,
+  `06` FR-351, ADR-2157): once a Rating Version has left `draft`, the database refuses a change
+  to its content, and its `status` must be one of the five the platform defines (`draft`,
+  `review`, `approved`, `live`, `retired`). **This upgrade is not a rolling upgrade: stop the
+  `api` and the `worker`, run `migrate`, then start them. There is no rolling order, and
+  `roll-api.sh` is not used for it.** Each build's start-up check compares the database's guards
+  with its own, so, for this upgrade, a process of one release does not start against the other's
+  schema. The wrong
+  order fails closed: a process refuses to start, and a running process of the previous release
+  answers one action (withdrawing an approved approval request) with a server error that is
+  rolled back.
+  **Before upgrading, run this read-only query** on the database the upgrade will run on. It
+  lists the rows the upgrade refuses:
+
+  ```sql
+  BEGIN READ ONLY;
+  SELECT id, workspace_id, slug, version, status, created_at
+    FROM rating_versions
+   WHERE status NOT IN ('draft', 'review', 'approved', 'live', 'retired')
+   ORDER BY workspace_id, slug, version;
+  ROLLBACK;
+  ```
+
+  An empty result means the upgrade does not stop on data. A listed row holds a status the
+  product never writes, so it came from outside the application. The upgrade does not rewrite
+  it and no migration does: decide what the row is, and correct it with the database owner's
+  rights, before you upgrade. **If a row is missed**, `migrate` (`alembic upgrade head`, FR-435)
+  exits non-zero and prints `<n> rating_versions row(s) hold a status outside the lifecycle;
+  nothing was rewritten and the CHECK was not added`, in that step's output (the `migrate`
+  container's log). The revision is not applied and the listed rows are unchanged. Correct the
+  rows and run the step again.
+
+  Optional, and not a condition of the upgrade: `live` and `retired` are held like `approved`,
+  so an update that names `status`, `workspace_id`, `slug` or `version` of such a row, even one
+  that changes nothing, is refused without a decided approval request for the version's
+  reference. To list versions in `approved`, `live` or `retired` with none:
+
+  ```sql
+  BEGIN READ ONLY;
+  SELECT rv.id, rv.workspace_id, rv.slug, rv.version, rv.status
+    FROM rating_versions rv
+   WHERE rv.status IN ('approved', 'live', 'retired')
+     AND NOT EXISTS (
+           SELECT 1 FROM approval_requests r
+            WHERE r.workspace_id = rv.workspace_id
+              AND r.status = 'approved'
+              AND r.artifact_ref = 'rating_version:' || rv.slug || '@' || rv.version);
+  ROLLBACK;
+  ```
+
+  Held drafts: a rating version in `draft` whose reference has an approved approval request is
+  held: no column of it and no status of it changes, and it never moves to `approved` or `live`.
+  The upgrade reports each such row by workspace and reference, as a warning in the `migrate`
+  step's log, and does not stop on them. The row stays held; make a new version from it. To list
+  them in advance:
+
+  ```sql
+  BEGIN READ ONLY;
+  SELECT rv.id, rv.workspace_id, rv.slug, rv.version
+    FROM rating_versions rv
+   WHERE rv.status = 'draft'
+     AND EXISTS (
+           SELECT 1 FROM approval_requests r
+            WHERE r.workspace_id = rv.workspace_id
+              AND r.status = 'approved'
+              AND r.artifact_ref = 'rating_version:' || rv.slug || '@' || rv.version);
+  ROLLBACK;
+  ```
 - **Rolling `api` to a new image is health-gated** (NFR-531). A plain `up --scale api=2`
   recreates every replica at once, so none is healthy until the new ones pass their healthcheck.
   Run `GIP_BUILD=<new> deploy/roll-api.sh [-t <seconds>] <project> <compose-file>...`. `lb`
@@ -241,3 +309,31 @@ default. It signs the chain head with an Ed25519 key you hold.
   5. Later, to detect a rewrite of history, export the log (`GET /api/v1/audit/export?format=json`)
      and check that the event at `head_sequence` has an `event_hash` equal to `head_event_hash`, and
      that `GET /api/v1/audit/verify` is intact over the range.
+
+## Reconciling approvals against the audit chain (FR-2163)
+
+`scripts/reconcile-approvals.py` checks, per workspace, that every artifact in an approved state and
+every deployment has the approval request, the decisions and the Audit Events the decision path
+writes, in order, in a chain that verifies. It is **detective and read-only**: it reports after the
+fact, writes nothing (not even an Audit Event) and prevents no write.
+
+- **Run:** `uv run python scripts/reconcile-approvals.py`; `GIP_DATABASE_URL` overrides the DSN.
+  Use a read-only login where one exists. The application login is acceptable, because the run only
+  reads.
+- **Output:** one JSON line per workspace (`chain`, counts, and each mismatch with its `rule`,
+  `ref`, `detail` and `legacy` mark), then a summary line. The workspaces are every id in the
+  `workspaces` table, in `audit_events` or on a governed row: no foreign key ties an event or a
+  governed row to a `workspaces` row. An id with no `workspaces` row prints its own line
+  (`"workspace_row": false`), is counted in the summary as `workspaces_without_row`, and makes
+  the exit code `1`.
+- **Exit code:** `0` every chain verifies and nothing mismatches; `1` at least one mismatch or one
+  workspace id with no `workspaces` row;
+  `2` a chain is broken or unreadable (a stored row the models refuse) or the run could not
+  complete. Such a workspace prints no rule output; every other workspace still prints. Its `chain_detail` is
+  the verifier's reason and the sequence it broke at, or the exception's type name, never an
+  exception's text: a stored row can carry input.
+- **`legacy`:** a mismatch whose chain evidence lies wholly before the workspace's first decision event that
+  carries the request and decision ids, by chain sequence and never by timestamp. It is reported and counted like any other; the exit code stays `1`. `legacy` means "no later than the cut-over as far as the chain shows", never "benign": a workspace with no decision event carrying the ids has no cut-over, and nothing in it is marked legacy. A deployment's mismatch is never marked legacy.
+- **What the run cannot show:** a chain rewritten consistently (FR-373: the chain is tamper-evident,
+  not tamper-proof). The anchors of FR-373, kept in a store the operator does not control, are the
+  record outside the platform. This check does not widen FR-372 or FR-373.

@@ -7,11 +7,22 @@
  * an API requirement carrying no link obligation, and §5.3 registers no metric-certificate
  * view to link to. Under FR-24 that cell binds nothing, so no link is owed. Building one
  * would build a view the specification has not declared.
+ *
+ * **Each certificate's provenance is shown below the table** (FR-2159): which certificate,
+ * which Job produced it, and which metric version it certifies. Below and not in a row,
+ * because the shared library table has no cell for it.
  */
 import { onMounted, ref } from "vue";
 
-import { listMetrics, type CustomMetric } from "@/api/metrics";
+import {
+  getMetricCertificate,
+  listMetrics,
+  type CustomMetric,
+  type MetricCertificate,
+} from "@/api/metrics";
+import { isProblem } from "@/api/problem";
 import ArtifactLibraryTable, { type ArtifactRow } from "@/components/ArtifactLibraryTable.vue";
+import ProvenanceBadge from "@/components/ProvenanceBadge.vue";
 
 /**
  * The columns this library declares. Both objective and metric libraries have all five;
@@ -37,13 +48,53 @@ function toRow(metric: CustomMetric): ArtifactRow {
   };
 }
 
+const certificates = ref<MetricCertificate[]>([]);
+const certificateFailure = ref<string | undefined>(undefined);
+
+/**
+ * Only a metric whose `certificate_id` names a current certificate is asked, so only that
+ * certificate's provenance shows. The fetch is the acceptance's item 2 on #1506; requesting it
+ * only for a current certificate is slice 3's choice, not a recorded decision. A
+ * re-certification that came back `failed` clears the pointer, so its certificate is not shown
+ * here.
+ *
+ * A 404 `NOT_FOUND` (an unknown metric answers it too, e.g. one removed between the list and
+ * the read) is "no certificate", not a failure: neither a badge nor an error.
+ */
+async function certificateOf(metric: CustomMetric): Promise<MetricCertificate | null> {
+  if (!metric.certificate_id) return null;
+  try {
+    return await getMetricCertificate(metric.id);
+  } catch (error) {
+    if (isProblem(error, "NOT_FOUND")) return null;
+    throw error;
+  }
+}
+
 onMounted(async () => {
+  let metrics: CustomMetric[];
   try {
     const list = await listMetrics();
-    rows.value = list.items.map(toRow);
+    metrics = list.items;
+    rows.value = metrics.map(toRow);
     truncated.value = list.truncated;
   } catch (error) {
     failure.value = error instanceof Error ? error.message : String(error);
+    return;
+  }
+  // A failed certificate read takes down neither the library nor the other certificates'
+  // badges: each read settles on its own, and a failure is said once beside what could be read.
+  const settled = await Promise.allSettled(metrics.map(certificateOf));
+  certificates.value = settled.flatMap((result) =>
+    result.status === "fulfilled" && result.value !== null ? [result.value] : [],
+  );
+  const failed = settled.filter((result) => result.status === "rejected");
+  if (failed.length > 0) {
+    // Only a metric with a `certificate_id` is asked, so that is the count read against.
+    const asked = metrics.filter((metric) => metric.certificate_id).length;
+    const reason = (failed[0] as PromiseRejectedResult).reason;
+    const text = reason instanceof Error ? reason.message : String(reason);
+    certificateFailure.value = `${failed.length} of ${asked} certificates could not be read: ${text}`;
   }
 });
 </script>
@@ -66,5 +117,25 @@ onMounted(async () => {
       :truncated="truncated"
       empty-label="No custom metrics in this workspace yet."
     />
+
+    <section
+      v-if="!failure && certificates.length"
+      class="mt-8"
+    >
+      <h2 class="text-sm font-semibold uppercase tracking-wide text-slate-500">
+        Certificates
+      </h2>
+      <ProvenanceBadge
+        v-for="certificate in certificates"
+        :key="certificate.id"
+        :provenance="certificate.provenance"
+      />
+    </section>
+    <p
+      v-if="certificateFailure"
+      class="mt-4 text-sm text-rose-800"
+    >
+      {{ certificateFailure }}
+    </p>
   </section>
 </template>

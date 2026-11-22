@@ -1,11 +1,16 @@
 import { request } from "./client";
 import type { components } from "./generated/schema";
 
-export type Diagnostics = components["schemas"]["Diagnostics"];
+export type Diagnostics = components["schemas"]["DiagnosticsRead"];
 export type UniversalDiagnostics = components["schemas"]["UniversalDiagnostics"];
 export type PartitionDiagnostics = components["schemas"]["PartitionDiagnostics"];
 export type AeCell = components["schemas"]["AeCell"];
+/** FR-109: one Factor on a chained grouping, with its finer levels (#1506 slice 5). */
+export type FactorFinerLevels = components["schemas"]["FactorFinerLevels"];
+/** One finer level: its cells and its named "not available" row. */
+export type FinerLevelAe = components["schemas"]["FinerLevelAe"];
 export type LiftBin = components["schemas"]["LiftBin"];
+
 export type CalibrationBin = components["schemas"]["CalibrationBin"];
 export type ResidualSummary = components["schemas"]["ResidualSummary"];
 export type ComplexityDiagnostic = components["schemas"]["ComplexityDiagnostic"];

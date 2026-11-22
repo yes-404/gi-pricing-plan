@@ -58,6 +58,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import Settings
 from app.db.models import (
+    ApprovalDecisionRow,
     ApprovalRequestRow,
     AuditEventRow,
     CustomMetricRow,
@@ -437,8 +438,20 @@ async def test_the_first_of_two_approvals_is_a_decision_not_a_state(
             ).all()
         )
     (event,) = events
+    async with database.session() as session:
+        decision_id = (
+            await session.execute(
+                select(ApprovalDecisionRow.id).where(ApprovalDecisionRow.request_id == request_id)
+            )
+        ).scalar_one()
     assert event.before == {"status": "review", "approvers_recorded": 0}
-    assert event.after == {"status": "review", "approvers_recorded": 1}
+    # The two ids let a reconciliation match the event to its request and decision row (FR-2163).
+    assert event.after == {
+        "status": "review",
+        "approvers_recorded": 1,
+        "approval_request_id": str(request_id),
+        "decision_id": str(decision_id),
+    }
 
 
 async def _events_named(database: Database, workspace_id: UUID, action: str) -> list[AuditEventRow]:

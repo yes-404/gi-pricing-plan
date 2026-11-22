@@ -624,3 +624,211 @@ def test_a_grouping_can_name_its_parent_in_a_chain() -> None:
     assert region.parent_grouping_id == area.id
     rolled = apply_grouping(apply_grouping(pl.Series("vehicle_group", ["AB2"]), area), region)
     assert rolled.to_list() == ["NORTH"]
+
+
+# --- following a chain for the finer-level diagnostics (FR-109, decision #1908) ---------
+
+
+def _postcode_chain() -> tuple[Grouping, Grouping]:
+    """`area` rolls postcodes up from `postcode`, and `region` rolls areas up from its own
+    `area` column, so each level reads its own column and the chain holds under the rules a
+    chain must satisfy (a value at an ancestor's level is refused, PR #1947). The finer levels
+    are still rebuilt from the deepest column, `postcode`, never read from `area` (#1908 (B)),
+    which the frames below show by carrying no `area` column at all."""
+    area = _manual(
+        slug="area", column="postcode", mapping={"AB1": "AB", "AB2": "AB", "CD1": "CD"}
+    )
+    region = _manual(
+        slug="region",
+        column="area",
+        mapping={"AB": "NORTH", "CD": "SOUTH"},
+        parent_grouping_id=area.id,
+    )
+    return area, region
+
+
+@pytest.mark.req("FR-109")
+def test_a_chain_is_read_from_the_deepest_grouping_to_the_one_named() -> None:
+    from pricing_core.modelling.groupings import grouping_chain
+
+    area, region = _postcode_chain()
+    groupings = {area.id: area, region.id: region}
+    assert grouping_chain(region, groupings) == (area, region)
+    assert grouping_chain(area, groupings) == (area,)
+
+
+@pytest.mark.req("FR-109")
+def test_a_slug_equal_to_the_deepest_column_never_gives_two_levels_one_name() -> None:
+    """The deepest grouping `postcode` reads the `postcode` column. The raw level is then named
+    "postcode (column)", so the two levels stay apart (a duplicate name would refuse the
+    stored diagnostics and fail the fit, against the ruling of 2026-11-17 on #1506)."""
+    from pricing_core.modelling.groupings import finer_levels
+
+    postcode = _manual(
+        slug="postcode", column="postcode", mapping={"AB1": "AB", "AB2": "AB", "CD1": "CD"}
+    )
+    region = _manual(
+        slug="region", column="postcode_area", mapping={"AB": "NORTH", "CD": "SOUTH"},
+        parent_grouping_id=postcode.id,
+    )
+    frame = pl.DataFrame({"postcode": ["AB1", "AB2", "CD1"]})
+    levels = finer_levels(frame, region, {postcode.id: postcode, region.id: region})
+    assert [name for name, _ in levels] == ["postcode (column)", "postcode"]
+    raw, rolled = (values.to_list() for _, values in levels)
+    assert raw == ["AB1", "AB2", "CD1"]
+    assert rolled == ["AB", "AB", "CD"]
+
+
+@pytest.mark.req("FR-109")
+def test_two_versions_of_one_grouping_in_a_chain_are_named_by_their_versions() -> None:
+    """`area` at version 1 is the parent of `area` at version 2 (slugs are unique per version
+    only, and nothing refuses such a chain). Each repeated slug's level is named
+    "<slug>@<version>", so no two levels share a name and the stored diagnostics, and the
+    fit, are never refused for it."""
+    from pricing_core.modelling.groupings import finer_levels
+
+    area1 = _manual(
+        slug="area", version=1, column="postcode",
+        mapping={"AB1": "AB", "AB2": "AB", "CD1": "CD"},
+    )
+    area2 = _manual(
+        slug="area", version=2, column="area", mapping={"AB": "AB", "CD": "CD"},
+        parent_grouping_id=area1.id,
+    )
+    region = _manual(
+        slug="region", column="area", mapping={"AB": "NORTH", "CD": "SOUTH"},
+        parent_grouping_id=area2.id,
+    )
+    groupings = {g.id: g for g in (area1, area2, region)}
+    levels = finer_levels(pl.DataFrame({"postcode": ["AB1", "CD1"]}), region, groupings)
+    names = [name for name, _ in levels]
+    assert names == ["postcode", "area@1", "area@2"]
+    assert len(set(names)) == len(names)
+
+
+@pytest.mark.req("FR-109")
+def test_no_other_level_name_changes_when_nothing_collides() -> None:
+    """The rule renames only the raw level, and only on a collision: the column, then each
+    grouping's slug, as before."""
+    from pricing_core.modelling.groupings import finer_levels
+
+    area, region = _postcode_chain()
+    country = _manual(
+        slug="country", column="region", mapping={"NORTH": "UK", "SOUTH": "UK"},
+        parent_grouping_id=region.id,
+    )
+    groupings = {area.id: area, region.id: region, country.id: country}
+    levels = finer_levels(pl.DataFrame({"postcode": ["AB1"]}), country, groupings)
+    assert [name for name, _ in levels] == ["postcode", "area", "region"]
+
+
+@pytest.mark.req("FR-109")
+def test_each_finer_level_is_rebuilt_from_the_deepest_column_by_applying_the_chain() -> None:
+    """#1908 (B): the raw postcode, then `area` applied to it. Reading each grouping's own
+    column would give the raw postcode twice and never the area level."""
+    from pricing_core.modelling.groupings import finer_levels
+
+    area, region = _postcode_chain()
+    frame = pl.DataFrame({"postcode": ["AB1", "AB1", "AB2", "AB2", "CD1", "CD1"]})
+    levels = finer_levels(frame, region, {area.id: area, region.id: region})
+    assert [name for name, _ in levels] == ["postcode", "area"]
+    raw, rolled = (values for _, values in levels)
+    assert raw.to_list() == ["AB1", "AB1", "AB2", "AB2", "CD1", "CD1"]
+    assert rolled.to_list() == ["AB", "AB", "AB", "AB", "CD", "CD"]
+
+
+@pytest.mark.req("FR-109")
+def test_a_finer_level_whose_column_is_not_in_the_frame_is_not_available() -> None:
+    from pricing_core.modelling.groupings import finer_levels
+
+    area, region = _postcode_chain()
+    frame = pl.DataFrame({"outcode": ["AB1", "CD1"]})
+    levels = finer_levels(frame, region, {area.id: area, region.id: region})
+    assert [name for name, _ in levels] == ["postcode", "area"]
+    # Every row stays, as one that is not available, so none of them is lost from a count.
+    assert all(values.to_list() == [None, None] for _, values in levels)
+
+
+@pytest.mark.req("FR-109")
+def test_a_level_the_chain_refuses_is_not_available_nor_any_coarser_one() -> None:
+    """`area` refuses an unseen postcode (`error`, FR-104): its row keeps its raw value and is
+    not available at the area level, while the other row rolls up as usual (the maintainer's
+    ruling of 2026-11-17 on #1506)."""
+    from pricing_core.modelling.groupings import finer_levels
+
+    area, region = _postcode_chain()
+    frame = pl.DataFrame({"postcode": ["AB1", "ZZ9", None]})
+    levels = finer_levels(frame, region, {area.id: area, region.id: region})
+    assert [name for name, _ in levels] == ["postcode", "area"]
+    raw, rolled = (values for _, values in levels)
+    assert raw.to_list() == ["AB1", "ZZ9", None]
+    assert rolled.to_list() == ["AB", None, None]
+
+
+@pytest.mark.req("FR-109")
+def test_a_grouping_with_no_parent_has_no_finer_level() -> None:
+    from pricing_core.modelling.groupings import finer_levels
+
+    area, _ = _postcode_chain()
+    frame = pl.DataFrame({"postcode": ["AB1"]})
+    assert finer_levels(frame, area, {area.id: area}) == ()
+
+
+@pytest.mark.req("FR-109")
+def test_a_chain_whose_parent_is_not_supplied_is_followed_as_far_as_it_goes() -> None:
+    """A dangling parent link is data, not a caller's error: main has stored Groupings whose
+    parent is gone. The chain stops at the link it cannot follow, and its first Grouping
+    still names a parent, which is how `finer_levels` knows the chain is broken."""
+    from pricing_core.modelling.groupings import grouping_chain
+
+    _, region = _postcode_chain()
+    assert grouping_chain(region, {region.id: region}) == (region,)
+
+
+def _country_chain() -> tuple[Grouping, Grouping, Grouping]:
+    """`postcode` -> `area` -> `region` -> `country`, each level reading its own column."""
+    area, region = _postcode_chain()
+    country = _manual(
+        slug="country",
+        column="region",
+        mapping={"NORTH": "UK", "SOUTH": "UK"},
+        parent_grouping_id=region.id,
+    )
+    return area, region, country
+
+
+@pytest.mark.req("FR-109")
+def test_a_parent_not_supplied_makes_its_level_and_every_coarser_one_not_available() -> None:
+    """`area` is missing, so neither the level it produces nor the `region` level above it can
+    be rebuilt: both are named, every row is "not available" at both, and nothing raises,
+    so a fit that scoring completes is never failed by its diagnostics (the ruling of
+    2026-11-17 on #1506, applied to a link the chain cannot follow)."""
+    from pricing_core.modelling.groupings import finer_levels
+
+    _, region, country = _country_chain()
+    frame = pl.DataFrame({"postcode": ["AB1", "CD1", None]})
+    levels = finer_levels(frame, country, {region.id: region, country.id: country})
+    assert [name for name, _ in levels] == ["area", "region"]
+    assert all(values.to_list() == [None, None, None] for _, values in levels)
+
+
+@pytest.mark.req("FR-109")
+def test_a_direct_parent_not_supplied_leaves_one_not_available_level() -> None:
+    from pricing_core.modelling.groupings import finer_levels
+
+    _, region = _postcode_chain()
+    levels = finer_levels(pl.DataFrame({"postcode": ["AB1"]}), region, {region.id: region})
+    assert [(name, values.to_list()) for name, values in levels] == [("area", [None])]
+
+
+@pytest.mark.req("FR-109")
+def test_a_chain_that_comes_back_on_itself_is_still_a_callers_error() -> None:
+    from pricing_core.modelling.groupings import finer_levels, grouping_chain
+
+    area, region = _postcode_chain()
+    looped = area.model_copy(update={"parent_grouping_id": region.id})
+    groupings = {looped.id: looped, region.id: region}
+    with pytest.raises(ValueError, match="comes back"):
+        grouping_chain(region, groupings)
+    with pytest.raises(ValueError, match="comes back"):
+        finer_levels(pl.DataFrame({"postcode": ["AB1"]}), region, groupings)

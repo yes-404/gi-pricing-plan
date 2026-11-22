@@ -209,6 +209,16 @@ def test_a_scale_cap_overflow_is_refused() -> None:
     assert "EXPRESSION_SCALE_OVERFLOW" in codes(algorithm)
 
 
+@pytest.mark.req("FR-275")
+def test_a_scale_overflow_locates_the_input_and_the_bound_by_position() -> None:
+    """#1712 S7c: the field is the real entry's position, the second input's `max` here."""
+    data = valid_algorithm()
+    data["input_contract"][1]["max"] = "0.12345678901234567890123456789"  # 29 places
+    issues = [i for i in validate_algorithm(RatingAlgorithm.model_validate(data))
+              if i.code == "EXPRESSION_SCALE_OVERFLOW"]
+    assert [(i.step_id, i.field) for i in issues] == [(None, "input_contract[1].max")], issues
+
+
 @pytest.mark.req("FR-276")
 def test_a_foreign_function_is_refused() -> None:
     """FR-276: an expression using a function the engine lacks fails to compile."""
@@ -390,7 +400,8 @@ def test_a_fragment_output_port_type_mismatch_names_the_producing_step() -> None
     assert [(i.code, i.step_id, i.field) for i in issues] == [
         ("RATING_TYPE_MISMATCH", "s_last", "outputs")
     ]
-    assert "'ncd_factor'" in issues[0].message
+    # #1712 S7c: the port is named by the issue's structured fields, not by the text.
+    assert "ncd_factor" not in issues[0].message
 
 
 @pytest.mark.req("FR-217")
@@ -698,3 +709,126 @@ def test_a_mount_port_admits_the_allowed_set(producer: str, declared: str) -> No
 
     algorithm, fragments = _mount_case(producer, declared)
     _refuse_mount_port_type_mismatch(algorithm, fragments)
+
+
+# --- #1712 S7c: no issue text carries a caller-controlled string -------------------------------
+# NFR-499: `compile_bundle` raises `issues[0].message` into a CodedError that a Job stores, so the
+# text of EVERY issue is checked, not the first: the guard is order-independent. The sentinel is
+# in every caller-controlled string the checks read (step ids, value names, input names, the
+# expression text, the function the expression calls).
+
+SENT = "sentinels7c91"
+
+
+def _sentinel_everywhere(data: dict, names: list[str]) -> dict:
+    import json
+    import re
+
+    text = json.dumps(data)
+    for name in names:
+        text = re.sub(rf"\b{name}\b", f"{name}_{SENT}", text)
+    planted: dict = json.loads(text)
+    return planted
+
+
+def _planted_clamp() -> RatingAlgorithm:
+    data = _sentinel_everywhere(
+        PRE_EDIT_VALID_ALGORITHM,
+        ["s_minprem", "s_office", "s_expense", "s_area", "office_premium_minor",
+         "expense_factor", "rating_area"],
+    )
+    return RatingAlgorithm.model_validate(data)
+
+
+def _planted_text() -> RatingAlgorithm:
+    data = _sentinel_everywhere(
+        valid_algorithm(), ["s_office", "s_area", "office_premium_minor", "expense_factor"]
+    )
+    for step in data["steps"]:
+        if step["step_id"].startswith("s_office"):
+            step["expr"] = (
+                f"now() + risk_premium_minor / expense_factor_{SENT} + "
+                f"0.12345678901234567890123456789012 + fn_{SENT}(1) % 2 + undeclared_{SENT}"
+            )
+        if step["step_id"].startswith("s_area"):
+            step["as_at"] = f"asat_{SENT}"
+    data["input_contract"].append(
+        {"name": f"rate_{SENT}", "type": "decimal", "nullable": False,
+         "min": "0.12345678901234567890123456789012"}
+    )
+    return RatingAlgorithm.model_validate(data)
+
+
+def test_no_issue_text_carries_a_step_id_a_value_name_or_authored_text() -> None:
+    clamp, text = validate_algorithm(_planted_clamp()), validate_algorithm(_planted_text())
+    issues = [*clamp, *text]
+    # The guard: each check the plants are for fired, so a clean text is not a check that
+    # never ran (the order of the issues does not matter).
+    assert {i.code for i in issues} >= {
+        "LADDER_CLAMP_UNPLACEABLE", "EXPRESSION_NON_DETERMINISTIC", "EXPRESSION_UNGUARDED_DIVISION",
+        "EXPRESSION_SCALE_OVERFLOW", "EXPRESSION_INVALID_VOCABULARY",
+        "RATING_GRAPH_UNRESOLVED_REF", "RATING_STEP_UNDECLARED_READ",
+    }
+    leaking = [(i.code, i.message) for i in issues if SENT in i.message]
+    assert leaking == []
+    # The location is still reported, in the structured fields (FR-1607).
+    assert any(i.step_id is not None and SENT in i.step_id for i in issues)
+
+
+# S7c audit S3: the one test above plants `now()` first, and `check_allow_list` returns only the
+# FIRST refused token, so it cannot see the allow-list text, the scale-cap text or the engine's
+# own text. Each of those three refusals is planted ALONE here, so reverting one fix is red.
+_LONG_LITERAL = "0.12345678901234567890123456789012"
+
+
+@pytest.mark.parametrize(
+    ("expr", "code", "authored"),
+    [
+        (f"risk_premium_minor + fn_{SENT}(1)", "EXPRESSION_INVALID_VOCABULARY", f"fn_{SENT}"),
+        (f"risk_premium_minor + {_LONG_LITERAL}", "EXPRESSION_SCALE_OVERFLOW", _LONG_LITERAL),
+        ("risk_premium_minor @ 2", "EXPRESSION_INVALID_VOCABULARY", "@"),
+    ],
+    ids=["allow-list", "scale-cap", "engine-vocabulary"],
+)
+def test_a_refusal_text_carries_no_authored_token(expr: str, code: str, authored: str) -> None:
+    issues = _issues(_with("s_office", expr=expr), code)
+    assert issues, f"the plant did not fire {code}"
+    assert [i.message for i in issues if authored in i.message] == []
+    assert {i.field for i in issues} == {"expr"}
+
+
+def test_the_type_mismatch_text_names_no_output() -> None:
+    outputs = [(f"s_out_{SENT}", f"out_{SENT}", "decimal", f"src_{SENT}")]
+    issues = output_type_issues({f"src_{SENT}": "money_minor"}, outputs, at_output_step=True)
+    assert [i.code for i in issues] == ["RATING_TYPE_MISMATCH"]
+    assert SENT not in issues[0].message
+    assert issues[0].step_id == f"s_out_{SENT}"
+
+
+@pytest.mark.req("FR-240")
+def test_a_clamp_consuming_another_name_is_located_at_consumes_0() -> None:
+    """#1914 review (freynia404, at 267e8507), blocking 1: the `consumes[0]` limb of the clamp
+    location is reachable. A clamp whose produced name is the source of the last rung before
+    `constraints` (`clamped_value`, read by the `optimisation_adjustment` output step) but which
+    consumes another name (`optimisation_adjustment_minor`) validates, and the issue names the
+    consumed entry by position."""
+    payload = valid_algorithm()
+    steps = [s for s in payload["steps"] if s["step_id"] not in {"s_minprem", "s_out_office"}]
+    index = next(i for i, s in enumerate(steps) if s["step_id"] == "s_office")
+    steps[index + 1 : index + 1] = [
+        {"step_id": "s_opt", "type": "expression", "label": "Optimisation adjustment",
+         "expr": "office_premium_minor * 1", "result_type": "money_minor",
+         "consumes": ["office_premium_minor"], "produces": "optimisation_adjustment_minor"},
+        {"step_id": "s_clamp", "type": "constraint", "label": "Min premium",
+         "condition": "optimisation_adjustment_minor >= 100", "on_violation": "clamp",
+         "clamp_bounds": {"min": "100"}, "reason_code": "MIN_PREMIUM_APPLIED",
+         "consumes": ["optimisation_adjustment_minor"], "produces": "clamped_value"},
+        {"step_id": "s_out_opt", "type": "output", "label": "Optimisation adjustment",
+         "output_name": "optimisation_adjustment_minor",
+         "rounding": {"mode": "half_even", "dp": 0}, "consumes": ["clamped_value"]},
+    ]
+    payload["steps"] = steps
+    issues = validate_algorithm(RatingAlgorithm.model_validate(payload))
+    assert [(i.code, i.step_id, i.field) for i in issues] == [
+        ("LADDER_CLAMP_UNPLACEABLE", "s_clamp", "consumes[0]")
+    ], issues

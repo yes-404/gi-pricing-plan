@@ -155,7 +155,7 @@ def test_default_repo_is_the_checkout_the_script_lives_in(
     """
     scripts = repo / "scripts"
     scripts.mkdir()
-    for name in ("freeze-check.py", "_frozen.py"):
+    for name in ("freeze-check.py", "_frozen.py", "_gitenv.py"):
         (scripts / name).write_text((SCRIPT.parent / name).read_text())
     write(repo, "docs/plans/PL-1.md", "edited\n")
     commit(repo)
@@ -196,7 +196,7 @@ def test_an_exported_git_variable_does_not_redirect_the_read(
     strips them, so it still reads its own checkout and does not false-pass (#1900 audit Q6-A)."""
     scripts = repo / "scripts"
     scripts.mkdir()
-    for name in ("freeze-check.py", "_frozen.py"):
+    for name in ("freeze-check.py", "_frozen.py", "_gitenv.py"):
         (scripts / name).write_text((SCRIPT.parent / name).read_text())
     write(repo, "docs/plans/PL-1.md", "edited\n")
     commit(repo)

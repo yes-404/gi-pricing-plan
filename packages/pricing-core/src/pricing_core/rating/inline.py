@@ -275,7 +275,7 @@ def inline_mounts(
     if clash:
         _raise_named(
             "VALIDATION_FAILED",
-            f"a namespaced sub-graph name equals a parent name or an engine key: {clash} (FR-217)",
+            "a namespaced sub-graph name equals a parent name or an engine key (FR-217)",
         )
 
     ordered = _stable_topological([*algorithm.steps, *inlined])

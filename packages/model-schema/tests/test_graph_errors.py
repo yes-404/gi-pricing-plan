@@ -70,3 +70,54 @@ def test_a_declared_output_without_an_output_step_is_an_input_free_error() -> No
     error = raised(data)
     assert type(error) is InputFreeError
     assert "FR-214" in str(error)
+
+
+# --- #1712 S7c: a typed signal's text carries no caller-controlled string --------------------
+# Every string the request controls carries the sentinel, so a text that echoes any of them
+# (a step id, a value name, an output name, a mount point, a port name) is caught whichever
+# rule fires first.
+
+SENT = "sentinels7c91"
+
+
+def _planted() -> dict:
+    return {
+        "slug": f"slug-{SENT}",
+        "version": 1,
+        "input_contract": [{"name": f"age_{SENT}", "type": "int", "nullable": False}],
+        "outputs": [{"name": f"out_{SENT}", "type": "money_minor", "required": True}],
+        "steps": [
+            {"step_id": f"s_in_{SENT}", "type": "input", "label": f"label {SENT}",
+             "input_name": f"age_{SENT}", "on_missing": "error", "produces": f"age_{SENT}"},
+            {"step_id": f"s_out_{SENT}", "type": "output", "label": f"label {SENT}",
+             "output_name": f"out_{SENT}", "rounding": {"mode": "half_even", "dp": 0},
+             "consumes": f"age_{SENT}"},
+        ],
+    }
+
+
+def test_an_undefined_value_signal_names_neither_the_step_nor_the_value() -> None:
+    data = _planted()
+    data["steps"][1]["consumes"] = f"ghost_{SENT}"
+    error = raised(data)
+    assert isinstance(error, GraphUnresolvedRefError)
+    assert SENT not in str(error)
+
+
+def test_a_blank_mount_input_signal_names_neither_the_mount_nor_the_port() -> None:
+    data = _planted()
+    data["sub_graphs"] = [
+        {"ref": "sub_graph:ncd@1", "mount_point": f"m_{SENT}", "inputs": {f"p_{SENT}": " "}}
+    ]
+    error = raised(data)
+    assert isinstance(error, GraphUnresolvedRefError)
+    assert SENT not in str(error)
+
+
+def test_a_missing_output_step_names_the_output_in_located_and_not_in_the_message() -> None:
+    data = _planted()
+    data["outputs"].append({"name": f"extra_{SENT}", "type": "money_minor", "required": False})
+    error = raised(data)
+    assert isinstance(error, InputFreeError)
+    assert SENT not in str(error)
+    assert error.located == {"output": f"extra_{SENT}"}

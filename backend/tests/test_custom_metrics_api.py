@@ -599,3 +599,60 @@ def test_a_refused_metric_parameter_keeps_the_rule_and_drops_the_value(
         assert text not in problem["detail"], problem["detail"]
     for text in kept:
         assert text in problem["detail"], problem["detail"]
+
+
+# -- Strict numeric `params` (#1904) ---------------------------------------------------------
+
+
+@pytest.mark.parametrize("bad", [True, False, "5", "1e3"])
+def test_the_metric_create_model_refuses_a_non_number_param(bad: object) -> None:
+    """A JSON boolean or numeric string is no number: it is refused before any coercion."""
+    from pydantic import ValidationError
+
+    from app.api.custom_metrics import CreateCustomMetric
+
+    with pytest.raises(ValidationError):
+        CreateCustomMetric.model_validate({**_BODY, "params": {"cap": bad}})
+
+
+def test_the_metric_create_model_keeps_an_integer_money_param_an_int() -> None:
+    """Control: `cap` is integer minor units and must not become a float."""
+    from app.api.custom_metrics import CreateCustomMetric
+
+    request = CreateCustomMetric.model_validate({**_BODY, "params": {"cap": 1000}})
+    assert request.params == {"cap": 1000}
+    assert type(request.params["cap"]) is int
+
+
+_FLOAT_PARAM_BODY = {
+    "slug": "asymmetric-squared-nll",
+    "template": "asymmetric_squared",
+    "params": {"w_over": 1.5},
+    "direction": "lower_is_better",
+}
+
+
+def test_the_metric_create_model_keeps_a_float_param_a_float() -> None:
+    """Control, not a red: a float param stays a float (passes at main too)."""
+    from app.api.custom_metrics import CreateCustomMetric
+
+    request = CreateCustomMetric.model_validate(_FLOAT_PARAM_BODY)
+    assert request.params == {"w_over": 1.5}
+    assert type(request.params["w_over"]) is float
+
+
+def test_the_route_accepts_the_float_param_body_the_model_test_sends(
+    client: TestClient, actuary: dict[str, str]
+) -> None:
+    """The same body, through the route: `asymmetric_squared` defines `w_over`."""
+    response = client.post("/api/v1/custom-metrics", json=_FLOAT_PARAM_BODY, headers=actuary)
+    assert response.status_code == 201, response.text
+    assert response.json()["params"] == {"w_over": 1.5}
+
+
+def test_creating_a_metric_with_a_boolean_param_is_refused(
+    client: TestClient, actuary: dict[str, str]
+) -> None:
+    body = {**_BODY, "params": {"cap": True}}
+    response = client.post("/api/v1/custom-metrics", json=body, headers=actuary)
+    assert response.status_code == 422, response.text

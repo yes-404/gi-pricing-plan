@@ -54,7 +54,7 @@ export async function listObjectives(
   );
 }
 
-export type ObjectiveCertificate = components["schemas"]["ObjectiveCertificate"];
+export type ObjectiveCertificate = components["schemas"]["ObjectiveCertificateRead"];
 
 /**
  * FR-166's first read: status, certificate **outcome** and `approval_request_id` — not the

@@ -80,3 +80,12 @@ def test_the_module_level_helpers_do_not_echo_their_argument() -> None:
         with pytest.raises(InputFreeError) as raised:
             refuse(_SENTINEL)  # type: ignore[operator]
         assert _SENTINEL not in str(raised.value)
+
+
+@pytest.mark.req("NFR-499")
+def test_located_values_are_kept_on_the_error_and_never_rendered() -> None:
+    error = InputFreeError("an output has no step", located={"output": _SENTINEL})
+    assert str(error) == "an output has no step"
+    assert error.located == {"output": _SENTINEL}
+    assert _SENTINEL not in repr(error.args)
+    assert InputFreeError("plain").located == {}

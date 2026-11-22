@@ -1051,13 +1051,17 @@ a full suite (a seat that needs one is a gate holder). **A change that needs `al
 gap**, and the database must already be migrated.
 
 ```bash
-scripts/run-small.sh <worktree> <test-file> [<test-file> [<test-file>]]
+scripts/run-small.sh <worktree> <target> [<target> [<target>]]
 # e.g. scripts/run-small.sh /abs/path/to/worktree backend/tests/test_x.py
+#      scripts/run-small.sh /abs/path/to/worktree 'backend/tests/test_x.py::test_name[param]'
 ```
 
 It runs `uv run --directory <worktree> pytest -q <files>` itself; the command is not an argument. That is what
-lets "at most 3 named files" and "never a migration" be enforced by the script. Test files are relative to the
-worktree or absolute. **It exits with pytest's own exit code.** Each refusal below ends the run before pytest and is
+lets "at most 3 named files" and "never a migration" be enforced by the script. A `<target>` is a test file or one
+pytest node id (`file::test`, `file::test[param]`, `file::Class::test`), relative to the worktree or absolute; the
+file part passes every check below. `-k` and every other option stay refused (71). **It exits with pytest's own exit
+code, and a run that ran no test is an error:** pytest's exit 5 (nothing collected) and exit 4 (a node id not found)
+come back non-zero with a `NO TEST RAN` line on stderr, never a green. Each refusal below ends the run before pytest and is
 proven by `backend/tests/test_run_small_script.py`:
 
 | Exit | Refusal |
@@ -1066,8 +1070,8 @@ proven by `backend/tests/test_run_small_script.py`:
 | 65 | the caller's shell exports `GIP_GATE_SLOT`. No seat shell does; only a wrapper that holds a slot |
 | 66 | load1 (first field of `/proc/loadavg`) is not below 6. **Refused, not waited on**: retry later |
 | 67 | any argument names `alembic` (case-insensitive) |
-| 68 | more than 3 test files |
-| 71 | an argument is not an existing `.py` file: a directory, a pytest option or a typo |
+| 68 | more than 3 targets |
+| 71 | the file part of an argument is not an existing `.py` file: a directory, a pytest option (`-k` included) or a typo |
 | 72 | a test file resolves (after `realpath`, so a symlink counts) outside `<worktree>` |
 | 73 | a `.py` file is not named `test_*.py` or `*_test.py` (pytest's default `python_files`; `conftest.py` and helpers are refused) |
 | 75 | the small-test flock stayed held for the whole wait (`flock -E 75`, clear of pytest's 0-5) |

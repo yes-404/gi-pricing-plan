@@ -209,6 +209,10 @@ GENERATED_SHAPES: dict[str, str] = {
     # First written form, no hand-authored counterpart; the response gains `id`.
     "upload-url-request": "UploadUrlRequest",
     "upload-url-response": "UploadUrlResponse",
+    # Added 2026-11-17 (#1506 slice 2, FR-2159; #1810 option B). The read-side object every
+    # one of the ten governed shapes' reads carries. Generated wins: this file replaces the
+    # hand-authored `common/provenance.schema.json`, which is deleted in the same change.
+    "provenance": "Provenance",
 }
 
 

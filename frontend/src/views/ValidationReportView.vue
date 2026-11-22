@@ -12,6 +12,7 @@ import {
   type ValidationReport,
 } from "@/api/validation";
 import AcknowledgeDialog from "@/components/AcknowledgeDialog.vue";
+import ProvenanceBadge from "@/components/ProvenanceBadge.vue";
 import RuleResultRow from "@/components/RuleResultRow.vue";
 import ValidationBanner from "@/components/ValidationBanner.vue";
 
@@ -138,6 +139,8 @@ onMounted(() => void load());
 
     <template v-else-if="bands">
       <ValidationBanner :report="report" />
+      <!-- After the banner: `01` §5.3 puts the overall banner first. -->
+      <ProvenanceBadge :provenance="report.provenance" />
 
       <section
         v-if="bands.blocking.length"

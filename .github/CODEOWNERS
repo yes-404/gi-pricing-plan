@@ -46,10 +46,12 @@
 /packages/pricing-core/src/pricing_core/modelling/loss_treatment.py @yes-404 @freynia404
 /backend/src/app/worker/dislocation_handlers.py            @yes-404 @freynia404
 
-# The shared data contracts, and the script that generates the committed contracts from them
+# The shared data contracts, the script that generates the committed contracts from them, and
+# the drift guard whose registry of declared one-sided paths a change to must be cross-reviewed
 /packages/model-schema/                                    @yes-404 @freynia404
 /docs/contracts/                                           @yes-404 @freynia404
 /scripts/generate-contracts.py                             @yes-404 @freynia404
+/backend/tests/test_contracts.py                           @yes-404 @freynia404
 
 # Authentication and roles: what decides identity, permissions and roles. The Permission enum
 # and the built-in roles are in packages/model-schema/, covered above.
@@ -106,6 +108,7 @@
 /scripts/hooks/                                            @yes-404 @freynia404
 /scripts/freeze-check.py                                   @yes-404 @freynia404
 /scripts/_frozen.py                                        @yes-404 @freynia404
+/scripts/_gitenv.py                                        @yes-404 @freynia404
 /scripts/audit-docs.py                                     @yes-404 @freynia404
 /scripts/req-coverage.py                                   @yes-404 @freynia404
 /scripts/doc-id.py                                         @yes-404 @freynia404

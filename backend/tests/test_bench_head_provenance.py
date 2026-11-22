@@ -12,6 +12,7 @@ import importlib.util
 import os
 import pathlib
 import subprocess
+import sys
 
 import pytest
 
@@ -19,6 +20,8 @@ SCRIPTS = pathlib.Path(__file__).resolve().parents[2] / "scripts"
 
 
 def _load(name: str):
+    if str(SCRIPTS) not in sys.path:  # the script does `from _gitenv import clean_env`
+        sys.path.insert(0, str(SCRIPTS))
     spec = importlib.util.spec_from_file_location(name.replace("-", "_"), SCRIPTS / f"{name}.py")
     assert spec is not None
     assert spec.loader is not None
