@@ -9,7 +9,8 @@ description: Git and GitHub working discipline for this repo — what belongs in
 > `CONTRIBUTING.md` ("Pull requests", "Review"): one pull request per Work, squash at merge,
 > nobody merges their own pull request, the core lead merges one at a time. The section
 > "merge only the maintainer's own pull requests" below is a 2026-08-30 instruction kept as
-> history; the review tiers replace it. The slice grammar (`sl-<n>-<slug>`, `SL-<n>:` titles)
+> history; the review tiers replace it, and the ruling of 22 Nov 2026 (same section) governs
+> who merges a collaborator's pull request. The slice grammar (`sl-<n>-<slug>`, `SL-<n>:` titles)
 > is RETIRED: no `SL-` id is minted. Name a branch for its Work issue number and a short slug,
 > and write a Conventional Commit title. Where a section below says "ledger", "mint" or
 > `docs/process/document-ids.md`, it describes the retired record process: do not follow it.
@@ -56,7 +57,7 @@ plain generally. They are read by people with none of the session's context, so 
 changed and why, and leave load-bearing reasoning in the artifact the commit lands rather than
 in the message pointing at it.
 
-## The repository is public: merge only the maintainer's own pull requests
+## The repository is public: merge only the maintainer's own pull requests (SUPERSEDED 2026-11-22 for collaborators; see the amendment below)
 
 **Standing maintainer instruction, 2026-08-30**, when `yes-404/gi-pricing-plan` went public:
 
@@ -68,6 +69,15 @@ maintainer and left alone**~~ **Merge a PR only when `author.login` is `yes-404`
 `app/dependabot` on the maintainer's MERGE-ACK naming its head SHA. Any other author is reported to the
 maintainer and left alone** — not merged, not closed, not reviewed into a state that invites
 merging.
+
+~~**Merge a PR only when `author.login` is `yes-404`, or `app/dependabot` on the maintainer's MERGE-ACK naming its head SHA. Any other author is reported to the maintainer and left alone**~~ **Superseded for a collaborator's pull request by the rules below.**
+
+*(Amended 2026-11-22 by the maintainer (by delegation), on the ruling of 22 Nov 2026 that a collaborator's pull request is merged by the core lead: the four rules below replace the author line. The 2026-09-29 amendment that follows is kept as history.)*
+
+1. **Who merges.** A collaborator's pull request (an author other than `yes-404`; nobody merges their own pull request, `CONTRIBUTING.md` "Pull requests") is **squash-merged by the core lead** on the maintainer's MERGE-ACK naming its head SHA, after the maintainer's cross-review approves it. *Why: the contributor cannot merge their own work, and the maintainer decides what lands.*
+2. **Squash form.** Subject = the PR title + ` (#N)`. Body = the `Range:` line, then the pull request's body verbatim. No core-lead `Co-Authored-By` trailer and no link: the work is not the core team's, and GitHub keeps the collaborator as the author. The read-back (`git log -1 --format='%an %s'`, `%B` line count) includes the commit's **author**. *Why: a trailer would credit the core team with work it did not write.*
+3. **Evidence.** The CI workflows that the PR's paths fire, run on the **exact landing tree**: the merge with the current `main`. Read the checkout line (`HEAD is now at <merge> Merge <head> into <main>`) from a **finished run's log** before saying which tree ran, and check the squash tree equals that merge's tree. To refresh a human's PR on a moved `main`: close and reopen it, and read the checkout line **before cancelling anything** (the first reopen is stale only sometimes). *Why: a run reports its own head, not the tree it tested.*
+4. **A bot's pull request** (`app/dependabot`) is refreshed by the bot's own rebase (`@dependabot rebase`), never by close and reopen. **Read the regenerated head again:** compare its own diff with the one read before (the same packages at the same versions, lock changes confined to them). A moved version makes it a new read, not a refresh. *Why: a rebase can change what the bot resolved.*
 
 *(Amended 2026-09-29, mirroring `.claude/roles/lead.md`'s dated amendment by the maintainer: `app/dependabot` is also merged, but only on the maintainer's MERGE-ACK naming its head SHA. Every other author is still reported and left alone. The author query below lists Dependabot PRs too; they wait for that ACK, not a report.)*
 
@@ -1002,6 +1012,8 @@ delta, not the PR. W6b-13 practiced this by accident: the executor's push `8ef88
 it fixed; a silent amend would have carried the old verdict over the new code.
 
 ## Verified
+
+2026-11-22 (against main `18868c6c697ecb6f1708348d4b5813b1c3264c22`) — The collaborator-merge amendment added under "The repository is public", on the maintainer's ruling of 22 Nov 2026. The rules were read against `CONTRIBUTING.md` "Pull requests" and "Review" at that tree. The rules were applied on live pull requests the same day: #1961 and #1986 (collaborator pull requests) were squash-merged this way, with the author read back, and #1965 was refreshed by the bot's rebase and its regenerated diff read again. The rest of this file was not re-read.
 
 2026-11-08 (tree `c4ae584a`) — The merge-body section added (skills-gap A6), read against its process rows. The rest of this file was not re-read.
 

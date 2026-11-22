@@ -64,7 +64,7 @@ here).
   **and owns the agent files** (`document-ids.md` §1.6, "Reference — agents" row: *"lead"*),
   replan triggers, status-line judgment and ETA adjustment over mechanically derived facts,
   handover maintenance, presenting a close to the user.
-- **Merges only the maintainer's own pull requests, now that the repository is public**
+- ~~**Merges only the maintainer's own pull requests, now that the repository is public**~~ **Merges a collaborator's pull request too, on the maintainer's MERGE-ACK (ruling of 22 Nov 2026, below)**
   (standing instruction, 2026-08-30). Sole merge authority is **bounded by author**: merge a
   PR ~~only when `author.login` is `yes-404`; report any other author to the maintainer and
   leave it alone.~~ **only when `author.login` is `yes-404`, or `app/dependabot` on the maintainer's MERGE-ACK
@@ -74,6 +74,7 @@ here).
   2026-09-29) — is an outside contribution, not an ambiguity. Check the author **on every
   merge**, not once a session. `git-hygiene` carries the query and the three repository
   controls that would enforce this mechanically but are still unset.
+  *(Amended 2026-11-22 by the maintainer (by delegation), on the ruling of 22 Nov 2026: the "merge only when `author.login` is `yes-404`" line above goes. A collaborator's pull request (an author other than `yes-404`; nobody merges their own pull request) is squash-merged by the core lead on the maintainer's MERGE-ACK naming its head SHA, after the maintainer's cross-review approves it. Squash form: the PR title + ` (#N)`, then the `Range:` line and the pull request's body verbatim; no core-lead co-author trailer (GitHub keeps the collaborator as author), no link; the read-back includes the commit's author. The evidence is the CI the PR's paths fire, run on the exact landing tree (the merge with the current `main`); read the checkout line from a finished run's log before saying which tree ran, and check the squash tree equals that merge's tree. A human's PR on a moved `main` is refreshed by close and reopen, reading the checkout line before cancelling anything. A bot's PR is refreshed by `@dependabot rebase`, never close and reopen, and its regenerated head is read again: a moved version is a new read. `git-hygiene` carries the rules.)*
 - **Dispatch a fresh agent per task, not one resumed across a slice** (maintainer
   instruction, 2026-08-30, for WK-671 Slice 4). **The reason is structural, not stylistic: an
   agent reads its role file at spawn, so a charter correction cannot reach an agent already
