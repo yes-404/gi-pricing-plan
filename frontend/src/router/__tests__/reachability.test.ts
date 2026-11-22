@@ -82,6 +82,13 @@ describe("route reachability (FR-25)", () => {
     expect(WHITELISTED.has("/admin/settings")).toBe(false);
   });
 
+  it("registers /admin/status and links it from the shell (FR-443, 07 §5.3)", () => {
+    expect(ROUTES.map((route) => route.path)).toContain("/admin/status");
+    expect(extractTargets(SHELL, ROUTES)).toContain("/admin/status");
+    expect(WHITELISTED.has("/admin/status")).toBe(false);
+    expect(reachableSet()).toContain("/admin/status");
+  });
+
   it("finds no literal link to an unregistered route", () => {
     const views = ROUTES.map((route) => (route.view ? viewSource(route.view) : ""));
     const candidates = [SHELL, ...views].flatMap(linkCandidates);

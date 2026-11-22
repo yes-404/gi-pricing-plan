@@ -346,6 +346,15 @@ export const routes: RouteRecordRaw[] = [
     component: () => import("@/views/SettingsView.vue"),
   },
   {
+    // `07` §5.3: System status. Open to any role that holds `settings:read`, which every
+    // built-in role does (decision, #1505 comment 7060618416, answer 1); the server enforces
+    // it, so a caller with no role sees the refusal as a problem, as on `/audit`.
+    path: "/admin/status",
+    name: "system-status",
+    meta: { requiresAuth: true },
+    component: () => import("@/views/SystemStatusView.vue"),
+  },
+  {
     // `06` FR-383: one artifact version's history. `:ref` is `{type}:{slug}@{version}`,
     // percent-encoded in the path (its `:` and `@` are not path-safe in every client); vue-router
     // decodes it. Function mode and a prop named `artifactRef`: `props: true` would pass it as

@@ -148,3 +148,11 @@ describe("the artifact history route", () => {
     expect(props(resolved)).toEqual({ artifactRef: "model:motor-freq@2" });
   });
 });
+
+describe("the /admin/status route (07 §5.3)", () => {
+  it("resolves to the System status view, behind sign-in only", () => {
+    expect(matchedNames("/admin/status")).toContain("system-status");
+    const record = routes.find((r) => r.path === "/admin/status");
+    expect(record?.meta?.requiresAuth).toBe(true);
+  });
+});
