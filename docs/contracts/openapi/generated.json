@@ -17720,6 +17720,10 @@
           "resolved_from": {
             "$ref": "#/components/schemas/SettingSource"
           },
+          "scope": {
+            "$ref": "#/components/schemas/SettingScope",
+            "description": "The levels this setting may be set at, as the settings registry declares them: `workspace`, `workspace_or_environment` or `environment` (FR-446). A workspace-level write to an `environment` setting is refused. Required on every resolution; the registry is its only source."
+          },
           "type": {
             "$ref": "#/components/schemas/SettingType"
           }
@@ -17729,10 +17733,21 @@
           "effective_value",
           "resolved_from",
           "candidates",
-          "type"
+          "type",
+          "scope"
         ],
         "title": "SettingResolution",
         "type": "object"
+      },
+      "SettingScope": {
+        "description": "The levels a setting may be set at (FR-446, `RL-1311` item 1).",
+        "enum": [
+          "workspace",
+          "workspace_or_environment",
+          "environment"
+        ],
+        "title": "SettingScope",
+        "type": "string"
       },
       "SettingSource": {
         "description": "Which layer supplied a value. Ordered by precedence, highest first.",

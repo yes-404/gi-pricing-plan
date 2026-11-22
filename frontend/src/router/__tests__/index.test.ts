@@ -130,6 +130,14 @@ describe("the audit explorer route", () => {
   });
 });
 
+describe("the settings route", () => {
+  it("resolves /admin/settings to the Settings view, behind sign-in", () => {
+    const resolved = router().resolve("/admin/settings");
+    expect(resolved.matched.map((r) => r.name)).toContain("settings");
+    expect(resolved.meta.requiresAuth).toBe(true);
+  });
+});
+
 describe("the artifact history route", () => {
   it("resolves a percent-encoded ref and hands the view the decoded string", () => {
     const resolved = router().resolve("/artifacts/model%3Amotor-freq%402/history");

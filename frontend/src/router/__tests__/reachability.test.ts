@@ -75,6 +75,13 @@ describe("route reachability (FR-25)", () => {
     expect(reachableSet()).toContain("/rating-versions/:id");
   });
 
+  it("registers /admin/settings and reaches it from the shell (FR-446, 07 §5.3)", () => {
+    expect(ROUTES.map((route) => route.path)).toContain("/admin/settings");
+    expect(extractTargets(SHELL, ROUTES)).toContain("/admin/settings");
+    expect(reachableSet()).toContain("/admin/settings");
+    expect(WHITELISTED.has("/admin/settings")).toBe(false);
+  });
+
   it("finds no literal link to an unregistered route", () => {
     const views = ROUTES.map((route) => (route.view ? viewSource(route.view) : ""));
     const candidates = [SHELL, ...views].flatMap(linkCandidates);

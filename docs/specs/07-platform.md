@@ -297,11 +297,14 @@ The key value itself appears exactly once, in the creation response (FR-389).
     {"source": "workspace", "value": 0.10},
     {"source": "default", "value": 0.10}
   ],
-  "type": "float", "constraints": {"min": 0.0, "max": 1.0}
+  "type": "float", "constraints": {"min": 0.0, "max": 1.0},
+  "scope": "workspace"
 }
 ```
 
 > **Amended 2026-10-10 (WK-674 Slice 3, `PL-1583`; `RL-1311` item 2).** The example above is not rewritten. The resolution's `candidates` gain an `environment_setting` source, between `env` and `workspace`. The request takes an optional Environment (its slug). With none, the Environment layer is skipped and no `environment_setting` candidate is reported. With one, every layer's candidate is reported, the Environment setting included. An Environment setting is stored one row per (Environment, key): `environment_id`, `key`, `value`, `updated_by`, `updated_at`; the pair is unique.
+
+> **Amended 2026-11-21 (#1505, #1964, the decision on #1964 (issue comment 7060618167), option A): the resolution carries each setting's declared scope.** A `scope` field is added to the resolution and is required on every resolution the API returns. Its value is the level the settings registry declares for the setting (FR-446): `workspace`, `workspace_or_environment` or `environment`. The registry is its only source; no request supplies it. A caller can therefore tell a setting that can be set at workspace level (`workspace`, `workspace_or_environment`) from an Environment-only one (`environment`), for which `PUT /api/v1/settings` refuses a workspace-level write, without holding a copy of the registry. The example above gains the field and is otherwise as it was.
 
 ### 4.5 `Blob Upload` *(appended 2026-10-16, WK-1178, `SL-1722`, FR-1776, `RL-1724`)*
 

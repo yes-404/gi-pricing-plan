@@ -338,6 +338,14 @@ export const routes: RouteRecordRaw[] = [
     component: () => import("@/views/AuditExplorerView.vue"),
   },
   {
+    // `07` §5.3, FR-446: effective settings with their resolution source. Reading needs
+    // `settings:read` and writing `admin:manage_settings`; the server enforces both.
+    path: "/admin/settings",
+    name: "settings",
+    meta: { requiresAuth: true },
+    component: () => import("@/views/SettingsView.vue"),
+  },
+  {
     // `06` FR-383: one artifact version's history. `:ref` is `{type}:{slug}@{version}`,
     // percent-encoded in the path (its `:` and `@` are not path-safe in every client); vue-router
     // decodes it. Function mode and a prop named `artifactRef`: `props: true` would pass it as

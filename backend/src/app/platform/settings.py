@@ -18,7 +18,6 @@ automatically the safe answer.
 
 from __future__ import annotations
 
-import enum
 from dataclasses import dataclass, field
 from typing import Any
 from uuid import UUID
@@ -36,6 +35,7 @@ from model_schema import (
     SettingSource,
     SettingType,
 )
+from model_schema.settings import SettingScope
 
 __all__ = [
     "REGISTRY",
@@ -50,14 +50,6 @@ __all__ = [
 ]
 
 _log = get_logger("app.platform.settings")
-
-
-class SettingScope(enum.StrEnum):
-    """The levels a setting may be set at (FR-446, `RL-1311` item 1)."""
-
-    WORKSPACE = "workspace"
-    WORKSPACE_OR_ENVIRONMENT = "workspace_or_environment"
-    ENVIRONMENT = "environment"
 
 
 @dataclass(frozen=True)
@@ -553,6 +545,7 @@ def _resolution(
         constraints=definition.constraints,
         feature_flag=definition.feature_flag,
         description=definition.description,
+        scope=definition.scope,
     )
 
 
