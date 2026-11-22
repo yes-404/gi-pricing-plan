@@ -32,6 +32,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.models import (
     ApprovalRequestRow,
     DatasetRow,
+    DatasetVersionRow,
     ValidationReportRow,
     ValidationRuleRow,
     ValidationRuleSetRow,
@@ -63,6 +64,7 @@ __all__ = [
     "create_rule",
     "load_rule",
     "open_request_for",
+    "reference_version_readable",
     "replace_rule_set",
     "resolve_artifact_ref",
     "rule_set_for",
@@ -820,6 +822,27 @@ def _audit_state(version: int, body: Mapping[str, Any]) -> dict[str, Any]:
     }
 
 
+async def reference_version_readable(
+    session: AsyncSession, *, workspace_id: UUID, principal: Principal, version_id: UUID
+) -> bool:
+    """Is this Dataset Version one the principal may use as a rule set's reference? (`01` FR-57)
+
+    It must be in the workspace and the principal must hold `dataset:read` on the Dataset it
+    belongs to. One answer for an absent version, another workspace's and an unreadable
+    Dataset's, so the caller cannot tell them apart.
+    """
+    version = await session.get(DatasetVersionRow, version_id)
+    if version is None or version.workspace_id != workspace_id:
+        return False
+    return await rbac.has_permission(
+        session,
+        workspace_id=workspace_id,
+        principal=principal,
+        permission=Permission.DATASET_READ,
+        resource=rbac.ResourceRef(scope_type=ScopeType.DATASET, scope_id=version.dataset_id),
+    )
+
+
 async def replace_rule_set(
     session: AsyncSession,
     *,
@@ -849,6 +872,19 @@ async def replace_rule_set(
     )
     if count_management is not None:
         await count_management()
+
+    if reference_dataset_version_id is not None and not await reference_version_readable(
+        session,
+        workspace_id=workspace_id,
+        principal=actor,
+        version_id=reference_dataset_version_id,
+    ):
+        raise PlatformError(
+            "NOT_FOUND",
+            "Dataset version not found",
+            404,
+            "The reference Dataset Version is not available to this caller.",
+        )
 
     rule_ids = [member.rule_id for member in members]
     by_id = await _rules_by_id(session, workspace_id=workspace_id, rule_ids=rule_ids)

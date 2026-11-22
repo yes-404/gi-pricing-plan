@@ -239,8 +239,19 @@ def _profile(parameters: dict[str, Any], callback: ProgressCallback) -> JobResul
 async def _reference_profile(
     session: AsyncSession, *, workspace_id: UUID, actor: Principal, reference_id: UUID | None
 ) -> Profile | None:
-    """The profile of a rule set's reference version, or `None` (`01` FR-57, FR-54)."""
+    """The profile of a rule set's reference version, or `None` (`01` FR-57, FR-54).
+
+    The reference is checked again here, against the run's actor; one that fails is absent."""
     if reference_id is None:
+        return None
+    if not await rule_service.reference_version_readable(
+        session, workspace_id=workspace_id, principal=actor, version_id=reference_id
+    ):
+        _log.warning(
+            "reference version %s is not available to the run's actor in workspace %s",
+            reference_id,
+            workspace_id,
+        )
         return None
     try:
         return await profile_service.latest_profile(
