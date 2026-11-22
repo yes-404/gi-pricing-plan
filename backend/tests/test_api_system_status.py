@@ -20,6 +20,7 @@ from app.api.health import register_probe
 from app.config import Environment, Settings
 from app.main import create_app
 from model_schema import SystemStatus
+from model_schema.permissions import BUILTIN_ROLES
 from model_schema.system_status import BlobStoreUsage, ComponentHealth, ComponentStatus
 
 STATUS = "/api/v1/admin/status"
@@ -66,6 +67,21 @@ def test_a_caller_with_no_role_is_refused(client: TestClient, unprivileged_heade
     response = client.get(STATUS, headers=unprivileged_headers)
     assert response.status_code == 403
     assert response.json()["code"] == "PERMISSION_DENIED"
+
+
+@pytest.mark.req("FR-443", "FR-444")
+@pytest.mark.parametrize("role", sorted(BUILTIN_ROLES))
+@pytest.mark.asyncio
+async def test_every_built_in_role_may_open_the_route(
+    client: TestClient, workspace_id, principal, grant, role: str
+) -> None:
+    """Answer 1: any built-in role may open the route. The roles are read from
+    `BUILTIN_ROLES`, so a role added there is covered, and a permission changed to one a
+    role does not hold (an `admin:*` one, say) fails for every role but `admin`."""
+    await grant(role)
+    headers = {DEV_PRINCIPAL_HEADER: str(principal.id), "Workspace-Id": str(workspace_id)}
+    response = client.get(STATUS, headers=headers)
+    assert response.status_code == 200
 
 
 #: The one literal: the field names `07` §4.6 states. It pins the spec against the model; the
