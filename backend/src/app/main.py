@@ -55,6 +55,7 @@ from app.config import Settings, load_settings
 from app.db.session import Database, database_probe
 from app.errors import install_error_handlers
 from app.observability.logging import configure_logging, get_logger
+from app.observability.metrics import track_cache
 from app.observability.middleware import TraceMiddleware
 from app.platform.blobs import BlobStore, blob_probe
 from app.platform.bundle_slot import BundleSlot
@@ -289,6 +290,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     # lifetime `blob_store` has. Deliberately *not* per request: a slot rebuilt per call
     # holds nothing, which is the state option (a) was rejected for (RL-882).
     app.state.bundle_slot = BundleSlot(capacity=settings.bundle_slot_capacity)
+    # `/metrics` reports this slot's lookups (FR-443). A name holds one tally, so a later
+    # `create_app` replaces this one rather than adding samples.
+    track_cache("bundle_slot", lambda: (app.state.bundle_slot.hits, app.state.bundle_slot.misses))
     # This process's `live` reference (FR-268). Empty until the lifespan loads the latest
     # committed Deployments; written afterwards only by a COMMIT this process acknowledged.
     app.state.live_refs = LiveRefs()

@@ -17,6 +17,10 @@ correctness.
 
 Fail-open on purpose: Redis is an optimisation, not the correctness path. A cache
 outage degrades to a plain compute-on-read, never to a 500.
+
+Each `get` is one lookup and is counted on `gip_cache_lookups_total` (FR-443, `07` §5.1) as
+`hit`, `miss`, or `error` when Redis fails, so an outage is not read as misses. No caller is
+given a `DiffCache` at present, so nothing is counted until one is.
 """
 
 from __future__ import annotations
@@ -30,6 +34,7 @@ from uuid import UUID
 
 from redis.exceptions import RedisError
 
+from app.observability.metrics import observe_cache_lookup
 from model_schema.rating import RateTable, RateTableDiff
 
 __all__ = ["DiffCache", "cells_key", "definition_hash", "version_content_hash"]
@@ -152,10 +157,14 @@ class DiffCache:
                 "diff cache read failed; computing without it",
                 extra={"error_type": type(exc).__name__},
             )
+            observe_cache_lookup("diff_cache", "error")
             return None
         if raw is None:
+            observe_cache_lookup("diff_cache", "miss")
             return None
-        return RateTableDiff.model_validate_json(raw)
+        diff = RateTableDiff.model_validate_json(raw)
+        observe_cache_lookup("diff_cache", "hit")
+        return diff
 
     async def set(self, key: str, diff: RateTableDiff) -> None:
         try:

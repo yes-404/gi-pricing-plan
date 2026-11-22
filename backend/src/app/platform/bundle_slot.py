@@ -158,17 +158,38 @@ class BundleSlot:
         #: ever read as "this hash is clean" — every hydrate runs the guard. Bounded; an evicted
         #: hash is audited once more, which is the safe direction.
         self._refused: OrderedDict[str, None] = OrderedDict()
+        #: Lookup tallies for FR-443 and `07` §4.6, since this process started. Two plain
+        #: integers, read by the status route and by `/metrics` when they are read.
+        #: **Read-only tallies, and none of the four mechanisms RL-882 clause 4 reserves**:
+        #: they are not a refresh, a poll, a push or an environment pointer, nothing reads them
+        #: back into a lookup, and they hold no ref, hash or bundle.
+        # The counters assume `get` runs on the event loop's thread, not from `to_thread`.
+        self._hits = 0
+        self._misses = 0
 
     @property
     def capacity(self) -> int:
         return self._capacity
 
+    @property
+    def hits(self) -> int:
+        """`get` calls that found a held bundle (a lookup, not a request)."""
+        return self._hits
+
+    @property
+    def misses(self) -> int:
+        """`get` calls that found none. A miss on the score path is two lookups, because the
+        path looks the slot up twice on a miss, so one such request adds two here."""
+        return self._misses
+
     def get(self, content_hash: str) -> CompiledBundle | None:
         """The bundle held for `content_hash`, or `None`. A hit is a use, so it counts
-        for the recency order."""
+        for the recency order. Each call is one lookup and is tallied as a hit or a miss."""
         held = self._held.get(content_hash)
         if held is None:
+            self._misses += 1
             return None
+        self._hits += 1
         self._held.move_to_end(content_hash)
         return held
 

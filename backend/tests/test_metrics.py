@@ -3,16 +3,27 @@
 from __future__ import annotations
 
 import re
+from collections.abc import Iterator
 
 import pytest
 from fastapi.testclient import TestClient
 from pydantic import SecretStr
+from redis.exceptions import ConnectionError as RedisConnectionError
 
 from app.api.deps import DEV_PRINCIPAL_HEADER
 from app.config import Environment, Settings
 from app.main import create_app
-from app.observability.metrics import REGISTRY
+from app.observability.metrics import (
+    REGISTRY,
+    observe_cache_lookup,
+    render,
+    reset_cache_lookups,
+    track_cache,
+)
+from app.platform.bundle_slot import BundleSlot
+from app.platform.diff_cache import DiffCache
 from model_schema import new_uuid7
+from model_schema.rating import RateTableDiff
 
 
 @pytest.fixture
@@ -166,3 +177,127 @@ def test_the_registry_is_not_the_process_global_one() -> None:
     from prometheus_client import REGISTRY as PROCESS_GLOBAL
 
     assert REGISTRY is not PROCESS_GLOBAL
+
+
+# --------------------------------------------------------------------------------------
+# The cache hit-rate family (FR-443, `07` §5.1, #1505 slice 3)
+# --------------------------------------------------------------------------------------
+
+_FAMILY = "gip_cache_lookups_total"
+
+
+def _samples(cache: str) -> dict[str, float]:
+    """The `result -> count` samples the scrape carries for one cache."""
+    found: dict[str, float] = {}
+    for line in render().decode().splitlines():
+        match = re.fullmatch(rf'{_FAMILY}\{{cache="{cache}",result="(\w+)"\}} ([0-9.e+]+)', line)
+        if match:
+            found[match.group(1)] = float(match.group(2))
+    return found
+
+
+class _DictClient:
+    """The slice of the Redis client `DiffCache` uses, over a dict."""
+
+    def __init__(self) -> None:
+        self.data: dict[str, bytes] = {}
+        self.fail = False
+
+    async def get(self, key: str) -> bytes | None:
+        if self.fail:
+            raise RedisConnectionError("down")
+        return self.data.get(key)
+
+    async def set(self, key: str, value: bytes) -> None:
+        self.data[key] = value
+
+
+@pytest.fixture
+def clean_cache_family() -> Iterator[None]:
+    reset_cache_lookups()
+    yield
+    reset_cache_lookups()
+
+
+@pytest.mark.req("FR-443")
+async def test_a_diff_cache_hit_and_miss_appear_on_the_scrape(clean_cache_family: None) -> None:
+    """One miss then one hit through `DiffCache`; the family carries both results."""
+    cache = DiffCache(_DictClient())
+    key = cache.key("a", "b", "d", None, None)
+
+    assert await cache.get(key) is None  # miss
+    await cache.set(key, RateTableDiff(changed_cells=0))
+    assert await cache.get(key) is not None  # hit
+
+    assert "# TYPE gip_cache_lookups_total counter" in render().decode()
+    assert _samples("diff_cache") == {"miss": 1.0, "hit": 1.0}
+
+
+@pytest.mark.req("FR-443")
+async def test_a_redis_failure_is_an_error_not_a_miss(clean_cache_family: None) -> None:
+    client = _DictClient()
+    client.fail = True
+
+    assert await DiffCache(client).get("k") is None
+
+    assert _samples("diff_cache") == {"error": 1.0}
+
+
+@pytest.mark.req("FR-443")
+def test_a_cache_nobody_has_read_is_absent_not_zero(clean_cache_family: None) -> None:
+    """The 2026-08-15 rule: a label set gets its first sample on first use."""
+    DiffCache(_DictClient())  # constructing one is not a read
+    track_cache("bundle_slot", lambda: (0, 0))  # a slot with no reads has no sample
+
+    assert "gip_cache_lookups" not in render().decode()
+    assert _samples("diff_cache") == {}
+    assert _samples("bundle_slot") == {}
+
+
+@pytest.mark.req("FR-443")
+def test_a_bundle_slot_is_read_at_scrape_time(clean_cache_family: None) -> None:
+    slot = BundleSlot(capacity=1)
+    track_cache("bundle_slot", lambda: (slot.hits, slot.misses))
+    assert slot.get("h") is None
+    assert slot.get("h") is None  # a score-path miss is two lookups
+
+    assert _samples("bundle_slot") == {"miss": 2.0}
+
+
+@pytest.mark.req("FR-443")
+def test_the_cache_labels_are_a_closed_set(clean_cache_family: None) -> None:
+    """The label set is bounded: an unknown cache or result is refused, never exposed."""
+    with pytest.raises(ValueError, match="closed set"):
+        observe_cache_lookup("oidc_keys", "hit")
+    with pytest.raises(ValueError, match="closed set"):
+        observe_cache_lookup("diff_cache", "weird")
+
+
+@pytest.mark.req("FR-443")
+def test_only_the_redis_backed_cache_may_report_an_error(clean_cache_family: None) -> None:
+    """`error` is `diff_cache`'s alone. The slot is in-process and cannot fail a lookup, and a
+    refusal here keeps the message literal: no argument is echoed."""
+    with pytest.raises(ValueError, match="closed set") as refused:
+        observe_cache_lookup("bundle_slot", "error")
+    assert str(refused.value) == "cache lookup label outside the closed set"
+    observe_cache_lookup("diff_cache", "error")
+    assert _samples("diff_cache") == {"error": 1.0}
+
+
+@pytest.mark.req("FR-443")
+def test_the_apps_own_bundle_slot_is_on_the_scrape(clean_cache_family: None) -> None:
+    """Route level: `create_app` registers its slot, so `GET /metrics` carries the counts of
+    `app.state.bundle_slot` (07 §4.6, §5.1). DB-free: the app is not entered, so no lifespan
+    runs and nothing connects; the settings name no test database."""
+    from backend.tests.test_bundle_slot import _compiled, _ref
+
+    app = create_app(Settings(environment=Environment.LOCAL, version="test"))
+    slot = app.state.bundle_slot
+    assert slot.get("absent") is None  # a miss
+    slot.put(_ref(1), _compiled("held"))
+    assert slot.get("held") is not None  # a hit
+
+    body = TestClient(app).get("/metrics").text
+
+    assert 'gip_cache_lookups_total{cache="bundle_slot",result="hit"} 1.0' in body
+    assert 'gip_cache_lookups_total{cache="bundle_slot",result="miss"} 1.0' in body
