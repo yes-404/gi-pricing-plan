@@ -796,7 +796,9 @@ async def test_a_5xx_raised_while_a_pin_is_re_resolved_is_not_recorded_as_a_refu
         assert deploy(client, deployer, "dev", second).status_code == 201
 
     async def outage(*_: Any, **__: Any) -> None:
-        raise PlatformError("STORE_UNAVAILABLE", "Store unavailable", 503, "the store is down")
+        # A registered 503 code (an unregistered one is a ValueError, hence a 500); the resolver's
+        # real 5xx would be an outage of the store it reads, and what matters is the status.
+        raise PlatformError("DEPLOY_SWITCH_INCOMPLETE", "Outage", 503, "the store is down")
 
     monkeypatch.setattr(bundle_hydration, "check_rateable_intent", outage)
     written = await deployments_written(database, workspace_id)
@@ -811,7 +813,7 @@ async def test_a_5xx_raised_while_a_pin_is_re_resolved_is_not_recorded_as_a_refu
             headers=deployer.headers,
         )
     assert refused.status_code == 503, refused.text
-    assert refused.json()["code"] == "STORE_UNAVAILABLE", refused.text
+    assert refused.json()["code"] == "DEPLOY_SWITCH_INCOMPLETE", refused.text
     assert await deployments_written(database, workspace_id) == written
     assert await refusal_events(database, workspace_id) == []
 
