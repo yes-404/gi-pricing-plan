@@ -1,6 +1,7 @@
 import { render, screen, within } from "@testing-library/vue";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import type { Backtest } from "@/api/backtests";
 import BacktestView from "../BacktestView.vue";
 import { BACKTEST, GBM_MODEL, GLM_MODEL } from "./fixtures";
 
@@ -187,7 +188,14 @@ describe("BacktestView, the rows left out on an unseen level (FR-2143)", () => {
   });
 
   it("shows no section for a GBM, which refuses such a level whatever is declared", async () => {
-    stubBoth(withExcluded(undefined, undefined));
+    // The provenance badge prints "not recorded" for a null Job id, which this page-wide
+    // assertion would read as the unseen-level section. The fixture carries a Job id, so the
+    // only "not recorded" left on the page could be that section's.
+    const recorded: Backtest = {
+      ...(withExcluded(undefined, undefined) as Backtest),
+      provenance: { ...BACKTEST.provenance, produced_by_job_id: "5c5c5c5c-1234-4567-8901-abcdefabcdef" },
+    };
+    stubBoth(recorded);
     render(BacktestView, { props, ...mounted });
     await screen.findByRole("table", { name: /headline metrics/i });
 
