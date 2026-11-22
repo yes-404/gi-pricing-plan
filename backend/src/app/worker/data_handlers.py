@@ -20,6 +20,7 @@ from typing import Any, Final
 from uuid import UUID
 
 import polars as pl
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.data.ingestion import PARQUET_MEDIA_TYPE, ingest_upload
 from app.db.models import BlobRow, BlobUploadRow, DatasetRow, DatasetVersionRow
@@ -32,7 +33,7 @@ from app.platform import validation_rules as rule_service
 from app.platform.blobs import BlobStore, to_ref
 from app.worker.handlers import register_handler
 from app.worker.progress import JobProgress
-from model_schema import ActorKind, JobKind, JobResult, Principal
+from model_schema import ActorKind, JobKind, JobResult, Principal, Profile
 from pricing_core.data.profile import profile_frame
 from pricing_core.data.validate import run_validation
 from pricing_core.progress import ProgressCallback
@@ -235,6 +236,22 @@ def _profile(parameters: dict[str, Any], callback: ProgressCallback) -> JobResul
     return JobResult(kind="artifact", ref=f"profile:{profile_id}")
 
 
+async def _reference_profile(
+    session: AsyncSession, *, workspace_id: UUID, actor: Principal, reference_id: UUID | None
+) -> Profile | None:
+    """The profile of a rule set's reference version, or `None` (`01` FR-57, FR-54)."""
+    if reference_id is None:
+        return None
+    try:
+        return await profile_service.latest_profile(
+            session, workspace_id=workspace_id, version_id=reference_id
+        )
+    except PlatformError:
+        # FR-54 prefers the profile; a reference version without one is a
+        # reason to skip the distributional rules, not to fail the run.
+        return None
+
+
 def _validate(parameters: dict[str, Any], callback: ProgressCallback) -> JobResult:
     """`dataset.validate` — run the rule set and persist the report (FR-42).
 
@@ -284,17 +301,12 @@ def _validate(parameters: dict[str, Any], callback: ProgressCallback) -> JobResu
                     slug=dataset.slug if dataset is not None else str(version.dataset_id),
                 )
 
-            reference_profile = None
-            reference_id = rule_set.reference_dataset_version_id
-            if reference_id is not None:
-                try:
-                    reference_profile = await profile_service.latest_profile(
-                        session, workspace_id=workspace_id, version_id=reference_id
-                    )
-                except PlatformError:
-                    # FR-54 prefers the profile; a reference version without one is a
-                    # reason to skip the distributional rules, not to fail the run.
-                    reference_profile = None
+            reference_profile = await _reference_profile(
+                session,
+                workspace_id=workspace_id,
+                actor=actor,
+                reference_id=rule_set.reference_dataset_version_id,
+            )
             return tables, rule_set, reference_profile
 
     tables, rule_set, reference_profile = progress.run_on_loop(load())
