@@ -1013,7 +1013,7 @@ it fixed; a silent amend would have carried the old verdict over the new code.
 
 ## Verified
 
-2026-11-22 (against main `18868c6c697ecb6f1708348d4b5813b1c3264c22`) — The collaborator-merge amendment added under "The repository is public", on the maintainer's ruling of 22 Nov 2026. The rules were read against `CONTRIBUTING.md` "Pull requests" and "Review" at that tree. Not run on a live pull request; the rest of this file was not re-read.
+2026-11-22 (against main `18868c6c697ecb6f1708348d4b5813b1c3264c22`) — The collaborator-merge amendment added under "The repository is public", on the maintainer's ruling of 22 Nov 2026. The rules were read against `CONTRIBUTING.md` "Pull requests" and "Review" at that tree. The rules were applied on live pull requests the same day: #1961 and #1986 (collaborator pull requests) were squash-merged this way, with the author read back, and #1965 was refreshed by the bot's rebase and its regenerated diff read again. The rest of this file was not re-read.
 
 2026-11-08 (tree `c4ae584a`) — The merge-body section added (skills-gap A6), read against its process rows. The rest of this file was not re-read.
 
