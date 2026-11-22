@@ -130,6 +130,14 @@ describe("the audit explorer route", () => {
   });
 });
 
+describe("the settings route", () => {
+  it("resolves /admin/settings to the Settings view, behind sign-in", () => {
+    const resolved = router().resolve("/admin/settings");
+    expect(resolved.matched.map((r) => r.name)).toContain("settings");
+    expect(resolved.meta.requiresAuth).toBe(true);
+  });
+});
+
 describe("the artifact history route", () => {
   it("resolves a percent-encoded ref and hands the view the decoded string", () => {
     const resolved = router().resolve("/artifacts/model%3Amotor-freq%402/history");
@@ -138,5 +146,13 @@ describe("the artifact history route", () => {
     const record = resolved.matched.find((r) => r.name === "artifact-history")!;
     const props = record.props.default as (route: typeof resolved) => unknown;
     expect(props(resolved)).toEqual({ artifactRef: "model:motor-freq@2" });
+  });
+});
+
+describe("the /admin/status route (07 §5.3)", () => {
+  it("resolves to the System status view, behind sign-in only", () => {
+    expect(matchedNames("/admin/status")).toContain("system-status");
+    const record = routes.find((r) => r.path === "/admin/status");
+    expect(record?.meta?.requiresAuth).toBe(true);
   });
 });
