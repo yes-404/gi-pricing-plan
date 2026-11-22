@@ -9476,6 +9476,11 @@
           },
           "detail": {
             "additionalProperties": true,
+            "not": {
+              "required": [
+                "_location"
+              ]
+            },
             "title": "Detail",
             "type": "object"
           },
@@ -9527,7 +9532,7 @@
               {
                 "maxLength": 256,
                 "minLength": 1,
-                "pattern": "^[^\\x00-\\x1f\\x7f-\\x9f\\u2028\\u2029]+$",
+                "pattern": "^[^\\x00-\\x1f\\x7f-\\x9f\\u2028\\u2029]+(?![\\s\\S])",
                 "type": "string"
               },
               {
@@ -9541,7 +9546,7 @@
               {
                 "maxLength": 256,
                 "minLength": 1,
-                "pattern": "^[^\\x00-\\x1f\\x7f-\\x9f\\u2028\\u2029]+$",
+                "pattern": "^[^\\x00-\\x1f\\x7f-\\x9f\\u2028\\u2029]+(?![\\s\\S])",
                 "type": "string"
               },
               {
@@ -9555,7 +9560,7 @@
               {
                 "maxLength": 256,
                 "minLength": 1,
-                "pattern": "^[^\\x00-\\x1f\\x7f-\\x9f\\u2028\\u2029]+$",
+                "pattern": "^[^\\x00-\\x1f\\x7f-\\x9f\\u2028\\u2029]+(?![\\s\\S])",
                 "type": "string"
               },
               {
@@ -9569,7 +9574,7 @@
               {
                 "maxLength": 256,
                 "minLength": 1,
-                "pattern": "^[^\\x00-\\x1f\\x7f-\\x9f\\u2028\\u2029]+$",
+                "pattern": "^[^\\x00-\\x1f\\x7f-\\x9f\\u2028\\u2029]+(?![\\s\\S])",
                 "type": "string"
               },
               {
@@ -9583,7 +9588,7 @@
               {
                 "maxLength": 256,
                 "minLength": 1,
-                "pattern": "^[^\\x00-\\x1f\\x7f-\\x9f\\u2028\\u2029]+$",
+                "pattern": "^[^\\x00-\\x1f\\x7f-\\x9f\\u2028\\u2029]+(?![\\s\\S])",
                 "type": "string"
               },
               {
@@ -9597,7 +9602,7 @@
               {
                 "maxLength": 256,
                 "minLength": 1,
-                "pattern": "^[^\\x00-\\x1f\\x7f-\\x9f\\u2028\\u2029]+$",
+                "pattern": "^[^\\x00-\\x1f\\x7f-\\x9f\\u2028\\u2029]+(?![\\s\\S])",
                 "type": "string"
               },
               {
@@ -9611,7 +9616,7 @@
               {
                 "maxLength": 256,
                 "minLength": 1,
-                "pattern": "^[^\\x00-\\x1f\\x7f-\\x9f\\u2028\\u2029]+$",
+                "pattern": "^[^\\x00-\\x1f\\x7f-\\x9f\\u2028\\u2029]+(?![\\s\\S])",
                 "type": "string"
               },
               {
@@ -9649,7 +9654,7 @@
               {
                 "maxLength": 256,
                 "minLength": 1,
-                "pattern": "^[^\\x00-\\x1f\\x7f-\\x9f\\u2028\\u2029]+$",
+                "pattern": "^[^\\x00-\\x1f\\x7f-\\x9f\\u2028\\u2029]+(?![\\s\\S])",
                 "type": "string"
               },
               {

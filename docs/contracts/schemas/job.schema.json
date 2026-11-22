@@ -150,7 +150,12 @@
           "type": "boolean"
         },
         "detail": {
-          "type": "object"
+          "type": "object",
+          "not": {
+            "required": [
+              "_location"
+            ]
+          }
         },
         "location": {
           "type": [
@@ -167,7 +172,7 @@
               ],
               "minLength": 1,
               "maxLength": 256,
-              "pattern": "^[^\\x00-\\x1f\\x7f-\\x9f\\u2028\\u2029]+$"
+              "pattern": "^[^\\x00-\\x1f\\x7f-\\x9f\\u2028\\u2029]+(?![\\s\\S])"
             },
             "feature": {
               "type": [
@@ -176,7 +181,7 @@
               ],
               "minLength": 1,
               "maxLength": 256,
-              "pattern": "^[^\\x00-\\x1f\\x7f-\\x9f\\u2028\\u2029]+$"
+              "pattern": "^[^\\x00-\\x1f\\x7f-\\x9f\\u2028\\u2029]+(?![\\s\\S])"
             },
             "field": {
               "type": [
@@ -185,7 +190,7 @@
               ],
               "minLength": 1,
               "maxLength": 256,
-              "pattern": "^[^\\x00-\\x1f\\x7f-\\x9f\\u2028\\u2029]+$"
+              "pattern": "^[^\\x00-\\x1f\\x7f-\\x9f\\u2028\\u2029]+(?![\\s\\S])"
             },
             "interaction": {
               "type": [
@@ -194,7 +199,7 @@
               ],
               "minLength": 1,
               "maxLength": 256,
-              "pattern": "^[^\\x00-\\x1f\\x7f-\\x9f\\u2028\\u2029]+$"
+              "pattern": "^[^\\x00-\\x1f\\x7f-\\x9f\\u2028\\u2029]+(?![\\s\\S])"
             },
             "key": {
               "type": [
@@ -203,7 +208,7 @@
               ],
               "minLength": 1,
               "maxLength": 256,
-              "pattern": "^[^\\x00-\\x1f\\x7f-\\x9f\\u2028\\u2029]+$"
+              "pattern": "^[^\\x00-\\x1f\\x7f-\\x9f\\u2028\\u2029]+(?![\\s\\S])"
             },
             "objective": {
               "type": [
@@ -212,7 +217,7 @@
               ],
               "minLength": 1,
               "maxLength": 256,
-              "pattern": "^[^\\x00-\\x1f\\x7f-\\x9f\\u2028\\u2029]+$"
+              "pattern": "^[^\\x00-\\x1f\\x7f-\\x9f\\u2028\\u2029]+(?![\\s\\S])"
             },
             "operand": {
               "type": [
@@ -221,7 +226,7 @@
               ],
               "minLength": 1,
               "maxLength": 256,
-              "pattern": "^[^\\x00-\\x1f\\x7f-\\x9f\\u2028\\u2029]+$"
+              "pattern": "^[^\\x00-\\x1f\\x7f-\\x9f\\u2028\\u2029]+(?![\\s\\S])"
             },
             "peril": {
               "type": [
@@ -244,7 +249,7 @@
               ],
               "minLength": 1,
               "maxLength": 256,
-              "pattern": "^[^\\x00-\\x1f\\x7f-\\x9f\\u2028\\u2029]+$"
+              "pattern": "^[^\\x00-\\x1f\\x7f-\\x9f\\u2028\\u2029]+(?![\\s\\S])"
             },
             "structure": {
               "type": [

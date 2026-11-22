@@ -242,9 +242,10 @@ _CONTRACTS = Path(__file__).resolve().parents[3] / "docs" / "contracts" / "schem
 
 def _refusals(schema: dict[str, Any], value: Any, defs: dict[str, Any], at: str = "$") -> list[str]:
     """The JSON Schema keywords the two Job contracts use, and no others: `$ref`, `anyOf`,
-    `type`, `properties`, `additionalProperties: false`, `required`, `pattern`, `maxLength`,
-    `minLength`. There is no `jsonschema` in the workspace, and a new dependency is not this
-    change's to add. Returns the places `value` is refused."""
+    `type`, `properties`, `additionalProperties: false`, `required`, `not`, `pattern`,
+    `maxLength`, `minLength`. A `pattern` is read with `_ecma_search`, ECMA 262's end anchor,
+    as the rest of this module does. There is no `jsonschema` in the workspace, and a new
+    dependency is not this change's to add. Returns the places `value` is refused."""
     if "$ref" in schema:
         return _refusals(defs[schema["$ref"].rsplit("/", 1)[1]], value, defs, at)
     if "anyOf" in schema:
@@ -257,8 +258,10 @@ def _refusals(schema: dict[str, Any], value: Any, defs: dict[str, Any], at: str 
         if not any(isinstance(value, kinds[t]) for t in allowed):
             return [f"{at}: {type(value).__name__} is not {allowed}"]
     out: list[str] = []
+    if "not" in schema and not _refusals(schema["not"], value, defs, at):
+        out.append(f"{at}: matches a `not` schema")
     if isinstance(value, str):
-        if "pattern" in schema and not re.search(schema["pattern"], value):
+        if "pattern" in schema and not _ecma_search(schema["pattern"], value):
             out.append(f"{at}: pattern")
         if len(value) > schema.get("maxLength", len(value)):
             out.append(f"{at}: maxLength")
@@ -320,6 +323,19 @@ def test_both_real_job_schemas_refuse_a_located_error_with_a_bad_value(
     wire["location"][key] = bad
     refused = _wire_refusals(schema, wire)
     assert refused, (schema, key, bad)
+
+
+@pytest.mark.req("FR-403")
+@pytest.mark.parametrize("schema", ["job.schema.json", "generated/job.schema.json"])
+def test_both_job_schemas_refuse_the_reserved_key_in_detail_as_the_model_does(
+    schema: str,
+) -> None:
+    """`JobError` refuses `detail["_location"]` (it is the stored form's, `from_stored` lifts it):
+    a schema that admits it says a client may send what the model will not take (review of #1930,
+    note 4). The control: an ordinary detail key is still admitted."""
+    wire = _failed_error(location=_LOCATED).model_dump(mode="json")
+    assert _wire_refusals(schema, {**wire, "detail": {"step": "s"}}) == []
+    assert _wire_refusals(schema, {**wire, "detail": {"_location": {"step_id": "s"}}})
 
 
 # -- the free-text keys: a bound, a character rule, and the same answer in every consumer -------
@@ -424,7 +440,11 @@ def _ecma_search(pattern: str, value: str) -> bool:
 @pytest.mark.parametrize("schema", ["job.schema.json", "generated/job.schema.json"])
 def test_the_schemas_and_the_model_admit_the_same_free_text(schema: str, key: str) -> None:
     rules = _text_rules(schema, key)
-    engine = TypeAdapter(Annotated[str, Field(pattern=rules["pattern"])])
+    # pydantic's engine is Rust `regex`, which has no look-around; its `$` is end of text only, so
+    # the same rule is written with `$` for it.
+    engine = TypeAdapter(
+        Annotated[str, Field(pattern=rules["pattern"].replace(r"(?![\s\S])", "$"))]
+    )
     for value, admitted in _ADMITTED:
         try:
             JobErrorLocation(**{key: value})
@@ -433,12 +453,17 @@ def test_the_schemas_and_the_model_admit_the_same_free_text(schema: str, key: st
             by_the_model = False
         in_bounds = rules["minLength"] <= len(value) <= rules["maxLength"]
         by_the_schema = in_bounds and _ecma_search(rules["pattern"], value)
+        # a validator that reads `pattern` with `re.search` (Python's `jsonschema`): its `$` also
+        # matches before a final newline, so a pattern ending in `$` is looser there (note 1)
+        by_a_search_validator = in_bounds and re.search(rules["pattern"], value) is not None
         try:
             engine.validate_python(value)
             by_the_engine = in_bounds
         except ValidationError:
             by_the_engine = False
-        assert (by_the_model, by_the_schema, by_the_engine) == (admitted,) * 3, (
+        assert (by_the_model, by_the_schema, by_a_search_validator, by_the_engine) == (
+            admitted,
+        ) * 4, (
             schema, key, ascii(value[:8]), len(value),
         )
 

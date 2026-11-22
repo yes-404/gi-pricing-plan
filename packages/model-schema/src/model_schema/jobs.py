@@ -196,8 +196,10 @@ LOCATION_TEXT_MAX = 256
 #: and an objective name hold spaces, `&`, `:` and non-ASCII letters. It is a rule about
 #: characters, **not** a proof that a value is not submitted text: the raise sites guarantee that.
 #: The same string is the JSON Schema `pattern`: written to match the same strings under Python's
-#: `re` (via `fullmatch`) and ECMA 262, whose `$` matches only at the very end.
-LOCATION_TEXT_PATTERN = r"^[^\x00-\x1f\x7f-\x9f\u2028\u2029]+$"
+#: `re` (via `fullmatch`, or `search` as a validator such as `jsonschema` reads it) and ECMA 262.
+#: It ends in `(?![\s\S])`, "no character follows", not `$`: Python's `$` also matches before a
+#: final newline, so under `re.search` a `$` would admit `"abc\n"`, which the model refuses.
+LOCATION_TEXT_PATTERN = r"^[^\x00-\x1f\x7f-\x9f\u2028\u2029]+(?![\s\S])"
 _LOCATION_TEXT = re.compile(LOCATION_TEXT_PATTERN)
 #: A free-text location key's value as the published schema states it. A validator on the model
 #: enforces the bound and the rule (so a refusal is an `InputFreeError` with a literal text and not
@@ -288,7 +290,11 @@ class JobError(BaseModel):
     code: str = Field(pattern="^[A-Z][A-Z0-9_]*$")
     message: str
     retryable: bool
-    detail: dict[str, Any] = Field(default_factory=dict)
+    # `not required _location`: the schema says what the validator below refuses (the key is the
+    # stored form's, not the wire's).
+    detail: dict[str, Any] = Field(
+        default_factory=dict, json_schema_extra={"not": {"required": [LOCATION_DETAIL_KEY]}}
+    )
     location: JobErrorLocation | None = None
     trace_id: str | None = Field(default=None, pattern="^[0-9a-f]{32}$")
 
