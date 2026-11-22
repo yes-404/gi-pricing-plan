@@ -23,11 +23,12 @@ from uuid import UUID, uuid4
 import pytest
 import pytest_asyncio
 from backend.tests.conftest_db import grant_roles_as_owner, seed_as_owner
+from backend.tests.test_data_jobs import CLEAN, _ingest, _seed_dataset_and_rules
 from fastapi.testclient import TestClient
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import DEV_PRINCIPAL_HEADER
+from app.api.deps import DEV_PRINCIPAL_HEADER, Caller, job_identity
 from app.db.models import (
     DatasetRow,
     RoleAssignmentRow,
@@ -36,9 +37,13 @@ from app.db.models import (
 )
 from app.db.session import Database
 from app.platform import datasets as dataset_service
+from app.platform import jobs as job_service
 from app.platform import profiles
+from app.platform.blobs import BlobStore
 from app.worker import data_handlers
-from model_schema import ActorKind, Principal, Profile, ScopeType, new_uuid7
+from app.worker.data_handlers import register_data_handlers
+from app.worker.tasks import execute_job
+from model_schema import ActorKind, JobKind, JobStatus, Principal, Profile, ScopeType, new_uuid7
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 SCRIPT = ROOT / "scripts" / "list-cross-dataset-references.py"
@@ -229,19 +234,59 @@ async def test_the_worker_treats_a_reference_in_another_workspace_as_absent(
 
 @pytest.mark.req("FR-57")
 @pytest.mark.asyncio
-async def test_the_worker_uses_another_datasets_version_in_the_same_workspace(
+@pytest.mark.parametrize("actor_kind", [ActorKind.SERVICE_ACCOUNT, ActorKind.USER])
+async def test_a_validation_job_uses_another_datasets_version_whoever_submitted_it(
     database: Database,
+    blob_store: BlobStore,
     world: World,
-    caplog: pytest.LogCaptureFixture,
+    principal: Principal,
     workspace_id: UUID,
+    monkeypatch: pytest.MonkeyPatch,
+    actor_kind: ActorKind,
 ) -> None:
-    # The lookup takes no actor: the write decided the permission, so a Service Account's run
-    # and a person's run reach the same reference.
-    with caplog.at_level(logging.WARNING, logger="app.worker.data"):
-        used = await _worker_reference(database, workspace_id, world.version["y"])
-    assert used is not None
-    assert used.row_count == 4321
-    assert [r for r in caplog.records if r.levelno == logging.WARNING] == []
+    """The reference was accepted at the write; a run of any actor uses it (`01` FR-57).
+
+    The Job's parameters are built with `job_identity`, as the route builds them. The
+    Service Account holds no grant on the Dataset the reference belongs to."""
+    register_data_handlers()
+    dataset_id = await _seed_dataset_and_rules(database, blob_store, workspace_id, principal)
+    version_id = await _ingest(database, blob_store, workspace_id, principal, dataset_id, CLEAN)
+    async with database.unit_of_work() as session:
+        await session.execute(
+            update(ValidationRuleSetRow)
+            .where(ValidationRuleSetRow.dataset_id == dataset_id)
+            .values(reference_dataset_version_id=world.version["y"])
+        )
+
+    seen: list[Profile | None] = []
+    real_run_validation = data_handlers.run_validation
+
+    def spy(*args: Any, **kwargs: Any) -> Any:
+        seen.append(kwargs["reference_profile"])
+        return real_run_validation(*args, **kwargs)
+
+    monkeypatch.setattr(data_handlers, "run_validation", spy)
+    submitter = (
+        principal
+        if actor_kind is ActorKind.USER
+        else Principal(kind=actor_kind, id=new_uuid7(), display="sa-run")
+    )
+    async with database.unit_of_work() as session:
+        job = await job_service.submit(
+            session,
+            JobKind.DATASET_VALIDATE,
+            {
+                **job_identity(Caller(principal=submitter, workspace_id=workspace_id)),
+                "dataset_version_id": str(version_id),
+            },
+            submitter,
+            workspace_id=workspace_id,
+        )
+    assert await execute_job(database, job.id, blob_store) is JobStatus.SUCCEEDED
+    assert len(seen) == 1
+    assert seen[0] is not None, "the stored reference was treated as absent"
+    assert seen[0].dataset_version_id == world.version["y"]
+    assert seen[0].row_count == 4321
 
 
 def _load_script() -> Any:
