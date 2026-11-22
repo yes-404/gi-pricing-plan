@@ -297,7 +297,7 @@ Notably absent from Pricing Actuary: ~~every `*:approve` permission~~ `approval:
 > | `score:batch` | Batch scoring (a Service Account may hold it, FR-347) |  |
 > | `job:read` | Reading Jobs |  |
 > | `job:cancel` | Cancelling a Job |  |
-> | `settings:read` | Reading workspace settings, and listing and reading Environments (`07` FR-428, FR-431; `GET /api/v1/environments`, WK-674 Slice 2). *(Amended 2026-10-03, WK-674 Slice 2, on the maintainer's dated decision.)* |  |
+> | `settings:read` | Reading workspace settings, and listing and reading Environments (`07` FR-428, FR-431; `GET /api/v1/environments`, WK-674 Slice 2). *(Amended 2026-10-03, WK-674 Slice 2, on the maintainer's dated decision.)* *(Amended 2026-11-21, #1505, the maintainer's decision of 2026-11-21 (issue comment 7060618416), answer 1: also reading the System status, `GET /api/v1/admin/status` (`07` §5.1, §4.6). Every built-in role holds `settings:read`, so every built-in role may read it.)* |  |
 > | `admin:manage_roles` | Changing permissions, roles and role assignments (FR-348), and the workspace Approval Policy (`PUT /approval-policy` requires it, as this spec's route permission table states) |  |
 > | `admin:manage_settings` | Changing workspace settings and reference data, and every per-environment setting value: `07` FR-431's settings, and FR-270/FR-271's routing and shadow switches and shadow configuration (DP-D). Each change writes an Audit Event naming the environment, the key, the old value and the new value. Nothing it guards can change which Rating Version prices a live quote |  |
 > | `admin:manage_service_accounts` | Creating, rotating and revoking Service Accounts |  |
