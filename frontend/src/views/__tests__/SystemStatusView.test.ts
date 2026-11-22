@@ -151,3 +151,28 @@ describe("SystemStatusView, who may open it (decision 7060618416, answer 1)", ()
     expect(within(alert).getByText("This action requires settings:read.")).toBeTruthy();
   });
 });
+
+describe("SystemStatusView, reading aids (review notes of #1986)", () => {
+  it("says under the caches table that the diff cache reports nothing until a caller is given one", async () => {
+    await shown(UP);
+    expect(screen.getByText(/diff cache reports nothing until a caller is given one/i)).toBeTruthy();
+  });
+
+  it("says it also when no cache reports", async () => {
+    await shown({ ...UP, caches: [] });
+    expect(screen.getByText(/diff cache reports nothing until a caller is given one/i)).toBeTruthy();
+  });
+
+  it("gives every column header of the queue and cache tables a column scope", async () => {
+    await shown(UP);
+    const headers = screen.getAllByRole("columnheader");
+    expect(headers.length).toBe(7);
+    for (const header of headers) expect(header.getAttribute("scope")).toBe("col");
+  });
+
+  it("announces the loading text as a status", () => {
+    vi.stubGlobal("fetch", vi.fn(() => new Promise(() => {})));
+    render(SystemStatusView);
+    expect(screen.getByRole("status")).toHaveTextContent(/loading system status/i);
+  });
+});

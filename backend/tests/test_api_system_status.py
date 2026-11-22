@@ -166,8 +166,8 @@ async def test_the_schema_version_is_the_migration_revision(
 
 @pytest.mark.req("FR-443", "FR-444")
 def test_caches_report_the_bundle_slot_and_not_the_diff_cache(client: TestClient, headers) -> None:
-    """`07` §4.6: a slot with no reads shows 0/0; `diff_cache` reports nothing until a
-    caller is given one, so it has no entry."""
+    """`07` §4.6: a slot that has been read twice and holds nothing shows 0 hits and 2
+    misses; `diff_cache` reports nothing until a caller is given one, so it has no entry."""
     slot = client.app.state.bundle_slot
     assert slot.get("a" * 64) is None
     assert slot.get("b" * 64) is None
@@ -394,7 +394,8 @@ def test_a_down_database_probe_with_both_reads_succeeding(client: TestClient, he
 
 @pytest.mark.req("FR-443", "FR-444")
 def test_the_model_makes_the_three_fields_nullable() -> None:
-    """The published contract says so, and a null is a valid body (not a 500)."""
+    """The model accepts `None` for the three fields, so a body carrying them is valid; an
+    empty list and zeros stay distinct, valid values. The published contract is not read here."""
     status = SystemStatus(
         status=ComponentStatus.DOWN,
         components=(),

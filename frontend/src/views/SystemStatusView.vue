@@ -65,6 +65,7 @@ function badge(state: ComponentStatus): string {
 
     <p
       v-if="loading"
+      role="status"
       class="text-sm text-slate-500"
     >
       Loading system status...
@@ -155,13 +156,22 @@ function badge(state: ComponentStatus): string {
         >
           <thead class="text-xs uppercase tracking-wide text-slate-500">
             <tr>
-              <th class="pr-6 font-medium">
+              <th
+                scope="col"
+                class="pr-6 font-medium"
+              >
                 Kind
               </th>
-              <th class="pr-6 font-medium">
+              <th
+                scope="col"
+                class="pr-6 font-medium"
+              >
                 Status
               </th>
-              <th class="font-medium">
+              <th
+                scope="col"
+                class="font-medium"
+              >
                 Depth
               </th>
             </tr>
@@ -217,16 +227,28 @@ function badge(state: ComponentStatus): string {
         >
           <thead class="text-xs uppercase tracking-wide text-slate-500">
             <tr>
-              <th class="pr-6 font-medium">
+              <th
+                scope="col"
+                class="pr-6 font-medium"
+              >
                 Cache
               </th>
-              <th class="pr-6 font-medium">
+              <th
+                scope="col"
+                class="pr-6 font-medium"
+              >
                 Hits
               </th>
-              <th class="pr-6 font-medium">
+              <th
+                scope="col"
+                class="pr-6 font-medium"
+              >
                 Misses
               </th>
-              <th class="font-medium">
+              <th
+                scope="col"
+                class="font-medium"
+              >
                 Hit rate
               </th>
             </tr>
@@ -249,6 +271,9 @@ function badge(state: ComponentStatus): string {
             </tr>
           </tbody>
         </table>
+        <p class="mt-2 text-xs text-slate-500">
+          The diff cache reports nothing until a caller is given one, so it has no row here.
+        </p>
       </div>
     </div>
   </section>
