@@ -251,6 +251,7 @@ async def test_a_validation_job_uses_another_datasets_version_whoever_submitted_
     register_data_handlers()
     dataset_id = await _seed_dataset_and_rules(database, blob_store, workspace_id, principal)
     version_id = await _ingest(database, blob_store, workspace_id, principal, dataset_id, CLEAN)
+
     async def set_reference(session: AsyncSession) -> None:
         await session.execute(
             update(ValidationRuleSetRow)
@@ -330,15 +331,32 @@ async def _snapshot(database: Database, workspace_id: UUID) -> list[tuple[Any, .
 async def test_the_listing_names_exactly_the_cross_dataset_references_and_changes_nothing(
     client: TestClient, database: Database, world: World, workspace_id: UUID
 ) -> None:
-    assert _put(client, world, "x", "workspace", world.version["x"]).status_code == 200  # own
-    assert _put(client, world, "y", "workspace", world.version["x"]).status_code == 200  # foreign
-    assert _put(client, world, "y", "workspace", None).status_code == 200  # none
-    foreign_rows = [
-        r
-        for r in await _rule_set_rows(database, world.dataset_id["y"])
-        if r.reference_dataset_version_id is not None
-    ]
-    assert len(foreign_rows) == 1
+    # Dataset X: one rule set naming its own version (not listed).
+    assert _put(client, world, "x", "workspace", world.version["x"]).status_code == 200
+    # Dataset Y: four versions of its rule set, each one shape.
+    assert (
+        _put(client, world, "y", "workspace", world.version["x"]).status_code == 200
+    )  # v1: another Dataset
+    assert _put(client, world, "y", "workspace", None).status_code == 200  # v2: no reference
+    assert (
+        _put(client, world, "y", "workspace", None).status_code == 200
+    )  # v3: set to another workspace
+    assert (
+        _put(client, world, "y", "workspace", None).status_code == 200
+    )  # v4: set to a missing version
+    rows = {r.version: r for r in await _rule_set_rows(database, world.dataset_id["y"])}
+    assert sorted(rows) == [1, 2, 3, 4]
+
+    async def set_references(session: AsyncSession) -> None:
+        for version, reference in ((3, world.version["z"]), (4, new_uuid7())):
+            await session.execute(
+                update(ValidationRuleSetRow)
+                .where(ValidationRuleSetRow.id == rows[version].id)
+                .values(reference_dataset_version_id=reference)
+            )
+
+    # The application role holds no UPDATE on `validation_rule_sets`: set-up goes through the owner.
+    await seed_as_owner(set_references)
 
     before = await _snapshot(database, workspace_id)
     out, err = io.StringIO(), io.StringIO()
@@ -348,7 +366,11 @@ async def test_the_listing_names_exactly_the_cross_dataset_references_and_change
     assert rc == 0, err.getvalue()
     assert before == after
     listed = out.getvalue().splitlines()
-    assert str(foreign_rows[0].id) in listed[0]
+    # Listed: another Dataset's version in the workspace (v1) and in another workspace (v3).
+    # Not listed: an own-Dataset reference, no reference (v2), a reference to no version (v4).
+    assert str(rows[1].id) in listed[0]
     assert str(world.version["x"]) in listed[0]
-    assert listed[-1] == "cross-dataset references: 1"
-    assert len(listed) == 2
+    assert str(rows[3].id) in listed[1]
+    assert str(world.version["z"]) in listed[1]
+    assert listed[-1] == "cross-dataset references: 2"
+    assert len(listed) == 3
