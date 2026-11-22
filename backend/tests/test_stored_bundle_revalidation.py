@@ -807,6 +807,51 @@ async def test_a_5xx_raised_while_a_pin_is_re_resolved_is_not_recorded_as_a_refu
     assert await refusal_events(database, workspace_id) == []
 
 
+@pytest.mark.req("FR-240")
+@pytest.mark.req("FR-243")
+@pytest.mark.asyncio
+async def test_a_hash_mismatch_met_inside_revalidate_is_recorded_exactly_once(
+    database: Database, blob_store: Any, workspace_id: UUID
+) -> None:
+    """FR-240 beside FR-243's scoped sentence: the mismatch is a 5xx and IS recorded. The version
+    declares its algorithm and pins, so `revalidate` goes on to the `except PlatformError` clause
+    that leaves a pin's 5xx unrecorded; the mismatch is raised by the loader before it, is
+    answered as the 500 `BUNDLE_HASH_MISMATCH`, and writes one event as the acting principal."""
+    from backend.tests.test_rating_version_compile import _empty_pins
+
+    from app.platform.bundle_hydration import revalidate
+    from model_schema import ActorKind, Principal
+
+    forged = json.loads((FIXTURES / "clean.bundle.json").read_bytes())
+    # The recorded and the carried hash agree; the content does not.
+    forged["content_hash"] = "sha256:" + "6" * 64
+    ref, _ = await stored_version_bytes(
+        database,
+        blob_store,
+        workspace_id,
+        json.dumps(forged).encode(),
+        algorithm_ref="rating_algorithm:minimal@1",
+        pins=_empty_pins(),
+    )
+    actor = Principal(kind=ActorKind.USER, id=new_uuid7(), display="actor")
+    async with database.session() as session:
+        with pytest.raises(PlatformError) as refused:
+            await revalidate(
+                session,
+                database=database,
+                blob_store=blob_store,
+                slot=BundleSlot(),
+                workspace_id=workspace_id,
+                ref=ArtifactRef.parse(ref),
+                actor=actor,
+            )
+    assert (refused.value.code, refused.value.status_code) == ("BUNDLE_HASH_MISMATCH", 500)
+    (event,) = await refusal_events(database, workspace_id)
+    assert event.entity_ref == ref
+    assert event.actor.get("id") == str(actor.id)
+    assert str((event.after or {}).get("refusal")).startswith("hash mismatch")
+
+
 @pytest.mark.req("FR-116")
 @pytest.mark.req("FR-243")
 @pytest.mark.asyncio
