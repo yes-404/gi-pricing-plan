@@ -195,3 +195,102 @@ async def test_the_same_bundle_with_a_risk_operand_loads() -> None:
     assert carried, "the bundle must carry the operand's payload"
     assert all(p["intent"] == "risk" for p in carried)
     assert load_bundle(bundle) is not None
+
+
+def test_scorer_chain_is_exactly_the_walk_refuse_control_in_bundle_makes(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """`scorer_chain` is the offset walk `refuse_control_in_bundle` makes: a scorer, then the scorer
+    its offset reads, then that one's offset, in order, one call each.
+
+    Doubles carry only what the walk reads: `offset_source`, `spec.offset.offset_model_ref`,
+    `factors`. The refusal itself is recorded, never run."""
+    from types import SimpleNamespace
+
+    from pricing_core.rating import runtime
+
+    def scorer(offset_ref: str | None, source: Any, factors: tuple[str, ...]) -> Any:
+        return SimpleNamespace(
+            offset_source=source,
+            spec=SimpleNamespace(offset=SimpleNamespace(offset_model_ref=offset_ref)),
+            factors=factors,
+        )
+
+    third = scorer(None, None, ("t",))
+    second = scorer("model:third@1", third, ("s",))
+    first = scorer("model:second@1", second, ("f",))
+    lone = scorer(None, None, ("l",))
+    payloads = {
+        ref: {"fit_result": {"for": ref}}
+        for ref in ("model:first@1", "model:second@1", "model:third@1", "model:lone@1")
+    }
+    scorers = {"model:first@1": first, "model:lone@1": lone}
+
+    assert [ref for ref, _ in runtime.scorer_chain("model:first@1", first)] == [
+        "model:first@1", "model:second@1", "model:third@1",
+    ]
+    assert [ref for ref, _ in runtime.scorer_chain("model:lone@1", lone)] == ["model:lone@1"]
+
+    walked: list[tuple[str, Any, tuple[str, ...]]] = []
+    monkeypatch.setattr(
+        runtime,
+        "refuse_control_in_features",
+        lambda ref, fit, factors, pool: walked.append((ref, fit, factors)),
+    )
+    runtime.refuse_control_in_bundle(payloads, scorers)  # type: ignore[arg-type]
+
+    assert walked == [
+        ("model:first@1", {"for": "model:first@1"}, ("f",)),
+        ("model:second@1", {"for": "model:second@1"}, ("s",)),
+        ("model:third@1", {"for": "model:third@1"}, ("t",)),
+        ("model:lone@1", {"for": "model:lone@1"}, ("l",)),
+    ]
+
+
+def test_inlined_algorithms_is_the_base_algorithm_and_one_per_purpose_the_bundle_selects(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """`inlined_algorithms` is `load_bundle`'s first step: the stored algorithm re-inlined from the
+    mounted fragments with no purpose (the base), then once per purpose in `purpose_graphs`.
+
+    The collaborators are recorded, not run: what is pinned is which purposes reach `inline_mounts`
+    and what the function returns, so dropping the purpose algorithms fails here alone."""
+    from types import SimpleNamespace
+
+    from pricing_core.rating import runtime
+
+    stored = object()
+    fragments = object()
+    calls: list[tuple[object, object, str | None]] = []
+
+    def inline(algorithm: object, mounted: object, purpose: str | None = None) -> str:
+        calls.append((algorithm, mounted, purpose))
+        return f"inlined:{purpose}"
+
+    bundle = SimpleNamespace(
+        algorithm_ref="algorithm:a@1",
+        pins="pins",
+        resolved_payloads={"algorithm:a@1": {"payload": 1}},
+        purpose_graphs={"cancellation": None, "mid_term_adjustment": None},
+    )
+    monkeypatch.setattr(
+        runtime, "RatingAlgorithm", SimpleNamespace(model_validate=lambda payload: stored)
+    )
+    monkeypatch.setattr(runtime, "mounted_fragments", lambda *args: fragments)
+    monkeypatch.setattr(runtime, "inline_mounts", inline)
+
+    base, per_purpose = runtime.inlined_algorithms(bundle)  # type: ignore[arg-type]
+
+    assert base == "inlined:None"
+    assert per_purpose == {
+        "cancellation": "inlined:cancellation",
+        "mid_term_adjustment": "inlined:mid_term_adjustment",
+    }
+    assert calls == [
+        (stored, fragments, None),
+        (stored, fragments, "cancellation"),
+        (stored, fragments, "mid_term_adjustment"),
+    ]
+
+    none = SimpleNamespace(**{**vars(bundle), "purpose_graphs": {}})
+    assert runtime.inlined_algorithms(none) == ("inlined:None", {})  # type: ignore[arg-type]
