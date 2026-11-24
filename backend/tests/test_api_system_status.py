@@ -20,6 +20,7 @@ from app.api.health import register_probe
 from app.config import Environment, Settings
 from app.main import create_app
 from model_schema import SystemStatus
+from model_schema.permissions import BUILTIN_ROLES
 from model_schema.system_status import BlobStoreUsage, ComponentHealth, ComponentStatus
 
 STATUS = "/api/v1/admin/status"
@@ -66,6 +67,21 @@ def test_a_caller_with_no_role_is_refused(client: TestClient, unprivileged_heade
     response = client.get(STATUS, headers=unprivileged_headers)
     assert response.status_code == 403
     assert response.json()["code"] == "PERMISSION_DENIED"
+
+
+@pytest.mark.req("FR-443", "FR-444")
+@pytest.mark.parametrize("role", sorted(BUILTIN_ROLES))
+@pytest.mark.asyncio
+async def test_every_built_in_role_may_open_the_route(
+    client: TestClient, workspace_id, principal, grant, role: str
+) -> None:
+    """Answer 1: any built-in role may open the route. The roles are read from
+    `BUILTIN_ROLES`, so a role added there is covered, and a permission changed to one a
+    role does not hold (an `admin:*` one, say) fails for every role but `admin`."""
+    await grant(role)
+    headers = {DEV_PRINCIPAL_HEADER: str(principal.id), "Workspace-Id": str(workspace_id)}
+    response = client.get(STATUS, headers=headers)
+    assert response.status_code == 200
 
 
 #: The one literal: the field names `07` §4.6 states. It pins the spec against the model; the
@@ -150,8 +166,8 @@ async def test_the_schema_version_is_the_migration_revision(
 
 @pytest.mark.req("FR-443", "FR-444")
 def test_caches_report_the_bundle_slot_and_not_the_diff_cache(client: TestClient, headers) -> None:
-    """`07` §4.6: a slot with no reads shows 0/0; `diff_cache` reports nothing until a
-    caller is given one, so it has no entry."""
+    """`07` §4.6: a slot that has been read twice and holds nothing shows 0 hits and 2
+    misses; `diff_cache` reports nothing until a caller is given one, so it has no entry."""
     slot = client.app.state.bundle_slot
     assert slot.get("a" * 64) is None
     assert slot.get("b" * 64) is None
@@ -378,7 +394,8 @@ def test_a_down_database_probe_with_both_reads_succeeding(client: TestClient, he
 
 @pytest.mark.req("FR-443", "FR-444")
 def test_the_model_makes_the_three_fields_nullable() -> None:
-    """The published contract says so, and a null is a valid body (not a 500)."""
+    """The model accepts `None` for the three fields, so a body carrying them is valid; an
+    empty list and zeros stay distinct, valid values. The published contract is not read here."""
     status = SystemStatus(
         status=ComponentStatus.DOWN,
         components=(),

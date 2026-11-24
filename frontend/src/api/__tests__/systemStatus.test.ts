@@ -50,10 +50,15 @@ describe("the system status client (07 §4.6)", () => {
 
   it("surfaces a refusal as a ProblemError", async () => {
     respond(403, {
-      type: "about:blank", title: "Forbidden", status: 403, code: "FORBIDDEN", errors: [],
+      type: "about:blank",
+      title: "Not permitted",
+      status: 403,
+      code: "PERMISSION_DENIED",
+      detail: "This action requires settings:read.",
+      errors: [],
     });
     await expect(getSystemStatus()).rejects.toSatisfy(
-      (e: unknown) => e instanceof ProblemError && isProblem(e) && e.code === "FORBIDDEN",
+      (e: unknown) => e instanceof ProblemError && isProblem(e) && e.code === "PERMISSION_DENIED",
     );
   });
 });

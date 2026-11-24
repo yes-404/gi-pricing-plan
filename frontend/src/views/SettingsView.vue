@@ -142,6 +142,7 @@ onMounted(async () => {
 
     <p
       v-if="loading"
+      role="status"
       class="mt-6 text-sm text-slate-500"
     >
       Loading settings…
@@ -178,22 +179,40 @@ onMounted(async () => {
       </caption>
       <thead>
         <tr class="border-b border-slate-200 text-xs uppercase text-slate-500">
-          <th class="py-2 pr-4">
+          <th
+            scope="col"
+            class="py-2 pr-4"
+          >
             Setting
           </th>
-          <th class="py-2 pr-4">
+          <th
+            scope="col"
+            class="py-2 pr-4"
+          >
             Effective value
           </th>
-          <th class="py-2 pr-4">
+          <th
+            scope="col"
+            class="py-2 pr-4"
+          >
             Source
           </th>
-          <th class="py-2 pr-4">
+          <th
+            scope="col"
+            class="py-2 pr-4"
+          >
             Scope
           </th>
-          <th class="py-2 pr-4">
+          <th
+            scope="col"
+            class="py-2 pr-4"
+          >
             Layers
           </th>
-          <th class="py-2">
+          <th
+            scope="col"
+            class="py-2"
+          >
             <span class="sr-only">Actions</span>
           </th>
         </tr>

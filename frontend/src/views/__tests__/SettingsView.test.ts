@@ -136,6 +136,20 @@ describe("the Settings view", () => {
     expect(envRow.queryByRole("spinbutton")).not.toBeInTheDocument();
   });
 
+  it("gives every column header a column scope", async () => {
+    render(SettingsView);
+    await rowOf("validation.psi_warn_threshold");
+    const headers = screen.getAllByRole("columnheader");
+    expect(headers.length).toBe(6);
+    for (const header of headers) expect(header.getAttribute("scope")).toBe("col");
+  });
+
+  it("announces the loading text as a status", () => {
+    listSettings.mockReturnValue(new Promise(() => {}));
+    render(SettingsView);
+    expect(screen.getByRole("status")).toHaveTextContent(/loading settings/i);
+  });
+
   it("FR-446: a workspace-resolved key shows its source and offers an edit control", async () => {
     render(SettingsView);
     const psiRow = within(await rowOf("validation.psi_warn_threshold"));
