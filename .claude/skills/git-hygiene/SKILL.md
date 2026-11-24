@@ -79,6 +79,8 @@ merging.
 3. **Evidence.** The CI workflows that the PR's paths fire, run on the **exact landing tree**: the merge with the current `main`. Read the checkout line (`HEAD is now at <merge> Merge <head> into <main>`) from a **finished run's log** before saying which tree ran, and check the squash tree equals that merge's tree. To refresh a human's PR on a moved `main`: close and reopen it, and read the checkout line **before cancelling anything** (the first reopen is stale only sometimes). *Why: a run reports its own head, not the tree it tested.*
 4. **A bot's pull request** (`app/dependabot`) is refreshed by the bot's own rebase (`@dependabot rebase`), never by close and reopen. **Read the regenerated head again:** compare its own diff with the one read before (the same packages at the same versions, lock changes confined to them). A moved version makes it a new read, not a refresh. *Why: a rebase can change what the bot resolved.*
 
+*(Amended 2026-11-24 by the maintainer, on [ADR-2180](../../../docs/adrs/ADR-02180-a-code-owned-pull-request-in-a-period-with-no-cross-review-is-audited-read-and-checked-by-three-things.md) and the dated amendment in `CONTRIBUTING.md` "Review": a pull request merged in the period with no cross-review (from 1 December 2026 until the maintainer ends it) says so in one line of its description and carries the label `no-cross-review`; the merge is still the core lead's, one at a time, on the maintainer's MERGE-ACK naming the head, and the workflows its paths fire are read on the exact landing tree as in rule 3. In force only once it is on `main` and 1 December 2026 is reached.)*
+
 *(Amended 2026-09-29, mirroring `.claude/roles/lead.md`'s dated amendment by the maintainer: `app/dependabot` is also merged, but only on the maintainer's MERGE-ACK naming its head SHA. Every other author is still reported and left alone. The author query below lists Dependabot PRs too; they wait for that ACK, not a report.)*
 
 **Why the boundary is clean here and would not be in most repositories**: every agent on this
@@ -1012,6 +1014,8 @@ delta, not the PR. W6b-13 practiced this by accident: the executor's push `8ef88
 it fixed; a silent amend would have carried the old verdict over the new code.
 
 ## Verified
+
+2026-11-24 (against main `3a02515f6f64807a9728e078ce33373738f8651f`) — The pointer amendment under "The repository is public", on the maintainer's decision of 24 Nov 2026 (ADR-2180). It was read against `CONTRIBUTING.md` "Review" and "Pull requests" at that tree; no command was run. The rest of this file was not re-read.
 
 2026-11-22 (against main `18868c6c697ecb6f1708348d4b5813b1c3264c22`) — The collaborator-merge amendment added under "The repository is public", on the maintainer's ruling of 22 Nov 2026. The rules were read against `CONTRIBUTING.md` "Pull requests" and "Review" at that tree. The rules were applied on live pull requests the same day: #1961 and #1986 (collaborator pull requests) were squash-merged this way, with the author read back, and #1965 was refreshed by the bot's rebase and its regenerated diff read again. The rest of this file was not re-read.
 
