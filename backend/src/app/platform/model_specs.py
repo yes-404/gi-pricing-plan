@@ -334,7 +334,9 @@ async def validate_spec(
     # A `kind="model"` offset is another model's linear predictor (FR-116): the ref
     # must resolve to a fitted GLM in this workspace whose link is the new spec's. Every
     # refusal the resolver names is reported as the ref's problem here, before a Job
-    # exists — `WF-698` D2's rule applied to offsets-from-model.
+    # exists — `WF-698` D2's rule applied to offsets-from-model. The message carries the
+    # resolver's code (`MODEL_OFFSET_REF_INVALID` for a source that has a model offset of its
+    # own: version 1 supports one level, #1943), because a problem has no field for one.
     if isinstance(spec, GlmSpec) and spec.offset.kind == "model":
         try:
             await resolve_offset_model(
@@ -348,7 +350,7 @@ async def validate_spec(
                 SpecProblem(
                     kind=SpecProblemKind.MODEL_OFFSET_UNRESOLVABLE,
                     subject=str(spec.offset.offset_model_ref),
-                    message=f"the offset model cannot be used: {exc.detail}",
+                    message=f"the offset model cannot be used ({exc.code}): {exc.detail}",
                 )
             )
 

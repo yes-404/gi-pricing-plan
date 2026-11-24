@@ -42,9 +42,9 @@ from app.api.deps import DEV_PRINCIPAL_HEADER, Caller
 from app.config import Settings
 from app.db.models import JobRow, ScoringTraceRow
 from app.main import create_app
+from app.platform import bundle_hydration, traces
 from app.platform import jobs as job_service
 from app.platform import settings as settings_service
-from app.platform import traces
 from app.platform.deployment_switch import LiveRefs
 from app.worker.rating_handlers import register_rating_handlers
 from app.worker.tasks import execute_job
@@ -578,6 +578,34 @@ def test_a_plain_value_error_wearing_a_per_quote_code_is_not_mapped(
 
     assert response.status_code == 500, response.text
     assert "SENTINEL-quote-input-f3" not in response.text
+
+
+@pytest.mark.req("FR-239")
+@pytest.mark.req("FR-243")
+def test_a_stored_bundle_that_does_not_carry_what_it_pins_is_a_409_not_a_500(
+    client: TestClient,
+    scoring_headers: dict[str, str],
+    compiled_version: Any,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """#1943 D3: `load_bundle` refuses a stored Bundle with `RATING_VERSION_UNPINNED` (a pinned
+    payload is absent, FR-239). The route answers that load refusal by name, 409; it was a 500
+    `INTERNAL_ERROR` because the code was not a load-guard code. The refusal is the real
+    `CodedError` class `load_bundle` raises, so the mapping under test is the route's."""
+
+    def _refuse(_bundle: Any) -> Any:
+        raise CodedError(
+            "RATING_VERSION_UNPINNED: step 's_risk' names model:motor-freq@1, which the bundle "
+            "does not carry (FR-237)"
+        )
+
+    monkeypatch.setattr(bundle_hydration, "load_bundle", _refuse)
+    response = client.post(
+        SCORE_URL, json=_quote({"rating_version_ref": SCORED_REF}), headers=scoring_headers
+    )
+
+    assert response.status_code == 409, response.text
+    assert response.json()["code"] == "RATING_VERSION_UNPINNED"
 
 
 @pytest.mark.req("FR-250")

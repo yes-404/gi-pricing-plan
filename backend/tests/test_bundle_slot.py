@@ -277,6 +277,55 @@ def test_a_slot_that_can_hold_nothing_is_refused(capacity: int) -> None:
         Settings(bundle_slot_capacity=capacity)
 
 
+@pytest.mark.req("FR-443")
+def test_the_slot_tallies_lookups_not_requests() -> None:
+    """`07` §4.6: the unit is a lookup. A miss on the score path is two lookups, so one
+    request that misses adds two to `misses`; `put`, `hash_for` and `discard` are no lookup."""
+    slot = BundleSlot(capacity=1)
+    assert (slot.hits, slot.misses) == (0, 0)
+
+    assert slot.get("hash-a") is None
+    assert slot.get("hash-a") is None
+    assert (slot.hits, slot.misses) == (0, 2)
+
+    slot.put(_ref(1), _compiled("hash-a"))
+    assert slot.hash_for(_ref(1)) == "hash-a"
+    assert (slot.hits, slot.misses) == (0, 2)
+
+    assert slot.get("hash-a") is not None
+    assert (slot.hits, slot.misses) == (1, 2)
+    slot.discard("hash-a")
+    assert (slot.hits, slot.misses) == (1, 2)
+
+
+@pytest.mark.req("FR-443")
+def test_the_tally_changes_nothing_a_lookup_returns() -> None:
+    """The counters are read-only tallies: given the same sequence, a slot whose counters are
+    read after every step returns what a slot whose counters are never read returns, and the
+    counters are not assignable from outside."""
+    read, unread = BundleSlot(capacity=2), BundleSlot(capacity=2)
+    lookups: tuple[list[str | None], list[str | None]] = ([], [])
+
+    def step(slot: BundleSlot, seen: list[str | None], *, observe: bool) -> None:
+        for number in (1, 2, 3):  # the third put evicts the least recently used
+            slot.put(_ref(number), _compiled(f"hash-{number}"))
+            if number == 2:
+                slot.get("hash-1")  # a use: hash-2 is now the older
+        for name in ("hash-1", "hash-2", "hash-3", "hash-absent"):
+            held = slot.get(name)
+            seen.append(held.content_hash if held else None)
+            if observe:
+                _ = (slot.hits, slot.misses)
+
+    step(read, lookups[0], observe=True)
+    step(unread, lookups[1], observe=False)
+
+    assert lookups[0] == lookups[1]
+    assert lookups[0] == ["hash-1", None, "hash-3", None]  # the sequence does evict
+    with pytest.raises(AttributeError):
+        read.hits = 5  # type: ignore[misc]
+
+
 def _imported_roots(source: str) -> set[str]:
     """The top-level package of every import in `source`.
 

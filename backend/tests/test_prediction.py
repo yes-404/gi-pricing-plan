@@ -528,6 +528,47 @@ async def test_a_model_offset_ref_that_names_no_model_is_not_found_not_a_500(
     assert refused.value.status_code == 404
 
 
+@pytest.mark.req("FR-116")
+async def test_a_two_level_offset_chain_is_a_409_naming_the_refusal_not_a_missing_offset(
+    database, blob_store, workspace_id
+) -> None:
+    """#1943 point 2: model C is offset from B, which is offset from A. The fit refuses C, so C
+    is a row written by hand past the fit, as in `test_a_model_offset_ref_that_names_no_model_...`.
+    Scoring it answers `MODEL_OFFSET_REF_INVALID` (409); the base answered
+    `MODEL_OFFSET_MISSING`."""
+    pair = await _fitted_residual_pair(database, blob_store, workspace_id)
+
+    async with database.unit_of_work() as session:
+        fitted = await session.get(ModelRow, pair.residual_id)
+        assert fitted is not None
+        chained, _ = await model_service.reserve_model(
+            session, workspace_id=workspace_id, actor=pair.actor,
+            spec=_residual_spec(
+                pair.v2_id, pair.resid_flag_id, pair.split2,
+                ref=f"model:{fitted.model_family_slug}@{fitted.version}",
+            ),
+        )
+        await session.execute(
+            ModelRow.__table__.update()
+            .where(ModelRow.id == chained.id)
+            .values(
+                fit_result=fitted.fit_result,
+                status=ModelStatus.FITTED.value,
+                diagnostics_id=fitted.diagnostics_id,
+            )
+        )
+        chained_id = chained.id
+
+    async with database.session() as session:
+        with pytest.raises(PlatformError) as refused:
+            await service.predict_rows(
+                session, workspace_id=workspace_id, actor=pair.actor,
+                model_id=chained_id, rows=RESIDUAL_ROWS, blob_store=blob_store,
+            )
+    assert refused.value.code == "MODEL_OFFSET_REF_INVALID"
+    assert refused.value.status_code == 409
+
+
 # -- The refusals --------------------------------------------------------------------------
 
 

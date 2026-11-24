@@ -19,6 +19,7 @@ from pydantic import BaseModel, ConfigDict, Field
 __all__ = [
     "SettingCandidate",
     "SettingResolution",
+    "SettingScope",
     "SettingSource",
     "SettingType",
 ]
@@ -31,6 +32,14 @@ class SettingSource(enum.StrEnum):
     ENVIRONMENT_SETTING = "environment_setting"
     WORKSPACE = "workspace"
     DEFAULT = "default"
+
+
+class SettingScope(enum.StrEnum):
+    """The levels a setting may be set at (FR-446, `RL-1311` item 1)."""
+
+    WORKSPACE = "workspace"
+    WORKSPACE_OR_ENVIRONMENT = "workspace_or_environment"
+    ENVIRONMENT = "environment"
 
 
 class SettingType(enum.StrEnum):
@@ -66,3 +75,9 @@ class SettingResolution(BaseModel):
         "to the safe value (FR-449).",
     )
     description: str = ""
+    scope: SettingScope = Field(
+        description="The levels this setting may be set at, as the settings registry declares "
+        "them: `workspace`, `workspace_or_environment` or `environment` (FR-446). A "
+        "workspace-level write to an `environment` setting is refused. Required on every "
+        "resolution; the registry is its only source."
+    )

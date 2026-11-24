@@ -6,9 +6,11 @@ import pytest
 import pytest_asyncio
 from backend.tests.conftest_db import seed_as_owner
 from fastapi.testclient import TestClient
+from sqlalchemy import delete
 
 from app.api.deps import DEV_PRINCIPAL_HEADER
 from app.config import Environment, Settings
+from app.db.models import EnvironmentSettingRow
 from app.main import create_app
 
 
@@ -67,6 +69,87 @@ def test_reads_show_the_source_not_only_the_value(client: TestClient, headers) -
     assert psi["resolved_from"] == "default"
     assert [c["source"] for c in psi["candidates"]] == ["env", "workspace", "default"]
     assert psi["constraints"] == {"min": 0.0, "max": 1.0}
+
+
+@pytest.mark.req("FR-446")
+def test_reads_carry_each_settings_declared_scope(client: TestClient, headers) -> None:
+    """FR-446, `07` §4.4: every resolution says which levels its setting may be set at.
+
+    The scope comes from the registry alone. A key that can be set at workspace level and
+    one that cannot are told apart without the caller holding a list of its own (#1964).
+    """
+    body = client.get("/api/v1/settings", headers=headers).json()
+    by_key = {s["key"]: s for s in body}
+    assert by_key["validation.psi_warn_threshold"]["scope"] == "workspace"
+    assert by_key["rating.trace_sample_rate"]["scope"] == "workspace_or_environment"
+    # Environment-only: a workspace write is refused, and the read says so beforehand.
+    assert by_key["features.date_routing_enabled"]["scope"] == "environment"
+    assert all("scope" in s for s in body)
+
+
+@pytest.mark.req("FR-446")
+def test_scope_is_a_required_field_of_the_published_resolution(client: TestClient) -> None:
+    """The field is required on every resolution the API returns, not optional."""
+    schema = client.get("/openapi.json").json()["components"]["schemas"]["SettingResolution"]
+    assert "scope" in schema["required"]
+
+
+@pytest.mark.req("FR-446")
+def test_a_workspace_update_returns_each_settings_declared_scope(
+    client: TestClient, headers
+) -> None:
+    """FR-446, `07` §4.4: `PUT /api/v1/settings` shares `_resolution`, so it carries scope too."""
+    response = client.put(
+        "/api/v1/settings",
+        json={"values": {"validation.psi_warn_threshold": 0.2}},
+        headers=headers,
+    )
+    assert response.status_code == 200
+    by_key = {s["key"]: s for s in response.json()}
+    assert by_key["validation.psi_warn_threshold"]["scope"] == "workspace"
+    assert by_key["features.date_routing_enabled"]["scope"] == "environment"
+    assert all("scope" in s for s in by_key.values())
+
+
+@pytest.mark.req("FR-446")
+def test_an_environment_read_returns_each_settings_declared_scope(
+    client: TestClient, headers
+) -> None:
+    """FR-446, `07` §4.4: `GET /api/v1/environments/{slug}/settings` carries scope too."""
+    response = client.get("/api/v1/environments/uat/settings", headers=headers)
+    assert response.status_code == 200
+    by_key = {s["key"]: s for s in response.json()}
+    assert by_key["rating.trace_sample_rate"]["scope"] == "workspace_or_environment"
+    assert by_key["features.date_routing_enabled"]["scope"] == "environment"
+    assert all("scope" in s for s in by_key.values())
+
+
+@pytest_asyncio.fixture
+async def clean_environment_settings():
+    """Environments are deployment-wide, so a row written here would outlive the test."""
+    yield
+
+    async def _remove(session) -> None:
+        await session.execute(delete(EnvironmentSettingRow))
+
+    await seed_as_owner(_remove)
+
+
+@pytest.mark.req("FR-446")
+def test_an_environment_update_returns_each_settings_declared_scope(
+    client: TestClient, headers, clean_environment_settings
+) -> None:
+    """FR-446, `07` §4.4: `PUT /api/v1/environments/{slug}/settings` carries scope too."""
+    response = client.put(
+        "/api/v1/environments/uat/settings",
+        json={"values": {"rating.trace_sample_rate": 0.25}},
+        headers=headers,
+    )
+    assert response.status_code == 200, response.text
+    by_key = {s["key"]: s for s in response.json()}
+    assert by_key["rating.trace_sample_rate"]["scope"] == "workspace_or_environment"
+    assert by_key["validation.psi_warn_threshold"]["scope"] == "workspace"
+    assert all("scope" in s for s in by_key.values())
 
 
 @pytest.mark.req("FR-448")

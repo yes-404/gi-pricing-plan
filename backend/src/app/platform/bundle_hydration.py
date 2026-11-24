@@ -2,11 +2,11 @@
 
 `hydrate` is the only caller of `load_bundle` in `backend/src`, so a Bundle compiled before the
 `control`-intent guard existed cannot price: `load_bundle` refuses it with a load-guard code
-(`LOAD_GUARD_CODES`: `CONTROL_FACTOR_IN_RATEABLE_PATH`, or `MODEL_TERM_UNRESOLVED` for a GLM level
-its Factor cannot produce), and this wrapper turns that into a decided answer — a 409
-problem (the request is valid; the stored artifact conflicts with the current rules), never a
-500 — and records the refusal as an Audit Event (NFR-498). `test_hydration_census` holds both
-"only caller" claims.
+(`LOAD_GUARD_CODES`: `CONTROL_FACTOR_IN_RATEABLE_PATH`; `MODEL_TERM_UNRESOLVED` for a GLM level
+its Factor cannot produce; `RATING_VERSION_UNPINNED` for a payload the Bundle pins and does not
+carry), and this wrapper turns that into a decided answer — a 409 problem (the request is
+valid; the stored artifact conflicts with the current rules), never a 500 — and records the
+refusal as an Audit Event (NFR-498). `test_hydration_census` holds both "only caller" claims.
 
 **The event survives the refusal**: it is written in its own transaction, because the request
 that raises would otherwise roll it back. **One event per process per hash** (DP-1): the slot's
@@ -54,6 +54,7 @@ __all__ = [
 LOAD_GUARD_CODES: Mapping[str, str] = {
     "CONTROL_FACTOR_IN_RATEABLE_PATH": "A stored bundle prices on a control-intent Factor",
     "MODEL_TERM_UNRESOLVED": "A stored bundle prices a level its Factor cannot produce",
+    "RATING_VERSION_UNPINNED": "A stored bundle does not carry what it pins",
 }
 #: The Audit Event action for a refused load (`03` §4.3, NFR-498).
 REFUSAL_ACTION = "rating_version.load_refused"
@@ -73,19 +74,18 @@ def unreadable_bundle(ref: ArtifactRef | str, why: str) -> PlatformError:
     )
 
 
-async def _refuse(
+async def _record_refusal(
     slot: BundleSlot,
     database: Database,
     *,
     workspace_id: UUID,
     ref: ArtifactRef,
     content_hash: str,
-    code: str,
     refusal: str,
     acting: Principal | None,
     requester: Principal | None,
-) -> PlatformError:
-    """The refusal as a decided answer: evict the hash, audit it, return the 409.
+) -> None:
+    """Evict the hash and write the refusal's Audit Event (`_refuse`'s first two acts).
 
     **A governance act** (`acting` set: submit, deploy, rollback) writes its OWN event with the
     acting principal as actor, every time, never de-duplicated and never touching the memo.
@@ -119,6 +119,36 @@ async def _refuse(
             if acting is None:
                 slot.unrecord_refusal(content_hash)
             raise
+
+
+async def _refuse(
+    slot: BundleSlot,
+    database: Database,
+    *,
+    workspace_id: UUID,
+    ref: ArtifactRef,
+    content_hash: str,
+    code: str,
+    refusal: str,
+    acting: Principal | None,
+    requester: Principal | None,
+) -> PlatformError:
+    """The refusal as a decided answer: evict the hash, audit it, return the answer.
+
+    A load-guard refusal is a 409. A hash mismatch (`MISMATCH_CODE`) is the platform's own
+    integrity decision: it is recorded here like any refusal and answered as an internal 500
+    that names no content. It is the only 5xx that is recorded; the 5xx of a pin
+    re-resolution (an outage) is not (`revalidate`)."""
+    await _record_refusal(
+        slot,
+        database,
+        workspace_id=workspace_id,
+        ref=ref,
+        content_hash=content_hash,
+        refusal=refusal,
+        acting=acting,
+        requester=requester,
+    )
     if code == MISMATCH_CODE:
         return PlatformError(
             code, "Internal error", 500, f"{ref}: the stored bundle does not match its hash."
@@ -343,6 +373,27 @@ async def revalidate(
             acting=actor,
             requester=None,
         ) from None
+    except PlatformError as exc:
+        # A pin the resolver refuses (a pinned model whose offset source has an offset of its own,
+        # FR-116, a pin that no longer resolves): the resolver refuses it as a `PlatformError`,
+        # which is already the answer's status, but a governance refusal also writes its own
+        # event every time (FR-243). Every 4xx the resolver raises is a decided refusal and is
+        # recorded, then re-raised unchanged. A 5xx is an outage, not a decision, and an outage is
+        # never recorded as a refusal. None of these is a load-guard code, so `hydrate` never
+        # sees them.
+        if not 400 <= exc.status_code < 500:
+            raise
+        await _record_refusal(
+            slot,
+            database,
+            workspace_id=workspace_id,
+            ref=ref,
+            content_hash=bundle.content_hash,
+            refusal=f"{exc.code}: {exc.detail or exc.title}",
+            acting=actor,
+            requester=None,
+        )
+        raise
 
 
 class Revalidate(Protocol):
