@@ -82,8 +82,8 @@ NO_PERMISSION_REQUIRED = {
 #:   left), each raising `WORKSPACE_SCOPE_DENIED`.
 HANDLER_GUARDED: dict[tuple[str, str], tuple[tuple[str, int, str], ...]] = {
     ("POST", "/api/v1/validation-rules"): (
-        ("platform/validation_rules.py", 217, "require_permission("),
-        ("platform/validation_rules.py", 224, "require_permission("),
+        ("platform/validation_rules.py", 219, "require_permission("),
+        ("platform/validation_rules.py", 226, "require_permission("),
     ),
     ("POST", "/api/v1/me/workspace"): (
         ("api/me.py", 244, "WORKSPACE_SCOPE_DENIED"),
