@@ -301,10 +301,76 @@ def _unproducible_bundle() -> Bundle:
     return Bundle.model_validate(raw)
 
 
+_MODEL = "model:motor-freq-glm@1"
+
+
+def _clean_raw() -> dict[str, Any]:
+    return json.loads((FIXTURES / "clean.bundle.json").read_text())
+
+
+def _unpinned_step_bundle() -> Bundle:
+    """`check_step_refs_pinned`'s raise: the `model_call` step's model is not in the pins."""
+    raw = _clean_raw()
+    raw["pins"]["models"] = []
+    return Bundle.model_validate(raw)
+
+
+def _step_model_not_carried_bundle() -> Bundle:
+    """`_load_boosters`'s raise: the step names a model the Bundle does not carry."""
+    raw = _clean_raw()
+    del raw["resolved_payloads"][_MODEL]
+    return Bundle.model_validate(raw)
+
+
+def _drop_payloads(prefix: str) -> Callable[[], Bundle]:
+    def build() -> Bundle:
+        raw = _clean_raw()
+        payloads = raw["resolved_payloads"]
+        for key in [k for k in payloads if k.startswith(prefix)]:
+            del payloads[key]
+        return Bundle.model_validate(raw)
+
+    return build
+
+
+def _offset_source_absent_bundle() -> Bundle:
+    """A GLM whose model offset names a source the Bundle does not carry (FR-116, #1943)."""
+    raw = _clean_raw()
+    spec = raw["resolved_payloads"][_MODEL]["spec"]
+    spec["offset"] = {"kind": "model", "offset_model_ref": "model:motor-source@1"}
+    return Bundle.model_validate(raw)
+
+
+def _pinned_but_not_carried(kind: str) -> Callable[[], Bundle]:
+    """The `region` Factor made a banding or a grouping whose payload the Bundle lacks."""
+
+    def build() -> Bundle:
+        raw = _clean_raw()
+        region = raw["resolved_payloads"]["factor:region@1"]
+        region.update(type=kind, **{f"{kind}_id": str(uuid4())})
+        return Bundle.model_validate(raw)
+
+    return build
+
+
+#: A Bundle `load_bundle` refuses with `RATING_VERSION_UNPINNED`, one per raise site: the two
+#: that were already coded (`check_step_refs_pinned`, `_load_boosters`) and the four in
+#: `_glm_scorer` that were bare `ValueError`s until #1943. Each answered 500 before #1943.
+UNPINNED_ROWS: dict[str, Callable[[], Bundle]] = {
+    "step_model_not_pinned": _unpinned_step_bundle,
+    "step_model_not_carried": _step_model_not_carried_bundle,
+    "glm_factor_not_carried": _drop_payloads("factor:"),
+    "glm_banding_not_carried": _pinned_but_not_carried("banding"),
+    "glm_grouping_not_carried": _pinned_but_not_carried("grouping"),
+    "glm_offset_source_not_carried": _offset_source_absent_bundle,
+}
+
+
 #: One row per load-guard code: a Bundle `load_bundle` refuses with it.
 GUARD_ROWS: dict[str, Callable[[], Bundle]] = {
     "CONTROL_FACTOR_IN_RATEABLE_PATH": lambda: _bundle("offender.bundle.json"),
     "MODEL_TERM_UNRESOLVED": _unproducible_bundle,
+    "RATING_VERSION_UNPINNED": _offset_source_absent_bundle,
 }
 
 
@@ -343,7 +409,7 @@ async def test_a_coded_error_outside_the_load_guard_set_is_re_raised(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     def other(_bundle: Bundle) -> None:
-        raise CodedError("RATING_VERSION_UNPINNED: not a load guard")
+        raise CodedError("NOT_A_LOAD_GUARD: not a load guard")
 
     monkeypatch.setattr(bundle_hydration, "load_bundle", other)
     with pytest.raises(CodedError):
@@ -354,3 +420,97 @@ async def test_a_coded_error_outside_the_load_guard_set_is_re_raised(
             workspace_id=uuid4(),
             ref=REF,
         )
+
+
+@pytest.mark.req("FR-116")
+@pytest.mark.req("FR-239")
+@pytest.mark.req("FR-243")
+@pytest.mark.asyncio
+@pytest.mark.parametrize("name", sorted(UNPINNED_ROWS))
+async def test_every_unpinned_load_refusal_is_a_409_and_one_audit_event(
+    name: str, events: list[dict[str, Any]]
+) -> None:
+    """#1943 D3: each raise site of `RATING_VERSION_UNPINNED` at load answered 500 (a bare
+    `ValueError`, or a `CodedError` `hydrate` re-raised) and now answers 409, audited once."""
+    bundle = UNPINNED_ROWS[name]()
+    database = _FakeDatabase()
+    with pytest.raises(PlatformError) as refused:
+        await hydrate(
+            bundle,
+            slot=BundleSlot(),
+            database=database,  # type: ignore[arg-type]
+            workspace_id=uuid4(),
+            ref=REF,
+        )
+    assert (refused.value.code, refused.value.status_code) == ("RATING_VERSION_UNPINNED", 409)
+    assert [e["action"] for e in events] == [REFUSAL_ACTION]
+    assert events[0]["after"]["bundle_hash"] == bundle.content_hash
+
+
+@pytest.mark.req("FR-88")
+@pytest.mark.req("FR-240")
+@pytest.mark.asyncio
+async def test_a_governance_act_on_a_bundle_missing_its_offset_source_is_refused_by_name(
+    events: list[dict[str, Any]],
+) -> None:
+    """#1943 D3: submit, deploy and rollback reach `hydrate` with `acting` set (`revalidate`)."""
+    from model_schema import ActorKind, Principal
+
+    actor = Principal(kind=ActorKind.USER, id=uuid4(), display="deployer")
+    with pytest.raises(PlatformError) as refused:
+        await hydrate(
+            _offset_source_absent_bundle(),
+            slot=BundleSlot(),
+            database=_FakeDatabase(),  # type: ignore[arg-type]
+            workspace_id=uuid4(),
+            ref=REF,
+            acting=actor,
+        )
+    assert (refused.value.code, refused.value.status_code) == ("RATING_VERSION_UNPINNED", 409)
+    assert "model:motor-source@1" in str(refused.value)
+    assert events[0]["actor"] is actor
+
+
+@pytest.mark.req("FR-116")
+@pytest.mark.asyncio
+async def test_a_bundle_carrying_a_whole_offset_chain_loads_and_each_quote_is_refused() -> None:
+    """#1943 note (a): a stored Bundle that carries the whole chain (C offset from B, B offset
+    from A) loads, as it did before #1943, and every quote is refused `MODEL_CALL_FAILED`
+    (`MODEL_OFFSET_MISSING`): the chain is refused per quote there, not at load, and nothing
+    prices. FR-116 says so."""
+    import copy
+
+    from model_schema import QuoteContext
+    from pricing_core.rating.score import score_one
+
+    raw = _clean_raw()
+    payloads = raw["resolved_payloads"]
+    for source, offset in (
+        ("model:motor-source-a@1", payloads[_MODEL]["spec"]["offset"]),
+        ("model:motor-source-b@1", {"kind": "model", "offset_model_ref": "model:motor-source-a@1"}),
+    ):
+        payloads[source] = copy.deepcopy(payloads[_MODEL])
+        payloads[source]["spec"]["offset"] = offset
+    payloads[_MODEL]["spec"]["offset"] = {
+        "kind": "model",
+        "offset_model_ref": "model:motor-source-b@1",
+    }
+    compiled = load_bundle(Bundle.model_validate(raw))
+    context = QuoteContext.model_validate(
+        {
+            "purpose": "new_business",
+            "quoted_at": "2026-09-28T09:00:00",
+            "effective_date": "2026-10-01",
+            "inputs": {
+                "region": "A",
+                "yoa": "2010",
+                "region_x_yoa": "A:2010",
+                "exposure_years": 1.0,
+            },
+            "options": {"rating_version_ref": str(REF)},
+        }
+    )
+    with pytest.raises(CodedError) as refused:
+        await score_one(compiled, context)
+    assert str(refused.value).startswith("MODEL_CALL_FAILED")
+    assert "MODEL_OFFSET_MISSING" in str(refused.value)

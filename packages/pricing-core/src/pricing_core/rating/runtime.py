@@ -1008,19 +1008,19 @@ def _glm_scorer(ref: str, payloads: Mapping[str, Any]) -> _GlmScorer:
     groupings = _carried(payloads, "grouping", Grouping)
     missing = [str(i) for i in spec.factors if i not in carried]
     if missing:
-        raise ValueError(
+        raise CodedError(
             f"RATING_VERSION_UNPINNED: the bundle carries {ref} but not its Factor(s) "
             f"{missing} — a malformed Bundle (FR-239, NFR-491)"
         )
     factors = tuple(carried[i] for i in spec.factors)
     for factor in factors:
         if factor.banding_id is not None and factor.banding_id not in bandings:
-            raise ValueError(
+            raise CodedError(
                 f"RATING_VERSION_UNPINNED: {ref}'s Factor {factor.slug!r} pins a Banding the "
                 "bundle does not carry (FR-239)"
             )
         if factor.grouping_id is not None and factor.grouping_id not in groupings:
-            raise ValueError(
+            raise CodedError(
                 f"RATING_VERSION_UNPINNED: {ref}'s Factor {factor.slug!r} pins a Grouping the "
                 "bundle does not carry (FR-239)"
             )
@@ -1033,7 +1033,7 @@ def _glm_scorer(ref: str, payloads: Mapping[str, Any]) -> _GlmScorer:
     if spec.offset.kind == "model":
         offset_ref = str(spec.offset.offset_model_ref)
         if offset_ref not in payloads:
-            raise ValueError(
+            raise CodedError(
                 f"RATING_VERSION_UNPINNED: {ref}'s offset model {offset_ref} is not in the "
                 "bundle (FR-116, FR-239)"
             )
