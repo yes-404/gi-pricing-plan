@@ -886,7 +886,7 @@ def test_a_version_the_runtime_cannot_load_is_unreadable_by_the_exception_type()
     del bundle["resolved_payloads"]["factor:region@1"]
     rc, lines = _run([_row(bundle, "unloadable", 1)])
 
-    assert "UNREADABLE unloadable@1 status=approved (ValueError)" in lines, lines
+    assert "UNREADABLE unloadable@1 status=approved (CodedError)" in lines, lines
     assert rc == 2
 
 
