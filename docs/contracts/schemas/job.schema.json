@@ -150,10 +150,117 @@
           "type": "boolean"
         },
         "detail": {
-          "type": "object"
+          "type": "object",
+          "description": "`detail` never carries the key `_location`; the location is its own field."
+        },
+        "location": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": false,
+          "description": "Where in the caller's own artifact a deterministic refusal points (#1917): identifiers only, never a submitted value. A key that is not set is null. At least one key is set: JSON Schema cannot say so while unset keys are null, so the model's own validator enforces it (`07` §4.1).",
+          "properties": {
+            "factor": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "minLength": 1,
+              "maxLength": 256,
+              "pattern": "^[^\\x00-\\x1f\\x7f-\\x9f\\u2028\\u2029]+(?![\\s\\S])"
+            },
+            "feature": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "minLength": 1,
+              "maxLength": 256,
+              "pattern": "^[^\\x00-\\x1f\\x7f-\\x9f\\u2028\\u2029]+(?![\\s\\S])"
+            },
+            "field": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "minLength": 1,
+              "maxLength": 256,
+              "pattern": "^[^\\x00-\\x1f\\x7f-\\x9f\\u2028\\u2029]+(?![\\s\\S])"
+            },
+            "interaction": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "minLength": 1,
+              "maxLength": 256,
+              "pattern": "^[^\\x00-\\x1f\\x7f-\\x9f\\u2028\\u2029]+(?![\\s\\S])"
+            },
+            "key": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "minLength": 1,
+              "maxLength": 256,
+              "pattern": "^[^\\x00-\\x1f\\x7f-\\x9f\\u2028\\u2029]+(?![\\s\\S])"
+            },
+            "objective": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "minLength": 1,
+              "maxLength": 256,
+              "pattern": "^[^\\x00-\\x1f\\x7f-\\x9f\\u2028\\u2029]+(?![\\s\\S])"
+            },
+            "operand": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "minLength": 1,
+              "maxLength": 256,
+              "pattern": "^[^\\x00-\\x1f\\x7f-\\x9f\\u2028\\u2029]+(?![\\s\\S])"
+            },
+            "peril": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "pattern": "^[A-Z][A-Z0-9_]{0,31}$"
+            },
+            "ref": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "pattern": "^((banding|custom_metric|custom_objective|dataset|dataset_version|deployment|dossier|gipp_check|grouping|model|monitor|optimisation_run|peril_structure|rate_table|rating_algorithm|rating_version|reference_table|regression_suite|sub_graph|validation_rule|validation_rule_set):[a-z0-9][a-z0-9-]{1,62}|factor:[a-z0-9][a-z0-9_-]{1,62})@[1-9][0-9]*$"
+            },
+            "step_id": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "minLength": 1,
+              "maxLength": 256,
+              "pattern": "^[^\\x00-\\x1f\\x7f-\\x9f\\u2028\\u2029]+(?![\\s\\S])"
+            },
+            "structure": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "pattern": "^((banding|custom_metric|custom_objective|dataset|dataset_version|deployment|dossier|gipp_check|grouping|model|monitor|optimisation_run|peril_structure|rate_table|rating_algorithm|rating_version|reference_table|regression_suite|sub_graph|validation_rule|validation_rule_set):[a-z0-9][a-z0-9-]{1,62}|factor:[a-z0-9][a-z0-9_-]{1,62})@[1-9][0-9]*$"
+            }
+          }
         },
         "trace_id": {
-          "type": "string",
+          "type": [
+            "string",
+            "null"
+          ],
           "pattern": "^[0-9a-f]{32}$",
           "description": "W3C/OpenTelemetry trace id: 32 lowercase hex characters (00 §5.3)."
         }

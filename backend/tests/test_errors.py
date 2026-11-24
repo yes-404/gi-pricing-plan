@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import logging
+import warnings
+
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
@@ -11,12 +14,13 @@ from app.errors import (
     PLATFORM_ERROR_CODES,
     RATING_ERROR_CODES,
     PlatformError,
+    build_location,
     install_error_handlers,
 )
 from app.main import create_app
 from app.observability.middleware import TraceMiddleware
 from app.observability.trace import TRACE_ID_PATTERN
-from model_schema import GlmSpec, new_uuid7
+from model_schema import GlmSpec, JobErrorLocation, new_uuid7
 from model_schema.input_free import InputFreeError
 
 PROBLEM = "application/problem+json"
@@ -103,6 +107,24 @@ def test_unexpected_error_does_not_leak_the_exception_message(
     assert "hunter2" not in response.text
     assert "password" not in response.text
     assert body["trace_id"]
+
+
+@pytest.mark.req("FR-403")
+def test_to_problem_leaves_a_refusals_location_out_of_the_problem_body() -> None:
+    """#1917: `location` is for the Job worker only; a request's problem response is unchanged."""
+    from model_schema.jobs import JobErrorLocation
+
+    located = PlatformError(
+        "VALIDATION_FAILED",
+        "Nope",
+        422,
+        location=JobErrorLocation(step_id="s_rp", field="inputs.age"),
+    )
+    plain = PlatformError("VALIDATION_FAILED", "Nope", 422)
+    body = located.to_problem().model_dump(mode="json")
+    assert "location" not in body
+    assert "s_rp" not in str(body)
+    assert body == plain.to_problem().model_dump(mode="json")
 
 
 @pytest.mark.req("FR-450")
@@ -267,3 +289,147 @@ def test_a_malformed_json_body_renders_the_authored_text_and_no_input(
     (error,) = response.json()["errors"]
     assert error["code"] == "JSON_INVALID"
     assert error["message"] == "The request body is not valid JSON."
+
+
+@pytest.mark.req("FR-403")
+@pytest.mark.parametrize(
+    "value",
+    [
+        {"step_id": "base premium"},
+        {"step_id": "s" * 129},
+        {"interaction": "VehAge & DrivAge"},
+        {"feature": "Veh Age"},
+        {"key": "Driver Age"},
+        {"objective": "reg:tweedie"},
+        {"factor": "vehicle_group_rated"},
+    ],
+)
+def test_a_refusal_built_from_a_mapping_keeps_a_location_that_fits_its_source_field(
+    value: dict[str, str],
+) -> None:
+    """Review of #1930, point 3: each is a valid value of its source field."""
+    from model_schema.jobs import JobErrorLocation
+
+    refusal = PlatformError("VALIDATION_FAILED", "Nope", 422, location=value)
+    assert refusal.location == JobErrorLocation(**value)
+
+
+@pytest.mark.req("FR-403")
+@pytest.mark.parametrize(
+    "bad",
+    [{}, {"nope": "x"}, {"step_id": 42}, {"ref": "not-a-reference"}, {"peril": "has a space"}],
+)
+def test_a_location_that_cannot_be_built_never_costs_the_refusal_its_code(
+    bad: dict[str, object],
+) -> None:
+    """A location is an aid: when it cannot be built the refusal is raised without one, under
+    its own code, never as a `ValidationError` from the raise site."""
+    refusal = PlatformError("VALIDATION_FAILED", "Nope", 422, "Nope.", location=bad)  # type: ignore[arg-type]
+    assert (refusal.code, refusal.status_code, refusal.location) == ("VALIDATION_FAILED", 422, None)
+
+
+_LOCATION_SENTINEL = "SENTINEL-submitted-value-3c9e"
+
+
+@pytest.mark.req("FR-403")
+@pytest.mark.parametrize(
+    ("bad", "key"),
+    [
+        ({"ref": _LOCATION_SENTINEL}, "ref"),
+        ({"peril": _LOCATION_SENTINEL}, "peril"),
+        ({"step_id": "s_rp", "structure": _LOCATION_SENTINEL}, "structure"),
+        ({"undeclared": _LOCATION_SENTINEL}, "undeclared:1"),
+        ({_LOCATION_SENTINEL: "x", "step_id": "s_rp"}, "undeclared:1"),
+        (
+            {_LOCATION_SENTINEL: "x", _LOCATION_SENTINEL + "2": "y", "ref": "bad"},
+            "ref,undeclared:2",
+        ),
+        ({}, "(none)"),
+    ],
+)
+def test_a_dropped_location_is_logged_with_the_code_and_the_key_and_never_the_value(
+    bad: dict[str, str], key: str, caplog: pytest.LogCaptureFixture
+) -> None:
+    with caplog.at_level(logging.WARNING, logger="app.errors"):
+        refusal = PlatformError("VALIDATION_FAILED", "Nope", 422, location=bad)
+
+    assert refusal.location is None
+    lines = [r.getMessage() for r in caplog.records if r.name == "app.errors"]
+    assert len(lines) == 1, lines
+    assert "VALIDATION_FAILED" in lines[0]
+    assert f"keys={key}" in lines[0]
+    assert _LOCATION_SENTINEL not in caplog.text
+
+
+@pytest.mark.req("FR-403")
+def test_a_location_that_builds_is_not_logged(caplog: pytest.LogCaptureFixture) -> None:
+    with caplog.at_level(logging.WARNING, logger="app.errors"):
+        PlatformError("VALIDATION_FAILED", "Nope", 422, location={"step_id": "base premium"})
+    assert [r for r in caplog.records if r.name == "app.errors"] == []
+
+
+#: Instances that were never validated: `model_construct` skips every validator, and
+#: `model_copy(update=...)` does not re-run them, so each can hold what the model refuses.
+_UNVALIDATED_INSTANCES = {
+    "model_construct, 300 characters": lambda: JobErrorLocation.model_construct(
+        step_id=_LOCATION_SENTINEL + "x" * 300
+    ),
+    "model_construct, a control character": lambda: JobErrorLocation.model_construct(
+        step_id=_LOCATION_SENTINEL + "\nx"
+    ),
+    "model_copy(update=), 300 characters": lambda: JobErrorLocation(step_id="s").model_copy(
+        update={"step_id": _LOCATION_SENTINEL + "x" * 300}
+    ),
+}
+
+
+@pytest.mark.req("NFR-499")
+@pytest.mark.parametrize("shape", sorted(_UNVALIDATED_INSTANCES))
+def test_build_location_checks_an_instance_like_a_mapping(
+    shape: str, caplog: pytest.LogCaptureFixture
+) -> None:
+    """An instance that was never validated is held to the same bound and rule: it is dropped
+    with the one warning naming the key and never the value, and the caller gets None."""
+    instance = _UNVALIDATED_INSTANCES[shape]()
+    with caplog.at_level(logging.WARNING, logger="app.errors"):
+        built = build_location("VALIDATION_FAILED", instance)
+
+    assert built is None
+    lines = [r.getMessage() for r in caplog.records if r.name == "app.errors"]
+    assert len(lines) == 1, lines
+    assert "VALIDATION_FAILED" in lines[0]
+    assert "keys=step_id" in lines[0]
+    assert _LOCATION_SENTINEL not in caplog.text
+
+
+@pytest.mark.req("NFR-499")
+def test_build_location_never_raises_on_an_instance_with_a_badly_typed_field(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """The sink must never raise: dumping an unvalidated instance whose field has the wrong type
+    makes pydantic warn, and under warnings-as-errors that warning would be exactly the escape
+    this check exists to close. The instance is dropped with the one warning, and None returned."""
+    instance = JobErrorLocation.model_construct(step_id=42)
+    with (
+        caplog.at_level(logging.WARNING, logger="app.errors"),
+        warnings.catch_warnings(),  # scoped to the call: a fixture's own warnings stay warnings
+    ):
+        warnings.simplefilter("error")
+        built = build_location("VALIDATION_FAILED", instance)
+
+    assert built is None
+    lines = [r.getMessage() for r in caplog.records if r.name == "app.errors"]
+    assert len(lines) == 1, lines
+    assert "keys=step_id" in lines[0]
+
+
+@pytest.mark.req("NFR-499")
+def test_build_location_keeps_a_valid_instance_even_when_it_was_never_validated(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    with caplog.at_level(logging.WARNING, logger="app.errors"):
+        built = build_location(
+            "VALIDATION_FAILED", JobErrorLocation.model_construct(step_id="base premium")
+        )
+    assert built == JobErrorLocation(step_id="base premium")
+    assert [r for r in caplog.records if r.name == "app.errors"] == []

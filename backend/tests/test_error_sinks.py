@@ -404,6 +404,202 @@ def test_every_failure_sink_on_a_quote_input_path_is_accounted_for() -> None:
     )
 
 
+#: Every place, in the census's files, that fills a Job error's location (#1917, `07` §4.1): a call
+#: with a `location=` keyword, a `**` expansion that names `location` (or one of unknown content
+#: into `PlatformError` or `JobError`), an assignment to a `.location` attribute, or a direct
+#: `JobErrorLocation(` construction. (file, function) -> where the values come from. The model
+#: bounds a location's free-text keys and refuses control characters, but no rule can tell a
+#: submitted value from an identifier, so each such site is listed with the artifact field its
+#: values are read from, and a new one fails until it is.
+#:
+#: OUTSIDE the scan, by name: a `JobErrorLocation.model_validate(...)` build with nothing else. It
+#: is weak alone, because it fills nothing until its result is passed as `location=` or assigned,
+#: and that call or assignment IS seen; a build whose result goes anywhere else is not a location
+#: on any error, so it cannot be stored. Also outside it: a `setattr(error, "location", ...)`, an
+#: update of the error's `__dict__`, a `model_construct` or `model_copy(update=...)` used as a
+#: build, and a `**` into a SUBCLASS of `PlatformError` (the scan reads a `**` into `PlatformError`
+#: or `JobError` by name). The scan does not carry the guarantee alone: every error that reaches
+#: the Job's stored error passes through `build_location` in `execute_job`, which holds all of
+#: these forms to the same bound and rule (`test_job_error_sanitiser.py`).
+_LOCATION_SITES: dict[tuple[str, str], str] = {
+    ("backend/src/app/errors.py", "__init__"): (
+        "`PlatformError.__init__` stores the location its raise site passed, after "
+        "`build_location` has validated it (the bound, the character rule, a warning on a drop): "
+        "nothing is composed here"
+    ),
+    ("backend/src/app/worker/tasks.py", "execute_job"): (
+        "passes `exc.location` through `app.errors.build_location`, the check `PlatformError` "
+        "applies when it is built, so a location set by plain assignment is held to the same "
+        "bound and rule where the error is stored: nothing is composed here"
+    ),
+}
+
+
+def _composes_text(value: ast.AST) -> bool:
+    """Whether an expression builds text from parts: an f-string, `+` or `%` on operands,
+    `.format(` or `.join(`. A value filled from a name or an attribute is not composed."""
+    for node in ast.walk(value):
+        if isinstance(node, ast.JoinedStr):
+            return True
+        if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Add | ast.Mod):
+            return True
+        if (
+            isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Attribute)
+            and node.func.attr in {"format", "join"}
+        ):
+            return True
+    return False
+
+
+def _location_sites(source: str, name: str) -> tuple[set[tuple[str, str]], list[str]]:
+    """The (file, function) of each call that fills a location, and `file:line` of each whose
+    `location=` value composes text."""
+    sites: set[tuple[str, str]] = set()
+    composed: list[str] = []
+
+    def fills(node: ast.AST, function: str, value: ast.AST | None) -> None:
+        sites.add((name, function))
+        if value is not None and _composes_text(value):
+            composed.append(f"{name}:{node.lineno}")  # type: ignore[attr-defined]
+
+    def visit(node: ast.AST, function: str) -> None:
+        if isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef):
+            function = node.name
+        if isinstance(node, ast.Assign | ast.AnnAssign | ast.AugAssign):
+            targets = node.targets if isinstance(node, ast.Assign) else [node.target]
+            for target in targets:
+                if isinstance(target, ast.Attribute) and target.attr == "location":
+                    fills(node, function, node.value)
+        if isinstance(node, ast.Call):
+            func = node.func
+            callee = func.id if isinstance(func, ast.Name) else getattr(func, "attr", "")
+            if callee == "JobErrorLocation" and isinstance(node.func, ast.Name):
+                sites.add((name, function))
+            for keyword in node.keywords:
+                if keyword.arg == "location":
+                    fills(node, function, keyword.value)
+                elif keyword.arg is None and isinstance(keyword.value, ast.Dict):
+                    for key, value in zip(keyword.value.keys, keyword.value.values, strict=True):
+                        if isinstance(key, ast.Constant) and key.value == "location":
+                            fills(node, function, value)
+                elif keyword.arg is None and callee in {"PlatformError", "JobError"}:
+                    # a `**` of content this scan cannot read, into a call that takes a location
+                    sites.add((name, function))
+        for child in ast.iter_child_nodes(node):
+            visit(child, function)
+
+    visit(ast.parse(source), "<module>")
+    return sites, composed
+
+
+def _location_problems(
+    sites: set[tuple[str, str]], composed: list[str], registered: dict[tuple[str, str], str]
+) -> list[str]:
+    return [
+        *(f"unregistered: {file} {function}" for file, function in sorted(sites - set(registered))),
+        *(f"stale entry: {file} {function}" for file, function in sorted(set(registered) - sites)),
+        *(f"composed text: {where}" for where in composed),
+    ]
+
+
+@pytest.mark.req("NFR-499")
+def test_every_raise_site_that_fills_a_location_is_accounted_for() -> None:
+    """A location holds identifiers of the caller's own artifact and never a submitted value. This
+    cannot prove that: it makes every site that fills one visible and reasoned, as `_SINKS` does,
+    and refuses a value built by composing text (which is where submitted text would get in). The
+    shapes it sees are those under `_LOCATION_SITES`; a `JobErrorLocation.model_validate(...)`
+    build on its own is outside the scan (weak alone: the call that passes it on is seen), and so
+    are `setattr`, a `__dict__` update, `model_construct` / `model_copy` as a build and a `**` into
+    a `PlatformError` subclass: the sink check in `execute_job` holds those the same."""
+    sites: set[tuple[str, str]] = set()
+    composed: list[str] = []
+    for path in _files():
+        name = path.relative_to(_ROOT).as_posix()
+        found, text = _location_sites(path.read_text(encoding="utf-8"), name)
+        sites |= found
+        composed += text
+    assert _location_problems(sites, composed, _LOCATION_SITES) == [], (
+        "a raise site fills a Job error's location without being listed in _LOCATION_SITES with "
+        "where its values come from, or a listed site is gone, or a value is composed text"
+    )
+
+
+_PLANTED_LOCATIONS = {
+    "a new raise site": (
+        "def refuse(step):\n"
+        "    raise PlatformError('X_Y', 't', 422, location={'step_id': step.id})\n",
+        "unregistered: planted.py refuse",
+    ),
+    "a JobErrorLocation built": (
+        "def refuse(step):\n    return JobErrorLocation(step_id=step.id)\n",
+        "unregistered: planted.py refuse",
+    ),
+    "an f-string value": (
+        "def refuse(name):\n"
+        "    raise PlatformError('X_Y', 't', 422, location={'field': f'inputs.{name}'})\n",
+        "composed text: planted.py:2",
+    ),
+    "a concatenated value": (
+        "def refuse(name):\n"
+        "    raise PlatformError('X_Y', 't', 422, location={'field': 'inputs.' + name})\n",
+        "composed text: planted.py:2",
+    ),
+    "a formatted value": (
+        "def refuse(name):\n"
+        "    raise PlatformError('X_Y', 't', 422, location={'field': 'inputs.{}'.format(name)})\n",
+        "composed text: planted.py:2",
+    ),
+    "an attribute assignment": (
+        "def refuse(step):\n"
+        "    err = PlatformError('X_Y', 't', 422)\n"
+        "    err.location = {'step_id': step.id}\n"
+        "    raise err\n",
+        "unregistered: planted.py refuse",
+    ),
+    "an attribute assignment of composed text": (
+        "def refuse(name):\n"
+        "    err = PlatformError('X_Y', 't', 422)\n"
+        "    err.location = {'field': f'inputs.{name}'}\n"
+        "    raise err\n",
+        "composed text: planted.py:3",
+    ),
+    "a ** expansion naming location": (
+        "def refuse(step):\n"
+        "    raise PlatformError('X_Y', 't', 422, **{'location': {'step_id': step.id}})\n",
+        "unregistered: planted.py refuse",
+    ),
+    "a ** expansion of composed text": (
+        "def refuse(name):\n"
+        "    raise PlatformError('X_Y', 't', 422, **{'location': {'field': f'inputs.{name}'}})\n",
+        "composed text: planted.py:2",
+    ),
+    "a ** expansion of unknown content": (
+        "def refuse(extra):\n    raise PlatformError('X_Y', 't', 422, **extra)\n",
+        "unregistered: planted.py refuse",
+    ),
+}
+
+
+@pytest.mark.parametrize("shape", sorted(_PLANTED_LOCATIONS))
+def test_the_location_census_finds_each_planted_shape(shape: str) -> None:
+    """Red on deliberately broken input: each shape, planted, is reported under its own reason."""
+    source, expected = _PLANTED_LOCATIONS[shape]
+    sites, composed = _location_sites(source, "planted.py")
+    registered = {("planted.py", "refuse"): "a registered site"} if "composed" in expected else {}
+    assert expected in _location_problems(sites, composed, registered)
+
+
+def test_the_location_census_is_quiet_on_a_copy_and_reports_a_stale_entry() -> None:
+    copy = "def run(exc):\n    return JobError(code=exc.code, location=exc.location)\n"
+    sites, composed = _location_sites(copy, "planted.py")
+    assert sites == {("planted.py", "run")}
+    assert _location_problems(sites, composed, {("planted.py", "run"): "a copy"}) == []
+    assert _location_problems(set(), [], {("planted.py", "run"): "a copy"}) == [
+        "stale entry: planted.py run"
+    ]
+
+
 @pytest.mark.req("NFR-499")
 def test_a_banding_refusal_in_a_fit_keeps_its_text_and_no_row_value() -> None:
     """The `BandingError` arm of `model_handlers._fit` persists `safe_error_detail(exc)`."""
